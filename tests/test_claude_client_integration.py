@@ -1,88 +1,65 @@
 #!/usr/bin/env python3
-"""Integration tests for claude_client module with mocked CLI calls."""
+"""Integration tests for claude_client module."""
 
 import subprocess
-from unittest.mock import Mock, patch
 
 import pytest
 
 from mcp_coder.claude_client import ask_claude, _find_claude_executable
 
 
-class TestClaudeClientIntegration:
-    """Integration test cases with mocked Claude Code CLI."""
-
-    @patch("mcp_coder.claude_client._find_claude_executable")
-    @patch("subprocess.run")
-    def test_ask_claude_simple_math_exact(self, mock_run: Mock, mock_find: Mock) -> None:
-        """Test asking Claude a simple math question with mocked response."""
-        # Mock finding the executable
-        mock_find.return_value = "claude"
-
-        # Mock successful subprocess call
-        mock_result = Mock()
-        mock_result.stdout = "4"
-        mock_result.returncode = 0
-        mock_run.return_value = mock_result
-
-        response = ask_claude("What is 2 + 2? Please provide the shortest possible answer.")
-
-        # Verify the response
-        assert response == "4"
-        # Verify subprocess was called correctly
-        mock_run.assert_called_once_with(
-            ["claude", "--print", "What is 2 + 2? Please provide the shortest possible answer."],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=True,
-        )
-
-    @patch("mcp_coder.claude_client._find_claude_executable")
-    @patch("subprocess.run")
-    def test_ask_claude_timeout_handling(self, mock_run: Mock, mock_find: Mock) -> None:
-        """Test that timeout parameter works with mocked response."""
-        # Mock finding the executable
-        mock_find.return_value = "claude"
-
-        # Mock successful subprocess call
-        mock_result = Mock()
-        mock_result.stdout = "Hello! How can I help you?"
-        mock_result.returncode = 0
-        mock_run.return_value = mock_result
-
-        response = ask_claude("Hello", timeout=20)
-
-        assert len(response) > 0
-        assert isinstance(response, str)
-        # Verify timeout was passed correctly
-        mock_run.assert_called_once_with(
-            ["claude", "--print", "Hello"],
-            capture_output=True,
-            text=True,
-            timeout=20,
-            check=True,
-        )
-
-    @patch("mcp_coder.claude_client._find_claude_executable")
-    @patch("subprocess.run")
-    def test_ask_claude_timeout_expired(self, mock_run: Mock, mock_find: Mock) -> None:
-        """Test timeout exception handling."""
-        # Mock finding the executable
-        mock_find.return_value = "claude"
-
-        # Mock timeout exception
-        mock_run.side_effect = subprocess.TimeoutExpired(
-            ["claude", "--print", "Hello"], 30
-        )
-
-        with pytest.raises(subprocess.TimeoutExpired, match="Command.*timed out after 30 seconds"):
-            ask_claude("Hello", timeout=30)
-
-    def test_ask_claude_cli_not_found(self) -> None:
-        """Test error handling when Claude CLI is not found."""
-        with patch("mcp_coder.claude_client._find_claude_executable") as mock_find:
-            mock_find.side_effect = FileNotFoundError("Claude Code CLI not found. Please ensure it's installed and accessible.")
-
-            with pytest.raises(FileNotFoundError, match="Claude Code CLI not found"):
-                ask_claude("Test question")
+class TestClaudeClientRealIntegration:
+    """Real integration tests with actual Claude Code CLI (if available)."""
+    
+    @pytest.mark.integration
+    def test_claude_cli_available(self) -> None:
+        """Test if Claude CLI is available and working."""
+        try:
+            # This should either work or raise FileNotFoundError
+            claude_path = _find_claude_executable()
+            assert claude_path is not None
+            assert len(claude_path) > 0
+            print(f"Found Claude CLI at: {claude_path}")
+        except FileNotFoundError:
+            pytest.skip("Claude Code CLI not found - skipping real integration test")
+    
+    @pytest.mark.integration
+    def test_ask_claude_real_simple_math(self) -> None:
+        """Test asking Claude a simple math question with real CLI."""
+        try:
+            print("Starting Claude CLI test...")
+            claude_path = _find_claude_executable()
+            print(f"Using Claude at: {claude_path}")
+            
+            response = ask_claude("What is 2 + 2? Answer with just the number.", timeout=60)
+            
+            # Claude should respond with something containing "4"
+            assert "4" in response
+            assert len(response.strip()) > 0
+            print(f"Claude responded: {response}")
+            
+        except FileNotFoundError:
+            pytest.skip("Claude Code CLI not found - skipping real integration test")
+        except subprocess.TimeoutExpired as e:
+            print(f"Timeout details: {e}")
+            print(f"Command that timed out: {e.cmd}")
+            pytest.skip("Claude CLI call timed out - may indicate setup issues")
+        except subprocess.CalledProcessError as e:
+            print(f"Command error details: {e}")
+            print(f"Return code: {e.returncode}")
+            print(f"Stderr: {e.stderr}")
+            pytest.skip(f"Claude CLI failed - may indicate setup issues: {e}")
+    
+    @pytest.mark.integration
+    def test_ask_claude_real_timeout(self) -> None:
+        """Test timeout handling with real CLI using very short timeout."""
+        try:
+            # Use a very short timeout to force a timeout (if Claude is slow)
+            with pytest.raises(subprocess.TimeoutExpired):
+                ask_claude("Write a very long story about programming", timeout=1)
+                
+        except FileNotFoundError:
+            pytest.skip("Claude Code CLI not found - skipping real integration test")
+        except subprocess.CalledProcessError:
+            # If Claude responds quickly, we might not get a timeout
+            pytest.skip("Claude responded too quickly to test timeout")

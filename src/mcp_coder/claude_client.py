@@ -6,21 +6,20 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
+from .subprocess_runner import execute_command
+
 
 def _find_claude_executable() -> str:
     """Find Claude Code CLI executable, checking both PATH and common install locations."""
     # First, try to find claude in PATH
     try:
-        result = subprocess.run(
+        result = execute_command(
             ["claude", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
+            timeout_seconds=10,
         )
-        if result.returncode == 0:
+        if result.return_code == 0:
             return "claude"  # Available in PATH
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except Exception:
         pass
 
     # Try common installation locations
@@ -39,17 +38,14 @@ def _find_claude_executable() -> str:
         if claude_path.exists() and claude_path.is_file():
             try:
                 # Test if the executable works with a simple help command (faster than --version)
-                result = subprocess.run(
+                result = execute_command(
                     [str(claude_path), "--help"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,  # Reduced timeout
-                    check=False,
+                    timeout_seconds=5,
                 )
                 # If it doesn't crash immediately, assume it's working
-                if result.returncode in [0, 1]:  # 0 = success, 1 = help shown
+                if result.return_code in [0, 1]:  # 0 = success, 1 = help shown
                     return str(claude_path)
-            except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError):
+            except Exception:
                 # If it exists as a file, return it anyway - might work for actual commands
                 return str(claude_path)
 
@@ -79,29 +75,36 @@ def ask_claude(question: str, timeout: int = 30) -> str:
         claude_cmd = _find_claude_executable()
 
         # Use Claude Code CLI to ask the question
-        result = subprocess.run(
+        result = execute_command(
             [claude_cmd, "--print", question],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=True,
+            timeout_seconds=timeout,
         )
+
+        if result.timed_out:
+            raise subprocess.TimeoutExpired(
+                [claude_cmd, "--print", question], 
+                timeout, 
+                f"Claude Code command timed out after {timeout} seconds"
+            )
+
+        if result.return_code != 0:
+            raise subprocess.CalledProcessError(
+                result.return_code,
+                [claude_cmd, "--print", question],
+                output=result.stdout,
+                stderr=f"Claude Code command failed: {result.stderr}",
+            )
 
         return result.stdout.strip()
 
     except FileNotFoundError:
         # This will be raised by _find_claude_executable if not found
         raise
-    except subprocess.TimeoutExpired as e:
-        raise subprocess.TimeoutExpired(
-            e.cmd, e.timeout, f"Claude Code command timed out after {timeout} seconds"
-        )
-    except subprocess.CalledProcessError as e:
-        raise subprocess.CalledProcessError(
-            e.returncode,
-            e.cmd,
-            output=e.output,
-            stderr=f"Claude Code command failed: {e.stderr}",
-        )
+    except subprocess.TimeoutExpired:
+        # Re-raise timeout errors
+        raise
+    except subprocess.CalledProcessError:
+        # Re-raise command errors
+        raise
 
 
