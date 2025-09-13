@@ -82,9 +82,9 @@ def ask_claude(question: str, timeout: int = 30) -> str:
 
         if result.timed_out:
             raise subprocess.TimeoutExpired(
-                [claude_cmd, "--print", question], 
-                timeout, 
-                f"Claude Code command timed out after {timeout} seconds"
+                [claude_cmd, "--print", question],
+                timeout,
+                f"Claude Code command timed out after {timeout} seconds",
             )
 
         if result.return_code != 0:
@@ -106,5 +106,3 @@ def ask_claude(question: str, timeout: int = 30) -> str:
     except subprocess.CalledProcessError:
         # Re-raise command errors
         raise
-
-

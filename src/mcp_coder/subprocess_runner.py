@@ -201,7 +201,9 @@ def _run_subprocess(
                                     subprocess.TimeoutExpired,
                                     Exception,
                                 ) as e:
-                                    logger.debug(f"Taskkill failed, using fallback: {e}")
+                                    logger.debug(
+                                        f"Taskkill failed, using fallback: {e}"
+                                    )
                                     popen_proc.terminate()
                                     time.sleep(0.5)
                                     if popen_proc.poll() is None:
@@ -229,7 +231,9 @@ def _run_subprocess(
                                     ProcessLookupError,
                                     AttributeError,
                                 ) as e:
-                                    logger.debug(f"Process group kill failed, using fallback: {e}")
+                                    logger.debug(
+                                        f"Process group kill failed, using fallback: {e}"
+                                    )
                                     popen_proc.terminate()
                                     time.sleep(0.5)
                                     if popen_proc.poll() is None:
@@ -353,7 +357,9 @@ def _run_subprocess(
                                 subprocess.TimeoutExpired,
                                 Exception,
                             ) as e:
-                                logger.debug(f"Taskkill failed in regular execution: {e}")
+                                logger.debug(
+                                    f"Taskkill failed in regular execution: {e}"
+                                )
                                 popen_proc.kill()
                         else:
                             # Unix: Kill process group
@@ -371,7 +377,9 @@ def _run_subprocess(
                                 else:
                                     popen_proc.kill()
                             except (OSError, ProcessLookupError, AttributeError) as e:
-                                logger.debug(f"Process group kill failed in regular execution: {e}")
+                                logger.debug(
+                                    f"Process group kill failed in regular execution: {e}"
+                                )
                                 popen_proc.kill()
 
                         # Wait for cleanup
@@ -429,9 +437,7 @@ def execute_subprocess(
     )
     use_isolation = is_python_command(command) and not disable_isolation
 
-    logger.debug(
-        f"Starting subprocess execution: {command[:3] if command else None}"
-    )
+    logger.debug(f"Starting subprocess execution: {command[:3] if command else None}")
 
     try:
         process = _run_subprocess(command, options, use_isolation)

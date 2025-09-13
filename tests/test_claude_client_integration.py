@@ -5,12 +5,12 @@ import subprocess
 
 import pytest
 
-from mcp_coder.claude_client import ask_claude, _find_claude_executable
+from mcp_coder.claude_client import _find_claude_executable, ask_claude
 
 
 class TestClaudeClientRealIntegration:
     """Real integration tests with actual Claude Code CLI (if available)."""
-    
+
     @pytest.mark.integration
     def test_claude_cli_available(self) -> None:
         """Test if Claude CLI is available and working."""
@@ -22,7 +22,7 @@ class TestClaudeClientRealIntegration:
             print(f"Found Claude CLI at: {claude_path}")
         except FileNotFoundError:
             pytest.skip("Claude Code CLI not found - skipping real integration test")
-    
+
     @pytest.mark.integration
     def test_ask_claude_real_simple_math(self) -> None:
         """Test asking Claude a simple math question with real CLI."""
@@ -30,14 +30,16 @@ class TestClaudeClientRealIntegration:
             print("Starting Claude CLI test...")
             claude_path = _find_claude_executable()
             print(f"Using Claude at: {claude_path}")
-            
-            response = ask_claude("What is 2 + 2? Answer with just the number.", timeout=60)
-            
+
+            response = ask_claude(
+                "What is 2 + 2? Answer with just the number.", timeout=60
+            )
+
             # Claude should respond with something containing "4"
             assert "4" in response
             assert len(response.strip()) > 0
             print(f"Claude responded: {response}")
-            
+
         except FileNotFoundError:
             pytest.skip("Claude Code CLI not found - skipping real integration test")
         except subprocess.TimeoutExpired as e:
@@ -49,7 +51,7 @@ class TestClaudeClientRealIntegration:
             print(f"Return code: {e.returncode}")
             print(f"Stderr: {e.stderr}")
             pytest.skip(f"Claude CLI failed - may indicate setup issues: {e}")
-    
+
     @pytest.mark.integration
     def test_ask_claude_real_timeout(self) -> None:
         """Test timeout handling with real CLI using very short timeout."""
@@ -57,7 +59,7 @@ class TestClaudeClientRealIntegration:
             # Use a very short timeout to force a timeout (if Claude is slow)
             with pytest.raises(subprocess.TimeoutExpired):
                 ask_claude("Write a very long story about programming", timeout=1)
-                
+
         except FileNotFoundError:
             pytest.skip("Claude Code CLI not found - skipping real integration test")
         except subprocess.CalledProcessError:
