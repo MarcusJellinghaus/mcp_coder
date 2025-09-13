@@ -27,3 +27,4 @@ venv/
 .ruff_cache/
 /.mcp.json
 .claude/settings.local.json
+checks_output.txt
