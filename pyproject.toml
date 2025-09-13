@@ -35,24 +35,6 @@ where = ["src"]
 [tool.setuptools.package-dir]
 "" = "src"
 
-[tool.black]
-line-length = 88
-target-version = ['py39']
-
-[tool.isort]
-profile = "black"
-line_length = 88
-
-[tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-
-[tool.pytest.ini_options]
-markers = [
-    "integration: marks tests as integration tests that require Claude Code CLI (deselect with '-m \"not integration\"')",
-]
 
 
 [project.urls]
@@ -63,11 +45,8 @@ markers = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_default_fixture_loop_scope = "function"
-pythonpath = ["."]
 markers = [
-    "cli: Tests for CLI command functionality",
-    "installation: Tests for installation modes"
+    "integration: marks tests as integration tests that require Claude Code CLI"
 ]
 
 
@@ -101,13 +80,3 @@ ignore_missing_imports = true
 module = ["mcp.server.fastmcp"]
 ignore_missing_imports = true
 
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["mcp_config*"]
-
-[tool.setuptools]
-package-dir = {"" = "src"}
