@@ -18,7 +18,7 @@ ask_llm() -> ask_claude_code() -> ask_claude_code_cli() (existing)
 - **Extensibility**: Easy to add new LLM clients in the future
 - **Backward Compatibility**: Existing `ask_claude()` function remains unchanged
 - **KISS Principle**: Minimal complexity, maximum maintainability
-- **Test-Driven Development**: Tests first, implementation second
+- **Essential Testing**: Focus on core functionality, skip performance benchmarking
 
 ## Files to be Created/Modified
 - `src/mcp_coder/llm_interface.py` (new) - High-level interface
@@ -34,5 +34,5 @@ ask_llm() -> ask_claude_code() -> ask_claude_code_cli() (existing)
 1. All existing tests pass without modification
 2. New Python SDK implementation works with basic functionality
 3. Clean separation of concerns between CLI and API implementations
-4. Easy to extend for future LLM clients
-5. Performance parity with existing implementation
+4. Easy to extend for future LLM providers
+5. SDK uses existing CLI subscription authentication automatically

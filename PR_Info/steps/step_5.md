@@ -4,8 +4,7 @@
 Ensure the refactored architecture works correctly with comprehensive testing, performance validation, and backward compatibility verification.
 
 ## WHERE
-- `tests/test_integration_full.py` (new) - Full integration tests
-- `tests/test_performance.py` (new) - Performance comparison tests  
+- `tests/test_integration_full.py` (new) - Essential integration tests
 - `tests/test_backward_compatibility.py` (new) - Compatibility validation
 - Update existing test files with additional edge cases
 
@@ -13,13 +12,9 @@ Ensure the refactored architecture works correctly with comprehensive testing, p
 ### Main Test Functions:
 ```python
 # test_integration_full.py
-def test_cli_vs_api_consistency()  # Compare CLI and API responses
-def test_error_handling_parity()   # Ensure same error behavior
-def test_timeout_behavior()        # Test timeout handling
-
-# test_performance.py  
-def test_response_time_comparison() # Benchmark CLI vs API
-def test_memory_usage()            # Monitor resource usage
+def test_cli_vs_api_basic_functionality()  # Both methods work
+def test_error_handling_differences()      # Document different error types
+def test_timeout_behavior()               # Test timeout handling
 
 # test_backward_compatibility.py
 def test_existing_imports_work()   # Verify old import paths
@@ -65,23 +60,23 @@ def test_both_methods(method):
 - Startup time differences
 
 ## Testing Strategy
-- Aim for >95% code coverage on new modules
+- Focus on essential functionality and error handling
 - Use both unit tests (mocked) and integration tests (real)
 - Test error conditions and edge cases thoroughly
 - Validate that refactoring didn't break existing functionality
-- Performance tests to ensure no regression
+- Document different error signatures between methods
 
 ## LLM Prompt for Implementation
 ```
 I need to implement Step 5 of the LLM interface refactoring plan. Please:
 
 1. Read the summary from pr_info/steps/summary.md to understand what we've built
-2. Create comprehensive tests that validate both CLI and API methods work correctly
+2. Create essential tests that validate both CLI and API methods work correctly
 3. Add parameterized tests that run the same test cases against both implementations  
 4. Create integration tests that verify real functionality (mark with @pytest.mark.integration)
 5. Add backward compatibility tests to ensure existing code still works
-6. Include performance comparison tests to verify no significant regression
-7. Run the full test suite and ensure everything passes
+6. Document that different error signatures between methods are acceptable
+7. Run the test suite and ensure core functionality passes
 
-Focus on thorough validation that the refactoring achieved its goals without breaking anything.
+Focus on essential validation that the refactoring works without breaking existing functionality.
 ```

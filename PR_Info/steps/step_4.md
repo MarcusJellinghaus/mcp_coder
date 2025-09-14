@@ -28,13 +28,13 @@ def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> st
 ### Integration Points:
 - Import `claude_code_sdk` package
 - Use `query()` function from SDK with basic configuration
-- Handle async/await pattern by using `anyio.run()` or similar
+- Handle async/await pattern by using `asyncio.run()` (standard library)
 - Integrate with existing error handling patterns
 
 ### Imports:
 ```python
 # claude_code_api.py
-import anyio
+import asyncio
 from claude_code_sdk import query, ClaudeCodeOptions
 
 # claude_code_interface.py (add)
@@ -83,10 +83,10 @@ I need to implement Step 4 of the LLM interface refactoring plan. Please:
 2. Verify that `import claude_code_sdk` works - if not, STOP and request dependency installation
 3. Create src/mcp_coder/claude_code_api.py with ask_claude_code_api() function using the claude-code-sdk
 4. Use the SDK's query() function with basic ClaudeCodeOptions configuration
-5. Handle the async nature of the SDK by using anyio.run() or similar synchronous wrapper
+5. Handle the async nature of the SDK by using asyncio.run() synchronous wrapper
 6. Update claude_code_interface.py to support method="api" and route to the new function
 7. Create comprehensive tests including error handling and integration tests
 8. Keep the implementation simple - just match the basic functionality of the CLI version
 
-**IMPORTANT**: If claude_code_sdk import fails, stop immediately and alert that dependencies need to be installed first.
+**IMPORTANT**: If claude_code_sdk import fails, stop immediately and alert that dependencies need to be installed first. The SDK will use existing CLI subscription authentication automatically.
 ```

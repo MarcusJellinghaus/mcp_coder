@@ -92,6 +92,7 @@ Can you update the plan, please?
 Please update the files in folder `pr_info`
 (including creating the `steps/` subfolder for implementation details)
 Please do targeted changes.
+Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`
 ```
 
 #### Task Tracker Update Prompt:

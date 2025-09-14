@@ -23,7 +23,7 @@ No new functions in this step - only project setup.
 ### Dependencies:
 ```toml
 dependencies = [
-    "claude-code-sdk",  # New dependency for Python SDK
+    "claude-code-sdk",  # Confirmed: Available on PyPI, version 0.0.22+
 ]
 ```
 
@@ -55,9 +55,8 @@ dependencies = [
 
 **After dependency installation (user confirms):**
 - Verify project installs cleanly with new dependency
-- Check that existing functionality still works
-- Ensure no import conflicts
 - Test that `import claude_code_sdk` works
+- Confirm SDK can use existing CLI authentication (no API key setup needed)
 
 ## LLM Prompt for Implementation
 ```
@@ -70,5 +69,5 @@ I need to implement Step 1 of the LLM interface refactoring plan. Please:
 5. DO NOT proceed with any imports or tests that require the new dependency
 6. Wait for my confirmation that I have installed the dependencies before continuing
 
-**CRITICAL**: After adding the dependency, the system must stop and wait for user confirmation that dependencies are installed. Any code that imports claude_code_sdk will fail until then.
+**CRITICAL**: After adding the dependency, the system must stop and wait for user confirmation that dependencies are installed. The SDK will automatically use existing CLI subscription authentication.
 ```

@@ -1,10 +1,9 @@
-# Step 6: Documentation and Future Roadmap
+# Step 6: Essential Documentation
 
 ## Objective
-Document the completed refactoring work and create a comprehensive roadmap for advanced features that could be implemented using the Claude Code Python SDK.
+Document the completed refactoring work with essential usage examples and API documentation.
 
 ## WHERE
-- `pr_info/claude_code_sdk_features.md` (new) - Advanced features documentation
 - `README.md` (modify) - Update usage examples and API documentation
 - `src/mcp_coder/__init__.py` (modify) - Add docstrings for new exports
 - `CHANGELOG.md` (new) - Document the refactoring changes
@@ -58,17 +57,14 @@ def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> st
 ## DATA
 ### Documentation Deliverables:
 - **README.md**: Updated usage examples, API reference
-- **claude_code_sdk_features.md**: Advanced features roadmap
 - **CHANGELOG.md**: What changed in this refactoring
 - **Docstrings**: Complete API documentation in code
 
-### Advanced Features to Document:
-- Conversation continuation and session management
-- MCP server configuration and custom integrations  
-- Real-time streaming responses
-- Custom Python tools and hooks
-- Advanced prompting and system configuration
-- Performance optimization options
+### Essential Documentation:
+- Basic usage patterns for both methods
+- Authentication approach (existing CLI subscription)
+- Error handling differences between methods
+- Migration guide for existing users
 
 ## Testing Strategy
 - Verify all documentation examples work correctly
@@ -82,10 +78,10 @@ I need to implement Step 6 of the LLM interface refactoring plan. Please:
 
 1. Read the summary from pr_info/steps/summary.md to understand what we accomplished
 2. Update README.md with new usage examples showing both ask_claude() and ask_llm() functions
-3. Create pr_info/claude_code_sdk_features.md documenting advanced SDK capabilities we discovered during research
+3. Focus on essential usage examples and API documentation
 4. Add comprehensive docstrings to all new functions in the codebase
 5. Create a CHANGELOG.md documenting the refactoring changes
-6. Focus the features document on concrete capabilities with implementation difficulty estimates
+6. Keep documentation focused on immediate usage needs
 
-This completes the refactoring project and sets up the roadmap for future enhancements.
+This completes the refactoring project with clean, maintainable documentation.
 ```
