@@ -5,7 +5,8 @@ import subprocess
 
 import pytest
 
-from mcp_coder.claude_client import _find_claude_executable, ask_claude
+from mcp_coder.claude_client import ask_claude
+from mcp_coder.claude_code_cli import _find_claude_executable
 
 
 class TestClaudeClientRealIntegration:

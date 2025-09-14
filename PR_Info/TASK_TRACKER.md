@@ -32,15 +32,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy type checking and resolve any issues
   - [x] Prepare git commit for project setup changes
 
-- [ ] **Step 2: Move CLI Implementation to Dedicated Module** - [step_2.md](steps/step_2.md)  
+- [x] **Step 2: Move CLI Implementation to Dedicated Module** - [step_2.md](steps/step_2.md)  
   Extract existing CLI-based Claude Code implementation into dedicated claude_code_cli.py module
-  - [ ] Create src/mcp_coder/claude_code_cli.py with moved implementation
-  - [ ] Update src/mcp_coder/claude_client.py as compatibility wrapper
-  - [ ] Move and update existing tests to test_claude_code_cli.py
-  - [ ] Run pylint quality check and fix any issues
-  - [ ] Run pytest to ensure all tests pass with new structure
-  - [ ] Run mypy type checking and resolve any issues
-  - [ ] Prepare git commit for CLI module extraction
+  - [x] Create src/mcp_coder/claude_code_cli.py with moved implementation
+  - [x] Update src/mcp_coder/claude_client.py as compatibility wrapper
+  - [x] Move and update existing tests to test_claude_code_cli.py
+  - [x] Run pylint quality check and fix any issues
+  - [x] Run pytest to ensure all tests pass with new structure
+  - [x] Run mypy type checking and resolve any issues
+  - [x] Prepare git commit for CLI module extraction
 
 - [ ] **Step 3: Create High-Level LLM Interface** - [step_3.md](steps/step_3.md)  
   Create the top-level ask_llm() function and Claude-specific routing logic
