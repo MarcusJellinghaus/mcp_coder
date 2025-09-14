@@ -1,6 +1,7 @@
 """Claude Code interface with routing between different implementation methods."""
 
 from .claude_code_cli import ask_claude_code_cli
+from .claude_code_api import ask_claude_code_api
 
 
 def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> str:
@@ -8,11 +9,11 @@ def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> st
     Ask Claude a question using the specified implementation method.
 
     Routes between different Claude Code implementation methods (CLI, API, etc.).
-    Currently supports CLI method, with API method coming in a future step.
+    Supports both CLI and Python SDK (API) methods.
 
     Args:
         question: The question to ask Claude
-        method: The implementation method to use ("cli" for now, "api" coming soon)
+        method: The implementation method to use ("cli" or "api")
         timeout: Timeout in seconds for the request (default: 30)
 
     Returns:
@@ -28,5 +29,7 @@ def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> st
     """
     if method == "cli":
         return ask_claude_code_cli(question, timeout=timeout)
+    elif method == "api":
+        return ask_claude_code_api(question, timeout=timeout)
     else:
-        raise ValueError(f"Unsupported method: {method}. Currently supported: 'cli'")
+        raise ValueError(f"Unsupported method: {method}. Supported methods: 'cli', 'api'")

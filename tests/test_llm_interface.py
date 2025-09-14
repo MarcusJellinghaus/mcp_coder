@@ -87,10 +87,20 @@ class TestAskClaudeCode:
         mock_ask_claude_code_cli.assert_called_once_with("Test question", timeout=30)
         assert result == "Default CLI response"
 
+    @patch('mcp_coder.claude_code_interface.ask_claude_code_api')
+    def test_ask_claude_code_routes_to_api(self, mock_ask_claude_code_api: MagicMock) -> None:
+        """Test that ask_claude_code routes to API implementation."""
+        mock_ask_claude_code_api.return_value = "API response"
+        
+        result = ask_claude_code("Test question", method="api", timeout=30)
+        
+        mock_ask_claude_code_api.assert_called_once_with("Test question", timeout=30)
+        assert result == "API response"
+
     def test_ask_claude_code_unsupported_method(self) -> None:
         """Test that ask_claude_code raises ValueError for unsupported method."""
-        with pytest.raises(ValueError, match="Unsupported method: api"):
-            ask_claude_code("Test question", method="api")
+        with pytest.raises(ValueError, match="Unsupported method: invalid"):
+            ask_claude_code("Test question", method="invalid")
 
     @patch('mcp_coder.claude_code_interface.ask_claude_code_cli')
     def test_ask_claude_code_passes_through_exceptions(self, mock_ask_claude_code_cli: MagicMock) -> None:
