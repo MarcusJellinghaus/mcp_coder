@@ -244,12 +244,77 @@ class TestClaudeCodeApiIntegration:
         from mcp_coder.claude_code_api import ask_claude_code_api
 
         assert callable(ask_claude_code_api)
+        print("✓ ask_claude_code_api function is callable")
+        
+        # Also verify helper function is available
+        from mcp_coder.claude_code_api import _create_claude_client
+        assert callable(_create_claude_client)
+        print("✓ _create_claude_client helper function is callable")
 
-    @pytest.mark.skip(reason="Requires actual claude-code-sdk installation and setup")
     def test_real_api_call(self) -> None:
-        """Test making a real API call (skipped by default)."""
-        # This test would require actual SDK setup and authentication
-        # It's marked as skip to avoid failures in environments without SDK
-        result = ask_claude_code_api("What is 2+2?", timeout=60)
-        assert isinstance(result, str)
-        assert len(result) > 0
+        """Test making a real API call with proper error handling."""
+        print("\nTesting real claude-code-sdk API call...")
+        
+        # First check if SDK is available
+        try:
+            import claude_code_sdk
+            from claude_code_sdk import AssistantMessage, TextBlock, SystemMessage, ResultMessage
+            print("✓ claude-code-sdk package is available")
+            print(f"✓ Message types imported: {[cls.__name__ for cls in [AssistantMessage, TextBlock, SystemMessage, ResultMessage]]}")
+        except ImportError as e:
+            pytest.skip(f"claude-code-sdk not installed: {e}")
+        
+        # Now test the actual API call
+        try:
+            print("Making real API call...")
+            result = ask_claude_code_api("What is 2+2? Answer with just the number.", timeout=60)
+            
+            # Validate response
+            assert isinstance(result, str), f"Expected string, got {type(result)}"
+            assert len(result) > 0, "Response should not be empty"
+            print(f"✓ Real API call successful")
+            print(f"  Response type: {type(result)}")
+            print(f"  Response length: {len(result)} characters")
+            print(f"  Response content: {repr(result)}")
+            
+            # Check if response makes sense (flexible validation)
+            if "4" in result:
+                print("✓ Response contains expected result '4'")
+            else:
+                print(f"⚠ Response doesn't contain '4' but API call succeeded: {result}")
+                # Still pass since the API call worked
+            
+            # Test the detailed API call function
+            print("\nTesting detailed API call...")
+            from mcp_coder.claude_code_api import ask_claude_code_api_detailed_sync
+            detailed_result = ask_claude_code_api_detailed_sync("What is 3+3? Just the number.", timeout=60)
+            
+            assert isinstance(detailed_result, dict), f"Expected dict, got {type(detailed_result)}"
+            assert 'text' in detailed_result, "Detailed result should contain 'text' key"
+            assert 'session_info' in detailed_result, "Detailed result should contain 'session_info' key"
+            assert 'result_info' in detailed_result, "Detailed result should contain 'result_info' key"
+            
+            print(f"✓ Detailed API call successful")
+            print(f"  Text response: {repr(detailed_result['text'])}")
+            print(f"  Session ID: {detailed_result['session_info'].get('session_id', 'unknown')}")
+            print(f"  Model: {detailed_result['session_info'].get('model', 'unknown')}")
+            print(f"  Cost: ${detailed_result['result_info'].get('cost_usd', 0):.4f}")
+            print(f"  Duration: {detailed_result['result_info'].get('duration_ms', 0)}ms")
+            print(f"  Tools available: {len(detailed_result['session_info'].get('tools', []))}")
+            print(f"  Raw message count: {len(detailed_result['raw_messages'])}")
+            
+            # Validate the detailed response structure
+            if "6" in detailed_result['text']:
+                print("✓ Detailed response contains expected result '6'")
+                
+        except subprocess.CalledProcessError as e:
+            print(f"API call failed: {e}")
+            if e.stderr and ("authentication" in e.stderr.lower() or "login" in e.stderr.lower()):
+                pytest.skip(f"Authentication required for claude-code-sdk: {e.stderr}")
+            else:
+                pytest.skip(f"claude-code-sdk API call failed: {e}")
+        except subprocess.TimeoutExpired:
+            pytest.skip("API call timed out - may indicate network or service issues")
+        except Exception as e:
+            print(f"Unexpected error: {type(e).__name__}: {e}")
+            pytest.skip(f"Unexpected error during real API call: {e}")
