@@ -1,6 +1,7 @@
 """MCP Coder - An MCP server for code analysis and development tasks."""
 
 from .claude_client import ask_claude
+from .llm_interface import ask_llm
 from .subprocess_runner import (
     CommandOptions,
     CommandResult,
@@ -16,4 +17,5 @@ __all__ = [
     "CommandResult",
     "CommandOptions",
     "ask_claude",
+    "ask_llm",
 ]
