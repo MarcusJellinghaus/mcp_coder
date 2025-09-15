@@ -44,6 +44,9 @@ REM Generate git diff and create enhanced review prompt
     echo.
     echo Review the changes below and identify any issues.
     echo.
+    echo There is no read to run all checks, do not use pylint warnings.
+    echo Feel free to further analyse any mentioned files and/or the file structure etc.
+    echo.
     echo ### Focus Areas:
     echo - Logic errors or bugs
     echo - Tests for `__main__` functions should be removed ^(not needed^)
@@ -55,6 +58,8 @@ REM Generate git diff and create enhanced review prompt
     echo 2. **Critical Issues** - Must fix before merging
     echo 3. **Suggestions** - Nice to have improvements
     echo 4. **Good** - What works well
+    echo.
+    echo Do not perform any action. Just present the code review.
     echo.
     echo Base: %DEFAULT_BRANCH%
     echo.
