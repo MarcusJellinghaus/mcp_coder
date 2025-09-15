@@ -30,14 +30,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Fix all issues until checks pass
   - [x] Prepare git commit with concise message
 
-- [ ] **Step 2: Package Integration and Prompt File Creation** - [step_2.md](./steps/step_2.md)
-  - [ ] Create comprehensive prompt file `src/mcp_coder/prompts/prompts.md`
-  - [ ] Update package exports in `src/mcp_coder/__init__.py`
-  - [ ] Configure package data in `pyproject.toml`
-  - [ ] Test file path, directory, and wildcard functionality
-  - [ ] Run quality checks: pylint, pytest, mypy
-  - [ ] Fix all issues until checks pass
-  - [ ] Prepare git commit with concise message
+- [x] **Step 2: Package Integration and Prompt File Creation** - [step_2.md](./steps/step_2.md)
+  - [x] Create comprehensive prompt file `src/mcp_coder/prompts/prompts.md`
+  - [x] Update package exports in `src/mcp_coder/__init__.py`
+  - [x] Configure package data in `pyproject.toml`
+  - [x] Test file path, directory, and wildcard functionality
+  - [x] Run quality checks: pylint, pytest, mypy
+  - [x] Fix all issues until checks pass
+  - [x] Prepare git commit with concise message
 
 - [ ] **Step 3: Documentation and Final Validation** - [step_3.md](./steps/step_3.md)
   - [ ] Add comprehensive docstrings with practical usage examples

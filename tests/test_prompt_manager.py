@@ -545,3 +545,84 @@ file_code = "test"
             assert 'file_code = "test"' in result
         finally:
             os.unlink(temp_name)
+
+
+
+class TestPackageIntegration:
+    """Test package integration with real prompt files."""
+    
+    def test_package_imports(self) -> None:
+        """Test that all functions can be imported from the package."""
+        # This test is implicitly run by importing at the top of this file
+        # If import failed, this test file wouldn't run
+        assert get_prompt is not None
+        assert validate_prompt_markdown is not None
+        assert validate_prompt_directory is not None
+        
+    def test_real_prompt_file_access(self) -> None:
+        """Test accessing prompts from the real test data file."""
+        # Get the path to the test data file
+        import mcp_coder
+        package_dir = Path(mcp_coder.__file__).parent
+        prompts_file = package_dir / "prompts" / "prompts_testdata.md"
+        
+        # Test that the file exists
+        assert prompts_file.exists(), f"Test data file not found at {prompts_file}"
+        
+        # Test reading a prompt from the test data file
+        result = get_prompt(str(prompts_file), "Test Prompt AAA")
+        assert result is not None
+        assert "This is test prompt AAA" in result
+        assert "Keep responses under 50 characters" in result
+        
+    def test_real_prompt_file_directory_access(self) -> None:
+        """Test accessing prompts via directory path."""
+        import mcp_coder
+        package_dir = Path(mcp_coder.__file__).parent
+        prompts_dir = package_dir / "prompts"
+        
+        # Test that directory access works
+        result = get_prompt(str(prompts_dir), "Test Prompt BBB")
+        assert result is not None
+        assert "This is test prompt BBB" in result
+        
+    def test_real_prompt_file_wildcard_access(self) -> None:
+        """Test accessing prompts via wildcard pattern."""
+        import mcp_coder
+        package_dir = Path(mcp_coder.__file__).parent
+        prompts_pattern = str(package_dir / "prompts" / "*.md")
+        
+        # Test that wildcard access works
+        result = get_prompt(prompts_pattern, "Test Prompt CCC")
+        assert result is not None
+        assert "This is test prompt CCC" in result
+        
+    def test_real_prompt_file_validation(self) -> None:
+        """Test validation functions with real test data file."""
+        import mcp_coder
+        package_dir = Path(mcp_coder.__file__).parent
+        prompts_file = package_dir / "prompts" / "prompts_testdata.md"
+        
+        # Test markdown validation - this will show validation errors for doc headers
+        # but should still extract headers correctly
+        result = validate_prompt_markdown(str(prompts_file))
+        # The file has documentation headers without code blocks, which is expected
+        # So validation will fail, but headers should be extracted
+        assert len(result["headers"]) > 0
+        
+        # Verify specific headers are found
+        header_names = [h["name"] for h in result["headers"]]
+        expected_headers = ["Test Prompt AAA", "Test Prompt BBB", "Test Prompt CCC"]
+        for expected in expected_headers:
+            assert expected in header_names, f"Expected header '{expected}' not found in {header_names}"
+            
+    def test_real_prompt_directory_validation(self) -> None:
+        """Test directory validation with real prompts directory (will include both files)."""
+        import mcp_coder
+        package_dir = Path(mcp_coder.__file__).parent
+        prompts_dir = package_dir / "prompts"
+        
+        # Test directory validation - will have errors due to doc headers without code blocks
+        result = validate_prompt_directory(str(prompts_dir))
+        # Directory validation will show errors for documentation headers, which is expected
+        assert result["files_checked"] >= 2  # Should find at least prompts.md and prompts_testdata.md
