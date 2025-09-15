@@ -70,11 +70,8 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
             SystemMessage,
             TextBlock,
         )
-
-        types_imported = True
     except ImportError:
         # Fallback to string-based type checking if imports fail
-        types_imported = False
         AssistantMessage = None  # type: ignore[assignment,misc]
         TextBlock = None  # type: ignore[assignment,misc]
         SystemMessage = None  # type: ignore[assignment,misc]
@@ -163,12 +160,12 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
 
     try:
         return await asyncio.wait_for(_query_with_timeout(), timeout)
-    except asyncio.TimeoutError:
+    except asyncio.TimeoutError as exc:
         raise subprocess.TimeoutExpired(
             ["claude-code-sdk", "query"],
             timeout,
             f"Claude Code SDK request timed out after {timeout} seconds",
-        )
+        ) from exc
 
 
 def ask_claude_code_api(question: str, timeout: int = 30) -> str:
@@ -232,14 +229,14 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
             claude_path = find_claude_executable(return_none_if_not_found=True)
             if claude_path:
                 # Get dynamic username for path suggestions
-                username = os.environ.get("USERNAME", os.environ.get("USER", "<username>"))
-                
+                username = os.environ.get(
+                    "USERNAME", os.environ.get("USER", "<username>")
+                )
+
                 error_msg += f"\n\nFound Claude CLI at: {claude_path}"
                 error_msg += "\nTo fix this issue, add Claude to your PATH:"
                 error_msg += f"\n  Windows PowerShell: $env:PATH = 'C:\\Users\\{username}\\.local\\bin;' + $env:PATH"
-                error_msg += (
-                    f"\n  Windows CMD: set PATH=C:\\Users\\{username}\\.local\\bin;%PATH%"
-                )
+                error_msg += f"\n  Windows CMD: set PATH=C:\\Users\\{username}\\.local\\bin;%PATH%"
                 error_msg += (
                     "\n  Or restart your terminal after installing Claude globally."
                 )
@@ -306,11 +303,8 @@ async def ask_claude_code_api_detailed(
             SystemMessage,
             TextBlock,
         )
-
-        types_imported = True
     except ImportError:
         # Fallback to string-based type checking if imports fail
-        types_imported = False
         AssistantMessage = None  # type: ignore[assignment,misc]
         TextBlock = None  # type: ignore[assignment,misc]
         SystemMessage = None  # type: ignore[assignment,misc]
@@ -400,12 +394,12 @@ async def ask_claude_code_api_detailed(
 
     try:
         return await asyncio.wait_for(_query_with_timeout(), timeout)
-    except asyncio.TimeoutError:
+    except asyncio.TimeoutError as exc:
         raise subprocess.TimeoutExpired(
             ["claude-code-sdk", "query"],
             timeout,
             f"Claude Code SDK request timed out after {timeout} seconds",
-        )
+        ) from exc
 
 
 def ask_claude_code_api_detailed_sync(

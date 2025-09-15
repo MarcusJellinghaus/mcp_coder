@@ -49,7 +49,7 @@ class TestAskClaudeCodeApiAsync:
         mock_message2 = MagicMock()
         mock_message2.text = "world!"
 
-        async def mock_query_response(*args: object, **kwargs: object) -> object:
+        async def mock_query_response(*_args: object, **_kwargs: object) -> object:
             yield mock_message1
             yield mock_message2
 
@@ -78,7 +78,7 @@ class TestAskClaudeCodeApiAsync:
         mock_message.text = None
         mock_message.content = "Response with content"
 
-        async def mock_query_response(*args: object, **kwargs: object) -> object:
+        async def mock_query_response(*_args: object, **_kwargs: object) -> object:
             yield mock_message
 
         mock_query.side_effect = mock_query_response
@@ -106,7 +106,7 @@ class TestAskClaudeCodeApiAsync:
             "Fallback content response"  # Set content instead of relying on __str__
         )
 
-        async def mock_query_response(*args: object, **kwargs: object) -> object:
+        async def mock_query_response(*_args: object, **_kwargs: object) -> object:
             yield mock_message
 
         mock_query.side_effect = mock_query_response
@@ -128,7 +128,7 @@ class TestAskClaudeCodeApiAsync:
         mock_options = MagicMock()
         mock_create_client.return_value = mock_options
 
-        async def slow_query_response(*args: object, **kwargs: object) -> object:
+        async def slow_query_response(*_args: object, **_kwargs: object) -> object:
             await asyncio.sleep(2)  # Simulate slow response
             yield MagicMock(text="Too late")
 
@@ -154,7 +154,7 @@ class TestAskClaudeCodeApiAsync:
         mock_message = MagicMock()
         mock_message.text = "  \n  Response with whitespace  \n  "
 
-        async def mock_query_response(*args: object, **kwargs: object) -> object:
+        async def mock_query_response(*_args: object, **_kwargs: object) -> object:
             yield mock_message
 
         mock_query.side_effect = mock_query_response
@@ -182,7 +182,7 @@ class TestAskClaudeCodeApi:
         assert result == "Test response"
         mock_asyncio_run.assert_called_once()
         # The actual async function call is passed to asyncio.run
-        args, kwargs = mock_asyncio_run.call_args
+        args, _ = mock_asyncio_run.call_args
         assert len(args) == 1  # One positional argument (the coroutine)
 
     @patch("mcp_coder.claude_code_api.asyncio.run")
@@ -217,7 +217,9 @@ class TestAskClaudeCodeApi:
 
     @patch("mcp_coder.claude_code_api.find_claude_executable")
     @patch("mcp_coder.claude_code_api.asyncio.run")
-    def test_dynamic_username_in_error_message(self, mock_asyncio_run: MagicMock, mock_find_claude: MagicMock) -> None:
+    def test_dynamic_username_in_error_message(
+        self, mock_asyncio_run: MagicMock, mock_find_claude: MagicMock
+    ) -> None:
         """Test that error messages use dynamic username instead of hardcoded 'Marcus'."""
         # Setup
         mock_find_claude.return_value = "/some/path/to/claude"
@@ -240,7 +242,10 @@ class TestAskClaudeCodeApi:
                 # Check that the error message contains the expected username
                 assert f"C:\\Users\\{expected_username}\\.local\\bin" in error_message
                 # Ensure it doesn't contain the hardcoded "Marcus"
-                assert "C:\\Users\\Marcus\\.local\\bin" not in error_message or expected_username == "Marcus"
+                assert (
+                    "C:\\Users\\Marcus\\.local\\bin" not in error_message
+                    or expected_username == "Marcus"
+                )
 
 
 class TestImportError:
@@ -270,14 +275,10 @@ class TestClaudeCodeApiIntegration:
         """Test that the API implementation can be imported and called."""
         # This is a minimal integration test that doesn't require actual SDK
         # It just verifies the module structure is correct
-        from mcp_coder.claude_code_api import ask_claude_code_api
-
         assert callable(ask_claude_code_api)
         print("✓ ask_claude_code_api function is callable")
 
         # Also verify helper function is available
-        from mcp_coder.claude_code_api import _create_claude_client
-
         assert callable(_create_claude_client)
         print("✓ _create_claude_client helper function is callable")
 
@@ -312,7 +313,7 @@ class TestClaudeCodeApiIntegration:
             # Validate response
             assert isinstance(result, str), f"Expected string, got {type(result)}"
             assert len(result) > 0, "Response should not be empty"
-            print(f"✓ Real API call successful")
+            print("✓ Real API call successful")
             print(f"  Response type: {type(result)}")
             print(f"  Response length: {len(result)} characters")
             print(f"  Response content: {repr(result)}")
@@ -347,7 +348,7 @@ class TestClaudeCodeApiIntegration:
                 "result_info" in detailed_result
             ), "Detailed result should contain 'result_info' key"
 
-            print(f"✓ Detailed API call successful")
+            print("✓ Detailed API call successful")
             print(f"  Text response: {repr(detailed_result['text'])}")
             print(
                 f"  Session ID: {detailed_result['session_info'].get('session_id', 'unknown')}"

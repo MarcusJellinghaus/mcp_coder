@@ -42,39 +42,28 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
         subprocess.CalledProcessError: If the command fails
         FileNotFoundError: If Claude Code CLI is not found
     """
-    try:
-        # Find the Claude executable
-        claude_cmd = _find_claude_executable()
+    # Find the Claude executable
+    claude_cmd = _find_claude_executable()
 
-        # Use Claude Code CLI to ask the question
-        result = execute_command(
+    # Use Claude Code CLI to ask the question
+    result = execute_command(
+        [claude_cmd, "--print", question],
+        timeout_seconds=timeout,
+    )
+
+    if result.timed_out:
+        raise subprocess.TimeoutExpired(
             [claude_cmd, "--print", question],
-            timeout_seconds=timeout,
+            timeout,
+            f"Claude Code command timed out after {timeout} seconds",
         )
 
-        if result.timed_out:
-            raise subprocess.TimeoutExpired(
-                [claude_cmd, "--print", question],
-                timeout,
-                f"Claude Code command timed out after {timeout} seconds",
-            )
+    if result.return_code != 0:
+        raise subprocess.CalledProcessError(
+            result.return_code,
+            [claude_cmd, "--print", question],
+            output=result.stdout,
+            stderr=f"Claude Code command failed: {result.stderr}",
+        )
 
-        if result.return_code != 0:
-            raise subprocess.CalledProcessError(
-                result.return_code,
-                [claude_cmd, "--print", question],
-                output=result.stdout,
-                stderr=f"Claude Code command failed: {result.stderr}",
-            )
-
-        return result.stdout.strip()
-
-    except FileNotFoundError:
-        # This will be raised by _find_claude_executable if not found
-        raise
-    except subprocess.TimeoutExpired:
-        # Re-raise timeout errors
-        raise
-    except subprocess.CalledProcessError:
-        # Re-raise command errors
-        raise
+    return result.stdout.strip()
