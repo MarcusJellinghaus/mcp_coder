@@ -23,19 +23,19 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Implementation Steps
 
-- [ ] **Step 1: Create Test Directory Structure** - [steps/step_1.md](./steps/step_1.md)
-  - [ ] Create missing directory structure and `__init__.py` files to mirror source code organization
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest check and fix any issues
-  - [ ] Run mypy check and fix any issues
-  - [ ] Prepare git commit with concise message
+- [x] **Step 1: Create Test Directory Structure** - [steps/step_1.md](./steps/step_1.md)
+  - [x] Create missing directory structure and `__init__.py` files to mirror source code organization
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest check and fix any issues
+  - [x] Run mypy check and fix any issues
+  - [x] Prepare git commit with concise message
 
-- [ ] **Step 2: Move Claude-Related Test Files** - [steps/step_2.md](./steps/step_2.md)
-  - [ ] Move existing Claude-related test files from flat structure to new subdirectory structure
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest check and fix any issues
-  - [ ] Run mypy check and fix any issues
-  - [ ] Prepare git commit with concise message
+- [x] **Step 2: Move Claude-Related Test Files** - [steps/step_2.md](./steps/step_2.md)
+  - [x] Move existing Claude-related test files from flat structure to new subdirectory structure
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest check and fix any issues
+  - [x] Run mypy check and fix any issues
+  - [x] Prepare git commit with concise message
 
 - [ ] **Step 3: Create Missing Test Files for Uncovered Modules** - [steps/step_3.md](./steps/step_3.md)
   - [ ] Create test files for source modules that currently lack test coverage
