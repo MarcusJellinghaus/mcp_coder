@@ -1,7 +1,7 @@
 """Claude Code interface with routing between different implementation methods."""
 
-from .claude_code_cli import ask_claude_code_cli
 from .claude_code_api import ask_claude_code_api
+from .claude_code_cli import ask_claude_code_cli
 
 
 def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> str:
@@ -32,4 +32,6 @@ def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> st
     elif method == "api":
         return ask_claude_code_api(question, timeout=timeout)
     else:
-        raise ValueError(f"Unsupported method: {method}. Supported methods: 'cli', 'api'")
+        raise ValueError(
+            f"Unsupported method: {method}. Supported methods: 'cli', 'api'"
+        )

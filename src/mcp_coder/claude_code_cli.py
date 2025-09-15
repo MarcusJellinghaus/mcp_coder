@@ -4,26 +4,23 @@
 import subprocess
 from typing import Optional
 
-from .subprocess_runner import execute_command
 from .claude_executable_finder import find_claude_executable
+from .subprocess_runner import execute_command
 
 
 def _find_claude_executable() -> str:
     """Find Claude Code CLI executable, checking both PATH and common install locations.
-    
+
     This is a wrapper around the shared find_claude_executable function,
     configured for CLI usage (tests execution and raises on not found).
-    
+
     Returns:
         Path to Claude executable
-        
+
     Raises:
         FileNotFoundError: If Claude Code CLI is not found
     """
-    result = find_claude_executable(
-        test_execution=True,
-        return_none_if_not_found=False
-    )
+    result = find_claude_executable(test_execution=True, return_none_if_not_found=False)
     if result is None:
         raise FileNotFoundError("Claude Code CLI not found")
     return result

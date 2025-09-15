@@ -3,7 +3,9 @@
 from .claude_code_interface import ask_claude_code
 
 
-def ask_llm(question: str, provider: str = "claude", method: str = "cli", timeout: int = 30) -> str:
+def ask_llm(
+    question: str, provider: str = "claude", method: str = "cli", timeout: int = 30
+) -> str:
     """
     Ask a question to an LLM provider using the specified method.
 
@@ -30,4 +32,6 @@ def ask_llm(question: str, provider: str = "claude", method: str = "cli", timeou
     if provider == "claude":
         return ask_claude_code(question, method=method, timeout=timeout)
     else:
-        raise ValueError(f"Unsupported provider: {provider}. Currently supported: 'claude'")
+        raise ValueError(
+            f"Unsupported provider: {provider}. Currently supported: 'claude'"
+        )
