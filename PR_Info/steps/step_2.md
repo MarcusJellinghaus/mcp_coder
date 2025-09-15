@@ -1,12 +1,14 @@
-# Step 2: Test File Path Functionality 
+# Step 2: Package Integration and Prompt File Creation
 
 ## WHERE
-- **Example file**: `src/mcp_coder/prompts/commit.md` (optional)
-- **Test update**: Add file path test to `tests/test_prompt_manager.py`
+- **Prompt file**: `src/mcp_coder/prompts/prompts.md`
+- **Package exports**: `src/mcp_coder/__init__.py`
+- **Configuration**: `pyproject.toml` (package data)
 
 ## WHAT
-Optionally create a real prompt file to test file path functionality:
+Create comprehensive prompt file and integrate into package:
 
+**Comprehensive prompt file** (`prompts.md`):
 ```markdown
 # Short Commit
 ```
@@ -19,30 +21,49 @@ Keep it under 50 characters.
 Provide a detailed commit message with body.
 Include rationale and context for the changes.
 ```
+
+## Documentation Section
+
+This file contains prompts for the mcp-coder project...
+[Additional documentation, experiences, notes, etc.]
+
+# Another Prompt
+```
+Example of another prompt...
+```
 ```
 
-**Add one more test**:
+**Package integration**:
 ```python
-def test_get_prompt_from_file():
-    """Test reading from actual file path (if file exists)."""
+# In src/mcp_coder/__init__.py
+from .prompt_manager import get_prompt, validate_prompt_markdown, validate_prompt_directory
 ```
 
 ## HOW
-- Optionally create real prompt file
-- Add test for file path functionality
-- Verify both memory stream AND file path work
+- Create comprehensive `prompts.md` with documentation and prompts
+- Update package exports in `__init__.py`
+- Configure package data in `pyproject.toml`
+- Test file path functionality with real prompt file
+- Verify wildcard and directory functionality
 
 ## ALGORITHM
 ```
-1. (Optional) Create src/mcp_coder/prompts/commit.md
-2. Add test for file path reading
-3. Verify auto-detection works for both types
-4. Test that file path and memory stream both work
+1. Create src/mcp_coder/prompts/ directory
+2. Create comprehensive prompts.md with mixed content
+3. Update __init__.py to export all three functions
+4. Configure package data in pyproject.toml
+5. Test file path, directory, and wildcard functionality
+6. Verify package imports work correctly
+7. Test validation functions with real prompt file
 ```
 
 ## DATA
-**Optional file**: `src/mcp_coder/prompts/commit.md`
-**Test coverage**: Both memory streams AND file paths work
+**Created files**:
+- `src/mcp_coder/prompts/prompts.md` - comprehensive documentation + prompts
+- Updated `src/mcp_coder/__init__.py` - package exports
+- Updated `pyproject.toml` - package data configuration
+
+**Test coverage**: File paths, directories, wildcards, package imports, real file validation
 
 ---
 
@@ -50,19 +71,24 @@ def test_get_prompt_from_file():
 
 You are implementing a prompt manager for the mcp-coder project.
 
-**Context**: Read the summary at `pr_info/steps/summary.md`. Step 1 should be complete with working functions that handle memory streams.
+**Context**: Read the summary at `pr_info/steps/summary.md` and decisions at `pr_info/steps/Decisions.md`. Step 1 should be complete with working core functions.
 
-**Current Step**: Test and optionally implement file path functionality.
+**Current Step**: Create comprehensive prompt file and integrate into package.
 
 **Task**: 
-1. Add a test for file path functionality in `tests/test_prompt_manager.py`
-2. Optionally create `src/mcp_coder/prompts/commit.md` for testing real files
+1. Create `src/mcp_coder/prompts/prompts.md` as comprehensive documentation + prompts file
+2. Update `src/mcp_coder/__init__.py` to export all three functions
+3. Configure package data in `pyproject.toml`
+4. Test file path, directory, and wildcard functionality with real files
 
 **Requirements**:
-- Verify that your auto-detection works for both memory streams and file paths
-- Test that the same functions work with both input types
-- If you create a real file, use the same format as the embedded test data
+- Create a lengthy markdown file with prompts, documentation, experiences mixed together
+- Use various header levels (`#`, `##`, `###`, `####`) for structure
+- Include actual prompts in code blocks after headers
+- Test that `from mcp_coder import get_prompt` works
+- Verify wildcard patterns like `prompts/*` and directory paths work
+- Test validation functions with the real prompt file
 
-**Key point**: This step verifies the flexible input system works for both use cases
+**Key point**: This creates the actual prompt file and integrates the package for real-world use
 
-**Test**: Verify both `get_prompt(memory_stream, "Header")` AND `get_prompt("file.md", "Header")` work
+**Test**: Verify file paths, directories, wildcards, package imports all work with real prompt file

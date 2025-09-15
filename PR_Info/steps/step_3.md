@@ -1,41 +1,74 @@
-# Step 3: Complete Setup (Package Config + Exports)
+# Step 3: Documentation and Final Validation
 
 ## WHERE
-- **Configuration**: `pyproject.toml` (only if using real files)
-- **Package exports**: `src/mcp_coder/__init__.py`
+- **Documentation**: Enhanced docstrings and usage examples
+- **Validation**: Comprehensive quality checks and testing
+- **Final integration**: End-to-end functionality verification
 
 ## WHAT
-**Complete the remaining setup tasks** following the detailed instructions that will be included in the `prompt_manager.py` file:
+**Enhanced documentation and comprehensive validation**:
 
-1. **Package configuration** (only if using real prompt files):
-   ```toml
-   [tool.setuptools.package-data]
-   "mcp_coder" = ["prompts/*.md"]
-   ```
-
-2. **Export functions** - Add to `src/mcp_coder/__init__.py`:
+1. **Comprehensive docstrings** with practical examples:
    ```python
-   from .prompt_manager import get_prompt, validate_prompt_markdown
+   def get_prompt(source: str, header: str) -> str:
+       """Get prompt from markdown source.
+       
+       Args:
+           source: File path, directory, wildcard pattern, or markdown content
+           header: Header name to search for (any level: #, ##, ###, ####)
+           
+       Examples:
+           # From string content
+           prompt = get_prompt('# Test\n```\nHello\n```', 'Test')
+           
+           # From file
+           prompt = get_prompt('prompts/prompts.md', 'Short Commit')
+           
+           # From directory (all .md files)
+           prompt = get_prompt('prompts/', 'Short Commit')
+           
+           # From wildcard
+           prompt = get_prompt('prompts/*.md', 'Short Commit')
+       """
    ```
+
+2. **Usage documentation** including markdown format requirements
+3. **Error handling examples** and troubleshooting guidance
 
 ## HOW
-- Follow the detailed setup instructions in `prompt_manager.py`
-- The implementation file will contain complete step-by-step guidance
-- Package config only needed if using real files (not just memory streams)
-- Test that everything works after setup
+- Add comprehensive docstrings with practical usage examples
+- Document markdown format requirements and expectations
+- Include error handling examples for common issues
+- Run complete quality checks (pylint, pytest, mypy)
+- Verify end-to-end functionality with real prompt files
+- Test package imports and exports work correctly
 
 ## ALGORITHM
 ```
-1. Read setup instructions in prompt_manager.py
-2. Update __init__.py for exports (always needed)
-3. Update pyproject.toml for package data (only if using files)
-4. Test final integration works
-5. Run tests to verify everything passes
+1. Add comprehensive docstrings to all functions
+2. Include practical usage examples in documentation
+3. Document markdown format requirements
+4. Add error handling examples and troubleshooting
+5. Run complete quality checks (pylint, pytest, mypy)
+6. Test end-to-end functionality with real files
+7. Verify package imports work: `from mcp_coder import get_prompt`
+8. Test all input types: string content, files, directories, wildcards
+9. Validate cross-file duplicate detection works
+10. Confirm error messages are clear and actionable
 ```
 
 ## DATA
-**Final deliverable**: Complete, working prompt manager system ready for use
-**Key feature**: Works with memory streams (no files needed) OR real files
+**Final deliverable**: Production-ready prompt manager with comprehensive documentation
+
+**Key features**:
+- Works with string content, file paths, directories, and wildcards
+- Clear error messages with file locations and line numbers
+- Cross-file duplicate detection using virtual concatenation
+- Detailed validation results for troubleshooting
+- Comprehensive documentation with usage examples
+- Full package integration and exports
+
+**Quality assurance**: All checks pass (pylint, pytest, mypy), comprehensive test coverage
 
 ---
 
@@ -43,19 +76,24 @@
 
 You are implementing a prompt manager for the mcp-coder project.
 
-**Context**: Read the summary at `pr_info/steps/summary.md`. Steps 1-2 should be complete with working prompt manager that handles both memory streams and optionally files.
+**Context**: Read the summary at `pr_info/steps/summary.md` and decisions at `pr_info/steps/Decisions.md`. Steps 1-2 should be complete with working core functions and package integration.
 
-**Current Step**: Complete the final setup by following instructions in the prompt_manager.py file.
+**Current Step**: Add comprehensive documentation and run final validation.
 
-**Task**: The `prompt_manager.py` file will contain detailed instructions for:
-1. Updating `src/mcp_coder/__init__.py` to export the prompt manager functions
-2. Optionally updating `pyproject.toml` (only if using real prompt files)
-3. Final testing and validation
+**Task**: 
+1. Add comprehensive docstrings with practical usage examples to all functions
+2. Document markdown format requirements and error handling patterns
+3. Run complete quality checks (pylint, pytest, mypy) and fix any issues
+4. Test end-to-end functionality with real prompt files
+5. Verify all input types work correctly (string content, files, directories, wildcards)
 
 **Requirements**:
-- Follow the step-by-step instructions that will be included in `prompt_manager.py`
-- Always update exports in `__init__.py`
-- Package configuration only needed if using real files (not memory streams)
-- Test that the complete system works: `from mcp_coder import get_prompt`
+- Include practical examples in docstrings showing different input types
+- Document the expected markdown format (headers + code blocks)
+- Show error handling examples for common issues
+- Ensure all quality checks pass without issues
+- Test cross-file duplicate detection with multiple prompt files
+- Verify package imports work: `from mcp_coder import get_prompt, validate_prompt_markdown, validate_prompt_directory`
+- Confirm error messages are clear and actionable
 
-**Success criteria**: The prompt manager works with both memory streams and files, integrated into the package.
+**Success criteria**: Production-ready prompt manager with excellent documentation, passing all quality checks, and comprehensive functionality.
