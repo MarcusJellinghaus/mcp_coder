@@ -127,7 +127,6 @@ def setup_claude_path() -> Optional[str]:
         current_path = os.environ.get("PATH", "")
         if claude_dir not in current_path:
             os.environ["PATH"] = f"{claude_dir}{os.pathsep}{current_path}"
-            print(f"Added to PATH: {claude_dir}")
         return claude_path
 
     return None

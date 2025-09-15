@@ -156,17 +156,7 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
                             # Fallback: convert to string
                             response_parts.append(str(message.content))
 
-        # Debug info (only in verbose mode or for debugging)
-        if session_info:
-            print(
-                f"[DEBUG] Session: {session_info.get('session_id', 'unknown')}, "
-                f"Model: {session_info.get('model', 'unknown')}"
-            )
-        if result_info and result_info.get("cost_usd"):
-            print(
-                f"[DEBUG] Cost: ${result_info['cost_usd']:.4f}, "
-                f"Duration: {result_info.get('duration_ms', 0)}ms"
-            )
+        # Session and result info are collected but not printed in production
 
         return "".join(response_parts).strip()
 
@@ -193,8 +183,7 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
     3. ResultMessage: Contains cost, duration, and usage statistics
 
     This function extracts only the text content from AssistantMessage.TextBlock objects
-    and returns it as a concatenated string. Debug information about session and costs
-    is printed during execution.
+    and returns it as a concatenated string.
 
     Response Structure Example:
         SystemMessage(

@@ -168,12 +168,12 @@ class TestSetupClaudePath:
             # But can be found in specific location
             mock_find.return_value = "/opt/claude/bin/claude"
 
-            with patch("builtins.print") as mock_print:
-                result = setup_claude_path()
+            result = setup_claude_path()
 
+            # Verify the function works correctly
             assert result == "/opt/claude/bin/claude"
             assert "/opt/claude/bin" in os.environ["PATH"]
-            mock_print.assert_called_once_with("Added to PATH: /opt/claude/bin")
+            # Note: Print statement was removed from production code (debug cleanup)
 
         finally:
             # Restore original PATH
@@ -231,9 +231,9 @@ class TestVerifyClaudeInstallation:
         assert result["works"] is False
         error_msg = result["error"]
         assert error_msg is not None
-        assert (
-            "Claude not found" in error_msg
-        )  # pylint: disable=unsupported-membership-test
+        # Convert to string explicitly to avoid pylint E1135
+        error_str = str(error_msg)
+        assert "Claude not found" in error_str
 
     @patch("mcp_coder.claude_executable_finder.find_claude_executable")
     @patch("mcp_coder.claude_executable_finder.execute_command")
@@ -259,9 +259,9 @@ class TestVerifyClaudeInstallation:
         assert result["works"] is False
         error_msg = result["error"]
         assert error_msg is not None
-        assert (
-            "Version check failed" in error_msg
-        )  # pylint: disable=unsupported-membership-test
+        # Convert to string explicitly to avoid pylint E1135
+        error_str = str(error_msg)
+        assert "Version check failed" in error_str
 
 
 class TestIntegration:
