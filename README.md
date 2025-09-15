@@ -10,7 +10,9 @@ Automated software feature development with stringent quality controls using AI-
 
 ## ✨ Current Features
 
-- **Claude Code Integration**: Programmatic interaction with Claude Code CLI
+- **Extensible LLM Interface**: Multi-provider LLM integration with `ask_llm()` function
+- **Claude Code Integration**: Both CLI and Python SDK support via `ask_claude_code()`
+- **Dual Implementation Methods**: Choose between CLI (`method="cli"`) or API (`method="api"`)
 - **Intelligent Queries**: Ask Claude about code analysis and implementation strategies
 
 ## 🔮 Planned Features
@@ -51,12 +53,86 @@ pip install -e ".[dev]"
 ### Usage
 
 ```python
-from mcp_coder.claude_client import ask_claude
+# New extensible interface (recommended)
+from mcp_coder import ask_llm
 
-# Ask Claude to analyze code or provide implementation guidance
+# Ask Claude using CLI method (default)
+response = ask_llm("How should I structure this new feature?", provider="claude", method="cli")
+print(response)
+
+# Ask Claude using Python SDK method
+response = ask_llm("Explain this code pattern", provider="claude", method="api")
+print(response)
+
+# Claude-specific interface
+from mcp_coder.claude_code_interface import ask_claude_code
+
+# Use CLI method
+response = ask_claude_code("Review my code", method="cli")
+print(response)
+
+# Use API method
+response = ask_claude_code("Optimize this function", method="api")
+print(response)
+
+# Legacy interface (still supported)
+from mcp_coder import ask_claude
 response = ask_claude("How should I structure this new feature?")
 print(response)
 ```
+
+## 📋 API Reference
+
+### High-Level Interface
+
+#### `ask_llm(question, provider="claude", method="cli", timeout=30)`
+
+Main entry point for LLM interactions with extensible provider support.
+
+**Parameters:**
+- `question` (str): The question to ask the LLM
+- `provider` (str): LLM provider to use (currently supports "claude")
+- `method` (str): Implementation method ("cli" or "api")
+- `timeout` (int): Request timeout in seconds (default: 30)
+
+**Returns:** LLM response as string
+
+### Claude-Specific Interface
+
+#### `ask_claude_code(question, method="cli", timeout=30)`
+
+Claude Code interface with routing between CLI and API methods.
+
+**Parameters:**
+- `question` (str): The question to ask Claude
+- `method` (str): Implementation method ("cli" or "api")
+- `timeout` (int): Request timeout in seconds (default: 30)
+
+**Returns:** Claude's response as string
+
+### Implementation Methods
+
+- **CLI Method** (`method="cli"`): Uses Claude Code CLI executable
+  - Requires Claude Code CLI installation
+  - Uses existing CLI subscription authentication
+  - Subprocess-based execution
+
+- **API Method** (`method="api"`): Uses Claude Code Python SDK
+  - Leverages existing CLI authentication automatically
+  - Direct Python API integration
+  - Enhanced error handling and response parsing
+
+### Legacy Interface
+
+#### `ask_claude(question, timeout=30)`
+
+Backward-compatible interface using CLI method.
+
+**Parameters:**
+- `question` (str): The question to ask Claude
+- `timeout` (int): Request timeout in seconds (default: 30)
+
+**Returns:** Claude's response as string
 
 ## 🛠️ Development
 
@@ -66,6 +142,10 @@ pip install -e ".[dev]"
 
 # Run tests
 pytest
+
+# Run code quality checks
+pylint src/
+mypy src/
 ```
 
 ## 📚 Documentation

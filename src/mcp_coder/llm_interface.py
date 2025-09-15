@@ -15,7 +15,9 @@ def ask_llm(
     Args:
         question: The question to ask the LLM
         provider: The LLM provider to use (currently only "claude" is supported)
-        method: The implementation method to use ("cli" for now, "api" coming soon)
+        method: The implementation method to use ("cli" or "api")
+                - "cli": Uses Claude Code CLI executable (requires installation)
+                - "api": Uses Claude Code Python SDK (automatic authentication)
         timeout: Timeout in seconds for the request (default: 30)
 
     Returns:
@@ -25,8 +27,17 @@ def ask_llm(
         ValueError: If the provider or method is not supported
         Various exceptions from underlying implementations (e.g., subprocess errors)
 
-    Example:
+    Examples:
+        >>> # Use CLI method (default)
         >>> response = ask_llm("What is Python?", provider="claude", method="cli")
+        >>> print(response)
+        
+        >>> # Use API method (recommended)
+        >>> response = ask_llm("Explain recursion", provider="claude", method="api")
+        >>> print(response)
+        
+        >>> # Default parameters
+        >>> response = ask_llm("Review this code")  # Uses claude + cli
         >>> print(response)
     """
     if provider == "claude":

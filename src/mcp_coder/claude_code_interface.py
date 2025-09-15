@@ -23,8 +23,17 @@ def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> st
         ValueError: If the method is not supported
         Various exceptions from underlying implementations (e.g., subprocess errors for CLI)
 
-    Example:
+    Examples:
+        >>> # Use CLI method
         >>> response = ask_claude_code("Explain recursion", method="cli")
+        >>> print(response)
+        
+        >>> # Use API method (recommended)
+        >>> response = ask_claude_code("Review this function", method="api")
+        >>> print(response)
+        
+        >>> # Default method (CLI)
+        >>> response = ask_claude_code("Optimize this code")
         >>> print(response)
     """
     if method == "cli":
