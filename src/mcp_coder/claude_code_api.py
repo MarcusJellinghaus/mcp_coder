@@ -7,14 +7,14 @@ import subprocess
 from typing import Any
 
 from .claude_executable_finder import find_claude_executable, setup_claude_path
-
-try:
-    from claude_code_sdk import ClaudeCodeOptions, query
-except ImportError as e:
-    raise ImportError(
-        "claude-code-sdk is not installed. Please install it with: "
-        "pip install claude-code-sdk"
-    ) from e
+from claude_code_sdk import (
+    AssistantMessage,
+    ClaudeCodeOptions,
+    ResultMessage,
+    SystemMessage,
+    TextBlock,
+    query,
+)
 
 
 def _create_claude_client() -> ClaudeCodeOptions:
@@ -70,20 +70,7 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
 
     options = _create_claude_client()
 
-    # Import message types for proper type checking
-    try:
-        from claude_code_sdk import (
-            AssistantMessage,
-            ResultMessage,
-            SystemMessage,
-            TextBlock,
-        )
-    except ImportError:
-        # Fallback to string-based type checking if imports fail
-        AssistantMessage = None  # type: ignore[assignment,misc]
-        TextBlock = None  # type: ignore[assignment,misc]
-        SystemMessage = None  # type: ignore[assignment,misc]
-        ResultMessage = None  # type: ignore[assignment,misc]
+    # Message types are now available at module level
 
     # Use asyncio timeout to respect the timeout parameter
     async def _query_with_timeout() -> str:
@@ -93,13 +80,13 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
 
         async for message in query(prompt=question, options=options):
             # Handle different message types according to SDK documentation
-            if AssistantMessage is not None and isinstance(message, AssistantMessage):
+            if isinstance(message, AssistantMessage):
                 # AssistantMessage contains content blocks (TextBlock, ToolUseBlock, etc.)
                 for block in message.content:
-                    if TextBlock is not None and isinstance(block, TextBlock):
+                    if isinstance(block, TextBlock):
                         response_parts.append(block.text)
 
-            elif SystemMessage is not None and isinstance(message, SystemMessage):
+            elif isinstance(message, SystemMessage):
                 # SystemMessage contains session metadata - store for debugging
                 session_info.update(
                     {
@@ -122,7 +109,7 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
                     }
                 )
 
-            elif ResultMessage is not None and isinstance(message, ResultMessage):
+            elif isinstance(message, ResultMessage):
                 # ResultMessage contains cost and usage information
                 result_info.update(
                     {
@@ -132,35 +119,6 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
                         "result": getattr(message, "result", None),
                     }
                 )
-
-            else:
-                # Fallback for unknown message types or when imports failed
-                # Check for common attributes and extract text content
-                message_type = type(message).__name__
-
-                if message_type == "AssistantMessage":
-                    # Handle AssistantMessage without import
-                    if hasattr(message, "content"):
-                        for content_block in message.content:
-                            if hasattr(content_block, "text"):
-                                response_parts.append(content_block.text)
-
-                elif hasattr(message, "text") and message.text:
-                    # Direct text attribute
-                    response_parts.append(message.text)
-                elif hasattr(message, "content") and message.content:
-                    # Content attribute that might be text
-                    if isinstance(message.content, str):
-                        response_parts.append(message.content)
-                    else:
-                        # Try to extract text from content blocks
-                        try:
-                            for content_block in message.content:
-                                if hasattr(content_block, "text"):
-                                    response_parts.append(content_block.text)
-                        except (TypeError, AttributeError):
-                            # Fallback: convert to string
-                            response_parts.append(str(message.content))
 
         # Session and result info are collected but not printed in production
 
@@ -219,7 +177,6 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
         ValueError: If input validation fails
         subprocess.TimeoutExpired: If the request times out
         subprocess.CalledProcessError: If the SDK request fails (with helpful error messages)
-        ImportError: If claude-code-sdk is not installed
     """
     # Input validation is handled by _ask_claude_code_api_async
     try:
@@ -317,20 +274,7 @@ async def ask_claude_code_api_detailed(
 
     options = _create_claude_client()
 
-    # Import message types for proper type checking
-    try:
-        from claude_code_sdk import (
-            AssistantMessage,
-            ResultMessage,
-            SystemMessage,
-            TextBlock,
-        )
-    except ImportError:
-        # Fallback to string-based type checking if imports fail
-        AssistantMessage = None  # type: ignore[assignment,misc]
-        TextBlock = None  # type: ignore[assignment,misc]
-        SystemMessage = None  # type: ignore[assignment,misc]
-        ResultMessage = None  # type: ignore[assignment,misc]
+    # Message types are now available at module level
 
     # Use asyncio timeout to respect the timeout parameter
     async def _query_with_timeout() -> dict[str, Any]:
@@ -343,13 +287,13 @@ async def ask_claude_code_api_detailed(
             raw_messages.append(message)
 
             # Handle different message types according to SDK documentation
-            if AssistantMessage is not None and isinstance(message, AssistantMessage):
+            if isinstance(message, AssistantMessage):
                 # AssistantMessage contains content blocks (TextBlock, ToolUseBlock, etc.)
                 for block in message.content:
-                    if TextBlock is not None and isinstance(block, TextBlock):
+                    if isinstance(block, TextBlock):
                         response_parts.append(block.text)
 
-            elif SystemMessage is not None and isinstance(message, SystemMessage):
+            elif isinstance(message, SystemMessage):
                 # SystemMessage contains session metadata
                 session_info.update(
                     {
@@ -382,7 +326,7 @@ async def ask_claude_code_api_detailed(
                     }
                 )
 
-            elif ResultMessage is not None and isinstance(message, ResultMessage):
+            elif isinstance(message, ResultMessage):
                 # ResultMessage contains cost and usage information
                 result_info.update(
                     {
@@ -395,17 +339,6 @@ async def ask_claude_code_api_detailed(
                         "is_error": getattr(message, "is_error", False),
                     }
                 )
-
-            else:
-                # Fallback for unknown message types or when imports failed
-                message_type = type(message).__name__
-
-                if message_type == "AssistantMessage":
-                    # Handle AssistantMessage without import
-                    if hasattr(message, "content"):
-                        for content_block in message.content:
-                            if hasattr(content_block, "text"):
-                                response_parts.append(content_block.text)
 
         return {
             "text": "".join(response_parts).strip(),

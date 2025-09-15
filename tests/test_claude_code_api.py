@@ -35,18 +35,27 @@ class TestAskClaudeCodeApiAsync:
     @pytest.mark.asyncio
     @patch("mcp_coder.claude_code_api.query")
     @patch("mcp_coder.claude_code_api._create_claude_client")
-    async def test_basic_question_with_text_attribute(
+    async def test_multiple_text_blocks_concatenated(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
-        """Test asking a basic question when messages have text attribute."""
+        """Test that multiple TextBlock messages are properly concatenated."""
         # Setup
         mock_options = MagicMock()
         mock_create_client.return_value = mock_options
 
-        mock_message1 = MagicMock()
-        mock_message1.text = "Hello, "
-        mock_message2 = MagicMock()
-        mock_message2.text = "world!"
+        # Import the real SDK classes to create proper mock objects
+        from mcp_coder.claude_code_api import AssistantMessage, TextBlock
+        
+        # Create proper mock objects that will pass isinstance checks
+        mock_text_block1 = MagicMock(spec=TextBlock)
+        mock_text_block1.text = "Hello, "
+        mock_text_block2 = MagicMock(spec=TextBlock)
+        mock_text_block2.text = "world!"
+        
+        mock_message1 = MagicMock(spec=AssistantMessage)
+        mock_message1.content = [mock_text_block1]
+        mock_message2 = MagicMock(spec=AssistantMessage)
+        mock_message2.content = [mock_text_block2]
 
         async def mock_query_response(*_args: object, **_kwargs: object) -> object:
             yield mock_message1
@@ -65,17 +74,22 @@ class TestAskClaudeCodeApiAsync:
     @pytest.mark.asyncio
     @patch("mcp_coder.claude_code_api.query")
     @patch("mcp_coder.claude_code_api._create_claude_client")
-    async def test_basic_question_with_content_attribute(
+    async def test_basic_question_with_assistant_message(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
-        """Test asking a basic question when messages have content attribute."""
+        """Test asking a basic question with proper AssistantMessage types."""
         # Setup
         mock_options = MagicMock()
         mock_create_client.return_value = mock_options
 
-        mock_message = MagicMock()
-        mock_message.text = None
-        mock_message.content = "Response with content"
+        # Import the real SDK classes to create proper mock objects
+        from mcp_coder.claude_code_api import AssistantMessage, TextBlock
+        
+        mock_text_block = MagicMock(spec=TextBlock)
+        mock_text_block.text = "Response from TextBlock"
+        
+        mock_message = MagicMock(spec=AssistantMessage)
+        mock_message.content = [mock_text_block]
 
         async def mock_query_response(*_args: object, **_kwargs: object) -> object:
             yield mock_message
@@ -86,35 +100,44 @@ class TestAskClaudeCodeApiAsync:
         result = await _ask_claude_code_api_async("test question")
 
         # Verify
-        assert result == "Response with content"
+        assert result == "Response from TextBlock"
 
     @pytest.mark.asyncio
     @patch("mcp_coder.claude_code_api.query")
     @patch("mcp_coder.claude_code_api._create_claude_client")
-    async def test_basic_question_with_string_fallback(
+    async def test_unknown_message_type_ignored(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
-        """Test asking a basic question when messages need string conversion."""
+        """Test that unknown message types are simply ignored."""
         # Setup
         mock_options = MagicMock()
         mock_create_client.return_value = mock_options
 
-        mock_message = MagicMock()
-        mock_message.text = None
-        mock_message.content = (
-            "Fallback content response"  # Set content instead of relying on __str__
-        )
+        # Import the real SDK classes to create proper mock objects
+        from mcp_coder.claude_code_api import AssistantMessage, TextBlock
+        
+        # Create a message that doesn't match any known types
+        mock_unknown_message = MagicMock()
+        mock_unknown_message.some_attribute = "unknown"
+        
+        # Create a proper AssistantMessage that will pass isinstance checks
+        mock_text_block = MagicMock(spec=TextBlock)
+        mock_text_block.text = "Real response"
+        
+        mock_assistant_message = MagicMock(spec=AssistantMessage)
+        mock_assistant_message.content = [mock_text_block]
 
         async def mock_query_response(*_args: object, **_kwargs: object) -> object:
-            yield mock_message
+            yield mock_unknown_message  # This should be ignored
+            yield mock_assistant_message  # This should be processed
 
         mock_query.side_effect = mock_query_response
 
         # Execute
         result = await _ask_claude_code_api_async("test question")
 
-        # Verify
-        assert result == "Fallback content response"
+        # Verify - should only get response from the AssistantMessage
+        assert result == "Real response"
 
     @pytest.mark.asyncio
     @patch("mcp_coder.claude_code_api.query")
@@ -150,8 +173,14 @@ class TestAskClaudeCodeApiAsync:
         mock_options = MagicMock()
         mock_create_client.return_value = mock_options
 
-        mock_message = MagicMock()
-        mock_message.text = "  \n  Response with whitespace  \n  "
+        # Import the real SDK classes to create proper mock objects
+        from mcp_coder.claude_code_api import AssistantMessage, TextBlock
+        
+        mock_text_block = MagicMock(spec=TextBlock)
+        mock_text_block.text = "  \n  Response with whitespace  \n  "
+        
+        mock_message = MagicMock(spec=AssistantMessage)
+        mock_message.content = [mock_text_block]
 
         async def mock_query_response(*_args: object, **_kwargs: object) -> object:
             yield mock_message
@@ -248,23 +277,8 @@ class TestAskClaudeCodeApi:
                 )
 
 
-class TestImportError:
-    """Test import error handling."""
-
-    def test_import_error_on_missing_sdk(self) -> None:
-        """Test that import error is raised when SDK is not available."""
-        # This test verifies the import handling in the module
-        # In a real scenario where claude-code-sdk is missing, the import would fail
-        with patch.dict("sys.modules", {"claude_code_sdk": None}):
-            with pytest.raises(ImportError) as exc_info:
-                # Re-import the module to trigger the import error
-                import importlib
-
-                import mcp_coder.claude_code_api
-
-                importlib.reload(mcp_coder.claude_code_api)
-
-            assert "claude-code-sdk is not installed" in str(exc_info.value)
+# Note: ImportError tests removed since claude-code-sdk is now a required dependency
+# Any import errors will occur at module load time if the dependency is missing
 
 
 @pytest.mark.integration
