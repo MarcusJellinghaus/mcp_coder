@@ -233,7 +233,15 @@ Please provide a short concise commit message stating the step name in the title
 
 After all implementation steps are complete:
 
-#### 3.1 PR Review
+#### 3.1 Run more detailed checks
+
+Run certain checks in an automated way and deal with possibly highlighted issues:
+- Pylint warnings
+- (custom checks - to be developed)
+- Check pytest runtime
+
+
+#### 3.2 PR Review
 
 **Process:**
 - Review the entire pull request for the feature via an LLM prompt
@@ -242,7 +250,7 @@ After all implementation steps are complete:
 
 **Tools:**
 
-#### 3.2 Create Summary
+#### 3.3 Create Summary
 
 **Process:**
 - Generate comprehensive feature summary
