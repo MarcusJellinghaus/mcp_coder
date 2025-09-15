@@ -30,7 +30,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Run quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 2: Copy and Adapt Git Operations Tests** - [step_2.md](steps/step_2.md)
+- [x] **Step 2: Copy and Adapt Git Operations Tests** - [step_2.md](steps/step_2.md)
   - Copy test file from p_fs to tests/utils/test_git_operations.py
   - Update import paths to reference new location
   - Verify foundation works correctly
