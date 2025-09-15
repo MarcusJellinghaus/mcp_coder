@@ -17,7 +17,7 @@ def stage_all_changes(project_dir: Path) -> bool
 ### Integration Points
 - Extend existing git_operations.py module
 - Use existing `is_git_repository()` for validation
-- Use `get_files_to_commit()` from Step 3 for validation
+- Use `get_unstaged_changes()` from Step 3 for validation
 - Import `git.Repo` for staging operations
 
 ### Dependencies

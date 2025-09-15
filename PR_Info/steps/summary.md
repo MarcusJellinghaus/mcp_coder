@@ -32,6 +32,8 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult
 def commit_all_changes(message: str, project_dir: Path) -> CommitResult
 ```
 
+**Note**: Removed `commit_specific_files()` to avoid API duplication - users achieve the same result with `stage_specific_files()` → `commit_staged_files()`
+
 ### API Design Principles
 - **Simplicity**: Clean, git-aligned functions that match git's mental model
 - **Safety**: Always validate git repository before operations

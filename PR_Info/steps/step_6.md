@@ -31,7 +31,7 @@ from .utils.git_operations import commit_all_changes, commit_staged_files, is_gi
 - Combine all functions from Steps 1-5 into comprehensive workflow
 - Use all existing git operation functions
 - Provide detailed status and result information
-- Support dry-run mode for preview
+- Focus on core integration without advanced features
 
 ### Dependencies  
 - All previously implemented functions

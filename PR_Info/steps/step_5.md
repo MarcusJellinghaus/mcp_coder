@@ -16,7 +16,7 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult
 ## HOW
 ### Integration Points
 - Extend existing git_operations.py module  
-- Use `is_git_repository()`, `stage_files()`, `get_files_to_commit()` from previous steps
+- Use `is_git_repository()`, `stage_all_changes()`, `get_staged_changes()` from previous steps
 - Import `git.Repo` for commit operations
 - Return detailed commit information
 
@@ -76,7 +76,7 @@ Implement Step 5 using Test-Driven Development: First write comprehensive tests 
 
 Write tests for:
 1. commit_staged_files() - test successful commit, no staged files, empty message
-2. commit_files() - test with specific files, with all files, empty repo
+2. commit_all_changes() - test staging + commit workflow, empty repo, error cases
 3. Error cases - not git repo, invalid commit message, git commit failures  
 4. Edge cases - empty commits, large commit messages, special characters
 

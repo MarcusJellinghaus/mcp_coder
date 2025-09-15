@@ -111,6 +111,12 @@ def is_file_tracked(file_path: Path, project_dir: Path) -> bool
 - Advanced workflow parameters
 - Commit message validation
 - Git hooks integration
+- Path validation beyond basic existence checks
+- Performance optimizations for large repositories
+- Merge conflict detection and resolution
+- Branch management operations
+- Remote repository operations (push/pull)
+- Commit signing and GPG integration
 
 ### **Simplified Step Count** ✅
 **Decision**: Reduce from 7 steps to 6 steps
@@ -136,7 +142,45 @@ def is_file_tracked(file_path: Path, project_dir: Path) -> bool
 - Proven foundation code from p_fs
 - Git-aligned API reduces user confusion
 
+## Recent Updates (September 2025)
+
+### **10. Advanced Features Deferral** ✅
+**Decision**: Expanded list of deferred features for v1.0
+**Added to Deferred List**:
+- Path validation beyond basic existence checks
+- Performance optimizations for large repositories
+- Merge conflict detection and resolution
+- Branch management operations
+- Remote repository operations (push/pull)
+- Commit signing and GPG integration
+
+**Rationale**: 
+- Focus on core commit workflow for initial release
+- Reduce implementation complexity and testing burden
+- Ensure solid foundation before adding advanced features
+- Most users need simple local commit functionality first
+
+### **11. API Simplification Confirmation** ✅
+**Decision**: Confirmed removal of `commit_specific_files()` function
+**Rationale**:
+- Avoids API duplication - same result achieved with `stage_specific_files()` → `commit_staged_files()`
+- Keeps API focused on git's actual workflow
+- Reduces testing complexity
+- Makes user intent more explicit
+
+### **12. Error Handling Standardization** ✅
+**Decision**: Establish consistent error handling patterns
+- Status functions: Return empty results on errors (list/dict)
+- Staging functions: Return `False` on errors
+- Commit functions: Return `{"success": False, "error": "message"}`
+- All functions: Log errors appropriately but don't crash calling code
+
+**Rationale**:
+- Predictable behavior across all functions
+- Calling code can handle errors gracefully
+- Consistent with existing MCP Coder patterns
+
 ---
 
-**Last Updated**: [Current Date]
+**Last Updated**: September 15, 2025
 **Status**: Decisions Finalized ✅
