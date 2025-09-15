@@ -2,6 +2,7 @@
 """Claude Code Python SDK implementation for programmatic interaction."""
 
 import asyncio
+import os
 import subprocess
 from typing import Any, Optional
 
@@ -230,11 +231,14 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
         if "Claude Code not found" in error_msg or "claude" in error_msg.lower():
             claude_path = find_claude_executable(return_none_if_not_found=True)
             if claude_path:
+                # Get dynamic username for path suggestions
+                username = os.environ.get("USERNAME", os.environ.get("USER", "<username>"))
+                
                 error_msg += f"\n\nFound Claude CLI at: {claude_path}"
                 error_msg += "\nTo fix this issue, add Claude to your PATH:"
-                error_msg += "\n  Windows PowerShell: $env:PATH = 'C:\\Users\\Marcus\\.local\\bin;' + $env:PATH"
+                error_msg += f"\n  Windows PowerShell: $env:PATH = 'C:\\Users\\{username}\\.local\\bin;' + $env:PATH"
                 error_msg += (
-                    "\n  Windows CMD: set PATH=C:\\Users\\Marcus\\.local\\bin;%PATH%"
+                    f"\n  Windows CMD: set PATH=C:\\Users\\{username}\\.local\\bin;%PATH%"
                 )
                 error_msg += (
                     "\n  Or restart your terminal after installing Claude globally."

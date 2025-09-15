@@ -34,9 +34,6 @@ def _get_claude_search_paths() -> List[str]:
         # System-wide locations
         "/usr/local/bin/claude",
         "/opt/claude/claude",
-        # Legacy paths (to be removed eventually)
-        "C:/Users/Marcus/.local/bin/claude.exe",
-        "C:/Users/Marcus/.local/bin/claude",
     ]
 
     # Add PATH location if it exists

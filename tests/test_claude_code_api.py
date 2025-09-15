@@ -215,6 +215,33 @@ class TestAskClaudeCodeApi:
         assert "Some SDK error" in error.stderr
         assert error.__cause__ == original_error
 
+    @patch("mcp_coder.claude_code_api.find_claude_executable")
+    @patch("mcp_coder.claude_code_api.asyncio.run")
+    def test_dynamic_username_in_error_message(self, mock_asyncio_run: MagicMock, mock_find_claude: MagicMock) -> None:
+        """Test that error messages use dynamic username instead of hardcoded 'Marcus'."""
+        # Setup
+        mock_find_claude.return_value = "/some/path/to/claude"
+        claude_error = ValueError("Claude Code not found")
+        mock_asyncio_run.side_effect = claude_error
+
+        # Test with different usernames
+        test_cases = [
+            ({"USERNAME": "testuser"}, "testuser"),
+            ({"USER": "linuxuser"}, "linuxuser"),
+            ({}, "<username>"),  # Fallback when no username env vars
+        ]
+
+        for env_vars, expected_username in test_cases:
+            with patch.dict("os.environ", env_vars, clear=True):
+                with pytest.raises(subprocess.CalledProcessError) as exc_info:
+                    ask_claude_code_api("test question")
+
+                error_message = exc_info.value.stderr
+                # Check that the error message contains the expected username
+                assert f"C:\\Users\\{expected_username}\\.local\\bin" in error_message
+                # Ensure it doesn't contain the hardcoded "Marcus"
+                assert "C:\\Users\\Marcus\\.local\\bin" not in error_message or expected_username == "Marcus"
+
 
 class TestImportError:
     """Test import error handling."""
