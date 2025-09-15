@@ -57,9 +57,17 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
         Claude's response as a string (concatenated text from all TextBlocks)
 
     Raises:
+        ValueError: If input validation fails
         asyncio.TimeoutError: If the request times out
         Exception: Various exceptions from the SDK
     """
+    # Input validation
+    if not question or not question.strip():
+        raise ValueError("Question cannot be empty or whitespace only")
+    
+    if timeout <= 0:
+        raise ValueError("Timeout must be a positive number")
+    
     options = _create_claude_client()
 
     # Import message types for proper type checking
@@ -208,16 +216,22 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
         Claude's response as a string (text content only)
 
     Raises:
+        ValueError: If input validation fails
         subprocess.TimeoutExpired: If the request times out
         subprocess.CalledProcessError: If the SDK request fails (with helpful error messages)
         ImportError: If claude-code-sdk is not installed
     """
+    # Input validation is handled by _ask_claude_code_api_async
     try:
         # Run the async function in the current event loop or create a new one
         return asyncio.run(_ask_claude_code_api_async(question, timeout))
 
     except subprocess.TimeoutExpired:
         # Re-raise timeout errors as-is for consistency with CLI version
+        raise
+    
+    except ValueError:
+        # Re-raise input validation errors as-is
         raise
 
     except Exception as e:
@@ -290,9 +304,17 @@ async def ask_claude_code_api_detailed(
         }
 
     Raises:
+        ValueError: If input validation fails
         asyncio.TimeoutError: If the request times out
         Exception: Various exceptions from the SDK
     """
+    # Input validation
+    if not question or not question.strip():
+        raise ValueError("Question cannot be empty or whitespace only")
+    
+    if timeout <= 0:
+        raise ValueError("Timeout must be a positive number")
+    
     options = _create_claude_client()
 
     # Import message types for proper type checking
@@ -418,14 +440,20 @@ def ask_claude_code_api_detailed_sync(
         Dictionary with detailed response information
 
     Raises:
+        ValueError: If input validation fails
         subprocess.TimeoutExpired: If the request times out
         subprocess.CalledProcessError: If the SDK request fails
     """
+    # Input validation is handled by ask_claude_code_api_detailed
     try:
         return asyncio.run(ask_claude_code_api_detailed(question, timeout))
 
     except subprocess.TimeoutExpired:
         # Re-raise timeout errors as-is for consistency with CLI version
+        raise
+    
+    except ValueError:
+        # Re-raise input validation errors as-is
         raise
 
     except Exception as e:

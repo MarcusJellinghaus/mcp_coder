@@ -199,9 +199,9 @@ class TestAskClaudeCodeApi:
 
     @patch("mcp_coder.claude_code_api.asyncio.run")
     def test_other_exception_conversion(self, mock_asyncio_run: MagicMock) -> None:
-        """Test that other exceptions are converted to CalledProcessError."""
-        # Setup
-        original_error = ValueError("Some SDK error")
+        """Test that other exceptions (non-ValueError, non-TimeoutExpired) are converted to CalledProcessError."""
+        # Setup - use RuntimeError instead of ValueError since ValueError is now re-raised
+        original_error = RuntimeError("Some SDK error")
         mock_asyncio_run.side_effect = original_error
 
         # Execute & Verify
@@ -222,7 +222,8 @@ class TestAskClaudeCodeApi:
         """Test that error messages use dynamic username instead of hardcoded 'Marcus'."""
         # Setup
         mock_find_claude.return_value = "/some/path/to/claude"
-        claude_error = ValueError("Claude Code not found")
+        # Use RuntimeError instead of ValueError since ValueError is now re-raised
+        claude_error = RuntimeError("Claude Code not found")
         mock_asyncio_run.side_effect = claude_error
 
         # Test with different usernames

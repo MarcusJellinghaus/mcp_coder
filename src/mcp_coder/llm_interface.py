@@ -24,7 +24,7 @@ def ask_llm(
         The LLM's response as a string
 
     Raises:
-        ValueError: If the provider or method is not supported
+        ValueError: If the provider or method is not supported, or if input validation fails
         Various exceptions from underlying implementations (e.g., subprocess errors)
 
     Examples:
@@ -40,6 +40,13 @@ def ask_llm(
         >>> response = ask_llm("Review this code")  # Uses claude + cli
         >>> print(response)
     """
+    # Input validation
+    if not question or not question.strip():
+        raise ValueError("Question cannot be empty or whitespace only")
+    
+    if timeout <= 0:
+        raise ValueError("Timeout must be a positive number")
+    
     if provider == "claude":
         return ask_claude_code(question, method=method, timeout=timeout)
     else:
