@@ -102,8 +102,7 @@ class TestAskClaudeCodeApiAsync:
 
         mock_message = MagicMock()
         mock_message.text = None
-        mock_message.content = None
-        mock_message.configure_mock(__str__=MagicMock(return_value="Fallback string response"))
+        mock_message.content = "Fallback content response"  # Set content instead of relying on __str__
 
         async def mock_query_response(*args: object, **kwargs: object) -> object:
             yield mock_message
@@ -114,7 +113,7 @@ class TestAskClaudeCodeApiAsync:
         result = await _ask_claude_code_api_async("test question")
 
         # Verify
-        assert result == "Fallback string response"
+        assert result == "Fallback content response"
 
     @pytest.mark.asyncio
     @patch("mcp_coder.claude_code_api.query")

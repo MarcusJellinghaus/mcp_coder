@@ -2,8 +2,6 @@
 """Claude Code Python SDK implementation for programmatic interaction."""
 
 import asyncio
-import os
-import shutil
 import subprocess
 from typing import Any, Optional
 
@@ -15,56 +13,7 @@ except ImportError as e:
         "pip install claude-code-sdk"
     ) from e
 
-
-def _find_claude_cli() -> Optional[str]:
-    """Find the Claude CLI executable in common locations.
-    
-    Returns:
-        Path to claude executable or None if not found
-    """
-    # Common locations to check
-    common_paths = [
-        # Standard locations
-        shutil.which("claude"),
-        # Windows user-specific locations  
-        os.path.expanduser("~/.local/bin/claude"),
-        os.path.expanduser("~/.local/bin/claude.exe"),
-        # Node.js global install locations
-        os.path.expanduser("~/node_modules/.bin/claude"),
-        os.path.expanduser("~/node_modules/.bin/claude.exe"),
-        # npm global on Windows
-        os.path.expanduser("~/AppData/Roaming/npm/claude.exe"),
-        # Common Windows paths
-        "C:/Users/Marcus/.local/bin/claude.exe",
-        "C:/Users/Marcus/.local/bin/claude",
-    ]
-    
-    for path in common_paths:
-        if path and os.path.isfile(path) and os.access(path, os.X_OK):
-            return path
-    
-    return None
-
-
-def _setup_claude_path() -> None:
-    """Setup PATH to include common Claude CLI locations.
-    
-    This function attempts to find Claude CLI and temporarily add it to PATH
-    for the current process if it's not already accessible.
-    """
-    # Check if claude is already in PATH
-    if shutil.which("claude"):
-        return  # Already available
-    
-    # Try to find Claude CLI
-    claude_path = _find_claude_cli()
-    if claude_path:
-        # Add the directory containing Claude to PATH
-        claude_dir = os.path.dirname(claude_path)
-        current_path = os.environ.get("PATH", "")
-        if claude_dir not in current_path:
-            os.environ["PATH"] = f"{claude_dir}{os.pathsep}{current_path}"
-            print(f"Added to PATH: {claude_dir}")
+from .claude_executable_finder import find_claude_executable, setup_claude_path
 
 
 def _create_claude_client() -> ClaudeCodeOptions:
@@ -78,7 +27,8 @@ def _create_claude_client() -> ClaudeCodeOptions:
         Attempts to setup PATH if Claude CLI is not accessible.
     """
     # Try to setup Claude PATH before creating client
-    _setup_claude_path()
+    # The SDK needs the CLI to be accessible for authentication
+    setup_claude_path()
     
     # Use basic configuration - SDK should now find Claude
     return ClaudeCodeOptions()
@@ -258,7 +208,7 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
         
         # Check if this is a CLI path issue and provide helpful guidance
         if "Claude Code not found" in error_msg or "claude" in error_msg.lower():
-            claude_path = _find_claude_cli()
+            claude_path = find_claude_executable(return_none_if_not_found=True)
             if claude_path:
                 error_msg += f"\n\nFound Claude CLI at: {claude_path}"
                 error_msg += "\nTo fix this issue, add Claude to your PATH:"

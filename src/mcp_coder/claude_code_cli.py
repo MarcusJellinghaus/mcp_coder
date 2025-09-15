@@ -1,56 +1,28 @@
 #!/usr/bin/env python3
 """Claude Code CLI implementation for programmatic interaction."""
 
-import os
 import subprocess
-from pathlib import Path
 from typing import Optional
 
 from .subprocess_runner import execute_command
+from .claude_executable_finder import find_claude_executable
 
 
 def _find_claude_executable() -> str:
-    """Find Claude Code CLI executable, checking both PATH and common install locations."""
-    # First, try to find claude in PATH
-    try:
-        result = execute_command(
-            ["claude", "--version"],
-            timeout_seconds=10,
-        )
-        if result.return_code == 0:
-            return "claude"  # Available in PATH
-    except Exception:
-        pass
-
-    # Try common installation locations
-    username = os.environ.get("USERNAME", os.environ.get("USER", ""))
-    possible_locations = [
-        f"C:\\Users\\{username}\\.local\\bin\\claude.exe",
-        f"C:\\Users\\{username}\\AppData\\Local\\Programs\\Claude\\claude.exe",
-        f"C:\\Users\\{username}\\AppData\\Roaming\\Claude\\claude.exe",
-        "/usr/local/bin/claude",
-        "/opt/claude/claude",
-        f"{os.path.expanduser('~')}/.local/bin/claude",
-    ]
-
-    for location in possible_locations:
-        claude_path = Path(location)
-        if claude_path.exists() and claude_path.is_file():
-            try:
-                # Test if the executable works with a simple help command (faster than --version)
-                result = execute_command(
-                    [str(claude_path), "--help"],
-                    timeout_seconds=5,
-                )
-                # If it doesn't crash immediately, assume it's working
-                if result.return_code in [0, 1]:  # 0 = success, 1 = help shown
-                    return str(claude_path)
-            except Exception:
-                # If it exists as a file, return it anyway - might work for actual commands
-                return str(claude_path)
-
-    raise FileNotFoundError(
-        "Claude Code CLI not found. Please ensure it's installed and accessible."
+    """Find Claude Code CLI executable, checking both PATH and common install locations.
+    
+    This is a wrapper around the shared find_claude_executable function,
+    configured for CLI usage (tests execution and raises on not found).
+    
+    Returns:
+        Path to Claude executable
+        
+    Raises:
+        FileNotFoundError: If Claude Code CLI is not found
+    """
+    return find_claude_executable(
+        test_execution=True,
+        return_none_if_not_found=False
     )
 
 
