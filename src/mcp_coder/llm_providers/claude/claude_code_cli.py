@@ -3,8 +3,8 @@
 
 import subprocess
 
+from ...utils.subprocess_runner import execute_command
 from .claude_executable_finder import find_claude_executable
-from .subprocess_runner import execute_command
 
 
 def _find_claude_executable() -> str:

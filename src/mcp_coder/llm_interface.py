@@ -1,6 +1,6 @@
 """High-level LLM interface for extensible provider support."""
 
-from .claude_code_interface import ask_claude_code
+from .llm_providers.claude.claude_code_interface import ask_claude_code
 
 
 def ask_llm(
