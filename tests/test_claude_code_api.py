@@ -44,7 +44,10 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.llm_providers.claude.claude_code_api import AssistantMessage, TextBlock
+        from mcp_coder.llm_providers.claude.claude_code_api import (
+            AssistantMessage,
+            TextBlock,
+        )
 
         # Create proper mock objects that will pass isinstance checks
         mock_text_block1 = MagicMock(spec=TextBlock)
@@ -83,7 +86,10 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.llm_providers.claude.claude_code_api import AssistantMessage, TextBlock
+        from mcp_coder.llm_providers.claude.claude_code_api import (
+            AssistantMessage,
+            TextBlock,
+        )
 
         mock_text_block = MagicMock(spec=TextBlock)
         mock_text_block.text = "Response from TextBlock"
@@ -114,7 +120,10 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.llm_providers.claude.claude_code_api import AssistantMessage, TextBlock
+        from mcp_coder.llm_providers.claude.claude_code_api import (
+            AssistantMessage,
+            TextBlock,
+        )
 
         # Create a message that doesn't match any known types
         mock_unknown_message = MagicMock()
@@ -174,7 +183,10 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.llm_providers.claude.claude_code_api import AssistantMessage, TextBlock
+        from mcp_coder.llm_providers.claude.claude_code_api import (
+            AssistantMessage,
+            TextBlock,
+        )
 
         mock_text_block = MagicMock(spec=TextBlock)
         mock_text_block.text = "  \n  Response with whitespace  \n  "
