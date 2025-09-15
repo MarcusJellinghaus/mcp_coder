@@ -231,7 +231,9 @@ class TestVerifyClaudeInstallation:
         assert result["works"] is False
         error_msg = result["error"]
         assert error_msg is not None
-        assert "Claude not found" in error_msg  # pylint: disable=unsupported-membership-test
+        assert (
+            "Claude not found" in error_msg
+        )  # pylint: disable=unsupported-membership-test
 
     @patch("mcp_coder.claude_executable_finder.find_claude_executable")
     @patch("mcp_coder.claude_executable_finder.execute_command")
@@ -257,7 +259,9 @@ class TestVerifyClaudeInstallation:
         assert result["works"] is False
         error_msg = result["error"]
         assert error_msg is not None
-        assert "Version check failed" in error_msg  # pylint: disable=unsupported-membership-test
+        assert (
+            "Version check failed" in error_msg
+        )  # pylint: disable=unsupported-membership-test
 
 
 class TestIntegration:

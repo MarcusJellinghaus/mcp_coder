@@ -17,11 +17,11 @@ class TestSimpleIntegration:
         """Test that both CLI and API methods can correctly answer a simple math question."""
         try:
             response = ask_llm("What is 2+2? Just answer a number!", method=method)
-            
+
             # Verify we got a response
             assert response is not None
             assert len(response) > 0
-            
+
             # Verify both methods give the correct answer
             # Check if response can be parsed as exact int 4
             response_clean = response.strip()
@@ -34,9 +34,9 @@ class TestSimpleIntegration:
             # except ValueError:
             #     # If not a pure number, check if "4" is in the response
             #     assert "4" in response_clean
-            
+
             print(f"{method.upper()} method response: {response}")
-            
+
         except FileNotFoundError:
             if method == "cli":
                 pytest.skip("Claude Code CLI not found - skipping CLI integration test")
@@ -48,11 +48,22 @@ class TestSimpleIntegration:
             else:
                 raise  # Unexpected for CLI method
         except subprocess.TimeoutExpired:
-            pytest.skip(f"Claude {method.upper()} call timed out - may indicate setup issues")
+            pytest.skip(
+                f"Claude {method.upper()} call timed out - may indicate setup issues"
+            )
         except subprocess.CalledProcessError as e:
-            if "authentication" in str(e.stderr).lower() or "login" in str(e.stderr).lower():
-                pytest.skip(f"Claude {method.upper()} authentication required: {e.stderr}")
+            if (
+                "authentication" in str(e.stderr).lower()
+                or "login" in str(e.stderr).lower()
+            ):
+                pytest.skip(
+                    f"Claude {method.upper()} authentication required: {e.stderr}"
+                )
             else:
-                pytest.skip(f"Claude {method.upper()} failed - may indicate setup issues: {e}")
+                pytest.skip(
+                    f"Claude {method.upper()} failed - may indicate setup issues: {e}"
+                )
         except (RuntimeError, ValueError) as e:
-            pytest.skip(f"Runtime or validation error during {method.upper()} test: {e}")
+            pytest.skip(
+                f"Runtime or validation error during {method.upper()} test: {e}"
+            )

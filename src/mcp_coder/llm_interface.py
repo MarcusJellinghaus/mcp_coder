@@ -31,11 +31,11 @@ def ask_llm(
         >>> # Use CLI method (default)
         >>> response = ask_llm("What is Python?", provider="claude", method="cli")
         >>> print(response)
-        
+
         >>> # Use API method (recommended)
         >>> response = ask_llm("Explain recursion", provider="claude", method="api")
         >>> print(response)
-        
+
         >>> # Default parameters
         >>> response = ask_llm("Review this code")  # Uses claude + cli
         >>> print(response)

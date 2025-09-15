@@ -12,7 +12,7 @@ Example:
     >>> from mcp_coder import ask_llm
     >>> response = ask_llm("Explain recursion", provider="claude", method="api")
     >>> print(response)
-    
+
     >>> from mcp_coder import ask_claude  # Legacy interface
     >>> response = ask_claude("Review this code")
     >>> print(response)

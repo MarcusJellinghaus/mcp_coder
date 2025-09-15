@@ -16,7 +16,6 @@ except ImportError as e:
     ) from e
 
 
-
 def _create_claude_client() -> ClaudeCodeOptions:
     """Create a Claude Code SDK client with basic configuration.
 
