@@ -8,6 +8,65 @@ Main functions:
 - get_prompt(source, header): Get prompt from markdown source
 - validate_prompt_markdown(source): Validate markdown structure  
 - validate_prompt_directory(directory): Validate all markdown files in directory
+
+Key Features:
+- Supports multiple input types: string content, file paths, directories, wildcards
+- Auto-detection of input type (file path vs string content)
+- Cross-file duplicate header detection when using directories/wildcards
+- Clear error messages with file locations and line numbers
+- Comprehensive validation with detailed results
+
+Markdown Format Requirements:
+- Headers: Use # ## ### #### ##### (1-5 levels)
+- Code blocks: Use ``` fenced code blocks immediately after headers
+- Headers must be unique within and across files
+- Each header should be followed by exactly one code block
+
+Usage Examples:
+    # From string content
+    prompt = get_prompt('# Test\\n```\\nHello World\\n```', 'Test')
+    
+    # From file
+    prompt = get_prompt('prompts/prompts.md', 'Short Commit')
+    
+    # From directory (all .md files)
+    prompt = get_prompt('prompts/', 'Short Commit')
+    
+    # From wildcard pattern
+    prompt = get_prompt('prompts/*.md', 'Short Commit')
+    
+    # Validation examples
+    result = validate_prompt_markdown('prompts/prompts.md')
+    if not result['valid']:
+        print(f"Errors: {result['errors']}")
+    
+    # Directory validation with cross-file checking
+    result = validate_prompt_directory('prompts/')
+    if not result['valid']:
+        for error in result['errors']:
+            print(f"Error: {error}")
+
+Error Handling Examples:
+    # Handle missing headers
+    try:
+        prompt = get_prompt('prompts/prompts.md', 'NonExistent')
+    except ValueError as e:
+        print(f"Header not found: {e}")
+    
+    # Handle missing files
+    try:
+        prompt = get_prompt('missing_file.md', 'Test')
+    except FileNotFoundError as e:
+        print(f"File error: {e}")
+    
+    # Comprehensive validation
+    result = validate_prompt_markdown('prompts/prompts.md')
+    if result['valid']:
+        print(f"Found {len(result['headers'])} valid headers")
+    else:
+        print("Validation failed:")
+        for error in result['errors']:
+            print(f"  - {error}")
 """
 
 import os
@@ -21,16 +80,62 @@ def get_prompt(source: str, header: str) -> str:
     """
     Get prompt from markdown source (file path, directory/wildcard, or string content).
     
+    This function supports multiple input types and automatically detects whether the
+    source is a file path, directory, wildcard pattern, or string content. For
+    directories and wildcards, it concatenates all .md files and searches across them.
+    
     Args:
         source: File path, directory path, wildcard pattern, or string content
-        header: Header name to search for (any level: #, ##, ###, ####)
+            - File path: 'prompts/prompts.md'
+            - Directory: 'prompts/' (searches all .md files)
+            - Wildcard: 'prompts/*.md' or 'docs/section*.md'
+            - String content: '# Header\\n```\\ncode\\n```'
+        header: Header name to search for (any level: #, ##, ###, ####, #####)
+            - Case-sensitive exact match
+            - Should not include the # symbols
+            - Examples: 'Short Commit', 'API Documentation', 'Error Handling'
         
     Returns:
-        str: The code block content following the header
+        str: The code block content following the header, with leading/trailing
+             whitespace preserved from the original markdown
         
     Raises:
         ValueError: If header not found, duplicate headers found, or no code block after header
-        FileNotFoundError: If file path doesn't exist
+            - Includes available headers in error message when header not found
+            - Shows line numbers and locations for duplicate headers
+            - Indicates specific line where code block is missing
+        FileNotFoundError: If file path doesn't exist or cannot be read
+            - Includes specific file path and underlying error details
+    
+    Examples:
+        # From string content with inline markdown
+        markdown_content = '''# Test Header
+        ```python
+        print("Hello World")
+        ```
+        
+        # Another Header
+        ```bash
+        echo "test"
+        ```'''
+        prompt = get_prompt(markdown_content, 'Test Header')
+        # Returns: 'print("Hello World")'
+        
+        # From single file
+        prompt = get_prompt('prompts/git_prompts.md', 'Short Commit')
+        
+        # From directory (searches all .md files)
+        prompt = get_prompt('prompts/', 'Short Commit')
+        
+        # From wildcard pattern
+        prompt = get_prompt('docs/api_*.md', 'Error Handling')
+        
+        # Error handling example
+        try:
+            prompt = get_prompt('prompts/prompts.md', 'NonExistent Header')
+        except ValueError as e:
+            print(f"Error: {e}")
+            # Prints available headers for reference
     """
     # Auto-detect input type and get content
     content = _load_content(source)
@@ -69,17 +174,56 @@ def get_prompt(source: str, header: str) -> str:
 
 def validate_prompt_markdown(source: str) -> Dict[str, Any]:
     """
-    Validate prompt markdown structure, return detailed results.
+    Validate prompt markdown structure and return detailed results.
+    
+    This function checks that the markdown follows the expected format:
+    each header followed by exactly one code block, no duplicate headers,
+    and proper markdown syntax.
     
     Args:
-        source: File path or string content
+        source: File path or string content to validate
+            - File path: 'prompts/prompts.md'
+            - String content: '# Header\\n```\\ncode\\n```'
         
     Returns:
-        dict: Validation results with keys:
-            - valid: bool indicating if valid
-            - errors: list of error messages
-            - headers: list of found headers
-            - source_type: 'file' or 'string'
+        dict: Validation results with the following keys:
+            - valid (bool): True if all validation checks pass
+            - errors (List[str]): List of error messages (empty if valid)
+            - headers (List[Dict]): List of found headers with metadata:
+                * name (str): Header text
+                * level (int): Header level (1-5)
+                * line (int): Line number in source
+                * position (int): 0-based line index
+            - source_type (str): 'file' or 'string' indicating input type
+    
+    Examples:
+        # Validate a file
+        result = validate_prompt_markdown('prompts/prompts.md')
+        if result['valid']:
+            print(f"✓ Valid markdown with {len(result['headers'])} headers")
+            for header in result['headers']:
+                print(f"  - {header['name']} (line {header['line']})")
+        else:
+            print("✗ Validation failed:")
+            for error in result['errors']:
+                print(f"  - {error}")
+        
+        # Validate string content
+        markdown = '''# Header 1
+        ```
+        code block 1
+        ```
+        
+        # Header 1
+        ```
+        duplicate header - this will cause validation error
+        ```'''
+        result = validate_prompt_markdown(markdown)
+        # result['valid'] will be False due to duplicate header
+        
+        # Handle file not found
+        result = validate_prompt_markdown('nonexistent.md')
+        # result['valid'] will be False with file error in result['errors']
     """
     try:
         content = _load_content(source)
@@ -119,17 +263,53 @@ def validate_prompt_markdown(source: str) -> Dict[str, Any]:
 
 def validate_prompt_directory(directory: str) -> Dict[str, Any]:
     """
-    Validate all markdown files in directory including cross-file duplicates.
+    Validate all markdown files in directory including cross-file duplicate detection.
+    
+    This function performs comprehensive validation across multiple files:
+    - Validates each individual .md file
+    - Checks for duplicate headers across different files
+    - Provides detailed per-file and aggregate results
     
     Args:
         directory: Directory path to validate
+            - Must be an existing directory
+            - Only .md files are processed
+            - Subdirectories are not recursively searched
         
     Returns:
-        dict: Validation results with keys:
-            - valid: bool indicating if valid
-            - errors: list of error messages
-            - files_checked: number of markdown files checked
-            - individual_results: dict of per-file validation results
+        dict: Comprehensive validation results with keys:
+            - valid (bool): True if all files and cross-file checks pass
+            - errors (List[str]): All errors found, with file context
+            - files_checked (int): Number of .md files processed
+            - individual_results (Dict[str, Dict]): Per-file validation results
+                * Key: filename (e.g., 'prompts.md')
+                * Value: Same structure as validate_prompt_markdown() return
+    
+    Examples:
+        # Validate entire prompts directory
+        result = validate_prompt_directory('prompts/')
+        
+        if result['valid']:
+            print(f"✓ All {result['files_checked']} files valid")
+        else:
+            print(f"✗ Found {len(result['errors'])} errors across {result['files_checked']} files:")
+            for error in result['errors']:
+                print(f"  - {error}")
+        
+        # Check individual file results
+        for filename, file_result in result['individual_results'].items():
+            if not file_result['valid']:
+                print(f"Issues in {filename}:")
+                for error in file_result['errors']:
+                    print(f"  - {error}")
+        
+        # Handle directory not found
+        result = validate_prompt_directory('nonexistent_dir/')
+        # result['valid'] will be False with directory error
+        
+        # Empty directory (no .md files)
+        result = validate_prompt_directory('empty_dir/')
+        # result['valid'] will be True, files_checked will be 0
     """
     if not os.path.isdir(directory):
         return {
@@ -211,14 +391,20 @@ def _load_content(source: str) -> str:
     Load content from source (auto-detect file path vs string content).
     For directories/wildcards, concatenate all .md files.
     
+    This is an internal function that handles the complexity of determining
+    whether the input is a file path, directory, wildcard pattern, or
+    string content, and loads the appropriate content.
+    
     Args:
         source: File path, directory, wildcard, or string content
         
     Returns:
-        str: The loaded content
+        str: The loaded content. For directories/wildcards, this is the
+             concatenated content of all matching .md files separated by
+             double newlines.
         
     Raises:
-        FileNotFoundError: If file/directory doesn't exist
+        FileNotFoundError: If file/directory doesn't exist or cannot be read
     """
     if _is_file_path(source):
         if os.path.isdir(source):
@@ -274,6 +460,12 @@ def _is_file_path(source: str) -> bool:
     """
     Detect if source is a file path vs string content using simple heuristics.
     
+    This function uses several heuristics to distinguish between file paths
+    and markdown content strings:
+    - Presence of newlines or # at start indicates content
+    - Path separators, extensions, wildcards indicate file paths
+    - Short strings without markdown indicators are assumed to be paths
+    
     Args:
         source: Input string to check
         
@@ -297,11 +489,18 @@ def _extract_headers(content: str) -> List[Dict[str, Any]]:
     """
     Extract all headers from markdown content.
     
+    This function finds all markdown headers (levels 1-5) and returns
+    detailed information about each one including position data.
+    
     Args:
         content: Markdown content
         
     Returns:
-        list: List of header dictionaries with keys: name, level, line, position
+        list: List of header dictionaries with keys:
+            - name (str): Header text without # symbols
+            - level (int): Header level (1-5)
+            - line (int): 1-based line number
+            - position (int): 0-based line index
     """
     headers = []
     lines = content.split('\n')
@@ -327,12 +526,16 @@ def _extract_code_block_after_header(content: str, header: Dict[str, Any]) -> Un
     """
     Extract the first code block after a header.
     
+    This function looks for the first ``` fenced code block that appears
+    after the given header, stopping if it encounters another header first.
+    
     Args:
         content: Full markdown content
         header: Header dictionary with position info
         
     Returns:
-        str or None: Code block content, or None if no code block found
+        str or None: Code block content (excluding ``` markers), or None
+                     if no code block found before the next header
     """
     lines = content.split('\n')
     start_line = header['position'] + 1  # Start searching after the header
@@ -373,7 +576,7 @@ def _find_duplicates(items: List[str]) -> List[str]:
         items: List of items to check
         
     Returns:
-        list: List of items that appear more than once
+        list: List of items that appear more than once (unique duplicates)
     """
     seen = set()
     duplicates = set()
