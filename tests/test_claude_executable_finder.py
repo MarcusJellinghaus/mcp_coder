@@ -5,7 +5,7 @@ import os
 import shutil
 import unittest.mock
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, Mock
 
 import pytest
 
@@ -22,9 +22,9 @@ class TestGetClaudeSearchPaths:
 
     @patch.dict(os.environ, {"USERNAME": "testuser"}, clear=True)
     @patch("mcp_coder.claude_executable_finder.shutil.which")
-    def test_search_paths_generation(self, mock_which: MagicMock) -> None:
+    def test_search_paths_generation(self, mock_which: Mock) -> None:  # type: ignore[misc]
         """Test that search paths are generated correctly."""
-        mock_which.return_value = "/usr/bin/claude"
+        mock_which.return_value = "/usr/bin/claude"  # type: ignore[attr-defined]
         
         paths = _get_claude_search_paths()
         
@@ -45,9 +45,9 @@ class TestGetClaudeSearchPaths:
 
     @patch.dict(os.environ, {"USER": "unixuser"}, clear=True)
     @patch("mcp_coder.claude_executable_finder.shutil.which")
-    def test_search_paths_unix_user(self, mock_which: MagicMock) -> None:
+    def test_search_paths_unix_user(self, mock_which: Mock) -> None:  # type: ignore[misc]
         """Test search paths with Unix USER environment variable."""
-        mock_which.return_value = None
+        mock_which.return_value = None  # type: ignore[attr-defined]
         
         paths = _get_claude_search_paths()
         
@@ -67,13 +67,13 @@ class TestFindClaudeExecutable:
         
         # Mock first path doesn't exist, second does
         mock_path1 = MagicMock()
-        mock_path1.exists.return_value = False
-        mock_path1.__str__.return_value = "/usr/bin/claude"
+        mock_path1.exists.return_value = False  # type: ignore[attr-defined]
+        mock_path1.__str__.return_value = "/usr/bin/claude"  # type: ignore[attr-defined]
         
         mock_path2 = MagicMock()
-        mock_path2.exists.return_value = True
-        mock_path2.is_file.return_value = True
-        mock_path2.__str__.return_value = "/opt/claude/claude"
+        mock_path2.exists.return_value = True  # type: ignore[attr-defined]
+        mock_path2.is_file.return_value = True  # type: ignore[attr-defined]
+        mock_path2.__str__.return_value = "/opt/claude/claude"  # type: ignore[attr-defined]
         
         mock_path_class.side_effect = [mock_path1, mock_path2]
         
@@ -92,14 +92,14 @@ class TestFindClaudeExecutable:
         mock_get_paths.return_value = ["/usr/bin/claude"]
         
         mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.is_file.return_value = True
-        mock_path.__str__.return_value = "/usr/bin/claude"
+        mock_path.exists.return_value = True  # type: ignore[attr-defined]
+        mock_path.is_file.return_value = True  # type: ignore[attr-defined]
+        mock_path.__str__.return_value = "/usr/bin/claude"  # type: ignore[attr-defined]
         mock_path_class.return_value = mock_path
         
         # Mock successful execution test
         mock_result = MagicMock()
-        mock_result.return_code = 0
+        mock_result.return_code = 0  # type: ignore[attr-defined]
         
         with patch("mcp_coder.claude_executable_finder.os.access", return_value=True), \
              patch("mcp_coder.claude_executable_finder.execute_command", return_value=mock_result):
@@ -111,7 +111,7 @@ class TestFindClaudeExecutable:
     @patch("mcp_coder.claude_executable_finder._get_claude_search_paths")
     def test_find_executable_not_found_raises(self, mock_get_paths: MagicMock) -> None:
         """Test that FileNotFoundError is raised when executable not found."""
-        mock_get_paths.return_value = []
+        mock_get_paths.return_value = []  # type: ignore[attr-defined]
         
         with pytest.raises(FileNotFoundError) as exc_info:
             find_claude_executable(return_none_if_not_found=False)
@@ -132,9 +132,9 @@ class TestSetupClaudePath:
     """Test the setup_claude_path function."""
 
     @patch("mcp_coder.claude_executable_finder.shutil.which")
-    def test_claude_already_in_path(self, mock_which: MagicMock) -> None:
+    def test_claude_already_in_path(self, mock_which: Mock) -> None:  # type: ignore[misc]
         """Test when Claude is already available in PATH."""
-        mock_which.return_value = "/usr/bin/claude"
+        mock_which.return_value = "/usr/bin/claude"  # type: ignore[attr-defined]
         
         result = setup_claude_path()
         
@@ -142,7 +142,7 @@ class TestSetupClaudePath:
 
     @patch("mcp_coder.claude_executable_finder.shutil.which")
     @patch("mcp_coder.claude_executable_finder.find_claude_executable")
-    def test_add_claude_to_path(self, mock_find: MagicMock, mock_which: MagicMock) -> None:
+    def test_add_claude_to_path(self, mock_find: MagicMock, mock_which: Mock) -> None:  # type: ignore[misc]
         """Test adding Claude directory to PATH."""
         # Store original PATH to restore later
         original_path = os.environ.get("PATH", "")
@@ -152,7 +152,7 @@ class TestSetupClaudePath:
             os.environ["PATH"] = "/usr/bin:/bin"
             
             # Claude not in PATH initially
-            mock_which.return_value = None
+            mock_which.return_value = None  # type: ignore[attr-defined]
             
             # But can be found in specific location
             mock_find.return_value = "/opt/claude/bin/claude"
@@ -170,9 +170,9 @@ class TestSetupClaudePath:
 
     @patch("mcp_coder.claude_executable_finder.shutil.which")
     @patch("mcp_coder.claude_executable_finder.find_claude_executable")
-    def test_claude_not_found(self, mock_find: MagicMock, mock_which: MagicMock) -> None:
+    def test_claude_not_found(self, mock_find: MagicMock, mock_which: Mock) -> None:  # type: ignore[misc]
         """Test when Claude cannot be found."""
-        mock_which.return_value = None
+        mock_which.return_value = None  # type: ignore[attr-defined]
         mock_find.return_value = None
         
         result = setup_claude_path()
@@ -188,12 +188,12 @@ class TestVerifyClaudeInstallation:
     def test_successful_verification(self, mock_execute: MagicMock, mock_find: MagicMock) -> None:
         """Test successful Claude installation verification."""
         # Setup
-        mock_find.return_value = "/usr/bin/claude"
+        mock_find.return_value = "/usr/bin/claude"  # type: ignore[attr-defined]
         
         mock_result = MagicMock()
-        mock_result.return_code = 0
-        mock_result.stdout = "claude 1.2.3"
-        mock_execute.return_value = mock_result
+        mock_result.return_code = 0  # type: ignore[attr-defined]
+        mock_result.stdout = "claude 1.2.3"  # type: ignore[attr-defined]
+        mock_execute.return_value = mock_result  # type: ignore[attr-defined]
         
         # Execute
         result = verify_claude_installation()
@@ -208,7 +208,7 @@ class TestVerifyClaudeInstallation:
     @patch("mcp_coder.claude_executable_finder.find_claude_executable")
     def test_claude_not_found(self, mock_find: MagicMock) -> None:
         """Test verification when Claude is not found."""
-        mock_find.side_effect = FileNotFoundError("Claude not found")
+        mock_find.side_effect = FileNotFoundError("Claude not found")  # type: ignore[attr-defined]
         
         result = verify_claude_installation()
         
@@ -216,7 +216,9 @@ class TestVerifyClaudeInstallation:
         assert result['path'] is None
         assert result['version'] is None
         assert result['works'] is False
-        assert "Claude not found" in result['error']
+        error_msg = result['error']
+        assert error_msg is not None
+        assert "Claude not found" in error_msg  # pylint: disable=unsupported-membership-test
 
     @patch("mcp_coder.claude_executable_finder.find_claude_executable")
     @patch("mcp_coder.claude_executable_finder.execute_command")
@@ -226,9 +228,9 @@ class TestVerifyClaudeInstallation:
         mock_find.return_value = "/usr/bin/claude"
         
         mock_result = MagicMock()
-        mock_result.return_code = 1
-        mock_result.stderr = "Command failed"
-        mock_execute.return_value = mock_result
+        mock_result.return_code = 1  # type: ignore[attr-defined]
+        mock_result.stderr = "Command failed"  # type: ignore[attr-defined]
+        mock_execute.return_value = mock_result  # type: ignore[attr-defined]
         
         # Execute
         result = verify_claude_installation()
@@ -238,7 +240,9 @@ class TestVerifyClaudeInstallation:
         assert result['path'] == "/usr/bin/claude"
         assert result['version'] is None
         assert result['works'] is False
-        assert "Version check failed" in result['error']
+        error_msg = result['error']
+        assert error_msg is not None
+        assert "Version check failed" in error_msg  # pylint: disable=unsupported-membership-test
 
 
 class TestIntegration:

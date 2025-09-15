@@ -20,10 +20,13 @@ def _find_claude_executable() -> str:
     Raises:
         FileNotFoundError: If Claude Code CLI is not found
     """
-    return find_claude_executable(
+    result = find_claude_executable(
         test_execution=True,
         return_none_if_not_found=False
     )
+    if result is None:
+        raise FileNotFoundError("Claude Code CLI not found")
+    return result
 
 
 def ask_claude_code_cli(question: str, timeout: int = 30) -> str:

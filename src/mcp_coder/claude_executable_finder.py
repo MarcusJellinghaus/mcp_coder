@@ -4,7 +4,7 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from .subprocess_runner import execute_command
 
@@ -17,10 +17,8 @@ def _get_claude_search_paths() -> List[str]:
     """
     username = os.environ.get("USERNAME", os.environ.get("USER", ""))
     
-    paths = [
-        # Standard PATH locations
-        shutil.which("claude"),
-        
+    # Start with the paths that are definitely strings
+    paths_list: List[str] = [
         # Windows user-specific locations
         f"C:\\Users\\{username}\\.local\\bin\\claude.exe",
         f"C:\\Users\\{username}\\.local\\bin\\claude",
@@ -45,8 +43,12 @@ def _get_claude_search_paths() -> List[str]:
         "C:/Users/Marcus/.local/bin/claude",
     ]
     
-    # Filter out None values from shutil.which
-    return [path for path in paths if path is not None]
+    # Add PATH location if it exists
+    claude_from_path = shutil.which("claude")
+    if claude_from_path is not None:
+        paths_list.insert(0, claude_from_path)
+    
+    return paths_list
 
 
 def find_claude_executable(*, 
@@ -104,7 +106,7 @@ def find_claude_executable(*,
         raise FileNotFoundError(
             "Claude Code CLI not found. Please ensure it's installed and accessible.\\n"
             "Install with: npm install -g @anthropic-ai/claude-code\\n"
-            f"Searched locations: {search_paths}"
+            f"Searched locations: {[str(path) for path in search_paths]}"
         )
 
 
@@ -135,7 +137,7 @@ def setup_claude_path() -> Optional[str]:
     return None
 
 
-def verify_claude_installation() -> dict:
+def verify_claude_installation() -> dict[str, Any]:
     """Verify Claude Code installation and return detailed information.
     
     Returns:
@@ -148,7 +150,7 @@ def verify_claude_installation() -> dict:
             'error': str | None
         }
     """
-    result = {
+    result: dict[str, Any] = {
         'found': False,
         'path': None,
         'version': None,
@@ -165,7 +167,7 @@ def verify_claude_installation() -> dict:
         # Get version information
         try:
             version_result = execute_command(
-                [claude_path, "--version"],
+                [str(claude_path), "--version"],
                 timeout_seconds=10,
             )
             if version_result.return_code == 0:

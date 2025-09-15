@@ -64,25 +64,30 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
     # Import message types for proper type checking
     try:
         from claude_code_sdk import AssistantMessage, TextBlock, SystemMessage, ResultMessage
+        types_imported = True
     except ImportError:
         # Fallback to string-based type checking if imports fail
-        AssistantMessage = TextBlock = SystemMessage = ResultMessage = None
+        types_imported = False
+        AssistantMessage = None  # type: ignore[assignment,misc]
+        TextBlock = None  # type: ignore[assignment,misc]
+        SystemMessage = None  # type: ignore[assignment,misc]
+        ResultMessage = None  # type: ignore[assignment,misc]
     
     # Use asyncio timeout to respect the timeout parameter
     async def _query_with_timeout() -> str:
         response_parts = []
-        session_info = {}
-        result_info = {}
+        session_info: dict[str, Any] = {}
+        result_info: dict[str, Any] = {}
         
         async for message in query(prompt=question, options=options):
             # Handle different message types according to SDK documentation
-            if AssistantMessage and isinstance(message, AssistantMessage):
+            if AssistantMessage is not None and isinstance(message, AssistantMessage):
                 # AssistantMessage contains content blocks (TextBlock, ToolUseBlock, etc.)
                 for block in message.content:
-                    if TextBlock and isinstance(block, TextBlock):
+                    if TextBlock is not None and isinstance(block, TextBlock):
                         response_parts.append(block.text)
                         
-            elif SystemMessage and isinstance(message, SystemMessage):
+            elif SystemMessage is not None and isinstance(message, SystemMessage):
                 # SystemMessage contains session metadata - store for debugging
                 session_info.update({
                     'session_id': getattr(message, 'session_id', None),
@@ -91,7 +96,7 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
                     'mcp_servers': message.data.get('mcp_servers', []) if hasattr(message, 'data') else []
                 })
                 
-            elif ResultMessage and isinstance(message, ResultMessage):
+            elif ResultMessage is not None and isinstance(message, ResultMessage):
                 # ResultMessage contains cost and usage information
                 result_info.update({
                     'duration_ms': getattr(message, 'duration_ms', None),
@@ -108,9 +113,9 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
                 if message_type == 'AssistantMessage':
                     # Handle AssistantMessage without import
                     if hasattr(message, 'content'):
-                        for block in message.content:
-                            if hasattr(block, 'text'):
-                                response_parts.append(block.text)
+                        for content_block in message.content:
+                            if hasattr(content_block, 'text'):
+                                response_parts.append(content_block.text)
                                 
                 elif hasattr(message, 'text') and message.text:
                     # Direct text attribute
@@ -122,9 +127,9 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
                     else:
                         # Try to extract text from content blocks
                         try:
-                            for block in message.content:
-                                if hasattr(block, 'text'):
-                                    response_parts.append(block.text)
+                            for content_block in message.content:
+                                if hasattr(content_block, 'text'):
+                                    response_parts.append(content_block.text)
                         except (TypeError, AttributeError):
                             # Fallback: convert to string
                             response_parts.append(str(message.content))
@@ -228,7 +233,7 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
 
 
 
-async def ask_claude_code_api_detailed(question: str, timeout: int = 30) -> dict:
+async def ask_claude_code_api_detailed(question: str, timeout: int = 30) -> dict[str, Any]:
     """
     Ask Claude a question via Python SDK and return detailed response information.
     
@@ -272,28 +277,33 @@ async def ask_claude_code_api_detailed(question: str, timeout: int = 30) -> dict
     # Import message types for proper type checking
     try:
         from claude_code_sdk import AssistantMessage, TextBlock, SystemMessage, ResultMessage
+        types_imported = True
     except ImportError:
         # Fallback to string-based type checking if imports fail
-        AssistantMessage = TextBlock = SystemMessage = ResultMessage = None
+        types_imported = False
+        AssistantMessage = None  # type: ignore[assignment,misc]
+        TextBlock = None  # type: ignore[assignment,misc]
+        SystemMessage = None  # type: ignore[assignment,misc]
+        ResultMessage = None  # type: ignore[assignment,misc]
     
     # Use asyncio timeout to respect the timeout parameter
-    async def _query_with_timeout() -> dict:
+    async def _query_with_timeout() -> dict[str, Any]:
         response_parts = []
-        session_info = {}
-        result_info = {}
+        session_info: dict[str, Any] = {}
+        result_info: dict[str, Any] = {}
         raw_messages = []
         
         async for message in query(prompt=question, options=options):
             raw_messages.append(message)
             
             # Handle different message types according to SDK documentation
-            if AssistantMessage and isinstance(message, AssistantMessage):
+            if AssistantMessage is not None and isinstance(message, AssistantMessage):
                 # AssistantMessage contains content blocks (TextBlock, ToolUseBlock, etc.)
                 for block in message.content:
-                    if TextBlock and isinstance(block, TextBlock):
+                    if TextBlock is not None and isinstance(block, TextBlock):
                         response_parts.append(block.text)
                         
-            elif SystemMessage and isinstance(message, SystemMessage):
+            elif SystemMessage is not None and isinstance(message, SystemMessage):
                 # SystemMessage contains session metadata
                 session_info.update({
                     'session_id': getattr(message, 'session_id', None),
@@ -304,7 +314,7 @@ async def ask_claude_code_api_detailed(question: str, timeout: int = 30) -> dict
                     'api_key_source': message.data.get('apiKeySource') if hasattr(message, 'data') else None
                 })
                 
-            elif ResultMessage and isinstance(message, ResultMessage):
+            elif ResultMessage is not None and isinstance(message, ResultMessage):
                 # ResultMessage contains cost and usage information
                 result_info.update({
                     'duration_ms': getattr(message, 'duration_ms', None),
@@ -323,9 +333,9 @@ async def ask_claude_code_api_detailed(question: str, timeout: int = 30) -> dict
                 if message_type == 'AssistantMessage':
                     # Handle AssistantMessage without import
                     if hasattr(message, 'content'):
-                        for block in message.content:
-                            if hasattr(block, 'text'):
-                                response_parts.append(block.text)
+                        for content_block in message.content:
+                            if hasattr(content_block, 'text'):
+                                response_parts.append(content_block.text)
         
         return {
             'text': ''.join(response_parts).strip(),
@@ -344,7 +354,7 @@ async def ask_claude_code_api_detailed(question: str, timeout: int = 30) -> dict
         )
 
 
-def ask_claude_code_api_detailed_sync(question: str, timeout: int = 30) -> dict:
+def ask_claude_code_api_detailed_sync(question: str, timeout: int = 30) -> dict[str, Any]:
     """
     Synchronous wrapper for ask_claude_code_api_detailed.
     
