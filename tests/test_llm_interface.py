@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.claude_code_interface import ask_claude_code
+from mcp_coder.llm_providers.claude.claude_code_interface import ask_claude_code
 from mcp_coder.llm_interface import ask_llm
 
 
@@ -82,7 +82,7 @@ class TestAskLLM:
 class TestAskClaudeCode:
     """Test the Claude-specific routing function."""
 
-    @patch("mcp_coder.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_ask_claude_code_routes_to_cli(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -94,7 +94,7 @@ class TestAskClaudeCode:
         mock_ask_claude_code_cli.assert_called_once_with("Test question", timeout=30)
         assert result == "CLI response"
 
-    @patch("mcp_coder.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_ask_claude_code_default_parameters(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -106,7 +106,7 @@ class TestAskClaudeCode:
         mock_ask_claude_code_cli.assert_called_once_with("Test question", timeout=30)
         assert result == "Default CLI response"
 
-    @patch("mcp_coder.claude_code_interface.ask_claude_code_api")
+    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_api")
     def test_ask_claude_code_routes_to_api(
         self, mock_ask_claude_code_api: MagicMock
     ) -> None:
@@ -123,7 +123,7 @@ class TestAskClaudeCode:
         with pytest.raises(ValueError, match="Unsupported method: invalid"):
             ask_claude_code("Test question", method="invalid")
 
-    @patch("mcp_coder.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_ask_claude_code_passes_through_exceptions(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -133,7 +133,7 @@ class TestAskClaudeCode:
         with pytest.raises(FileNotFoundError, match="Claude CLI not found"):
             ask_claude_code("Test question", method="cli")
 
-    @patch("mcp_coder.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_ask_claude_code_custom_timeout(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -149,7 +149,7 @@ class TestAskClaudeCode:
 class TestIntegration:
     """Integration tests for the full routing chain."""
 
-    @patch("mcp_coder.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_full_routing_chain(self, mock_ask_claude_code_cli: MagicMock) -> None:
         """Test the full routing chain from ask_llm to ask_claude_code_cli."""
         mock_ask_claude_code_cli.return_value = "Full chain response"

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from mcp_coder.claude_code_api import (
+from mcp_coder.llm_providers.claude.claude_code_api import (
     _ask_claude_code_api_async,
     _create_claude_client,
     ask_claude_code_api,
@@ -17,7 +17,7 @@ from mcp_coder.claude_code_api import (
 class TestCreateClaudeClient:
     """Test the _create_claude_client function."""
 
-    @patch("mcp_coder.claude_code_api.ClaudeCodeOptions")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.ClaudeCodeOptions")
     def test_create_claude_client_basic(self, mock_options_class: MagicMock) -> None:
         """Test that _create_claude_client creates basic options."""
         mock_options = MagicMock()
@@ -33,8 +33,8 @@ class TestAskClaudeCodeApiAsync:
     """Test the async _ask_claude_code_api_async function."""
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.claude_code_api.query")
-    @patch("mcp_coder.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
     async def test_multiple_text_blocks_concatenated(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -44,7 +44,7 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.claude_code_api import AssistantMessage, TextBlock
+        from mcp_coder.llm_providers.claude.claude_code_api import AssistantMessage, TextBlock
 
         # Create proper mock objects that will pass isinstance checks
         mock_text_block1 = MagicMock(spec=TextBlock)
@@ -72,8 +72,8 @@ class TestAskClaudeCodeApiAsync:
         mock_query.assert_called_once_with(prompt="test question", options=mock_options)
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.claude_code_api.query")
-    @patch("mcp_coder.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
     async def test_basic_question_with_assistant_message(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -83,7 +83,7 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.claude_code_api import AssistantMessage, TextBlock
+        from mcp_coder.llm_providers.claude.claude_code_api import AssistantMessage, TextBlock
 
         mock_text_block = MagicMock(spec=TextBlock)
         mock_text_block.text = "Response from TextBlock"
@@ -103,8 +103,8 @@ class TestAskClaudeCodeApiAsync:
         assert result == "Response from TextBlock"
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.claude_code_api.query")
-    @patch("mcp_coder.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
     async def test_unknown_message_type_ignored(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -114,7 +114,7 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.claude_code_api import AssistantMessage, TextBlock
+        from mcp_coder.llm_providers.claude.claude_code_api import AssistantMessage, TextBlock
 
         # Create a message that doesn't match any known types
         mock_unknown_message = MagicMock()
@@ -140,8 +140,8 @@ class TestAskClaudeCodeApiAsync:
         assert result == "Real response"
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.claude_code_api.query")
-    @patch("mcp_coder.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
     async def test_timeout_handling(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -163,8 +163,8 @@ class TestAskClaudeCodeApiAsync:
         assert "timed out after 1 seconds" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.claude_code_api.query")
-    @patch("mcp_coder.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
     async def test_strips_whitespace(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -174,7 +174,7 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.claude_code_api import AssistantMessage, TextBlock
+        from mcp_coder.llm_providers.claude.claude_code_api import AssistantMessage, TextBlock
 
         mock_text_block = MagicMock(spec=TextBlock)
         mock_text_block.text = "  \n  Response with whitespace  \n  "
@@ -197,7 +197,7 @@ class TestAskClaudeCodeApiAsync:
 class TestAskClaudeCodeApi:
     """Test the synchronous ask_claude_code_api function."""
 
-    @patch("mcp_coder.claude_code_api.asyncio.run")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.asyncio.run")
     def test_basic_question(self, mock_asyncio_run: MagicMock) -> None:
         """Test asking a basic question."""
         # Setup
@@ -213,7 +213,7 @@ class TestAskClaudeCodeApi:
         args, _ = mock_asyncio_run.call_args
         assert len(args) == 1  # One positional argument (the coroutine)
 
-    @patch("mcp_coder.claude_code_api.asyncio.run")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.asyncio.run")
     def test_timeout_exception_passthrough(self, mock_asyncio_run: MagicMock) -> None:
         """Test that TimeoutExpired exceptions are passed through."""
         # Setup
@@ -226,7 +226,7 @@ class TestAskClaudeCodeApi:
         with pytest.raises(subprocess.TimeoutExpired):
             ask_claude_code_api("test question")
 
-    @patch("mcp_coder.claude_code_api.asyncio.run")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.asyncio.run")
     def test_other_exception_conversion(self, mock_asyncio_run: MagicMock) -> None:
         """Test that other exceptions (non-ValueError, non-TimeoutExpired) are converted to CalledProcessError."""
         # Setup - use RuntimeError instead of ValueError since ValueError is now re-raised
@@ -243,8 +243,8 @@ class TestAskClaudeCodeApi:
         assert "Some SDK error" in error.stderr
         assert error.__cause__ == original_error
 
-    @patch("mcp_coder.claude_code_api.find_claude_executable")
-    @patch("mcp_coder.claude_code_api.asyncio.run")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.find_claude_executable")
+    @patch("mcp_coder.llm_providers.claude.claude_code_api.asyncio.run")
     def test_dynamic_username_in_error_message(
         self, mock_asyncio_run: MagicMock, mock_find_claude: MagicMock
     ) -> None:

@@ -5,9 +5,9 @@ import subprocess
 
 import pytest
 
-from mcp_coder.claude_client import ask_claude
-from mcp_coder.claude_code_cli import _find_claude_executable
-from mcp_coder.claude_code_interface import ask_claude_code
+from mcp_coder.llm_providers.claude.claude_client import ask_claude
+from mcp_coder.llm_providers.claude.claude_code_cli import _find_claude_executable
+from mcp_coder.llm_providers.claude.claude_code_interface import ask_claude_code
 
 
 class TestClaudeClientRealIntegration:

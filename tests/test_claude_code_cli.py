@@ -6,15 +6,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.claude_code_cli import ask_claude_code_cli
-from mcp_coder.subprocess_runner import CommandResult
+from mcp_coder.llm_providers.claude.claude_code_cli import ask_claude_code_cli
+from mcp_coder.utils.subprocess_runner import CommandResult
 
 
 class TestClaudeCodeCli:
     """Test cases for Claude Code CLI functions."""
 
-    @patch("mcp_coder.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
     def test_ask_claude_code_cli_success(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -36,8 +36,8 @@ class TestClaudeCodeCli:
             timeout_seconds=30,
         )
 
-    @patch("mcp_coder.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
     def test_ask_claude_code_cli_with_custom_timeout(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -58,7 +58,7 @@ class TestClaudeCodeCli:
             timeout_seconds=60,
         )
 
-    @patch("mcp_coder.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
     def test_ask_claude_code_cli_file_not_found(self, mock_find: MagicMock) -> None:
         """Test Claude CLI not found error."""
         mock_find.side_effect = FileNotFoundError(
@@ -68,8 +68,8 @@ class TestClaudeCodeCli:
         with pytest.raises(FileNotFoundError, match="Claude Code CLI not found"):
             ask_claude_code_cli("Test question")
 
-    @patch("mcp_coder.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
     def test_ask_claude_code_cli_timeout(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -89,8 +89,8 @@ class TestClaudeCodeCli:
         ):
             ask_claude_code_cli("Test question")
 
-    @patch("mcp_coder.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
     def test_ask_claude_code_cli_command_error(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
