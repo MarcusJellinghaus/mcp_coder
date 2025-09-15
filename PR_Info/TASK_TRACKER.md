@@ -39,13 +39,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy check and fix any type issues
   - [x] Prepare git commit with descriptive message
 
-- [ ] **Step 3: Update Import Statements in Moved Test Files** - [step_3.md](./steps/step_3.md)
-  - [ ] Fix import paths in all moved Claude test files
-  - [ ] Ensure all mcp_coder.* imports work from new nested location
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest to verify imports resolve correctly
-  - [ ] Run mypy check and fix any type issues
-  - [ ] Prepare git commit with descriptive message
+- [x] **Step 3: Update Import Statements in Moved Test Files** - [step_3.md](./steps/step_3.md)
+  - [x] Fix import paths in all moved Claude test files
+  - [x] Ensure all mcp_coder.* imports work from new nested location
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest to verify imports resolve correctly
+  - [x] Run mypy check and fix any type issues
+  - [x] Prepare git commit with descriptive message
 
 - [ ] **Step 4: Verify Test Functionality and Run Validation** - [step_4.md](./steps/step_4.md)
   - [ ] Run comprehensive pytest validation on reorganized structure
