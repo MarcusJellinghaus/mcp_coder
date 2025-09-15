@@ -6,7 +6,6 @@ import os
 import subprocess
 from typing import Any
 
-from .claude_executable_finder import find_claude_executable, setup_claude_path
 from claude_code_sdk import (
     AssistantMessage,
     ClaudeCodeOptions,
@@ -15,6 +14,8 @@ from claude_code_sdk import (
     TextBlock,
     query,
 )
+
+from .claude_executable_finder import find_claude_executable, setup_claude_path
 
 
 def _create_claude_client() -> ClaudeCodeOptions:

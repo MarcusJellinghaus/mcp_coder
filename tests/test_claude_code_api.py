@@ -45,13 +45,13 @@ class TestAskClaudeCodeApiAsync:
 
         # Import the real SDK classes to create proper mock objects
         from mcp_coder.claude_code_api import AssistantMessage, TextBlock
-        
+
         # Create proper mock objects that will pass isinstance checks
         mock_text_block1 = MagicMock(spec=TextBlock)
         mock_text_block1.text = "Hello, "
         mock_text_block2 = MagicMock(spec=TextBlock)
         mock_text_block2.text = "world!"
-        
+
         mock_message1 = MagicMock(spec=AssistantMessage)
         mock_message1.content = [mock_text_block1]
         mock_message2 = MagicMock(spec=AssistantMessage)
@@ -84,10 +84,10 @@ class TestAskClaudeCodeApiAsync:
 
         # Import the real SDK classes to create proper mock objects
         from mcp_coder.claude_code_api import AssistantMessage, TextBlock
-        
+
         mock_text_block = MagicMock(spec=TextBlock)
         mock_text_block.text = "Response from TextBlock"
-        
+
         mock_message = MagicMock(spec=AssistantMessage)
         mock_message.content = [mock_text_block]
 
@@ -115,15 +115,15 @@ class TestAskClaudeCodeApiAsync:
 
         # Import the real SDK classes to create proper mock objects
         from mcp_coder.claude_code_api import AssistantMessage, TextBlock
-        
+
         # Create a message that doesn't match any known types
         mock_unknown_message = MagicMock()
         mock_unknown_message.some_attribute = "unknown"
-        
+
         # Create a proper AssistantMessage that will pass isinstance checks
         mock_text_block = MagicMock(spec=TextBlock)
         mock_text_block.text = "Real response"
-        
+
         mock_assistant_message = MagicMock(spec=AssistantMessage)
         mock_assistant_message.content = [mock_text_block]
 
@@ -175,10 +175,10 @@ class TestAskClaudeCodeApiAsync:
 
         # Import the real SDK classes to create proper mock objects
         from mcp_coder.claude_code_api import AssistantMessage, TextBlock
-        
+
         mock_text_block = MagicMock(spec=TextBlock)
         mock_text_block.text = "  \n  Response with whitespace  \n  "
-        
+
         mock_message = MagicMock(spec=AssistantMessage)
         mock_message.content = [mock_text_block]
 
