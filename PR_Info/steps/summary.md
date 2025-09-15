@@ -26,6 +26,7 @@ def is_file_tracked(file_path: Path, project_dir: Path) -> bool
 # New git-aligned functionality
 def get_staged_changes(project_dir: Path) -> list[str]
 def get_unstaged_changes(project_dir: Path) -> dict[str, list[str]]
+def get_full_status(project_dir: Path) -> dict[str, list[str]]  # Added comprehensive status
 def stage_specific_files(files: list[Path], project_dir: Path) -> bool
 def stage_all_changes(project_dir: Path) -> bool
 def commit_staged_files(message: str, project_dir: Path) -> CommitResult
@@ -57,11 +58,13 @@ CommitResult = {
 ```
 
 ## Implementation Strategy
-- **Step 1-2**: Copy foundation (git_operations.py + tests) and update dependencies
-- **Step 3**: Implement git status checking functions with tests
-- **Step 4**: Implement file staging functions with tests
-- **Step 5**: Implement commit functions with tests
-- **Step 6**: Integration and module exports
+- **Steps 1-2**: Copy foundation (git_operations.py + tests) and update dependencies
+- **Steps 3-5**: Implement git status functions (TDD: test & implement each function)
+- **Steps 6-8**: Implement file staging functions (TDD: test & implement each function)
+- **Steps 9-10**: Implement commit functions (TDD: test & implement each function)
+- **Steps 11-12**: Integration testing and module exports
+
+*Total: 12 focused steps using KISS + TDD + small incremental approach*
 
 ## Quality Assurance
 - Follow TDD: Write tests before implementation

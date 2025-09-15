@@ -1,96 +1,47 @@
-# Step 5: Implement Git Commit Functions (TDD)
+# Step 5: Test & Implement get_full_status()
 
-## WHERE
-- **File**: `src/mcp_coder/utils/git_operations.py` (extend existing)
-- **Test File**: `tests/utils/test_git_operations.py` (extend existing)
+## Goal
+Add comprehensive status function that combines staged, modified, and untracked info in one call.
 
-## WHAT
-Add core commit functionality for creating git commits.
-
-### Main Functions
+## Function Signature
 ```python
-def commit_staged_files(message: str, project_dir: Path) -> CommitResult
-def commit_all_changes(message: str, project_dir: Path) -> CommitResult
+def get_full_status(project_dir: Path) -> dict[str, list[str]]
 ```
 
-## HOW
-### Integration Points
-- Extend existing git_operations.py module  
-- Use `is_git_repository()`, `stage_all_changes()`, `get_staged_changes()` from previous steps
-- Import `git.Repo` for commit operations
-- Return detailed commit information
+## Test Scenarios to Write
+- Test comprehensive status with various file combinations
+- Test consistency with individual functions (`get_staged_changes`, `get_unstaged_changes`)
+- Test performance (should be efficient, not multiple git calls)
+- Test error cases (not git repo)
+- Test with large repositories (basic performance validation)
 
-### Dependencies
-- GitPython `Repo.index.commit()` for commit operations
-- Validation functions from previous steps
-
-## ALGORITHM
-### commit_staged_files()
-```
-1. Validate project_dir is git repository
-2. Check if there are staged files using get_staged_changes()
-3. Validate commit message is not empty/None
-4. Execute repo.index.commit(message) 
-5. Return simple commit result (success, hash, error)
-```
-
-### commit_all_changes()
-```
-1. Validate project_dir is git repository and commit message
-2. Stage all changes using stage_all_changes()
-3. Check staging was successful
-4. Execute commit_staged_files() to create commit
-5. Return commit result
-```
-
-## DATA
-### Return Values
+## Expected Behavior
 ```python
-# Both functions return simple CommitResult:
+# Return structure:
 {
-    "success": bool,                    # True if commit successful
-    "commit_hash": str | None,          # Git commit SHA (first 7 chars)
-    "error": str | None                # Error message if failed
+    "staged": list[str],      # Files staged for commit
+    "modified": list[str],    # Files tracked but modified  
+    "untracked": list[str]    # New files not tracked by git
 }
 ```
+- Returns empty dict if not a git repository (logs error)
+- Should be consistent with calling individual status functions
+- More efficient than separate calls
 
-### Validation Rules
-- commit_message must be non-empty string
-- Must be in a git repository
-- Must have staged changes to commit
-- Files (if specified) must exist and be stageable
+## Implementation Guidelines
+- Reuse logic from `get_staged_changes()` and `get_unstaged_changes()` OR
+- Implement efficiently with single git status call
+- Ensure consistency with individual functions
+- Handle errors gracefully
 
-### Error Scenarios
-- Not a git repository → success=False, error="Not a git repository"
-- Empty commit message → success=False, error="Commit message required"  
-- No staged changes → success=False, error="No changes to commit"
-- Git commit error → success=False, error=<git error message>
+## Done When
+- All tests pass
+- Function provides comprehensive status efficiently
+- Results consistent with individual status functions
+- Performance acceptable for typical repositories
 
----
-
-## LLM PROMPT  
-```
-Reference the summary in pr_info/steps/summary.md and decisions in pr_info/steps/Decisions.md for context.
-
-Implement Step 5 using Test-Driven Development: First write comprehensive tests for git commit functions, then implement the functions.
-
-Write tests for:
-1. commit_staged_files() - test successful commit, no staged files, empty message
-2. commit_all_changes() - test staging + commit workflow, empty repo, error cases
-3. Error cases - not git repo, invalid commit message, git commit failures  
-4. Edge cases - empty commits, large commit messages, special characters
-
-Then implement the functions in src/mcp_coder/utils/git_operations.py:
-- commit_staged_files(message: str, project_dir: Path) -> CommitResult
-- commit_all_changes(message: str, project_dir: Path) -> CommitResult
-
-Key requirements:
-- Use functions from previous steps (is_git_repository, stage_all_changes, get_staged_changes)
-- commit_all_changes() should call stage_all_changes() then commit_staged_files()
-- Use GitPython's repo.index.commit() for actual commits
-- Return simple commit information as per Decisions.md
-- Handle all error cases gracefully with informative messages
-- Follow existing logging and error handling patterns
-
-Ensure all tests pass and integration with existing functions works correctly.
-```
+## TDD Approach
+1. Write tests covering all status combinations
+2. Write tests verifying consistency with existing functions
+3. Implement efficiently (optimize git calls)
+4. Refactor for clarity and maintainability
