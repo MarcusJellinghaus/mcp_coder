@@ -43,10 +43,10 @@ def ask_llm(
     # Input validation
     if not question or not question.strip():
         raise ValueError("Question cannot be empty or whitespace only")
-    
+
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
-    
+
     if provider == "claude":
         return ask_claude_code(question, method=method, timeout=timeout)
     else:

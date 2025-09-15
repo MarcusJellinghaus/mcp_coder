@@ -39,10 +39,10 @@ def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> st
     # Input validation
     if not question or not question.strip():
         raise ValueError("Question cannot be empty or whitespace only")
-    
+
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
-    
+
     if method == "cli":
         return ask_claude_code_cli(question, timeout=timeout)
     elif method == "api":

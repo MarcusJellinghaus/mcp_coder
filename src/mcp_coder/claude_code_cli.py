@@ -45,10 +45,10 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     # Input validation
     if not question or not question.strip():
         raise ValueError("Question cannot be empty or whitespace only")
-    
+
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
-    
+
     # Find the Claude executable
     claude_cmd = _find_claude_executable()
 

@@ -64,10 +64,10 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
     # Input validation
     if not question or not question.strip():
         raise ValueError("Question cannot be empty or whitespace only")
-    
+
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
-    
+
     options = _create_claude_client()
 
     # Import message types for proper type checking
@@ -229,7 +229,7 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
     except subprocess.TimeoutExpired:
         # Re-raise timeout errors as-is for consistency with CLI version
         raise
-    
+
     except ValueError:
         # Re-raise input validation errors as-is
         raise
@@ -311,10 +311,10 @@ async def ask_claude_code_api_detailed(
     # Input validation
     if not question or not question.strip():
         raise ValueError("Question cannot be empty or whitespace only")
-    
+
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
-    
+
     options = _create_claude_client()
 
     # Import message types for proper type checking
@@ -451,7 +451,7 @@ def ask_claude_code_api_detailed_sync(
     except subprocess.TimeoutExpired:
         # Re-raise timeout errors as-is for consistency with CLI version
         raise
-    
+
     except ValueError:
         # Re-raise input validation errors as-is
         raise
