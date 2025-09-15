@@ -191,6 +191,22 @@ Please work only on one task. Do not pick further tasks.
   - Task was unnecessary or already implemented
   - *Response:* Mark as complete, update plan for remaining tasks
 
+** Possible prompt for too complex task**
+
+```
+Please look at pr_info/TASK_TRACKER.md and pick the next task that should be done.
+Please let me know on which task you are working on.
+
+Actually, please do not work on the task right now.
+
+Rather review the task (and the summary and the related code base etc)
+And tell me what needs to be done
+Please tell me whether this is feasible, how complicated it is, whether it could be simplified or whether it needs to broken down in several sub tasks.
+```
+
+
+
+
 #### 2.2 Commit Preparation
 
 **Process:**
