@@ -264,7 +264,7 @@ class TestExecuteSubprocess:
         
         assert result.return_code == 1
         assert result.timed_out is True
-        assert "timed out after 5 seconds" in result.execution_error
+        assert result.execution_error is not None and "timed out after 5 seconds" in result.execution_error
         assert result.command == ["sleep", "10"]
 
     @patch("mcp_coder.utils.subprocess_runner._run_subprocess")
@@ -276,7 +276,7 @@ class TestExecuteSubprocess:
         
         assert result.return_code == 1
         assert result.timed_out is False
-        assert "FileNotFoundError: Command not found" in result.execution_error
+        assert result.execution_error is not None and "FileNotFoundError: Command not found" in result.execution_error
 
     @patch("mcp_coder.utils.subprocess_runner._run_subprocess")
     def test_execute_subprocess_permission_error(self, mock_run: MagicMock) -> None:
@@ -287,7 +287,7 @@ class TestExecuteSubprocess:
         
         assert result.return_code == 1
         assert result.timed_out is False
-        assert "PermissionError: Permission denied" in result.execution_error
+        assert result.execution_error is not None and "PermissionError: Permission denied" in result.execution_error
 
     @patch("mcp_coder.utils.subprocess_runner._run_subprocess")
     def test_execute_subprocess_called_process_error_without_check(self, mock_run: MagicMock) -> None:
@@ -357,7 +357,8 @@ class TestIntegration:
 
     def test_simple_echo_command(self) -> None:
         """Test executing a simple echo command."""
-        result = execute_command(["echo", "hello world"])
+        # Use Python's print instead of echo for cross-platform compatibility
+        result = execute_command([sys.executable, "-c", "print('hello world')"])
         
         assert result.return_code == 0
         assert "hello world" in result.stdout
@@ -382,7 +383,8 @@ class TestIntegration:
             
             # Use a command that should work cross-platform
             if os.name == "nt":  # Windows
-                result = execute_command(["dir"], cwd=temp_dir, shell=True)
+                # Use PowerShell's dir command or Python to list directory
+                result = execute_command([sys.executable, "-c", "import os; print('\\n'.join(os.listdir('.')))"], cwd=temp_dir)
             else:  # Unix-like
                 result = execute_command(["ls"], cwd=temp_dir)
             
@@ -391,21 +393,19 @@ class TestIntegration:
 
     def test_command_timeout(self) -> None:
         """Test command timeout functionality."""
-        # Use a sleep command that should timeout
-        if os.name == "nt":  # Windows
-            result = execute_command(["timeout", "10"], timeout_seconds=1)
-        else:  # Unix-like
-            result = execute_command(["sleep", "10"], timeout_seconds=1)
+        # Use Python's time.sleep for cross-platform compatibility
+        result = execute_command([sys.executable, "-c", "import time; time.sleep(10)"], timeout_seconds=1)
         
         assert result.timed_out is True
         assert result.return_code == 1
-        assert "timed out" in result.execution_error
+        assert result.execution_error is not None and "timed out" in result.execution_error
 
     def test_nonexistent_command(self) -> None:
         """Test executing a nonexistent command."""
         result = execute_command(["nonexistent_command_12345"])
         
         assert result.return_code == 1
+        assert result.execution_error is not None
         assert result.execution_error is not None
         assert "FileNotFoundError" in result.execution_error or "not found" in result.execution_error.lower()
 
@@ -439,12 +439,12 @@ class TestEdgeCases:
 
     def test_command_with_special_characters(self) -> None:
         """Test command with special characters in arguments."""
-        # Test with echo command that can handle special characters
+        # Test with Python print that can handle special characters
         special_text = "Hello! @#$%^&*()_+ World"
-        result = execute_command(["echo", special_text])
+        result = execute_command([sys.executable, "-c", f"print('{special_text}')"])
         
         assert result.return_code == 0
-        # Note: Different systems may handle echo differently, so we're just checking it doesn't crash
+        assert special_text in result.stdout
 
     @patch("mcp_coder.utils.subprocess_runner._run_subprocess")
     def test_command_result_with_none_stdout_stderr(self, mock_run: MagicMock) -> None:

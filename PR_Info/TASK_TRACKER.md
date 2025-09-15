@@ -37,12 +37,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy check and fix any issues
   - [x] Prepare git commit with concise message
 
-- [ ] **Step 3: Create Missing Test Files for Uncovered Modules** - [steps/step_3.md](./steps/step_3.md)
-  - [ ] Create test files for source modules that currently lack test coverage
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest check and fix any issues
-  - [ ] Run mypy check and fix any issues
-  - [ ] Prepare git commit with concise message
+- [x] **Step 3: Create Missing Test Files for Uncovered Modules** - [steps/step_3.md](./steps/step_3.md)
+  - [x] Create test files for source modules that currently lack test coverage
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest check and fix any issues
+  - [x] Run mypy check and fix any issues
+  - [x] Prepare git commit with concise message
 
 - [ ] **Step 4: Fix Import Statements and Test Discovery** - [steps/step_4.md](./steps/step_4.md)
   - [ ] Update import statements in moved test files and ensure pytest can discover all tests
