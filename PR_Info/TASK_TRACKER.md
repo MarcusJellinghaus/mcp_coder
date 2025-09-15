@@ -64,15 +64,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy type checking and resolve any issues
   - [x] Prepare git commit for Python SDK implementation
 
-- [ ] **Step 5: Comprehensive Testing and Validation** - [step_5.md](steps/step_5.md)  
-  Ensure refactored architecture works correctly with comprehensive testing
-  - [ ] Create tests/test_integration_full.py with essential integration tests
-  - [ ] Add parameterized tests comparing CLI and API methods
-  - [ ] Update existing test files with additional edge cases
+- [ ] **Step 5: Simple Integration Testing** - [step_5.md](steps/step_5.md)  
+  Verify both CLI and API methods work with basic testing
+  - [ ] Create tests/test_integration_simple.py with one parameterized test
+  - [ ] Run pytest to verify both methods work
   - [ ] Run pylint quality check and fix any issues
-  - [ ] Run pytest to ensure all functionality works correctly
   - [ ] Run mypy type checking and resolve any issues
-  - [ ] Prepare git commit for comprehensive testing suite
+  - [ ] Prepare git commit for simple integration test
 
 - [ ] **Step 6: Essential Documentation** - [step_6.md](steps/step_6.md)  
   Document the completed refactoring work with essential usage examples
