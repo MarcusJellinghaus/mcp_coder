@@ -132,3 +132,41 @@ def git_move(source_path: Path, dest_path: Path, project_dir: Path) -> bool:
     except Exception as e:
         logger.error("Unexpected error during git move: %s", e)
         return False
+
+
+def get_staged_changes(project_dir: Path) -> list[str]:
+    """
+    Get list of files currently staged for commit.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        List of file paths currently staged for commit, relative to project root.
+        Returns empty list if no staged files or if not a git repository.
+    """
+    logger.debug("Getting staged changes for %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return []
+
+    try:
+        repo = Repo(project_dir, search_parent_directories=False)
+        
+        # Use git diff --cached --name-only to get staged files
+        # This shows files that are staged for the next commit
+        staged_files = repo.git.diff("--cached", "--name-only").splitlines()
+        
+        # Filter out empty strings and ensure we have clean paths
+        staged_files = [f for f in staged_files if f.strip()]
+        
+        logger.debug("Found %d staged files: %s", len(staged_files), staged_files)
+        return staged_files
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.debug("Git error getting staged changes: %s", e)
+        return []
+    except Exception as e:
+        logger.warning("Unexpected error getting staged changes: %s", e)
+        return []

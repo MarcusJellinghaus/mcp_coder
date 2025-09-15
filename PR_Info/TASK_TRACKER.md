@@ -37,7 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Run quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 3: Test & Implement get_staged_changes()** - [step_3.md](steps/step_3.md)
+- [x] **Step 3: Test & Implement get_staged_changes()** - [step_3.md](steps/step_3.md)
   - Write tests for get_staged_changes() function using TDD
   - Implement function to detect staged files
   - Ensure proper error handling and validation
