@@ -55,32 +55,44 @@ class TestClaudeCodeInterfaceIntegration:
             # Verify we got a response
             assert response is not None
             assert len(response.strip()) > 0
-            
+
             # Verify both methods give the correct answer - expect exactly 4
             response_clean = response.strip()
-            assert int(response_clean) == 4, f"Expected exactly '4', got: {repr(response)}"
-            
+            assert (
+                int(response_clean) == 4
+            ), f"Expected exactly '4', got: {repr(response)}"
+
             print(f"✓ {method.upper()} method response: {response}")
 
         except FileNotFoundError:
-            pytest.skip(f"Claude Code CLI not found - skipping {method.upper()} integration test")
+            pytest.skip(
+                f"Claude Code CLI not found - skipping {method.upper()} integration test"
+            )
         except ImportError as e:
             if method == "api":
                 pytest.skip(f"claude-code-sdk not installed: {e}")
             else:
                 raise  # Unexpected for CLI method
         except subprocess.TimeoutExpired:
-            pytest.skip(f"Claude {method.upper()} call timed out - may indicate setup issues")
+            pytest.skip(
+                f"Claude {method.upper()} call timed out - may indicate setup issues"
+            )
         except subprocess.CalledProcessError as e:
             if (
                 "authentication" in str(e.stderr).lower()
                 or "login" in str(e.stderr).lower()
             ):
-                pytest.skip(f"Claude {method.upper()} authentication required: {e.stderr}")
+                pytest.skip(
+                    f"Claude {method.upper()} authentication required: {e.stderr}"
+                )
             else:
-                pytest.skip(f"Claude {method.upper()} failed - may indicate setup issues: {e}")
+                pytest.skip(
+                    f"Claude {method.upper()} failed - may indicate setup issues: {e}"
+                )
         except (RuntimeError, ValueError, AttributeError) as e:
-            pytest.skip(f"Runtime or configuration error during {method.upper()} test: {e}")
+            pytest.skip(
+                f"Runtime or configuration error during {method.upper()} test: {e}"
+            )
         except OSError as e:
             pytest.skip(f"System error during {method.upper()} test: {e}")
 

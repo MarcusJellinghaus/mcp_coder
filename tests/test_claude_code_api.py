@@ -280,5 +280,3 @@ class TestClaudeCodeApiIntegration:
         # Also verify helper function is available
         assert callable(_create_claude_client)
         print("✓ _create_claude_client helper function is callable")
-
-
