@@ -31,13 +31,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy check and fix any type issues
   - [x] Prepare git commit with descriptive message
 
-- [ ] **Step 2: Move Claude Provider Test Files** - [step_2.md](./steps/step_2.md)
-  - [ ] Move all Claude test files from tests/ root to tests/llm_providers/claude/
-  - [ ] Preserve all file content during move operation
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest to verify files are discoverable in new location
-  - [ ] Run mypy check and fix any type issues
-  - [ ] Prepare git commit with descriptive message
+- [x] **Step 2: Move Claude Provider Test Files** - [step_2.md](./steps/step_2.md)
+  - [x] Move all Claude test files from tests/ root to tests/llm_providers/claude/
+  - [x] Preserve all file content during move operation
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest to verify files are discoverable in new location
+  - [x] Run mypy check and fix any type issues
+  - [x] Prepare git commit with descriptive message
 
 - [ ] **Step 3: Update Import Statements in Moved Test Files** - [step_3.md](./steps/step_3.md)
   - [ ] Fix import paths in all moved Claude test files
