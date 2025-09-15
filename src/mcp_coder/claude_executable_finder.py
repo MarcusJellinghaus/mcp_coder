@@ -3,6 +3,7 @@
 
 import os
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -86,8 +87,11 @@ def find_claude_executable(
                 # Accept both 0 (success) and 1 (help shown) as valid
                 if result.return_code not in [0, 1]:
                     continue
-            except Exception:
+            except (OSError, subprocess.SubprocessError, FileNotFoundError):
                 # If testing fails, try the next location
+                # OSError: File not executable, permission issues
+                # SubprocessError: Process execution issues
+                # FileNotFoundError: Executable disappeared between checks
                 continue
 
         return str(claude_path)
@@ -167,12 +171,14 @@ def verify_claude_installation() -> dict[str, Any]:
                 result["works"] = True
             else:
                 result["error"] = f"Version check failed: {version_result.stderr}"
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
             result["error"] = f"Version check error: {e}"
 
     except FileNotFoundError as e:
         result["error"] = str(e)
-    except Exception as e:
-        result["error"] = f"Unexpected error: {e}"
+    except (OSError, subprocess.SubprocessError) as e:
+        result["error"] = f"Process execution error: {e}"
+    except (TypeError, ValueError) as e:
+        result["error"] = f"Configuration error: {e}"
 
     return result

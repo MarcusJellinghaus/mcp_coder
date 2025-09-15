@@ -3,7 +3,6 @@
 
 import asyncio
 import subprocess
-import unittest.mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -288,7 +287,6 @@ class TestClaudeCodeApiIntegration:
 
         # First check if SDK is available
         try:
-            import claude_code_sdk
             from claude_code_sdk import (
                 AssistantMessage,
                 ResultMessage,
@@ -377,6 +375,9 @@ class TestClaudeCodeApiIntegration:
                 pytest.skip(f"claude-code-sdk API call failed: {e}")
         except subprocess.TimeoutExpired:
             pytest.skip("API call timed out - may indicate network or service issues")
-        except Exception as e:
-            print(f"Unexpected error: {type(e).__name__}: {e}")
-            pytest.skip(f"Unexpected error during real API call: {e}")
+        except (RuntimeError, ValueError, AttributeError) as e:
+            print(f"SDK configuration or runtime error: {type(e).__name__}: {e}")
+            pytest.skip(f"SDK configuration error during real API call: {e}")
+        except OSError as e:
+            print(f"System/network error: {type(e).__name__}: {e}")
+            pytest.skip(f"System/network error during real API call: {e}")

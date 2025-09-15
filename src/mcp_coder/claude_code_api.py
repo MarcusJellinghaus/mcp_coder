@@ -4,7 +4,7 @@
 import asyncio
 import os
 import subprocess
-from typing import Any, Optional
+from typing import Any
 
 from .claude_executable_finder import find_claude_executable, setup_claude_path
 

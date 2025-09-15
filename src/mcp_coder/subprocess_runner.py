@@ -16,7 +16,6 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +198,7 @@ def _run_subprocess(
                                 except (
                                     subprocess.SubprocessError,
                                     subprocess.TimeoutExpired,
-                                    Exception,
+                                    OSError,
                                 ) as e:
                                     logger.debug(
                                         f"Taskkill failed, using fallback: {e}"
@@ -250,6 +249,7 @@ def _run_subprocess(
 
                 except subprocess.TimeoutExpired:
                     # Close files before re-raising to prevent Windows file locking
+                    # This cleanup is necessary before re-raising the timeout exception
                     if stdout_f:
                         stdout_f.flush()
                         stdout_f.close()
@@ -262,7 +262,7 @@ def _run_subprocess(
                         time.sleep(0.1)
 
                     # Re-raise to be handled by the caller
-                    raise
+                    raise  # pylint: disable=try-except-raise
                 finally:
                     # Ensure files are closed
                     if stdout_f and not stdout_f.closed:
@@ -271,7 +271,7 @@ def _run_subprocess(
                         stderr_f.close()
             except Exception:
                 # Let any other exceptions propagate after cleanup in finally block
-                raise
+                raise  # pylint: disable=try-except-raise
 
             # Read output files after process completes
             # Use a small delay on Windows to avoid file locking issues
@@ -355,7 +355,7 @@ def _run_subprocess(
                             except (
                                 subprocess.SubprocessError,
                                 subprocess.TimeoutExpired,
-                                Exception,
+                                OSError,
                             ) as e:
                                 logger.debug(
                                     f"Taskkill failed in regular execution: {e}"
@@ -404,10 +404,10 @@ def _run_subprocess(
                     check=False,
                 )
         except subprocess.TimeoutExpired:
-            raise  # Re-raise for handling in execute_subprocess
+            raise  # pylint: disable=try-except-raise  # Re-raise for handling in execute_subprocess
         except Exception:
-            # Re-raise any other exceptions
-            raise
+            # Re-raise any other exceptions (this catch-all is needed for cleanup)
+            raise  # pylint: disable=try-except-raise
 
 
 def execute_subprocess(
@@ -487,8 +487,8 @@ def execute_subprocess(
             execution_time_ms=execution_time_ms,
         )
 
-    except Exception as e:
-        # Handle all other exceptions (FileNotFoundError, PermissionError, etc.)
+    except (FileNotFoundError, PermissionError, OSError) as e:
+        # Handle file system and permission errors
         execution_time_ms = int((time.time() - start_time) * 1000)
         logger.error(f"Subprocess execution failed: {type(e).__name__}: {e}")
         return CommandResult(

@@ -2,7 +2,6 @@
 """Claude Code CLI implementation for programmatic interaction."""
 
 import subprocess
-from typing import Optional
 
 from .claude_executable_finder import find_claude_executable
 from .subprocess_runner import execute_command

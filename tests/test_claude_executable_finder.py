@@ -2,9 +2,6 @@
 """Tests for claude_executable_finder module."""
 
 import os
-import shutil
-import unittest.mock
-from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest

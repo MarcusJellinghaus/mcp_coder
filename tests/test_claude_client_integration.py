@@ -99,14 +99,17 @@ class TestClaudeCodeInterfaceIntegration:
 
         try:
             # First test that we can import the API function
-            from mcp_coder.claude_code_api import ask_claude_code_api
+            from mcp_coder.claude_code_api import (  # pylint: disable=unused-import
+                ask_claude_code_api,
+            )
 
             print("✓ Successfully imported claude_code_api")
 
             # Test that the SDK can be imported
             try:
-                import claude_code_sdk
-
+                __import__(
+                    "claude_code_sdk"
+                )  # Test package availability without importing unused symbols
                 print("✓ claude-code-sdk is available")
             except ImportError as e:
                 pytest.skip(f"claude-code-sdk not installed: {e}")
@@ -150,10 +153,12 @@ class TestClaudeCodeInterfaceIntegration:
                 pytest.skip(f"Claude API authentication required: {e.stderr}")
             else:
                 pytest.skip(f"Claude API failed - may indicate setup issues: {e}")
-        except Exception as e:
-            print(f"Unexpected error type: {type(e)}")
-            print(f"Error details: {e}")
-            pytest.skip(f"Unexpected error during API test: {e}")
+        except (RuntimeError, ValueError, AttributeError) as e:
+            print(f"SDK configuration or runtime error: {type(e).__name__}: {e}")
+            pytest.skip(f"SDK configuration issue during API test: {e}")
+        except OSError as e:
+            print(f"System/network error: {e}")
+            pytest.skip(f"System error during API test: {e}")
 
     @pytest.mark.integration
     def test_method_parameter_comparison(self) -> None:
@@ -185,9 +190,12 @@ class TestClaudeCodeInterfaceIntegration:
         ) as e:
             api_available = False
             print(f"API method not available: {type(e).__name__}: {e}")
-        except Exception as e:
+        except (RuntimeError, ValueError, AttributeError) as e:
             api_available = False
-            print(f"API method failed with unexpected error: {type(e).__name__}: {e}")
+            print(f"API method failed with SDK error: {type(e).__name__}: {e}")
+        except OSError as e:
+            api_available = False
+            print(f"API method failed with system error: {type(e).__name__}: {e}")
 
         # At least one method should be available for basic functionality
         if not cli_available and not api_available:
