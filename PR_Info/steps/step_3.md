@@ -74,6 +74,7 @@ Please review the implementation plan in PR_Info, especially the summary and ste
 **Task**: Create missing test files to achieve complete test coverage matching the source structure.
 
 **Requirements**:
+1. Create `tests/utils/test_subprocess_runner.py` with tests for `subprocess_runner.py`
 2. Create `tests/llm_providers/claude/test_claude_code_interface.py` with tests for `claude_code_interface.py`
 3. Create `tests/llm_providers/test___init__.py` with tests for `llm_providers/__init__.py`
 4. Create `tests/utils/test___init__.py` with tests for `utils/__init__.py`
@@ -99,6 +100,7 @@ Please implement comprehensive but focused test files that establish good covera
 
 ## Acceptance Criteria
 
+- [ ] `tests/utils/test_subprocess_runner.py` created with comprehensive tests
 - [ ] `tests/llm_providers/claude/test_claude_code_interface.py` created with interface tests
 - [ ] `tests/llm_providers/test___init__.py` created with module tests
 - [ ] `tests/utils/test___init__.py` created with module tests
