@@ -17,6 +17,21 @@ from claude_code_sdk import (
 
 from .claude_executable_finder import find_claude_executable, setup_claude_path
 
+# Export the classes that tests need to import
+__all__ = [
+    "AssistantMessage",
+    "TextBlock",
+    "SystemMessage",
+    "ResultMessage",
+    "ClaudeCodeOptions",
+    "query",
+    "ask_claude_code_api",
+    "ask_claude_code_api_detailed",
+    "ask_claude_code_api_detailed_sync",
+    "_ask_claude_code_api_async",
+    "_create_claude_client",
+]
+
 
 def _create_claude_client() -> ClaudeCodeOptions:
     """Create a Claude Code SDK client with basic configuration.
