@@ -92,6 +92,7 @@ Can you update the plan, please?
 Please update the files in folder `pr_info`
 (including creating the `steps/` subfolder for implementation details)
 Please do targeted changes.
+Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`
 ```
 
 #### Task Tracker Update Prompt:
@@ -190,6 +191,22 @@ Please work only on one task. Do not pick further tasks.
   - Task was unnecessary or already implemented
   - *Response:* Mark as complete, update plan for remaining tasks
 
+** Possible prompt for too complex task**
+
+```
+Please look at pr_info/TASK_TRACKER.md and pick the next task that should be done.
+Please let me know on which task you are working on.
+
+Actually, please do not work on the task right now.
+
+Rather review the task (and the summary and the related code base etc)
+And tell me what needs to be done
+Please tell me whether this is feasible, how complicated it is, whether it could be simplified or whether it needs to broken down in several sub tasks.
+```
+
+
+
+
 #### 2.2 Commit Preparation
 
 **Process:**
@@ -216,7 +233,15 @@ Please provide a short concise commit message stating the step name in the title
 
 After all implementation steps are complete:
 
-#### 3.1 PR Review
+#### 3.1 Run more detailed checks
+
+Run certain checks in an automated way and deal with possibly highlighted issues:
+- Pylint warnings
+- (custom checks - to be developed)
+- Check pytest runtime
+
+
+#### 3.2 PR Review
 
 **Process:**
 - Review the entire pull request for the feature via an LLM prompt
@@ -225,7 +250,7 @@ After all implementation steps are complete:
 
 **Tools:**
 
-#### 3.2 Create Summary
+#### 3.3 Create Summary
 
 **Process:**
 - Generate comprehensive feature summary
