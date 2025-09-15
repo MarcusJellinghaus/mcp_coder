@@ -1,1 +1,0 @@
-# Claude provider tests package

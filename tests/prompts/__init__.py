@@ -1,1 +1,0 @@
-# Prompts tests package
