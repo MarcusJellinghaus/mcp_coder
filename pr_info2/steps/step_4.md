@@ -1,181 +1,171 @@
-# Step 4: Implement Edge Case Tests
+# Step 4: Implement Simplified Test Fixtures
 
 ## Objective
-Implement the 5 edge case tests in `test_git_edge_cases.py` that verify cross-platform compatibility and special scenarios your application might encounter.
+Implement streamlined, reusable git repository fixtures in `conftest.py` to support all test scenarios while minimizing setup overhead and ensuring consistent test environments.
 
 ## WHERE
-- File: `tests/utils/test_git_edge_cases.py`
-- Module: `mcp_coder.utils.git_operations`
+- File: `tests/utils/conftest.py`
+- Dependencies: `git`, `pytest`, `pathlib`
 
 ## WHAT
-Implement 5 focused edge case tests:
+Implement 2 core fixtures and helper utilities:
 
-### Platform Compatibility (2 tests)
+### Core Fixtures
 ```python
-def test_cross_platform_path_handling(self, git_repo)
-def test_unicode_filenames_and_content(self, git_repo)
+@pytest.fixture
+def git_repo(tmp_path) -> tuple[Repo, Path]
+
+@pytest.fixture  
+def git_repo_with_files(tmp_path) -> tuple[Repo, Path]
 ```
 
-### Special File Types (2 tests)
+### Helper Functions
 ```python
-def test_binary_file_operations(self, git_repo)
-def test_gitignore_behavior(self, git_repo)
-```
-
-### Performance Edge Case (1 test)
-```python
-def test_reasonable_performance_with_many_files(self, git_repo)
+def setup_git_config(repo: Repo) -> None  
+def create_sample_files(project_dir: Path, file_specs: dict) -> None
+def verify_git_state(repo: Repo, expected_commits: int = None) -> dict
 ```
 
 ## HOW
-### Edge Case Testing Focus
-- Cross-platform path separator handling (Windows vs Unix)
-- Unicode filename and content support
-- Binary file staging and committing
-- Gitignore file respect
-- Reasonable performance with moderate file counts
+### Fixture Design Principles
+- Return both `git.Repo` object and `Path` to project directory
+- Configure git user for commits (required for git operations)
+- Create realistic but simple file structures for testing
+- Provide two repository states: empty and with committed files
+- Minimize setup time while ensuring isolation
+- Let tests create complex states inline when needed
 
 ### Integration Points
 ```python
-# Path handling verification
-Path("/") vs Path("\\")  # Platform differences
-file_path.as_posix()     # Consistent path format
-relative_to(project_dir) # Relative path conversion
+# Import in test files
+from git import Repo
 
-# Unicode support
-filename = "测试文件.txt"  # Unicode filename
-content = "Hello 🌍 World!"  # Unicode content
-commit_message = "Add files 🚀"  # Unicode commit message
+# Fixture usage pattern
+def test_something(self, git_repo):
+    repo, project_dir = git_repo
+    # Use project_dir for file operations
+    # Use repo for git state verification
 ```
 
 ## ALGORITHM
 ```
-1. Create edge case scenarios (unicode files, binary content, etc.)
-2. Perform git operations using your wrapper functions
-3. Verify operations complete successfully
-4. Check that git repository handles edge cases correctly
-5. Ensure cross-platform compatibility
-6. Validate reasonable performance characteristics
+1. Create temporary directory using pytest tmp_path
+2. Initialize git repository using Repo.init()
+3. Configure git user.name and user.email (required for commits)
+4. For git_repo_with_files: create 2-3 sample files and commit them
+5. Return tuple of (repo_object, project_path)
 ```
 
 ## DATA
-### Edge Case Scenarios
+### Fixture Return Types
 ```python
-# Unicode test files
-unicode_files = {
-    "chinese.txt": "你好世界",
-    "emoji.md": "# Hello 🌍 World! 🚀",
-    "accents.py": "# café naïve résumé"
+# git_repo fixture
+return (Repo, Path)  # Empty repo ready for first commit
+
+# git_repo_with_files fixture  
+return (Repo, Path)  # Repo with 2-3 committed files ready for modification
+```
+
+### Sample Test Files for git_repo_with_files
+```python
+# Simple test files for modification scenarios
+sample_files = {
+    "README.md": "# Test Project\\n\\nA sample project for testing.",
+    "main.py": "def main():\\n    print('Hello, World!')",
+    "config.yml": "debug: false\\nport: 8080"
 }
-
-# Binary file simulation
-binary_content = bytes(range(256)) + b"binary data" * 100
-
-# Gitignore patterns
-gitignore_content = """
-*.log
-*.tmp
-__pycache__/
-.env
-build/
-dist/
-"""
-
-# Performance test scale
-moderate_file_count = 50  # Reasonable test size
 ```
 
 ## LLM Prompt for Implementation
 ```
-Based on the Git Operations Test Simplification Summary and previous steps, implement Step 4 to create the 5 edge case tests in test_git_edge_cases.py.
+Based on the Git Operations Test Simplification Summary and previous steps, implement Step 4 to create streamlined git repository fixtures in tests/utils/conftest.py.
 
-Create focused edge case tests that:
-- Test cross-platform compatibility
-- Verify Unicode filename and content support
-- Handle binary files correctly
-- Respect gitignore patterns
-- Ensure reasonable performance
+Create 2 fixtures that provide different git repository states for testing:
 
-Each test should:
-1. Create a specific edge case scenario
-2. Use your git_operations functions to handle the scenario
-3. Verify the operations complete successfully
-4. Check that git repository state is correct
-5. Focus on edge cases your application might encounter
+1. git_repo: Clean, empty git repository
+2. git_repo_with_files: Repository with 2-3 committed files for modification testing
 
-Example test structure:
+Each fixture should:
+- Use tmp_path to create isolated test directory
+- Initialize git repository with Repo.init()
+- Configure git user.name and user.email (required for commits)
+- Create simple, realistic test files for git_repo_with_files
+- Return tuple of (repo_object, project_directory_path)
+- Be fast and reliable for repeated test runs
+
+Also create helper functions for common operations:
+- setup_git_config(): Configure git user for repository
+- create_sample_files(): Create files from specifications
+- verify_git_state(): Check repository state for assertions
+
+Example fixture implementation:
 ```python
-def test_cross_platform_path_handling(self, git_repo):
-    \"\"\"Test path handling works on both Windows and Unix.\"\"\"
-    repo, project_dir = git_repo
-    
-    # Create nested directory structure
-    nested_dirs = [
-        project_dir / "src" / "utils",
-        project_dir / "tests" / "unit",
-        project_dir / "docs" / "api"
-    ]
-    
-    for dir_path in nested_dirs:
-        dir_path.mkdir(parents=True)
-        test_file = dir_path / "test.py"
-        test_file.write_text(f"# {dir_path.name}")
-    
-    # Stage all files
-    result = stage_all_changes(project_dir)
-    assert result is True
-    
-    # Check staged files use consistent path format
-    staged_files = get_staged_changes(project_dir)
-    assert len(staged_files) == 3
-    
-    # Verify paths work regardless of platform
-    for staged_file in staged_files:
-        assert not str(project_dir) in staged_file  # Should be relative
-        assert ("/" in staged_file or "\\\\" in staged_file)  # Has separators
-    
-    # Commit should work
-    commit_result = commit_staged_files("Add nested files", project_dir)
-    assert commit_result["success"] is True
+import pytest
+from pathlib import Path
+from git import Repo
 
-def test_unicode_filenames_and_content(self, git_repo):
-    \"\"\"Test Unicode support in filenames and content.\"\"\"
-    repo, project_dir = git_repo
+@pytest.fixture
+def git_repo(tmp_path):
+    \"\"\"Create a clean, empty git repository for testing.\"\"\"
+    project_dir = tmp_path / "test_project"
+    project_dir.mkdir()
     
-    # Create files with Unicode names and content
-    unicode_files = {
-        "测试文件.txt": "你好世界 Chinese content",
-        "emoji_🚀.md": "# Hello 🌍 World! 🎉\\n\\nUnicode content",
-        "café.py": "# -*- coding: utf-8 -*-\\nprint('café naïve résumé')"
+    # Initialize git repository
+    repo = Repo.init(project_dir)
+    
+    # Configure git user (required for commits)
+    setup_git_config(repo)
+    
+    return repo, project_dir
+
+@pytest.fixture
+def git_repo_with_files(tmp_path):
+    \"\"\"Create git repository with sample committed files for modification tests.\"\"\"
+    repo, project_dir = git_repo(tmp_path)
+    
+    # Create simple test files
+    sample_files = {
+        "README.md": "# Test Project\\n\\nSample project for testing.",
+        "main.py": "def main():\\n    print('Hello, World!')",
+        "config.yml": "debug: false\\nport: 8080"
     }
     
-    for filename, content in unicode_files.items():
-        file_path = project_dir / filename
-        file_path.write_text(content, encoding='utf-8')
+    create_sample_files(project_dir, sample_files)
     
-    # Operations should handle Unicode correctly
-    status = get_full_status(project_dir)
-    assert len(status["untracked"]) == 3
+    # Stage and commit files
+    repo.index.add(list(sample_files.keys()))
+    repo.index.commit("Initial commit with sample files")
     
-    result = stage_all_changes(project_dir)
-    assert result is True
-    
-    # Commit with Unicode message
-    unicode_message = "Add Unicode files 🎯 测试"
-    commit_result = commit_staged_files(unicode_message, project_dir)
-    assert commit_result["success"] is True
-    
-    # Verify commit message preserved
-    commits = list(repo.iter_commits())
-    assert unicode_message in commits[0].message
+    return repo, project_dir
+
+def setup_git_config(repo: Repo) -> None:
+    \"\"\"Configure git user for repository.\"\"\"
+    with repo.config_writer() as config:
+        config.set_value("user", "name", "Test User")
+        config.set_value("user", "email", "test@example.com")
+
+def create_sample_files(project_dir: Path, file_specs: dict) -> None:
+    \"\"\"Create test files from specifications.\"\"\"
+    for file_path, content in file_specs.items():
+        full_path = project_dir / file_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        full_path.write_text(content)
 ```
+
+Focus on creating fixtures that are:
+- Fast to set up and tear down
+- Provide realistic git repository states
+- Support both empty repo and modification scenarios
+- Return consistent data structures
+- Handle git configuration properly
+- Simple and focused (avoid complex states - let tests create those inline)
 ```
 
 ## Verification
-- [ ] All 5 edge case tests pass
-- [ ] Unicode filenames and content handled correctly
-- [ ] Binary files can be staged and committed
-- [ ] Gitignore patterns are respected
-- [ ] Cross-platform path handling works
-- [ ] Performance test completes in reasonable time
-- [ ] Tests work on both Windows and Unix systems
+- [ ] Both fixtures can be imported and used
+- [ ] git_repo creates clean repository with proper git config
+- [ ] git_repo_with_files has committed files and proper history
+- [ ] Helper functions work correctly
+- [ ] Fixtures are fast (each takes <100ms to create)
+- [ ] All test files from previous steps can use these fixtures
+- [ ] Complex states can be created inline in tests when needed

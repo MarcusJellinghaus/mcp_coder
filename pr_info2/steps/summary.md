@@ -16,10 +16,10 @@ Drastically simplify the git operations test suite by eliminating excessive unit
 - **High maintenance burden** due to brittle mocked tests
 
 ## Target State
-- **40 tests** across 3 focused test files with 0% mocking
+- **30 tests** across 2 focused test files with 0% mocking
 - **2-second execution time** with real git operations
 - **Integration-focused** testing of actual workflows
-- **90% reduction** in test count and maintenance burden
+- **93% reduction** in test count and maintenance burden
 
 ## Test Structure Changes
 
@@ -29,11 +29,10 @@ tests/utils/test_git_operations.py           # 300+ unit tests with mocks
 tests/utils/test_git_operations_integration.py # 150+ integration tests
 ```
 
-### To (3 files, 40 tests):
+### To (2 files, 30 tests):
 ```
-tests/utils/test_git_integration.py       # 25 tests - real workflows
-tests/utils/test_git_error_handling.py    # 10 tests - error scenarios  
-tests/utils/test_git_edge_cases.py        # 5 tests - platform/edge cases
+tests/utils/test_git_workflows.py       # 20 tests - real workflows
+tests/utils/test_git_error_cases.py      # 10 tests - error scenarios & edge cases
 ```
 
 ## Functions Under Test
@@ -65,7 +64,7 @@ All functions in `src/mcp_coder/utils/git_operations.py`:
 
 ## Success Metrics
 - Maintain 95%+ line coverage of git_operations.py
-- Reduce test execution time from 45s to <5s
-- Reduce test count by 90% (450 → 40)
+- Reduce test execution time from 45s to <2s
+- Reduce test count by 93% (450 → 30)
 - Zero regression in git operation functionality
 - Improved test maintainability and readability

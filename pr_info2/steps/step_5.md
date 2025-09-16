@@ -1,187 +1,205 @@
-# Step 5: Implement Shared Test Fixtures
+# Step 5: Verify Coverage and Remove Old Tests
 
 ## Objective
-Implement robust, reusable git repository fixtures in `conftest.py` to support all test scenarios while minimizing setup overhead and ensuring consistent test environments.
+Verify that the new 30-test suite maintains adequate coverage of `git_operations.py`, run performance benchmarks, and safely remove the old test files to complete the simplification.
 
 ## WHERE
-- File: `tests/utils/conftest.py`
-- Dependencies: `git`, `pytest`, `pathlib`
+- Verify: `tests/utils/test_git_workflows.py` (20 tests)
+- Verify: `tests/utils/test_git_error_cases.py` (10 tests)
+- Remove: `tests/utils/test_git_operations.py` (300+ tests)
+- Remove: `tests/utils/test_git_operations_integration.py` (150+ tests)
 
 ## WHAT
-Implement 3 core fixtures and helper utilities:
-
-### Core Fixtures
+### Coverage Verification
 ```python
-@pytest.fixture
-def git_repo(tmp_path) -> tuple[Repo, Path]
-
-@pytest.fixture  
-def git_repo_with_commits(tmp_path) -> tuple[Repo, Path]
-
-@pytest.fixture
-def complex_git_state(tmp_path) -> tuple[Repo, Path, dict]
+# Target coverage metrics
+line_coverage >= 95%      # of git_operations.py
+branch_coverage >= 90%    # of git_operations.py
+function_coverage == 100% # All 10 functions tested
 ```
 
-### Helper Functions
+### Performance Benchmarks
 ```python
-def create_test_files(project_dir: Path, file_specs: dict) -> None
-def setup_git_config(repo: Repo) -> None  
-def verify_git_state(repo: Repo, expected_commits: int = None) -> dict
+# Target performance metrics  
+total_test_time < 2_seconds    # vs 45s previously
+individual_test_time < 100ms   # per test method
+fixture_setup_time < 50ms      # per simplified fixture
 ```
+
+### Cleanup Tasks
+- Remove old test files with 450+ tests
+- Update CI configuration if needed
+- Update test documentation
+- Verify no import dependencies remain
 
 ## HOW
-### Fixture Design Principles
-- Return both `git.Repo` object and `Path` to project directory
-- Configure git user for commits (required for git operations)
-- Create realistic file structures for testing
-- Provide different repository states (empty, with commits, complex)
-- Minimize setup time while ensuring isolation
+### Coverage Analysis Steps
+1. Run `pytest --cov=src/mcp_coder/utils/git_operations --cov-report=html`
+2. Analyze coverage report for missed lines/branches
+3. Add targeted tests if coverage gaps found
+4. Verify all 10 functions have at least one test
 
-### Integration Points
+### Performance Measurement
 ```python
-# Import in test files
-from git import Repo
+# Time measurement command
+pytest tests/utils/test_git_* --durations=0 -v
 
-# Fixture usage pattern
-def test_something(self, git_repo):
-    repo, project_dir = git_repo
-    # Use project_dir for file operations
-    # Use repo for git state verification
+# Expected results
+test_git_workflows.py::TestGitWorkflows::* < 100ms each
+test_git_error_cases.py::TestGitErrorCases::* < 50ms each
 ```
 
 ## ALGORITHM
 ```
-1. Create temporary directory using pytest tmp_path
-2. Initialize git repository using Repo.init()
-3. Configure git user.name and user.email (required for commits)
-4. Create test files based on fixture type
-5. Perform initial commits if needed for fixture type
-6. Return tuple of (repo_object, project_path)
+1. Run new test suite and measure execution time
+2. Generate coverage report for git_operations.py
+3. Identify any coverage gaps and add minimal tests if needed
+4. Verify all integration scenarios work correctly
+5. Backup old test files (optional safety step)
+6. Remove old test files and verify no import errors
 ```
 
 ## DATA
-### Fixture Return Types
+### Expected Coverage Results
 ```python
-# git_repo fixture
-return (Repo, Path)  # Empty repo ready for first commit
+# Functions that must be covered
+covered_functions = [
+    "is_git_repository",
+    "is_file_tracked", 
+    "get_staged_changes",
+    "get_unstaged_changes",
+    "get_full_status",
+    "stage_specific_files",
+    "stage_all_changes", 
+    "commit_staged_files",
+    "commit_all_changes",
+    "git_move"
+]
 
-# git_repo_with_commits fixture  
-return (Repo, Path)  # Repo with 2-3 committed files
-
-# complex_git_state fixture
-return (Repo, Path, dict)  # Repo with mixed staged/modified/untracked
-# dict = {"staged": [...], "modified": [...], "untracked": [...]}
+# Coverage gaps to watch for
+potential_gaps = [
+    "Error handling branches",
+    "Platform-specific code paths",
+    "Edge case validation logic"
+]
 ```
 
-### Test File Specifications
+### Performance Comparison
 ```python
-# Standard test files for git_repo_with_commits
-test_files = {
-    "README.md": "# Test Project\\n\\nA sample project for testing.",
-    "src/main.py": "def main():\\n    print('Hello, World!')",
-    "src/__init__.py": "",
-    ".gitignore": "*.pyc\\n__pycache__/\\n.env"
+# Before vs After metrics
+before = {
+    "test_count": 450,
+    "execution_time": "45 seconds",
+    "mock_percentage": "80%",
+    "files": 2
 }
 
-# Complex state files for complex_git_state
-complex_files = {
-    "committed": {"existing.txt": "original content"},
-    "staged": {"new_feature.py": "def new_feature(): pass"}, 
-    "modified": {"existing.txt": "modified content"},
-    "untracked": {"temp.md": "temporary notes"}
+after = {
+    "test_count": 30, 
+    "execution_time": "<2 seconds",
+    "mock_percentage": "0%",
+    "files": 2
 }
 ```
 
 ## LLM Prompt for Implementation
 ```
-Based on the Git Operations Test Simplification Summary and previous steps, implement Step 5 to create robust git repository fixtures in tests/utils/conftest.py.
+Based on the Git Operations Test Simplification Summary and completed steps 1-5, implement Step 6 to verify coverage, measure performance, and clean up old tests.
 
-Create 3 fixtures that provide different git repository states for testing:
+Tasks to complete:
 
-1. git_repo: Clean, empty git repository
-2. git_repo_with_commits: Repository with 2-3 committed files 
-3. complex_git_state: Repository with mixed staged/modified/untracked files
+1. **Run Coverage Analysis**:
+   - Execute: `pytest --cov=src/mcp_coder/utils/git_operations --cov-report=html tests/utils/test_git_*`
+   - Verify line coverage >= 95% and branch coverage >= 90%
+   - Check that all 10 functions in git_operations.py are covered
+   - Identify any coverage gaps
 
-Each fixture should:
-- Use tmp_path to create isolated test directory
-- Initialize git repository with Repo.init()
-- Configure git user.name and user.email (required for commits)
-- Create realistic test files for the scenario
-- Return tuple of (repo_object, project_directory_path)
-- Be fast and reliable for repeated test runs
+2. **Measure Performance**:
+   - Run: `pytest tests/utils/test_git_* --durations=0 -v`
+   - Verify total execution time < 2 seconds
+   - Check individual test times are reasonable
+   - Compare against old test suite if possible
 
-Also create helper functions for common operations:
-- create_test_files(): Create files from specifications
-- setup_git_config(): Configure git user for repository
-- verify_git_state(): Check repository state for assertions
+3. **Add Missing Coverage** (if needed):
+   - Add minimal tests for any uncovered lines/branches
+   - Focus on error paths or edge cases not covered
+   - Keep additions minimal - don't recreate old test bloat
 
-Example fixture implementation:
+4. **Clean Up Old Tests**:
+   - Backup old files if desired: `mv tests/utils/test_git_operations*.py /tmp/`
+   - Remove old test files
+   - Verify no import errors: `pytest --collect-only tests/`
+   - Update any CI configurations that reference old test files
+
+5. **Final Verification**:
+   - Run full test suite: `pytest tests/utils/test_git_*`
+   - Verify all 30 tests pass
+   - Check coverage report shows good coverage
+   - Confirm fast execution time
+
+Create a summary report showing:
+- Coverage percentages achieved
+- Performance improvements (before/after)
+- Test count reduction (450 → 30)
+- Any remaining gaps or recommendations
+
+Example verification script:
 ```python
-import pytest
-from pathlib import Path
-from git import Repo
+import subprocess
+import time
 
-@pytest.fixture
-def git_repo(tmp_path):
-    \"\"\"Create a clean git repository for testing.\"\"\"
-    project_dir = tmp_path / "test_project"
-    project_dir.mkdir()
+def verify_test_suite():
+    \"\"\"Verify new test suite meets requirements.\"\"\"
     
-    # Initialize git repository
-    repo = Repo.init(project_dir)
+    print("Running new test suite...")
+    start_time = time.time()
     
-    # Configure git user (required for commits)
-    setup_git_config(repo)
+    # Run tests with coverage
+    result = subprocess.run([
+        "pytest", 
+        "--cov=src/mcp_coder/utils/git_operations",
+        "--cov-report=term-missing",
+        "tests/utils/test_git_*"
+    ], capture_output=True, text=True)
     
-    return repo, project_dir
+    execution_time = time.time() - start_time
+    
+    print(f"Execution time: {execution_time:.2f} seconds")
+    print(f"Exit code: {result.returncode}")
+    
+    if "FAILED" in result.stdout:
+        print("❌ Some tests failed")
+        print(result.stdout)
+    else:
+        print("✅ All tests passed")
+    
+    # Extract coverage percentage
+    for line in result.stdout.split('\\n'):
+        if 'git_operations.py' in line:
+            print(f"Coverage: {line}")
+    
+    return result.returncode == 0
 
-@pytest.fixture
-def git_repo_with_commits(tmp_path):
-    \"\"\"Create git repository with sample committed files.\"\"\"
-    repo, project_dir = git_repo(tmp_path)
-    
-    # Create initial files
-    test_files = {
-        "README.md": "# Test Project\\n\\nSample project for testing.",
-        "src/main.py": "def main():\\n    print('Hello, World!')",
-        "src/__init__.py": "",
-    }
-    
-    create_test_files(project_dir, test_files)
-    
-    # Stage and commit files
-    repo.index.add(["README.md", "src/main.py", "src/__init__.py"])
-    repo.index.commit("Initial commit")
-    
-    return repo, project_dir
-
-def setup_git_config(repo: Repo) -> None:
-    \"\"\"Configure git user for repository.\"\"\"
-    with repo.config_writer() as config:
-        config.set_value("user", "name", "Test User")
-        config.set_value("user", "email", "test@example.com")
-
-def create_test_files(project_dir: Path, file_specs: dict) -> None:
-    \"\"\"Create test files from specifications.\"\"\"
-    for file_path, content in file_specs.items():
-        full_path = project_dir / file_path
-        full_path.parent.mkdir(parents=True, exist_ok=True)
-        full_path.write_text(content)
+if __name__ == "__main__":
+    verify_test_suite()
 ```
 
-Focus on creating fixtures that are:
-- Fast to set up and tear down
-- Provide realistic git repository states
-- Support all the test scenarios from previous steps
-- Return consistent data structures
-- Handle git configuration properly
+Focus on ensuring the simplified test suite provides equivalent confidence with dramatically reduced complexity.
 ```
 
-## Verification
-- [ ] All 3 fixtures can be imported and used
-- [ ] git_repo creates clean repository with proper git config
-- [ ] git_repo_with_commits has committed files and proper history
-- [ ] complex_git_state provides mixed staged/modified/untracked files
-- [ ] Helper functions work correctly
-- [ ] Fixtures are fast (each takes <100ms to create)
-- [ ] All test files from previous steps can use these fixtures
+## Verification Checklist
+- [ ] Coverage report shows ≥95% line coverage of git_operations.py
+- [ ] All 10 functions have test coverage
+- [ ] Total test execution time <2 seconds  
+- [ ] All 30 new tests pass consistently
+- [ ] Old test files (450+ tests) successfully removed
+- [ ] No import errors or broken dependencies
+- [ ] CI/test configuration updated if needed
+- [ ] Documentation reflects new test structure
+
+## Success Criteria
+- **Coverage maintained**: ≥95% line coverage preserved
+- **Performance improved**: 95% reduction in test execution time
+- **Complexity reduced**: 93% reduction in test count (450→30)
+- **Confidence maintained**: All git workflows still tested
+- **Maintainability improved**: Zero mocking, simplified fixtures, focused integration tests
