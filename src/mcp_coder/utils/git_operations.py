@@ -10,9 +10,11 @@ from git.exc import GitCommandError, InvalidGitRepositoryError
 # Use same logging pattern as existing modules (see file_operations.py)
 logger = logging.getLogger(__name__)
 
+
 # Type alias for commit result structure
 class CommitResult(TypedDict):
     """Result of a git commit operation."""
+
     success: bool
     commit_hash: Optional[str]
     error: Optional[str]
@@ -160,14 +162,14 @@ def get_staged_changes(project_dir: Path) -> list[str]:
 
     try:
         repo = Repo(project_dir, search_parent_directories=False)
-        
+
         # Use git diff --cached --name-only to get staged files
         # This shows files that are staged for the next commit
         staged_files = repo.git.diff("--cached", "--name-only").splitlines()
-        
+
         # Filter out empty strings and ensure we have clean paths
         staged_files = [f for f in staged_files if f.strip()]
-        
+
         logger.debug("Found %d staged files: %s", len(staged_files), staged_files)
         return staged_files
 
@@ -199,46 +201,43 @@ def get_unstaged_changes(project_dir: Path) -> dict[str, list[str]]:
 
     try:
         repo = Repo(project_dir, search_parent_directories=False)
-        
+
         # Use git status --porcelain to get file status
         # Format: XY filename where X=index status, Y=working tree status
         # We want files where Y is not empty (working tree changes)
         # Use -u to show individual untracked files instead of just directories
         status_output = repo.git.status("--porcelain", "-u").splitlines()
-        
+
         modified_files = []
         untracked_files = []
-        
+
         for line in status_output:
             if len(line) < 3:
                 continue
-                
+
             # Parse git status format: XY filename
             index_status = line[0]  # Staged changes
             working_status = line[1]  # Working tree changes
             filename = line[3:]  # Skip space and get filename
-            
+
             # Skip files that are only staged (no working tree changes)
-            if working_status == ' ':
+            if working_status == " ":
                 continue
-                
+
             # Untracked files have '??' status
-            if line.startswith('??'):
+            if line.startswith("??"):
                 untracked_files.append(filename)
             else:
                 # Any other working tree change (M, D, etc.)
                 modified_files.append(filename)
-        
+
         logger.debug(
-            "Found %d modified and %d untracked files", 
-            len(modified_files), 
-            len(untracked_files)
+            "Found %d modified and %d untracked files",
+            len(modified_files),
+            len(untracked_files),
         )
-        
-        return {
-            "modified": modified_files,
-            "untracked": untracked_files
-        }
+
+        return {"modified": modified_files, "untracked": untracked_files}
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting unstaged changes: %s", e)
@@ -259,7 +258,7 @@ def get_full_status(project_dir: Path) -> dict[str, list[str]]:
         Dictionary with 'staged', 'modified', and 'untracked' keys containing lists of file paths.
         File paths are relative to project root.
         Returns empty dict if not a git repository.
-        
+
     Example:
         {
             "staged": ["new_feature.py", "docs/readme.md"],
@@ -277,20 +276,20 @@ def get_full_status(project_dir: Path) -> dict[str, list[str]]:
         # Use existing functions for consistency and efficiency
         staged_files = get_staged_changes(project_dir)
         unstaged_changes = get_unstaged_changes(project_dir)
-        
+
         result = {
             "staged": staged_files,
             "modified": unstaged_changes["modified"],
-            "untracked": unstaged_changes["untracked"]
+            "untracked": unstaged_changes["untracked"],
         }
-        
+
         logger.debug(
             "Full status: %d staged, %d modified, %d untracked files",
             len(result["staged"]),
             len(result["modified"]),
-            len(result["untracked"])
+            len(result["untracked"]),
         )
-        
+
         return result
 
     except Exception as e:
@@ -328,7 +327,7 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
 
     try:
         repo = Repo(project_dir, search_parent_directories=False)
-        
+
         # Validate and convert all file paths first
         relative_paths = []
         for file_path in files:
@@ -336,28 +335,26 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
             if not file_path.exists():
                 logger.error("File does not exist: %s", file_path)
                 return False
-            
+
             # Get relative path from project directory
             try:
                 relative_path = file_path.relative_to(project_dir)
             except ValueError:
                 logger.error(
-                    "File %s is outside project directory %s", 
-                    file_path, project_dir
+                    "File %s is outside project directory %s", file_path, project_dir
                 )
                 return False
-            
+
             # Convert to posix path for git (even on Windows)
             git_path = str(relative_path).replace("\\", "/")
             relative_paths.append(git_path)
-        
+
         # Stage all files at once
         logger.debug("Staging files: %s", relative_paths)
         repo.index.add(relative_paths)
-        
+
         logger.info(
-            "Successfully staged %d files: %s", 
-            len(relative_paths), relative_paths
+            "Successfully staged %d files: %s", len(relative_paths), relative_paths
         )
         return True
 
@@ -394,32 +391,34 @@ def stage_all_changes(project_dir: Path) -> bool:
     try:
         # Get all unstaged changes
         unstaged_changes = get_unstaged_changes(project_dir)
-        
+
         # Combine modified and untracked files
-        all_unstaged_files = unstaged_changes["modified"] + unstaged_changes["untracked"]
-        
+        all_unstaged_files = (
+            unstaged_changes["modified"] + unstaged_changes["untracked"]
+        )
+
         # If no unstaged changes, this is a successful no-op
         if not all_unstaged_files:
             logger.debug("No unstaged changes to stage - success")
             return True
-        
+
         # Use git add --all to stage everything including deletions
         # This is more robust than trying to handle individual files
         repo = Repo(project_dir, search_parent_directories=False)
-        
+
         logger.debug(
-            "Staging %d unstaged files using git add --all: %s", 
-            len(all_unstaged_files), all_unstaged_files
+            "Staging %d unstaged files using git add --all: %s",
+            len(all_unstaged_files),
+            all_unstaged_files,
         )
-        
+
         # Use git add --all to stage all changes (additions, modifications, deletions)
         repo.git.add("--all")
-        
+
         logger.info(
-            "Successfully staged all %d unstaged changes", 
-            len(all_unstaged_files)
+            "Successfully staged all %d unstaged changes", len(all_unstaged_files)
         )
-        
+
         return True
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
@@ -428,7 +427,6 @@ def stage_all_changes(project_dir: Path) -> bool:
     except Exception as e:
         logger.error("Unexpected error staging all changes: %s", e)
         return False
-
 
 
 def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
@@ -442,7 +440,7 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
     Returns:
         CommitResult dictionary containing:
         - success: True if commit was created successfully, False otherwise
-        - commit_hash: Git commit SHA (first 7 characters) if successful, None otherwise  
+        - commit_hash: Git commit SHA (first 7 characters) if successful, None otherwise
         - error: Error message if failed, None if successful
 
     Note:
@@ -459,20 +457,12 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
     if not message or not message.strip():
         error_msg = "Commit message cannot be empty or contain only whitespace"
         logger.error(error_msg)
-        return {
-            "success": False,
-            "commit_hash": None,
-            "error": error_msg
-        }
+        return {"success": False, "commit_hash": None, "error": error_msg}
 
     if not is_git_repository(project_dir):
         error_msg = f"Directory is not a git repository: {project_dir}"
         logger.error(error_msg)
-        return {
-            "success": False,
-            "commit_hash": None,
-            "error": error_msg
-        }
+        return {"success": False, "commit_hash": None, "error": error_msg}
 
     try:
         # Check if there are staged files to commit
@@ -480,47 +470,31 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
         if not staged_files:
             error_msg = "No staged files to commit"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "commit_hash": None,
-                "error": error_msg
-            }
+            return {"success": False, "commit_hash": None, "error": error_msg}
 
         # Create the commit
         repo = Repo(project_dir, search_parent_directories=False)
         commit = repo.index.commit(message.strip())
-        
+
         # Get short commit hash (first 7 characters)
         commit_hash = commit.hexsha[:7]
-        
+
         logger.info(
-            "Successfully created commit %s with message: %s", 
-            commit_hash, message.strip()
+            "Successfully created commit %s with message: %s",
+            commit_hash,
+            message.strip(),
         )
-        
-        return {
-            "success": True,
-            "commit_hash": commit_hash,
-            "error": None
-        }
+
+        return {"success": True, "commit_hash": commit_hash, "error": None}
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         error_msg = f"Git error creating commit: {e}"
         logger.error(error_msg)
-        return {
-            "success": False,
-            "commit_hash": None,
-            "error": error_msg
-        }
+        return {"success": False, "commit_hash": None, "error": error_msg}
     except Exception as e:
         error_msg = f"Unexpected error creating commit: {e}"
         logger.error(error_msg)
-        return {
-            "success": False,
-            "commit_hash": None,
-            "error": error_msg
-        }
-
+        return {"success": False, "commit_hash": None, "error": error_msg}
 
 
 def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
@@ -537,7 +511,7 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
     Returns:
         CommitResult dictionary containing:
         - success: True if staging and commit were both successful, False otherwise
-        - commit_hash: Git commit SHA (first 7 characters) if successful, None otherwise  
+        - commit_hash: Git commit SHA (first 7 characters) if successful, None otherwise
         - error: Error message if failed, None if successful
 
     Note:
@@ -556,50 +530,37 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
     if not is_git_repository(project_dir):
         error_msg = f"Directory is not a git repository: {project_dir}"
         logger.error(error_msg)
-        return {
-            "success": False,
-            "commit_hash": None,
-            "error": error_msg
-        }
+        return {"success": False, "commit_hash": None, "error": error_msg}
 
     try:
         # Stage all unstaged changes first
         logger.debug("Staging all unstaged changes")
         staging_result = stage_all_changes(project_dir)
-        
+
         if not staging_result:
             error_msg = "Failed to stage changes"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "commit_hash": None,
-                "error": error_msg
-            }
-        
+            return {"success": False, "commit_hash": None, "error": error_msg}
+
         logger.debug("Successfully staged all changes, proceeding to commit")
-        
+
         # Commit the staged files
         commit_result = commit_staged_files(message, project_dir)
-        
+
         if commit_result["success"]:
             logger.info(
                 "Successfully committed all changes with hash %s",
-                commit_result["commit_hash"]
+                commit_result["commit_hash"],
             )
         else:
             logger.error(
-                "Staging succeeded but commit failed: %s",
-                commit_result["error"]
+                "Staging succeeded but commit failed: %s", commit_result["error"]
             )
-        
+
         # Return the commit result directly (success or failure)
         return commit_result
 
     except Exception as e:
         error_msg = f"Unexpected error during commit all changes: {e}"
         logger.error(error_msg)
-        return {
-            "success": False,
-            "commit_hash": None,
-            "error": error_msg
-        }
+        return {"success": False, "commit_hash": None, "error": error_msg}
