@@ -380,11 +380,10 @@ def stage_all_changes(project_dir: Path) -> bool:
         True if all unstaged changes were staged successfully, False otherwise
 
     Note:
-        - This is a convenience function that combines get_unstaged_changes() and stage_specific_files()
-        - Stages both modified tracked files and untracked files
+        - Stages both modified tracked files (including deletions) and untracked files
         - Returns True if no unstaged changes exist (no-op case)
-        - Uses existing validation and error handling from underlying functions
-        - Returns False if any files couldn't be staged
+        - Uses git add --all to handle deletions properly
+        - Returns False if staging operation fails
     """
     logger.debug("Staging all changes in %s", project_dir)
 
@@ -404,30 +403,28 @@ def stage_all_changes(project_dir: Path) -> bool:
             logger.debug("No unstaged changes to stage - success")
             return True
         
-        # Convert relative paths to absolute paths for stage_specific_files
-        absolute_paths = []
-        for file_path in all_unstaged_files:
-            absolute_path = project_dir / file_path
-            absolute_paths.append(absolute_path)
+        # Use git add --all to stage everything including deletions
+        # This is more robust than trying to handle individual files
+        repo = Repo(project_dir, search_parent_directories=False)
         
-        # Stage all unstaged files using existing function
         logger.debug(
-            "Staging %d unstaged files: %s", 
-            len(absolute_paths), all_unstaged_files
+            "Staging %d unstaged files using git add --all: %s", 
+            len(all_unstaged_files), all_unstaged_files
         )
         
-        result = stage_specific_files(absolute_paths, project_dir)
+        # Use git add --all to stage all changes (additions, modifications, deletions)
+        repo.git.add("--all")
         
-        if result:
-            logger.info(
-                "Successfully staged all %d unstaged changes", 
-                len(absolute_paths)
-            )
-        else:
-            logger.error("Failed to stage all unstaged changes")
+        logger.info(
+            "Successfully staged all %d unstaged changes", 
+            len(all_unstaged_files)
+        )
         
-        return result
+        return True
 
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error staging all changes: %s", e)
+        return False
     except Exception as e:
         logger.error("Unexpected error staging all changes: %s", e)
         return False
@@ -517,6 +514,89 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
         }
     except Exception as e:
         error_msg = f"Unexpected error creating commit: {e}"
+        logger.error(error_msg)
+        return {
+            "success": False,
+            "commit_hash": None,
+            "error": error_msg
+        }
+
+
+
+def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
+    """
+    Stage all unstaged changes and commit them in one operation.
+
+    This is a convenience function that combines stage_all_changes() and commit_staged_files()
+    workflows into a single operation.
+
+    Args:
+        message: Commit message
+        project_dir: Path to the project directory containing the git repository
+
+    Returns:
+        CommitResult dictionary containing:
+        - success: True if staging and commit were both successful, False otherwise
+        - commit_hash: Git commit SHA (first 7 characters) if successful, None otherwise  
+        - error: Error message if failed, None if successful
+
+    Note:
+        - First stages all unstaged changes (both modified and untracked files)
+        - Then commits the staged files
+        - Returns error if either staging or commit phase fails
+        - Uses existing stage_all_changes() and commit_staged_files() functions
+        - Provides clear error messages indicating which phase failed
+        - Requires non-empty commit message (after stripping whitespace)
+        - If no unstaged changes exist but staged changes do, will commit staged changes
+        - If no changes exist at all, will fail with appropriate error
+    """
+    logger.debug("Committing all changes with message: %s in %s", message, project_dir)
+
+    # Validate inputs early (delegate message validation to commit_staged_files)
+    if not is_git_repository(project_dir):
+        error_msg = f"Directory is not a git repository: {project_dir}"
+        logger.error(error_msg)
+        return {
+            "success": False,
+            "commit_hash": None,
+            "error": error_msg
+        }
+
+    try:
+        # Stage all unstaged changes first
+        logger.debug("Staging all unstaged changes")
+        staging_result = stage_all_changes(project_dir)
+        
+        if not staging_result:
+            error_msg = "Failed to stage changes"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "commit_hash": None,
+                "error": error_msg
+            }
+        
+        logger.debug("Successfully staged all changes, proceeding to commit")
+        
+        # Commit the staged files
+        commit_result = commit_staged_files(message, project_dir)
+        
+        if commit_result["success"]:
+            logger.info(
+                "Successfully committed all changes with hash %s",
+                commit_result["commit_hash"]
+            )
+        else:
+            logger.error(
+                "Staging succeeded but commit failed: %s",
+                commit_result["error"]
+            )
+        
+        # Return the commit result directly (success or failure)
+        return commit_result
+
+    except Exception as e:
+        error_msg = f"Unexpected error during commit all changes: {e}"
         logger.error(error_msg)
         return {
             "success": False,
