@@ -74,6 +74,9 @@ Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** wi
 
 **Issue:** This prompt generates way too many unit tests.
 
+**Issue:** Hardcoded `pr_info` path does not help for sub-problems.
+Simple hack:`pr_info2`. ( Could be also branch name or something?)
+
 #### Plan Review Prompt:
 ```
 Please review the project plan for a new feature in folder PR_Info\steps.
