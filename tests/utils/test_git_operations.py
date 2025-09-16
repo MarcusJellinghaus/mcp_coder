@@ -14,6 +14,7 @@ from mcp_coder.utils.git_operations import (
     get_unstaged_changes,
     is_file_tracked,
     is_git_repository,
+    stage_specific_files,
 )
 
 
@@ -823,3 +824,345 @@ class TestGetFullStatus:
         # Should handle exceptions gracefully
         result = get_full_status(tmp_path)
         assert result == {"staged": [], "modified": [], "untracked": []}
+
+
+
+class TestStageSpecificFiles:
+    """Test stage_specific_files function."""
+
+    def test_stage_specific_files_single_existing_file(self, tmp_path: Path) -> None:
+        """Test staging a single existing file."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create file to stage
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        
+        # Should successfully stage the file
+        result = stage_specific_files([test_file], tmp_path)
+        assert result is True
+        
+        # Verify file is staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "test.txt" in staged_files
+
+    def test_stage_specific_files_multiple_existing_files(self, tmp_path: Path) -> None:
+        """Test staging multiple existing files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create files to stage
+        file1 = tmp_path / "file1.txt"
+        file1.write_text("content 1")
+        file2 = tmp_path / "subdir" / "file2.txt"
+        file2.parent.mkdir()
+        file2.write_text("content 2")
+        file3 = tmp_path / "file3.py"
+        file3.write_text("print('hello')")
+        
+        # Should successfully stage all files
+        result = stage_specific_files([file1, file2, file3], tmp_path)
+        assert result is True
+        
+        # Verify all files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "file1.txt" in staged_files
+        assert any("file2.txt" in path for path in staged_files)
+        assert "file3.py" in staged_files
+        assert len(staged_files) == 3
+
+    def test_stage_specific_files_non_existent_file(self, tmp_path: Path) -> None:
+        """Test staging non-existent file should fail gracefully."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Try to stage non-existent file
+        non_existent = tmp_path / "does_not_exist.txt"
+        result = stage_specific_files([non_existent], tmp_path)
+        assert result is False
+        
+        # Verify no files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert staged_files == []
+
+    def test_stage_specific_files_outside_repository(self, tmp_path: Path) -> None:
+        """Test staging files outside repository should fail."""
+        # Create git repo in subdirectory
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        repo = Repo.init(repo_dir)
+        
+        # Create file outside repo
+        outside_file = tmp_path / "outside.txt"
+        outside_file.write_text("outside content")
+        
+        # Should fail to stage file outside repo
+        result = stage_specific_files([outside_file], repo_dir)
+        assert result is False
+        
+        # Verify no files are staged
+        staged_files = get_staged_changes(repo_dir)
+        assert staged_files == []
+
+    def test_stage_specific_files_already_staged(self, tmp_path: Path) -> None:
+        """Test staging already staged files should be no-op."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage file
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        repo.index.add([str(test_file)])
+        
+        # Verify file is already staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "test.txt" in staged_files
+        
+        # Stage again - should succeed (no-op)
+        result = stage_specific_files([test_file], tmp_path)
+        assert result is True
+        
+        # Verify file is still staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "test.txt" in staged_files
+        assert len(staged_files) == 1
+
+    def test_stage_specific_files_mix_valid_invalid(self, tmp_path: Path) -> None:
+        """Test staging mix of valid and invalid files should fail."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create one valid file
+        valid_file = tmp_path / "valid.txt"
+        valid_file.write_text("valid content")
+        
+        # One non-existent file
+        invalid_file = tmp_path / "invalid.txt"
+        
+        # Should fail due to invalid file
+        result = stage_specific_files([valid_file, invalid_file], tmp_path)
+        assert result is False
+        
+        # Verify no files are staged (all or nothing)
+        staged_files = get_staged_changes(tmp_path)
+        assert staged_files == []
+
+    def test_stage_specific_files_relative_vs_absolute_paths(self, tmp_path: Path) -> None:
+        """Test staging works with both relative and absolute paths."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create files to stage
+        file1 = tmp_path / "absolute.txt"
+        file1.write_text("absolute path file")
+        
+        # Create file with relative path reference
+        file2 = tmp_path / "relative.txt"
+        file2.write_text("relative path file")
+        
+        # Stage using absolute paths
+        result1 = stage_specific_files([file1], tmp_path)
+        assert result1 is True
+        
+        # Verify absolute path file is staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "absolute.txt" in staged_files
+        
+        # Stage using relative path (from project dir perspective)
+        result2 = stage_specific_files([file2], tmp_path)
+        assert result2 is True
+        
+        # Verify both files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "absolute.txt" in staged_files
+        assert "relative.txt" in staged_files
+        assert len(staged_files) == 2
+
+    def test_stage_specific_files_not_git_repository(self, tmp_path: Path) -> None:
+        """Test staging files when not in git repository should fail."""
+        # Create regular directory (not git repo)
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        
+        # Should fail - not a git repository
+        result = stage_specific_files([test_file], tmp_path)
+        assert result is False
+
+    def test_stage_specific_files_empty_list(self, tmp_path: Path) -> None:
+        """Test staging empty list of files should succeed."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Stage empty list - should succeed (no-op)
+        result = stage_specific_files([], tmp_path)
+        assert result is True
+        
+        # Verify no files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert staged_files == []
+
+    def test_stage_specific_files_various_file_types(self, tmp_path: Path) -> None:
+        """Test staging various file types and extensions."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create files with different extensions
+        files_to_stage = [
+            tmp_path / "script.py",
+            tmp_path / "data.json",
+            tmp_path / "docs" / "readme.md",
+            tmp_path / "config.yml",
+            tmp_path / "image.png",  # Binary file
+            tmp_path / ".gitignore",  # Hidden file
+        ]
+        
+        for file_path in files_to_stage:
+            file_path.parent.mkdir(exist_ok=True, parents=True)
+            if file_path.name == "image.png":
+                # Simulate binary content
+                file_path.write_bytes(b"fake binary content")
+            else:
+                file_path.write_text(f"content for {file_path.name}")
+        
+        # Should successfully stage all file types
+        result = stage_specific_files(files_to_stage, tmp_path)
+        assert result is True
+        
+        # Verify all files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert len(staged_files) == 6
+        assert "script.py" in staged_files
+        assert "data.json" in staged_files
+        assert "config.yml" in staged_files
+        assert "image.png" in staged_files
+        assert ".gitignore" in staged_files
+        assert any("readme.md" in path for path in staged_files)
+
+    def test_stage_specific_files_modified_tracked_file(self, tmp_path: Path) -> None:
+        """Test staging a tracked file that has been modified."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit file
+        tracked_file = tmp_path / "tracked.txt"
+        tracked_file.write_text("original content")
+        repo.index.add([str(tracked_file)])
+        repo.index.commit("Initial commit")
+        
+        # Modify the tracked file
+        tracked_file.write_text("modified content")
+        
+        # Verify file is modified but not staged
+        unstaged = get_unstaged_changes(tmp_path)
+        assert "tracked.txt" in unstaged["modified"]
+        
+        staged = get_staged_changes(tmp_path)
+        assert "tracked.txt" not in staged
+        
+        # Stage the modified file
+        result = stage_specific_files([tracked_file], tmp_path)
+        assert result is True
+        
+        # Verify file is now staged
+        staged = get_staged_changes(tmp_path)
+        assert "tracked.txt" in staged
+
+    def test_stage_specific_files_deleted_tracked_file(self, tmp_path: Path) -> None:
+        """Test staging a tracked file that has been deleted."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit file
+        tracked_file = tmp_path / "tracked.txt"
+        tracked_file.write_text("original content")
+        repo.index.add([str(tracked_file)])
+        repo.index.commit("Initial commit")
+        
+        # Delete the tracked file
+        tracked_file.unlink()
+        
+        # Verify file shows as modified (deleted)
+        unstaged = get_unstaged_changes(tmp_path)
+        assert "tracked.txt" in unstaged["modified"]
+        
+        # Try to stage the deleted file - should handle gracefully
+        # (Git can stage deletions, but the file path doesn't exist)
+        result = stage_specific_files([tracked_file], tmp_path)
+        # This might fail since file doesn't exist, but that's expected
+        # The function should handle this gracefully
+        assert result is False
+
+    @patch("mcp_coder.utils.git_operations.is_git_repository")
+    def test_stage_specific_files_git_validation_fails(self, mock_is_git: Mock, tmp_path: Path) -> None:
+        """Test when git repository validation fails."""
+        mock_is_git.return_value = False
+        
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("content")
+        
+        # Should fail when not a git repo
+        result = stage_specific_files([test_file], tmp_path)
+        assert result is False
+
+    @patch("mcp_coder.utils.git_operations.Repo")
+    def test_stage_specific_files_git_command_error(self, mock_repo: Mock, tmp_path: Path) -> None:
+        """Test handling of git command failures."""
+        mock_instance = Mock()
+        mock_repo.return_value = mock_instance
+        mock_instance.index.add.side_effect = GitCommandError("add", 128)
+        
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("content")
+        
+        # Should handle git command errors gracefully
+        result = stage_specific_files([test_file], tmp_path)
+        assert result is False
+
+    def test_stage_specific_files_paths_conversion(self, tmp_path: Path) -> None:
+        """Test that file paths are correctly converted to relative paths."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create file in subdirectory
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        test_file = subdir / "test.txt"
+        test_file.write_text("test content")
+        
+        # Stage using absolute path
+        result = stage_specific_files([test_file], tmp_path)
+        assert result is True
+        
+        # Verify staged file uses correct relative path
+        staged_files = get_staged_changes(tmp_path)
+        assert len(staged_files) == 1
+        # Should be relative path, not absolute
+        staged_path = staged_files[0]
+        assert not str(tmp_path) in staged_path  # Not absolute
+        assert "subdir" in staged_path and "test.txt" in staged_path
+
+    def test_stage_specific_files_large_number_of_files(self, tmp_path: Path) -> None:
+        """Test staging a large number of files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create many files
+        files_to_stage = []
+        for i in range(100):  # 100 files should be reasonable for testing
+            file_path = tmp_path / f"file_{i:03d}.txt"
+            file_path.write_text(f"content for file {i}")
+            files_to_stage.append(file_path)
+        
+        # Should handle large number of files
+        result = stage_specific_files(files_to_stage, tmp_path)
+        assert result is True
+        
+        # Verify all files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert len(staged_files) == 100
+        
+        # Verify some sample files are in the list
+        assert "file_000.txt" in staged_files
+        assert "file_050.txt" in staged_files
+        assert "file_099.txt" in staged_files

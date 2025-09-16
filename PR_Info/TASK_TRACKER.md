@@ -58,7 +58,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Run quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 6: Test & Implement stage_specific_files()** - [step_6.md](steps/step_6.md)
+- [x] **Step 6: Test & Implement stage_specific_files()** - [step_6.md](steps/step_6.md)
   - Write tests for staging specific files using TDD
   - Implement function to stage selected files
   - Handle path validation and conversion

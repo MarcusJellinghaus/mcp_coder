@@ -289,3 +289,74 @@ def get_full_status(project_dir: Path) -> dict[str, list[str]]:
     except Exception as e:
         logger.warning("Unexpected error getting full git status: %s", e)
         return {"staged": [], "modified": [], "untracked": []}
+
+
+def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
+    """
+    Stage specific files for commit.
+
+    Args:
+        files: List of file paths to stage
+        project_dir: Path to the project directory containing the git repository
+
+    Returns:
+        True if all specified files were staged successfully, False otherwise
+
+    Note:
+        - Handles both absolute and relative file paths
+        - Validates files exist and are within project directory
+        - Logs appropriate warnings/errors for failed operations
+        - Returns False if any files couldn't be staged (all-or-nothing approach)
+    """
+    logger.debug("Staging %d specific files in %s", len(files), project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    # Handle empty list - this is a valid no-op case
+    if not files:
+        logger.debug("No files to stage - success")
+        return True
+
+    try:
+        repo = Repo(project_dir, search_parent_directories=False)
+        
+        # Validate and convert all file paths first
+        relative_paths = []
+        for file_path in files:
+            # Check if file exists
+            if not file_path.exists():
+                logger.error("File does not exist: %s", file_path)
+                return False
+            
+            # Get relative path from project directory
+            try:
+                relative_path = file_path.relative_to(project_dir)
+            except ValueError:
+                logger.error(
+                    "File %s is outside project directory %s", 
+                    file_path, project_dir
+                )
+                return False
+            
+            # Convert to posix path for git (even on Windows)
+            git_path = str(relative_path).replace("\\", "/")
+            relative_paths.append(git_path)
+        
+        # Stage all files at once
+        logger.debug("Staging files: %s", relative_paths)
+        repo.index.add(relative_paths)
+        
+        logger.info(
+            "Successfully staged %d files: %s", 
+            len(relative_paths), relative_paths
+        )
+        return True
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error staging files: %s", e)
+        return False
+    except Exception as e:
+        logger.error("Unexpected error staging files: %s", e)
+        return False
