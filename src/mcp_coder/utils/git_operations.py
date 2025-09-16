@@ -2,13 +2,20 @@
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TypedDict
 
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
 # Use same logging pattern as existing modules (see file_operations.py)
 logger = logging.getLogger(__name__)
+
+# Type alias for commit result structure
+class CommitResult(TypedDict):
+    """Result of a git commit operation."""
+    success: bool
+    commit_hash: Optional[str]
+    error: Optional[str]
 
 
 def is_git_repository(project_dir: Path) -> bool:
@@ -424,3 +431,95 @@ def stage_all_changes(project_dir: Path) -> bool:
     except Exception as e:
         logger.error("Unexpected error staging all changes: %s", e)
         return False
+
+
+
+def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
+    """
+    Create a commit from currently staged files.
+
+    Args:
+        message: Commit message
+        project_dir: Path to the project directory containing the git repository
+
+    Returns:
+        CommitResult dictionary containing:
+        - success: True if commit was created successfully, False otherwise
+        - commit_hash: Git commit SHA (first 7 characters) if successful, None otherwise  
+        - error: Error message if failed, None if successful
+
+    Note:
+        - Only commits currently staged files
+        - Requires non-empty commit message (after stripping whitespace)
+        - Returns commit hash on success
+        - Provides error details on failure
+        - Uses existing is_git_repository() for validation
+        - Uses get_staged_changes() to verify there's content to commit
+    """
+    logger.debug("Creating commit with message: %s in %s", message, project_dir)
+
+    # Validate inputs
+    if not message or not message.strip():
+        error_msg = "Commit message cannot be empty or contain only whitespace"
+        logger.error(error_msg)
+        return {
+            "success": False,
+            "commit_hash": None,
+            "error": error_msg
+        }
+
+    if not is_git_repository(project_dir):
+        error_msg = f"Directory is not a git repository: {project_dir}"
+        logger.error(error_msg)
+        return {
+            "success": False,
+            "commit_hash": None,
+            "error": error_msg
+        }
+
+    try:
+        # Check if there are staged files to commit
+        staged_files = get_staged_changes(project_dir)
+        if not staged_files:
+            error_msg = "No staged files to commit"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "commit_hash": None,
+                "error": error_msg
+            }
+
+        # Create the commit
+        repo = Repo(project_dir, search_parent_directories=False)
+        commit = repo.index.commit(message.strip())
+        
+        # Get short commit hash (first 7 characters)
+        commit_hash = commit.hexsha[:7]
+        
+        logger.info(
+            "Successfully created commit %s with message: %s", 
+            commit_hash, message.strip()
+        )
+        
+        return {
+            "success": True,
+            "commit_hash": commit_hash,
+            "error": None
+        }
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        error_msg = f"Git error creating commit: {e}"
+        logger.error(error_msg)
+        return {
+            "success": False,
+            "commit_hash": None,
+            "error": error_msg
+        }
+    except Exception as e:
+        error_msg = f"Unexpected error creating commit: {e}"
+        logger.error(error_msg)
+        return {
+            "success": False,
+            "commit_hash": None,
+            "error": error_msg
+        }

@@ -72,7 +72,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Run quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 8: Test & Implement commit_staged_files()** - [step_8.md](steps/step_8.md)
+- [x] **Step 8: Test & Implement commit_staged_files()** - [step_8.md](steps/step_8.md)
   - Write tests for core commit function using TDD
   - Implement function to create commits from staged content
   - Return CommitResult structure with success/hash/error info

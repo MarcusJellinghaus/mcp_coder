@@ -9,6 +9,7 @@ from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from mcp_coder.utils.git_operations import (
+    commit_staged_files,
     get_full_status,
     get_staged_changes,
     get_unstaged_changes,
@@ -1468,3 +1469,401 @@ class TestStageAllChanges:
         # Should fail when not a git repo
         result = stage_all_changes(tmp_path)
         assert result is False
+
+
+
+class TestCommitStagedFiles:
+    """Test commit_staged_files function."""
+
+    def test_commit_staged_files_success_single_file(self, tmp_path: Path) -> None:
+        """Test successful commit with single staged file."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage file
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        repo.index.add([str(test_file)])
+        
+        # Should successfully commit staged file
+        result = commit_staged_files("Add test file", tmp_path)
+        assert result["success"] is True
+        assert result["commit_hash"] is not None
+        assert result["error"] is None
+        
+        # Verify commit was created
+        assert len(list(repo.iter_commits())) == 1
+        
+        # Verify commit hash format (should be 7 characters)
+        assert len(result["commit_hash"]) == 7
+        assert result["commit_hash"].isalnum()
+        
+        # Verify no staged files remain
+        staged_files = get_staged_changes(tmp_path)
+        assert staged_files == []
+
+    def test_commit_staged_files_success_multiple_files(self, tmp_path: Path) -> None:
+        """Test successful commit with multiple staged files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage multiple files
+        file1 = tmp_path / "file1.txt"
+        file1.write_text("content 1")
+        file2 = tmp_path / "subdir" / "file2.txt"
+        file2.parent.mkdir()
+        file2.write_text("content 2")
+        file3 = tmp_path / "file3.py"
+        file3.write_text("print('hello')")
+        
+        repo.index.add([str(file1), str(file2), str(file3)])
+        
+        # Should successfully commit all staged files
+        result = commit_staged_files("Add multiple files", tmp_path)
+        assert result["success"] is True
+        assert result["commit_hash"] is not None
+        assert result["error"] is None
+        
+        # Verify commit was created
+        commits = list(repo.iter_commits())
+        assert len(commits) == 1
+        
+        # Verify commit message
+        assert commits[0].message.strip() == "Add multiple files"
+        
+        # Verify no staged files remain
+        staged_files = get_staged_changes(tmp_path)
+        assert staged_files == []
+
+    def test_commit_staged_files_no_staged_files(self, tmp_path: Path) -> None:
+        """Test commit attempt with no staged files should fail."""
+        # Create git repo
+        Repo.init(tmp_path)
+        
+        # Try to commit with no staged files
+        result = commit_staged_files("Empty commit", tmp_path)
+        assert result["success"] is False
+        assert result["commit_hash"] is None
+        assert result["error"] is not None
+        assert "no staged files" in result["error"].lower() or "nothing to commit" in result["error"].lower()
+
+    def test_commit_staged_files_empty_message(self, tmp_path: Path) -> None:
+        """Test commit with empty message should fail."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage file
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        repo.index.add([str(test_file)])
+        
+        # Try to commit with empty message
+        result = commit_staged_files("", tmp_path)
+        assert result["success"] is False
+        assert result["commit_hash"] is None
+        assert result["error"] is not None
+        assert "message" in result["error"].lower()
+
+    def test_commit_staged_files_none_message(self, tmp_path: Path) -> None:
+        """Test commit with None message should fail."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage file
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        repo.index.add([str(test_file)])
+        
+        # Try to commit with None message
+        result = commit_staged_files(None, tmp_path)  # type: ignore
+        assert result["success"] is False
+        assert result["commit_hash"] is None
+        assert result["error"] is not None
+        assert "message" in result["error"].lower()
+
+    def test_commit_staged_files_whitespace_only_message(self, tmp_path: Path) -> None:
+        """Test commit with whitespace-only message should fail."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage file
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        repo.index.add([str(test_file)])
+        
+        # Try to commit with whitespace-only message
+        result = commit_staged_files("   \n\t  ", tmp_path)
+        assert result["success"] is False
+        assert result["commit_hash"] is None
+        assert result["error"] is not None
+        assert "message" in result["error"].lower()
+
+    def test_commit_staged_files_multiline_message(self, tmp_path: Path) -> None:
+        """Test successful commit with multiline message."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage file
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        repo.index.add([str(test_file)])
+        
+        multiline_message = "Add test file\n\nThis is a detailed description\nof the changes made."
+        
+        # Should successfully commit with multiline message
+        result = commit_staged_files(multiline_message, tmp_path)
+        assert result["success"] is True
+        assert result["commit_hash"] is not None
+        assert result["error"] is None
+        
+        # Verify commit message is preserved
+        commits = list(repo.iter_commits())
+        assert commits[0].message.strip() == multiline_message
+
+    def test_commit_staged_files_special_characters_message(self, tmp_path: Path) -> None:
+        """Test successful commit with special characters in message."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage file
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        repo.index.add([str(test_file)])
+        
+        special_message = "Fix: issue #123 🚀 (urgent) [v1.2.3]"
+        
+        # Should successfully commit with special characters
+        result = commit_staged_files(special_message, tmp_path)
+        assert result["success"] is True
+        assert result["commit_hash"] is not None
+        assert result["error"] is None
+        
+        # Verify commit message is preserved
+        commits = list(repo.iter_commits())
+        assert commits[0].message.strip() == special_message
+
+    def test_commit_staged_files_not_git_repository(self, tmp_path: Path) -> None:
+        """Test commit when not in git repository should fail."""
+        # Create regular directory (not git repo)
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        
+        # Should fail - not a git repository
+        result = commit_staged_files("Test commit", tmp_path)
+        assert result["success"] is False
+        assert result["commit_hash"] is None
+        assert result["error"] is not None
+        assert "git repository" in result["error"].lower() or "not a git" in result["error"].lower()
+
+    def test_commit_staged_files_after_initial_commit(self, tmp_path: Path) -> None:
+        """Test commit after initial commit (non-empty repo)."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create initial commit
+        initial_file = tmp_path / "initial.txt"
+        initial_file.write_text("initial content")
+        repo.index.add([str(initial_file)])
+        repo.index.commit("Initial commit")
+        
+        # Create and stage new file
+        new_file = tmp_path / "new.txt"
+        new_file.write_text("new content")
+        repo.index.add([str(new_file)])
+        
+        # Should successfully commit second change
+        result = commit_staged_files("Add new file", tmp_path)
+        assert result["success"] is True
+        assert result["commit_hash"] is not None
+        assert result["error"] is None
+        
+        # Verify two commits exist
+        commits = list(repo.iter_commits())
+        assert len(commits) == 2
+        assert commits[0].message.strip() == "Add new file"
+        assert commits[1].message.strip() == "Initial commit"
+
+    def test_commit_staged_files_modified_tracked_file(self, tmp_path: Path) -> None:
+        """Test committing modifications to tracked files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit initial file
+        tracked_file = tmp_path / "tracked.txt"
+        tracked_file.write_text("original content")
+        repo.index.add([str(tracked_file)])
+        repo.index.commit("Initial commit")
+        
+        # Modify and stage the tracked file
+        tracked_file.write_text("modified content")
+        repo.index.add([str(tracked_file)])
+        
+        # Should successfully commit modification
+        result = commit_staged_files("Update tracked file", tmp_path)
+        assert result["success"] is True
+        assert result["commit_hash"] is not None
+        assert result["error"] is None
+        
+        # Verify two commits exist
+        commits = list(repo.iter_commits())
+        assert len(commits) == 2
+        
+        # Verify content was updated
+        assert tracked_file.read_text() == "modified content"
+
+    def test_commit_staged_files_deleted_tracked_file(self, tmp_path: Path) -> None:
+        """Test committing deletion of tracked files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit initial file
+        tracked_file = tmp_path / "tracked.txt"
+        tracked_file.write_text("content to delete")
+        repo.index.add([str(tracked_file)])
+        repo.index.commit("Initial commit")
+        
+        # Delete and stage the deletion
+        tracked_file.unlink()
+        repo.index.remove([str(tracked_file)])
+        
+        # Should successfully commit deletion
+        result = commit_staged_files("Delete tracked file", tmp_path)
+        assert result["success"] is True
+        assert result["commit_hash"] is not None
+        assert result["error"] is None
+        
+        # Verify two commits exist
+        commits = list(repo.iter_commits())
+        assert len(commits) == 2
+        
+        # Verify file is deleted
+        assert not tracked_file.exists()
+
+    def test_commit_staged_files_mixed_operations(self, tmp_path: Path) -> None:
+        """Test committing mix of additions, modifications, and deletions."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create initial commit with multiple files
+        file1 = tmp_path / "file1.txt"
+        file1.write_text("original content 1")
+        file2 = tmp_path / "file2.txt"
+        file2.write_text("original content 2")
+        repo.index.add([str(file1), str(file2)])
+        repo.index.commit("Initial commit")
+        
+        # Modify file1
+        file1.write_text("modified content 1")
+        repo.index.add([str(file1)])
+        
+        # Delete file2
+        file2.unlink()
+        repo.index.remove([str(file2)])
+        
+        # Add new file3
+        file3 = tmp_path / "file3.txt"
+        file3.write_text("new content 3")
+        repo.index.add([str(file3)])
+        
+        # Should successfully commit all changes
+        result = commit_staged_files("Mixed operations commit", tmp_path)
+        assert result["success"] is True
+        assert result["commit_hash"] is not None
+        assert result["error"] is None
+        
+        # Verify commits exist
+        commits = list(repo.iter_commits())
+        assert len(commits) == 2
+        
+        # Verify final state
+        assert file1.read_text() == "modified content 1"
+        assert not file2.exists()
+        assert file3.read_text() == "new content 3"
+
+    def test_commit_staged_files_commit_hash_format(self, tmp_path: Path) -> None:
+        """Test that commit hash is in correct format."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage file
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        repo.index.add([str(test_file)])
+        
+        # Commit and check hash format
+        result = commit_staged_files("Test commit", tmp_path)
+        assert result["success"] is True
+        
+        commit_hash = result["commit_hash"]
+        assert commit_hash is not None
+        
+        # Should be 7 characters (short hash)
+        assert len(commit_hash) == 7
+        
+        # Should be hexadecimal
+        assert all(c in '0123456789abcdef' for c in commit_hash.lower())
+        
+        # Should match actual git commit hash
+        actual_commit = list(repo.iter_commits())[0]
+        assert commit_hash == actual_commit.hexsha[:7]
+
+    def test_commit_staged_files_unstaged_files_ignored(self, tmp_path: Path) -> None:
+        """Test that unstaged files are not included in commit."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage one file
+        staged_file = tmp_path / "staged.txt"
+        staged_file.write_text("staged content")
+        repo.index.add([str(staged_file)])
+        
+        # Create unstaged file (should not be committed)
+        unstaged_file = tmp_path / "unstaged.txt"
+        unstaged_file.write_text("unstaged content")
+        
+        # Commit should only include staged file
+        result = commit_staged_files("Commit staged only", tmp_path)
+        assert result["success"] is True
+        
+        # Verify unstaged file still exists and is unstaged
+        unstaged_changes = get_unstaged_changes(tmp_path)
+        assert "unstaged.txt" in unstaged_changes["untracked"]
+        
+        # Verify no staged files remain
+        staged_changes = get_staged_changes(tmp_path)
+        assert staged_changes == []
+
+    @patch("mcp_coder.utils.git_operations.is_git_repository")
+    def test_commit_staged_files_git_validation_fails(self, mock_is_git: Mock, tmp_path: Path) -> None:
+        """Test when git repository validation fails."""
+        mock_is_git.return_value = False
+        
+        # Should fail when not a git repo
+        result = commit_staged_files("Test commit", tmp_path)
+        assert result["success"] is False
+        assert result["commit_hash"] is None
+        assert result["error"] is not None
+
+    @patch("mcp_coder.utils.git_operations.Repo")
+    def test_commit_staged_files_git_command_error(self, mock_repo: Mock, tmp_path: Path) -> None:
+        """Test handling of git command failures."""
+        mock_instance = Mock()
+        mock_repo.return_value = mock_instance
+        mock_instance.index.commit.side_effect = GitCommandError("commit", 128)
+        
+        # Should handle git command errors gracefully
+        result = commit_staged_files("Test commit", tmp_path)
+        assert result["success"] is False
+        assert result["commit_hash"] is None
+        assert result["error"] is not None
+
+    @patch("mcp_coder.utils.git_operations.get_staged_changes")
+    def test_commit_staged_files_get_staged_changes_fails(self, mock_get_staged: Mock, tmp_path: Path) -> None:
+        """Test when get_staged_changes fails."""
+        mock_get_staged.return_value = []  # No staged files
+        
+        # Should fail gracefully when no staged files
+        result = commit_staged_files("Test commit", tmp_path)
+        assert result["success"] is False
+        assert result["commit_hash"] is None
+        assert result["error"] is not None
