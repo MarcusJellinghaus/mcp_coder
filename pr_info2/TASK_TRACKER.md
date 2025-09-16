@@ -30,7 +30,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 2: Implement Core Workflow Tests** - [step_2.md](steps/step_2.md)
+- [x] **Step 2: Implement Core Workflow Tests** - [step_2.md](steps/step_2.md)
   - Implement 20 core workflow tests in test_git_workflows.py
   - Focus on complete end-to-end scenarios without mocking
   - Test realistic git operation sequences
