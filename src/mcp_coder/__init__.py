@@ -30,6 +30,13 @@ from .prompt_manager import (
     validate_prompt_directory,
     validate_prompt_markdown,
 )
+from .utils.git_operations import (
+    CommitResult,
+    commit_all_changes,
+    commit_staged_files,
+    get_full_status,
+    is_git_repository,
+)
 from .utils.subprocess_runner import (
     CommandOptions,
     CommandResult,
@@ -40,15 +47,25 @@ from .utils.subprocess_runner import (
 __version__ = "0.1.0"
 
 __all__ = [
+    # Core LLM interfaces
+    "ask_claude",
+    "ask_claude_code",
+    "ask_llm",
+    # Claude executable utilities
+    "find_claude_executable",
+    "verify_claude_installation",
+    # Command execution
     "execute_command",
     "execute_subprocess",
     "CommandResult",
     "CommandOptions",
-    "ask_claude",
-    "ask_claude_code",
-    "ask_llm",
-    "find_claude_executable",
-    "verify_claude_installation",
+    # Git operations - Public API
+    "CommitResult",
+    "commit_all_changes",
+    "commit_staged_files",
+    "get_full_status",
+    "is_git_repository",
+    # Prompt management
     "get_prompt",
     "validate_prompt_markdown",
     "validate_prompt_directory",

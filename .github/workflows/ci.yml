@@ -39,9 +39,14 @@ jobs:
       run: pylint -E ./src ./tests
       continue-on-error: true
         
-    - name: Run tests
-      id: pytest
-      run: pytest tests
+    - name: Run unit tests (fast)
+      id: unit-tests
+      run: pytest -m "not git_integration and not claude_integration"
+      continue-on-error: true
+        
+    - name: Run integration tests
+      id: integration-tests
+      run: pytest -m "git_integration or claude_integration"
       continue-on-error: true
         
     - name: Check type hints with mypy
@@ -58,7 +63,8 @@ jobs:
         [[ "${{ steps.black.outcome }}" == "failure" ]] && { echo "❌ Black formatting check failed"; ERROR=1; } || echo "✅ Black formatting check passed"
         [[ "${{ steps.isort.outcome }}" == "failure" ]] && { echo "❌ isort import check failed"; ERROR=1; } || echo "✅ isort import check passed"
         [[ "${{ steps.pylint.outcome }}" == "failure" ]] && { echo "❌ pylint error check failed"; ERROR=1; } || echo "✅ pylint error check passed"
-        [[ "${{ steps.pytest.outcome }}" == "failure" ]] && { echo "❌ pytest tests failed"; ERROR=1; } || echo "✅ pytest tests passed"
+        [[ "${{ steps.unit-tests.outcome }}" == "failure" ]] && { echo "❌ unit tests failed"; ERROR=1; } || echo "✅ unit tests passed"
+        [[ "${{ steps.integration-tests.outcome }}" == "failure" ]] && { echo "❌ integration tests failed"; ERROR=1; } || echo "✅ integration tests passed"
         [[ "${{ steps.mypy.outcome }}" == "failure" ]] && { echo "❌ mypy type checking failed"; ERROR=1; } || echo "✅ mypy type checking passed"
         
         exit $ERROR

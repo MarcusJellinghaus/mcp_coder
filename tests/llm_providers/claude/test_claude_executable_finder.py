@@ -285,10 +285,10 @@ class TestVerifyClaudeInstallation:
         assert "Version check failed" in error_str
 
 
+@pytest.mark.claude_integration
 class TestIntegration:
     """Integration tests for the claude_executable_finder module."""
 
-    @pytest.mark.integration
     def test_real_claude_finder(self) -> None:
         """Test finding real Claude installation if available."""
         try:
@@ -299,7 +299,6 @@ class TestIntegration:
         except FileNotFoundError:
             pytest.skip("Claude Code CLI not installed")
 
-    @pytest.mark.integration
     def test_real_verification(self) -> None:
         """Test real Claude installation verification."""
         result = verify_claude_installation()

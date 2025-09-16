@@ -72,6 +72,11 @@ Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** wi
 - **DATA**: Return values and data structures
 ```
 
+**Issue:** This prompt generates way too many unit tests.
+
+**Issue:** Hardcoded `pr_info` path does not help for sub-problems.
+Simple hack:`pr_info2`. ( Could be also branch name or something?)
+
 #### Plan Review Prompt:
 ```
 Please review the project plan for a new feature in folder PR_Info\steps.
@@ -88,8 +93,7 @@ You explain, ask and I answer until we discussed all topics?
 
 Wait for end of discussion
 ```
-Can you update the plan, please?
-Please update the files in folder `pr_info`
+Can you update the plan by updating the different files in folder `pr_info`
 (including creating the `steps/` subfolder for implementation details)
 Please do targeted changes.
 Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`

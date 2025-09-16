@@ -19,6 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "claude-code-sdk",
+    "GitPython>=3.1.0",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +33,12 @@ dev = [
 # [project.scripts]
 # mcp-coder = "mcp_coder.main:main"
 
+[project.urls]
+"Homepage" = "https://github.com/MarcusJellinghaus/mcp_coder"
+"Repository" = "https://github.com/MarcusJellinghaus/mcp_coder"
+"Bug Tracker" = "https://github.com/MarcusJellinghaus/mcp_coder/issues"
+"Documentation" = "https://github.com/MarcusJellinghaus/mcp_coder#readme"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -41,20 +48,17 @@ where = ["src"]
 [tool.setuptools.package-data]
 mcp_coder = ["prompts/*.md"]
 
-
-
-[project.urls]
-"Homepage" = "https://github.com/MarcusJellinghaus/mcp_coder"
-"Repository" = "https://github.com/MarcusJellinghaus/mcp_coder"
-"Bug Tracker" = "https://github.com/MarcusJellinghaus/mcp_coder/issues"
-"Documentation" = "https://github.com/MarcusJellinghaus/mcp_coder#readme"
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-    "integration: marks tests as integration tests that require Claude Code CLI"
+    "git_integration: tests with file system git operations (repos, commits)", 
+    "claude_integration: tests requiring Claude CLI/API (network, auth needed)"
 ]
-
+# Default pytest options:
+# --strict-markers: Fail if unknown markers are used (prevents typos)
+# --tb=short: Show concise error tracebacks (not full stack traces)
+# -v: Verbose output showing individual test names
+addopts = ["--strict-markers", "--tb=short", "-v"]
 
 [tool.black]
 line-length = 88
@@ -89,4 +93,3 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["mcp.server.fastmcp"]
 ignore_missing_imports = true
-
