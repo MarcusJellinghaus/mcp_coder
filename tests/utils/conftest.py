@@ -1,8 +1,9 @@
 """Shared test fixtures for git operations testing."""
 
-import pytest
 from pathlib import Path
 from typing import Any
+
+import pytest
 from git import Repo
 
 

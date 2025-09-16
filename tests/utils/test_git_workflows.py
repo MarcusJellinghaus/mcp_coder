@@ -1,18 +1,19 @@
 """Test git workflows with end-to-end integration testing."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 from git import Repo
 
 from mcp_coder.utils.git_operations import (
-    is_git_repository,
+    commit_all_changes,
+    commit_staged_files,
+    get_full_status,
     get_staged_changes,
     get_unstaged_changes,
-    get_full_status,
-    stage_specific_files,
+    is_git_repository,
     stage_all_changes,
-    commit_staged_files,
-    commit_all_changes,
+    stage_specific_files,
 )
 
 
