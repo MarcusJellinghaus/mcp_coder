@@ -189,7 +189,7 @@ class TestRealWorldWorkflows:
         # Test 1: Try to commit with no staged files
         commit_result = commit_staged_files("Empty commit", tmp_path)
         assert commit_result["success"] is False
-        assert "no staged files" in commit_result["error"].lower() or "nothing to commit" in commit_result["error"].lower()
+        assert commit_result["error"] and ("no staged files" in commit_result["error"].lower() or "nothing to commit" in commit_result["error"].lower())
         
         # Test 2: Try to commit with empty message
         test_file = tmp_path / "test.txt"
@@ -198,7 +198,7 @@ class TestRealWorldWorkflows:
         
         commit_result = commit_staged_files("", tmp_path)
         assert commit_result["success"] is False
-        assert "message" in commit_result["error"].lower()
+        assert commit_result["error"] and "message" in commit_result["error"].lower()
         
         # Recovery: Commit with proper message
         commit_result = commit_staged_files("Add test file", tmp_path)
@@ -219,7 +219,7 @@ class TestRealWorldWorkflows:
         
         commit_result = commit_all_changes("Should fail", non_git_dir)
         assert commit_result["success"] is False
-        assert "git repository" in commit_result["error"].lower() or "not a git" in commit_result["error"].lower()
+        assert commit_result["error"] and ("git repository" in commit_result["error"].lower() or "not a git" in commit_result["error"].lower())
         
         # Recovery: Continue working in valid repo
         another_file = tmp_path / "recovery.txt"

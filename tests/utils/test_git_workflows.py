@@ -19,10 +19,9 @@ from mcp_coder.utils.git_operations import (
 class TestGitWorkflows:
     """Test complete git workflow scenarios without mocking."""
 
-    def test_new_project_to_first_commit(self, git_repo: Path) -> None:
+    def test_new_project_to_first_commit(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: create new project, add files, stage, and commit."""
-        project_dir = git_repo
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo
         
         # Verify we start with a clean git repository
         assert is_git_repository(project_dir) is True
@@ -71,37 +70,36 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_modify_existing_files_workflow(self, git_repo_with_files: Path) -> None:
+    def test_modify_existing_files_workflow(self, git_repo_with_files: tuple[Repo, Path]) -> None:
         """Test workflow: modify existing tracked files and commit changes."""
-        project_dir = git_repo_with_files
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo_with_files
         
         # Verify starting state - should have committed files
         initial_commits = list(repo.iter_commits())
         assert len(initial_commits) == 1
-        assert initial_commits[0].message == "Initial commit with test files"
+        assert initial_commits[0].message == "Initial commit with sample files"
         
         # Verify no pending changes initially
         status = get_full_status(project_dir)
         assert status == {"staged": [], "modified": [], "untracked": []}
         
         # Modify existing files
-        file1 = project_dir / "file1.txt"
-        file2 = project_dir / "subdir" / "file2.py"
-        file3 = project_dir / "config.json"
+        file1 = project_dir / "README.md"
+        file2 = project_dir / "main.py"
+        file3 = project_dir / "config.yml"
         
-        file1.write_text("Updated content for file 1\nAdded a new line")
-        file2.write_text("# Updated Python file\nprint('Hello, Updated World!')\nprint('New functionality')")
-        file3.write_text('{"setting": "updated_value", "enabled": false, "new_option": 42}')
+        file1.write_text("# Updated Test Project\n\nUpdated sample project for testing.\nAdded a new line")
+        file2.write_text("def main():\n    print('Hello, Updated World!')\n    print('New functionality')")
+        file3.write_text("debug: true\nport: 3000\nnew_option: 42")
         
         # Check that modifications are detected
         status = get_full_status(project_dir)
         assert len(status["modified"]) == 3
         assert status["staged"] == []
         assert status["untracked"] == []
-        assert "file1.txt" in status["modified"]
-        assert "subdir/file2.py" in status["modified"]
-        assert "config.json" in status["modified"]
+        assert "README.md" in status["modified"]
+        assert "main.py" in status["modified"]
+        assert "config.yml" in status["modified"]
         
         # Stage and commit modified files
         stage_result = stage_all_changes(project_dir)
@@ -110,9 +108,9 @@ class TestGitWorkflows:
         # Verify staging
         staged = get_staged_changes(project_dir)
         assert len(staged) == 3
-        assert "file1.txt" in staged
-        assert "subdir/file2.py" in staged
-        assert "config.json" in staged
+        assert "README.md" in staged
+        assert "main.py" in staged
+        assert "config.yml" in staged
         
         # Commit changes
         commit_result = commit_staged_files("Update all files with new content", project_dir)
@@ -127,10 +125,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_mixed_file_operations_workflow(self, git_repo_with_files: Path) -> None:
+    def test_mixed_file_operations_workflow(self, git_repo_with_files: tuple[Repo, Path]) -> None:
         """Test workflow: mix of adding new files, modifying existing, and deletions."""
-        project_dir = git_repo_with_files
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo_with_files
         
         # Verify starting state
         initial_status = get_full_status(project_dir)
@@ -138,8 +135,8 @@ class TestGitWorkflows:
         
         # Mix of operations:
         # 1. Modify existing file
-        file1 = project_dir / "file1.txt"
-        file1.write_text("Modified content in file1")
+        file1 = project_dir / "README.md"
+        file1.write_text("# Modified Test Project\n\nModified content in README")
         
         # 2. Add new files
         new_file = project_dir / "new_feature.py"
@@ -150,7 +147,7 @@ class TestGitWorkflows:
         nested_new.write_text("# User Guide\n\n## Getting Started")
         
         # 3. Delete existing file
-        file_to_delete = project_dir / "config.json"
+        file_to_delete = project_dir / "config.yml"
         file_to_delete.unlink()
         
         # Check mixed status
@@ -166,7 +163,7 @@ class TestGitWorkflows:
         # Verify all changes staged
         staged = get_staged_changes(project_dir)
         assert len(staged) >= 3  # At minimum: modified file1, new files, deletion
-        assert "file1.txt" in staged
+        assert "README.md" in staged
         assert "new_feature.py" in staged
         assert "docs/guide.md" in staged
         
@@ -189,10 +186,9 @@ class TestGitWorkflows:
         assert len(commits) == 2
         assert commits[0].message == "Mixed operations: modify, add, delete"
 
-    def test_staging_specific_files_workflow(self, git_repo: Path) -> None:
+    def test_staging_specific_files_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: selectively stage specific files for commit."""
-        project_dir = git_repo
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo
         
         # Create multiple files
         files = {
@@ -262,10 +258,9 @@ class TestGitWorkflows:
         commits = list(repo.iter_commits())
         assert len(commits) == 2
 
-    def test_staging_all_changes_workflow(self, git_repo: Path) -> None:
+    def test_staging_all_changes_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: stage all changes at once and commit."""
-        project_dir = git_repo
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo
         
         # Create various types of files
         files = {
@@ -315,10 +310,9 @@ class TestGitWorkflows:
         assert len(commits) == 1
         assert commits[0].message == "Initial project setup with all files"
 
-    def test_commit_workflows(self, git_repo: Path) -> None:
+    def test_commit_workflows(self, git_repo: tuple[Repo, Path]) -> None:
         """Test various commit scenarios with different message formats."""
-        project_dir = git_repo
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo
         
         # Test commit_all_changes (stage + commit in one operation)
         file1 = project_dir / "test1.py"
@@ -368,10 +362,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_multiple_commit_cycles(self, git_repo: Path) -> None:
+    def test_multiple_commit_cycles(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: multiple rounds of changes and commits."""
-        project_dir = git_repo
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo
         
         # Cycle 1: Initial setup
         cycle1_files = {
@@ -428,9 +421,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_cross_platform_paths(self, git_repo: Path) -> None:
+    def test_cross_platform_paths(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow with files in nested directories and various path formats."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Create files with various path separators and nested structures
         files = {
@@ -488,9 +481,9 @@ class TestGitWorkflows:
         for path in files.keys():
             assert (project_dir / path).exists()
 
-    def test_unicode_and_binary_files(self, git_repo: Path) -> None:
+    def test_unicode_and_binary_files(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow with unicode filenames and binary file content."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Create files with unicode content and names
         unicode_files = {
@@ -547,9 +540,9 @@ class TestGitWorkflows:
         assert binary_file.exists()
         assert unicode_file.exists()
 
-    def test_performance_with_many_files(self, git_repo: Path) -> None:
+    def test_performance_with_many_files(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow performance with large number of files."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Create many files to test performance
         files_count = 50  # Reasonable number for testing
@@ -589,9 +582,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_incremental_staging_workflow(self, git_repo: Path) -> None:
+    def test_incremental_staging_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: stage files incrementally and commit in batches."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Create files for incremental staging
         batch1_files = [
@@ -657,38 +650,38 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_file_modification_detection_workflow(self, git_repo_with_files: Path) -> None:
+    def test_file_modification_detection_workflow(self, git_repo_with_files: tuple[Repo, Path]) -> None:
         """Test workflow: detect and handle various types of file modifications."""
-        project_dir = git_repo_with_files
+        repo, project_dir = git_repo_with_files
         
         # Initial state should be clean
         initial_status = get_full_status(project_dir)
         assert initial_status == {"staged": [], "modified": [], "untracked": []}
         
         # Type 1: Content modification
-        file1 = project_dir / "file1.txt"
+        file1 = project_dir / "README.md"
         original_content = file1.read_text()
         file1.write_text(original_content + "\nAdded new line")
         
         # Type 2: Complete rewrite
-        file2 = project_dir / "subdir" / "file2.py"
+        file2 = project_dir / "main.py"
         file2.write_text("# Completely rewritten\nclass NewClass:\n    def new_method(self):\n        pass")
         
         # Type 3: Minor change
-        file3 = project_dir / "config.json"
-        file3.write_text('{"setting": "initial_value", "enabled": true, "debug": true}')
+        file3 = project_dir / "config.yml"
+        file3.write_text("debug: true\nport: 8080\nnew_setting: value")
         
         # Detect all modifications
         status = get_full_status(project_dir)
         assert len(status["modified"]) == 3
-        assert "file1.txt" in status["modified"]
-        assert "subdir/file2.py" in status["modified"]
-        assert "config.json" in status["modified"]
+        assert "README.md" in status["modified"]
+        assert "main.py" in status["modified"]
+        assert "config.yml" in status["modified"]
         assert status["staged"] == []
         assert status["untracked"] == []
         
         # Stage modifications selectively
-        files_to_stage = [project_dir / "file1.txt", project_dir / "subdir" / "file2.py"]
+        files_to_stage = [project_dir / "README.md", project_dir / "main.py"]
         stage_result = stage_specific_files(files_to_stage, project_dir)
         assert stage_result is True
         
@@ -696,17 +689,17 @@ class TestGitWorkflows:
         status = get_full_status(project_dir)
         assert len(status["staged"]) == 2
         assert len(status["modified"]) == 1  # config.json still modified
-        assert "config.json" in status["modified"]
+        assert "config.yml" in status["modified"]
         
         # Commit staged modifications
-        commit_result = commit_staged_files("Update file1 and file2", project_dir)
+        commit_result = commit_staged_files("Update README and main", project_dir)
         assert commit_result["success"] is True
         
         # Verify remaining modification
         status = get_full_status(project_dir)
         assert status["staged"] == []
         assert len(status["modified"]) == 1
-        assert "config.json" in status["modified"]
+        assert "config.yml" in status["modified"]
         
         # Commit remaining modification
         commit_result2 = commit_all_changes("Update config file", project_dir)
@@ -716,10 +709,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_empty_to_populated_repository_workflow(self, git_repo: Path) -> None:
+    def test_empty_to_populated_repository_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: transform empty repository to populated with content."""
-        project_dir = git_repo
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo
         
         # Verify we start with an empty repository (no commits exist yet)
         try:
@@ -790,30 +782,30 @@ class TestGitWorkflows:
         for file_path_str in all_files:
             assert (project_dir / file_path_str).exists()
 
-    def test_staged_vs_unstaged_changes_workflow(self, git_repo_with_files: Path) -> None:
+    def test_staged_vs_unstaged_changes_workflow(self, git_repo_with_files: tuple[Repo, Path]) -> None:
         """Test workflow: manage mix of staged and unstaged changes."""
-        project_dir = git_repo_with_files
+        repo, project_dir = git_repo_with_files
         
         # Create a mix of changes
-        (project_dir / "file1.txt").write_text("Modified file1 content")
-        (project_dir / "config.json").write_text('{"modified": true}')
+        (project_dir / "README.md").write_text("# Modified Test Project\n\nModified README content")
+        (project_dir / "config.yml").write_text("debug: true\nmodified: true")
         (project_dir / "new1.py").write_text("# New file 1")
         (project_dir / "new2.py").write_text("# New file 2")
         (project_dir / "new3.py").write_text("# New file 3")
         
         # Stage some changes selectively
-        files_to_stage = [project_dir / "file1.txt", project_dir / "new1.py", project_dir / "new2.py"]
+        files_to_stage = [project_dir / "README.md", project_dir / "new1.py", project_dir / "new2.py"]
         stage_result = stage_specific_files(files_to_stage, project_dir)
         assert stage_result is True
         
         # Verify mixed state
         status = get_full_status(project_dir)
         assert len(status["staged"]) == 3
-        assert len(status["modified"]) == 1  # config.json
+        assert len(status["modified"]) == 1  # config.yml
         assert len(status["untracked"]) == 1  # new3.py
         
         # Commit only staged changes
-        commit_result1 = commit_staged_files("Partial commit: file1 and new files 1,2", project_dir)
+        commit_result1 = commit_staged_files("Partial commit: README and new files 1,2", project_dir)
         assert commit_result1["success"] is True
         
         # Verify remaining unstaged changes
@@ -830,9 +822,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_commit_message_variations_workflow(self, git_repo: Path) -> None:
+    def test_commit_message_variations_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: various commit message formats and lengths."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Test different commit message styles
         test_cases = [
@@ -859,9 +851,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_file_tracking_status_workflow(self, git_repo: Path) -> None:
+    def test_file_tracking_status_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: track file status changes throughout operations."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         test_file = project_dir / "tracked_file.py"
         test_file.write_text("# Initial content")
         
@@ -902,9 +894,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_directory_structure_workflow(self, git_repo: Path) -> None:
+    def test_directory_structure_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: create complex directory structures and manage files."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Create complex nested structure
         structure = {
@@ -937,9 +929,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_git_status_consistency_workflow(self, git_repo_with_files: Path) -> None:
+    def test_git_status_consistency_workflow(self, git_repo_with_files: tuple[Repo, Path]) -> None:
         """Test workflow: verify git status consistency after operations."""
-        project_dir = git_repo_with_files
+        repo, project_dir = git_repo_with_files
         
         # Perform operations and check consistency
         (project_dir / "file1.txt").write_text("Modified")
@@ -967,9 +959,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_complete_project_lifecycle_workflow(self, git_repo: Path) -> None:
+    def test_complete_project_lifecycle_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: complete project from initialization to multiple commits."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Phase 1: Project initialization
         init_files = {"README.md": "# New Project", "setup.py": "from setuptools import setup\nsetup()"}
@@ -1001,9 +993,9 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
-    def test_real_world_development_workflow(self, git_repo: Path) -> None:
+    def test_real_world_development_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: simulate realistic development patterns."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Day 1: Initial app setup
         (project_dir / "app.py").write_text("from flask import Flask\napp = Flask(__name__)")

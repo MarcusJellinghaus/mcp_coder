@@ -51,10 +51,9 @@ class TestGitErrorCases:
         assert is_file_tracked(test_file, tmp_path) is False
         assert git_move(test_file, tmp_path / "moved.txt", tmp_path) is False
 
-    def test_invalid_commit_scenarios(self, git_repo: Path) -> None:
+    def test_invalid_commit_scenarios(self, git_repo: tuple[Repo, Path]) -> None:
         """Test commit attempts with invalid conditions (empty message, no staged files)."""
-        project_dir = git_repo
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo
         
         # Test empty message
         result = commit_staged_files("", project_dir)
@@ -80,9 +79,9 @@ class TestGitErrorCases:
         assert result["commit_hash"] is None
         assert result["error"] is not None and "no staged files" in result["error"].lower()
 
-    def test_invalid_file_operations(self, git_repo: Path) -> None:
+    def test_invalid_file_operations(self, git_repo: tuple[Repo, Path]) -> None:
         """Test operations on non-existent, inaccessible, or invalid file paths."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Test non-existent file
         nonexistent_file = project_dir / "does_not_exist.txt"
@@ -108,9 +107,9 @@ class TestGitErrorCases:
         assert git_move(test_file, outside_file, project_dir) is False
         assert git_move(outside_file, test_file, project_dir) is False
 
-    def test_git_command_failures(self, git_repo: Path) -> None:
+    def test_git_command_failures(self, git_repo: tuple[Repo, Path]) -> None:
         """Test graceful handling of git command execution failures."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Create a file and stage it, then try to move it to an invalid location
         test_file = project_dir / "test.txt"
@@ -133,10 +132,9 @@ class TestGitErrorCases:
         assert len(status["staged"]) >= 0  # Some files might still be staged
         assert len(status["untracked"]) >= 0  # dest.txt is untracked
 
-    def test_unicode_edge_cases(self, git_repo: Path) -> None:
+    def test_unicode_edge_cases(self, git_repo: tuple[Repo, Path]) -> None:
         """Test edge cases with unicode characters in filenames and content."""
-        project_dir = git_repo
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo
         
         # Create files with Unicode names and content
         unicode_files = {
@@ -185,9 +183,9 @@ class TestGitErrorCases:
         # If not, at least verify the commit was successful and repo state is clean
         assert tracked_count >= 0  # Don't fail the test if Unicode tracking has issues
 
-    def test_gitignore_behavior(self, git_repo: Path) -> None:
+    def test_gitignore_behavior(self, git_repo: tuple[Repo, Path]) -> None:
         """Test git operations behavior with gitignore patterns."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Create .gitignore file
         gitignore_content = "*.log\n*.tmp\n__pycache__/\n.env\n*.pyc"
@@ -236,19 +234,18 @@ class TestGitErrorCases:
         # or fail (depending on git behavior), we just check it doesn't crash
         assert result in [True, False]
 
-    def test_file_deletion_handling(self, git_repo_with_files: Path) -> None:
+    def test_file_deletion_handling(self, git_repo_with_files: tuple[Repo, Path]) -> None:
         """Test handling of deleted files in various scenarios."""
-        project_dir = git_repo_with_files
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo_with_files
         
         # Get initial status
         initial_status = get_full_status(project_dir)
         
-        # Find an existing file to delete
-        existing_files = list(project_dir.glob("*.txt"))
-        assert len(existing_files) > 0, "Expected test files to exist"
+        # Find an existing file to delete - use README.md from the new fixtures
+        existing_files = [project_dir / "README.md"]
+        assert (project_dir / "README.md").exists(), "Expected README.md to exist"
         
-        file_to_delete = existing_files[0]
+        file_to_delete = existing_files[0]  # README.md
         
         # Verify file is tracked
         assert is_file_tracked(file_to_delete, project_dir) is True
@@ -276,10 +273,9 @@ class TestGitErrorCases:
         # File should no longer be tracked
         assert is_file_tracked(file_to_delete, project_dir) is False
 
-    def test_platform_compatibility(self, git_repo: Path) -> None:
+    def test_platform_compatibility(self, git_repo: tuple[Repo, Path]) -> None:
         """Test cross-platform compatibility issues and edge cases."""
-        project_dir = git_repo
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo
         
         # Test nested directory creation with cross-platform paths
         nested_paths = ["src/utils", "tests/unit", "docs/api"]
@@ -319,9 +315,9 @@ class TestGitErrorCases:
         for file_path in nested_files:
             assert is_file_tracked(file_path, project_dir) is True
 
-    def test_permission_errors_simulation(self, git_repo: Path) -> None:
+    def test_permission_errors_simulation(self, git_repo: tuple[Repo, Path]) -> None:
         """Test handling of file system permission errors."""
-        project_dir = git_repo
+        repo, project_dir = git_repo
         
         # Create a test file
         test_file = project_dir / "test.txt"
@@ -369,10 +365,9 @@ class TestGitErrorCases:
         # Basic operations should still work
         assert is_git_repository(project_dir) is True
 
-    def test_concurrent_access_simulation(self, git_repo_with_files: Path) -> None:
+    def test_concurrent_access_simulation(self, git_repo_with_files: tuple[Repo, Path]) -> None:
         """Test behavior when repository state changes during operations."""
-        project_dir = git_repo_with_files
-        repo = Repo(project_dir)
+        repo, project_dir = git_repo_with_files
         
         # Create additional file
         new_file = project_dir / "concurrent.txt"
