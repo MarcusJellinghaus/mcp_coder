@@ -10,6 +10,7 @@ from mcp_coder.llm_providers.claude.claude_code_cli import _find_claude_executab
 from mcp_coder.llm_providers.claude.claude_code_interface import ask_claude_code
 
 
+@pytest.mark.claude_integration
 class TestClaudeClientRealIntegration:
     """Real integration tests with actual Claude Code CLI (if available)."""
 
@@ -40,6 +41,7 @@ class TestClaudeClientRealIntegration:
             pytest.skip("Claude responded too quickly to test timeout")
 
 
+@pytest.mark.claude_integration
 class TestClaudeCodeInterfaceIntegration:
     """Integration tests for claude_code_interface with multiple methods."""
 

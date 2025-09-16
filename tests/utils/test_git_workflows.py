@@ -17,6 +17,7 @@ from mcp_coder.utils.git_operations import (
 )
 
 
+@pytest.mark.git_integration
 class TestGitWorkflows:
     """Test complete git workflow scenarios without mocking."""
 

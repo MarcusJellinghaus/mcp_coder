@@ -21,6 +21,7 @@ from mcp_coder.utils.git_operations import (
 )
 
 
+@pytest.mark.git_integration
 class TestGitErrorCases:
     """Test error handling and edge cases for git operations."""
 
