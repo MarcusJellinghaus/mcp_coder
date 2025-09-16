@@ -3,11 +3,11 @@
 ## Quick Start
 
 ```bash
-# Fast unit tests (default)
+# All tests (unit + integration)
 pytest
 
-# Exclude slow claude integration tests  
-pytest -m "not claude_integration"
+# Fast unit tests only
+pytest -m "not git_integration and not claude_integration"
 
 # Run specific test types
 pytest -m git_integration      # File system operations
@@ -38,4 +38,4 @@ def test_claude_api():
     pass
 ```
 
-**Default**: Run unmarked unit tests only. Mark tests only when external dependencies are needed.
+**Default**: `pytest` runs ALL tests. Use marker filtering to run specific subsets.
