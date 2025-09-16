@@ -10,10 +10,10 @@ from mcp_coder.llm_providers.claude.claude_code_cli import _find_claude_executab
 from mcp_coder.llm_providers.claude.claude_code_interface import ask_claude_code
 
 
+@pytest.mark.claude_integration
 class TestClaudeClientRealIntegration:
     """Real integration tests with actual Claude Code CLI (if available)."""
 
-    @pytest.mark.integration
     def test_claude_cli_available(self) -> None:
         """Test if Claude CLI is available and working."""
         try:
@@ -25,7 +25,6 @@ class TestClaudeClientRealIntegration:
         except FileNotFoundError:
             pytest.skip("Claude Code CLI not found - skipping real integration test")
 
-    @pytest.mark.integration
     def test_ask_claude_real_timeout(self) -> None:
         """Test timeout handling with real CLI using very short timeout."""
         try:
@@ -40,10 +39,10 @@ class TestClaudeClientRealIntegration:
             pytest.skip("Claude responded too quickly to test timeout")
 
 
+@pytest.mark.claude_integration
 class TestClaudeCodeInterfaceIntegration:
     """Integration tests for claude_code_interface with multiple methods."""
 
-    @pytest.mark.integration
     @pytest.mark.parametrize("method", ["cli", "api"])
     def test_basic_functionality(self, method: str) -> None:
         """Test basic functionality for both CLI and API methods with a real question."""

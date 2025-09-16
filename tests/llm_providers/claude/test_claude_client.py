@@ -3,6 +3,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mcp_coder.llm_providers.claude.claude_client import ask_claude
 
 
