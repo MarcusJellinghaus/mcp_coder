@@ -65,7 +65,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Run quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 7: Test & Implement stage_all_changes()** - [step_7.md](steps/step_7.md)
+- [x] **Step 7: Test & Implement stage_all_changes()** - [step_7.md](steps/step_7.md)
   - Write tests for staging all changes using TDD
   - Implement convenience function to stage all unstaged changes
   - Integrate with existing status and staging functions

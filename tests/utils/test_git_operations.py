@@ -14,6 +14,7 @@ from mcp_coder.utils.git_operations import (
     get_unstaged_changes,
     is_file_tracked,
     is_git_repository,
+    stage_all_changes,
     stage_specific_files,
 )
 
@@ -1166,3 +1167,304 @@ class TestStageSpecificFiles:
         assert "file_000.txt" in staged_files
         assert "file_050.txt" in staged_files
         assert "file_099.txt" in staged_files
+
+
+
+class TestStageAllChanges:
+    """Test stage_all_changes function."""
+
+    def test_stage_all_changes_clean_repo(self, tmp_path: Path) -> None:
+        """Test staging all changes in clean repository - should be no-op."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit a file to have non-empty repo
+        test_file = tmp_path / "committed.txt"
+        test_file.write_text("committed content")
+        repo.index.add([str(test_file)])
+        repo.index.commit("Initial commit")
+        
+        # Should succeed (no-op) - no unstaged changes
+        result = stage_all_changes(tmp_path)
+        assert result is True
+        
+        # Verify no new staged files
+        staged_files = get_staged_changes(tmp_path)
+        assert staged_files == []
+
+    def test_stage_all_changes_empty_repo(self, tmp_path: Path) -> None:
+        """Test staging all changes in empty repository with new files."""
+        # Create git repo
+        Repo.init(tmp_path)
+        
+        # Create untracked files
+        file1 = tmp_path / "new1.txt"
+        file1.write_text("new content 1")
+        file2 = tmp_path / "subdir" / "new2.txt"
+        file2.parent.mkdir()
+        file2.write_text("new content 2")
+        
+        # Should successfully stage all new files
+        result = stage_all_changes(tmp_path)
+        assert result is True
+        
+        # Verify all files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "new1.txt" in staged_files
+        assert any("new2.txt" in path for path in staged_files)
+        assert len(staged_files) == 2
+
+    def test_stage_all_changes_only_modified_files(self, tmp_path: Path) -> None:
+        """Test staging all changes with only modified files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit files
+        file1 = tmp_path / "file1.txt"
+        file1.write_text("original content 1")
+        file2 = tmp_path / "subdir" / "file2.txt"
+        file2.parent.mkdir()
+        file2.write_text("original content 2")
+        
+        repo.index.add([str(file1), str(file2)])
+        repo.index.commit("Initial commit")
+        
+        # Modify the files
+        file1.write_text("modified content 1")
+        file2.write_text("modified content 2")
+        
+        # Should successfully stage all modified files
+        result = stage_all_changes(tmp_path)
+        assert result is True
+        
+        # Verify all modified files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "file1.txt" in staged_files
+        assert any("file2.txt" in path for path in staged_files)
+        assert len(staged_files) == 2
+
+    def test_stage_all_changes_only_untracked_files(self, tmp_path: Path) -> None:
+        """Test staging all changes with only untracked files."""
+        # Create git repo with committed file
+        repo = Repo.init(tmp_path)
+        
+        committed_file = tmp_path / "committed.txt"
+        committed_file.write_text("committed content")
+        repo.index.add([str(committed_file)])
+        repo.index.commit("Initial commit")
+        
+        # Create untracked files
+        untracked1 = tmp_path / "untracked1.txt"
+        untracked1.write_text("untracked content 1")
+        untracked2 = tmp_path / "dir" / "untracked2.txt"
+        untracked2.parent.mkdir()
+        untracked2.write_text("untracked content 2")
+        
+        # Should successfully stage all untracked files
+        result = stage_all_changes(tmp_path)
+        assert result is True
+        
+        # Verify all untracked files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "untracked1.txt" in staged_files
+        assert any("untracked2.txt" in path for path in staged_files)
+        assert len(staged_files) == 2
+
+    def test_stage_all_changes_mixed_modified_and_untracked(self, tmp_path: Path) -> None:
+        """Test staging all changes with both modified and untracked files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit files
+        committed_file = tmp_path / "committed.txt"
+        committed_file.write_text("original content")
+        repo.index.add([str(committed_file)])
+        repo.index.commit("Initial commit")
+        
+        # Modify committed file
+        committed_file.write_text("modified content")
+        
+        # Create untracked file
+        untracked_file = tmp_path / "untracked.txt"
+        untracked_file.write_text("untracked content")
+        
+        # Should successfully stage both modified and untracked files
+        result = stage_all_changes(tmp_path)
+        assert result is True
+        
+        # Verify all files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert "committed.txt" in staged_files
+        assert "untracked.txt" in staged_files
+        assert len(staged_files) == 2
+
+    def test_stage_all_changes_with_already_staged_content(self, tmp_path: Path) -> None:
+        """Test staging all changes when some content is already staged."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit initial file
+        committed_file = tmp_path / "committed.txt"
+        committed_file.write_text("original content")
+        repo.index.add([str(committed_file)])
+        repo.index.commit("Initial commit")
+        
+        # Create and stage new file
+        already_staged = tmp_path / "already_staged.txt"
+        already_staged.write_text("staged content")
+        repo.index.add([str(already_staged)])
+        
+        # Create unstaged files
+        untracked_file = tmp_path / "untracked.txt"
+        untracked_file.write_text("untracked content")
+        
+        committed_file.write_text("modified content")
+        
+        # Should stage unstaged files but not affect already staged files
+        result = stage_all_changes(tmp_path)
+        assert result is True
+        
+        # Verify all files are staged (both previously staged and newly staged)
+        staged_files = get_staged_changes(tmp_path)
+        assert "already_staged.txt" in staged_files
+        assert "committed.txt" in staged_files
+        assert "untracked.txt" in staged_files
+        assert len(staged_files) == 3
+
+    def test_stage_all_changes_not_git_repository(self, tmp_path: Path) -> None:
+        """Test staging all changes when not in git repository should fail."""
+        # Create regular directory (not git repo)
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test content")
+        
+        # Should fail - not a git repository
+        result = stage_all_changes(tmp_path)
+        assert result is False
+
+    def test_stage_all_changes_no_unstaged_changes(self, tmp_path: Path) -> None:
+        """Test staging all changes when no unstaged changes exist."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage files but don't commit
+        staged_file = tmp_path / "staged.txt"
+        staged_file.write_text("staged content")
+        repo.index.add([str(staged_file)])
+        
+        # Should succeed (no-op) - only staged changes exist
+        result = stage_all_changes(tmp_path)
+        assert result is True
+        
+        # Verify staged file is still staged (unchanged)
+        staged_files = get_staged_changes(tmp_path)
+        assert "staged.txt" in staged_files
+        assert len(staged_files) == 1
+
+    def test_stage_all_changes_integration_with_status_functions(self, tmp_path: Path) -> None:
+        """Test that stage_all_changes integrates properly with status functions."""
+        # Create git repo with complex state
+        repo = Repo.init(tmp_path)
+        
+        # Create committed file
+        committed_file = tmp_path / "committed.txt"
+        committed_file.write_text("original")
+        repo.index.add([str(committed_file)])
+        repo.index.commit("Initial commit")
+        
+        # Modify committed file
+        committed_file.write_text("modified")
+        
+        # Create untracked file
+        untracked_file = tmp_path / "untracked.txt"
+        untracked_file.write_text("untracked")
+        
+        # Get unstaged changes before staging
+        unstaged_before = get_unstaged_changes(tmp_path)
+        expected_modified = unstaged_before["modified"]
+        expected_untracked = unstaged_before["untracked"]
+        
+        # Stage all changes
+        result = stage_all_changes(tmp_path)
+        assert result is True
+        
+        # Verify all previously unstaged files are now staged
+        staged_files = get_staged_changes(tmp_path)
+        for file_path in expected_modified + expected_untracked:
+            assert file_path in staged_files
+        
+        # Verify no more unstaged changes
+        unstaged_after = get_unstaged_changes(tmp_path)
+        assert unstaged_after == {"modified": [], "untracked": []}
+
+    def test_stage_all_changes_various_file_types(self, tmp_path: Path) -> None:
+        """Test staging all changes with various file types."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create initial commit
+        initial_file = tmp_path / "initial.txt"
+        initial_file.write_text("initial")
+        repo.index.add([str(initial_file)])
+        repo.index.commit("Initial commit")
+        
+        # Create various types of new files
+        files_to_create = [
+            tmp_path / "script.py",
+            tmp_path / "data.json",
+            tmp_path / "docs" / "readme.md",
+            tmp_path / "config.yml",
+            tmp_path / ".gitignore",
+        ]
+        
+        for file_path in files_to_create:
+            file_path.parent.mkdir(exist_ok=True, parents=True)
+            file_path.write_text(f"content for {file_path.name}")
+        
+        # Should stage all file types
+        result = stage_all_changes(tmp_path)
+        assert result is True
+        
+        # Verify all files are staged
+        staged_files = get_staged_changes(tmp_path)
+        assert len(staged_files) == 5
+        assert "script.py" in staged_files
+        assert "data.json" in staged_files
+        assert "config.yml" in staged_files
+        assert ".gitignore" in staged_files
+        assert any("readme.md" in path for path in staged_files)
+
+    @patch("mcp_coder.utils.git_operations.get_unstaged_changes")
+    @patch("mcp_coder.utils.git_operations.is_git_repository")
+    def test_stage_all_changes_get_unstaged_changes_fails(self, mock_is_git: Mock, mock_get_unstaged: Mock, tmp_path: Path) -> None:
+        """Test handling when get_unstaged_changes fails."""
+        mock_is_git.return_value = True
+        mock_get_unstaged.return_value = {"modified": [], "untracked": []}
+        
+        # Should handle failure gracefully
+        result = stage_all_changes(tmp_path)
+        # With empty unstaged changes, should succeed as no-op
+        assert result is True
+
+    @patch("mcp_coder.utils.git_operations.stage_specific_files")
+    def test_stage_all_changes_stage_specific_files_fails(self, mock_stage_specific: Mock, tmp_path: Path) -> None:
+        """Test handling when stage_specific_files fails."""
+        # Create git repo with unstaged file
+        repo = Repo.init(tmp_path)
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("content")
+        
+        # Mock stage_specific_files to fail
+        mock_stage_specific.return_value = False
+        
+        # Should handle staging failure
+        result = stage_all_changes(tmp_path)
+        assert result is False
+
+    @patch("mcp_coder.utils.git_operations.is_git_repository")
+    def test_stage_all_changes_invalid_git_repo(self, mock_is_git: Mock, tmp_path: Path) -> None:
+        """Test when git repository validation fails."""
+        mock_is_git.return_value = False
+        
+        # Should fail when not a git repo
+        result = stage_all_changes(tmp_path)
+        assert result is False

@@ -360,3 +360,67 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
     except Exception as e:
         logger.error("Unexpected error staging files: %s", e)
         return False
+
+
+def stage_all_changes(project_dir: Path) -> bool:
+    """
+    Stage all unstaged changes (both modified and untracked files) for commit.
+
+    Args:
+        project_dir: Path to the project directory containing the git repository
+
+    Returns:
+        True if all unstaged changes were staged successfully, False otherwise
+
+    Note:
+        - This is a convenience function that combines get_unstaged_changes() and stage_specific_files()
+        - Stages both modified tracked files and untracked files
+        - Returns True if no unstaged changes exist (no-op case)
+        - Uses existing validation and error handling from underlying functions
+        - Returns False if any files couldn't be staged
+    """
+    logger.debug("Staging all changes in %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    try:
+        # Get all unstaged changes
+        unstaged_changes = get_unstaged_changes(project_dir)
+        
+        # Combine modified and untracked files
+        all_unstaged_files = unstaged_changes["modified"] + unstaged_changes["untracked"]
+        
+        # If no unstaged changes, this is a successful no-op
+        if not all_unstaged_files:
+            logger.debug("No unstaged changes to stage - success")
+            return True
+        
+        # Convert relative paths to absolute paths for stage_specific_files
+        absolute_paths = []
+        for file_path in all_unstaged_files:
+            absolute_path = project_dir / file_path
+            absolute_paths.append(absolute_path)
+        
+        # Stage all unstaged files using existing function
+        logger.debug(
+            "Staging %d unstaged files: %s", 
+            len(absolute_paths), all_unstaged_files
+        )
+        
+        result = stage_specific_files(absolute_paths, project_dir)
+        
+        if result:
+            logger.info(
+                "Successfully staged all %d unstaged changes", 
+                len(absolute_paths)
+            )
+        else:
+            logger.error("Failed to stage all unstaged changes")
+        
+        return result
+
+    except Exception as e:
+        logger.error("Unexpected error staging all changes: %s", e)
+        return False
