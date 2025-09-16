@@ -87,10 +87,15 @@ class TestModuleIntegration:
 
         # Check docstrings are preserved
         assert commit_all_changes.__doc__ is not None
-        assert "Stage all unstaged changes and commit them" in commit_all_changes.__doc__
+        assert (
+            "Stage all unstaged changes and commit them" in commit_all_changes.__doc__
+        )
 
         assert is_git_repository.__doc__ is not None
-        assert "Check if the project directory is a git repository" in is_git_repository.__doc__
+        assert (
+            "Check if the project directory is a git repository"
+            in is_git_repository.__doc__
+        )
 
         # Check type annotations are preserved
         assert hasattr(commit_all_changes, "__annotations__")
@@ -102,22 +107,22 @@ class TestModuleIntegration:
 
         # Verify it's the expected TypedDict
         assert hasattr(CommitResult, "__annotations__")
-        
+
         # Create a sample CommitResult to verify structure
         sample_result: CommitResult = {
             "success": True,
             "commit_hash": "abc1234",
-            "error": None
+            "error": None,
         }
-        
+
         assert sample_result["success"] is True
         assert sample_result["commit_hash"] == "abc1234"
         assert sample_result["error"] is None
 
     def test_all_exports_available(self) -> None:
         """Test that __all__ exports are properly defined and available."""
-        import mcp_coder.utils as utils_module
         import mcp_coder as main_module
+        import mcp_coder.utils as utils_module
 
         # Check utils module has __all__ defined
         assert hasattr(utils_module, "__all__")
@@ -125,15 +130,24 @@ class TestModuleIntegration:
 
         # Verify git functions are in utils __all__
         git_functions = [
-            "CommitResult", "commit_all_changes", "commit_staged_files",
-            "get_full_status", "get_staged_changes", "get_unstaged_changes",
-            "git_move", "is_file_tracked", "is_git_repository",
-            "stage_all_changes", "stage_specific_files"
+            "CommitResult",
+            "commit_all_changes",
+            "commit_staged_files",
+            "get_full_status",
+            "get_staged_changes",
+            "get_unstaged_changes",
+            "git_move",
+            "is_file_tracked",
+            "is_git_repository",
+            "stage_all_changes",
+            "stage_specific_files",
         ]
-        
+
         for func_name in git_functions:
             assert func_name in utils_all, f"{func_name} not in utils.__all__"
-            assert hasattr(utils_module, func_name), f"{func_name} not available in utils module"
+            assert hasattr(
+                utils_module, func_name
+            ), f"{func_name} not available in utils module"
 
         # Check main module has __all__ defined
         assert hasattr(main_module, "__all__")
@@ -141,13 +155,18 @@ class TestModuleIntegration:
 
         # Verify public API functions are in main __all__
         public_api_functions = [
-            "CommitResult", "commit_all_changes", "commit_staged_files",
-            "get_full_status", "is_git_repository"
+            "CommitResult",
+            "commit_all_changes",
+            "commit_staged_files",
+            "get_full_status",
+            "is_git_repository",
         ]
-        
+
         for func_name in public_api_functions:
             assert func_name in main_all, f"{func_name} not in main.__all__"
-            assert hasattr(main_module, func_name), f"{func_name} not available in main module"
+            assert hasattr(
+                main_module, func_name
+            ), f"{func_name} not available in main module"
 
     def test_no_circular_imports(self) -> None:
         """Test that there are no circular import issues."""
@@ -156,14 +175,14 @@ class TestModuleIntegration:
             import mcp_coder
             import mcp_coder.utils
             import mcp_coder.utils.git_operations
-            
+
             # Try accessing functions through different paths
             func1 = mcp_coder.is_git_repository
             func2 = mcp_coder.utils.is_git_repository
             func3 = mcp_coder.utils.git_operations.is_git_repository
-            
+
             # Verify they're the same function
             assert func1 is func2 is func3
-            
+
         except ImportError as e:
             pytest.fail(f"Circular import detected: {e}")
