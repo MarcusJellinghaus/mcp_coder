@@ -72,6 +72,8 @@ Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** wi
 - **DATA**: Return values and data structures
 ```
 
+**Issue:** This prompt generates way too many unit tests.
+
 #### Plan Review Prompt:
 ```
 Please review the project plan for a new feature in folder PR_Info\steps.
