@@ -14,14 +14,15 @@ Automated software feature development with stringent quality controls using AI-
 - **Claude Code Integration**: Both CLI and Python SDK support via `ask_claude_code()`
 - **Dual Implementation Methods**: Choose between CLI (`method="cli"`) or API (`method="api"`)
 - **Intelligent Queries**: Ask Claude about code analysis and implementation strategies
+- **Git Operations**: Automated git workflows with staging, committing, and status checking
+- **Automated Testing**: Integration with pytest, pylint, and mypy via MCP servers
 
 ## 🔮 Planned Features
 
-- **Automated Testing**: Integration with pytest, pylint, and mypy via MCP servers
-- **Git Operations**: Automated commit workflows with AI-generated commit messages
 - **Feature Planning**: AI-driven analysis and planning from GitHub issues
 - **Implementation Workflows**: Automated TDD with test-first development
 - **Pull Request Management**: Automated branch creation, PR summaries, and reviews
+- **AI-Generated Commit Messages**: Smart commit message generation based on changes
 
 ## 🏗️ Architecture
 
@@ -81,6 +82,41 @@ response = ask_claude("How should I structure this new feature?")
 print(response)
 ```
 
+### Git Operations
+
+```python
+from mcp_coder import (
+    is_git_repository,
+    get_full_status,
+    commit_all_changes,
+    commit_staged_files
+)
+from pathlib import Path
+
+# Check if directory is a git repository
+repo_path = Path(".")
+if is_git_repository(repo_path):
+    print("This is a git repository")
+    
+    # Get repository status
+    status = get_full_status(repo_path)
+    print(f"Staged: {status['staged']}")
+    print(f"Modified: {status['modified']}")
+    print(f"Untracked: {status['untracked']}")
+    
+    # Commit all changes
+    result = commit_all_changes("Add new feature", repo_path)
+    if result.success:
+        print(f"Successfully committed: {result.commit_hash}")
+    else:
+        print(f"Commit failed: {result.error}")
+        
+    # Or commit only staged files
+    staged_result = commit_staged_files("Fix bug in parser", repo_path)
+    if staged_result.success:
+        print(f"Staged files committed: {staged_result.commit_hash}")
+```
+
 ## 📋 API Reference
 
 ### High-Level Interface
@@ -133,6 +169,57 @@ Backward-compatible interface using CLI method.
 - `timeout` (int): Request timeout in seconds (default: 30)
 
 **Returns:** Claude's response as string
+
+### Git Operations
+
+#### `is_git_repository(repo_path)`
+
+Check if a directory is a git repository.
+
+**Parameters:**
+- `repo_path` (Path): Path to the directory to check
+
+**Returns:** Boolean indicating if directory is a git repository
+
+#### `get_full_status(repo_path)`
+
+Get comprehensive git repository status including staged, modified, and untracked files.
+
+**Parameters:**
+- `repo_path` (Path): Path to the git repository
+
+**Returns:** Dictionary with 'staged', 'modified', and 'untracked' file lists
+
+#### `commit_all_changes(message, repo_path)`
+
+Stage all changes and create a commit.
+
+**Parameters:**
+- `message` (str): Commit message
+- `repo_path` (Path): Path to the git repository
+
+**Returns:** CommitResult object with success status, commit hash, and error details
+
+#### `commit_staged_files(message, repo_path)`
+
+Commit only the currently staged files.
+
+**Parameters:**
+- `message` (str): Commit message
+- `repo_path` (Path): Path to the git repository
+
+**Returns:** CommitResult object with success status, commit hash, and error details
+
+#### Additional Git Functions
+
+For more advanced git operations, import from `mcp_coder.utils`:
+
+- `get_staged_changes()`: Get list of staged files
+- `get_unstaged_changes()`: Get modified and untracked files
+- `stage_specific_files()`: Stage selected files
+- `stage_all_changes()`: Stage all unstaged changes
+- `git_move()`: Move/rename files with git tracking
+- `is_file_tracked()`: Check if file is tracked by git
 
 ## 🛠️ Development
 
