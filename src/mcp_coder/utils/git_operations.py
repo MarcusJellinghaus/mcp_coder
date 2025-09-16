@@ -239,3 +239,53 @@ def get_unstaged_changes(project_dir: Path) -> dict[str, list[str]]:
     except Exception as e:
         logger.warning("Unexpected error getting unstaged changes: %s", e)
         return {"modified": [], "untracked": []}
+
+
+def get_full_status(project_dir: Path) -> dict[str, list[str]]:
+    """
+    Get comprehensive status of all changes: staged, modified, and untracked files.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        Dictionary with 'staged', 'modified', and 'untracked' keys containing lists of file paths.
+        File paths are relative to project root.
+        Returns empty dict if not a git repository.
+        
+    Example:
+        {
+            "staged": ["new_feature.py", "docs/readme.md"],
+            "modified": ["existing_file.py"],
+            "untracked": ["temp_notes.txt"]
+        }
+    """
+    logger.debug("Getting full git status for %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return {"staged": [], "modified": [], "untracked": []}
+
+    try:
+        # Use existing functions for consistency and efficiency
+        staged_files = get_staged_changes(project_dir)
+        unstaged_changes = get_unstaged_changes(project_dir)
+        
+        result = {
+            "staged": staged_files,
+            "modified": unstaged_changes["modified"],
+            "untracked": unstaged_changes["untracked"]
+        }
+        
+        logger.debug(
+            "Full status: %d staged, %d modified, %d untracked files",
+            len(result["staged"]),
+            len(result["modified"]),
+            len(result["untracked"])
+        )
+        
+        return result
+
+    except Exception as e:
+        logger.warning("Unexpected error getting full git status: %s", e)
+        return {"staged": [], "modified": [], "untracked": []}

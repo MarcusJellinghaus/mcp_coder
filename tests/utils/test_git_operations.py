@@ -9,6 +9,7 @@ from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from mcp_coder.utils.git_operations import (
+    get_full_status,
     get_staged_changes,
     get_unstaged_changes,
     is_file_tracked,
@@ -492,3 +493,333 @@ class TestGetUnstagedChanges:
         # Should return empty dict when not a git repo
         result = get_unstaged_changes(tmp_path)
         assert result == {"modified": [], "untracked": []}
+
+
+class TestGetFullStatus:
+    """Test get_full_status function."""
+
+    def test_get_full_status_clean_repo(self, tmp_path: Path) -> None:
+        """Test with clean repository - no changes."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit a file to have non-empty repo
+        test_file = tmp_path / "committed.txt"
+        test_file.write_text("committed content")
+        repo.index.add([str(test_file)])
+        repo.index.commit("Initial commit")
+        
+        # Should return empty status - no changes
+        result = get_full_status(tmp_path)
+        assert result == {"staged": [], "modified": [], "untracked": []}
+
+    def test_get_full_status_empty_repo(self, tmp_path: Path) -> None:
+        """Test with empty repository - new files only."""
+        # Create git repo
+        Repo.init(tmp_path)
+        
+        # Create untracked files
+        file1 = tmp_path / "new1.txt"
+        file1.write_text("new content 1")
+        file2 = tmp_path / "subdir" / "new2.txt"
+        file2.parent.mkdir()
+        file2.write_text("new content 2")
+        
+        # Should return untracked files only
+        result = get_full_status(tmp_path)
+        assert "new1.txt" in result["untracked"]
+        assert any("new2.txt" in path for path in result["untracked"])
+        assert result["staged"] == []
+        assert result["modified"] == []
+        assert len(result["untracked"]) == 2
+
+    def test_get_full_status_only_staged(self, tmp_path: Path) -> None:
+        """Test with only staged files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and stage files
+        file1 = tmp_path / "staged1.txt"
+        file1.write_text("staged content 1")
+        file2 = tmp_path / "subdir" / "staged2.txt"
+        file2.parent.mkdir()
+        file2.write_text("staged content 2")
+        
+        repo.index.add([str(file1), str(file2)])
+        
+        # Should return staged files only
+        result = get_full_status(tmp_path)
+        assert "staged1.txt" in result["staged"]
+        assert any("staged2.txt" in path for path in result["staged"])
+        assert result["modified"] == []
+        assert result["untracked"] == []
+        assert len(result["staged"]) == 2
+
+    def test_get_full_status_only_modified(self, tmp_path: Path) -> None:
+        """Test with only modified files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit files
+        file1 = tmp_path / "file1.txt"
+        file1.write_text("original content 1")
+        file2 = tmp_path / "subdir" / "file2.txt"
+        file2.parent.mkdir()
+        file2.write_text("original content 2")
+        
+        repo.index.add([str(file1), str(file2)])
+        repo.index.commit("Initial commit")
+        
+        # Modify the files
+        file1.write_text("modified content 1")
+        file2.write_text("modified content 2")
+        
+        # Should return modified files only
+        result = get_full_status(tmp_path)
+        assert "file1.txt" in result["modified"]
+        assert any("file2.txt" in path for path in result["modified"])
+        assert result["staged"] == []
+        assert result["untracked"] == []
+        assert len(result["modified"]) == 2
+
+    def test_get_full_status_comprehensive_changes(self, tmp_path: Path) -> None:
+        """Test with all types of changes: staged, modified, and untracked."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit initial files
+        committed_file = tmp_path / "committed.txt"
+        committed_file.write_text("original content")
+        repo.index.add([str(committed_file)])
+        repo.index.commit("Initial commit")
+        
+        # Modify committed file (will be modified)
+        committed_file.write_text("modified content")
+        
+        # Create and stage new file (will be staged)
+        staged_file = tmp_path / "staged.txt"
+        staged_file.write_text("staged content")
+        repo.index.add([str(staged_file)])
+        
+        # Create untracked file
+        untracked_file = tmp_path / "untracked.txt"
+        untracked_file.write_text("untracked content")
+        
+        # Should return all types of changes
+        result = get_full_status(tmp_path)
+        assert "staged.txt" in result["staged"]
+        assert "committed.txt" in result["modified"]
+        assert "untracked.txt" in result["untracked"]
+        assert len(result["staged"]) == 1
+        assert len(result["modified"]) == 1
+        assert len(result["untracked"]) == 1
+
+    def test_get_full_status_not_git_repo(self, tmp_path: Path) -> None:
+        """Test with directory that is not a git repository."""
+        # Create regular files
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("content")
+        
+        # Should return empty status
+        result = get_full_status(tmp_path)
+        assert result == {"staged": [], "modified": [], "untracked": []}
+
+    def test_get_full_status_consistency_with_individual_functions(self, tmp_path: Path) -> None:
+        """Test that get_full_status returns consistent results with individual functions."""
+        # Create git repo with complex state
+        repo = Repo.init(tmp_path)
+        
+        # Create committed file
+        committed_file = tmp_path / "committed.txt"
+        committed_file.write_text("original")
+        repo.index.add([str(committed_file)])
+        repo.index.commit("Initial commit")
+        
+        # Modify committed file
+        committed_file.write_text("modified")
+        
+        # Create and stage new file
+        staged_file = tmp_path / "staged.txt"
+        staged_file.write_text("staged")
+        repo.index.add([str(staged_file)])
+        
+        # Create untracked file
+        untracked_file = tmp_path / "untracked.txt"
+        untracked_file.write_text("untracked")
+        
+        # Get results from individual functions
+        staged_changes = get_staged_changes(tmp_path)
+        unstaged_changes = get_unstaged_changes(tmp_path)
+        
+        # Get results from comprehensive function
+        full_status = get_full_status(tmp_path)
+        
+        # Should be consistent
+        assert set(full_status["staged"]) == set(staged_changes)
+        assert set(full_status["modified"]) == set(unstaged_changes["modified"])
+        assert set(full_status["untracked"]) == set(unstaged_changes["untracked"])
+
+    def test_get_full_status_large_repository_basic(self, tmp_path: Path) -> None:
+        """Test basic performance with many files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create many files of different types
+        file_count = 50  # Reasonable number for testing
+        
+        # Create committed files
+        for i in range(file_count // 3):
+            file_path = tmp_path / f"committed_{i}.txt"
+            file_path.write_text(f"committed content {i}")
+            repo.index.add([str(file_path)])
+        repo.index.commit("Initial commit")
+        
+        # Create staged files
+        for i in range(file_count // 3):
+            file_path = tmp_path / f"staged_{i}.txt"
+            file_path.write_text(f"staged content {i}")
+            repo.index.add([str(file_path)])
+        
+        # Create untracked files
+        for i in range(file_count // 3):
+            file_path = tmp_path / f"untracked_{i}.txt"
+            file_path.write_text(f"untracked content {i}")
+        
+        # Should handle many files efficiently
+        result = get_full_status(tmp_path)
+        assert len(result["staged"]) == file_count // 3
+        assert len(result["untracked"]) == file_count // 3
+        assert len(result["modified"]) == 0
+
+    def test_get_full_status_with_subdirectories(self, tmp_path: Path) -> None:
+        """Test with files in various subdirectories."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create files in nested directories
+        dirs = ["src", "tests", "docs", "assets/images", "config/dev"]
+        
+        for i, dir_name in enumerate(dirs):
+            dir_path = tmp_path / dir_name
+            dir_path.mkdir(parents=True, exist_ok=True)
+            
+            # Create different types of files in each directory
+            if i % 3 == 0:  # Committed files
+                file_path = dir_path / "committed.txt"
+                file_path.write_text("committed")
+                repo.index.add([str(file_path)])
+            elif i % 3 == 1:  # Staged files (after commit)
+                pass  # Will create after commit
+            else:  # Untracked files
+                file_path = dir_path / "untracked.txt"
+                file_path.write_text("untracked")
+        
+        # Commit the committed files
+        repo.index.commit("Initial commit")
+        
+        # Create staged files
+        for i, dir_name in enumerate(dirs):
+            if i % 3 == 1:
+                dir_path = tmp_path / dir_name
+                file_path = dir_path / "staged.txt"
+                file_path.write_text("staged")
+                repo.index.add([str(file_path)])
+        
+        # Should handle nested directories correctly
+        result = get_full_status(tmp_path)
+        
+        # Check that files from different directories are included
+        assert len(result["staged"]) > 0
+        assert len(result["untracked"]) > 0
+        assert any("/" in path or "\\" in path for path in result["staged"] + result["untracked"])
+
+    def test_get_full_status_deleted_files(self, tmp_path: Path) -> None:
+        """Test with deleted files (should appear as modified)."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit files
+        file1 = tmp_path / "file1.txt"
+        file1.write_text("content 1")
+        file2 = tmp_path / "file2.txt"
+        file2.write_text("content 2")
+        file3 = tmp_path / "file3.txt"
+        file3.write_text("content 3")
+        
+        repo.index.add([str(file1), str(file2), str(file3)])
+        repo.index.commit("Initial commit")
+        
+        # Delete one file, modify another, modify and stage third
+        file1.unlink()  # Deleted
+        file2.write_text("modified content")  # Modified
+        file3.write_text("modified and staged content")  # Modified
+        repo.index.add([str(file3)])  # Stage the modified file3
+        
+        # Should show deleted and modified files in modified list, staged file in staged
+        result = get_full_status(tmp_path)
+        assert "file1.txt" in result["modified"]  # Deleted file
+        assert "file2.txt" in result["modified"]  # Modified file
+        assert "file3.txt" in result["staged"]    # Modified and staged file
+        assert result["untracked"] == []
+        assert len(result["modified"]) == 2
+        assert len(result["staged"]) == 1
+
+    def test_get_full_status_uses_existing_functions(self, tmp_path: Path) -> None:
+        """Test that get_full_status efficiently uses existing functions."""
+        # Create a real git repo and test that the function works as expected
+        # by comparing with individual function calls rather than mocking
+        
+        # Create git repo with various changes
+        repo = Repo.init(tmp_path)
+        
+        # Create committed file
+        committed_file = tmp_path / "committed.txt"
+        committed_file.write_text("original")
+        repo.index.add([str(committed_file)])
+        repo.index.commit("Initial commit")
+        
+        # Modify committed file
+        committed_file.write_text("modified")
+        
+        # Create and stage new file
+        staged_file = tmp_path / "staged.txt"
+        staged_file.write_text("staged")
+        repo.index.add([str(staged_file)])
+        
+        # Create untracked file
+        untracked_file = tmp_path / "untracked.txt"
+        untracked_file.write_text("untracked")
+        
+        # Get results from individual functions
+        staged_changes = get_staged_changes(tmp_path)
+        unstaged_changes = get_unstaged_changes(tmp_path)
+        
+        # Get results from comprehensive function
+        full_status = get_full_status(tmp_path)
+        
+        # Should combine results correctly
+        expected_result = {
+            "staged": staged_changes,
+            "modified": unstaged_changes["modified"],
+            "untracked": unstaged_changes["untracked"]
+        }
+        
+        assert full_status == expected_result
+
+    @patch("mcp_coder.utils.git_operations.is_git_repository")
+    def test_get_full_status_invalid_git_repo(self, mock_is_git: Mock, tmp_path: Path) -> None:
+        """Test when git repository validation fails."""
+        mock_is_git.return_value = False
+        
+        # Should return empty status when not a git repo
+        result = get_full_status(tmp_path)
+        assert result == {"staged": [], "modified": [], "untracked": []}
+
+    @patch("mcp_coder.utils.git_operations.get_staged_changes")
+    def test_get_full_status_handles_exceptions(self, mock_staged: Mock, tmp_path: Path) -> None:
+        """Test handling of exceptions from underlying functions."""
+        mock_staged.side_effect = Exception("Unexpected error")
+        
+        # Should handle exceptions gracefully
+        result = get_full_status(tmp_path)
+        assert result == {"staged": [], "modified": [], "untracked": []}
