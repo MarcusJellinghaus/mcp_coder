@@ -170,3 +170,72 @@ def get_staged_changes(project_dir: Path) -> list[str]:
     except Exception as e:
         logger.warning("Unexpected error getting staged changes: %s", e)
         return []
+
+
+def get_unstaged_changes(project_dir: Path) -> dict[str, list[str]]:
+    """
+    Get list of files with unstaged changes (modified and untracked).
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        Dictionary with 'modified' and 'untracked' keys containing lists of file paths.
+        File paths are relative to project root.
+        Returns empty dict if not a git repository.
+    """
+    logger.debug("Getting unstaged changes for %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return {"modified": [], "untracked": []}
+
+    try:
+        repo = Repo(project_dir, search_parent_directories=False)
+        
+        # Use git status --porcelain to get file status
+        # Format: XY filename where X=index status, Y=working tree status
+        # We want files where Y is not empty (working tree changes)
+        # Use -u to show individual untracked files instead of just directories
+        status_output = repo.git.status("--porcelain", "-u").splitlines()
+        
+        modified_files = []
+        untracked_files = []
+        
+        for line in status_output:
+            if len(line) < 3:
+                continue
+                
+            # Parse git status format: XY filename
+            index_status = line[0]  # Staged changes
+            working_status = line[1]  # Working tree changes
+            filename = line[3:]  # Skip space and get filename
+            
+            # Skip files that are only staged (no working tree changes)
+            if working_status == ' ':
+                continue
+                
+            # Untracked files have '??' status
+            if line.startswith('??'):
+                untracked_files.append(filename)
+            else:
+                # Any other working tree change (M, D, etc.)
+                modified_files.append(filename)
+        
+        logger.debug(
+            "Found %d modified and %d untracked files", 
+            len(modified_files), 
+            len(untracked_files)
+        )
+        
+        return {
+            "modified": modified_files,
+            "untracked": untracked_files
+        }
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.debug("Git error getting unstaged changes: %s", e)
+        return {"modified": [], "untracked": []}
+    except Exception as e:
+        logger.warning("Unexpected error getting unstaged changes: %s", e)
+        return {"modified": [], "untracked": []}

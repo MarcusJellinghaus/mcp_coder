@@ -44,7 +44,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Run quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 4: Test & Implement get_unstaged_changes()** - [step_4.md](steps/step_4.md)
+- [x] **Step 4: Test & Implement get_unstaged_changes()** - [step_4.md](steps/step_4.md)
   - Write tests for get_unstaged_changes() function using TDD
   - Implement function to detect modified and untracked files
   - Return structured data with modified/untracked separation

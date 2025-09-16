@@ -10,6 +10,7 @@ from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from mcp_coder.utils.git_operations import (
     get_staged_changes,
+    get_unstaged_changes,
     is_file_tracked,
     is_git_repository,
 )
@@ -251,3 +252,243 @@ class TestGetStagedChanges:
         # Should return empty list when not a git repo
         result = get_staged_changes(tmp_path)
         assert result == []
+
+
+class TestGetUnstagedChanges:
+    """Test get_unstaged_changes function."""
+
+    def test_get_unstaged_changes_clean_repo(self, tmp_path: Path) -> None:
+        """Test with clean repository - no changes."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit a file to have non-empty repo
+        test_file = tmp_path / "committed.txt"
+        test_file.write_text("committed content")
+        repo.index.add([str(test_file)])
+        repo.index.commit("Initial commit")
+        
+        # Should return empty dict - no unstaged changes
+        result = get_unstaged_changes(tmp_path)
+        assert result == {"modified": [], "untracked": []}
+
+    def test_get_unstaged_changes_empty_repo(self, tmp_path: Path) -> None:
+        """Test with empty repository - new files only."""
+        # Create git repo
+        Repo.init(tmp_path)
+        
+        # Create untracked files
+        file1 = tmp_path / "new1.txt"
+        file1.write_text("new content 1")
+        file2 = tmp_path / "subdir" / "new2.txt"
+        file2.parent.mkdir()
+        file2.write_text("new content 2")
+        
+        # Should return untracked files only
+        result = get_unstaged_changes(tmp_path)
+        assert "new1.txt" in result["untracked"]
+        assert any("new2.txt" in path for path in result["untracked"])
+        assert result["modified"] == []
+        assert len(result["untracked"]) == 2
+
+    def test_get_unstaged_changes_only_modified(self, tmp_path: Path) -> None:
+        """Test with only modified files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit files
+        file1 = tmp_path / "file1.txt"
+        file1.write_text("original content 1")
+        file2 = tmp_path / "subdir" / "file2.txt"
+        file2.parent.mkdir()
+        file2.write_text("original content 2")
+        
+        repo.index.add([str(file1), str(file2)])
+        repo.index.commit("Initial commit")
+        
+        # Modify the files
+        file1.write_text("modified content 1")
+        file2.write_text("modified content 2")
+        
+        # Should return modified files only
+        result = get_unstaged_changes(tmp_path)
+        assert "file1.txt" in result["modified"]
+        assert any("file2.txt" in path for path in result["modified"])
+        assert result["untracked"] == []
+        assert len(result["modified"]) == 2
+
+    def test_get_unstaged_changes_only_untracked(self, tmp_path: Path) -> None:
+        """Test with only untracked files."""
+        # Create git repo with committed file
+        repo = Repo.init(tmp_path)
+        
+        committed_file = tmp_path / "committed.txt"
+        committed_file.write_text("committed content")
+        repo.index.add([str(committed_file)])
+        repo.index.commit("Initial commit")
+        
+        # Create untracked files
+        untracked1 = tmp_path / "untracked1.txt"
+        untracked1.write_text("untracked content 1")
+        untracked2 = tmp_path / "dir" / "untracked2.txt"
+        untracked2.parent.mkdir()
+        untracked2.write_text("untracked content 2")
+        
+        # Should return untracked files only
+        result = get_unstaged_changes(tmp_path)
+        assert "untracked1.txt" in result["untracked"]
+        assert any("untracked2.txt" in path for path in result["untracked"])
+        assert result["modified"] == []
+        assert len(result["untracked"]) == 2
+
+    def test_get_unstaged_changes_mixed_changes(self, tmp_path: Path) -> None:
+        """Test with both modified and untracked files."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit files
+        committed_file = tmp_path / "committed.txt"
+        committed_file.write_text("original content")
+        repo.index.add([str(committed_file)])
+        repo.index.commit("Initial commit")
+        
+        # Modify committed file
+        committed_file.write_text("modified content")
+        
+        # Create untracked file
+        untracked_file = tmp_path / "untracked.txt"
+        untracked_file.write_text("untracked content")
+        
+        # Create staged file (should not appear in unstaged)
+        staged_file = tmp_path / "staged.txt"
+        staged_file.write_text("staged content")
+        repo.index.add([str(staged_file)])
+        
+        # Should return both modified and untracked
+        result = get_unstaged_changes(tmp_path)
+        assert "committed.txt" in result["modified"]
+        assert "untracked.txt" in result["untracked"]
+        assert "staged.txt" not in result["modified"]
+        assert "staged.txt" not in result["untracked"]
+        assert len(result["modified"]) == 1
+        assert len(result["untracked"]) == 1
+
+    def test_get_unstaged_changes_not_git_repo(self, tmp_path: Path) -> None:
+        """Test with directory that is not a git repository."""
+        # Create regular files
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("content")
+        
+        # Should return empty dict
+        result = get_unstaged_changes(tmp_path)
+        assert result == {"modified": [], "untracked": []}
+
+    def test_get_unstaged_changes_with_gitignore(self, tmp_path: Path) -> None:
+        """Test that gitignored files are not included in untracked."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create .gitignore
+        gitignore = tmp_path / ".gitignore"
+        gitignore.write_text("*.log\ntemp/\n")
+        repo.index.add([str(gitignore)])
+        repo.index.commit("Add gitignore")
+        
+        # Create ignored files
+        ignored_file = tmp_path / "debug.log"
+        ignored_file.write_text("log content")
+        ignored_dir = tmp_path / "temp"
+        ignored_dir.mkdir()
+        (ignored_dir / "temp.txt").write_text("temp content")
+        
+        # Create non-ignored file
+        regular_file = tmp_path / "regular.txt"
+        regular_file.write_text("regular content")
+        
+        # Should not include ignored files
+        result = get_unstaged_changes(tmp_path)
+        assert "regular.txt" in result["untracked"]
+        assert "debug.log" not in result["untracked"]
+        assert not any("temp" in path for path in result["untracked"])
+        assert result["modified"] == []
+
+    def test_get_unstaged_changes_deleted_files(self, tmp_path: Path) -> None:
+        """Test with deleted files (should appear as modified)."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create and commit files
+        file1 = tmp_path / "file1.txt"
+        file1.write_text("content 1")
+        file2 = tmp_path / "file2.txt"
+        file2.write_text("content 2")
+        
+        repo.index.add([str(file1), str(file2)])
+        repo.index.commit("Initial commit")
+        
+        # Delete one file
+        file1.unlink()
+        
+        # Modify the other
+        file2.write_text("modified content")
+        
+        # Should show both deleted and modified files
+        result = get_unstaged_changes(tmp_path)
+        assert "file1.txt" in result["modified"]  # Deleted files show as modified
+        assert "file2.txt" in result["modified"]
+        assert result["untracked"] == []
+        assert len(result["modified"]) == 2
+
+    def test_get_unstaged_changes_various_file_types(self, tmp_path: Path) -> None:
+        """Test with various file types and subdirectories."""
+        # Create git repo
+        repo = Repo.init(tmp_path)
+        
+        # Create initial commit
+        initial_file = tmp_path / "initial.txt"
+        initial_file.write_text("initial")
+        repo.index.add([str(initial_file)])
+        repo.index.commit("Initial commit")
+        
+        # Create various untracked files
+        files_to_create = [
+            tmp_path / "script.py",
+            tmp_path / "data.json",
+            tmp_path / "docs" / "readme.md",
+            tmp_path / "tests" / "test_example.py",
+            tmp_path / "assets" / "image.png",
+        ]
+        
+        for file_path in files_to_create:
+            file_path.parent.mkdir(exist_ok=True, parents=True)
+            file_path.write_text(f"content for {file_path.name}")
+        
+        # Should return all untracked files
+        result = get_unstaged_changes(tmp_path)
+        assert len(result["untracked"]) == 5
+        assert "script.py" in result["untracked"]
+        assert "data.json" in result["untracked"]
+        assert any("readme.md" in path for path in result["untracked"])
+        assert any("test_example.py" in path for path in result["untracked"])
+        assert any("image.png" in path for path in result["untracked"])
+        assert result["modified"] == []
+
+    @patch("mcp_coder.utils.git_operations.Repo")
+    def test_get_unstaged_changes_git_command_error(self, mock_repo: Mock, tmp_path: Path) -> None:
+        """Test handling of git command failures."""
+        mock_instance = Mock()
+        mock_repo.return_value = mock_instance
+        mock_instance.git.status.side_effect = GitCommandError("status", 128)
+        
+        # Should return empty dict on git errors
+        result = get_unstaged_changes(tmp_path)
+        assert result == {"modified": [], "untracked": []}
+
+    @patch("mcp_coder.utils.git_operations.is_git_repository")
+    def test_get_unstaged_changes_invalid_git_repo(self, mock_is_git: Mock, tmp_path: Path) -> None:
+        """Test when git repository validation fails."""
+        mock_is_git.return_value = False
+        
+        # Should return empty dict when not a git repo
+        result = get_unstaged_changes(tmp_path)
+        assert result == {"modified": [], "untracked": []}
