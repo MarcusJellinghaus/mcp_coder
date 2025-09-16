@@ -1,65 +1,96 @@
-# Step 2: Implement Basic Function Structure and Validation
+# Step 2: Untracked Files Support
 
-## LLM Prompt
+## Overview
+Add support for untracked files in diff output with comprehensive tests.
+
+## Tests to Add
+**File**: `tests/utils/test_git_workflows.py`
+
+### Test Cases
+```python
+@pytest.mark.git_integration
+def test_get_git_diff_for_commit_with_untracked_files(self, git_repo: tuple[Repo, Path]) -> None:
+    """Test diff generation includes untracked files."""
+    # Create mix of staged, unstaged, and untracked files
+    # Call get_git_diff_for_commit()
+    # Assert output contains all three sections
+    # Assert untracked files shown as new files (diff from /dev/null)
+
+@pytest.mark.git_integration
+def test_get_git_diff_for_commit_untracked_only(self, git_repo: tuple[Repo, Path]) -> None:
+    """Test diff with only untracked files."""
+    # Clean repo + add untracked files
+    # Assert only untracked section appears
+
+@pytest.mark.git_integration
+def test_get_git_diff_for_commit_binary_files(self, git_repo: tuple[Repo, Path]) -> None:
+    """Test handling of binary files in diff."""
+    # Add binary file (untracked)
+    # Assert git's binary file message appears naturally
 ```
-I'm implementing a git diff function as described in pr_info/steps/summary.md. This is Step 2 - implement the basic function structure and validation logic.
 
-The tests from Step 1 should now be failing. I need to:
-- Add the function signature to `git_operations.py`
-- Implement basic validation using existing helper functions
-- Return None for invalid cases
-- Make the tests pass the validation parts but still fail on diff content
+## Implementation Updates
+**File**: `src/mcp_coder/utils/git_operations.py`
 
-Please implement just the function structure and validation - the actual diff generation will be in Step 3.
+### Add Untracked File Helper
+```python
+def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
+    """Generate diff for untracked files using git diff --no-index."""
+    untracked_files = repo.untracked_files
+    if not untracked_files:
+        return ""
+    
+    untracked_diffs = []
+    for file_path in untracked_files:
+        try:
+            # Generate diff from /dev/null to show as new file
+            diff = repo.git.diff("--no-index", "--unified=5", "--no-prefix", 
+                               "/dev/null", file_path)
+            untracked_diffs.append(diff)
+        except GitCommandError:
+            # Skip files that can't be diffed (e.g., binary files might still show basic info)
+            continue
+    
+    return "\\n".join(untracked_diffs)
 ```
 
-## WHERE
-- **File**: `src/mcp_coder/utils/git_operations.py`
-- **Location**: Add at end of file, after existing functions
-
-## WHAT
+### Update Main Function
 ```python
 def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
-    """
-    Generate git diff showing all changes without modifying git state.
+    """Generate comprehensive git diff without modifying repository state."""
+    logger.debug("Generating git diff for: %s", project_dir)
     
-    Shows staged, unstaged, and untracked files in diff format.
-    Equivalent to tools/commit_summary.bat functionality but read-only.
+    if not is_git_repository(project_dir):
+        logger.error("Not a git repository: %s", project_dir)
+        return None
     
-    Args:
-        project_dir: Path to the project directory containing git repository
+    try:
+        repo = Repo(project_dir, search_parent_directories=False)
         
-    Returns:
-        Git diff string showing all changes, or None if error
-    """
+        # Generate all diff sections
+        staged_diff = repo.git.diff("--cached", "--unified=5", "--no-prefix")
+        unstaged_diff = repo.git.diff("--unified=5", "--no-prefix")
+        untracked_diff = _generate_untracked_diff(repo, project_dir)
+        
+        return _format_diff_sections(staged_diff, unstaged_diff, untracked_diff)
+        
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error generating diff: %s", e)
+        return None
+    except Exception as e:
+        logger.error("Unexpected error generating diff: %s", e)
+        return None
 ```
 
-## HOW
-- **Imports**: Use existing imports (no new ones needed)
-- **Logging**: Follow existing logging pattern with `logger.debug/error`
-- **Validation**: Use existing `is_git_repository(project_dir)` function
-- **Error handling**: Follow existing exception handling patterns
+## Success Criteria
+- [ ] Function includes untracked files in diff output
+- [ ] Untracked files shown as new files (diff from /dev/null)
+- [ ] Binary files handled naturally by git
+- [ ] All three sections (staged/unstaged/untracked) work together
+- [ ] All new tests pass
+- [ ] No regressions in Step 1 functionality
 
-## ALGORITHM
-```
-1. Log debug message with project_dir
-2. Validate using is_git_repository(project_dir)
-3. If invalid, log error and return None
-4. Return placeholder string (will be replaced in Step 3)
-5. Handle any exceptions and log/return None
-```
-
-## DATA
-**Function signature**:
-```python
-def get_git_diff_for_commit(project_dir: Path) -> Optional[str]
-```
-
-**Return values**:
-- `None` - if not a git repository or on error
-- `str` - placeholder for now (e.g., "TODO: implement diff generation")
-
-**Validation**:
-- Must pass `is_git_repository(project_dir)` check
-- Must handle `InvalidGitRepositoryError` and `GitCommandError`
-- Must log appropriate debug/error messages
+## Notes
+- Use `git diff --no-index /dev/null filename` for untracked files
+- Let git handle binary file detection naturally
+- Skip files that can't be diffed (continue on GitCommandError)

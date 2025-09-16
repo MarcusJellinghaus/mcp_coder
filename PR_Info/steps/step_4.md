@@ -1,73 +1,116 @@
-# Step 4: Add Comprehensive Error Handling and Edge Cases
+# Step 4: Integration and Polish
 
-## LLM Prompt
-```
-I'm implementing a git diff function as described in pr_info/steps/summary.md. This is Step 4 - add comprehensive error handling and edge cases.
+## Overview
+Final integration testing, performance validation, and documentation completion.
 
-The core diff generation from Step 3 should be working. Now I need to:
-- Add proper exception handling for GitCommandError and other git errors
-- Handle edge cases like empty repositories, no changes, binary files
-- Ensure robust error logging following existing patterns
-- Make sure function never crashes and always returns valid data
+## Tests to Add/Update
+**File**: `tests/utils/test_git_workflows.py`
 
-Refine the error handling to make the function production-ready.
-```
-
-## WHERE
-- **File**: `src/mcp_coder/utils/git_operations.py`
-- **Location**: Add try/catch blocks and edge case handling in `get_git_diff_for_commit()`
-
-## WHAT
-Add comprehensive error handling:
+### Integration Test Cases
 ```python
-try:
-    repo = Repo(project_dir, search_parent_directories=False)
+@pytest.mark.git_integration
+def test_get_git_diff_integration_with_existing_functions(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+    """Test integration with existing git_operations functions."""
+    # Use get_full_status, stage_specific_files, etc.
+    # Call get_git_diff_for_commit at various stages
+    # Verify diff output matches git repository state
     
-    # Handle empty repository case
-    if not repo.heads:
-        logger.debug("Empty repository with no commits")
-        return handle_empty_repository(repo, project_dir)
+@pytest.mark.git_integration
+def test_get_git_diff_complete_workflow(self, git_repo: tuple[Repo, Path]) -> None:
+    """Test complete workflow from empty repo to multiple commits."""
+    # Simulate real development workflow
+    # Add files, stage some, modify others
+    # Verify diff output at each stage
     
-    # Generate diffs with error handling for each section
-    # ... existing diff logic with individual try/catch
-    
-except (InvalidGitRepositoryError, GitCommandError) as e:
-    logger.error("Git error generating diff: %s", e)
-    return None
-except Exception as e:
-    logger.error("Unexpected error generating diff: %s", e)
-    return None
+@pytest.mark.git_integration
+def test_get_git_diff_performance_basic(self, git_repo: tuple[Repo, Path]) -> None:
+    """Basic performance test with reasonable file count."""
+    # Create ~50 files with various states
+    # Measure execution time (should be < 5 seconds)
+    # Verify all files appear in output correctly
 ```
 
-## HOW
-- **Exception types**: Handle `GitCommandError`, `InvalidGitRepositoryError`
-- **Edge cases**: Empty repos, no changes, binary files, permission errors
-- **Logging**: Use existing logger patterns (`logger.debug`, `logger.error`)
-- **Graceful degradation**: Return None or empty string for recoverable errors
+## Implementation Polish
+**File**: `src/mcp_coder/utils/git_operations.py`
 
-## ALGORITHM
+### Final Documentation Update
+```python
+def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
+    """
+    Generate comprehensive git diff without modifying repository state.
+    
+    Shows staged, unstaged, and untracked files in unified diff format
+    suitable for LLM analysis and commit message generation.
+    
+    Args:
+        project_dir: Path to the project directory containing git repository
+        
+    Returns:
+        str: Unified diff format with sections for staged changes, unstaged 
+             changes, and untracked files. Each section uses format:
+             === SECTION NAME ===
+             [diff content]
+             
+             Returns empty string if no changes detected.
+        None: If error occurs (invalid repository, git command failure, etc.)
+        
+    Example:
+        >>> diff_output = get_git_diff_for_commit(Path("/path/to/repo"))
+        >>> if diff_output is not None:
+        ...     print("Changes detected" if diff_output else "No changes")
+        
+    Note:
+        - Uses read-only git operations, never modifies repository state
+        - Binary files handled naturally by git (shows "Binary files differ")
+        - Continues processing even if individual git operations fail
+        - Empty repositories (no commits) supported
+    """
 ```
-1. Wrap all git operations in try/catch blocks
-2. Check for empty repository (no commits) case
-3. Handle each diff section with individual error handling
-4. Log specific errors for debugging
-5. Return None only for unrecoverable errors
+
+### Import Statement Update
+Add to existing import in test file:
+```python
+from mcp_coder.utils.git_operations import (
+    # ... existing imports ...
+    get_git_diff_for_commit,  # Add this line
+)
 ```
 
-## DATA
-**Error cases to handle**:
-- `InvalidGitRepositoryError` - not a git repository
-- `GitCommandError` - git command execution failed
-- Empty repository - no commits exist yet
-- No changes - all diffs are empty
-- Permission errors - cannot read git objects
+## Validation Checklist
 
-**Return values**:
-- `None` - unrecoverable error (invalid repo, permission denied)
-- `""` (empty string) - no changes to show
-- `str` - valid diff content
+### Functional Validation
+- [ ] Function generates correct diff output for all file states
+- [ ] Output format matches LLM-friendly specification
+- [ ] Returns empty string for clean repositories
+- [ ] Returns None for error conditions
+- [ ] No git repository state modifications occur
 
-**Logging levels**:
-- `logger.debug` - normal operations, empty results
-- `logger.error` - actual errors that prevent function completion
-- Include error details in log messages for debugging
+### Integration Validation  
+- [ ] All existing git_operations tests still pass
+- [ ] Function works with existing git operation workflows
+- [ ] No conflicts with existing codebase patterns
+- [ ] Proper logging follows established patterns
+
+### Performance Validation
+- [ ] Reasonable performance with typical repository sizes
+- [ ] No memory leaks or resource issues
+- [ ] Handles large repositories gracefully
+
+### Documentation Validation
+- [ ] Comprehensive docstring with examples
+- [ ] Clear return value documentation
+- [ ] Usage examples provided
+- [ ] Edge cases documented
+
+## Final Notes
+- Run complete test suite: `pytest tests/utils/test_git_workflows.py -v`
+- Verify no regressions: `pytest tests/utils/ -v`
+- Check code quality follows existing patterns
+- Ensure logging output is appropriate for production use
+
+## Success Criteria
+- [ ] All tests pass (new and existing)
+- [ ] Function ready for production use
+- [ ] Documentation complete and accurate
+- [ ] Integration verified with existing codebase
+- [ ] Performance acceptable for intended use cases

@@ -59,7 +59,8 @@ Do not yet modify any code!
 Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** with self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
 
 ### Requirements:
-- Follow **Test-Driven Development** where applicable
+- Follow **Test-Driven Development** where applicable. 
+  Each step should have its own test implementation followed by related functionality implementation.  
 - Each step must include a **clear LLM prompt** that references the summary and that specific step
 - Apply **KISS principle** - minimize complexity, maximize maintainability
 - Keep code changes minimal and follow best practices
@@ -89,6 +90,10 @@ Wait for presentation of overall plan
 ```
 Can we go through all suggested changes and questions step by step?
 You explain, ask and I answer until we discussed all topics?
+Please offer, whenever possible, simple options like, 
+- A
+- B
+- C
 ```
 
 Wait for end of discussion
