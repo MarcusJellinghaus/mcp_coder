@@ -43,6 +43,7 @@ from .utils.subprocess_runner import (
     execute_command,
     execute_subprocess,
 )
+from .log_utils import setup_logging, get_logger
 
 __version__ = "0.1.0"
 
@@ -69,4 +70,7 @@ __all__ = [
     "get_prompt",
     "validate_prompt_markdown",
     "validate_prompt_directory",
+    # Logging utilities
+    "setup_logging",
+    "get_logger",
 ]
