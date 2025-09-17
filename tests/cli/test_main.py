@@ -1,4 +1,5 @@
 """Tests for CLI main entry point."""
+
 import argparse
 import subprocess
 import sys
@@ -45,7 +46,7 @@ class TestHandleNoCommand:
         """Test that handle_no_command prints help information."""
         args = argparse.Namespace(command=None)
         result = handle_no_command(args)
-        
+
         assert result == 1
         # Verify help text was printed
         mock_print.assert_called()
@@ -60,7 +61,7 @@ class TestHandleNoCommand:
         """Test that handle_no_command logs appropriate message."""
         args = argparse.Namespace(command=None)
         handle_no_command(args)
-        
+
         mock_logger.info.assert_called_with("No command provided, showing help")
 
 
@@ -69,42 +70,48 @@ class TestMain:
 
     @patch("mcp_coder.cli.main.handle_no_command")
     @patch("mcp_coder.cli.main.create_parser")
-    def test_main_no_args_calls_handle_no_command(self, mock_create_parser: Mock, mock_handle_no_command: Mock) -> None:
+    def test_main_no_args_calls_handle_no_command(
+        self, mock_create_parser: Mock, mock_handle_no_command: Mock
+    ) -> None:
         """Test that main calls handle_no_command when no command provided."""
         mock_parser = Mock()
         mock_parser.parse_args.return_value = argparse.Namespace(command=None)
         mock_create_parser.return_value = mock_parser
         mock_handle_no_command.return_value = 1
-        
+
         result = main()
-        
+
         assert result == 1
         mock_handle_no_command.assert_called_once()
 
     @patch("mcp_coder.cli.main.execute_help")
     @patch("mcp_coder.cli.main.create_parser")
-    def test_main_help_command(self, mock_create_parser: Mock, mock_execute_help: Mock) -> None:
+    def test_main_help_command(
+        self, mock_create_parser: Mock, mock_execute_help: Mock
+    ) -> None:
         """Test 'mcp-coder help' command works."""
         mock_parser = Mock()
         mock_parser.parse_args.return_value = argparse.Namespace(command="help")
         mock_create_parser.return_value = mock_parser
         mock_execute_help.return_value = 0
-        
+
         result = main()
-        
+
         assert result == 0
         mock_execute_help.assert_called_once()
 
     @patch("mcp_coder.cli.main.create_parser")
     @patch("builtins.print")
-    def test_main_unknown_command_returns_error(self, mock_print: Mock, mock_create_parser: Mock) -> None:
+    def test_main_unknown_command_returns_error(
+        self, mock_print: Mock, mock_create_parser: Mock
+    ) -> None:
         """Test that main returns error for unknown commands."""
         mock_parser = Mock()
         mock_parser.parse_args.return_value = argparse.Namespace(command="unknown")
         mock_create_parser.return_value = mock_parser
-        
+
         result = main()
-        
+
         assert result == 1
         mock_print.assert_called()
 
@@ -114,22 +121,24 @@ class TestMain:
         mock_parser = Mock()
         mock_parser.parse_args.side_effect = KeyboardInterrupt()
         mock_create_parser.return_value = mock_parser
-        
+
         with patch("builtins.print"):
             result = main()
-        
+
         assert result == 1
 
     @patch("mcp_coder.cli.main.create_parser")
-    def test_main_unexpected_exception_returns_2(self, mock_create_parser: Mock) -> None:
+    def test_main_unexpected_exception_returns_2(
+        self, mock_create_parser: Mock
+    ) -> None:
         """Test that main handles unexpected exceptions."""
         mock_parser = Mock()
         mock_parser.parse_args.side_effect = Exception("Test error")
         mock_create_parser.return_value = mock_parser
-        
+
         with patch("builtins.print"):
             result = main()
-        
+
         assert result == 2
 
 
@@ -140,11 +149,13 @@ class TestCLIEntryPoint:
         """Test that CLI entry point is properly configured."""
         # This tests that the import path works
         from mcp_coder.cli.main import main
+
         assert callable(main)
 
     def test_main_can_be_imported_from_package(self) -> None:
         """Test that main can be imported from package root."""
         from mcp_coder import cli_main
+
         assert callable(cli_main)
 
 
@@ -152,17 +163,22 @@ class TestCLIIntegration:
     """Integration tests for CLI functionality."""
 
     @pytest.mark.skipif(
-        sys.platform == "win32" and subprocess.run(["where", "python"], capture_output=True).returncode != 0,
-        reason="Python not available via 'python' command on Windows"
+        sys.platform == "win32"
+        and subprocess.run(["where", "python"], capture_output=True).returncode != 0,
+        reason="Python not available via 'python' command on Windows",
     )
     def test_cli_help_via_python_module(self) -> None:
         """Test CLI help via python -m mcp_coder.cli.main."""
         try:
             result = subprocess.run(
-                [sys.executable, "-c", "from mcp_coder.cli.main import main; exit(main())"],
+                [
+                    sys.executable,
+                    "-c",
+                    "from mcp_coder.cli.main import main; exit(main())",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
             # Should exit with code 1 (no command provided) and show help
             assert result.returncode == 1

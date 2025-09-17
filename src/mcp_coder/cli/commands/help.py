@@ -1,4 +1,5 @@
 """Help command implementation for MCP Coder CLI."""
+
 import argparse
 import logging
 from typing import Optional
@@ -9,10 +10,10 @@ logger = logging.getLogger(__name__)
 def execute_help(args: argparse.Namespace) -> int:
     """Execute help command. Returns exit code."""
     logger.info("Executing help command")
-    
+
     help_text = get_help_text()
     print(help_text)
-    
+
     logger.info("Help command completed successfully")
     return 0
 
@@ -34,7 +35,7 @@ COMMANDS:
 For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder""".format(
         examples=get_usage_examples()
     )
-    
+
     return help_content
 
 

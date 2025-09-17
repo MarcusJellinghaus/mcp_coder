@@ -1,8 +1,9 @@
 """Tests for clipboard utilities."""
 
-import pytest
 import tkinter as tk
 from unittest.mock import Mock, patch
+
+import pytest
 
 from mcp_coder.utils.clipboard import (
     get_clipboard_text,
@@ -14,17 +15,17 @@ from mcp_coder.utils.clipboard import (
 class TestGetClipboardText:
     """Tests for get_clipboard_text function."""
 
-    @patch('mcp_coder.utils.clipboard.tk.Tk')
+    @patch("mcp_coder.utils.clipboard.tk.Tk")
     def test_get_clipboard_text_success(self, mock_tk):
         """Test successful clipboard text retrieval."""
         # Setup mock
         mock_root = Mock()
         mock_tk.return_value = mock_root
         mock_root.clipboard_get.return_value = "test commit message"
-        
+
         # Execute
         success, text, error = get_clipboard_text()
-        
+
         # Verify
         assert success is True
         assert text == "test commit message"
@@ -33,83 +34,85 @@ class TestGetClipboardText:
         mock_root.clipboard_get.assert_called_once()
         mock_root.destroy.assert_called_once()
 
-    @patch('mcp_coder.utils.clipboard.tk.Tk')
+    @patch("mcp_coder.utils.clipboard.tk.Tk")
     def test_get_clipboard_text_empty(self, mock_tk):
         """Test handling of empty clipboard."""
         # Setup mock
         mock_root = Mock()
         mock_tk.return_value = mock_root
         mock_root.clipboard_get.return_value = "   "  # Only whitespace
-        
+
         # Execute
         success, text, error = get_clipboard_text()
-        
+
         # Verify
         assert success is False
         assert text == ""
         assert error == "Clipboard is empty"
         mock_root.destroy.assert_called_once()
 
-    @patch('mcp_coder.utils.clipboard.tk.Tk')
+    @patch("mcp_coder.utils.clipboard.tk.Tk")
     def test_get_clipboard_text_clipboard_selection_error(self, mock_tk):
         """Test handling of clipboard selection errors."""
         # Setup mock
         mock_root = Mock()
         mock_tk.return_value = mock_root
-        mock_root.clipboard_get.side_effect = tk.TclError("CLIPBOARD selection doesn't exist")
-        
+        mock_root.clipboard_get.side_effect = tk.TclError(
+            "CLIPBOARD selection doesn't exist"
+        )
+
         # Execute
         success, text, error = get_clipboard_text()
-        
+
         # Verify
         assert success is False
         assert text == ""
         assert error == "Clipboard is empty"
         mock_root.destroy.assert_called_once()
 
-    @patch('mcp_coder.utils.clipboard.tk.Tk')
+    @patch("mcp_coder.utils.clipboard.tk.Tk")
     def test_get_clipboard_text_display_error(self, mock_tk):
         """Test handling of display connection errors."""
         # Setup mock
         mock_root = Mock()
         mock_tk.return_value = mock_root
         mock_root.clipboard_get.side_effect = tk.TclError("couldn't connect to display")
-        
+
         # Execute
         success, text, error = get_clipboard_text()
-        
+
         # Verify
         assert success is False
         assert text == ""
         assert error == "No display available for clipboard access"
         mock_root.destroy.assert_called_once()
 
-    @patch('mcp_coder.utils.clipboard.tk.Tk')
+    @patch("mcp_coder.utils.clipboard.tk.Tk")
     def test_get_clipboard_text_generic_tcl_error(self, mock_tk):
         """Test handling of generic TclError."""
         # Setup mock
         mock_root = Mock()
         mock_tk.return_value = mock_root
         mock_root.clipboard_get.side_effect = tk.TclError("some other error")
-        
+
         # Execute
         success, text, error = get_clipboard_text()
-        
+
         # Verify
         assert success is False
         assert text == ""
         assert error == "Clipboard access failed: some other error"
         mock_root.destroy.assert_called_once()
 
-    @patch('mcp_coder.utils.clipboard.tk.Tk')
+    @patch("mcp_coder.utils.clipboard.tk.Tk")
     def test_get_clipboard_text_unexpected_error(self, mock_tk):
         """Test handling of unexpected errors."""
         # Setup mock
         mock_tk.side_effect = RuntimeError("unexpected error")
-        
+
         # Execute
         success, text, error = get_clipboard_text()
-        
+
         # Verify
         assert success is False
         assert text == ""
@@ -125,7 +128,7 @@ class TestValidateCommitMessage:
         valid, error = validate_commit_message("")
         assert valid is False
         assert error == "Commit message cannot be empty"
-        
+
         # Only whitespace
         valid, error = validate_commit_message("   \n  \t  ")
         assert valid is False
@@ -139,7 +142,7 @@ class TestValidateCommitMessage:
             "docs: update README with new examples",
             "refactor: simplify error handling logic",
         ]
-        
+
         for message in test_cases:
             valid, error = validate_commit_message(message)
             assert valid is True, f"Failed for message: {message}"
@@ -149,10 +152,10 @@ class TestValidateCommitMessage:
         """Test validation of long single line commit message."""
         # Create a message longer than 72 characters
         long_message = "fix: " + "a" * 70  # 74 characters total
-        
-        with patch('mcp_coder.utils.clipboard.logger') as mock_logger:
+
+        with patch("mcp_coder.utils.clipboard.logger") as mock_logger:
             valid, error = validate_commit_message(long_message)
-            
+
             assert valid is True  # Still valid, just warns
             assert error is None
             mock_logger.warning.assert_called_once()
@@ -163,7 +166,7 @@ class TestValidateCommitMessage:
 
 Implements user signup with email validation and password requirements.
 Includes form validation and database integration."""
-        
+
         valid, error = validate_commit_message(message)
         assert valid is True
         assert error is None
@@ -173,7 +176,7 @@ Includes form validation and database integration."""
         message = """feat: add user registration
 Implements user signup with email validation.
 More details here."""
-        
+
         valid, error = validate_commit_message(message)
         assert valid is False
         assert error == "Multi-line commit message must have empty second line"
@@ -181,7 +184,7 @@ More details here."""
     def test_validate_commit_message_empty_first_line(self):
         """Test validation with empty first line."""
         message = "\nSome body text"
-        
+
         valid, error = validate_commit_message(message)
         assert valid is False
         assert error == "Commit message cannot be empty"
@@ -189,7 +192,7 @@ More details here."""
     def test_validate_commit_message_only_empty_lines(self):
         """Test validation with only empty lines."""
         message = "\n\n\n"
-        
+
         valid, error = validate_commit_message(message)
         assert valid is False
         assert error == "Commit message cannot be empty"
@@ -208,7 +211,7 @@ class TestParseCommitMessage:
         """Test parsing single line commit message."""
         message = "fix: resolve authentication bug"
         summary, body = parse_commit_message(message)
-        
+
         assert summary == "fix: resolve authentication bug"
         assert body is None
 
@@ -216,7 +219,7 @@ class TestParseCommitMessage:
         """Test parsing single line with whitespace."""
         message = "  fix: resolve authentication bug  "
         summary, body = parse_commit_message(message)
-        
+
         assert summary == "fix: resolve authentication bug"
         assert body is None
 
@@ -227,9 +230,9 @@ class TestParseCommitMessage:
 Implements user signup with email validation and password requirements.
 Includes form validation and database integration.
 Also adds unit tests for the new functionality."""
-        
+
         summary, body = parse_commit_message(message)
-        
+
         assert summary == "feat: add user registration"
         expected_body = """Implements user signup with email validation and password requirements.
 Includes form validation and database integration.
@@ -243,9 +246,9 @@ Also adds unit tests for the new functionality."""
 Implements user signup functionality.
 
 """
-        
+
         summary, body = parse_commit_message(message)
-        
+
         assert summary == "feat: add user registration"
         assert body == "Implements user signup functionality."
 
@@ -254,9 +257,9 @@ Implements user signup functionality.
         message = """feat: add user registration
 Implements user signup functionality.
 More details here."""
-        
+
         summary, body = parse_commit_message(message)
-        
+
         assert summary == "feat: add user registration"
         assert body is None  # No valid body due to invalid format
 
@@ -265,9 +268,9 @@ More details here."""
         message = """fix: resolve bug
 
 """
-        
+
         summary, body = parse_commit_message(message)
-        
+
         assert summary == "fix: resolve bug"
         assert body is None
 
@@ -283,9 +286,9 @@ This adds a new configuration system with the following features:
 Example usage:
     config = load_config('app.yaml')
     db_url = config.database.url"""
-        
+
         summary, body = parse_commit_message(message)
-        
+
         assert summary == "feat: add configuration system"
         expected_body = """This adds a new configuration system with the following features:
 - YAML-based configuration files
