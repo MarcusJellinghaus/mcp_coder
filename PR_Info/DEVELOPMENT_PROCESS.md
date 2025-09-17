@@ -90,7 +90,7 @@ Wait for presentation of overall plan
 ```
 Can we go through all suggested changes and questions step by step?
 You explain, ask and I answer until we discussed all topics?
-Please offer, whenever possible, simple options like, 
+Please offer, whenever possible, simple options like 
 - A
 - B
 - C
