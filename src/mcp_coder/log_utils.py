@@ -1,4 +1,4 @@
-"""Logging utilities for MCP Coder."""
+"""Logging utilities for the MCP server."""
 
 import json
 import logging
@@ -18,7 +18,7 @@ T = TypeVar("T")
 stdlogger = logging.getLogger(__name__)
 
 
-def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None) -> None:
+def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
     """Configure logging - if log_file specified, logs only to file; otherwise to console."""
     # Set log level
     numeric_level = getattr(logging, log_level.upper(), None)
@@ -79,11 +79,6 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None) -> No
         root_logger.addHandler(console_handler)
 
         stdlogger.info("Logging initialized: console=%s", log_level)
-
-
-def get_logger(name: str) -> logging.Logger:
-    """Get a logger instance for the given name."""
-    return logging.getLogger(name)
 
 
 def log_function_call(func: Callable[..., T]) -> Callable[..., T]:
