@@ -21,15 +21,41 @@ Use placeholders like [Insert code here] for variable content.
 Expected output format: [describe the expected response]
 ```
 
-# Another Example Prompt
+# Git Commit Message Generation
 ```
-This is another example prompt.
-You can have as many prompts as you need.
+Analyze the provided git diff and status information to generate a concise, professional commit message following conventional commit format.
 
-Instructions:
-1. Step one
-2. Step two
-3. Step three
+REQUIREMENTS:
+1. Keep commit summary BRIEF - aim for under 50 characters when possible
+2. Use conventional commit format: type(scope): description
+   - Types: feat, fix, docs, style, refactor, test, chore, build, ci
+   - Scope is optional but helpful for context
+   - Description should be imperative mood ("add" not "adds" or "added")
+3. Focus on WHAT changed, not implementation details
+4. Only include body text if essential for context (1-2 sentences max)
+5. Analyze both staged and unstaged changes if provided
 
-Please be specific and detailed in your response.
+ANALYSIS STEPS:
+1. Review git status to understand file changes (new, modified, deleted)
+2. Examine git diff to understand the nature of changes
+3. Identify the primary purpose/type of the changes
+4. Determine appropriate scope if multiple areas are affected
+5. Craft a clear, concise description
+
+OUTPUT FORMAT:
+Provide the commit message in plain text format ready to use:
+
+feat(auth): add user validation
+
+Optional body text here if needed for context.
+
+EXAMPLES:
+- feat: add user authentication system
+- fix(api): resolve null pointer in validation
+- docs: update installation instructions
+- refactor(db): simplify connection handling
+- test: add unit tests for user service
+- chore: update dependencies to latest versions
+
+Expected output: A properly formatted conventional commit message ready to use with git commit.
 ```

@@ -44,7 +44,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [ ] **Step 3: Create Commit Message Generation Prompt** - [step_3.md](./steps/step_3.md)
+- [x] **Step 3: Create Commit Message Generation Prompt** - [step_3.md](./steps/step_3.md)
   - Add LLM prompt template to src/mcp_coder/prompts/prompts.md
   - Base prompt on tools/commit_summary.bat logic
   - Include git diff analysis and conventional commit format
