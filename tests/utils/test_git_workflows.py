@@ -1129,41 +1129,43 @@ class TestGitWorkflows:
             assert (project_dir / file_path_str).exists()
 
     @pytest.mark.git_integration
-    def test_get_git_diff_for_commit_basic_functionality(self, git_repo: tuple[Repo, Path]) -> None:
+    def test_get_git_diff_for_commit_basic_functionality(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
         """Test basic diff generation with staged and unstaged changes."""
         repo, project_dir = git_repo
-        
+
         # Create and commit initial files to track them
         file1 = project_dir / "file1.py"
         file2 = project_dir / "file2.py"
         file3 = project_dir / "file3.py"
-        
+
         file1.write_text("# File 1\nprint('original')")
         file2.write_text("# File 2\nprint('original')")
         file3.write_text("# File 3\nprint('original')")
-        
+
         # Commit initial versions
         commit_all_changes("Initial commit", project_dir)
-        
+
         # Now modify files
         file1.write_text("# File 1\nprint('hello')")
         file2.write_text("# File 2\nprint('world')")
         file3.write_text("# File 3\nprint('test')")
-        
+
         # Stage some changes (file1 and file2)
         stage_result = stage_specific_files([file1, file2], project_dir)
         assert stage_result is True
-        
+
         # file3 is now an unstaged change since it's tracked but not staged
-        
+
         # Call get_git_diff_for_commit()
         diff_output = get_git_diff_for_commit(project_dir)
-        
+
         # Assert output contains staged and unstaged sections
         assert diff_output is not None
         assert "=== STAGED CHANGES ===" in diff_output
         assert "=== UNSTAGED CHANGES ===" in diff_output
-        
+
         # Assert correct diff format with --unified=5 --no-prefix
         # Check for file paths and content
         assert "file1.py" in diff_output
@@ -1173,15 +1175,17 @@ class TestGitWorkflows:
         assert "print('world')" in diff_output
         assert "print('test')" in diff_output
 
-    @pytest.mark.git_integration  
-    def test_get_git_diff_for_commit_no_changes(self, git_repo: tuple[Repo, Path]) -> None:
+    @pytest.mark.git_integration
+    def test_get_git_diff_for_commit_no_changes(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
         """Test function returns empty string when no changes exist."""
         repo, project_dir = git_repo
-        
+
         # Clean repository with no changes
         # Call get_git_diff_for_commit()
         diff_output = get_git_diff_for_commit(project_dir)
-        
+
         # Assert returns empty string ""
         assert diff_output == ""
 
@@ -1190,49 +1194,51 @@ class TestGitWorkflows:
         """Test function returns None for invalid git repository."""
         # Call on non-git directory
         diff_output = get_git_diff_for_commit(tmp_path)
-        
+
         # Assert returns None
         assert diff_output is None
 
     @pytest.mark.git_integration
-    def test_get_git_diff_for_commit_with_untracked_files(self, git_repo: tuple[Repo, Path]) -> None:
+    def test_get_git_diff_for_commit_with_untracked_files(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
         """Test diff generation includes untracked files."""
         repo, project_dir = git_repo
-        
+
         # Create and commit initial file to track it
         tracked_file = project_dir / "tracked.py"
         tracked_file.write_text("# Initial content")
         commit_all_changes("Initial commit", project_dir)
-        
+
         # Create mix of staged, unstaged, and untracked files
         # 1. Create another tracked file and commit it
         unstaged_file = project_dir / "unstaged.py"
         unstaged_file.write_text("# Unstaged content")
         commit_all_changes("Add unstaged file", project_dir)
-        
+
         # 2. Modify tracked file and stage it
         tracked_file.write_text("# Modified content")
         stage_result = stage_specific_files([tracked_file], project_dir)
         assert stage_result is True
-        
+
         # 3. Modify unstaged file but don't stage it
         unstaged_file.write_text("# Modified unstaged content")
-        
+
         # 4. Create untracked files
         untracked1 = project_dir / "untracked1.py"
         untracked2 = project_dir / "untracked2.py"
         untracked1.write_text("# Untracked file 1\nprint('hello')")
         untracked2.write_text("# Untracked file 2\nclass Test:\n    pass")
-        
+
         # Call get_git_diff_for_commit()
         diff_output = get_git_diff_for_commit(project_dir)
-        
+
         # Assert output contains all three sections
         assert diff_output is not None
         assert "=== STAGED CHANGES ===" in diff_output
         assert "=== UNSTAGED CHANGES ===" in diff_output
         assert "=== UNTRACKED FILES ===" in diff_output
-        
+
         # Assert untracked files shown as new files (diff from /dev/null)
         assert "untracked1.py" in diff_output
         assert "untracked2.py" in diff_output
@@ -1240,29 +1246,33 @@ class TestGitWorkflows:
         assert "class Test" in diff_output
 
     @pytest.mark.git_integration
-    def test_get_git_diff_for_commit_untracked_only(self, git_repo: tuple[Repo, Path]) -> None:
+    def test_get_git_diff_for_commit_untracked_only(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
         """Test diff with only untracked files."""
         repo, project_dir = git_repo
-        
+
         # Clean repo + add untracked files
         untracked1 = project_dir / "new_file1.py"
         untracked2 = project_dir / "new_file2.md"
         untracked_nested = project_dir / "src" / "module.py"
-        
+
         untracked1.write_text("#!/usr/bin/env python3\ndef main():\n    print('Hello')")
         untracked2.write_text("# Documentation\n\nThis is a readme file.")
         untracked_nested.parent.mkdir(parents=True, exist_ok=True)
-        untracked_nested.write_text("class Module:\n    def __init__(self):\n        pass")
-        
+        untracked_nested.write_text(
+            "class Module:\n    def __init__(self):\n        pass"
+        )
+
         # Call get_git_diff_for_commit()
         diff_output = get_git_diff_for_commit(project_dir)
-        
+
         # Assert only untracked section appears
         assert diff_output is not None
         assert "=== UNTRACKED FILES ===" in diff_output
         assert "=== STAGED CHANGES ===" not in diff_output
         assert "=== UNSTAGED CHANGES ===" not in diff_output
-        
+
         # Assert files are present in diff
         assert "new_file1.py" in diff_output
         assert "new_file2.md" in diff_output
@@ -1272,170 +1282,193 @@ class TestGitWorkflows:
         assert "class Module" in diff_output
 
     @pytest.mark.git_integration
-    def test_get_git_diff_for_commit_binary_files(self, git_repo: tuple[Repo, Path]) -> None:
+    def test_get_git_diff_for_commit_binary_files(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
         """Test handling of binary files in diff."""
         repo, project_dir = git_repo
-        
+
         # Add binary file (untracked)
         binary_file = project_dir / "image.png"
         # Create simple binary content (PNG-like header)
-        binary_content = bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00])
+        binary_content = bytes(
+            [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00]
+        )
         binary_file.write_bytes(binary_content)
-        
+
         # Add text file for comparison
         text_file = project_dir / "text.txt"
         text_file.write_text("This is a regular text file.")
-        
+
         # Call get_git_diff_for_commit()
         diff_output = get_git_diff_for_commit(project_dir)
-        
+
         # Assert git's binary file message appears naturally
         assert diff_output is not None
         assert "=== UNTRACKED FILES ===" in diff_output
-        
+
         # Assert text file appears normally
         assert "text.txt" in diff_output
         assert "This is a regular text file." in diff_output
-        
+
         # Binary file should either appear in diff or be handled gracefully
         # Git might show "Binary files differ" or similar message
         # The key is that the function doesn't crash on binary files
 
     @pytest.mark.git_integration
-    def test_get_git_diff_for_commit_empty_repository(self, git_repo: tuple[Repo, Path]) -> None:
+    def test_get_git_diff_for_commit_empty_repository(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
         """Test handling of empty repository (no commits)."""
         repo, project_dir = git_repo
-        
+
         # Empty repository with untracked files
         untracked_file = project_dir / "new_file.py"
         untracked_file.write_text("# New file content\nprint('hello world')")
-        
+
         # Should handle gracefully and show untracked files
         diff_output = get_git_diff_for_commit(project_dir)
-        
+
         # Should return diff showing untracked files
         assert diff_output is not None
         assert "=== UNTRACKED FILES ===" in diff_output
         assert "new_file.py" in diff_output
         assert "print('hello world')" in diff_output
-        
+
         # Should not contain staged/unstaged sections since no commits exist
         assert "=== STAGED CHANGES ===" not in diff_output
         assert "=== UNSTAGED CHANGES ===" not in diff_output
 
     @pytest.mark.git_integration
-    def test_get_git_diff_for_commit_git_command_errors(self, git_repo: tuple[Repo, Path]) -> None:
+    def test_get_git_diff_for_commit_git_command_errors(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
         """Test handling of git command failures."""
         repo, project_dir = git_repo
-        
+
         # Test more realistic error scenarios by testing resilience
         # Create initial commit first
         test_file = project_dir / "test.py"
         test_file.write_text("# Test file")
         commit_all_changes("Initial commit", project_dir)
-        
+
         # Add a new untracked file
         new_file = project_dir / "new.py"
         new_file.write_text("# New content")
-        
+
         # Function should handle git command errors gracefully
         # Even if some git commands fail, it should try to provide what it can
         diff_output = get_git_diff_for_commit(project_dir)
-        
+
         # The function should work normally in this case
         assert diff_output is not None
         assert "=== UNTRACKED FILES ===" in diff_output
         assert "new.py" in diff_output
-        
+
         # Test with a corrupted repository that still has .git directory
         # but might have issues with some operations
         git_dir = project_dir / ".git"
-        
+
         # Rather than corrupting, test that the function doesn't crash
         # when there are permission issues or other non-fatal problems
         # This simulates partial git command failures in a more realistic way
-        
+
         # For a more robust test, we could mock the git commands to fail
         # but for now, we'll test that the function works even with edge cases
-        
+
         # Delete and recreate the file to ensure it's still untracked
         new_file.unlink()
         new_file.write_text("# New content after recreation")
-        
+
         diff_output2 = get_git_diff_for_commit(project_dir)
         assert diff_output2 is not None
         assert "# New content after recreation" in diff_output2
 
     @pytest.mark.git_integration
-    def test_get_git_diff_for_commit_unicode_filenames(self, git_repo: tuple[Repo, Path]) -> None:
+    def test_get_git_diff_for_commit_unicode_filenames(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
         """Test handling of unicode filenames."""
         repo, project_dir = git_repo
-        
+
         # Create files with unicode names
         unicode_files = {
             "测试文件.py": "# 中文注释\nprint('你好世界')",
             "файл.txt": "Привет мир",
             "émoji_test_🐍.md": "# Test with emoji\nContent with unicode: àáâã",
         }
-        
+
         for filename, content in unicode_files.items():
             file_path = project_dir / filename
             file_path.write_text(content, encoding="utf-8")
-        
+
         # Verify diff generation works correctly with unicode
         diff_output = get_git_diff_for_commit(project_dir)
-        
+
         assert diff_output is not None
         assert "=== UNTRACKED FILES ===" in diff_output
-        
+
         # Check that unicode content appears in diff (may be normalized by git)
         # At minimum, the diff should be generated without crashing
         assert len(diff_output) > 0
-        
+
         # Try to find at least some of the unicode content
         # Git may normalize filenames, so we check for content instead
-        assert "你好世界" in diff_output or "Привет мир" in diff_output or "àáâã" in diff_output
+        assert (
+            "你好世界" in diff_output
+            or "Привет мир" in diff_output
+            or "àáâã" in diff_output
+        )
 
-    @pytest.mark.git_integration  
-    def test_get_git_diff_for_commit_large_files(self, git_repo: tuple[Repo, Path]) -> None:
+    @pytest.mark.git_integration
+    def test_get_git_diff_for_commit_large_files(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
         """Test handling of large text files."""
         repo, project_dir = git_repo
-        
+
         # Create large text files
         large_file1 = project_dir / "large1.txt"
         large_file2 = project_dir / "large2.py"
-        
+
         # Generate large content (not too large to avoid test slowness)
-        large_content1 = "\n".join([f"Line {i}: This is a test line with some content." for i in range(1000)])
-        large_content2 = "\n".join([f"# Comment {i}\ndef function_{i}():\n    return {i}" for i in range(500)])
-        
+        large_content1 = "\n".join(
+            [f"Line {i}: This is a test line with some content." for i in range(1000)]
+        )
+        large_content2 = "\n".join(
+            [f"# Comment {i}\ndef function_{i}():\n    return {i}" for i in range(500)]
+        )
+
         large_file1.write_text(large_content1)
         large_file2.write_text(large_content2)
-        
+
         # Verify performance is acceptable (basic check)
         import time
+
         start_time = time.time()
-        
+
         diff_output = get_git_diff_for_commit(project_dir)
-        
+
         end_time = time.time()
         processing_time = end_time - start_time
-        
+
         # Should complete within reasonable time (5 seconds)
         assert processing_time < 5.0
-        
+
         # Should handle large files without crashing
         assert diff_output is not None
         assert "=== UNTRACKED FILES ===" in diff_output
         assert "large1.txt" in diff_output
         assert "large2.py" in diff_output
-        
+
         # Content should appear in diff
         assert "Line 1:" in diff_output
         assert "def function_1():" in diff_output
 
     @pytest.mark.git_integration
-    def test_get_git_diff_integration_with_existing_functions(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+    def test_get_git_diff_integration_with_existing_functions(
+        self, git_repo_with_files: tuple[Repo, Path]
+    ) -> None:
         """Test integration with existing git_operations functions."""
         repo, project_dir = git_repo_with_files
 
@@ -1546,17 +1579,23 @@ class TestGitWorkflows:
         # Add new files
         (project_dir / "utils.py").write_text("def helper():\n    return 'utility'")
         (project_dir / "tests" / "test_app.py").parent.mkdir(exist_ok=True)
-        (project_dir / "tests" / "test_app.py").write_text("def test_main():\n    assert True")
+        (project_dir / "tests" / "test_app.py").write_text(
+            "def test_main():\n    assert True"
+        )
 
         # Modify existing files
-        (project_dir / "app.py").write_text("#!/usr/bin/env python3\n# Main application\ndef main():\n    print('Hello World')")
-        (project_dir / "README.md").write_text("# My Project\n\nUpdated project with new features.")
+        (project_dir / "app.py").write_text(
+            "#!/usr/bin/env python3\n# Main application\ndef main():\n    print('Hello World')"
+        )
+        (project_dir / "README.md").write_text(
+            "# My Project\n\nUpdated project with new features."
+        )
 
         # Check mixed state diff
         diff_phase2 = get_git_diff_for_commit(project_dir)
         assert diff_phase2 is not None
         assert "=== UNSTAGED CHANGES ===" in diff_phase2  # Modified files
-        assert "=== UNTRACKED FILES ===" in diff_phase2   # New files
+        assert "=== UNTRACKED FILES ===" in diff_phase2  # New files
         assert "=== STAGED CHANGES ===" not in diff_phase2
 
         # Stage only modifications, leave new files untracked
@@ -1572,7 +1611,9 @@ class TestGitWorkflows:
         assert "=== UNSTAGED CHANGES ===" not in diff_partial_stage
 
         # Commit staged changes
-        commit_result2 = commit_staged_files("Update main app and documentation", project_dir)
+        commit_result2 = commit_staged_files(
+            "Update main app and documentation", project_dir
+        )
         assert commit_result2["success"] is True
 
         # Check remaining untracked files
@@ -1612,18 +1653,24 @@ class TestGitWorkflows:
         initial_files = []
         for i in range(20):
             file_path = project_dir / f"initial_{i:02d}.py"
-            file_path.write_text(f"# Initial file {i}\nclass Initial{i}:\n    def method(self):\n        return {i}")
+            file_path.write_text(
+                f"# Initial file {i}\nclass Initial{i}:\n    def method(self):\n        return {i}"
+            )
             initial_files.append(file_path)
 
         # Commit initial files
-        commit_result = commit_all_changes("Initial files for performance test", project_dir)
+        commit_result = commit_all_changes(
+            "Initial files for performance test", project_dir
+        )
         assert commit_result["success"] is True
 
         # Now create mix of staged, unstaged, and untracked files
         # Modify some existing files (will be unstaged)
         for i in range(0, 10):
             file_path = project_dir / f"initial_{i:02d}.py"
-            file_path.write_text(f"# Modified file {i}\nclass Modified{i}:\n    def updated_method(self):\n        return {i} * 2")
+            file_path.write_text(
+                f"# Modified file {i}\nclass Modified{i}:\n    def updated_method(self):\n        return {i} * 2"
+            )
 
         # Create new files to be staged
         staged_files = []
@@ -1639,16 +1686,19 @@ class TestGitWorkflows:
         # Create untracked files
         for i in range(15):
             file_path = project_dir / f"untracked_{i:02d}.py"
-            file_path.write_text(f"# Untracked file {i}\nclass Untracked{i}:\n    def new_feature(self):\n        return 'feature_{i}'")
+            file_path.write_text(
+                f"# Untracked file {i}\nclass Untracked{i}:\n    def new_feature(self):\n        return 'feature_{i}'"
+            )
 
         # Verify we have the expected mix of file states
         status = get_full_status(project_dir)
-        assert len(status["staged"]) == 15      # staged_XX.py files
-        assert len(status["modified"]) == 10    # modified initial_XX.py files
-        assert len(status["untracked"]) == 15   # untracked_XX.py files
+        assert len(status["staged"]) == 15  # staged_XX.py files
+        assert len(status["modified"]) == 10  # modified initial_XX.py files
+        assert len(status["untracked"]) == 15  # untracked_XX.py files
 
         # Performance test: measure diff generation time
         import time
+
         start_time = time.time()
 
         diff_output = get_git_diff_for_commit(project_dir)
@@ -1657,7 +1707,9 @@ class TestGitWorkflows:
         execution_time = end_time - start_time
 
         # Performance requirement: should complete within 5 seconds
-        assert execution_time < 5.0, f"Diff generation took {execution_time:.2f} seconds, expected < 5.0"
+        assert (
+            execution_time < 5.0
+        ), f"Diff generation took {execution_time:.2f} seconds, expected < 5.0"
 
         # Verify diff output correctness
         assert diff_output is not None
@@ -1670,7 +1722,7 @@ class TestGitWorkflows:
         assert "staged_00.py" in diff_output
         assert "class Staged0" in diff_output
 
-        # Check some modified files  
+        # Check some modified files
         assert "initial_00.py" in diff_output
         assert "class Modified0" in diff_output
 
@@ -1679,20 +1731,26 @@ class TestGitWorkflows:
         assert "class Untracked0" in diff_output
 
         # Verify diff format is correct (unified format with no prefix)
-        lines = diff_output.split('\n')
-        
+        lines = diff_output.split("\n")
+
         # Should contain diff headers
-        diff_headers = [line for line in lines if line.startswith('diff --git')]
+        diff_headers = [line for line in lines if line.startswith("diff --git")]
         assert len(diff_headers) >= 30  # Should have diffs for most files
 
         # Should contain proper add/remove markers
-        add_lines = [line for line in lines if line.startswith('+') and not line.startswith('+++')]
+        add_lines = [
+            line
+            for line in lines
+            if line.startswith("+") and not line.startswith("+++")
+        ]
         assert len(add_lines) > 0  # Should have additions
 
         # Measure memory usage is reasonable (basic check)
         diff_size = len(diff_output)
         # With ~50 files, diff shouldn't be excessively large (< 1MB is reasonable)
-        assert diff_size < 1024 * 1024, f"Diff output size is {diff_size} bytes, might be too large"
+        assert (
+            diff_size < 1024 * 1024
+        ), f"Diff output size is {diff_size} bytes, might be too large"
 
         # Clean up: commit everything to return to clean state
         commit_result2 = commit_all_changes("Performance test completion", project_dir)

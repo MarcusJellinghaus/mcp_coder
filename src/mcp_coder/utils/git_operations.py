@@ -572,7 +572,7 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
         untracked_files = repo.untracked_files
         if not untracked_files:
             return ""
-        
+
         untracked_diffs = []
         for file_path in untracked_files:
             try:
@@ -581,9 +581,9 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
                 if full_path.exists() and full_path.is_file():
                     # Create a synthetic diff that looks like git's output
                     try:
-                        content = full_path.read_text(encoding='utf-8')
+                        content = full_path.read_text(encoding="utf-8")
                         lines = content.splitlines()
-                        
+
                         # Create git-style diff header
                         diff_lines = [
                             f"diff --git {file_path} {file_path}",
@@ -591,13 +591,13 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
                             "index 0000000.." + "0" * 7,  # Placeholder hash
                             "--- /dev/null",
                             f"+++ {file_path}",
-                            "@@ -0,0 +1," + str(len(lines)) + " @@"
+                            "@@ -0,0 +1," + str(len(lines)) + " @@",
                         ]
-                        
+
                         # Add file content with + prefix
                         for line in lines:
                             diff_lines.append("+" + line)
-                        
+
                         untracked_diffs.append("\n".join(diff_lines))
                     except UnicodeDecodeError:
                         # Handle binary files
@@ -605,16 +605,20 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
                             f"diff --git {file_path} {file_path}",
                             "new file mode 100644",
                             "index 0000000.." + "0" * 7,
-                            "Binary files /dev/null and " + file_path + " differ"
+                            "Binary files /dev/null and " + file_path + " differ",
                         ]
                         untracked_diffs.append("\n".join(diff_lines))
             except Exception as e:
                 # Skip individual files that can't be processed
-                logger.debug("Skipping untracked file that couldn't be processed: %s - %s", file_path, e)
+                logger.debug(
+                    "Skipping untracked file that couldn't be processed: %s - %s",
+                    file_path,
+                    e,
+                )
                 continue
-        
+
         return "\n".join(untracked_diffs)
-        
+
     except Exception as e:
         logger.warning("Error generating untracked file diff: %s", e)
         return ""
@@ -623,27 +627,27 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
 def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
     """
     Generate comprehensive git diff without modifying repository state.
-    
+
     Shows staged, unstaged, and untracked files in unified diff format
     suitable for LLM analysis and commit message generation.
-    
+
     Args:
         project_dir: Path to the project directory containing git repository
-        
+
     Returns:
-        str: Unified diff format with sections for staged changes, unstaged 
+        str: Unified diff format with sections for staged changes, unstaged
              changes, and untracked files. Each section uses format:
              === SECTION NAME ===
              [diff content]
-             
+
              Returns empty string if no changes detected.
         None: If error occurs (invalid repository, git command failure, etc.)
-        
+
     Example:
         >>> diff_output = get_git_diff_for_commit(Path("/path/to/repo"))
         >>> if diff_output is not None:
         ...     print("Changes detected" if diff_output else "No changes")
-        
+
     Note:
         - Uses read-only git operations, never modifies repository state
         - Binary files handled naturally by git (shows "Binary files differ")
@@ -651,14 +655,14 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
         - Empty repositories (no commits) supported
     """
     logger.debug("Generating git diff for: %s", project_dir)
-    
+
     if not is_git_repository(project_dir):
         logger.error("Not a git repository: %s", project_dir)
         return None
-    
+
     try:
         repo = Repo(project_dir, search_parent_directories=False)
-        
+
         # Simple check for empty repository (KISS approach)
         has_commits = True
         try:
@@ -666,27 +670,27 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
         except:
             has_commits = False
             logger.debug("Empty repository detected, showing untracked files only")
-        
+
         # Generate diff sections with individual error handling
         staged_diff = ""
         unstaged_diff = ""
-        
+
         if has_commits:
             try:
                 staged_diff = repo.git.diff("--cached", "--unified=5", "--no-prefix")
             except GitCommandError as e:
                 logger.warning("Failed to get staged diff: %s", e)
-            
+
             try:
                 unstaged_diff = repo.git.diff("--unified=5", "--no-prefix")
             except GitCommandError as e:
                 logger.warning("Failed to get unstaged diff: %s", e)
-        
+
         # Always try to get untracked files
         untracked_diff = _generate_untracked_diff(repo, project_dir)
-        
+
         return _format_diff_sections(staged_diff, unstaged_diff, untracked_diff)
-        
+
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error generating diff: %s", e)
         return None
@@ -695,17 +699,19 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
         return None
 
 
-def _format_diff_sections(staged_diff: str, unstaged_diff: str, untracked_diff: str) -> str:
+def _format_diff_sections(
+    staged_diff: str, unstaged_diff: str, untracked_diff: str
+) -> str:
     """Format diff sections with appropriate headers."""
     sections = []
-    
+
     if staged_diff.strip():
         sections.append(f"=== STAGED CHANGES ===\n{staged_diff}")
-    
+
     if unstaged_diff.strip():
         sections.append(f"=== UNSTAGED CHANGES ===\n{unstaged_diff}")
-    
+
     if untracked_diff.strip():
         sections.append(f"=== UNTRACKED FILES ===\n{untracked_diff}")
-    
+
     return "\n\n".join(sections)
