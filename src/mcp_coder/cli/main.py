@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from ..log_utils import setup_logging
-from .commands import execute_help
+from .commands import execute_help, execute_commit_auto
 
 # Initialize logging
 setup_logging("INFO")
@@ -44,9 +44,27 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     # Help command - Step 2
     help_parser = subparsers.add_parser('help', help='Show help information')
     
-    # Placeholder for future commands - will be populated in later steps
-    # commit auto command - Step 5  
-    # commit clipboard command - Step 6
+    # Commit commands - Step 5
+    commit_parser = subparsers.add_parser('commit', help='Git commit operations')
+    commit_subparsers = commit_parser.add_subparsers(
+        dest='commit_mode',
+        help='Available commit modes',
+        metavar='MODE'
+    )
+    
+    # commit auto command - Step 5
+    auto_parser = commit_subparsers.add_parser(
+        'auto', 
+        help='Auto-generate commit message using LLM'
+    )
+    auto_parser.add_argument(
+        '--preview', 
+        action='store_true', 
+        help='Show generated message and ask for confirmation'
+    )
+    
+    # commit clipboard command - Step 6 (placeholder)
+    # Will be implemented in next step
     
     return parser
 
@@ -86,6 +104,13 @@ def main() -> int:
         # Route to appropriate command handler
         if args.command == 'help':
             return execute_help(args)
+        elif args.command == 'commit' and hasattr(args, 'commit_mode'):
+            if args.commit_mode == 'auto':
+                return execute_commit_auto(args)
+            else:
+                logger.error(f"Commit mode '{args.commit_mode}' not yet implemented")
+                print(f"Error: Commit mode '{args.commit_mode}' is not yet implemented.")
+                return 1
         
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")

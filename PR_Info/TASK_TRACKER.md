@@ -58,7 +58,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [ ] **Step 5: Implement Commit Auto Command** - [step_5.md](./steps/step_5.md)
+- [x] **Step 5: Implement Commit Auto Command** - [step_5.md](./steps/step_5.md)
   - Create commit auto functionality with LLM integration
   - Stage changes, generate messages, create commits
   - Add preview mode with confirmation
