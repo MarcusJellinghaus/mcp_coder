@@ -84,7 +84,21 @@ Please review the project plan for a new feature in folder PR_Info\steps.
 Please revise the project plan with a balanced level of detail.
 Please let me know if any complexity could be reduced.
 Please let me know any questions / comments or suggestions you might have.
+
+Please consider the already discussed and decided decisions (if any) under decisions.
+We do not need to challenge them again unless absolutely necessary.
 ```
+
+**Issue Pyproject.toml requirements updates**:
+```
+In case of after updating the pyproject.toml requirements, 
+put something in the project plan to stop and tell me, 
+so that I can install the requiremetns. 
+This is important so that unit tests can work.
+```
+
+
+
 
 Wait for presentation of overall plan
 ```
@@ -98,6 +112,14 @@ Please offer, whenever possible, simple options like
 
 Wait for end of discussion
 ```
+
+---
+Please summarise changes you want to do to the project plan for confirmation 
+( one liner bullet points)
+---
+Please ask me whether I agree (Y/N)
+---
+After the agreement:
 Can you update the plan by updating the different files in folder `pr_info`
 (including creating the `steps/` subfolder for implementation details)
 Please do targeted changes.
