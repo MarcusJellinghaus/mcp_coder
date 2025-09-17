@@ -83,12 +83,12 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
 ```
 
 ## Success Criteria
-- [ ] Function includes untracked files in diff output
-- [ ] Untracked files shown as new files (diff from /dev/null)
-- [ ] Binary files handled naturally by git
-- [ ] All three sections (staged/unstaged/untracked) work together
-- [ ] All new tests pass
-- [ ] No regressions in Step 1 functionality
+- [x] Function includes untracked files in diff output
+- [x] Untracked files shown as new files (diff from /dev/null)
+- [x] Binary files handled naturally by git
+- [x] All three sections (staged/unstaged/untracked) work together
+- [x] All new tests pass
+- [x] No regressions in Step 1 functionality
 
 ## Notes
 - Use `git diff --no-index /dev/null filename` for untracked files

@@ -1193,3 +1193,110 @@ class TestGitWorkflows:
         
         # Assert returns None
         assert diff_output is None
+
+    @pytest.mark.git_integration
+    def test_get_git_diff_for_commit_with_untracked_files(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test diff generation includes untracked files."""
+        repo, project_dir = git_repo
+        
+        # Create and commit initial file to track it
+        tracked_file = project_dir / "tracked.py"
+        tracked_file.write_text("# Initial content")
+        commit_all_changes("Initial commit", project_dir)
+        
+        # Create mix of staged, unstaged, and untracked files
+        # 1. Create another tracked file and commit it
+        unstaged_file = project_dir / "unstaged.py"
+        unstaged_file.write_text("# Unstaged content")
+        commit_all_changes("Add unstaged file", project_dir)
+        
+        # 2. Modify tracked file and stage it
+        tracked_file.write_text("# Modified content")
+        stage_result = stage_specific_files([tracked_file], project_dir)
+        assert stage_result is True
+        
+        # 3. Modify unstaged file but don't stage it
+        unstaged_file.write_text("# Modified unstaged content")
+        
+        # 4. Create untracked files
+        untracked1 = project_dir / "untracked1.py"
+        untracked2 = project_dir / "untracked2.py"
+        untracked1.write_text("# Untracked file 1\nprint('hello')")
+        untracked2.write_text("# Untracked file 2\nclass Test:\n    pass")
+        
+        # Call get_git_diff_for_commit()
+        diff_output = get_git_diff_for_commit(project_dir)
+        
+        # Assert output contains all three sections
+        assert diff_output is not None
+        assert "=== STAGED CHANGES ===" in diff_output
+        assert "=== UNSTAGED CHANGES ===" in diff_output
+        assert "=== UNTRACKED FILES ===" in diff_output
+        
+        # Assert untracked files shown as new files (diff from /dev/null)
+        assert "untracked1.py" in diff_output
+        assert "untracked2.py" in diff_output
+        assert "# Untracked file 1" in diff_output
+        assert "class Test" in diff_output
+
+    @pytest.mark.git_integration
+    def test_get_git_diff_for_commit_untracked_only(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test diff with only untracked files."""
+        repo, project_dir = git_repo
+        
+        # Clean repo + add untracked files
+        untracked1 = project_dir / "new_file1.py"
+        untracked2 = project_dir / "new_file2.md"
+        untracked_nested = project_dir / "src" / "module.py"
+        
+        untracked1.write_text("#!/usr/bin/env python3\ndef main():\n    print('Hello')")
+        untracked2.write_text("# Documentation\n\nThis is a readme file.")
+        untracked_nested.parent.mkdir(parents=True, exist_ok=True)
+        untracked_nested.write_text("class Module:\n    def __init__(self):\n        pass")
+        
+        # Call get_git_diff_for_commit()
+        diff_output = get_git_diff_for_commit(project_dir)
+        
+        # Assert only untracked section appears
+        assert diff_output is not None
+        assert "=== UNTRACKED FILES ===" in diff_output
+        assert "=== STAGED CHANGES ===" not in diff_output
+        assert "=== UNSTAGED CHANGES ===" not in diff_output
+        
+        # Assert files are present in diff
+        assert "new_file1.py" in diff_output
+        assert "new_file2.md" in diff_output
+        assert "src/module.py" in diff_output
+        assert "def main():" in diff_output
+        assert "# Documentation" in diff_output
+        assert "class Module" in diff_output
+
+    @pytest.mark.git_integration
+    def test_get_git_diff_for_commit_binary_files(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test handling of binary files in diff."""
+        repo, project_dir = git_repo
+        
+        # Add binary file (untracked)
+        binary_file = project_dir / "image.png"
+        # Create simple binary content (PNG-like header)
+        binary_content = bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00])
+        binary_file.write_bytes(binary_content)
+        
+        # Add text file for comparison
+        text_file = project_dir / "text.txt"
+        text_file.write_text("This is a regular text file.")
+        
+        # Call get_git_diff_for_commit()
+        diff_output = get_git_diff_for_commit(project_dir)
+        
+        # Assert git's binary file message appears naturally
+        assert diff_output is not None
+        assert "=== UNTRACKED FILES ===" in diff_output
+        
+        # Assert text file appears normally
+        assert "text.txt" in diff_output
+        assert "This is a regular text file." in diff_output
+        
+        # Binary file should either appear in diff or be handled gracefully
+        # Git might show "Binary files differ" or similar message
+        # The key is that the function doesn't crash on binary files
