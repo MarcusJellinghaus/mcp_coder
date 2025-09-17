@@ -9,6 +9,7 @@ from mcp_coder.utils.git_operations import (
     commit_all_changes,
     commit_staged_files,
     get_full_status,
+    get_git_diff_for_commit,
     get_staged_changes,
     get_unstaged_changes,
     is_git_repository,
@@ -1126,3 +1127,69 @@ class TestGitWorkflows:
         ]
         for file_path_str in expected_files:
             assert (project_dir / file_path_str).exists()
+
+    @pytest.mark.git_integration
+    def test_get_git_diff_for_commit_basic_functionality(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test basic diff generation with staged and unstaged changes."""
+        repo, project_dir = git_repo
+        
+        # Create and commit initial files to track them
+        file1 = project_dir / "file1.py"
+        file2 = project_dir / "file2.py"
+        file3 = project_dir / "file3.py"
+        
+        file1.write_text("# File 1\nprint('original')")
+        file2.write_text("# File 2\nprint('original')")
+        file3.write_text("# File 3\nprint('original')")
+        
+        # Commit initial versions
+        commit_all_changes("Initial commit", project_dir)
+        
+        # Now modify files
+        file1.write_text("# File 1\nprint('hello')")
+        file2.write_text("# File 2\nprint('world')")
+        file3.write_text("# File 3\nprint('test')")
+        
+        # Stage some changes (file1 and file2)
+        stage_result = stage_specific_files([file1, file2], project_dir)
+        assert stage_result is True
+        
+        # file3 is now an unstaged change since it's tracked but not staged
+        
+        # Call get_git_diff_for_commit()
+        diff_output = get_git_diff_for_commit(project_dir)
+        
+        # Assert output contains staged and unstaged sections
+        assert diff_output is not None
+        assert "=== STAGED CHANGES ===" in diff_output
+        assert "=== UNSTAGED CHANGES ===" in diff_output
+        
+        # Assert correct diff format with --unified=5 --no-prefix
+        # Check for file paths and content
+        assert "file1.py" in diff_output
+        assert "file2.py" in diff_output
+        assert "file3.py" in diff_output
+        assert "print('hello')" in diff_output
+        assert "print('world')" in diff_output
+        assert "print('test')" in diff_output
+
+    @pytest.mark.git_integration  
+    def test_get_git_diff_for_commit_no_changes(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test function returns empty string when no changes exist."""
+        repo, project_dir = git_repo
+        
+        # Clean repository with no changes
+        # Call get_git_diff_for_commit()
+        diff_output = get_git_diff_for_commit(project_dir)
+        
+        # Assert returns empty string ""
+        assert diff_output == ""
+
+    @pytest.mark.git_integration
+    def test_get_git_diff_for_commit_invalid_repository(self, tmp_path: Path) -> None:
+        """Test function returns None for invalid git repository."""
+        # Call on non-git directory
+        diff_output = get_git_diff_for_commit(tmp_path)
+        
+        # Assert returns None
+        assert diff_output is None

@@ -21,4 +21,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ## Tasks
 
+- [x] [Step 1: Basic diff functionality](./steps/step_1.md) - Tests and implementation for staged/unstaged changes
+- [ ] [Step 2: Untracked files support](./steps/step_2.md) - Tests and implementation for untracked file diffs
+- [ ] [Step 3: Error handling and edge cases](./steps/step_3.md) - Tests and implementation for robust error handling
+- [ ] [Step 4: Integration and polish](./steps/step_4.md) - Final testing and documentation
 

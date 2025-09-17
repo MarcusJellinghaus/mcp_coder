@@ -564,3 +564,57 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
         error_msg = f"Unexpected error during commit all changes: {e}"
         logger.error(error_msg)
         return {"success": False, "commit_hash": None, "error": error_msg}
+
+
+def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
+    """
+    Generate comprehensive git diff without modifying repository state.
+    
+    Shows staged, unstaged, and untracked files in unified diff format.
+    
+    Args:
+        project_dir: Path to the project directory containing git repository
+        
+    Returns:
+        str: Unified diff format showing all changes. Returns empty string 
+             if no changes detected.
+        None: If error occurs (invalid repository, git command failure, etc.)
+    """
+    logger.debug("Generating git diff for: %s", project_dir)
+    
+    if not is_git_repository(project_dir):
+        logger.error("Not a git repository: %s", project_dir)
+        return None
+    
+    try:
+        repo = Repo(project_dir, search_parent_directories=False)
+        
+        # Generate diff sections
+        staged_diff = repo.git.diff("--cached", "--unified=5", "--no-prefix")
+        unstaged_diff = repo.git.diff("--unified=5", "--no-prefix")
+        
+        # Use helper function to format output
+        return _format_diff_sections(staged_diff, unstaged_diff, "")
+        
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error generating diff: %s", e)
+        return None
+    except Exception as e:
+        logger.error("Unexpected error generating diff: %s", e)
+        return None
+
+
+def _format_diff_sections(staged_diff: str, unstaged_diff: str, untracked_diff: str) -> str:
+    """Format diff sections with appropriate headers."""
+    sections = []
+    
+    if staged_diff.strip():
+        sections.append(f"=== STAGED CHANGES ===\n{staged_diff}")
+    
+    if unstaged_diff.strip():
+        sections.append(f"=== UNSTAGED CHANGES ===\n{unstaged_diff}")
+    
+    if untracked_diff.strip():
+        sections.append(f"=== UNTRACKED FILES ===\n{untracked_diff}")
+    
+    return "\n\n".join(sections)
