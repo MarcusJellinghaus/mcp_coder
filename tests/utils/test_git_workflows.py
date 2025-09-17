@@ -1433,3 +1433,271 @@ class TestGitWorkflows:
         # Content should appear in diff
         assert "Line 1:" in diff_output
         assert "def function_1():" in diff_output
+
+    @pytest.mark.git_integration
+    def test_get_git_diff_integration_with_existing_functions(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test integration with existing git_operations functions."""
+        repo, project_dir = git_repo_with_files
+
+        # Use get_full_status to check initial state
+        initial_status = get_full_status(project_dir)
+        assert initial_status == {"staged": [], "modified": [], "untracked": []}
+
+        # Test 1: Modify files and check diff at various stages
+        file1 = project_dir / "README.md"
+        file2 = project_dir / "main.py"
+        new_file = project_dir / "new_feature.py"
+
+        file1.write_text("# Updated README\n\nThis has been modified.")
+        file2.write_text("def main():\n    print('Updated main function')")
+        new_file.write_text("class NewFeature:\n    def __init__(self):\n        pass")
+
+        # Stage 1: Check diff with only unstaged and untracked changes
+        diff_output1 = get_git_diff_for_commit(project_dir)
+        assert diff_output1 is not None
+        assert "=== UNSTAGED CHANGES ===" in diff_output1
+        assert "=== UNTRACKED FILES ===" in diff_output1
+        assert "=== STAGED CHANGES ===" not in diff_output1
+        assert "Updated README" in diff_output1
+        assert "NewFeature" in diff_output1
+
+        # Use stage_specific_files to stage only file1
+        stage_result = stage_specific_files([file1], project_dir)
+        assert stage_result is True
+
+        # Stage 2: Check diff with mixed staged/unstaged/untracked
+        diff_output2 = get_git_diff_for_commit(project_dir)
+        assert diff_output2 is not None
+        assert "=== STAGED CHANGES ===" in diff_output2
+        assert "=== UNSTAGED CHANGES ===" in diff_output2
+        assert "=== UNTRACKED FILES ===" in diff_output2
+
+        # Verify status consistency with diff output
+        status = get_full_status(project_dir)
+        assert len(status["staged"]) == 1
+        assert "README.md" in status["staged"]
+        assert len(status["modified"]) == 1
+        assert "main.py" in status["modified"]
+        assert len(status["untracked"]) == 1
+        assert "new_feature.py" in status["untracked"]
+
+        # Use stage_all_changes to stage everything
+        stage_all_result = stage_all_changes(project_dir)
+        assert stage_all_result is True
+
+        # Stage 3: Check diff with only staged changes
+        diff_output3 = get_git_diff_for_commit(project_dir)
+        assert diff_output3 is not None
+        assert "=== STAGED CHANGES ===" in diff_output3
+        assert "=== UNSTAGED CHANGES ===" not in diff_output3
+        assert "=== UNTRACKED FILES ===" not in diff_output3
+
+        # Use commit_staged_files to commit everything
+        commit_result = commit_staged_files("Integration test commit", project_dir)
+        assert commit_result["success"] is True
+
+        # Stage 4: Check diff with clean state
+        diff_output4 = get_git_diff_for_commit(project_dir)
+        assert diff_output4 == ""
+
+        # Verify final status is clean
+        final_status = get_full_status(project_dir)
+        assert final_status == {"staged": [], "modified": [], "untracked": []}
+
+    @pytest.mark.git_integration
+    def test_get_git_diff_complete_workflow(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test complete workflow from empty repo to multiple commits."""
+        repo, project_dir = git_repo
+
+        # Phase 1: Empty repo should show no changes
+        diff_empty = get_git_diff_for_commit(project_dir)
+        assert diff_empty == ""
+
+        # Phase 2: Add initial files (untracked only)
+        files_phase1 = {
+            "app.py": "#!/usr/bin/env python3\n# Main application",
+            "config.json": '{"debug": true, "port": 8080}',
+            "README.md": "# My Project\n\nInitial project setup.",
+        }
+
+        for path_str, content in files_phase1.items():
+            (project_dir / path_str).write_text(content)
+
+        # Check diff shows untracked files
+        diff_phase1 = get_git_diff_for_commit(project_dir)
+        assert diff_phase1 is not None
+        assert "=== UNTRACKED FILES ===" in diff_phase1
+        assert "=== STAGED CHANGES ===" not in diff_phase1
+        assert "=== UNSTAGED CHANGES ===" not in diff_phase1
+        assert "app.py" in diff_phase1
+        assert "config.json" in diff_phase1
+        assert "README.md" in diff_phase1
+        assert "Main application" in diff_phase1
+
+        # Commit first phase
+        commit_result1 = commit_all_changes("Initial project setup", project_dir)
+        assert commit_result1["success"] is True
+
+        # Verify clean state after commit
+        diff_clean1 = get_git_diff_for_commit(project_dir)
+        assert diff_clean1 == ""
+
+        # Phase 3: Add more files and modify existing ones
+        # Add new files
+        (project_dir / "utils.py").write_text("def helper():\n    return 'utility'")
+        (project_dir / "tests" / "test_app.py").parent.mkdir(exist_ok=True)
+        (project_dir / "tests" / "test_app.py").write_text("def test_main():\n    assert True")
+
+        # Modify existing files
+        (project_dir / "app.py").write_text("#!/usr/bin/env python3\n# Main application\ndef main():\n    print('Hello World')")
+        (project_dir / "README.md").write_text("# My Project\n\nUpdated project with new features.")
+
+        # Check mixed state diff
+        diff_phase2 = get_git_diff_for_commit(project_dir)
+        assert diff_phase2 is not None
+        assert "=== UNSTAGED CHANGES ===" in diff_phase2  # Modified files
+        assert "=== UNTRACKED FILES ===" in diff_phase2   # New files
+        assert "=== STAGED CHANGES ===" not in diff_phase2
+
+        # Stage only modifications, leave new files untracked
+        modified_files = [project_dir / "app.py", project_dir / "README.md"]
+        stage_result = stage_specific_files(modified_files, project_dir)
+        assert stage_result is True
+
+        # Check diff with staged modifications and untracked files
+        diff_partial_stage = get_git_diff_for_commit(project_dir)
+        assert diff_partial_stage is not None
+        assert "=== STAGED CHANGES ===" in diff_partial_stage
+        assert "=== UNTRACKED FILES ===" in diff_partial_stage
+        assert "=== UNSTAGED CHANGES ===" not in diff_partial_stage
+
+        # Commit staged changes
+        commit_result2 = commit_staged_files("Update main app and documentation", project_dir)
+        assert commit_result2["success"] is True
+
+        # Check remaining untracked files
+        diff_remaining = get_git_diff_for_commit(project_dir)
+        assert diff_remaining is not None
+        assert "=== UNTRACKED FILES ===" in diff_remaining
+        assert "=== STAGED CHANGES ===" not in diff_remaining
+        assert "=== UNSTAGED CHANGES ===" not in diff_remaining
+        assert "utils.py" in diff_remaining
+        assert "tests/test_app.py" in diff_remaining
+
+        # Commit remaining files
+        commit_result3 = commit_all_changes("Add utilities and tests", project_dir)
+        assert commit_result3["success"] is True
+
+        # Final verification: clean state
+        diff_final = get_git_diff_for_commit(project_dir)
+        assert diff_final == ""
+
+        # Verify commit history
+        commits = list(repo.iter_commits())
+        assert len(commits) == 3
+        commit_messages = [commit.message for commit in commits]
+        assert "Initial project setup" in commit_messages
+        assert "Update main app and documentation" in commit_messages
+        assert "Add utilities and tests" in commit_messages
+
+    @pytest.mark.git_integration
+    def test_get_git_diff_performance_basic(self, git_repo: tuple[Repo, Path]) -> None:
+        """Basic performance test with reasonable file count."""
+        repo, project_dir = git_repo
+
+        # Create ~50 files with various states to test performance
+        files_count = 50
+
+        # Create initial commit with some files
+        initial_files = []
+        for i in range(20):
+            file_path = project_dir / f"initial_{i:02d}.py"
+            file_path.write_text(f"# Initial file {i}\nclass Initial{i}:\n    def method(self):\n        return {i}")
+            initial_files.append(file_path)
+
+        # Commit initial files
+        commit_result = commit_all_changes("Initial files for performance test", project_dir)
+        assert commit_result["success"] is True
+
+        # Now create mix of staged, unstaged, and untracked files
+        # Modify some existing files (will be unstaged)
+        for i in range(0, 10):
+            file_path = project_dir / f"initial_{i:02d}.py"
+            file_path.write_text(f"# Modified file {i}\nclass Modified{i}:\n    def updated_method(self):\n        return {i} * 2")
+
+        # Create new files to be staged
+        staged_files = []
+        for i in range(15):
+            file_path = project_dir / f"staged_{i:02d}.py"
+            file_path.write_text(f"# Staged file {i}\nclass Staged{i}:\n    pass")
+            staged_files.append(file_path)
+
+        # Stage the new files
+        stage_result = stage_specific_files(staged_files, project_dir)
+        assert stage_result is True
+
+        # Create untracked files
+        for i in range(15):
+            file_path = project_dir / f"untracked_{i:02d}.py"
+            file_path.write_text(f"# Untracked file {i}\nclass Untracked{i}:\n    def new_feature(self):\n        return 'feature_{i}'")
+
+        # Verify we have the expected mix of file states
+        status = get_full_status(project_dir)
+        assert len(status["staged"]) == 15      # staged_XX.py files
+        assert len(status["modified"]) == 10    # modified initial_XX.py files
+        assert len(status["untracked"]) == 15   # untracked_XX.py files
+
+        # Performance test: measure diff generation time
+        import time
+        start_time = time.time()
+
+        diff_output = get_git_diff_for_commit(project_dir)
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+
+        # Performance requirement: should complete within 5 seconds
+        assert execution_time < 5.0, f"Diff generation took {execution_time:.2f} seconds, expected < 5.0"
+
+        # Verify diff output correctness
+        assert diff_output is not None
+        assert "=== STAGED CHANGES ===" in diff_output
+        assert "=== UNSTAGED CHANGES ===" in diff_output
+        assert "=== UNTRACKED FILES ===" in diff_output
+
+        # Verify all file types appear in diff
+        # Check some staged files
+        assert "staged_00.py" in diff_output
+        assert "class Staged0" in diff_output
+
+        # Check some modified files  
+        assert "initial_00.py" in diff_output
+        assert "class Modified0" in diff_output
+
+        # Check some untracked files
+        assert "untracked_00.py" in diff_output
+        assert "class Untracked0" in diff_output
+
+        # Verify diff format is correct (unified format with no prefix)
+        lines = diff_output.split('\n')
+        
+        # Should contain diff headers
+        diff_headers = [line for line in lines if line.startswith('diff --git')]
+        assert len(diff_headers) >= 30  # Should have diffs for most files
+
+        # Should contain proper add/remove markers
+        add_lines = [line for line in lines if line.startswith('+') and not line.startswith('+++')]
+        assert len(add_lines) > 0  # Should have additions
+
+        # Measure memory usage is reasonable (basic check)
+        diff_size = len(diff_output)
+        # With ~50 files, diff shouldn't be excessively large (< 1MB is reasonable)
+        assert diff_size < 1024 * 1024, f"Diff output size is {diff_size} bytes, might be too large"
+
+        # Clean up: commit everything to return to clean state
+        commit_result2 = commit_all_changes("Performance test completion", project_dir)
+        assert commit_result2["success"] is True
+
+        # Verify clean state
+        final_diff = get_git_diff_for_commit(project_dir)
+        assert final_diff == ""

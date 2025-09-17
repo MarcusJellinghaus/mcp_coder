@@ -589,7 +589,7 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
                             f"diff --git {file_path} {file_path}",
                             "new file mode 100644",
                             "index 0000000.." + "0" * 7,  # Placeholder hash
-                            f"--- /dev/null",
+                            "--- /dev/null",
                             f"+++ {file_path}",
                             "@@ -0,0 +1," + str(len(lines)) + " @@"
                         ]
@@ -624,15 +624,31 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
     """
     Generate comprehensive git diff without modifying repository state.
     
-    Shows staged, unstaged, and untracked files in unified diff format.
+    Shows staged, unstaged, and untracked files in unified diff format
+    suitable for LLM analysis and commit message generation.
     
     Args:
         project_dir: Path to the project directory containing git repository
         
     Returns:
-        str: Unified diff format showing all changes. Returns empty string 
-             if no changes detected.
+        str: Unified diff format with sections for staged changes, unstaged 
+             changes, and untracked files. Each section uses format:
+             === SECTION NAME ===
+             [diff content]
+             
+             Returns empty string if no changes detected.
         None: If error occurs (invalid repository, git command failure, etc.)
+        
+    Example:
+        >>> diff_output = get_git_diff_for_commit(Path("/path/to/repo"))
+        >>> if diff_output is not None:
+        ...     print("Changes detected" if diff_output else "No changes")
+        
+    Note:
+        - Uses read-only git operations, never modifies repository state
+        - Binary files handled naturally by git (shows "Binary files differ")
+        - Continues processing even if individual git operations fail
+        - Empty repositories (no commits) supported
     """
     logger.debug("Generating git diff for: %s", project_dir)
     
