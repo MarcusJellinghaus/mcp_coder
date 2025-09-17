@@ -25,6 +25,7 @@ from .llm_providers.claude.claude_executable_finder import (
     find_claude_executable,
     verify_claude_installation,
 )
+from .log_utils import setup_logging
 from .prompt_manager import (
     get_prompt,
     validate_prompt_directory,
@@ -43,7 +44,6 @@ from .utils.subprocess_runner import (
     execute_command,
     execute_subprocess,
 )
-from .log_utils import setup_logging
 
 __version__ = "0.1.0"
 
