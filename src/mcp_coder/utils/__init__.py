@@ -24,6 +24,11 @@ from .subprocess_runner import (
     execute_command,
     execute_subprocess,
 )
+from .clipboard import (
+    get_clipboard_text,
+    parse_commit_message,
+    validate_commit_message,
+)
 
 __all__ = [
     # Git operations
@@ -43,4 +48,8 @@ __all__ = [
     "CommandResult",
     "execute_command",
     "execute_subprocess",
+    # Clipboard operations
+    "get_clipboard_text",
+    "parse_commit_message",
+    "validate_commit_message",
 ]
