@@ -14,6 +14,11 @@ from ...utils.git_operations import (
     is_git_repository,
     stage_all_changes,
 )
+from ...utils.clipboard import (
+    get_clipboard_text,
+    validate_commit_message,
+    parse_commit_message,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -168,3 +173,73 @@ def validate_git_repository(project_dir: Path) -> Tuple[bool, Optional[str]]:
     except Exception as e:
         logger.error("Error validating git repository: %s", e)
         return False, f"Git validation error: {str(e)}"
+
+
+def execute_commit_clipboard(args: argparse.Namespace) -> int:
+    """Execute commit clipboard command. Returns exit code."""
+    logger.info("Starting commit clipboard")
+
+    project_dir = Path.cwd()
+
+    # 1. Validate git repository
+    success, error = validate_git_repository(project_dir)
+    if not success:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
+
+    # 2. Get and validate commit message from clipboard
+    success, commit_message, error = get_commit_message_from_clipboard()
+    if not success:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
+
+    # 3. Stage all changes
+    if not stage_all_changes(project_dir):
+        print("Error: Failed to stage changes", file=sys.stderr)
+        return 2
+
+    # 4. Create commit
+    commit_result = commit_staged_files(commit_message, project_dir)
+    if not commit_result["success"]:
+        print(f"Error: {commit_result['error']}", file=sys.stderr)
+        return 2
+
+    # Parse commit message to get summary for user feedback
+    summary, _ = parse_commit_message(commit_message)
+    print(f"✅ Successfully committed with message: {summary}")
+    if commit_result["commit_hash"]:
+        print(f"📝 Commit hash: {commit_result['commit_hash']}")
+    
+    return 0
+
+
+def get_commit_message_from_clipboard() -> Tuple[bool, str, Optional[str]]:
+    """Get and validate commit message from clipboard.
+    
+    Returns:
+        Tuple containing:
+        - bool: True if successful, False otherwise
+        - str: The formatted commit message (empty string on failure)
+        - Optional[str]: Error message if failed, None if successful
+    """
+    # Get text from clipboard
+    success, clipboard_text, error = get_clipboard_text()
+    if not success:
+        return False, "", error
+
+    # Validate commit message format
+    is_valid, validation_error = validate_commit_message(clipboard_text)
+    if not is_valid:
+        return False, "", f"Invalid commit message format - {validation_error}"
+
+    # Parse message into components (this also formats it properly)
+    summary, body = parse_commit_message(clipboard_text)
+    
+    # Format the final commit message
+    if body:
+        formatted_message = f"{summary}\n\n{body}"
+    else:
+        formatted_message = summary
+    
+    logger.info("Successfully validated clipboard commit message: %s", summary)
+    return True, formatted_message, None

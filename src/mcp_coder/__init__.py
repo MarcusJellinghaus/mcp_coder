@@ -19,6 +19,8 @@ Example:
 """
 
 from .cli.main import main as cli_main
+from .cli.commands.commit import execute_commit_auto, execute_commit_clipboard
+from .cli.commands.help import execute_help
 from .llm_interface import ask_llm
 from .llm_providers.claude.claude_client import ask_claude
 from .llm_providers.claude.claude_code_interface import ask_claude_code
@@ -51,6 +53,9 @@ __version__ = "0.1.0"
 __all__ = [
     # CLI interface
     "cli_main",
+    "execute_help",
+    "execute_commit_auto", 
+    "execute_commit_clipboard",
     # Core LLM interfaces
     "ask_claude",
     "ask_claude_code",

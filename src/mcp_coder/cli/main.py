@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from ..log_utils import setup_logging
-from .commands import execute_commit_auto, execute_help
+from .commands import execute_commit_auto, execute_commit_clipboard, execute_help
 
 # Initialize logging
 setup_logging("INFO")
@@ -61,8 +61,10 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="Show generated message and ask for confirmation",
     )
 
-    # commit clipboard command - Step 6 (placeholder)
-    # Will be implemented in next step
+    # commit clipboard command - Step 6
+    clipboard_parser = commit_subparsers.add_parser(
+        "clipboard", help="Use commit message from clipboard"
+    )
 
     return parser
 
@@ -105,6 +107,8 @@ def main() -> int:
         elif args.command == "commit" and hasattr(args, "commit_mode"):
             if args.commit_mode == "auto":
                 return execute_commit_auto(args)
+            elif args.commit_mode == "clipboard":
+                return execute_commit_clipboard(args)
             else:
                 logger.error(f"Commit mode '{args.commit_mode}' not yet implemented")
                 print(
