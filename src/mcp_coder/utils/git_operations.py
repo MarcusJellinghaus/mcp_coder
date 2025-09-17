@@ -10,6 +10,27 @@ from git.exc import GitCommandError, InvalidGitRepositoryError
 # Use same logging pattern as existing modules (see file_operations.py)
 logger = logging.getLogger(__name__)
 
+# Constants for git operations
+PLACEHOLDER_HASH = "0" * 7
+GIT_SHORT_HASH_LENGTH = 7
+
+
+def _normalize_git_path(path: Path, base_dir: Path) -> str:
+    """Convert a path to git-compatible format.
+    
+    Args:
+        path: Path to normalize
+        base_dir: Base directory to make path relative to
+        
+    Returns:
+        Git-compatible path string using forward slashes
+        
+    Raises:
+        ValueError: If path is not relative to base_dir
+    """
+    relative_path = path.relative_to(base_dir)
+    return str(relative_path).replace("\\", "/")
+
 
 # Type alias for commit result structure
 class CommitResult(TypedDict):
@@ -61,18 +82,15 @@ def is_file_tracked(file_path: Path, project_dir: Path) -> bool:
     try:
         repo = Repo(project_dir, search_parent_directories=False)
 
-        # Get relative path from project directory
+        # Get git-compatible path
         try:
-            relative_path = file_path.relative_to(project_dir)
+            git_path = _normalize_git_path(file_path, project_dir)
         except ValueError:
             # File is outside project directory
             logger.debug(
                 "File %s is outside project directory %s", file_path, project_dir
             )
             return False
-
-        # Convert to posix path for git (even on Windows)
-        git_path = str(relative_path).replace("\\", "/")
 
         # Use git ls-files to check if file is tracked
         # This returns all files that git knows about (staged or committed)
@@ -114,17 +132,13 @@ def git_move(source_path: Path, dest_path: Path, project_dir: Path) -> bool:
     try:
         repo = Repo(project_dir, search_parent_directories=False)
 
-        # Get relative paths from project directory
+        # Get git-compatible paths
         try:
-            source_relative = source_path.relative_to(project_dir)
-            dest_relative = dest_path.relative_to(project_dir)
+            source_git = _normalize_git_path(source_path, project_dir)
+            dest_git = _normalize_git_path(dest_path, project_dir)
         except ValueError as e:
             logger.error("Paths must be within project directory: %s", e)
             return False
-
-        # Convert to posix paths for git
-        source_git = str(source_relative).replace("\\", "/")
-        dest_git = str(dest_relative).replace("\\", "/")
 
         # Execute git mv command
         logger.info("Executing git mv from %s to %s", source_git, dest_git)
@@ -336,18 +350,15 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
                 logger.error("File does not exist: %s", file_path)
                 return False
 
-            # Get relative path from project directory
+            # Get git-compatible path
             try:
-                relative_path = file_path.relative_to(project_dir)
+                git_path = _normalize_git_path(file_path, project_dir)
+                relative_paths.append(git_path)
             except ValueError:
                 logger.error(
                     "File %s is outside project directory %s", file_path, project_dir
                 )
                 return False
-
-            # Convert to posix path for git (even on Windows)
-            git_path = str(relative_path).replace("\\", "/")
-            relative_paths.append(git_path)
 
         # Stage all files at once
         logger.debug("Staging files: %s", relative_paths)
@@ -476,8 +487,8 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
         repo = Repo(project_dir, search_parent_directories=False)
         commit = repo.index.commit(message.strip())
 
-        # Get short commit hash (first 7 characters)
-        commit_hash = commit.hexsha[:7]
+        # Get short commit hash
+        commit_hash = commit.hexsha[:GIT_SHORT_HASH_LENGTH]
 
         logger.info(
             "Successfully created commit %s with message: %s",
@@ -588,7 +599,7 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
                         diff_lines = [
                             f"diff --git {file_path} {file_path}",
                             "new file mode 100644",
-                            "index 0000000.." + "0" * 7,  # Placeholder hash
+                            f"index 0000000..{PLACEHOLDER_HASH}",
                             "--- /dev/null",
                             f"+++ {file_path}",
                             "@@ -0,0 +1," + str(len(lines)) + " @@",
@@ -604,7 +615,7 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
                         diff_lines = [
                             f"diff --git {file_path} {file_path}",
                             "new file mode 100644",
-                            "index 0000000.." + "0" * 7,
+                            f"index 0000000..{PLACEHOLDER_HASH}",
                             "Binary files /dev/null and " + file_path + " differ",
                         ]
                         untracked_diffs.append("\n".join(diff_lines))
@@ -667,7 +678,7 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
         has_commits = True
         try:
             list(repo.iter_commits(max_count=1))
-        except:
+        except (GitCommandError, ValueError):
             has_commits = False
             logger.debug("Empty repository detected, showing untracked files only")
 
