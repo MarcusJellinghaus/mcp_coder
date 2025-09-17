@@ -32,10 +32,7 @@ src/mcp_coder/cli/main.py (updated)
 ### `src/mcp_coder/cli/commands/commit.py`
 ```python
 def execute_commit_auto(args: argparse.Namespace) -> int:
-    """Execute commit auto command. Returns exit code."""
-
-def execute_commit_auto_preview(args: argparse.Namespace) -> int:
-    """Execute commit auto with preview mode. Returns exit code."""
+    """Execute commit auto command with optional preview. Returns exit code."""
 
 def generate_commit_message_with_llm(project_dir: Path) -> tuple[bool, str, Optional[str]]:
     """Generate commit message using LLM. Returns (success, message, error)."""
@@ -45,9 +42,6 @@ def parse_llm_commit_response(response: str) -> tuple[str, Optional[str]]:
 
 def validate_git_repository(project_dir: Path) -> tuple[bool, Optional[str]]:
     """Validate current directory is git repo with changes."""
-
-def confirm_commit(message: str) -> bool:
-    """Show commit message and ask for user confirmation."""
 ```
 
 ### `src/mcp_coder/cli/commands/__init__.py` (updated)
@@ -71,8 +65,6 @@ auto_parser.add_argument('--preview', action='store_true', help='Show generated 
 
 # Command routing
 if args.command == 'commit' and args.commit_mode == 'auto':
-    if args.preview:
-        return execute_commit_auto_preview(args)
     return execute_commit_auto(args)
 ```
 
@@ -104,20 +96,10 @@ logger = logging.getLogger(__name__)
 2. Stage all changes using stage_all_changes()
 3. Generate commit message using LLM
 4. Parse and validate LLM response
-5. Commit changes using commit_staged_files()
-6. Return appropriate exit code
-```
-
-### execute_commit_auto_preview()
-```
-1. Validate current directory is git repository
-2. Stage all changes using stage_all_changes()
-3. Generate commit message using LLM
-4. Parse and validate LLM response
-5. Show commit message to user and ask for confirmation
-6. If confirmed: commit changes using commit_staged_files()
-7. If not confirmed: exit with code 0 (user choice)
-8. Return appropriate exit code
+5. If preview mode: show commit message and ask for confirmation
+   - If user cancels: exit with code 0 (user choice)
+6. Commit changes using commit_staged_files()
+7. Return appropriate exit code
 ```
 
 ### generate_commit_message_with_llm()
@@ -154,6 +136,12 @@ logger = logging.getLogger(__name__)
 ```python
 def test_execute_commit_auto_success(mock_git_repo, mock_llm):
     """Test successful commit auto execution."""
+
+def test_execute_commit_auto_with_preview_confirmed(mock_git_repo, mock_llm, mock_input):
+    """Test commit auto with preview mode - user confirms."""
+
+def test_execute_commit_auto_with_preview_cancelled(mock_git_repo, mock_llm, mock_input):
+    """Test commit auto with preview mode - user cancels."""
 
 def test_execute_commit_auto_not_git_repo():
     """Test commit auto in non-git directory."""
@@ -225,14 +213,55 @@ response = ask_llm(full_prompt, provider="claude", method="api")
 # Validate message format before committing
 ```
 
+## Preview Mode Implementation
+
+### Streamlined Inline Confirmation
+```python
+def execute_commit_auto(args: argparse.Namespace) -> int:
+    """Execute commit auto command with optional preview."""
+    logger.info("Starting commit auto", preview=args.preview)
+    
+    # 1. Validate git repository
+    if not validate_git_repository():
+        print("Error: Not a git repository", file=sys.stderr)
+        return 1
+    
+    # 2. Stage changes and generate commit message
+    success, commit_message, error = generate_commit_message_with_llm()
+    if not success:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
+        
+    # 3. Preview mode - simple inline confirmation
+    if args.preview:
+        print(f"\nGenerated commit message:")
+        print(f"{'='*50}")
+        print(commit_message)
+        print(f"{'='*50}")
+        
+        if input("\nProceed with commit? (y/N): ").lower() != 'y':
+            print("Commit cancelled.")
+            return 0
+    
+    # 4. Create commit
+    commit_result = commit_staged_files(commit_message)
+    if not commit_result["success"]:
+        print(f"Error: {commit_result['error']}", file=sys.stderr)
+        return 2
+        
+    print(f"✅ Commit created: {commit_message.split()[0]}...")
+    return 0
+```
+
 ## Acceptance Criteria
 1. ✅ Commit auto command implemented and integrated
 2. ✅ Uses existing git operations for staging and committing
 3. ✅ LLM integration using ask_llm with API method default
-4. ✅ Preview mode with --preview flag implemented
+4. ✅ Preview mode with --preview flag implemented using inline confirmation
 5. ✅ Comprehensive error handling for all failure modes
 6. ✅ `mcp-coder commit auto` works in git repositories
 7. ✅ `mcp-coder commit auto --preview` shows message and asks confirmation
-8. ✅ Appropriate exit codes for different scenarios
-9. ✅ All tests pass with mocked dependencies
-10. ✅ Proper structured logging and user feedback
+8. ✅ Single function handles both auto and preview modes
+9. ✅ Appropriate exit codes for different scenarios
+10. ✅ All tests pass with mocked dependencies
+11. ✅ Proper structured logging and user feedback

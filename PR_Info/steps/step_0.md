@@ -160,6 +160,22 @@ def test_log_levels():
 6. ✅ No breaking changes to existing package functionality
 7. ✅ Professional-grade logging foundation established
 
+## IMPORTANT: Installation Checkpoint
+🛑 **STOP HERE AFTER COMPLETING STEP 0** 🛑
+
+After updating pyproject.toml with new dependencies, you MUST install the requirements before proceeding:
+
+```bash
+pip install -e .
+```
+
+This ensures that:
+- New logging dependencies are available
+- Unit tests can run properly
+- Subsequent development steps work correctly
+
+**Only proceed to Step 1 after confirming installation is successful.**
+
 ## Next Step Integration
 Step 1 (CLI Foundation) will use this logging infrastructure:
 ```python

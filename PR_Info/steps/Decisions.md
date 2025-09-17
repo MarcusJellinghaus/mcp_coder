@@ -135,5 +135,42 @@ September 17, 2025
 - Project Owner
 - Claude (AI Assistant)
 
+## Updated Decisions - September 17, 2025 (Second Review)
+
+### 11. Preview Mode Implementation Simplification
+**Decision**: Streamline preview mode implementation using inline confirmation
+- **Option Chosen**: Use single function with inline `input()` confirmation instead of separate preview function
+- **Impact**: 
+  - Step 5: Combine `execute_commit_auto()` and `execute_commit_auto_preview()` into single function
+  - Simpler command routing in main.py
+  - Reduced test complexity
+  - Same functionality with less code
+- **Rationale**: KISS principle - simple yes/no confirmation is sufficient, follows standard CLI patterns
+
+### Preview Mode Technical Implementation
+```python
+# Single function handles both modes
+def execute_commit_auto(args: argparse.Namespace) -> int:
+    # ... generate commit message ...
+    
+    if args.preview:
+        print(f"\nGenerated commit message:")
+        print(f"{'='*50}")
+        print(commit_message)
+        print(f"{'='*50}")
+        
+        if input("\nProceed with commit? (y/N): ").lower() != 'y':
+            print("Commit cancelled.")
+            return 0
+    
+    # ... proceed with commit ...
+```
+
+### Installation Checkpoint Added
+**Decision**: Add installation checkpoint after pyproject.toml updates
+- **Impact**: Step 0 will include note to install requirements before proceeding to Step 1
+- **Rationale**: Ensure unit tests can run properly with new dependencies
+
 ## Status
 ✅ All decisions finalized and ready for implementation
+✅ Preview mode simplification approved and documented
