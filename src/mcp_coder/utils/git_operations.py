@@ -17,14 +17,14 @@ GIT_SHORT_HASH_LENGTH = 7
 
 def _normalize_git_path(path: Path, base_dir: Path) -> str:
     """Convert a path to git-compatible format.
-    
+
     Args:
         path: Path to normalize
         base_dir: Base directory to make path relative to
-        
+
     Returns:
         Git-compatible path string using forward slashes
-        
+
     Raises:
         ValueError: If path is not relative to base_dir
     """
