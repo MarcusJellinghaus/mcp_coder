@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from ..log_utils import setup_logging
+from .commands import execute_help
 
 # Initialize logging
 setup_logging("INFO")
@@ -40,8 +41,10 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         metavar="COMMAND",
     )
     
+    # Help command - Step 2
+    help_parser = subparsers.add_parser('help', help='Show help information')
+    
     # Placeholder for future commands - will be populated in later steps
-    # help command - Step 2
     # commit auto command - Step 5  
     # commit clipboard command - Step 6
     
@@ -81,7 +84,10 @@ def main() -> int:
             return handle_no_command(args)
         
         # Route to appropriate command handler
-        # This will be implemented in later steps
+        if args.command == 'help':
+            return execute_help(args)
+        
+        # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")
         print(f"Error: Command '{args.command}' is not yet implemented.")
         print("Available commands will be added in upcoming implementation steps.")

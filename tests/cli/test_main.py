@@ -81,6 +81,20 @@ class TestMain:
         assert result == 1
         mock_handle_no_command.assert_called_once()
 
+    @patch("mcp_coder.cli.main.execute_help")
+    @patch("mcp_coder.cli.main.create_parser")
+    def test_main_help_command(self, mock_create_parser: Mock, mock_execute_help: Mock) -> None:
+        """Test 'mcp-coder help' command works."""
+        mock_parser = Mock()
+        mock_parser.parse_args.return_value = argparse.Namespace(command="help")
+        mock_create_parser.return_value = mock_parser
+        mock_execute_help.return_value = 0
+        
+        result = main()
+        
+        assert result == 0
+        mock_execute_help.assert_called_once()
+
     @patch("mcp_coder.cli.main.create_parser")
     @patch("builtins.print")
     def test_main_unknown_command_returns_error(self, mock_print: Mock, mock_create_parser: Mock) -> None:

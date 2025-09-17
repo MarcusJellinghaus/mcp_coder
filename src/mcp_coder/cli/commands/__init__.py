@@ -1,2 +1,4 @@
 """CLI command modules."""
-# Empty for now, will be populated in later steps
+from .help import execute_help
+
+__all__ = ["execute_help"]

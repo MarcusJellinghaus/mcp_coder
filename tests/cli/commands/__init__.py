@@ -1,0 +1,1 @@
+"""Test CLI commands package."""
