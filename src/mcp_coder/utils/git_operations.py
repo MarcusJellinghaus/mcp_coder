@@ -10,6 +10,27 @@ from git.exc import GitCommandError, InvalidGitRepositoryError
 # Use same logging pattern as existing modules (see file_operations.py)
 logger = logging.getLogger(__name__)
 
+# Constants for git operations
+PLACEHOLDER_HASH = "0" * 7
+GIT_SHORT_HASH_LENGTH = 7
+
+
+def _normalize_git_path(path: Path, base_dir: Path) -> str:
+    """Convert a path to git-compatible format.
+
+    Args:
+        path: Path to normalize
+        base_dir: Base directory to make path relative to
+
+    Returns:
+        Git-compatible path string using forward slashes
+
+    Raises:
+        ValueError: If path is not relative to base_dir
+    """
+    relative_path = path.relative_to(base_dir)
+    return str(relative_path).replace("\\", "/")
+
 
 # Type alias for commit result structure
 class CommitResult(TypedDict):
@@ -61,18 +82,15 @@ def is_file_tracked(file_path: Path, project_dir: Path) -> bool:
     try:
         repo = Repo(project_dir, search_parent_directories=False)
 
-        # Get relative path from project directory
+        # Get git-compatible path
         try:
-            relative_path = file_path.relative_to(project_dir)
+            git_path = _normalize_git_path(file_path, project_dir)
         except ValueError:
             # File is outside project directory
             logger.debug(
                 "File %s is outside project directory %s", file_path, project_dir
             )
             return False
-
-        # Convert to posix path for git (even on Windows)
-        git_path = str(relative_path).replace("\\", "/")
 
         # Use git ls-files to check if file is tracked
         # This returns all files that git knows about (staged or committed)
@@ -114,17 +132,13 @@ def git_move(source_path: Path, dest_path: Path, project_dir: Path) -> bool:
     try:
         repo = Repo(project_dir, search_parent_directories=False)
 
-        # Get relative paths from project directory
+        # Get git-compatible paths
         try:
-            source_relative = source_path.relative_to(project_dir)
-            dest_relative = dest_path.relative_to(project_dir)
+            source_git = _normalize_git_path(source_path, project_dir)
+            dest_git = _normalize_git_path(dest_path, project_dir)
         except ValueError as e:
             logger.error("Paths must be within project directory: %s", e)
             return False
-
-        # Convert to posix paths for git
-        source_git = str(source_relative).replace("\\", "/")
-        dest_git = str(dest_relative).replace("\\", "/")
 
         # Execute git mv command
         logger.info("Executing git mv from %s to %s", source_git, dest_git)
@@ -336,18 +350,15 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
                 logger.error("File does not exist: %s", file_path)
                 return False
 
-            # Get relative path from project directory
+            # Get git-compatible path
             try:
-                relative_path = file_path.relative_to(project_dir)
+                git_path = _normalize_git_path(file_path, project_dir)
+                relative_paths.append(git_path)
             except ValueError:
                 logger.error(
                     "File %s is outside project directory %s", file_path, project_dir
                 )
                 return False
-
-            # Convert to posix path for git (even on Windows)
-            git_path = str(relative_path).replace("\\", "/")
-            relative_paths.append(git_path)
 
         # Stage all files at once
         logger.debug("Staging files: %s", relative_paths)
@@ -476,8 +487,8 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
         repo = Repo(project_dir, search_parent_directories=False)
         commit = repo.index.commit(message.strip())
 
-        # Get short commit hash (first 7 characters)
-        commit_hash = commit.hexsha[:7]
+        # Get short commit hash
+        commit_hash = commit.hexsha[:GIT_SHORT_HASH_LENGTH]
 
         logger.info(
             "Successfully created commit %s with message: %s",
@@ -572,7 +583,7 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
         untracked_files = repo.untracked_files
         if not untracked_files:
             return ""
-        
+
         untracked_diffs = []
         for file_path in untracked_files:
             try:
@@ -581,40 +592,44 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
                 if full_path.exists() and full_path.is_file():
                     # Create a synthetic diff that looks like git's output
                     try:
-                        content = full_path.read_text(encoding='utf-8')
+                        content = full_path.read_text(encoding="utf-8")
                         lines = content.splitlines()
-                        
+
                         # Create git-style diff header
                         diff_lines = [
                             f"diff --git {file_path} {file_path}",
                             "new file mode 100644",
-                            "index 0000000.." + "0" * 7,  # Placeholder hash
+                            f"index 0000000..{PLACEHOLDER_HASH}",
                             "--- /dev/null",
                             f"+++ {file_path}",
-                            "@@ -0,0 +1," + str(len(lines)) + " @@"
+                            "@@ -0,0 +1," + str(len(lines)) + " @@",
                         ]
-                        
+
                         # Add file content with + prefix
                         for line in lines:
                             diff_lines.append("+" + line)
-                        
+
                         untracked_diffs.append("\n".join(diff_lines))
                     except UnicodeDecodeError:
                         # Handle binary files
                         diff_lines = [
                             f"diff --git {file_path} {file_path}",
                             "new file mode 100644",
-                            "index 0000000.." + "0" * 7,
-                            "Binary files /dev/null and " + file_path + " differ"
+                            f"index 0000000..{PLACEHOLDER_HASH}",
+                            "Binary files /dev/null and " + file_path + " differ",
                         ]
                         untracked_diffs.append("\n".join(diff_lines))
             except Exception as e:
                 # Skip individual files that can't be processed
-                logger.debug("Skipping untracked file that couldn't be processed: %s - %s", file_path, e)
+                logger.debug(
+                    "Skipping untracked file that couldn't be processed: %s - %s",
+                    file_path,
+                    e,
+                )
                 continue
-        
+
         return "\n".join(untracked_diffs)
-        
+
     except Exception as e:
         logger.warning("Error generating untracked file diff: %s", e)
         return ""
@@ -623,27 +638,27 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
 def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
     """
     Generate comprehensive git diff without modifying repository state.
-    
+
     Shows staged, unstaged, and untracked files in unified diff format
     suitable for LLM analysis and commit message generation.
-    
+
     Args:
         project_dir: Path to the project directory containing git repository
-        
+
     Returns:
-        str: Unified diff format with sections for staged changes, unstaged 
+        str: Unified diff format with sections for staged changes, unstaged
              changes, and untracked files. Each section uses format:
              === SECTION NAME ===
              [diff content]
-             
+
              Returns empty string if no changes detected.
         None: If error occurs (invalid repository, git command failure, etc.)
-        
+
     Example:
         >>> diff_output = get_git_diff_for_commit(Path("/path/to/repo"))
         >>> if diff_output is not None:
         ...     print("Changes detected" if diff_output else "No changes")
-        
+
     Note:
         - Uses read-only git operations, never modifies repository state
         - Binary files handled naturally by git (shows "Binary files differ")
@@ -651,42 +666,42 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
         - Empty repositories (no commits) supported
     """
     logger.debug("Generating git diff for: %s", project_dir)
-    
+
     if not is_git_repository(project_dir):
         logger.error("Not a git repository: %s", project_dir)
         return None
-    
+
     try:
         repo = Repo(project_dir, search_parent_directories=False)
-        
+
         # Simple check for empty repository (KISS approach)
         has_commits = True
         try:
             list(repo.iter_commits(max_count=1))
-        except:
+        except (GitCommandError, ValueError):
             has_commits = False
             logger.debug("Empty repository detected, showing untracked files only")
-        
+
         # Generate diff sections with individual error handling
         staged_diff = ""
         unstaged_diff = ""
-        
+
         if has_commits:
             try:
                 staged_diff = repo.git.diff("--cached", "--unified=5", "--no-prefix")
             except GitCommandError as e:
                 logger.warning("Failed to get staged diff: %s", e)
-            
+
             try:
                 unstaged_diff = repo.git.diff("--unified=5", "--no-prefix")
             except GitCommandError as e:
                 logger.warning("Failed to get unstaged diff: %s", e)
-        
+
         # Always try to get untracked files
         untracked_diff = _generate_untracked_diff(repo, project_dir)
-        
+
         return _format_diff_sections(staged_diff, unstaged_diff, untracked_diff)
-        
+
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error generating diff: %s", e)
         return None
@@ -695,17 +710,19 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
         return None
 
 
-def _format_diff_sections(staged_diff: str, unstaged_diff: str, untracked_diff: str) -> str:
+def _format_diff_sections(
+    staged_diff: str, unstaged_diff: str, untracked_diff: str
+) -> str:
     """Format diff sections with appropriate headers."""
     sections = []
-    
+
     if staged_diff.strip():
         sections.append(f"=== STAGED CHANGES ===\n{staged_diff}")
-    
+
     if unstaged_diff.strip():
         sections.append(f"=== UNSTAGED CHANGES ===\n{unstaged_diff}")
-    
+
     if untracked_diff.strip():
         sections.append(f"=== UNTRACKED FILES ===\n{untracked_diff}")
-    
+
     return "\n\n".join(sections)
