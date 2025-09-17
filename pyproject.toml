@@ -32,8 +32,8 @@ dev = [
     "mcp-server-filesystem @ git+https://github.com/MarcusJellinghaus/mcp_server_filesystem.git",
 ]
 
-# [project.scripts]
-# mcp-coder = "mcp_coder.main:main"
+[project.scripts]
+mcp-coder = "mcp_coder.cli.main:main"
 
 [project.urls]
 "Homepage" = "https://github.com/MarcusJellinghaus/mcp_coder"

@@ -30,7 +30,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [ ] **Step 1: Create CLI Directory Structure and Basic Entry Point** - [step_1.md](./steps/step_1.md)
+- [x] **Step 1: Create CLI Directory Structure and Basic Entry Point** - [step_1.md](./steps/step_1.md)
   - Create CLI module structure under src/mcp_coder/cli/
   - Implement minimal main.py with argument parsing
   - Update pyproject.toml CLI entry point

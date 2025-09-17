@@ -45,6 +45,27 @@ if %ERRORLEVEL% NEQ 0 (
 echo ✓ Package import verified successfully
 echo.
 
+echo [3.1/4] Verifying CLI entry point...
+python -c "from mcp_coder.cli.main import main; print('CLI main function imported successfully')"
+if %ERRORLEVEL% NEQ 0 (
+    echo ✗ CLI entry point verification failed!
+    echo The CLI is not working properly.
+    pause
+    exit /b 1
+)
+echo ✓ CLI entry point verified successfully
+echo.
+
+echo [3.2/4] Testing CLI basic functionality...
+echo Testing mcp-coder command without arguments (should exit with code 1):
+mcp-coder
+if %ERRORLEVEL% EQU 1 (
+    echo ✓ CLI basic functionality working (expected exit code 1)
+) else (
+    echo ✗ CLI not working as expected (exit code was %ERRORLEVEL%)
+)
+echo.
+
 echo [4/4] Verifying MCP servers are installed...
 python -c "import mcp_code_checker; print('mcp-code-checker installed successfully')"
 if %ERRORLEVEL% NEQ 0 (

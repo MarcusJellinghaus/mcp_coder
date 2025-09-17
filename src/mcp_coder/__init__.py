@@ -18,6 +18,7 @@ Example:
     >>> print(response)
 """
 
+from .cli.main import main as cli_main
 from .llm_interface import ask_llm
 from .llm_providers.claude.claude_client import ask_claude
 from .llm_providers.claude.claude_code_interface import ask_claude_code
@@ -48,6 +49,8 @@ from .utils.subprocess_runner import (
 __version__ = "0.1.0"
 
 __all__ = [
+    # CLI interface
+    "cli_main",
     # Core LLM interfaces
     "ask_claude",
     "ask_claude_code",
