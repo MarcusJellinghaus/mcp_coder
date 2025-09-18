@@ -10,8 +10,9 @@ Main functions:
 - validate_prompt_directory(directory): Validate all markdown files in directory
 
 Key Features:
-- Supports multiple input types: string content, file paths, directories, wildcards
+- Supports multiple input types: string content, file paths, directories, wildcards, package-relative paths
 - Auto-detection of input type (file path vs string content)
+- Package-relative path resolution for both development and installed environments
 - Cross-file duplicate header detection when using directories/wildcards
 - Clear error messages with file locations and line numbers
 - Comprehensive validation with detailed results
@@ -28,6 +29,9 @@ Usage Examples:
 
     # From file
     prompt = get_prompt('prompts/prompts.md', 'Short Commit')
+
+    # From package-relative path (auto-resolves in dev/installed environments)
+    prompt = get_prompt('mcp_coder/prompts/prompts.md', 'Git Commit Message Generation')
 
     # From directory (all .md files)
     prompt = get_prompt('prompts/', 'Short Commit')
@@ -73,7 +77,9 @@ import glob
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
+
+from .utils.data_files import find_data_file
 
 
 def get_prompt(source: str, header: str) -> str:
@@ -123,6 +129,9 @@ def get_prompt(source: str, header: str) -> str:
 
         # From single file
         prompt = get_prompt('prompts/git_prompts.md', 'Short Commit')
+
+        # From package-relative path (works in both dev and installed environments)
+        prompt = get_prompt('mcp_coder/prompts/prompts.md', 'Git Commit Message Generation')
 
         # From directory (searches all .md files)
         prompt = get_prompt('prompts/', 'Short Commit')
@@ -400,6 +409,101 @@ def validate_prompt_directory(directory: str) -> Dict[str, Any]:
     }
 
 
+def _is_package_relative_path(source: str) -> bool:
+    """
+    Detect if source is a package-relative path that should use find_data_file.
+
+    Package-relative paths typically start with a package name (like 'mcp_coder/prompts/...')
+    and don't contain '..' or start with '/' or '\' (which would indicate absolute paths
+    or relative paths from current directory).
+
+    Args:
+        source: Path string to check
+
+    Returns:
+        bool: True if this looks like a package-relative path
+    """
+    if not _is_file_path(source):
+        return False
+
+    # Skip if it's a directory, wildcard, or absolute path
+    if (
+        source.endswith("/")
+        or source.endswith("\\")
+        or "*" in source
+        or "?" in source
+        or source.startswith("/")
+        or source.startswith("\\")
+        or (len(source) > 1 and source[1] == ":")  # Windows drive letter
+    ):
+        return False
+
+    # Skip relative paths that go up directories
+    if ".." in source:
+        return False
+
+    # Check if it looks like a package path (contains at least one slash and doesn't start with .)
+    return ("/" in source or "\\" in source) and not source.startswith(".")
+
+
+def _resolve_package_path(source: str) -> Optional[Path]:
+    """
+    Resolve a package-relative path using find_data_file.
+
+    This function attempts to parse the source as 'package_name/relative_path'
+    and use find_data_file to locate it robustly.
+
+    Args:
+        source: Package-relative path like 'mcp_coder/prompts/prompts.md'
+
+    Returns:
+        Path: Resolved path to the file, or None if resolution failed
+    """
+    try:
+        # Normalize path separators
+        normalized_source = source.replace("\\", "/")
+        parts = normalized_source.split("/")
+
+        if len(parts) < 2:
+            return None
+
+        # Try different package name combinations
+        # First try: first part as package name
+        package_name = parts[0]
+        relative_path = "/".join(parts[1:])
+
+        try:
+            resolved_file = find_data_file(
+                package_name=package_name,
+                relative_path=relative_path,
+                development_base_dir=None,  # Auto-detect environment
+            )
+            return resolved_file
+        except (FileNotFoundError, ImportError):
+            pass
+
+        # Second try: first two parts as package name (e.g., 'mcp_coder.prompts')
+        if len(parts) >= 3:
+            package_name = f"{parts[0]}.{parts[1]}"
+            relative_path = "/".join(parts[2:])
+
+            try:
+                resolved_file = find_data_file(
+                    package_name=package_name,
+                    relative_path=relative_path,
+                    development_base_dir=None,
+                )
+                return resolved_file
+            except (FileNotFoundError, ImportError):
+                pass
+
+    except Exception:
+        # If anything goes wrong with package resolution, fall back to normal path handling
+        pass
+
+    return None
+
+
 def _load_content(source: str) -> str:
     """
     Load content from source (auto-detect file path vs string content).
@@ -421,6 +525,17 @@ def _load_content(source: str) -> str:
         FileNotFoundError: If file/directory doesn't exist or cannot be read
     """
     if _is_file_path(source):
+        # First, try to resolve as package-relative path
+        if _is_package_relative_path(source):
+            resolved_path = _resolve_package_path(source)
+            if resolved_path and resolved_path.exists():
+                try:
+                    with open(resolved_path, "r", encoding="utf-8") as f:
+                        return f.read()
+                except Exception as e:
+                    # Fall through to normal path handling if package resolution fails
+                    pass
+
         if os.path.isdir(source):
             # Directory - load all .md files
             md_files = glob.glob(os.path.join(source, "*.md"))

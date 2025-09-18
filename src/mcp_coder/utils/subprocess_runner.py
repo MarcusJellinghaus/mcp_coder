@@ -216,10 +216,15 @@ def _run_subprocess(
                                         and hasattr(signal, "SIGTERM")
                                         and hasattr(signal, "SIGKILL")
                                     ):
-                                        os.killpg(os.getpgid(popen_proc.pid), signal.SIGTERM)  # type: ignore[attr-defined]
+                                        os.killpg(
+                                            os.getpgid(popen_proc.pid), signal.SIGTERM
+                                        )
                                         time.sleep(0.5)
                                         if popen_proc.poll() is None:
-                                            os.killpg(os.getpgid(popen_proc.pid), signal.SIGKILL)  # type: ignore[attr-defined]
+                                            os.killpg(
+                                                os.getpgid(popen_proc.pid),
+                                                signal.SIGKILL,
+                                            )
                                     else:
                                         popen_proc.terminate()
                                         time.sleep(0.5)
@@ -370,10 +375,14 @@ def _run_subprocess(
                                     and hasattr(signal, "SIGTERM")
                                     and hasattr(signal, "SIGKILL")
                                 ):
-                                    os.killpg(os.getpgid(popen_proc.pid), signal.SIGTERM)  # type: ignore[attr-defined]
+                                    os.killpg(
+                                        os.getpgid(popen_proc.pid), signal.SIGTERM
+                                    )
                                     time.sleep(0.5)
                                     if popen_proc.poll() is None:
-                                        os.killpg(os.getpgid(popen_proc.pid), signal.SIGKILL)  # type: ignore[attr-defined]
+                                        os.killpg(
+                                            os.getpgid(popen_proc.pid), signal.SIGKILL
+                                        )
                                 else:
                                     popen_proc.kill()
                             except (OSError, ProcessLookupError, AttributeError) as e:

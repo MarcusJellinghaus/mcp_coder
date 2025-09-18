@@ -4,6 +4,12 @@ This module provides various utility functions including git operations,
 subprocess execution, and other helper functions.
 """
 
+from .clipboard import (
+    get_clipboard_text,
+    parse_commit_message,
+    validate_commit_message,
+)
+
 # Import all git operations for easy access
 from .git_operations import (
     CommitResult,
@@ -18,6 +24,7 @@ from .git_operations import (
     stage_all_changes,
     stage_specific_files,
 )
+from .log_utils import log_function_call, setup_logging
 from .subprocess_runner import (
     CommandOptions,
     CommandResult,
@@ -38,9 +45,16 @@ __all__ = [
     "is_git_repository",
     "stage_all_changes",
     "stage_specific_files",
+    # Logging utilities
+    "log_function_call",
+    "setup_logging",
     # Subprocess operations
     "CommandOptions",
     "CommandResult",
     "execute_command",
     "execute_subprocess",
+    # Clipboard operations
+    "get_clipboard_text",
+    "parse_commit_message",
+    "validate_commit_message",
 ]

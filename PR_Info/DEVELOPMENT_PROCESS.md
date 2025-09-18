@@ -84,13 +84,27 @@ Please review the project plan for a new feature in folder PR_Info\steps.
 Please revise the project plan with a balanced level of detail.
 Please let me know if any complexity could be reduced.
 Please let me know any questions / comments or suggestions you might have.
+
+Please consider the already discussed and decided decisions (if any) under decisions.
+We do not need to challenge them again unless absolutely necessary.
 ```
+
+**Issue Pyproject.toml requirements updates**:
+```
+In case of after updating the pyproject.toml requirements, 
+put something in the project plan to stop and tell me, 
+so that I can install the requiremetns. 
+This is important so that unit tests can work.
+```
+
+
+
 
 Wait for presentation of overall plan
 ```
 Can we go through all suggested changes and questions step by step?
 You explain, ask and I answer until we discussed all topics?
-Please offer, whenever possible, simple options like, 
+Please offer, whenever possible, simple options like 
 - A
 - B
 - C
@@ -98,6 +112,14 @@ Please offer, whenever possible, simple options like,
 
 Wait for end of discussion
 ```
+
+---
+Please summarise changes you want to do to the project plan for confirmation 
+( one liner bullet points)
+---
+Please ask me whether I agree (Y/N)
+---
+After the agreement:
 Can you update the plan by updating the different files in folder `pr_info`
 (including creating the `steps/` subfolder for implementation details)
 Please do targeted changes.
@@ -179,6 +201,7 @@ Once you are done, please check again that task description on `pr_info/TASK_TRA
 Once everything is done, please mark the task as done.
 Please work only on one task. Do not pick further tasks.
 
+Please also take a look at the tests\readme and only run those tests that are required in your context -i.e. avoid slow integration tests.
 ```
 
 **Common Implementation Failures & Responses:**
@@ -199,6 +222,8 @@ Please work only on one task. Do not pick further tasks.
 - **Implementation works but requires no changes:**
   - Task was unnecessary or already implemented
   - *Response:* Mark as complete, update plan for remaining tasks
+  
+- ** Check for slower and slower unit tests **
 
 ** Possible prompt for too complex task**
 
@@ -224,10 +249,17 @@ Please tell me whether this is feasible, how complicated it is, whether it could
 - Create commit summary
 - User performs manual commit
 
-**Commit Message Prompt:**
+**Commit Message Prompt when working on a step:**
 ```
 Please provide a short concise commit message stating the step name in the title.
 ```
+
+
+**Commit message prompt after a small change:**
+```
+Can you provide a short commit message with short info on relevant changes?
+```
+This could benefit from `format_and_commit` tool.
 
 **Tools:**
 - `tools/format_all.bat` - Run all formatting tools (ruff, black, isort)

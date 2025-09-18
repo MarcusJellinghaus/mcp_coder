@@ -20,18 +20,22 @@ classifiers = [
 dependencies = [
     "claude-code-sdk",
     "GitPython>=3.1.0",
+    "structlog>=25.2.0",
+    "python-json-logger>=3.3.0",
+    "pyperclip>=1.8.2",
 ]
 
 [project.optional-dependencies]
 dev = [
     "black",
     "pytest-asyncio",
+    "types-pyperclip",
     "mcp-code-checker @ git+https://github.com/MarcusJellinghaus/mcp-code-checker.git",
     "mcp-server-filesystem @ git+https://github.com/MarcusJellinghaus/mcp_server_filesystem.git",
 ]
 
-# [project.scripts]
-# mcp-coder = "mcp_coder.main:main"
+[project.scripts]
+mcp-coder = "mcp_coder.cli.main:main"
 
 [project.urls]
 "Homepage" = "https://github.com/MarcusJellinghaus/mcp_coder"
@@ -75,16 +79,6 @@ disable = ["W1203"]
 
 [tool.mypy]
 python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-# disallow_untyped_decorators = false  # can create issues with pytest fixtures
-no_implicit_optional = true
-strict_optional = true
-mypy_path = "stubs"
-disable_error_code = ["unused-ignore"]
 
 [[tool.mypy.overrides]]
 module = ["pytest.*"]

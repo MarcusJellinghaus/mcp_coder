@@ -642,3 +642,57 @@ class TestPackageIntegration:
         assert (
             result["files_checked"] >= 2
         )  # Should find at least prompts.md and prompts_testdata.md
+
+    def test_commit_prompt_exists(self) -> None:
+        """Test that commit message generation prompt exists and is loadable."""
+        import mcp_coder
+
+        package_dir = Path(mcp_coder.__file__).parent
+        prompts_file = package_dir / "prompts" / "prompts.md"
+
+        # Test that the commit prompt can be loaded
+        result = get_prompt(str(prompts_file), "Git Commit Message Generation")
+        assert result is not None
+        assert len(result.strip()) > 0
+
+    def test_commit_prompt_format(self) -> None:
+        """Test that commit prompt follows expected format."""
+        import mcp_coder
+
+        package_dir = Path(mcp_coder.__file__).parent
+        prompts_file = package_dir / "prompts" / "prompts.md"
+
+        # Test that the commit prompt contains key sections
+        result = get_prompt(str(prompts_file), "Git Commit Message Generation")
+        assert "REQUIREMENTS:" in result
+        assert "ANALYSIS STEPS:" in result
+        assert "OUTPUT FORMAT:" in result
+        assert "EXAMPLES:" in result
+
+    def test_commit_prompt_content(self) -> None:
+        """Test that commit prompt contains key instructions."""
+        import mcp_coder
+
+        package_dir = Path(mcp_coder.__file__).parent
+        prompts_file = package_dir / "prompts" / "prompts.md"
+
+        # Test that the commit prompt contains essential content
+        result = get_prompt(str(prompts_file), "Git Commit Message Generation")
+
+        # Check for conventional commit format guidance
+        assert "conventional commit format" in result
+        assert "type(scope): description" in result
+
+        # Check for commit types
+        assert "feat, fix, docs, style, refactor, test, chore" in result
+
+        # Check for analysis guidance
+        assert "git diff" in result
+        assert "git status" in result
+
+        # Check for length guidance
+        assert "50 characters" in result
+
+        # Check for examples
+        assert "feat:" in result or "feat(" in result
+        assert "fix:" in result or "fix(" in result
