@@ -2,9 +2,11 @@
 """Claude Code Python SDK implementation for programmatic interaction."""
 
 import asyncio
+import logging
 import os
 import subprocess
-from typing import Any
+import time
+from typing import Any, Optional, Tuple
 
 from claude_code_sdk import (
     AssistantMessage,
@@ -14,8 +16,12 @@ from claude_code_sdk import (
     TextBlock,
     query,
 )
+from claude_code_sdk._errors import CLINotFoundError
 
-from .claude_executable_finder import find_claude_executable, setup_claude_path
+from .claude_executable_finder import find_claude_executable, setup_claude_path, verify_claude_installation
+
+# Create logger for this module
+logger = logging.getLogger(__name__)
 
 # Export the classes that tests need to import
 __all__ = [
@@ -30,7 +36,131 @@ __all__ = [
     "ask_claude_code_api_detailed_sync",
     "_ask_claude_code_api_async",
     "_create_claude_client",
+    "_extract_real_error_message",
+    "_verify_claude_before_use",
 ]
+
+
+def _extract_real_error_message(exception: Exception) -> str:
+    """Extract the real, actionable error message from nested exceptions.
+    
+    Args:
+        exception: The exception to analyze
+        
+    Returns:
+        A clear, actionable error message for the user
+    """
+    # Start with the base exception message
+    error_msg = str(exception)
+    
+    # Check for nested exceptions via __cause__ chain
+    current_exc = exception
+    error_details = []
+    
+    # Walk up the exception chain to find the root cause
+    while current_exc:
+        exc_type = type(current_exc).__name__
+        exc_msg = str(current_exc)
+        
+        # Look for specific error patterns we care about
+        if "WinError 206" in exc_msg or "filename or extension is too long" in exc_msg:
+            error_details.append("Windows path length limit exceeded (WinError 206)")
+            error_details.append("This often happens when the current working directory path is very long")
+            break
+        elif "CLINotFoundError" in exc_type or "Claude Code not found" in exc_msg:
+            error_details.append(f"Claude CLI executable not found: {exc_msg}")
+            break
+        elif "FileNotFoundError" in exc_type:
+            error_details.append(f"File/executable not found: {exc_msg}")
+            break
+        elif "PermissionError" in exc_type:
+            error_details.append(f"Permission denied: {exc_msg}")
+            break
+        elif "OSError" in exc_type and exc_msg:
+            error_details.append(f"System error: {exc_msg}")
+            break
+            
+        # Move to the next exception in the chain
+        current_exc = getattr(current_exc, '__cause__', None)
+        
+        # Avoid infinite loops
+        if len(error_details) > 5:
+            break
+    
+    # If we found specific error details, use them
+    if error_details:
+        return " | ".join(error_details)
+    
+    # Otherwise return the original message
+    return error_msg
+
+
+def _verify_claude_before_use() -> Tuple[bool, Optional[str], Optional[str]]:
+    """Verify Claude installation before attempting to use it.
+    
+    Returns:
+        Tuple of (success, claude_path, error_message)
+    """
+    logger.debug("Verifying Claude installation before use")
+    
+    try:
+        # First try to setup the PATH
+        claude_path = setup_claude_path()
+        if claude_path:
+            logger.info("Claude CLI found and PATH configured: %s", claude_path)
+        else:
+            logger.warning("setup_claude_path() returned None - Claude not found in standard locations")
+    except Exception as e:
+        logger.warning("Error during PATH setup: %s", e)
+        claude_path = None
+    
+    # Run detailed verification
+    verification_result = verify_claude_installation()
+    
+    logger.info("Claude verification result: %s", verification_result)
+    
+    if verification_result["found"] and verification_result["works"]:
+        return True, verification_result["path"], None
+    else:
+        error_msg = verification_result.get("error", "Claude CLI verification failed")
+        return False, verification_result.get("path"), error_msg
+
+
+def _retry_with_backoff(func, max_retries: int = 3, base_delay: float = 1.0):
+    """Retry a function with exponential backoff.
+    
+    Args:
+        func: Function to retry (should be callable with no args)
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay in seconds for exponential backoff
+        
+    Returns:
+        Result of the successful function call
+        
+    Raises:
+        The last exception if all retries fail
+    """
+    last_exception = None
+    
+    for attempt in range(max_retries + 1):  # +1 for initial attempt
+        try:
+            logger.debug("Attempt %d/%d for function %s", attempt + 1, max_retries + 1, func.__name__ if hasattr(func, '__name__') else 'callable')
+            result = func()
+            if attempt > 0:
+                logger.info("Function succeeded on attempt %d", attempt + 1)
+            return result
+        except Exception as e:
+            last_exception = e
+            
+            if attempt < max_retries:  # Don't sleep after the last attempt
+                delay = base_delay * (2 ** attempt)  # Exponential backoff
+                logger.warning("Attempt %d failed: %s. Retrying in %.1f seconds...", attempt + 1, str(e), delay)
+                time.sleep(delay)
+            else:
+                logger.error("All %d attempts failed. Final error: %s", max_retries + 1, str(e))
+    
+    # If we get here, all retries failed
+    raise last_exception
 
 
 def _create_claude_client() -> ClaudeCodeOptions:
@@ -42,11 +172,21 @@ def _create_claude_client() -> ClaudeCodeOptions:
     Note:
         The SDK will use existing CLI subscription authentication automatically.
         Attempts to setup PATH if Claude CLI is not accessible.
+        
+    Raises:
+        RuntimeError: If Claude CLI cannot be found or verified
     """
-    # Try to setup Claude PATH before creating client
-    # The SDK needs the CLI to be accessible for authentication
-    setup_claude_path()
-
+    logger.debug("Creating Claude Code SDK client")
+    
+    # Verify Claude installation before creating client
+    success, claude_path, error_msg = _verify_claude_before_use()
+    
+    if not success:
+        logger.error("Claude verification failed: %s", error_msg)
+        raise RuntimeError(f"Claude CLI verification failed: {error_msg}")
+    
+    logger.info("Claude CLI verified successfully at: %s", claude_path)
+    
     # Use basic configuration - SDK should now find Claude
     return ClaudeCodeOptions()
 
@@ -194,48 +334,97 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
         subprocess.TimeoutExpired: If the request times out
         subprocess.CalledProcessError: If the SDK request fails (with helpful error messages)
     """
+    logger.debug("ask_claude_code_api called with question length: %d, timeout: %d", len(question) if question else 0, timeout)
+    
     # Input validation is handled by _ask_claude_code_api_async
     try:
-        # Run the async function in the current event loop or create a new one
-        return asyncio.run(_ask_claude_code_api_async(question, timeout))
+        # Define a wrapper function for retry logic
+        def execute_request():
+            return asyncio.run(_ask_claude_code_api_async(question, timeout))
+        
+        # Use retry logic for intermittent issues (like PATH resolution)
+        # Only retry on specific errors that might be transient
+        try:
+            result = _retry_with_backoff(execute_request, max_retries=2, base_delay=0.5)
+            logger.info("Claude API request completed successfully")
+            return result
+        except Exception as retry_error:
+            # If retries failed, proceed to main error handling
+            raise retry_error
 
     except subprocess.TimeoutExpired:
+        logger.error("Claude API request timed out after %d seconds", timeout)
         # Re-raise timeout errors as-is for consistency with CLI version
         raise
 
-    except ValueError:
+    except ValueError as ve:
+        logger.error("Input validation failed: %s", ve)
         # Re-raise input validation errors as-is
         raise
 
     except Exception as e:
-        # Convert other exceptions to CalledProcessError for consistency with CLI version
-        error_msg = str(e)
-
-        # Check if this is a CLI path issue and provide helpful guidance
-        if "Claude Code not found" in error_msg or "claude" in error_msg.lower():
+        # Extract the real error message from nested exceptions
+        real_error = _extract_real_error_message(e)
+        logger.error("Claude API request failed: %s (original: %s)", real_error, str(e))
+        
+        # Build comprehensive error message
+        error_parts = [f"Claude Code SDK request failed: {real_error}"]
+        
+        # Add specific guidance based on error type
+        if "WinError 206" in str(e) or "filename or extension is too long" in str(e):
+            error_parts.extend([
+                "",
+                "SOLUTION: Windows path length limit exceeded.",
+                "Try one of these solutions:",
+                "1. Move your project to a shorter path (e.g., C:\\dev\\project)",
+                "2. Enable long path support: Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem' -Name 'LongPathsEnabled' -Value 1",
+                "3. Use PowerShell as Administrator and run the command above, then restart your terminal"
+            ])
+        elif "CLINotFoundError" in str(e) or "Claude Code not found" in str(e) or isinstance(e, CLINotFoundError):
+            # Try to find Claude and provide specific guidance
             claude_path = find_claude_executable(return_none_if_not_found=True)
             if claude_path:
-                # Get dynamic username for path suggestions
-                username = os.environ.get(
-                    "USERNAME", os.environ.get("USER", "<username>")
-                )
-
-                error_msg += f"\n\nFound Claude CLI at: {claude_path}"
-                error_msg += "\nTo fix this issue, add Claude to your PATH:"
-                error_msg += f"\n  Windows PowerShell: $env:PATH = 'C:\\Users\\{username}\\.local\\bin;' + $env:PATH"
-                error_msg += f"\n  Windows CMD: set PATH=C:\\Users\\{username}\\.local\\bin;%PATH%"
-                error_msg += (
-                    "\n  Or restart your terminal after installing Claude globally."
-                )
+                username = os.environ.get("USERNAME", os.environ.get("USER", "<username>"))
+                error_parts.extend([
+                    "",
+                    f"Claude CLI found at: {claude_path}",
+                    "SOLUTION: Add Claude to your PATH:",
+                    f"  PowerShell: $env:PATH = 'C:\\Users\\{username}\\.local\\bin;' + $env:PATH",
+                    f"  CMD: set PATH=C:\\Users\\{username}\\.local\\bin;%PATH%",
+                    "  Or restart your terminal after installing Claude globally."
+                ])
             else:
-                error_msg += "\n\nClaude CLI not found. Install with: npm install -g @anthropic-ai/claude-code"
-                error_msg += "\nThen restart your terminal or add Claude to your PATH."
-
+                error_parts.extend([
+                    "",
+                    "SOLUTION: Install Claude CLI:",
+                    "1. npm install -g @anthropic-ai/claude-code",
+                    "2. Restart your terminal",
+                    "3. Verify installation: claude --version"
+                ])
+        elif "FileNotFoundError" in str(e) or isinstance(e, FileNotFoundError):
+            error_parts.extend([
+                "",
+                "SOLUTION: File or executable not found.",
+                "1. Verify Claude CLI is installed: claude --version",
+                "2. Check if Claude is in PATH: where claude (Windows) or which claude (Unix)",
+                "3. Reinstall if needed: npm install -g @anthropic-ai/claude-code"
+            ])
+        elif "PermissionError" in str(e) or isinstance(e, PermissionError):
+            error_parts.extend([
+                "",
+                "SOLUTION: Permission denied.",
+                "1. Run terminal as Administrator (Windows) or use sudo (Unix)",
+                "2. Check file/directory permissions",
+                "3. Ensure Claude CLI has execute permissions"
+            ])
+        
+        combined_error_msg = "\n".join(error_parts)
+        
         raise subprocess.CalledProcessError(
             1,  # Generic error code
             ["claude-code-sdk", "query"],
             output="",
-            stderr=f"Claude Code SDK request failed: {error_msg}",
+            stderr=combined_error_msg,
         ) from e
 
 

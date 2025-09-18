@@ -2,7 +2,6 @@
 
 import argparse
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +26,7 @@ USAGE:
 
 COMMANDS:
     help                    Show help information
+    verify                  Verify Claude CLI installation and configuration
     commit auto             Auto-generate commit message using LLM
     commit auto --preview   Show generated message and ask for confirmation
     commit clipboard        Use commit message from clipboard
@@ -40,10 +40,14 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder""".f
     return help_content
 
 
+
+
+
 def get_usage_examples() -> str:
     """Get usage examples for common workflows."""
     return """EXAMPLES:
     mcp-coder help                    # Show this help
+    mcp-coder verify                  # Check Claude CLI installation
     mcp-coder commit auto             # Analyze changes and auto-commit
     mcp-coder commit auto --preview   # Review generated message before commit
     mcp-coder commit clipboard        # Commit with clipboard message"""
