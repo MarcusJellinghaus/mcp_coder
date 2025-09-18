@@ -45,6 +45,7 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
 
         # Configure JSON file handler
         json_handler = logging.FileHandler(log_file)
+        json_handler.setLevel(numeric_level)
 
         # This formatter ensures timestamp and level are included as separate fields in JSON
         json_formatter = JsonFormatter(
@@ -54,7 +55,7 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
         json_handler.setFormatter(json_formatter)
         root_logger.addHandler(json_handler)
 
-        # Configure structlog processors
+        # Configure structlog processors for file logging
         structlog.configure(
             processors=[
                 structlog.stdlib.filter_by_level,
@@ -77,11 +78,31 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
     else:
         # CONSOLE LOGGING ONLY (fallback when no file specified)
         console_handler = logging.StreamHandler()
+        console_handler.setLevel(numeric_level)
         console_formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         console_handler.setFormatter(console_formatter)
         root_logger.addHandler(console_handler)
+
+        # Configure structlog processors for console logging
+        # This ensures structlog respects the log level set for the CLI
+        structlog.configure(
+            processors=[
+                structlog.stdlib.filter_by_level,  # This will respect the logging level
+                structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,
+                structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+                structlog.processors.StackInfoRenderer(),
+                structlog.processors.format_exc_info,
+                structlog.processors.UnicodeDecoder(),
+                structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+            ],
+            context_class=dict,
+            logger_factory=structlog.stdlib.LoggerFactory(),
+            wrapper_class=structlog.stdlib.BoundLogger,
+            cache_logger_on_first_use=True,
+        )
 
         stdlogger.info("Logging initialized: console=%s", log_level)
 
