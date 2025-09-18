@@ -22,15 +22,17 @@ class TestCreateClaudeClient:
     def test_create_claude_client_basic(self, mock_options_class: MagicMock) -> None:
         """Test that _create_claude_client creates basic options."""
         # Mock verification function - required on Linux/CI, helpful for isolation on Windows
-        with patch("mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use") as mock_verify:
+        with patch(
+            "mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use"
+        ) as mock_verify:
             # Use platform-appropriate mock paths
             if platform.system() == "Windows":
                 mock_path = "C:\\Users\\user\\.local\\bin\\claude.exe"
             else:
                 mock_path = "/usr/local/bin/claude"
-            
+
             mock_verify.return_value = (True, mock_path, None)
-            
+
             mock_options = MagicMock()
             mock_options_class.return_value = mock_options
 
@@ -41,14 +43,18 @@ class TestCreateClaudeClient:
             assert result == mock_options
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use")
-    def test_create_claude_client_verification_fails(self, mock_verify: MagicMock) -> None:
+    def test_create_claude_client_verification_fails(
+        self, mock_verify: MagicMock
+    ) -> None:
         """Test that _create_claude_client raises RuntimeError when verification fails."""
         # Mock failed verification
         mock_verify.return_value = (False, None, "Claude CLI not found")
-        
-        with pytest.raises(RuntimeError, match="Claude CLI verification failed: Claude CLI not found"):
+
+        with pytest.raises(
+            RuntimeError, match="Claude CLI verification failed: Claude CLI not found"
+        ):
             _create_claude_client()
-        
+
         mock_verify.assert_called_once()
 
 
