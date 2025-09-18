@@ -4,9 +4,11 @@ import argparse
 import logging
 import sys
 
+from ..llm_providers.claude.claude_cli_verification import (
+    verify_claude_cli_installation,
+)
 from ..utils.log_utils import setup_logging
 from .commands import execute_commit_auto, execute_commit_clipboard, execute_help
-from ..llm_providers.claude.claude_cli_verification import verify_claude_cli_installation
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
@@ -51,9 +53,11 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # Help command - Step 2
     help_parser = subparsers.add_parser("help", help="Show help information")
-    
+
     # Verify command - Claude installation verification
-    verify_parser = subparsers.add_parser("verify", help="Verify Claude CLI installation and configuration")
+    verify_parser = subparsers.add_parser(
+        "verify", help="Verify Claude CLI installation and configuration"
+    )
 
     # Commit commands - Step 5
     commit_parser = subparsers.add_parser("commit", help="Git commit operations")

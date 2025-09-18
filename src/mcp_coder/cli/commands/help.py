@@ -40,9 +40,6 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder""".f
     return help_content
 
 
-
-
-
 def get_usage_examples() -> str:
     """Get usage examples for common workflows."""
     return """EXAMPLES:
