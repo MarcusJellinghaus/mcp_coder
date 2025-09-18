@@ -6,7 +6,7 @@ import logging
 import os
 import subprocess
 import time
-from typing import Any, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 from claude_code_sdk import (
     AssistantMessage,
@@ -58,7 +58,7 @@ def _extract_real_error_message(exception: Exception) -> str:
     error_msg = str(exception)
 
     # Check for nested exceptions via __cause__ chain
-    current_exc = exception
+    current_exc: Optional[BaseException] = exception
     error_details = []
 
     # Walk up the exception chain to find the root cause
@@ -134,7 +134,7 @@ def _verify_claude_before_use() -> Tuple[bool, Optional[str], Optional[str]]:
         return False, verification_result.get("path"), error_msg
 
 
-def _retry_with_backoff(func, max_retries: int = 3, base_delay: float = 1.0):
+def _retry_with_backoff(func: Callable[[], Any], max_retries: int = 3, base_delay: float = 1.0) -> Any:
     """Retry a function with exponential backoff.
 
     Args:
@@ -148,7 +148,7 @@ def _retry_with_backoff(func, max_retries: int = 3, base_delay: float = 1.0):
     Raises:
         The last exception if all retries fail
     """
-    last_exception = None
+    last_exception: Optional[Exception] = None
 
     for attempt in range(max_retries + 1):  # +1 for initial attempt
         try:
@@ -180,7 +180,10 @@ def _retry_with_backoff(func, max_retries: int = 3, base_delay: float = 1.0):
                 )
 
     # If we get here, all retries failed
-    raise last_exception
+    if last_exception is not None:
+        raise last_exception
+    else:
+        raise RuntimeError("All retry attempts failed with no exception recorded")
 
 
 def _create_claude_client() -> ClaudeCodeOptions:
@@ -306,7 +309,6 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
         raise subprocess.TimeoutExpired(
             ["claude-code-sdk", "query"],
             timeout,
-            f"Claude Code SDK request timed out after {timeout} seconds",
         ) from exc
 
 
@@ -363,7 +365,7 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
     # Input validation is handled by _ask_claude_code_api_async
     try:
         # Define a wrapper function for retry logic
-        def execute_request():
+        def execute_request() -> str:
             return asyncio.run(_ask_claude_code_api_async(question, timeout))
 
         # Use retry logic for intermittent issues (like PATH resolution)
@@ -371,7 +373,7 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
         try:
             result = _retry_with_backoff(execute_request, max_retries=2, base_delay=0.5)
             logger.info("Claude API request completed successfully")
-            return result
+            return str(result)
         except Exception as retry_error:
             # If retries failed, proceed to main error handling
             raise retry_error
@@ -598,7 +600,6 @@ async def ask_claude_code_api_detailed(
         raise subprocess.TimeoutExpired(
             ["claude-code-sdk", "query"],
             timeout,
-            f"Claude Code SDK request timed out after {timeout} seconds",
         ) from exc
 
 
@@ -624,7 +625,8 @@ def ask_claude_code_api_detailed_sync(
     """
     # Input validation is handled by ask_claude_code_api_detailed
     try:
-        return asyncio.run(ask_claude_code_api_detailed(question, timeout))
+        result = asyncio.run(ask_claude_code_api_detailed(question, timeout))
+        return result
 
     except subprocess.TimeoutExpired:
         # Re-raise timeout errors as-is for consistency with CLI version

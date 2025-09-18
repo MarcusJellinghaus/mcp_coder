@@ -99,7 +99,7 @@ class TestRetryWithBackoff:
     def test_success_on_first_attempt(self) -> None:
         """Test that function succeeds on first attempt."""
 
-        def successful_func():
+        def successful_func() -> str:
             return "success"
 
         result = _retry_with_backoff(successful_func, max_retries=3, base_delay=0.1)
@@ -110,7 +110,7 @@ class TestRetryWithBackoff:
         """Test that function succeeds after some retries."""
         call_count = 0
 
-        def eventually_successful_func():
+        def eventually_successful_func() -> str:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
@@ -127,7 +127,7 @@ class TestRetryWithBackoff:
     def test_all_attempts_fail(self) -> None:
         """Test behavior when all attempts fail."""
 
-        def always_failing_func():
+        def always_failing_func() -> str:
             raise RuntimeError("Persistent failure")
 
         with pytest.raises(RuntimeError) as exc_info:
@@ -139,7 +139,7 @@ class TestRetryWithBackoff:
         """Test behavior with zero retries (single attempt)."""
         call_count = 0
 
-        def counting_func():
+        def counting_func() -> str:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
