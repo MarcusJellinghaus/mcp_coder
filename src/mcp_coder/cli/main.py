@@ -90,7 +90,7 @@ def main() -> int:
     """Main CLI entry point. Returns exit code."""
     # Initialize logging at the start of main execution
     setup_logging("INFO")
-    
+
     try:
         logger.info("Starting mcp-coder CLI")
 

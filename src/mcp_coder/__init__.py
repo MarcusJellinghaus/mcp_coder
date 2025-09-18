@@ -54,7 +54,7 @@ __all__ = [
     # CLI interface
     "cli_main",
     "execute_help",
-    "execute_commit_auto", 
+    "execute_commit_auto",
     "execute_commit_clipboard",
     # Core LLM interfaces
     "ask_claude",

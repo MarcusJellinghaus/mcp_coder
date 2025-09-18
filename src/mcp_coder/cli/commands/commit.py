@@ -94,7 +94,7 @@ def generate_commit_message_with_llm(
             error_msg = "No changes to commit. Ensure you have modified, added, or deleted files before running commit auto."
             logger.warning(error_msg)
             return False, "", error_msg
-            
+
         logger.debug("Git diff retrieved successfully, %d characters", len(git_diff))
     except Exception as e:
         error_msg = f"Error retrieving git diff: {str(e)}. Check if git is properly installed and the repository is accessible."
@@ -107,7 +107,9 @@ def generate_commit_message_with_llm(
         base_prompt = get_prompt(
             "src/mcp_coder/prompts/prompts.md", "Git Commit Message Generation"
         )
-        logger.debug("Commit prompt loaded successfully, %d characters", len(base_prompt))
+        logger.debug(
+            "Commit prompt loaded successfully, %d characters", len(base_prompt)
+        )
     except FileNotFoundError as e:
         error_msg = f"Commit prompt template not found: {str(e)}. The prompts.md file may be missing or corrupted."
         logger.error("Prompt file not found: %s", e, exc_info=True)
@@ -122,21 +124,23 @@ def generate_commit_message_with_llm(
     try:
         # Combine prompt with git diff
         full_prompt = f"{base_prompt}\n\n=== GIT DIFF ===\n{git_diff}"
-        
+
         # Validate prompt size (avoid extremely large prompts)
         if len(full_prompt) > 100000:  # 100KB limit
-            logger.warning("Git diff is very large (%d chars), may cause LLM issues", len(git_diff))
-        
+            logger.warning(
+                "Git diff is very large (%d chars), may cause LLM issues", len(git_diff)
+            )
+
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
         response = ask_llm(full_prompt, provider="claude", method="api")
-        
+
         if not response or not response.strip():
             error_msg = "LLM returned empty or null response. The AI service may be unavailable or overloaded. Try again in a moment."
             logger.error(error_msg)
             return False, "", error_msg
-            
+
         logger.debug("LLM response received successfully, %d characters", len(response))
-        
+
     except Exception as e:
         error_msg = f"LLM communication failed: {str(e)}. Check your internet connection and API credentials. If the error persists, the AI service may be temporarily unavailable."
         logger.error("LLM request failed: %s", e, exc_info=True)
@@ -146,27 +150,31 @@ def generate_commit_message_with_llm(
     logger.debug("Parsing LLM response into commit message")
     try:
         commit_message, _ = parse_llm_commit_response(response)
-        
+
         if not commit_message or not commit_message.strip():
             error_msg = "LLM generated an empty commit message. The AI may not have understood the changes. Try modifying your changes or running the command again."
             logger.error(error_msg)
             return False, "", error_msg
-        
+
         # Basic validation of commit message format
-        lines = commit_message.split('\n')  # Don't strip the whole message first
+        lines = commit_message.split("\n")  # Don't strip the whole message first
         first_line = lines[0].strip() if lines else ""
-        
+
         if len(first_line) > 100:
-            logger.warning("Generated commit summary is very long (%d chars): %s", len(first_line), first_line[:50] + "...")
-        
+            logger.warning(
+                "Generated commit summary is very long (%d chars): %s",
+                len(first_line),
+                first_line[:50] + "...",
+            )
+
         if not first_line:
             error_msg = "LLM generated a commit message with empty first line. This is invalid for git commits."
             logger.error(error_msg)
             return False, "", error_msg
-            
+
         logger.info("Successfully generated commit message: %s", first_line)
         return True, commit_message, None
-        
+
     except Exception as e:
         error_msg = f"Error parsing LLM response: {str(e)}. The AI response may be in an unexpected format."
         logger.error("Response parsing failed: %s", e, exc_info=True)
@@ -268,13 +276,13 @@ def execute_commit_clipboard(args: argparse.Namespace) -> int:
     print(f"SUCCESS: Successfully committed with message: {summary}")
     if commit_result["commit_hash"]:
         print(f"COMMIT: {commit_result['commit_hash']}")
-    
+
     return 0
 
 
 def get_commit_message_from_clipboard() -> Tuple[bool, str, Optional[str]]:
     """Get and validate commit message from clipboard.
-    
+
     Returns:
         Tuple containing:
         - bool: True if successful, False otherwise
@@ -293,12 +301,12 @@ def get_commit_message_from_clipboard() -> Tuple[bool, str, Optional[str]]:
 
     # Parse message into components (this also formats it properly)
     summary, body = parse_commit_message(clipboard_text)
-    
+
     # Format the final commit message
     if body:
         formatted_message = f"{summary}\n\n{body}"
     else:
         formatted_message = summary
-    
+
     logger.info("Successfully validated clipboard commit message: %s", summary)
     return True, formatted_message, None

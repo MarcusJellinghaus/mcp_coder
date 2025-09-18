@@ -118,7 +118,11 @@ class TestExecuteCommitAuto:
     def test_execute_commit_auto_no_changes(self, mock_generate, mock_validate, capsys):
         """Test commit auto with no staged changes."""
         mock_validate.return_value = (True, None)
-        mock_generate.return_value = (False, "", "No changes to commit. Ensure you have modified, added, or deleted files before running commit auto.")
+        mock_generate.return_value = (
+            False,
+            "",
+            "No changes to commit. Ensure you have modified, added, or deleted files before running commit auto.",
+        )
 
         args = argparse.Namespace(preview=False)
 
@@ -368,7 +372,9 @@ class TestGenerateCommitMessageWithLLMExtended:
     @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
     @patch("src.mcp_coder.cli.commands.commit.get_prompt")
     @patch("src.mcp_coder.cli.commands.commit.ask_llm")
-    def test_empty_llm_response(self, mock_ask_llm, mock_get_prompt, mock_get_diff, mock_stage):
+    def test_empty_llm_response(
+        self, mock_ask_llm, mock_get_prompt, mock_get_diff, mock_stage
+    ):
         """Test empty LLM response handling."""
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
@@ -388,7 +394,9 @@ class TestGenerateCommitMessageWithLLMExtended:
     @patch("src.mcp_coder.cli.commands.commit.get_prompt")
     @patch("src.mcp_coder.cli.commands.commit.ask_llm")
     @patch("src.mcp_coder.cli.commands.commit.parse_llm_commit_response")
-    def test_empty_parsed_commit_message(self, mock_parse, mock_ask_llm, mock_get_prompt, mock_get_diff, mock_stage):
+    def test_empty_parsed_commit_message(
+        self, mock_parse, mock_ask_llm, mock_get_prompt, mock_get_diff, mock_stage
+    ):
         """Test empty parsed commit message handling."""
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
@@ -409,7 +417,9 @@ class TestGenerateCommitMessageWithLLMExtended:
     @patch("src.mcp_coder.cli.commands.commit.get_prompt")
     @patch("src.mcp_coder.cli.commands.commit.ask_llm")
     @patch("src.mcp_coder.cli.commands.commit.parse_llm_commit_response")
-    def test_invalid_commit_message_format(self, mock_parse, mock_ask_llm, mock_get_prompt, mock_get_diff, mock_stage):
+    def test_invalid_commit_message_format(
+        self, mock_parse, mock_ask_llm, mock_get_prompt, mock_get_diff, mock_stage
+    ):
         """Test invalid commit message format handling."""
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"

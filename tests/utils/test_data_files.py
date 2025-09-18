@@ -24,9 +24,7 @@ class TestFindDataFile:
         # Create a temporary directory structure matching the new layout
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            test_file = (
-                temp_path / "src" / "mcp_coder" / "prompts" / "test_prompt.md"
-            )
+            test_file = temp_path / "src" / "mcp_coder" / "prompts" / "test_prompt.md"
             test_file.parent.mkdir(parents=True)
             test_file.write_text("# test prompt")
 
@@ -130,11 +128,11 @@ class TestFindDataFile:
         project_root = Path(__file__).parent.parent.parent
         prompts_dir = project_root / "src" / "mcp_coder" / "prompts"
         assert prompts_dir.exists(), f"prompts directory not found at {prompts_dir}"
-        
+
         # Check for at least one .md file in prompts directory
         md_files = list(prompts_dir.glob("*.md"))
         assert len(md_files) > 0, f"No .md files found in {prompts_dir}"
-        
+
         # Test that find_data_file can actually find one of the prompt files
         first_md_file = md_files[0]
         result = find_data_file(

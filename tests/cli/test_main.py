@@ -72,7 +72,10 @@ class TestMain:
     @patch("mcp_coder.cli.main.handle_no_command")
     @patch("mcp_coder.cli.main.create_parser")
     def test_main_no_args_calls_handle_no_command(
-        self, mock_create_parser: Mock, mock_handle_no_command: Mock, mock_setup_logging: Mock
+        self,
+        mock_create_parser: Mock,
+        mock_handle_no_command: Mock,
+        mock_setup_logging: Mock,
     ) -> None:
         """Test that main calls handle_no_command when no command provided."""
         mock_parser = Mock()
@@ -90,7 +93,10 @@ class TestMain:
     @patch("mcp_coder.cli.main.execute_help")
     @patch("mcp_coder.cli.main.create_parser")
     def test_main_help_command(
-        self, mock_create_parser: Mock, mock_execute_help: Mock, mock_setup_logging: Mock
+        self,
+        mock_create_parser: Mock,
+        mock_execute_help: Mock,
+        mock_setup_logging: Mock,
     ) -> None:
         """Test 'mcp-coder help' command works."""
         mock_parser = Mock()
@@ -123,7 +129,9 @@ class TestMain:
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
-    def test_main_keyboard_interrupt_returns_1(self, mock_create_parser: Mock, mock_setup_logging: Mock) -> None:
+    def test_main_keyboard_interrupt_returns_1(
+        self, mock_create_parser: Mock, mock_setup_logging: Mock
+    ) -> None:
         """Test that main handles KeyboardInterrupt gracefully."""
         mock_parser = Mock()
         mock_parser.parse_args.side_effect = KeyboardInterrupt()
