@@ -134,7 +134,9 @@ def _verify_claude_before_use() -> Tuple[bool, Optional[str], Optional[str]]:
         return False, verification_result.get("path"), error_msg
 
 
-def _retry_with_backoff(func: Callable[[], Any], max_retries: int = 3, base_delay: float = 1.0) -> Any:
+def _retry_with_backoff(
+    func: Callable[[], Any], max_retries: int = 3, base_delay: float = 1.0
+) -> Any:
     """Retry a function with exponential backoff.
 
     Args:
