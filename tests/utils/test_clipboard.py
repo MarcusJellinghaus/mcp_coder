@@ -2,8 +2,8 @@
 
 from unittest.mock import patch
 
-import pytest
 import pyperclip
+import pytest
 
 from mcp_coder.utils.clipboard import (
     get_clipboard_text,
@@ -64,7 +64,9 @@ class TestGetClipboardText:
     def test_get_clipboard_text_pyperclip_exception(self, mock_paste):
         """Test handling of pyperclip exceptions."""
         # Setup mock
-        mock_paste.side_effect = pyperclip.PyperclipException("No clipboard mechanism found")
+        mock_paste.side_effect = pyperclip.PyperclipException(
+            "No clipboard mechanism found"
+        )
 
         # Execute
         success, text, error = get_clipboard_text()

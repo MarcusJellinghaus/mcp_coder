@@ -24,10 +24,10 @@ def get_clipboard_text() -> Tuple[bool, str, Optional[str]]:
     try:
         # Get clipboard content
         clipboard_text = pyperclip.paste()
-        
+
         if clipboard_text is None:
             return False, "", "Clipboard is empty"
-            
+
         if not clipboard_text.strip():
             return False, "", "Clipboard is empty"
 
@@ -38,7 +38,7 @@ def get_clipboard_text() -> Tuple[bool, str, Optional[str]]:
         error_msg = f"Clipboard access failed: {e}"
         logger.error(f"Pyperclip error: {error_msg}")
         return False, "", error_msg
-        
+
     except Exception as e:
         logger.error(f"Unexpected clipboard error: {e}")
         return False, "", f"Clipboard access failed: {e}"
