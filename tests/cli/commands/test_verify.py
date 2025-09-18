@@ -12,7 +12,7 @@ from mcp_coder.cli.main import main
 class TestVerifyCommandIntegration:
     """Test the verify command CLI integration."""
 
-    @patch("mcp_coder.cli.main.verify_claude_cli_installation")
+    @patch("mcp_coder.cli.main.execute_verify")
     @patch("sys.argv", ["mcp-coder", "verify"])
     def test_verify_command_calls_verification_function(
         self, mock_verify: MagicMock
@@ -29,7 +29,7 @@ class TestVerifyCommandIntegration:
         call_args = mock_verify.call_args[0][0]  # First positional argument (args)
         assert isinstance(call_args, argparse.Namespace)
 
-    @patch("mcp_coder.cli.main.verify_claude_cli_installation")
+    @patch("mcp_coder.cli.main.execute_verify")
     @patch("sys.argv", ["mcp-coder", "verify"])
     def test_verify_command_propagates_return_code(
         self, mock_verify: MagicMock

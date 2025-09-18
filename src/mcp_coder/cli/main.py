@@ -4,11 +4,8 @@ import argparse
 import logging
 import sys
 
-from ..llm_providers.claude.claude_cli_verification import (
-    verify_claude_cli_installation,
-)
 from ..utils.log_utils import setup_logging
-from .commands import execute_commit_auto, execute_commit_clipboard, execute_help
+from .commands import execute_commit_auto, execute_commit_clipboard, execute_help, execute_verify
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
@@ -130,7 +127,7 @@ def main() -> int:
         if args.command == "help":
             return execute_help(args)
         elif args.command == "verify":
-            return verify_claude_cli_installation(args)
+            return execute_verify(args)
         elif args.command == "commit" and hasattr(args, "commit_mode"):
             if args.commit_mode == "auto":
                 return execute_commit_auto(args)
