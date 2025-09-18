@@ -13,7 +13,7 @@ from src.mcp_coder.cli.commands.help import (
 )
 
 
-def test_execute_help_returns_success(capsys) -> None:
+def test_execute_help_returns_success(capsys: pytest.CaptureFixture[str]) -> None:
     """Test help command returns exit code 0."""
     args = argparse.Namespace(command="help")
 

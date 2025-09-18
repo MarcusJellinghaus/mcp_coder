@@ -1,6 +1,6 @@
 """Tests for clipboard utilities."""
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pyperclip
 import pytest
@@ -16,7 +16,7 @@ class TestGetClipboardText:
     """Tests for get_clipboard_text function."""
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_success(self, mock_paste) -> None:
+    def test_get_clipboard_text_success(self, mock_paste: Mock) -> None:
         """Test successful clipboard text retrieval."""
         # Setup mock
         mock_paste.return_value = "test commit message"
@@ -31,7 +31,7 @@ class TestGetClipboardText:
         mock_paste.assert_called_once()
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_empty(self, mock_paste) -> None:
+    def test_get_clipboard_text_empty(self, mock_paste: Mock) -> None:
         """Test handling of empty clipboard."""
         # Setup mock
         mock_paste.return_value = "   "  # Only whitespace
@@ -46,7 +46,7 @@ class TestGetClipboardText:
         mock_paste.assert_called_once()
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_none_result(self, mock_paste) -> None:
+    def test_get_clipboard_text_none_result(self, mock_paste: Mock) -> None:
         """Test handling when paste returns None."""
         # Setup mock
         mock_paste.return_value = None
@@ -61,7 +61,7 @@ class TestGetClipboardText:
         mock_paste.assert_called_once()
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_pyperclip_exception(self, mock_paste) -> None:
+    def test_get_clipboard_text_pyperclip_exception(self, mock_paste: Mock) -> None:
         """Test handling of pyperclip exceptions."""
         # Setup mock
         mock_paste.side_effect = pyperclip.PyperclipException(
@@ -78,7 +78,7 @@ class TestGetClipboardText:
         mock_paste.assert_called_once()
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_unexpected_error(self, mock_paste) -> None:
+    def test_get_clipboard_text_unexpected_error(self, mock_paste: Mock) -> None:
         """Test handling of unexpected errors."""
         # Setup mock
         mock_paste.side_effect = RuntimeError("unexpected error")
