@@ -85,7 +85,6 @@ class TestExecuteCommitAuto:
         captured = capsys.readouterr()
         captured_out = captured.out or ""
         assert "Generated commit message:" in captured_out
-        captured_out = captured.out or ""
         assert "feat: add new feature" in captured_out
         assert "SUCCESS: Commit created: abc1234" in captured_out
 
@@ -125,7 +124,6 @@ class TestExecuteCommitAuto:
         assert "Generated commit message:" in captured_out
         assert "SUCCESS: Commit created: abc1234" in captured_out
         # Should NOT see "Commit cancelled"
-        captured_out = captured.out or ""
         assert "Commit cancelled" not in captured_out
 
     @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
