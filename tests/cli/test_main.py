@@ -87,7 +87,7 @@ class TestMain:
 
         assert result == 1
         mock_handle_no_command.assert_called_once()
-        mock_setup_logging.assert_called_once_with("INFO")
+        mock_setup_logging.assert_called_once_with("WARNING")
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.execute_help")
@@ -108,7 +108,7 @@ class TestMain:
 
         assert result == 0
         mock_execute_help.assert_called_once()
-        mock_setup_logging.assert_called_once_with("INFO")
+        mock_setup_logging.assert_called_once_with("WARNING")
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
@@ -125,7 +125,7 @@ class TestMain:
 
         assert result == 1
         mock_print.assert_called()
-        mock_setup_logging.assert_called_once_with("INFO")
+        mock_setup_logging.assert_called_once_with("WARNING")
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
@@ -141,7 +141,7 @@ class TestMain:
             result = main()
 
         assert result == 1
-        mock_setup_logging.assert_called_once_with("INFO")
+        mock_setup_logging.assert_called_once_with("WARNING")
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
@@ -157,7 +157,7 @@ class TestMain:
             result = main()
 
         assert result == 2
-        mock_setup_logging.assert_called_once_with("INFO")
+        mock_setup_logging.assert_called_once_with("WARNING")
 
 
 class TestCLIEntryPoint:

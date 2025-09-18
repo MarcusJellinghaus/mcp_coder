@@ -31,6 +31,11 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
         root_logger.removeHandler(handler)
 
     root_logger.setLevel(numeric_level)
+    
+    # Ensure all existing loggers also get the new level
+    for name in logging.Logger.manager.loggerDict:
+        logger = logging.getLogger(name)
+        logger.setLevel(numeric_level)
 
     # Set up logging based on whether log_file is specified
     if log_file:

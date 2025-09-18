@@ -89,7 +89,7 @@ def handle_no_command(args: argparse.Namespace) -> int:
 def main() -> int:
     """Main CLI entry point. Returns exit code."""
     # Initialize logging at the start of main execution
-    setup_logging("INFO")
+    setup_logging("WARNING")
 
     try:
         logger.info("Starting mcp-coder CLI")
