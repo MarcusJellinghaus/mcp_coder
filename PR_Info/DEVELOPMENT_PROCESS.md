@@ -249,10 +249,17 @@ Please tell me whether this is feasible, how complicated it is, whether it could
 - Create commit summary
 - User performs manual commit
 
-**Commit Message Prompt:**
+**Commit Message Prompt when working on a step:**
 ```
 Please provide a short concise commit message stating the step name in the title.
 ```
+
+
+**Commit message prompt after a small change:**
+```
+Can you provide a short commit message with short info on relevant changes?
+```
+This could benefit from `format_and_commit` tool.
 
 **Tools:**
 - `tools/format_all.bat` - Run all formatting tools (ruff, black, isort)

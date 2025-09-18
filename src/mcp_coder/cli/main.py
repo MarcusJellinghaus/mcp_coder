@@ -8,8 +8,7 @@ from pathlib import Path
 from ..log_utils import setup_logging
 from .commands import execute_commit_auto, execute_commit_clipboard, execute_help
 
-# Initialize logging
-setup_logging("INFO")
+# Logger will be initialized in main()
 logger = logging.getLogger(__name__)
 
 
@@ -89,6 +88,9 @@ def handle_no_command(args: argparse.Namespace) -> int:
 
 def main() -> int:
     """Main CLI entry point. Returns exit code."""
+    # Initialize logging at the start of main execution
+    setup_logging("INFO")
+    
     try:
         logger.info("Starting mcp-coder CLI")
 

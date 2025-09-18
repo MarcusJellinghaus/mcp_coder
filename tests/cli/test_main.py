@@ -68,10 +68,11 @@ class TestHandleNoCommand:
 class TestMain:
     """Test main CLI entry point."""
 
+    @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.handle_no_command")
     @patch("mcp_coder.cli.main.create_parser")
     def test_main_no_args_calls_handle_no_command(
-        self, mock_create_parser: Mock, mock_handle_no_command: Mock
+        self, mock_create_parser: Mock, mock_handle_no_command: Mock, mock_setup_logging: Mock
     ) -> None:
         """Test that main calls handle_no_command when no command provided."""
         mock_parser = Mock()
@@ -83,11 +84,13 @@ class TestMain:
 
         assert result == 1
         mock_handle_no_command.assert_called_once()
+        mock_setup_logging.assert_called_once_with("INFO")
 
+    @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.execute_help")
     @patch("mcp_coder.cli.main.create_parser")
     def test_main_help_command(
-        self, mock_create_parser: Mock, mock_execute_help: Mock
+        self, mock_create_parser: Mock, mock_execute_help: Mock, mock_setup_logging: Mock
     ) -> None:
         """Test 'mcp-coder help' command works."""
         mock_parser = Mock()
@@ -99,11 +102,13 @@ class TestMain:
 
         assert result == 0
         mock_execute_help.assert_called_once()
+        mock_setup_logging.assert_called_once_with("INFO")
 
+    @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
     @patch("builtins.print")
     def test_main_unknown_command_returns_error(
-        self, mock_print: Mock, mock_create_parser: Mock
+        self, mock_print: Mock, mock_create_parser: Mock, mock_setup_logging: Mock
     ) -> None:
         """Test that main returns error for unknown commands."""
         mock_parser = Mock()
@@ -114,9 +119,11 @@ class TestMain:
 
         assert result == 1
         mock_print.assert_called()
+        mock_setup_logging.assert_called_once_with("INFO")
 
+    @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
-    def test_main_keyboard_interrupt_returns_1(self, mock_create_parser: Mock) -> None:
+    def test_main_keyboard_interrupt_returns_1(self, mock_create_parser: Mock, mock_setup_logging: Mock) -> None:
         """Test that main handles KeyboardInterrupt gracefully."""
         mock_parser = Mock()
         mock_parser.parse_args.side_effect = KeyboardInterrupt()
@@ -126,10 +133,12 @@ class TestMain:
             result = main()
 
         assert result == 1
+        mock_setup_logging.assert_called_once_with("INFO")
 
+    @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
     def test_main_unexpected_exception_returns_2(
-        self, mock_create_parser: Mock
+        self, mock_create_parser: Mock, mock_setup_logging: Mock
     ) -> None:
         """Test that main handles unexpected exceptions."""
         mock_parser = Mock()
@@ -140,6 +149,7 @@ class TestMain:
             result = main()
 
         assert result == 2
+        mock_setup_logging.assert_called_once_with("INFO")
 
 
 class TestCLIEntryPoint:
