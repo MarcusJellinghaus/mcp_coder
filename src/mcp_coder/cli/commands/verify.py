@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 def execute_verify(args: argparse.Namespace) -> int:
     """Execute verify command to check Claude CLI installation.
-    
+
     Args:
         args: Command line arguments
-        
+
     Returns:
         Exit code (0 for success, 1 for failure)
     """

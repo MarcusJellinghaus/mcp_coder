@@ -5,7 +5,12 @@ import logging
 import sys
 
 from ..utils.log_utils import setup_logging
-from .commands import execute_commit_auto, execute_commit_clipboard, execute_help, execute_verify
+from .commands import (
+    execute_commit_auto,
+    execute_commit_clipboard,
+    execute_help,
+    execute_verify,
+)
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)

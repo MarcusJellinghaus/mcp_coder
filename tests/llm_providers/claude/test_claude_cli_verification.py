@@ -86,7 +86,11 @@ class TestVerifyClaudeCliInstallation:
 
         # Check that failure messages were printed
         print_calls = [call[0][0] for call in mock_print.call_args_list]
-        failure_messages = [msg for msg in print_calls if "NO" in msg or "FAILED" in msg or "Issues detected" in msg]
+        failure_messages = [
+            msg
+            for msg in print_calls
+            if "NO" in msg or "FAILED" in msg or "Issues detected" in msg
+        ]
         assert len(failure_messages) >= 2  # Should have multiple failure indicators
 
         # Check that recommendations were provided
