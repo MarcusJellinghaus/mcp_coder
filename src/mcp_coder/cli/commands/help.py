@@ -1,4 +1,4 @@
-"""Help command implementation for MCP Coder CLI."""
+"""Help commands for the MCP Coder CLI."""
 
 import argparse
 import logging
@@ -26,8 +26,9 @@ USAGE:
     mcp-coder <command> [options]
 
 COMMANDS:
-    help                    Show this help information
-    commit auto             Auto-generate commit message using LLM analysis
+    help                    Show help information
+    commit auto             Auto-generate commit message using LLM
+    commit auto --preview   Show generated message and ask for confirmation
     commit clipboard        Use commit message from clipboard
 
 {examples}
@@ -44,4 +45,5 @@ def get_usage_examples() -> str:
     return """EXAMPLES:
     mcp-coder help                    # Show this help
     mcp-coder commit auto             # Analyze changes and auto-commit
+    mcp-coder commit auto --preview   # Review generated message before commit
     mcp-coder commit clipboard        # Commit with clipboard message"""

@@ -58,4 +58,6 @@ EXAMPLES:
 - chore: update dependencies to latest versions
 
 Expected output: A properly formatted conventional commit message ready to use with git commit.
+
+Do not provide anything else - just the commit message!
 ```

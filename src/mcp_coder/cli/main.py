@@ -57,7 +57,7 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     auto_parser.add_argument(
         "--preview",
         action="store_true",
-        help="Show generated message and ask for confirmation",
+        help="Show generated message and ask for confirmation before committing",
     )
 
     # commit clipboard command - Step 6
