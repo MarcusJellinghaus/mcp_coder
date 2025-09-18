@@ -1,18 +1,19 @@
 """Clipboard utilities for commit message handling.
 
 This module provides utilities for accessing clipboard content and validating
-commit message formats using tkinter (no external dependencies required).
+commit message formats using pyperclip.
 """
 
 import logging
-import tkinter as tk
 from typing import Optional, Tuple
+
+import pyperclip
 
 logger = logging.getLogger(__name__)
 
 
 def get_clipboard_text() -> Tuple[bool, str, Optional[str]]:
-    """Get text from clipboard using tkinter.
+    """Get text from clipboard using pyperclip.
 
     Returns:
         Tuple containing:
@@ -21,35 +22,23 @@ def get_clipboard_text() -> Tuple[bool, str, Optional[str]]:
         - Optional[str]: Error message if failed, None if successful
     """
     try:
-        # Create a temporary tkinter root window
-        root = tk.Tk()
-        root.withdraw()  # Hide the window
+        # Get clipboard content
+        clipboard_text = pyperclip.paste()
+        
+        if clipboard_text is None:
+            return False, "", "Clipboard is empty"
+            
+        if not clipboard_text.strip():
+            return False, "", "Clipboard is empty"
 
-        try:
-            # Get clipboard content
-            clipboard_text = root.clipboard_get()
-            root.destroy()
+        logger.debug("Successfully retrieved clipboard text")
+        return True, clipboard_text, None
 
-            if not clipboard_text.strip():
-                return False, "", "Clipboard is empty"
-
-            logger.debug("Successfully retrieved clipboard text")
-            return True, clipboard_text, None
-
-        except tk.TclError as e:
-            root.destroy()
-            error_msg = str(e)
-
-            if "CLIPBOARD selection doesn't exist" in error_msg:
-                error_msg = "Clipboard is empty"
-            elif "couldn't connect to display" in error_msg:
-                error_msg = "No display available for clipboard access"
-            else:
-                error_msg = f"Clipboard access failed: {error_msg}"
-
-            logger.error(f"Clipboard error: {error_msg}")
-            return False, "", error_msg
-
+    except pyperclip.PyperclipException as e:
+        error_msg = f"Clipboard access failed: {e}"
+        logger.error(f"Pyperclip error: {error_msg}")
+        return False, "", error_msg
+        
     except Exception as e:
         logger.error(f"Unexpected clipboard error: {e}")
         return False, "", f"Clipboard access failed: {e}"

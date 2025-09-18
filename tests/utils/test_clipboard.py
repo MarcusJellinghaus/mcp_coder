@@ -1,9 +1,9 @@
 """Tests for clipboard utilities."""
 
-import tkinter as tk
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
+import pyperclip
 
 from mcp_coder.utils.clipboard import (
     get_clipboard_text,
@@ -15,13 +15,11 @@ from mcp_coder.utils.clipboard import (
 class TestGetClipboardText:
     """Tests for get_clipboard_text function."""
 
-    @patch("mcp_coder.utils.clipboard.tk.Tk")
-    def test_get_clipboard_text_success(self, mock_tk):
+    @patch("mcp_coder.utils.clipboard.pyperclip.paste")
+    def test_get_clipboard_text_success(self, mock_paste):
         """Test successful clipboard text retrieval."""
         # Setup mock
-        mock_root = Mock()
-        mock_tk.return_value = mock_root
-        mock_root.clipboard_get.return_value = "test commit message"
+        mock_paste.return_value = "test commit message"
 
         # Execute
         success, text, error = get_clipboard_text()
@@ -30,17 +28,13 @@ class TestGetClipboardText:
         assert success is True
         assert text == "test commit message"
         assert error is None
-        mock_root.withdraw.assert_called_once()
-        mock_root.clipboard_get.assert_called_once()
-        mock_root.destroy.assert_called_once()
+        mock_paste.assert_called_once()
 
-    @patch("mcp_coder.utils.clipboard.tk.Tk")
-    def test_get_clipboard_text_empty(self, mock_tk):
+    @patch("mcp_coder.utils.clipboard.pyperclip.paste")
+    def test_get_clipboard_text_empty(self, mock_paste):
         """Test handling of empty clipboard."""
         # Setup mock
-        mock_root = Mock()
-        mock_tk.return_value = mock_root
-        mock_root.clipboard_get.return_value = "   "  # Only whitespace
+        mock_paste.return_value = "   "  # Only whitespace
 
         # Execute
         success, text, error = get_clipboard_text()
@@ -49,17 +43,13 @@ class TestGetClipboardText:
         assert success is False
         assert text == ""
         assert error == "Clipboard is empty"
-        mock_root.destroy.assert_called_once()
+        mock_paste.assert_called_once()
 
-    @patch("mcp_coder.utils.clipboard.tk.Tk")
-    def test_get_clipboard_text_clipboard_selection_error(self, mock_tk):
-        """Test handling of clipboard selection errors."""
+    @patch("mcp_coder.utils.clipboard.pyperclip.paste")
+    def test_get_clipboard_text_none_result(self, mock_paste):
+        """Test handling when paste returns None."""
         # Setup mock
-        mock_root = Mock()
-        mock_tk.return_value = mock_root
-        mock_root.clipboard_get.side_effect = tk.TclError(
-            "CLIPBOARD selection doesn't exist"
-        )
+        mock_paste.return_value = None
 
         # Execute
         success, text, error = get_clipboard_text()
@@ -68,15 +58,13 @@ class TestGetClipboardText:
         assert success is False
         assert text == ""
         assert error == "Clipboard is empty"
-        mock_root.destroy.assert_called_once()
+        mock_paste.assert_called_once()
 
-    @patch("mcp_coder.utils.clipboard.tk.Tk")
-    def test_get_clipboard_text_display_error(self, mock_tk):
-        """Test handling of display connection errors."""
+    @patch("mcp_coder.utils.clipboard.pyperclip.paste")
+    def test_get_clipboard_text_pyperclip_exception(self, mock_paste):
+        """Test handling of pyperclip exceptions."""
         # Setup mock
-        mock_root = Mock()
-        mock_tk.return_value = mock_root
-        mock_root.clipboard_get.side_effect = tk.TclError("couldn't connect to display")
+        mock_paste.side_effect = pyperclip.PyperclipException("No clipboard mechanism found")
 
         # Execute
         success, text, error = get_clipboard_text()
@@ -84,31 +72,14 @@ class TestGetClipboardText:
         # Verify
         assert success is False
         assert text == ""
-        assert error == "No display available for clipboard access"
-        mock_root.destroy.assert_called_once()
+        assert error == "Clipboard access failed: No clipboard mechanism found"
+        mock_paste.assert_called_once()
 
-    @patch("mcp_coder.utils.clipboard.tk.Tk")
-    def test_get_clipboard_text_generic_tcl_error(self, mock_tk):
-        """Test handling of generic TclError."""
-        # Setup mock
-        mock_root = Mock()
-        mock_tk.return_value = mock_root
-        mock_root.clipboard_get.side_effect = tk.TclError("some other error")
-
-        # Execute
-        success, text, error = get_clipboard_text()
-
-        # Verify
-        assert success is False
-        assert text == ""
-        assert error == "Clipboard access failed: some other error"
-        mock_root.destroy.assert_called_once()
-
-    @patch("mcp_coder.utils.clipboard.tk.Tk")
-    def test_get_clipboard_text_unexpected_error(self, mock_tk):
+    @patch("mcp_coder.utils.clipboard.pyperclip.paste")
+    def test_get_clipboard_text_unexpected_error(self, mock_paste):
         """Test handling of unexpected errors."""
         # Setup mock
-        mock_tk.side_effect = RuntimeError("unexpected error")
+        mock_paste.side_effect = RuntimeError("unexpected error")
 
         # Execute
         success, text, error = get_clipboard_text()
@@ -117,6 +88,7 @@ class TestGetClipboardText:
         assert success is False
         assert text == ""
         assert error == "Clipboard access failed: unexpected error"
+        mock_paste.assert_called_once()
 
 
 class TestValidateCommitMessage:

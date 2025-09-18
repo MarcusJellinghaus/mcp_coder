@@ -140,19 +140,34 @@ class TestExecuteCommitAuto:
         # Setup mocks
         mock_validate.return_value = (True, None)
         mock_generate.return_value = (True, "feat: add new feature", None)
-        mock_commit.return_value = {"success": True, "commit_hash": "abc1234", "error": None}
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc1234",
+            "error": None,
+        }
 
         args = argparse.Namespace(preview=True)
-        
+
         # Test various ways to cancel
         cancel_inputs = ["n", "N", "no", "No", "NO", "nope", "Nope"]
         for cancel_input in cancel_inputs:
             mock_input.return_value = cancel_input
             result = execute_commit_auto(args)
             assert result == 0, f"Failed to cancel with input: {cancel_input}"
-            
+
         # Test various ways to proceed (default behavior)
-        proceed_inputs = ["", "y", "Y", "yes", "Yes", "YES", "yeah", "yep", "sure", "ok"]
+        proceed_inputs = [
+            "",
+            "y",
+            "Y",
+            "yes",
+            "Yes",
+            "YES",
+            "yeah",
+            "yep",
+            "sure",
+            "ok",
+        ]
         for proceed_input in proceed_inputs:
             mock_input.return_value = proceed_input
             result = execute_commit_auto(args)
@@ -201,7 +216,7 @@ class TestExecuteCommitAuto:
 
 class TestPreviewModeLogic:
     """Tests specifically for preview mode user input logic."""
-    
+
     @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
@@ -213,7 +228,7 @@ class TestPreviewModeLogic:
         mock_validate.return_value = (True, None)
         mock_generate.return_value = (True, "feat: test", None)
         args = argparse.Namespace(preview=True)
-        
+
         cancel_inputs = ["n", "N", "no", "No", "NO", "nope", "never", "nah"]
         for cancel_input in cancel_inputs:
             mock_input.return_value = cancel_input
@@ -222,7 +237,7 @@ class TestPreviewModeLogic:
             # Should not call commit
             mock_commit.assert_not_called()
             mock_commit.reset_mock()
-    
+
     @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
@@ -233,10 +248,26 @@ class TestPreviewModeLogic:
         """Test various ways to proceed in preview mode."""
         mock_validate.return_value = (True, None)
         mock_generate.return_value = (True, "feat: test", None)
-        mock_commit.return_value = {"success": True, "commit_hash": "abc123", "error": None}
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
         args = argparse.Namespace(preview=True)
-        
-        proceed_inputs = ["", "y", "Y", "yes", "Yes", "YES", "yeah", "yep", "sure", "ok", "anything"]
+
+        proceed_inputs = [
+            "",
+            "y",
+            "Y",
+            "yes",
+            "Yes",
+            "YES",
+            "yeah",
+            "yep",
+            "sure",
+            "ok",
+            "anything",
+        ]
         for proceed_input in proceed_inputs:
             mock_input.return_value = proceed_input
             result = execute_commit_auto(args)

@@ -50,7 +50,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 
         response = input("\nProceed with commit? (Y/n): ").strip().lower()
         # Handle case-insensitive input, check first letter, only check for non-default (n/no)
-        if response.startswith('n'):  # 'n', 'no', 'nope', etc.
+        if response.startswith("n"):  # 'n', 'no', 'nope', etc.
             print("Commit cancelled.")
             return 0
         # Everything else (empty, 'y', 'yes', 'yeah', etc.) proceeds as default
