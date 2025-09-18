@@ -1,46 +1,49 @@
-# Step 3: Integrate Prompt Command into CLI
+# Step 3: Add Verbose Verbosity Level Tests
 
 ## LLM Prompt
 ```
-Based on the summary in pr_info/steps/summary.md, implement Step 3: Integrate the prompt command into the main CLI system.
+Based on the summary in PR_Info/steps/summary.md, implement Step 3: Add tests for the --verbose verbosity level.
 
-Update the CLI parser and routing to support the new prompt command:
-- Add prompt subparser to argument parser
-- Add routing logic in main function
-- Update command exports
-- Update no-command help text
+Create tests for the verbose output functionality:
+- Test verbose output format (detailed tool interactions + metrics)
+- Test that verbose shows more information than just-text
+- Use the same test patterns established in Step 1
 
-Follow the patterns used for existing commands like help, verify, and commit.
+This adds the first verbosity level beyond the default just-text format.
 ```
 
 ## WHERE
-- **Files**: 
-  - `src/mcp_coder/cli/main.py` (parser and routing)
-  - `src/mcp_coder/cli/commands/__init__.py` (exports)
+- **File**: `tests/cli/commands/test_prompt.py` (extend existing)
+- **Test Addition**: Add to existing test module
 
 ## WHAT
-- **Parser Addition**: Add prompt subparser in `create_parser()`
-- **Routing Logic**: Add prompt case in `main()` function
-- **Export Update**: Add `execute_prompt` to `__init__.py`
-- **Help Update**: Include prompt in `handle_no_command()`
+- **New Test Function**: `test_verbose_output()` 
+- **Test Logic**: Mock args with verbose flag, verify detailed output
+- **Comparison**: Ensure verbose output contains more detail than just-text
 
 ## HOW
-- **Import**: Add `execute_prompt` to imports in main.py
-- **Subparser**: `subparsers.add_parser("prompt", help="Execute prompt via Claude CLI")`
-- **Argument**: `prompt_parser.add_argument("prompt", help="The prompt to send to Claude")`
-- **Routing**: Add `elif args.command == "prompt":` case
+- **Mock Setup**: Mock args with `verbose=True` flag
+- **Output Verification**: Check for tool interaction details and performance metrics
+- **Pattern Matching**: Verify presence of expected verbose-only content
+- **Integration**: Extend existing test infrastructure
 
 ## ALGORITHM
 ```
-1. Add prompt subparser with required prompt argument
-2. Import execute_prompt in main.py
-3. Add routing case for prompt command
-4. Update __init__.py exports
-5. Update help text to include prompt command
+1. Setup mock args with prompt and verbose=True
+2. Mock ask_claude_code_api_detailed_sync with rich response data
+3. Call execute_prompt function
+4. Capture output and verify verbose-specific content:
+   - Tool interaction details with parameters
+   - Performance metrics (duration, cost)
+   - Session information
 ```
 
 ## DATA
-- **Parser Config**: Subparser with required `prompt` positional argument
-- **Import**: `from .commands import execute_prompt`
-- **Routing**: `args.command == "prompt"` → `return execute_prompt(args)`
-- **Help Text**: Include "prompt <text>" in command listing
+- **Input**: `argparse.Namespace` with `prompt` and `verbose=True`
+- **Mock Response**: Enhanced Claude API response with tool interactions and metrics
+- **Assertions**: 
+  - Contains Claude response
+  - Contains detailed tool interactions 
+  - Contains performance metrics
+  - More detailed than just-text output
+- **Scope**: Verbose level functionality only

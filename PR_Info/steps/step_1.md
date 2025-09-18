@@ -1,16 +1,15 @@
-# Step 1: Create Prompt Command Tests
+# Step 1: Create Basic Prompt Command Tests
 
 ## LLM Prompt
 ```
-Based on the summary in pr_info/steps/summary.md, implement Step 1: Create comprehensive tests for the prompt command functionality.
+Based on the summary in PR_Info/steps/summary.md, implement Step 1: Create tests for basic prompt command functionality.
 
-Create tests that validate:
-- Successful prompt execution with mocked Claude CLI
-- Input validation for empty/invalid prompts  
-- Error handling when Claude CLI fails
-- Argument parsing from command line
+Create tests for the core prompt execution:
+- Test successful prompt execution with mocked Claude API detailed function
+- Test API error handling when Claude API fails
 
 Follow the existing test patterns in tests/cli/commands/test_help.py and use pytest with proper mocking.
+This is the foundation for the TDD approach - implement only the basic test structure.
 ```
 
 ## WHERE
@@ -19,29 +18,28 @@ Follow the existing test patterns in tests/cli/commands/test_help.py and use pyt
 
 ## WHAT
 - **Test Functions**:
-  - `test_execute_prompt_success()` - Mock successful Claude CLI call
-  - `test_execute_prompt_empty_input()` - Validate input rejection
-  - `test_execute_prompt_claude_error()` - Handle Claude CLI failures
-  - `test_prompt_argument_parsing()` - Verify argument extraction
+  - `test_basic_prompt_success()` - Mock successful Claude API detailed call with just-text output
+  - `test_prompt_api_error()` - Handle Claude API failures gracefully
 
 ## HOW
 - **Imports**: `pytest`, `argparse`, `unittest.mock`
-- **Mocking**: Mock `ask_claude_code_cli` function
+- **Mocking**: Mock `ask_claude_code_api_detailed_sync` function
 - **Fixtures**: Use `capsys` for output capture
-- **Integration**: Follow existing test patterns
+- **Integration**: Follow existing test patterns from other command tests
 
 ## ALGORITHM
 ```
 FOR each test scenario:
-  1. Setup mock arguments/environment
-  2. Mock external dependencies (Claude CLI)
+  1. Setup mock arguments with basic prompt
+  2. Mock ask_claude_code_api_detailed_sync function
   3. Call execute_prompt function
-  4. Assert expected return code
-  5. Verify output/error messages
+  4. Assert expected return code (0 for success)
+  5. Verify basic output presence (Claude response visible)
 ```
 
 ## DATA
 - **Input**: `argparse.Namespace` with prompt attribute
-- **Return**: Exit codes (0=success, 1=user error, 2=system error)
-- **Mocks**: Claude CLI responses, error conditions
-- **Assertions**: Exit codes, console output, error messages
+- **Return**: Exit codes (0=success, non-zero=error) 
+- **Mocks**: Basic Claude API response with minimal structure
+- **Assertions**: Exit codes, presence of Claude response in output
+- **Scope**: Basic functionality only - no verbosity levels yet
