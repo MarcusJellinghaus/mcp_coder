@@ -3,9 +3,8 @@
 import argparse
 import logging
 import sys
-from pathlib import Path
 
-from ..log_utils import setup_logging
+from ..utils.log_utils import setup_logging
 from .commands import execute_commit_auto, execute_commit_clipboard, execute_help
 
 # Logger will be initialized in main()
