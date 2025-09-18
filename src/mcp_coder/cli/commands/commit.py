@@ -49,9 +49,11 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         print("=" * 50)
 
         response = input("\nProceed with commit? (Y/n): ").strip().lower()
-        if response == "n":
+        # Handle case-insensitive input, check first letter, only check for non-default (n/no)
+        if response.startswith('n'):  # 'n', 'no', 'nope', etc.
             print("Commit cancelled.")
             return 0
+        # Everything else (empty, 'y', 'yes', 'yeah', etc.) proceeds as default
 
     # 4. Create commit
     commit_result = commit_staged_files(commit_message, project_dir)

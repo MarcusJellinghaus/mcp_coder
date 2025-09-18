@@ -77,7 +77,36 @@ class TestExecuteCommitAuto:
         assert "SUCCESS: Commit created: abc1234" in captured.out
 
         # Verify input was called
-        mock_input.assert_called_once_with("\nProceed with commit? (y/N): ")
+        mock_input.assert_called_once_with("\nProceed with commit? (Y/n): ")
+
+    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("builtins.input")
+    def test_execute_commit_auto_preview_empty_input_proceeds(
+        self, mock_input, mock_commit, mock_generate, mock_validate, capsys
+    ):
+        """Test commit auto with preview mode - empty input proceeds as default."""
+        # Setup mocks
+        mock_validate.return_value = (True, None)
+        mock_generate.return_value = (True, "feat: add new feature", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc1234",
+            "error": None,
+        }
+        mock_input.return_value = ""  # Empty input (just pressed Enter)
+
+        args = argparse.Namespace(preview=True)
+
+        result = execute_commit_auto(args)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Generated commit message:" in captured.out
+        assert "SUCCESS: Commit created: abc1234" in captured.out
+        # Should NOT see "Commit cancelled"
+        assert "Commit cancelled" not in captured.out
 
     @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
@@ -99,6 +128,43 @@ class TestExecuteCommitAuto:
         captured = capsys.readouterr()
         assert "Generated commit message:" in captured.out
         assert "Commit cancelled." in captured.out
+
+    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("builtins.input")
+    def test_execute_commit_auto_preview_various_cancel_inputs(
+        self, mock_input, mock_commit, mock_generate, mock_validate, capsys
+    ):
+        """Test commit auto with preview mode - various cancel inputs."""
+        # Setup mocks
+        mock_validate.return_value = (True, None)
+        mock_generate.return_value = (True, "feat: add new feature", None)
+        mock_commit.return_value = {"success": True, "commit_hash": "abc1234", "error": None}
+
+        args = argparse.Namespace(preview=True)
+        
+        # Test various ways to cancel
+        cancel_inputs = ["n", "N", "no", "No", "NO", "nope", "Nope"]
+        for cancel_input in cancel_inputs:
+            mock_input.return_value = cancel_input
+            result = execute_commit_auto(args)
+            assert result == 0, f"Failed to cancel with input: {cancel_input}"
+            
+        # Test various ways to proceed (default behavior)
+        proceed_inputs = ["", "y", "Y", "yes", "Yes", "YES", "yeah", "yep", "sure", "ok"]
+        for proceed_input in proceed_inputs:
+            mock_input.return_value = proceed_input
+            result = execute_commit_auto(args)
+            assert result == 0, f"Failed to proceed with input: '{proceed_input}'"
+            # Should have proceeded to commit
+            captured = capsys.readouterr()
+            if proceed_input != "":  # Empty string test might not show success message
+                continue
+            # For empty string (default), should proceed
+            mock_input.return_value = ""
+            result = execute_commit_auto(args)
+            assert result == 0
 
     @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
     def test_execute_commit_auto_not_git_repo(self, mock_validate, capsys):
@@ -131,6 +197,53 @@ class TestExecuteCommitAuto:
         assert result == 2
         captured = capsys.readouterr()
         assert "Error: No changes to commit" in captured.err
+
+
+class TestPreviewModeLogic:
+    """Tests specifically for preview mode user input logic."""
+    
+    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("builtins.input")
+    def test_preview_mode_cancel_variations(
+        self, mock_input, mock_commit, mock_generate, mock_validate
+    ):
+        """Test various ways to cancel in preview mode."""
+        mock_validate.return_value = (True, None)
+        mock_generate.return_value = (True, "feat: test", None)
+        args = argparse.Namespace(preview=True)
+        
+        cancel_inputs = ["n", "N", "no", "No", "NO", "nope", "never", "nah"]
+        for cancel_input in cancel_inputs:
+            mock_input.return_value = cancel_input
+            result = execute_commit_auto(args)
+            assert result == 0  # Cancelled successfully
+            # Should not call commit
+            mock_commit.assert_not_called()
+            mock_commit.reset_mock()
+    
+    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("builtins.input")
+    def test_preview_mode_proceed_variations(
+        self, mock_input, mock_commit, mock_generate, mock_validate
+    ):
+        """Test various ways to proceed in preview mode."""
+        mock_validate.return_value = (True, None)
+        mock_generate.return_value = (True, "feat: test", None)
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123", "error": None}
+        args = argparse.Namespace(preview=True)
+        
+        proceed_inputs = ["", "y", "Y", "yes", "Yes", "YES", "yeah", "yep", "sure", "ok", "anything"]
+        for proceed_input in proceed_inputs:
+            mock_input.return_value = proceed_input
+            result = execute_commit_auto(args)
+            assert result == 0  # Success
+            # Should call commit
+            mock_commit.assert_called_once_with("feat: test", Path.cwd())
+            mock_commit.reset_mock()
 
 
 class TestGenerateCommitMessageWithLLM:
