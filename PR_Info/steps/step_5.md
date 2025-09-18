@@ -1,121 +1,148 @@
-# Step 5: Create MCP Filesystem-Specific Tests
+# Step 5: Expand Based on Automation Learnings
 
 ## Objective
-Implement detailed tests specifically for mcp-server-filesystem integration, covering advanced filesystem operations, reference projects, and edge cases.
+Expand the automated testing framework based on what we learned works reliably in Step 4. Add more sophisticated features only if the basic automation is solid and stable.
 
 ## WHERE
-- **File**: `tests/integration/test_mcp_filesystem.py`
-- **Supporting Tests**: Additional test cases in main integration test file
-- **Documentation**: Update test documentation with filesystem-specific scenarios
+- **Enhanced Tests**: `tests/integration/test_mcp_enhanced.py`
+- **Documentation**: `docs/mcp_testing_guide.md` (user guide for the framework)
+- **Configuration**: Update pytest configuration for MCP test markers
 
 ## WHAT
-### Main Test Functions
+### Expansion Options (Choose Based on Step 4 Results)
+
+#### Option A: More File Operations
 ```python
-class TestMCPFilesystemOperations:
-    def test_directory_operations(self, mcp_config_manager, test_project_with_files)
-    def test_reference_project_access(self, mcp_config_manager, test_project_with_files) 
-    def test_file_move_operations(self, mcp_config_manager, test_project_with_files)
-    def test_file_edit_operations(self, mcp_config_manager, test_project_with_files)
-    def test_batch_file_operations(self, mcp_config_manager, test_project_with_files)
-    def test_large_file_handling(self, mcp_config_manager, test_project_with_files)
-    def test_filesystem_edge_cases(self, mcp_config_manager, test_project_with_files)
-    def test_concurrent_operations(self, mcp_config_manager, test_project_with_files)
+class TestMCPEnhancedOperations:
+    def test_file_editing_operations(self):
+        """If edit_file worked reliably in exploration"""
+    
+    def test_file_move_operations(self):
+        """If move_file worked reliably in exploration"""
+    
+    def test_directory_creation(self):
+        """If directory operations worked reliably"""
 ```
 
-### Advanced Filesystem Features
-- **Reference Projects**: Test read-only access to additional directories
-- **File Editing**: Test precise file modifications using edit_file tool
-- **Directory Operations**: Test directory creation, listing, navigation
-- **Move Operations**: Test file/directory move and rename operations
-- **Batch Operations**: Test multiple file operations in single session
+#### Option B: Error Handling and Edge Cases
+```python
+class TestMCPErrorHandling:
+    def test_file_not_found_scenarios(self):
+        """Test MCP behavior with missing files"""
+    
+    def test_permission_denied_scenarios(self):
+        """Test MCP behavior with permission issues"""
+    
+    def test_mcp_server_unavailable(self):
+        """Test behavior when MCP server is down"""
+```
+
+#### Option C: Performance and Timing
+```python
+class TestMCPPerformance:
+    def test_operation_timing_bounds(self):
+        """Verify operations complete within expected timeframes"""
+    
+    def test_large_file_handling(self):
+        """Test with larger files (if successful in exploration)"""
+    
+    def test_concurrent_operations(self):
+        """Test multiple operations in sequence"""
+```
+
+#### Option D: Advanced MCP Features
+```python
+class TestMCPAdvancedFeatures:
+    def test_reference_project_access(self):
+        """If reference projects worked in exploration"""
+    
+    def test_complex_file_workflows(self):
+        """Multi-step file operations in single session"""
+```
 
 ## HOW
-### Integration Points
-- **MCP Filesystem Tools**: `list_directory`, `read_file`, `save_file`, `edit_file`, `move_file`
-- **Reference Projects**: Test `get_reference_projects`, `list_reference_directory`, `read_reference_file`
-- **Advanced Scenarios**: Multi-step workflows, error recovery, resource limits
-- **Performance Testing**: Large files, many files, concurrent operations
+### Decision Framework
+**Only proceed with expansions if Step 4 automation is:**
+- ✅ Running reliably without manual intervention
+- ✅ Completing within reasonable time (< 5 minutes)  
+- ✅ Cleaning up properly after each test run
+- ✅ Producing consistent, repeatable results
 
-### Test Coverage Strategy
-- Cover all mcp-server-filesystem tools individually and in combination
-- Test both success paths and error conditions
-- Include edge cases like large files, special characters, permissions
-- Verify reference project functionality works correctly
+### Implementation Strategy
+- **One Option at a Time**: Don't implement all options, choose based on Step 4 results
+- **Build on Success**: Only add features that showed promise in exploration
+- **Maintain Reliability**: New features shouldn't break existing automation
+- **Document Everything**: Create user guide for the testing framework
 
 ## ALGORITHM
 ```
-1. Set up MCP filesystem server with test project and reference projects
-2. Execute comprehensive filesystem operation tests
-3. Verify advanced features like file editing and reference projects
-4. Test edge cases and error conditions
-5. Validate performance characteristics and resource usage
+1. Evaluate Step 4 automation reliability and performance
+2. Choose expansion option based on exploration findings and automation success
+3. Implement chosen expansion incrementally
+4. Verify new features don't break existing automation
+5. Create documentation for using the testing framework
 ```
 
 ## DATA
-### Filesystem Test Scenarios
+### Decision Matrix for Expansion
 ```python
-FILESYSTEM_OPERATIONS = [
-    {
-        "category": "directory_ops",
-        "tests": [
-            {"prompt": "List all directories in the project", "tools": ["list_directory"]},
-            {"prompt": "Show me the file structure", "tools": ["list_directory"]}
-        ]
+EXPANSION_CRITERIA = {
+    "more_operations": {
+        "condition": "Basic file ops automation works perfectly",
+        "priority": "High - natural next step"
     },
-    {
-        "category": "file_editing", 
-        "tests": [
-            {"prompt": "Change 'Hello' to 'Hi' in main.py", "tools": ["edit_file"]},
-            {"prompt": "Add a comment to the top of main.py", "tools": ["read_file", "edit_file"]}
-        ]
+    "error_handling": {
+        "condition": "Observed interesting error behaviors in exploration",
+        "priority": "Medium - important for robustness"
     },
-    {
-        "category": "reference_projects",
-        "tests": [
-            {"prompt": "What reference projects are available?", "tools": ["get_reference_projects"]},
-            {"prompt": "Read the README from the docs reference", "tools": ["read_reference_file"]}
-        ]
+    "performance": {
+        "condition": "Timing issues observed in Step 4 automation",
+        "priority": "Low - optimization focus"
+    },
+    "advanced_features": {
+        "condition": "Reference projects worked in exploration",
+        "priority": "Low - nice to have"
     }
-]
+}
 ```
-
-### Edge Case Testing
-- **Large Files**: Test with files >1MB to verify handling
-- **Special Characters**: Test filenames with unicode, spaces, symbols
-- **Deep Directories**: Test nested directory structures
-- **Concurrent Access**: Simulate multiple operations on same files
 
 ## LLM Prompt
 ```
-Please review the implementation plan in PR_Info, especially the summary and step_5.md.
+Please review the automation results from Step 4 and the exploratory implementation plan in PR_Info.
 
-I need you to implement comprehensive filesystem-specific tests for mcp-server-filesystem integration with Claude Code.
+Based on how well the Step 4 automation worked, I need you to expand the testing framework with additional capabilities.
 
 Key requirements:
-1. Create `tests/integration/test_mcp_filesystem.py` with TestMCPFilesystemOperations class
-2. Test all mcp-server-filesystem tools: file operations, directory ops, reference projects
-3. Include advanced scenarios like file editing, batch operations, and reference project access
-4. Test edge cases: large files, special characters, concurrent operations
-5. Verify performance characteristics and resource usage
-6. Use existing fixtures and follow established test patterns
+1. First, evaluate whether Step 4 automation is working reliably
+2. Choose ONE expansion option (A, B, C, or D) based on Step 4 results and exploration findings
+3. Implement the chosen expansion while maintaining existing automation reliability
+4. Create `docs/mcp_testing_guide.md` with usage instructions for the framework
+5. Update pytest configuration with appropriate markers for different test types
 
-Focus on comprehensive coverage of the mcp-server-filesystem capabilities and realistic usage scenarios that would occur in actual development workflows.
+Only expand if Step 4 automation is solid. If Step 4 has issues, fix those first before adding new features.
 
-Please ensure tests cover both individual tool usage and complex multi-step workflows, with proper validation of all filesystem changes.
+Please document your decision rationale for which expansion option you chose and why.
 ```
 
 ## Implementation Notes
-- **Complete Tool Coverage**: Test every mcp-server-filesystem tool individually
-- **Realistic Workflows**: Multi-step operations that developers would actually perform
-- **Edge Case Handling**: Large files, special characters, deep directory structures
-- **Reference Projects**: Test read-only access to additional codebases
-- **Performance Validation**: Monitor response times and resource usage
+- **Conditional Expansion**: Only expand if foundation is solid
+- **Single Focus**: Choose one expansion area, don't try to do everything
+- **User Documentation**: Create guide so others can use the framework
+- **Maintain Quality**: New features should meet same reliability standards
+- **Future Planning**: Document what expansions weren't implemented and why
 
 ## Success Criteria
-- ✅ All mcp-server-filesystem tools work correctly with Claude Code
-- ✅ Reference project functionality enables read-only access to additional directories
-- ✅ File editing operations work precisely without corrupting files
-- ✅ Directory operations handle complex nested structures
-- ✅ Batch operations complete successfully within reasonable timeframes
-- ✅ Edge cases are handled gracefully without crashes
-- ✅ Performance meets acceptable thresholds for development workflows
+- ✅ Step 4 automation continues to work reliably after enhancements
+- ✅ New features provide clear value and work consistently
+- ✅ Documentation enables other developers to use the framework
+- ✅ Test execution time remains reasonable (< 10 minutes total)
+- ✅ Framework is ready for practical use in development workflows
+
+## Expected Outcomes
+- Enhanced MCP testing framework with additional capabilities
+- Comprehensive documentation for framework usage
+- Clear understanding of framework's capabilities and limitations
+- Foundation for future MCP testing needs
+- Practical tool that can be used for ongoing MCP integration validation
+
+This step completes the exploratory implementation by building a usable testing framework.

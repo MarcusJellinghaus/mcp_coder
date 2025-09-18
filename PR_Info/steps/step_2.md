@@ -1,106 +1,114 @@
-# Step 2: Create MCP Session Response Validator
+# Step 2: Explore Response Analysis and MCP Detection
 
 ## Objective
-Implement a response validator that can analyze Claude Code API responses to verify MCP tool usage, extract session information, and validate that MCP server operations actually occurred.
+Understand how to reliably detect MCP usage in Claude Code API responses. Build simple parsing functions that can identify when MCP tools were used and which specific tools were called.
 
 ## WHERE
-- **File**: `src/mcp_coder/mcp/session_validator.py`
-- **Test File**: `tests/mcp/test_session_validator.py`
-- **Integration**: Used by integration tests to verify MCP functionality
+- **Implementation File**: `src/mcp_coder/mcp/response_parser.py` (simple functions, not a class yet)
+- **Test File**: `tests/mcp/test_response_parser.py`
+- **Data Collection**: Save real API responses from Step 1 as test fixtures
 
 ## WHAT
-### Main Functions
+### Core Functions to Build
 ```python
-class MCPSessionValidator:
-    def validate_mcp_response(self, response: dict[str, Any]) -> MCPValidationResult
-    def extract_mcp_tools_used(self, response: dict[str, Any]) -> list[str]
-    def get_mcp_server_status(self, response: dict[str, Any]) -> dict[str, str]
-    def verify_file_operations(self, project_dir: Path, expected_operations: list[dict]) -> bool
-    def analyze_session_performance(self, response: dict[str, Any]) -> MCPPerformanceInfo
+def detect_mcp_usage(response: dict) -> bool:
+    """Return True if response shows MCP tools were used"""
+
+def extract_mcp_tools_used(response: dict) -> list[str]:
+    """Return list of MCP tool names that were used"""
+
+def extract_response_content(response: dict) -> str:
+    """Get the main response text for verification"""
+
+def save_response_example(response: dict, operation_name: str) -> None:
+    """Save response as example for future testing"""
 ```
 
-### Data Structures
-```python
-MCPValidationResult = {
-    "mcp_detected": bool,
-    "tools_used": list[str],
-    "server_status": dict[str, str],
-    "file_operations_verified": bool,
-    "performance_info": dict[str, Any],
-    "errors": list[str]
-}
-
-MCPPerformanceInfo = {
-    "duration_ms": int,
-    "cost_usd": float,
-    "tokens_used": dict[str, int],
-    "mcp_server_count": int
-}
-```
+### Key Questions to Answer
+- Where in the response structure does MCP tool usage appear?
+- How can we reliably distinguish MCP usage from regular responses?
+- What response fields contain the information we need?
+- Are there different response formats to handle?
 
 ## HOW
 ### Integration Points
-- **Import**: From `mcp_coder.llm_providers.claude.claude_code_api` import response types
-- **Validation**: Use existing `structlog` for structured logging of validation results
-- **File System**: Direct file system checks to verify operations occurred
-- **Type Safety**: Use existing `typing` imports and type hints
+- **Use Step 1 Results**: Analyze actual responses collected in previous step
+- **Simple Implementation**: Focus on working functions, not complex frameworks
+- **Test-Driven**: Write tests using real response examples
+- **Documentation**: Document response structure findings
 
-### Response Analysis Strategy
-- Parse `session_info` for MCP server details
-- Extract tool usage from response metadata
-- Cross-reference expected vs actual file operations
-- Calculate performance metrics from response timing data
+### Analysis Strategy
+- Collect various response examples from Step 1 tests
+- Identify patterns in MCP vs non-MCP responses
+- Build simple parsing logic based on observed patterns
+- Test parsing functions against collected examples
 
 ## ALGORITHM
 ```
-1. Parse Claude Code API detailed response structure
-2. Extract MCP server list and connection status
-3. Identify tools used during the session
-4. Verify file system changes match expected operations
-5. Calculate performance and cost metrics
+1. Load real API responses from Step 1 testing
+2. Manually analyze response structure and MCP indicators
+3. Implement simple detection functions based on patterns
+4. Test functions against known MCP and non-MCP responses
+5. Document findings about response structure
 ```
 
 ## DATA
-### Input Parameters
-- `response: dict[str, Any]` - Claude Code API detailed response
-- `project_dir: Path` - Directory to verify file operations
-- `expected_operations: list[dict]` - Expected file operations to verify
+### Response Collection Strategy
+```python
+# Collect these response types from Step 1
+RESPONSE_EXAMPLES = [
+    "file_read_with_mcp.json",      # Response when MCP read_file used
+    "file_create_with_mcp.json",    # Response when MCP save_file used
+    "file_list_with_mcp.json",      # Response when MCP list_directory used
+    "no_mcp_response.json",         # Response with no MCP usage
+    "mcp_error_response.json"       # Response when MCP operation fails
+]
+```
 
-### Return Values
-- **Success**: `MCPValidationResult` with comprehensive validation details
-- **Partial**: Results with warnings for unverified operations
-- **Failure**: Results with errors and diagnostic information
+### Expected Response Patterns
+Based on Claude SDK documentation, look for:
+- MCP server information in session data
+- Tool usage indicators
+- Response metadata showing MCP calls
+- Error patterns when MCP operations fail
 
 ## LLM Prompt
 ```
-Please review the implementation plan in PR_Info, especially the summary and step_2.md.
+Please review the exploratory implementation plan in PR_Info, especially step_2.md.
 
-I need you to implement the MCP Session Response Validator that will analyze Claude Code API responses to verify MCP integration is working correctly.
+I need you to analyze Claude Code API responses to understand how to detect MCP usage.
 
 Key requirements:
-1. Create `src/mcp_coder/mcp/session_validator.py` with the MCPSessionValidator class
-2. Parse Claude Code API detailed responses (as returned by ask_claude_code_api_detailed_sync)
-3. Extract MCP server connection status and tools used
-4. Verify actual file operations occurred by checking the filesystem
-5. Calculate performance metrics (duration, cost, tokens)
-6. Include comprehensive unit tests in `tests/mcp/test_session_validator.py`
+1. Use the actual API responses collected in Step 1 as your data source
+2. Create simple functions in `src/mcp_coder/mcp/response_parser.py` to detect MCP usage
+3. Focus on working detection, not sophisticated analysis
+4. Save example responses as test fixtures in `tests/fixtures/mcp_responses/`
+5. Write tests that verify your parsing functions work on real examples
 
-The validator should work with the response structure documented in `docs/claude_sdk_response_structure.md`. Focus on reliable detection of MCP usage and clear validation results.
+This is exploration focused - we want to understand the response structure before building complex validation logic.
 
-Please verify your implementation by testing with sample Claude Code responses and ensure all validation logic is thoroughly tested.
+Please document what you discover about where MCP information appears in responses.
 ```
 
 ## Implementation Notes
-- **Response Structure**: Based on `docs/claude_sdk_response_structure.md` format
-- **Robust Parsing**: Handle missing or malformed response fields gracefully
-- **File Verification**: Direct filesystem checks to confirm operations occurred
-- **Performance Tracking**: Extract cost and timing data for analysis
-- **Error Reporting**: Clear, actionable error messages for debugging
+- **Use Real Data**: Base parsing logic on actual responses from Step 1
+- **Keep It Simple**: Boolean detection is more important than detailed analysis
+- **Save Examples**: Create test fixtures for future use
+- **Handle Variability**: Responses might vary - build robust detection
+- **Document Structure**: Record what we learn about response format
 
 ## Success Criteria
-- ✅ Correctly parses Claude Code API detailed response structure
-- ✅ Extracts MCP server connection status and tools used
-- ✅ Verifies file operations actually occurred on filesystem
-- ✅ Calculates accurate performance and cost metrics
-- ✅ Handles malformed or incomplete responses gracefully
-- ✅ Unit tests cover all validation scenarios including edge cases
+- ✅ Can reliably detect when MCP tools were used in a response
+- ✅ Can identify which specific MCP tools were called
+- ✅ Parsing functions work on real response examples
+- ✅ Have documented the response structure patterns
+- ✅ Created reusable test fixtures for future development
+
+## Expected Learnings
+- Response structure and where MCP information appears
+- How to distinguish MCP vs non-MCP API calls
+- Reliable patterns for detecting different MCP operations
+- Edge cases in response format or structure
+- Foundation for more sophisticated response analysis
+
+This step provides the parsing foundation needed for automated validation in later steps.

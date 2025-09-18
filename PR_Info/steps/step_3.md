@@ -1,117 +1,131 @@
-# Step 3: Create MCP Test Utilities
+# Step 3: Explore Test Project Setup and Cleanup
 
 ## Objective
-Implement utility functions and fixtures to support MCP integration testing, including test data generation, temporary project setup, and common assertion helpers.
+Understand how to create controlled, isolated test environments for MCP testing. Figure out what cleanup is needed and how to ensure tests don't interfere with each other.
 
 ## WHERE
-- **File**: `src/mcp_coder/mcp/test_utilities.py`
-- **Test File**: `tests/mcp/test_utilities.py`
-- **Fixtures**: `tests/integration/conftest.py` (pytest fixtures)
+- **Implementation File**: `src/mcp_coder/mcp/test_project_manager.py` (simple utilities)
+- **Test File**: `tests/mcp/test_project_manager.py`
+- **Exploration Tests**: `tests/integration/test_mcp_project_setup.py`
 
 ## WHAT
-### Main Functions
+### Core Utilities to Build
 ```python
-class MCPTestUtilities:
-    def create_test_project(self, temp_dir: Path, files: dict[str, str]) -> Path
-    def generate_test_files(self) -> dict[str, str]
-    def cleanup_test_files(self, project_dir: Path, created_files: list[str]) -> None
-    def wait_for_mcp_server(self, timeout: int = 30) -> bool
-    def assert_file_operations_occurred(self, project_dir: Path, operations: list[dict]) -> None
+def create_test_project(base_dir: Path, files: dict[str, str]) -> Path:
+    """Create temporary test project with specified files"""
 
-# Pytest fixtures for integration tests
-@pytest.fixture
-def test_project_with_files() -> Iterator[Path]:
-    """Create temporary project with test files"""
+def cleanup_test_project(project_dir: Path) -> None:
+    """Clean up test project and created files"""
 
-@pytest.fixture  
-def mcp_config_manager() -> Iterator[MCPConfigManager]:
-    """Pre-configured MCP config manager with cleanup"""
+def verify_test_files(project_dir: Path, expected_files: list[str]) -> bool:
+    """Verify expected files exist in test project"""
 
-@pytest.fixture
-def mcp_session_validator() -> MCPSessionValidator:
-    """Session validator instance"""
+def get_created_files_list(project_dir: Path) -> list[str]:
+    """Get list of files that were created during testing"""
 ```
 
-### Data Structures
-```python
-TestFileSet = {
-    "README.md": "# Test Project\n\nMCP integration test project",
-    "main.py": "print('Hello, MCP integration!')",
-    "data.json": '{"test": true, "integration": "mcp"}',
-    "config.txt": "test_mode=true\nverbose=false"
-}
-
-FileOperation = {
-    "type": str,  # "create", "read", "update", "delete"
-    "filename": str,
-    "expected_content": str | None,
-    "verify_exists": bool
-}
-```
+### Key Questions to Answer
+- What files get created during MCP operations that need cleanup?
+- How to ensure test isolation between different test runs?
+- What's the best way to create temporary test environments?
+- Do MCP servers cache anything that needs clearing?
 
 ## HOW
 ### Integration Points
-- **Pytest Integration**: Use `@pytest.fixture` decorators for test setup
-- **Temporary Files**: Use `tempfile.TemporaryDirectory()` for isolated test environments
-- **Path Handling**: Use `pathlib.Path` for cross-platform compatibility
-- **Cleanup**: Ensure all temporary resources are properly cleaned up
+- **Build on Steps 1-2**: Use knowledge from operation exploration
+- **File System Management**: Use `tempfile` and `pathlib` for cross-platform support
+- **Test Isolation**: Ensure each test gets a clean environment
+- **Cleanup Verification**: Check that cleanup actually removes all created files
 
-### Test Data Strategy
-- Generate realistic test files for various scenarios
-- Include different file types (text, JSON, Python, etc.)
-- Create predictable content for verification
-- Support custom file sets for specific test cases
+### Exploration Strategy
+- Create test projects, run MCP operations, see what gets created
+- Test different cleanup approaches to find reliable method
+- Experiment with file permissions and cross-platform issues
+- Test concurrent access scenarios (multiple tests running)
 
 ## ALGORITHM
 ```
 1. Create temporary directory for test project
-2. Generate or use provided test files
-3. Set up test file structure in temporary directory
-4. Provide cleanup utilities for test teardown
-5. Include assertion helpers for common validation tasks
+2. Set up known files in test directory  
+3. Point MCP server to test directory (manually for now)
+4. Run various MCP operations and track what files are created
+5. Test different cleanup strategies
+6. Verify test isolation works properly
 ```
 
 ## DATA
-### Input Parameters
-- `temp_dir: Path` - Base temporary directory
-- `files: dict[str, str]` - Filename to content mapping
-- `operations: list[dict]` - Expected file operations to verify
+### Test Project Templates
+```python
+BASIC_PROJECT_FILES = {
+    "README.md": "# Test Project\nBasic MCP test project",
+    "main.py": "print('Hello from test project')",
+    "config.json": '{"name": "test", "version": "1.0"}'
+}
 
-### Return Values
-- **Test Project Path**: `Path` to created test project directory
-- **File List**: List of created filenames for cleanup
-- **Success Indicators**: Boolean results for setup/cleanup operations
+ADVANCED_PROJECT_FILES = {
+    **BASIC_PROJECT_FILES,
+    "src/module.py": "def test_function(): return True",
+    "tests/test_example.py": "def test_dummy(): assert True",
+    "data/sample.txt": "Sample data file content"
+}
+```
+
+### Cleanup Tracking
+```python
+class CleanupTracker:
+    """Track files created during testing for cleanup verification"""
+    def __init__(self, project_dir: Path):
+        self.project_dir = project_dir
+        self.initial_files = set()
+        self.final_files = set()
+    
+    def snapshot_before(self) -> None:
+        """Record files before test operations"""
+        
+    def snapshot_after(self) -> None:
+        """Record files after test operations"""
+        
+    def get_created_files(self) -> list[Path]:
+        """Return files that were created during testing"""
+```
 
 ## LLM Prompt
 ```
-Please review the implementation plan in PR_Info, especially the summary and step_3.md.
+Please review the exploratory implementation plan in PR_Info, especially step_3.md.
 
-I need you to implement MCP Test Utilities that provide helper functions and pytest fixtures for MCP integration testing.
+I need you to explore test project setup and cleanup for MCP integration testing.
 
 Key requirements:
-1. Create `src/mcp_coder/mcp/test_utilities.py` with the MCPTestUtilities class
-2. Generate realistic test file sets for various testing scenarios
-3. Implement pytest fixtures in `tests/integration/conftest.py` for test setup
-4. Include utilities for creating temporary projects and cleaning up
-5. Provide assertion helpers for common MCP integration validations
-6. Write unit tests in `tests/mcp/test_utilities.py`
+1. Create utilities in `src/mcp_coder/mcp/test_project_manager.py` for test project management
+2. Build exploration tests in `tests/integration/test_mcp_project_setup.py`
+3. Test different approaches to creating isolated test environments
+4. Figure out what cleanup is needed after MCP operations
+5. Verify that tests don't interfere with each other
 
-Focus on making integration tests easy to write and maintain. The utilities should handle the repetitive parts of test setup/cleanup and provide clear assertion helpers.
+This is about understanding the practical aspects of test environment management before building automation.
 
-Please verify your implementation works with the existing pytest configuration and integrates well with the MCP config manager and session validator from previous steps.
+Please document your findings about test isolation, cleanup requirements, and any platform-specific issues.
 ```
 
 ## Implementation Notes
-- **Pytest Integration**: Work with existing pytest configuration and markers
-- **Cross-Platform**: Handle Windows/macOS/Linux path differences correctly
-- **Resource Management**: Ensure temporary files and directories are cleaned up
-- **Realistic Data**: Generate test files that represent real-world usage patterns
-- **Flexibility**: Support custom test scenarios while providing sensible defaults
+- **Cross-Platform**: Test on your current platform but consider others
+- **File Permissions**: Some MCP operations might affect file permissions
+- **Temporary Directories**: Use proper temporary directory management
+- **Concurrent Testing**: Consider if multiple tests can run simultaneously
+- **Error Scenarios**: What happens when cleanup fails?
 
 ## Success Criteria
-- ✅ Generates comprehensive test file sets for various scenarios
-- ✅ Creates isolated temporary test environments
-- ✅ Provides easy-to-use pytest fixtures for integration tests
-- ✅ Includes helpful assertion utilities for MCP validation
-- ✅ Properly cleans up all temporary resources
-- ✅ Integrates seamlessly with existing pytest configuration
+- ✅ Can create isolated test environments with known file structures
+- ✅ Understand what files/state gets created during MCP operations
+- ✅ Have reliable cleanup that removes all test artifacts
+- ✅ Verified that tests don't interfere with each other
+- ✅ Documented any platform-specific or permission issues
+
+## Expected Learnings
+- Best practices for temporary test project creation
+- What MCP server state needs to be reset between tests
+- File system cleanup requirements and gotchas
+- How to verify test isolation is working properly
+- Cross-platform compatibility considerations for file operations
+
+This step ensures we can build reliable, repeatable tests in the automation phase.

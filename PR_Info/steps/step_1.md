@@ -1,96 +1,136 @@
-# Step 1: Create MCP Configuration Manager
+# Step 1: Explore Individual MCP File Operations
 
 ## Objective
-Implement a configuration manager that can programmatically set up and tear down MCP server configurations for testing, using patterns from the p_config reference project.
+Test each mcp-server-filesystem operation individually to understand their behavior, timing, and reliability. Build knowledge about what prompts trigger which tools and what success looks like.
 
 ## WHERE
-- **File**: `src/mcp_coder/mcp/config_manager.py`
-- **Test File**: `tests/mcp/test_config_manager.py`
-- **Module Structure**: New `mcp` package under `src/mcp_coder/`
+- **Test File**: `tests/integration/test_mcp_operations_exploration.py`
+- **Documentation**: Create `docs/mcp_operation_findings.md` to record observations
+- **Test Environment**: Use same manual setup from Step 0
 
 ## WHAT
-### Main Functions
+### Operations to Explore
 ```python
-class MCPConfigManager:
-    def setup_test_mcp_server(self, project_dir: Path, server_name: str) -> dict[str, Any]
-    def cleanup_test_mcp_server(self, server_name: str) -> bool
-    def get_config_status(self, server_name: str) -> dict[str, Any]
-    def backup_existing_config(self) -> Path | None
-    def restore_config(self, backup_path: Path) -> bool
+class TestMCPOperationsExploration:
+    def test_file_reading_operation(self)
+    def test_file_creation_operation(self)
+    def test_file_listing_operation(self)
+    def test_directory_operations(self)
+    def test_file_editing_operation(self)  # If available
 ```
 
-### Data Structures
-```python
-MCPConfigResult = {
-    "success": bool,
-    "server_name": str,
-    "config_path": str,
-    "backup_path": str | None,
-    "error": str | None
-}
-```
+### Key Questions to Answer
+- What prompt reliably triggers each MCP tool?
+- How long does each operation typically take?
+- What does success vs failure look like in responses?
+- Are there any unexpected behaviors or limitations?
 
 ## HOW
 ### Integration Points
-- **Import**: `from pathlib import Path`, `import tempfile`, `import json`
-- **Dependencies**: Use reference project p_config patterns for configuration logic
-- **Error Handling**: Custom `MCPConfigError` exception class
-- **Logging**: Use existing `mcp_coder.utils.log_utils` for structured logging
+- **Build on Step 0**: Use same manual MCP setup
+- **Systematic Testing**: One operation per test function
+- **Response Collection**: Save actual API responses for analysis
+- **Documentation**: Record findings in markdown file
 
-### Configuration Strategy
-- Create temporary Claude Desktop configuration for testing
-- Use mcp-server-filesystem as the test MCP server
-- Implement proper backup/restore of existing configurations
-- Handle cross-platform configuration file paths
+### Exploration Strategy
+- Try multiple prompt variations for each operation
+- Test with different file types and sizes
+- Observe response timing and structure
+- Note any error conditions encountered
 
 ## ALGORITHM
 ```
-1. Detect existing Claude Desktop configuration file location
-2. Create backup of current configuration (if exists)
-3. Generate MCP server configuration using p_config patterns
-4. Write test configuration to Claude Desktop config file
-5. Validate configuration was applied successfully
+For each MCP operation:
+1. Design prompt that should trigger the operation
+2. Call Claude Code API with prompt
+3. Analyze response for MCP tool usage
+4. Verify expected file system changes occurred
+5. Document findings and optimal prompts
 ```
 
 ## DATA
-### Input Parameters
-- `project_dir: Path` - Directory for MCP server to serve
-- `server_name: str` - Unique name for test server instance
+### Operation Test Matrix
+```python
+OPERATIONS_TO_TEST = [
+    {
+        "name": "file_read",
+        "prompts": [
+            "Read the contents of README.md",
+            "Show me what's in the README file",
+            "What does README.md contain?"
+        ],
+        "expected_tool": "read_file",
+        "verify_method": "check_response_contains_file_content"
+    },
+    {
+        "name": "file_create", 
+        "prompts": [
+            "Create a file called output.txt with content 'Hello MCP'",
+            "Make a new file named test_output.txt containing 'Success'"
+        ],
+        "expected_tool": "save_file",
+        "verify_method": "check_file_exists_on_filesystem"
+    },
+    {
+        "name": "file_list",
+        "prompts": [
+            "List all files in this directory",
+            "Show me the files in the current folder",
+            "What files are here?"
+        ],
+        "expected_tool": "list_directory",
+        "verify_method": "check_response_contains_known_files"
+    }
+]
+```
 
-### Return Values
-- **Success**: `MCPConfigResult` with success=True, paths, and server details
-- **Failure**: `MCPConfigResult` with success=False and error message
+### Findings Documentation Format
+```markdown
+## File Reading Operation
+- **Best Prompt**: "Read the contents of [filename]"
+- **Response Time**: ~2-3 seconds
+- **Success Indicators**: File content appears in response, read_file tool mentioned
+- **Failure Cases**: File not found, permission issues
+- **Notes**: Works reliably with text files, unsure about binary files
+```
 
 ## LLM Prompt
 ```
-Please review the implementation plan in PR_Info, especially the summary and step_1.md.
+Please review the exploratory implementation plan in PR_Info, especially step_1.md.
 
-I need you to implement the MCP Configuration Manager that will handle programmatic setup and cleanup of MCP server configurations for integration testing.
+I need you to systematically test individual MCP file operations to understand their behavior.
 
 Key requirements:
-1. Create `src/mcp_coder/mcp/config_manager.py` with the MCPConfigManager class
-2. Use patterns from p_config reference project for reliable configuration handling
-3. Support setup/cleanup of mcp-server-filesystem for testing
-4. Handle backup/restore of existing Claude Desktop configurations
-5. Include proper error handling and logging
-6. Write comprehensive unit tests in `tests/mcp/test_config_manager.py`
+1. Create `tests/integration/test_mcp_operations_exploration.py` with tests for each operation
+2. Try multiple prompt variations to find what reliably triggers each MCP tool  
+3. Create `docs/mcp_operation_findings.md` to document what you discover
+4. Test file reading, creation, listing, and directory operations
+5. Record response times, success patterns, and any unexpected behaviors
 
-Focus on the KISS principle - keep the configuration logic simple but robust. The goal is reliable setup/teardown of test MCP servers, not a full-featured configuration system.
+This is pure exploration - we want to understand how each MCP tool behaves before building automation around it.
 
-Please verify your implementation by running the MCP server checks and ensure all tests pass.
+Please be thorough in documenting your findings, including what doesn't work as expected.
 ```
 
 ## Implementation Notes
-- **Cross-Platform**: Handle Windows/macOS/Linux Claude Desktop config paths
-- **Safety First**: Always backup existing configurations before modification
-- **Validation**: Verify MCP server is properly configured and accessible
-- **Cleanup**: Ensure test configurations are completely removed
-- **Isolation**: Each test should have a unique server name to avoid conflicts
+- **Systematic Approach**: Test each operation thoroughly before moving to the next
+- **Multiple Prompts**: Try different ways to trigger the same operation
+- **Real Verification**: Check filesystem for actual changes, not just response content
+- **Detailed Documentation**: Record everything for future reference
+- **Timing Observations**: Note how long operations take
 
 ## Success Criteria
-- ✅ Can programmatically set up mcp-server-filesystem configuration
-- ✅ Properly backs up and restores existing Claude Desktop configs
-- ✅ Handles cross-platform configuration file paths correctly
-- ✅ Includes comprehensive error handling and logging
-- ✅ Unit tests achieve >90% coverage
-- ✅ Integration with existing project logging and error handling
+- ✅ Understand reliable prompts for each basic file operation
+- ✅ Know what successful MCP tool usage looks like in responses
+- ✅ Have documented timing and behavior patterns
+- ✅ Identified any operations that don't work reliably
+- ✅ Created reference documentation for future automation
+
+## Expected Learnings
+- Which prompts consistently trigger which MCP tools
+- How to verify operations actually occurred
+- What the response structure looks like for different operations
+- Any limitations or edge cases in MCP server behavior
+- Baseline performance expectations for each operation type
+
+This step builds the knowledge foundation needed for automation in later steps.

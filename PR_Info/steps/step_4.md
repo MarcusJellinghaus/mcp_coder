@@ -1,117 +1,126 @@
-# Step 4: Implement Core MCP Integration Tests
+# Step 4: Build Minimal Automation Framework
 
 ## Objective
-Create comprehensive integration tests that verify Claude Code API can successfully connect to and use MCP servers, focusing on filesystem operations with mcp-server-filesystem.
+Automate only the pieces we've proven work manually in Steps 0-3. Create a minimal but reliable automation framework based on our exploration findings.
 
 ## WHERE
-- **File**: `tests/integration/test_mcp_integration.py`
-- **Supporting File**: `tests/integration/__init__.py`
-- **Configuration**: Update `tests/integration/conftest.py` with MCP-specific fixtures
+- **Config Helper**: `src/mcp_coder/mcp/config_helper.py` (minimal MCP configuration)
+- **Test Suite**: `tests/integration/test_mcp_automated.py` (automated versions of manual tests)
+- **Test Runner**: Update existing pytest configuration for MCP tests
 
 ## WHAT
-### Main Test Functions
+### Core Automation Components
 ```python
-class TestMCPIntegration:
-    def test_mcp_server_connection(self, mcp_config_manager, test_project_with_files)
-    def test_file_list_operation(self, mcp_config_manager, test_project_with_files)
-    def test_file_read_operation(self, mcp_config_manager, test_project_with_files) 
-    def test_file_create_operation(self, mcp_config_manager, test_project_with_files)
-    def test_file_update_operation(self, mcp_config_manager, test_project_with_files)
-    def test_multiple_operations_session(self, mcp_config_manager, test_project_with_files)
-    def test_mcp_session_timeout_handling(self, mcp_config_manager, test_project_with_files)
-    def test_mcp_error_handling(self, mcp_config_manager, test_project_with_files)
+class MinimalMCPHelper:
+    def setup_test_mcp_config(self, project_dir: Path) -> bool:
+        """Set up MCP config for testing based on Step 0 learnings"""
+    
+    def restore_original_config(self) -> bool:
+        """Restore original Claude Desktop config"""
+    
+    def verify_mcp_connection(self) -> bool:
+        """Check if MCP server is connected (based on Step 0 findings)"""
+
+class AutomatedMCPTests:
+    def test_file_operations_automated(self):
+        """Automated version of Step 1 successful operations"""
+    
+    def test_response_parsing_automated(self):
+        """Automated validation using Step 2 response parsing"""
+    
+    def test_cleanup_and_isolation(self):
+        """Automated version of Step 3 cleanup verification"""
 ```
 
-### Test Categories
-- **Connection Tests**: Verify MCP server connection and session establishment
-- **Basic Operations**: Test individual file operations (list, read, create, update)
-- **Complex Workflows**: Multi-step operations within single Claude Code session
-- **Error Scenarios**: Invalid requests, server unavailable, timeout handling
-- **Performance Tests**: Measure response times and resource usage
+### Integration Points
+- **Use Step 1 Findings**: Implement only operations that worked reliably
+- **Use Step 2 Parsing**: Apply response analysis functions
+- **Use Step 3 Cleanup**: Apply proven cleanup strategies
 
 ## HOW
-### Integration Points
-- **Claude Code API**: Use `ask_claude_code_api_detailed_sync()` for MCP integration
-- **Fixtures**: Use MCP config manager and test utilities from previous steps
-- **Validation**: Use session validator to verify MCP tool usage
-- **Pytest Markers**: Use `@pytest.mark.claude_integration` for MCP tests
+### Automation Strategy
+- **Conservative Approach**: Only automate what we verified works manually
+- **Simple Configuration**: Minimal MCP config changes based on Step 0 learning
+- **Reliable Cleanup**: Use proven cleanup methods from Step 3
+- **Response Validation**: Use parsing functions from Step 2
 
-### Test Strategy
-- Each test sets up MCP server, runs operations, validates results, cleans up
-- Use realistic prompts that would naturally trigger MCP tools
-- Verify both response content and actual file system changes
-- Include timeout testing with configurable limits (30s, 5min, 1hr)
+### Implementation Priorities
+1. **Config Management**: Simple, reliable MCP setup/teardown
+2. **Test Automation**: Automated versions of successful manual tests
+3. **Validation Pipeline**: Automated response analysis and verification
+4. **Error Handling**: Handle known failure modes from exploration
 
 ## ALGORITHM
 ```
-1. Set up MCP server configuration for test project
-2. Send Claude Code API request with MCP-triggering prompt
-3. Wait for response with appropriate timeout
-4. Validate response shows MCP tool usage
-5. Verify expected file operations actually occurred
+For each proven operation from Steps 1-3:
+1. Set up test environment using Step 3 utilities
+2. Configure MCP server using Step 0 manual process (automated)
+3. Execute operation using prompts from Step 1
+4. Validate response using Step 2 parsing functions
+5. Verify file system changes using Step 3 verification
+6. Clean up using Step 3 cleanup methods
 ```
 
 ## DATA
-### Test Scenarios
+### Automation Configuration
 ```python
-FILE_OPERATIONS_TESTS = [
+PROVEN_OPERATIONS = [
+    # Only include operations that worked reliably in Step 1
     {
-        "name": "list_files",
-        "prompt": "Please list all files in the current directory",
-        "expected_tools": ["list_directory"],
-        "verify_response_contains": ["README.md", "main.py"]
+        "name": "file_read",
+        "prompt_template": "Read the contents of {filename}",
+        "expected_tool": "read_file",
+        "validation": "content_in_response"
     },
-    {
-        "name": "read_file",
-        "prompt": "Please read the contents of README.md", 
-        "expected_tools": ["read_file"],
-        "verify_response_contains": ["Test Project"]
-    },
-    {
-        "name": "create_file",
-        "prompt": "Create a file called test_output.txt with content 'MCP Test Success'",
-        "expected_tools": ["save_file"],
-        "verify_file_created": "test_output.txt"
-    }
+    # Add others based on Step 1 success results
 ]
-```
 
-### Timeout Configuration
-- **Quick Operations**: 30 seconds (file list, read)
-- **Medium Operations**: 5 minutes (file create, update)  
-- **Complex Operations**: 1 hour (multi-step workflows)
+AUTOMATION_CONFIG = {
+    "mcp_server": "mcp-server-filesystem",  # Based on Step 0 success
+    "timeout_seconds": 30,  # Based on Step 1 timing observations
+    "max_retries": 2,  # Conservative retry policy
+    "cleanup_verification": True  # Based on Step 3 requirements
+}
+```
 
 ## LLM Prompt
 ```
-Please review the implementation plan in PR_Info, especially the summary and step_4.md.
+Please review the exploratory implementation plan in PR_Info, especially step_4.md and the findings from steps 0-3.
 
-I need you to implement comprehensive MCP integration tests that verify Claude Code API works correctly with MCP servers.
+I need you to build minimal automation for the MCP operations we've proven work manually.
 
 Key requirements:
-1. Create `tests/integration/test_mcp_integration.py` with the TestMCPIntegration class
-2. Test basic MCP filesystem operations: list, read, create, update files
-3. Verify MCP server connection and tool usage in Claude Code responses
-4. Include timeout handling and error scenario testing
-5. Use fixtures from previous steps for setup and validation
-6. Follow existing pytest patterns and use claude_integration marker
+1. Create `src/mcp_coder/mcp/config_helper.py` with simple MCP configuration management
+2. Build automated tests in `tests/integration/test_mcp_automated.py` 
+3. Only automate operations that worked reliably in the exploration steps
+4. Use the response parsing functions from Step 2
+5. Apply the cleanup strategies from Step 3
+6. Keep the automation simple and focused on reliability
 
-The tests should use realistic prompts that naturally trigger MCP tools and verify both the response content and actual file system changes occurred.
+This is about automating proven functionality, not adding new features or complex logic.
 
-Please ensure tests are isolated, repeatable, and include proper cleanup. Verify the implementation works with the MCP configuration manager and session validator from earlier steps.
+Please ensure the automated tests match the results of the successful manual tests.
 ```
 
 ## Implementation Notes
-- **Realistic Prompts**: Use natural language that would trigger MCP tools
-- **Complete Validation**: Check both Claude responses and actual file changes
-- **Test Isolation**: Each test should be independent and repeatable
-- **Timeout Handling**: Progressive timeout strategy based on operation complexity
-- **Error Scenarios**: Test server unavailable, invalid requests, network issues
+- **Build on Success**: Only automate operations that worked in exploration
+- **Keep Simple**: Resist adding features not proven in manual testing
+- **Error Handling**: Handle known failure modes from exploration steps
+- **Test Reliability**: Automated tests should be as reliable as manual tests were
+- **Documentation**: Document any differences between manual and automated approaches
 
 ## Success Criteria
-- ✅ Successfully connects to MCP server and establishes session
-- ✅ File operations work correctly through MCP tools
-- ✅ Claude Code responses show evidence of MCP tool usage
-- ✅ Actual file system changes match expected operations
-- ✅ Timeout handling works for different operation types
-- ✅ Error scenarios are handled gracefully with clear messages
-- ✅ Tests are isolated, repeatable, and properly clean up resources
+- ✅ Automated tests produce same results as successful manual tests
+- ✅ MCP configuration setup/teardown works reliably without manual intervention
+- ✅ Response validation automatically detects MCP usage
+- ✅ Test cleanup works automatically and completely
+- ✅ Test suite runs reliably without hanging or failing due to infrastructure issues
+
+## Expected Outcomes
+- Working automated test suite for proven MCP operations
+- Reliable MCP configuration management for testing
+- Foundation for expanding automated testing in Step 5
+- Clear documentation of what's automated vs what still needs manual setup
+- Confidence that automation matches manual testing results
+
+This step transforms our exploration learnings into a reliable automated testing foundation.
