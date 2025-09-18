@@ -8,16 +8,16 @@ from typing import Optional, Tuple
 
 from ...llm_interface import ask_llm
 from ...prompt_manager import get_prompt
+from ...utils.clipboard import (
+    get_clipboard_text,
+    parse_commit_message,
+    validate_commit_message,
+)
 from ...utils.git_operations import (
     commit_staged_files,
     get_git_diff_for_commit,
     is_git_repository,
     stage_all_changes,
-)
-from ...utils.clipboard import (
-    get_clipboard_text,
-    validate_commit_message,
-    parse_commit_message,
 )
 
 logger = logging.getLogger(__name__)

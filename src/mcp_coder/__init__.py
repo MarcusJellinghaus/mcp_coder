@@ -18,9 +18,9 @@ Example:
     >>> print(response)
 """
 
-from .cli.main import main as cli_main
 from .cli.commands.commit import execute_commit_auto, execute_commit_clipboard
 from .cli.commands.help import execute_help
+from .cli.main import main as cli_main
 from .llm_interface import ask_llm
 from .llm_providers.claude.claude_client import ask_claude
 from .llm_providers.claude.claude_code_interface import ask_claude_code
