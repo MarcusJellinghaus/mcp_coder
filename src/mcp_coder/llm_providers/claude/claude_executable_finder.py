@@ -101,8 +101,8 @@ def find_claude_executable(
         return None
     else:
         raise FileNotFoundError(
-            "Claude Code CLI not found. Please ensure it's installed and accessible.\\n"
-            "Install with: npm install -g @anthropic-ai/claude-code\\n"
+            "Claude Code CLI not found. Please ensure it's installed and accessible.\n"
+            "Install with: npm install -g @anthropic-ai/claude-code\n"
             f"Searched locations: {[str(path) for path in search_paths]}"
         )
 
