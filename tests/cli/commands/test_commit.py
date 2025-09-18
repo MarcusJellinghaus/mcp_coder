@@ -118,7 +118,7 @@ class TestExecuteCommitAuto:
     def test_execute_commit_auto_no_changes(self, mock_generate, mock_validate, capsys):
         """Test commit auto with no staged changes."""
         mock_validate.return_value = (True, None)
-        mock_generate.return_value = (False, "", "No changes to commit")
+        mock_generate.return_value = (False, "", "No changes to commit. Ensure you have modified, added, or deleted files before running commit auto.")
 
         args = argparse.Namespace(preview=False)
 
@@ -170,7 +170,8 @@ class TestGenerateCommitMessageWithLLM:
 
         assert success is False
         assert message == ""
-        assert "Failed to stage changes" in error
+        assert "Failed to stage changes in repository" in error
+        assert "write permissions" in error
 
     @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
     @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
@@ -188,6 +189,7 @@ class TestGenerateCommitMessageWithLLM:
         assert success is False
         assert message == ""
         assert "No changes to commit" in error
+        assert "modified, added, or deleted files" in error
 
     @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
     @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
@@ -210,6 +212,7 @@ class TestGenerateCommitMessageWithLLM:
         assert success is False
         assert message == ""
         assert "LLM communication failed" in error
+        assert "internet connection" in error
 
 
 class TestParseLLMCommitResponse:
@@ -310,3 +313,115 @@ class TestValidateGitRepository:
 
         assert success is False
         assert error == "No changes to commit"
+
+
+class TestGenerateCommitMessageWithLLMExtended:
+    """Additional tests for the improved generate_commit_message_with_llm function."""
+
+    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    def test_stage_exception_handling(self, mock_stage):
+        """Test staging operation exception handling."""
+        mock_stage.side_effect = Exception("Permission denied")
+
+        project_dir = Path("/test/repo")
+        success, message, error = generate_commit_message_with_llm(project_dir)
+
+        assert success is False
+        assert message == ""
+        assert "Error staging changes" in error
+        assert "Permission denied" in error
+        assert "git repository is accessible" in error
+
+    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    def test_git_diff_none_handling(self, mock_get_diff, mock_stage):
+        """Test git diff returning None."""
+        mock_stage.return_value = True
+        mock_get_diff.return_value = None
+
+        project_dir = Path("/test/repo")
+        success, message, error = generate_commit_message_with_llm(project_dir)
+
+        assert success is False
+        assert message == ""
+        assert "Failed to retrieve git diff" in error
+        assert "invalid state" in error
+
+    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
+    def test_prompt_file_not_found(self, mock_get_prompt, mock_get_diff, mock_stage):
+        """Test prompt file not found error."""
+        mock_stage.return_value = True
+        mock_get_diff.return_value = "some changes"
+        mock_get_prompt.side_effect = FileNotFoundError("prompts.md not found")
+
+        project_dir = Path("/test/repo")
+        success, message, error = generate_commit_message_with_llm(project_dir)
+
+        assert success is False
+        assert message == ""
+        assert "Commit prompt template not found" in error
+        assert "prompts.md not found" in error
+
+    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
+    @patch("src.mcp_coder.cli.commands.commit.ask_llm")
+    def test_empty_llm_response(self, mock_ask_llm, mock_get_prompt, mock_get_diff, mock_stage):
+        """Test empty LLM response handling."""
+        mock_stage.return_value = True
+        mock_get_diff.return_value = "some changes"
+        mock_get_prompt.return_value = "prompt text"
+        mock_ask_llm.return_value = ""
+
+        project_dir = Path("/test/repo")
+        success, message, error = generate_commit_message_with_llm(project_dir)
+
+        assert success is False
+        assert message == ""
+        assert "LLM returned empty or null response" in error
+        assert "AI service may be unavailable" in error
+
+    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
+    @patch("src.mcp_coder.cli.commands.commit.ask_llm")
+    @patch("src.mcp_coder.cli.commands.commit.parse_llm_commit_response")
+    def test_empty_parsed_commit_message(self, mock_parse, mock_ask_llm, mock_get_prompt, mock_get_diff, mock_stage):
+        """Test empty parsed commit message handling."""
+        mock_stage.return_value = True
+        mock_get_diff.return_value = "some changes"
+        mock_get_prompt.return_value = "prompt text"
+        mock_ask_llm.return_value = "some response"
+        mock_parse.return_value = ("", None)
+
+        project_dir = Path("/test/repo")
+        success, message, error = generate_commit_message_with_llm(project_dir)
+
+        assert success is False
+        assert message == ""
+        assert "LLM generated an empty commit message" in error
+        assert "AI may not have understood" in error
+
+    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
+    @patch("src.mcp_coder.cli.commands.commit.ask_llm")
+    @patch("src.mcp_coder.cli.commands.commit.parse_llm_commit_response")
+    def test_invalid_commit_message_format(self, mock_parse, mock_ask_llm, mock_get_prompt, mock_get_diff, mock_stage):
+        """Test invalid commit message format handling."""
+        mock_stage.return_value = True
+        mock_get_diff.return_value = "some changes"
+        mock_get_prompt.return_value = "prompt text"
+        mock_ask_llm.return_value = "some response"
+        # Simulate a commit message that starts with empty line (invalid)
+        mock_parse.return_value = ("\n\nActual content here", None)
+
+        project_dir = Path("/test/repo")
+        success, message, error = generate_commit_message_with_llm(project_dir)
+
+        assert success is False
+        assert message == ""
+        assert "LLM generated a commit message with empty first line" in error
+        assert "invalid for git commits" in error
