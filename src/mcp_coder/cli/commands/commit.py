@@ -48,8 +48,8 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         print(commit_message)
         print("=" * 50)
 
-        response = input("\nProceed with commit? (y/N): ").strip().lower()
-        if response != "y":
+        response = input("\nProceed with commit? (Y/n): ").strip().lower()
+        if response == "n":
             print("Commit cancelled.")
             return 0
 
