@@ -59,7 +59,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         print(f"Error: {commit_result['error']}", file=sys.stderr)
         return 2
 
-    print(f"✅ Commit created: {commit_result['commit_hash']}")
+    print(f"SUCCESS: Commit created: {commit_result['commit_hash']}")
     return 0
 
 
@@ -265,9 +265,9 @@ def execute_commit_clipboard(args: argparse.Namespace) -> int:
 
     # Parse commit message to get summary for user feedback
     summary, _ = parse_commit_message(commit_message)
-    print(f"✅ Successfully committed with message: {summary}")
+    print(f"SUCCESS: Successfully committed with message: {summary}")
     if commit_result["commit_hash"]:
-        print(f"📝 Commit hash: {commit_result['commit_hash']}")
+        print(f"COMMIT: {commit_result['commit_hash']}")
     
     return 0
 

@@ -249,7 +249,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         print(f"Error: {commit_result['error']}", file=sys.stderr)
         return 2
         
-    print(f"✅ Commit created: {commit_message.split()[0]}...")
+    print(f"SUCCESS: Commit created: {commit_message.split()[0]}...")
     return 0
 ```
 

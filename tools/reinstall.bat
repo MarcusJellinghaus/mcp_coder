@@ -19,50 +19,50 @@ pip uninstall mcp-server-filesystem -y
 if %ERRORLEVEL% NEQ 0 (
     echo Warning: Some packages may not have been installed
 ) else (
-    echo ✓ Packages uninstalled successfully
+    echo [OK] Packages uninstalled successfully
 )
 echo.
 
 echo [2/4] Installing package in development mode...
 pip install -e .
 if %ERRORLEVEL% NEQ 0 (
-    echo ✗ Installation failed!
+    echo [ERROR] Installation failed!
     echo Please check for errors above and try again.
     pause
     exit /b 1
 )
-echo ✓ Package installed successfully
+echo [OK] Package installed successfully
 echo.
 
 echo [3/4] Verifying installation...
 python -c "import mcp_coder; print('mcp_coder imported successfully')"
 if %ERRORLEVEL% NEQ 0 (
-    echo ✗ Import verification failed!
+    echo [ERROR] Import verification failed!
     echo The mcp_coder package is not working properly.
     pause
     exit /b 1
 )
-echo ✓ Package import verified successfully
+echo [OK] Package import verified successfully
 echo.
 
 echo [3.1/4] Verifying CLI entry point...
 python -c "from mcp_coder.cli.main import main; print('CLI main function imported successfully')"
 if %ERRORLEVEL% NEQ 0 (
-    echo ✗ CLI entry point verification failed!
+    echo [ERROR] CLI entry point verification failed!
     echo The CLI is not working properly.
     pause
     exit /b 1
 )
-echo ✓ CLI entry point verified successfully
+echo [OK] CLI entry point verified successfully
 echo.
 
 echo [3.2/4] Testing CLI basic functionality...
 echo Testing mcp-coder command without arguments (should exit with code 1):
 mcp-coder
 if %ERRORLEVEL% EQU 1 (
-    echo ✓ CLI basic functionality working (expected exit code 1)
+    echo [OK] CLI basic functionality working (expected exit code 1)
 ) else (
-    echo ✗ CLI not working as expected (exit code was %ERRORLEVEL%)
+    echo [ERROR] CLI not working as expected (exit code was %ERRORLEVEL%)
 )
 echo.
 
@@ -71,13 +71,13 @@ python -c "import mcp_code_checker; print('mcp-code-checker installed successful
 if %ERRORLEVEL% NEQ 0 (
     echo Warning: mcp-code-checker not available
 ) else (
-    echo ✓ MCP code checker verified
+    echo [OK] MCP code checker verified
 )
 python -c "import mcp_server_filesystem; print('mcp-server-filesystem installed successfully')"
 if %ERRORLEVEL% NEQ 0 (
     echo Warning: mcp-server-filesystem not available
 ) else (
-    echo ✓ MCP server filesystem verified
+    echo [OK] MCP server filesystem verified
 )
 echo.
 

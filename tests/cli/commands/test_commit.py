@@ -41,7 +41,7 @@ class TestExecuteCommitAuto:
 
         assert result == 0
         captured = capsys.readouterr()
-        assert "✅ Commit created: abc1234" in captured.out
+        assert "SUCCESS: Commit created: abc1234" in captured.out
 
         # Verify function calls
         mock_validate.assert_called_once()
@@ -74,7 +74,7 @@ class TestExecuteCommitAuto:
         captured = capsys.readouterr()
         assert "Generated commit message:" in captured.out
         assert "feat: add new feature" in captured.out
-        assert "✅ Commit created: abc1234" in captured.out
+        assert "SUCCESS: Commit created: abc1234" in captured.out
 
         # Verify input was called
         mock_input.assert_called_once_with("\nProceed with commit? (y/N): ")
