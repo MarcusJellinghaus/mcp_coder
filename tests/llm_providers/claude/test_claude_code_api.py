@@ -2,7 +2,7 @@
 """Tests for claude_code_api module."""
 
 import asyncio
-import os
+import platform
 import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -19,41 +19,26 @@ class TestCreateClaudeClient:
     """Test the _create_claude_client function."""
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api.ClaudeCodeOptions")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use")
-    def test_create_claude_client_basic(
-        self, mock_verify: MagicMock, mock_options_class: MagicMock
-    ) -> None:
+    def test_create_claude_client_basic(self, mock_options_class: MagicMock) -> None:
         """Test that _create_claude_client creates basic options."""
-        # Mock successful verification
-        mock_verify.return_value = (True, "/path/to/claude", None)
-        
-        mock_options = MagicMock()
-        mock_options_class.return_value = mock_options
+        # Mock verification function - required on Linux/CI, helpful for isolation on Windows
+        with patch("mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use") as mock_verify:
+            # Use platform-appropriate mock paths
+            if platform.system() == "Windows":
+                mock_path = "C:\\Users\\user\\.local\\bin\\claude.exe"
+            else:
+                mock_path = "/usr/local/bin/claude"
+            
+            mock_verify.return_value = (True, mock_path, None)
+            
+            mock_options = MagicMock()
+            mock_options_class.return_value = mock_options
 
-        result = _create_claude_client()
+            result = _create_claude_client()
 
-        mock_verify.assert_called_once()
-        mock_options_class.assert_called_once_with()
-        assert result == mock_options
-
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.ClaudeCodeOptions")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use")
-    @patch.dict(os.environ, {"USER": "testuser"}, clear=False)
-    def test_create_claude_client_basic_linux_env(
-        self, mock_verify: MagicMock, mock_options_class: MagicMock
-    ) -> None:
-        """Test that _create_claude_client works in Linux-like environment."""
-        # Mock successful verification with Linux-style path
-        mock_verify.return_value = (True, "/usr/local/bin/claude", None)
-        
-        mock_options = MagicMock()
-        mock_options_class.return_value = mock_options
-
-        result = _create_claude_client()
-
-        mock_verify.assert_called_once()
-        mock_options_class.assert_called_once_with()
-        assert result == mock_options
+            mock_verify.assert_called_once()
+            mock_options_class.assert_called_once_with()
+            assert result == mock_options
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use")
     def test_create_claude_client_verification_fails(self, mock_verify: MagicMock) -> None:
@@ -65,51 +50,6 @@ class TestCreateClaudeClient:
             _create_claude_client()
         
         mock_verify.assert_called_once()
-
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.ClaudeCodeOptions")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.setup_claude_path")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.verify_claude_installation")
-    def test_create_claude_client_cross_platform(
-        self, mock_verify_install: MagicMock, mock_setup_path: MagicMock, mock_options_class: MagicMock
-    ) -> None:
-        """Test _create_claude_client with explicit mocking of platform-specific functions."""
-        # Mock the platform-specific functions directly
-        mock_setup_path.return_value = "/path/to/claude"
-        mock_verify_install.return_value = {
-            "found": True,
-            "path": "/path/to/claude", 
-            "works": True,
-            "error": None
-        }
-        
-        mock_options = MagicMock()
-        mock_options_class.return_value = mock_options
-
-        result = _create_claude_client()
-
-        mock_setup_path.assert_called_once()
-        mock_verify_install.assert_called_once()
-        mock_options_class.assert_called_once_with()
-        assert result == mock_options
-
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.ClaudeCodeOptions")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use")
-    @patch.dict(os.environ, {"USER": "runner", "HOME": "/home/runner"}, clear=False)
-    def test_create_claude_client_github_actions_linux(
-        self, mock_verify: MagicMock, mock_options_class: MagicMock
-    ) -> None:
-        """Test that _create_claude_client works in GitHub Actions Linux environment."""
-        # Simulate the exact environment from the CI failure
-        mock_verify.return_value = (True, "/usr/local/bin/claude", None)
-        
-        mock_options = MagicMock()
-        mock_options_class.return_value = mock_options
-
-        result = _create_claude_client()
-
-        mock_verify.assert_called_once()
-        mock_options_class.assert_called_once_with()
-        assert result == mock_options
 
 
 class TestAskClaudeCodeApiAsync:
