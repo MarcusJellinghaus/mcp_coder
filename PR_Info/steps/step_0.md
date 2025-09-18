@@ -1,20 +1,20 @@
 # Step 0: Basic MCP Connectivity Proof-of-Concept
 
 ## Objective
-Manually verify Claude Code can connect to and use MCP servers at all. This is our foundational validation step - if this doesn't work, we need to investigate before proceeding.
+Verify Claude Code API can connect to and use MCP servers at all. This is our foundational validation step - if this doesn't work, we need to investigate before proceeding.
 
 ## WHERE
 - **Test File**: `tests/integration/test_mcp_basic_connectivity.py`
-- **Manual Setup**: Claude Desktop configuration (temporary, manual)
+- **API Setup**: Claude Code API configuration with MCP server
 - **Test Directory**: Create temporary directory with known test files
 
 ## WHAT
 ### Manual Tasks
-1. **Install mcp-server-filesystem** (if not already available)
-2. **Manual Claude Desktop Configuration**
-   - Locate Claude Desktop config file
-   - Add mcp-server-filesystem configuration pointing to test directory
-   - Restart Claude Desktop to load configuration
+1. **Setup mcp-server-filesystem** (already available as dev dependency)
+2. **Claude Code API Configuration**
+   - Configure MCP server programmatically through API
+   - Point mcp-server-filesystem to test directory
+   - Verify MCP server connection through API
 
 3. **Create Test Environment**
    - Create temporary directory with known files (README.md, test.py, data.json)
@@ -23,7 +23,7 @@ Manually verify Claude Code can connect to and use MCP servers at all. This is o
 4. **Basic Connectivity Test**
 ```python
 def test_mcp_basic_connectivity():
-    """Test if Claude Code can connect to MCP server at all"""
+    """Test if Claude Code API can connect to MCP server at all"""
     prompt = "List the files in the current directory"
     response = ask_claude_code_api_detailed_sync(prompt)
     
@@ -42,11 +42,11 @@ def test_mcp_basic_connectivity():
 - **Manual Configuration**: Document exact steps for Claude Desktop setup
 - **Simple Assertions**: Just verify basic functionality works
 
-### Manual Setup Process
-1. Create test directory: `/tmp/mcp_test_project/` (or Windows equivalent)
+### API Setup Process
+1. Create test directory: `%TEMP%/mcp_test_project/` (Windows temp directory)
 2. Add test files with known content
-3. Update Claude Desktop config manually
-4. Verify MCP server appears in Claude Desktop UI
+3. Configure MCP server through Claude Code API
+4. Verify MCP server connection through API response
 
 ## ALGORITHM
 ```
@@ -91,16 +91,16 @@ Please document your findings clearly, including what works, what doesn't, and w
 ```
 
 ## Implementation Notes
-- **Manual Setup**: Don't automate Claude Desktop config yet - do it manually and document steps
+- **API Setup**: Use Claude Code API for MCP server configuration
 - **Simple Test**: One function, basic assertions, lots of logging/documentation
 - **Failure-Friendly**: If it doesn't work, that's valuable information too
 - **Documentation**: Write down everything you observe about the process
 
 ## Success Criteria
-- ✅ MCP server appears in Claude Desktop and shows as connected
+- ✅ MCP server connects through Claude Code API
 - ✅ Claude Code API call completes without errors
 - ✅ Response shows evidence that MCP tools were used (files listed)
-- ✅ Manual setup process is documented for repeatability
+- ✅ API setup process is documented for repeatability
 
 ## If This Step Fails
 - **Stop here** and investigate why MCP integration doesn't work

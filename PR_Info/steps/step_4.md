@@ -16,7 +16,7 @@ class MinimalMCPHelper:
         """Set up MCP config for testing based on Step 0 learnings"""
     
     def restore_original_config(self) -> bool:
-        """Restore original Claude Desktop config"""
+        """Restore original Claude Code API config"""
     
     def verify_mcp_connection(self) -> bool:
         """Check if MCP server is connected (based on Step 0 findings)"""
@@ -54,7 +54,7 @@ class AutomatedMCPTests:
 ```
 For each proven operation from Steps 1-3:
 1. Set up test environment using Step 3 utilities
-2. Configure MCP server using Step 0 manual process (automated)
+2. Configure MCP server using Step 0 API process (automated)
 3. Execute operation using prompts from Step 1
 4. Validate response using Step 2 parsing functions
 5. Verify file system changes using Step 3 verification
@@ -107,7 +107,7 @@ Please ensure the automated tests match the results of the successful manual tes
 - **Keep Simple**: Resist adding features not proven in manual testing
 - **Error Handling**: Handle known failure modes from exploration steps
 - **Test Reliability**: Automated tests should be as reliable as manual tests were
-- **Documentation**: Document any differences between manual and automated approaches
+- **Documentation**: Document any differences between API and automated approaches
 
 ## Success Criteria
 - ✅ Automated tests produce same results as successful manual tests
@@ -120,7 +120,7 @@ Please ensure the automated tests match the results of the successful manual tes
 - Working automated test suite for proven MCP operations
 - Reliable MCP configuration management for testing
 - Foundation for expanding automated testing in Step 5
-- Clear documentation of what's automated vs what still needs manual setup
+- Clear documentation of what's automated vs what still needs API setup
 - Confidence that automation matches manual testing results
 
 This step transforms our exploration learnings into a reliable automated testing foundation.

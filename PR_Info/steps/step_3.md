@@ -29,13 +29,15 @@ def get_created_files_list(project_dir: Path) -> list[str]:
 - How to ensure test isolation between different test runs?
 - What's the best way to create temporary test environments?
 - Do MCP servers cache anything that needs clearing?
+- How to use pytest markers to separate MCP tests from other tests?
 
 ## HOW
 ### Integration Points
 - **Build on Steps 1-2**: Use knowledge from operation exploration
 - **File System Management**: Use `tempfile` and `pathlib` for cross-platform support
-- **Test Isolation**: Ensure each test gets a clean environment
+- **Test Isolation**: Ensure each test gets a clean environment with separate temporary directories
 - **Cleanup Verification**: Check that cleanup actually removes all created files
+- **Pytest Markers**: Use `@pytest.mark.mcp_integration` for test separation
 
 ### Exploration Strategy
 - Create test projects, run MCP operations, see what gets created
@@ -101,6 +103,7 @@ Key requirements:
 3. Test different approaches to creating isolated test environments
 4. Figure out what cleanup is needed after MCP operations
 5. Verify that tests don't interfere with each other
+6. Set up pytest markers for MCP test isolation
 
 This is about understanding the practical aspects of test environment management before building automation.
 

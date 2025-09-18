@@ -12,8 +12,8 @@ Implement MCP (Model Context Protocol) integration testing for Claude Code API u
 ## Implementation Steps (6 Steps)
 
 ### Step 0: Basic MCP Connectivity Proof-of-Concept
-**Objective**: Manually verify Claude Code can connect to MCP servers at all
-- Manual MCP server setup and Claude Desktop configuration
+**Objective**: Verify Claude Code API can connect to MCP servers at all
+- MCP server setup and Claude Code API configuration
 - Single test to verify basic connectivity works
 - Document findings about response structure and MCP detection
 - **Decision Point**: If this fails, stop and investigate before proceeding
@@ -46,12 +46,12 @@ Implement MCP (Model Context Protocol) integration testing for Claude Code API u
 - Apply response parsing and cleanup strategies from exploration
 - Focus on reliability over comprehensiveness
 
-### Step 5: Expand Based on Automation Learnings
-**Objective**: Add sophisticated features only if basic automation is solid
-- Choose expansion based on Step 4 results: more operations, error handling, performance, or advanced features
-- Maintain reliability while adding capabilities  
-- Create comprehensive documentation for framework usage
-- **Decision Point**: Only expand if Step 4 automation works perfectly
+### Step 5: MCP Action Logging and Observability
+**Objective**: Add logging and visibility into MCP tool usage for debugging and understanding
+- Implement logging of MCP tool calls with input parameters and return values
+- Create utilities to display MCP action history from chat sessions
+- Add debugging aids for understanding what MCP operations occurred
+- **Decision Point**: Only expand if Step 4 automation works very reliably (99%+)
 
 ## Technical Architecture
 
@@ -74,7 +74,7 @@ Using **mcp-server-filesystem** because:
 - ✅ **Step 2**: Can detect MCP usage in API responses
 - ✅ **Step 3**: Can create isolated, repeatable test environments
 - ✅ **Step 4**: Automated tests match manual test results
-- ✅ **Step 5**: Enhanced framework provides practical testing capability
+- ✅ **Step 5**: MCP action logging provides visibility into tool usage
 
 ## Expected File Structure (Built Incrementally)
 ```
@@ -96,8 +96,7 @@ tests/
 │   ├── test_mcp_automated.py             # Step 4
 │   └── test_mcp_enhanced.py              # Step 5
 └── docs/
-    ├── mcp_operation_findings.md    # Step 1 exploration results
-    └── mcp_testing_guide.md         # Step 5 user documentation
+    └── mcp_testing.md               # Comprehensive MCP testing guide
 ```
 
 ## Risk Mitigation Benefits

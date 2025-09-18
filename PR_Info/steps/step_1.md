@@ -103,7 +103,7 @@ I need you to systematically test individual MCP file operations to understand t
 Key requirements:
 1. Create `tests/integration/test_mcp_operations_exploration.py` with tests for each operation
 2. Try multiple prompt variations to find what reliably triggers each MCP tool  
-3. Create `docs/mcp_operation_findings.md` to document what you discover
+3. Document findings in comprehensive `docs/mcp_testing.md`
 4. Test file reading, creation, listing, and directory operations
 5. Record response times, success patterns, and any unexpected behaviors
 

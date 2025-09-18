@@ -1,11 +1,11 @@
 # Step 6: Add CI/CD Integration and Documentation
 
 ## Objective  
-Integrate MCP integration tests into the CI/CD pipeline, update project documentation, and ensure the MCP testing framework is maintainable and well-documented.
+Integrate MCP integration tests into the CI/CD pipeline and create comprehensive documentation for the MCP testing framework.
 
 ## WHERE
 - **CI Configuration**: `.github/workflows/ci.yml` (update existing workflow)
-- **Documentation**: `README.md`, `tests/README.md`, `docs/mcp_integration_testing.md`
+- **Documentation**: `README.md`, `tests/README.md`, `docs/mcp_testing.md`
 - **Project Config**: `pyproject.toml` (add MCP-specific pytest markers)
 
 ## WHAT
@@ -25,7 +25,7 @@ Integrate MCP integration tests into the CI/CD pipeline, update project document
 ### Documentation Updates
 - **README.md**: Add MCP integration testing section
 - **tests/README.md**: Document MCP test markers and usage
-- **New File**: `docs/mcp_integration_testing.md` - Comprehensive testing guide
+- **Updated File**: `docs/mcp_testing.md` - Comprehensive testing guide
 
 ### Configuration Updates
 ```toml
@@ -90,7 +90,7 @@ I need you to integrate the MCP testing framework into CI/CD and create comprehe
 Key requirements:
 1. Update `.github/workflows/ci.yml` to include MCP integration tests with appropriate timeouts
 2. Add MCP-specific pytest markers to `pyproject.toml` configuration
-3. Create comprehensive documentation in `docs/mcp_integration_testing.md`
+3. Update comprehensive documentation in `docs/mcp_testing.md`
 4. Update `README.md` and `tests/README.md` with MCP testing information
 5. Ensure CI pipeline handles MCP test execution properly
 6. Include troubleshooting guide for common MCP testing issues

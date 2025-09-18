@@ -24,11 +24,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Exploratory MCP Integration Testing Implementation
 
 - [ ] **Step 0: Basic MCP Connectivity Proof-of-Concept** - [steps/step_0.md](steps/step_0.md)
-  - Manually set up mcp-server-filesystem and verify Claude Code can connect
+  - Set up mcp-server-filesystem and verify Claude Code API can connect
   - Create single test to verify basic MCP integration works at all
   - Document response structure and MCP detection patterns
   - **Critical Decision Point**: If this fails, investigate before proceeding
-  - **Quality Checks**: Basic test passes, manual setup documented
+  - **Quality Checks**: Basic test passes, API setup documented
   - **Deliverables**: `tests/integration/test_mcp_basic_connectivity.py`
 
 - [ ] **Step 1: Explore Individual MCP File Operations** - [steps/step_1.md](steps/step_1.md) 
@@ -37,7 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Record timing, success patterns, and any limitations discovered
   - Create findings documentation for future automation
   - **Quality Checks**: All operations tested, findings documented
-  - **Deliverables**: `tests/integration/test_mcp_operations_exploration.py`, `docs/mcp_operation_findings.md`
+  - **Deliverables**: `tests/integration/test_mcp_operations_exploration.py`, findings in `docs/mcp_testing.md`
 
 - [ ] **Step 2: Explore Response Analysis and MCP Detection** - [steps/step_2.md](steps/step_2.md)
   - Analyze actual API responses from Step 1 to understand structure
@@ -48,8 +48,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - **Deliverables**: `src/mcp_coder/mcp/response_parser.py`, `tests/mcp/test_response_parser.py`, response fixtures
 
 - [ ] **Step 3: Explore Test Project Setup and Cleanup** - [steps/step_3.md](steps/step_3.md)
-  - Test different approaches to creating isolated test environments
-  - Figure out cleanup requirements and test isolation strategies
+  - Test different approaches to creating isolated test environments with separate temp directories
+  - Figure out cleanup requirements and test isolation strategies with pytest markers
   - Build utilities for test project management and verification
   - Document cross-platform and permission considerations
   - **Quality Checks**: Run pylint, pytest, mypy - all must pass
@@ -63,14 +63,22 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - **Quality Checks**: Run pylint, pytest, mypy - all must pass, automated tests reliable
   - **Deliverables**: `src/mcp_coder/mcp/config_helper.py`, `tests/integration/test_mcp_automated.py`
 
-- [ ] **Step 5: Expand Based on Automation Learnings** - [steps/step_5.md](steps/step_5.md)
-  - Choose expansion option based on Step 4 automation success
-  - Add enhanced capabilities while maintaining existing reliability
-  - Create comprehensive documentation for framework usage
-  - Update pytest configuration with MCP test markers
-  - **Decision Point**: Only expand if Step 4 automation works perfectly
-  - **Quality Checks**: Enhanced tests work reliably, documentation complete
-  - **Deliverables**: `tests/integration/test_mcp_enhanced.py`, `docs/mcp_testing_guide.md`
+- [ ] **Step 5: MCP Action Logging and Observability** - [steps/step_5.md](steps/step_5.md)
+  - Implement logging of MCP tool calls with input parameters and return values
+  - Create utilities to display MCP action history from test sessions
+  - Add debugging aids for understanding what MCP operations occurred
+  - Update comprehensive documentation for framework usage
+  - **Decision Point**: Only expand if Step 4 automation works very reliably (99%+)
+  - **Quality Checks**: Logging tests work reliably, minimal performance impact
+  - **Deliverables**: `src/mcp_coder/mcp/action_logger.py`, `tests/integration/test_mcp_enhanced.py`
+
+- [ ] **Step 6: CI/CD Integration and Documentation** - [steps/step_6.md](steps/step_6.md)
+  - Integrate MCP integration tests into CI/CD pipeline with appropriate timeouts
+  - Add MCP-specific pytest markers to pyproject.toml configuration
+  - Update comprehensive documentation in docs/mcp_testing.md
+  - Update README.md and tests/README.md with MCP testing information
+  - **Quality Checks**: CI pipeline runs MCP tests successfully
+  - **Deliverables**: Updated CI workflow, pytest markers, comprehensive documentation
 
 ### Feature Completion Tasks
 
