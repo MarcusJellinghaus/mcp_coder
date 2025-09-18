@@ -33,6 +33,14 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         action="version",
         version="%(prog)s 0.1.0",
     )
+    
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="WARNING",
+        help="Set the logging level (default: WARNING)",
+        metavar="LEVEL",
+    )
 
     # Add subparsers for future commands
     subparsers = parser.add_subparsers(
@@ -73,7 +81,10 @@ def handle_no_command(args: argparse.Namespace) -> int:
     logger.info("No command provided, showing help")
     print("mcp-coder: AI-powered software development automation toolkit")
     print("")
-    print("Usage: mcp-coder COMMAND [OPTIONS]")
+    print("Usage: mcp-coder [--log-level LEVEL] COMMAND [OPTIONS]")
+    print("")
+    print("Global options:")
+    print("  --log-level LEVEL       Set logging verbosity: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: WARNING)")
     print("")
     print("Available commands:")
     print("  help                    Show detailed help information")
@@ -88,16 +99,16 @@ def handle_no_command(args: argparse.Namespace) -> int:
 
 def main() -> int:
     """Main CLI entry point. Returns exit code."""
-    # Initialize logging at the start of main execution
-    setup_logging("WARNING")
+    # Parse arguments first to get log level
+    parser = create_parser()
+    args = parser.parse_args()
+    
+    # Initialize logging with user-specified level
+    setup_logging(args.log_level)
 
     try:
         logger.info("Starting mcp-coder CLI")
-
-        parser = create_parser()
-        args = parser.parse_args()
-
-        logger.info(f"Parsed arguments: command={args.command}")
+        logger.info(f"Parsed arguments: command={args.command}, log_level={args.log_level}")
 
         # Handle case when no command is provided
         if not args.command:

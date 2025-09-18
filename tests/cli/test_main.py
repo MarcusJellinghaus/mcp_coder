@@ -37,6 +37,32 @@ class TestCreateParser:
         # Check that subparsers exist (they should be accessible via _subparsers)
         assert hasattr(parser, "_subparsers")
 
+    def test_parser_has_log_level_argument(self) -> None:
+        """Test parser includes log level argument."""
+        parser = create_parser()
+        # Test parsing with log level
+        args = parser.parse_args(["--log-level", "DEBUG", "help"])
+        assert args.log_level == "DEBUG"
+        assert args.command == "help"
+
+    def test_parser_log_level_default(self) -> None:
+        """Test log level has correct default value."""
+        parser = create_parser()
+        args = parser.parse_args(["help"])
+        assert args.log_level == "WARNING"
+
+    def test_parser_log_level_choices(self) -> None:
+        """Test log level validates choices."""
+        parser = create_parser()
+        # Valid choices should work
+        for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+            args = parser.parse_args(["--log-level", level, "help"])
+            assert args.log_level == level
+        
+        # Invalid choice should raise SystemExit
+        with pytest.raises(SystemExit):
+            parser.parse_args(["--log-level", "INVALID", "help"])
+
 
 class TestHandleNoCommand:
     """Test handling when no command is provided."""
@@ -79,7 +105,7 @@ class TestMain:
     ) -> None:
         """Test that main calls handle_no_command when no command provided."""
         mock_parser = Mock()
-        mock_parser.parse_args.return_value = argparse.Namespace(command=None)
+        mock_parser.parse_args.return_value = argparse.Namespace(command=None, log_level="WARNING")
         mock_create_parser.return_value = mock_parser
         mock_handle_no_command.return_value = 1
 
@@ -100,7 +126,7 @@ class TestMain:
     ) -> None:
         """Test 'mcp-coder help' command works."""
         mock_parser = Mock()
-        mock_parser.parse_args.return_value = argparse.Namespace(command="help")
+        mock_parser.parse_args.return_value = argparse.Namespace(command="help", log_level="WARNING")
         mock_create_parser.return_value = mock_parser
         mock_execute_help.return_value = 0
 
@@ -118,7 +144,7 @@ class TestMain:
     ) -> None:
         """Test that main returns error for unknown commands."""
         mock_parser = Mock()
-        mock_parser.parse_args.return_value = argparse.Namespace(command="unknown")
+        mock_parser.parse_args.return_value = argparse.Namespace(command="unknown", log_level="WARNING")
         mock_create_parser.return_value = mock_parser
 
         result = main()
@@ -134,11 +160,15 @@ class TestMain:
     ) -> None:
         """Test that main handles KeyboardInterrupt gracefully."""
         mock_parser = Mock()
-        mock_parser.parse_args.side_effect = KeyboardInterrupt()
+        # For KeyboardInterrupt, the exception occurs before we get log_level,
+        # so we need to mock the args parsing to succeed first
+        mock_parser.parse_args.return_value = argparse.Namespace(command=None, log_level="WARNING")
         mock_create_parser.return_value = mock_parser
-
-        with patch("builtins.print"):
-            result = main()
+        
+        # Patch the handle_no_command to raise KeyboardInterrupt
+        with patch("mcp_coder.cli.main.handle_no_command", side_effect=KeyboardInterrupt()):
+            with patch("builtins.print"):
+                result = main()
 
         assert result == 1
         mock_setup_logging.assert_called_once_with("WARNING")
@@ -150,14 +180,58 @@ class TestMain:
     ) -> None:
         """Test that main handles unexpected exceptions."""
         mock_parser = Mock()
-        mock_parser.parse_args.side_effect = Exception("Test error")
+        # For unexpected exceptions, the exception occurs after we get log_level,
+        # so we need args parsing to succeed first
+        mock_parser.parse_args.return_value = argparse.Namespace(command=None, log_level="WARNING")
         mock_create_parser.return_value = mock_parser
-
-        with patch("builtins.print"):
-            result = main()
+        
+        # Patch the handle_no_command to raise an unexpected exception
+        with patch("mcp_coder.cli.main.handle_no_command", side_effect=Exception("Test error")):
+            with patch("builtins.print"):
+                result = main()
 
         assert result == 2
         mock_setup_logging.assert_called_once_with("WARNING")
+
+    @patch("mcp_coder.cli.main.setup_logging")
+    @patch("mcp_coder.cli.main.handle_no_command")
+    @patch("mcp_coder.cli.main.create_parser")
+    def test_main_custom_log_level(self,
+        mock_create_parser: Mock,
+        mock_handle_no_command: Mock,
+        mock_setup_logging: Mock,
+    ) -> None:
+        """Test that main uses custom log level when provided."""
+        mock_parser = Mock()
+        mock_parser.parse_args.return_value = argparse.Namespace(command=None, log_level="DEBUG")
+        mock_create_parser.return_value = mock_parser
+        mock_handle_no_command.return_value = 1
+
+        result = main()
+
+        assert result == 1
+        mock_handle_no_command.assert_called_once()
+        mock_setup_logging.assert_called_once_with("DEBUG")
+
+    @patch("mcp_coder.cli.main.setup_logging")
+    @patch("mcp_coder.cli.main.execute_help")
+    @patch("mcp_coder.cli.main.create_parser")
+    def test_main_error_log_level(self,
+        mock_create_parser: Mock,
+        mock_execute_help: Mock,
+        mock_setup_logging: Mock,
+    ) -> None:
+        """Test that main works with ERROR log level."""
+        mock_parser = Mock()
+        mock_parser.parse_args.return_value = argparse.Namespace(command="help", log_level="ERROR")
+        mock_create_parser.return_value = mock_parser
+        mock_execute_help.return_value = 0
+
+        result = main()
+
+        assert result == 0
+        mock_execute_help.assert_called_once()
+        mock_setup_logging.assert_called_once_with("ERROR")
 
 
 class TestCLIEntryPoint:
