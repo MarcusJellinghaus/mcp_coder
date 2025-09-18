@@ -22,14 +22,14 @@ This adds the first verbosity level beyond the default just-text format.
 - **Comparison**: Ensure verbose output contains more detail than just-text
 
 ## HOW
-- **Mock Setup**: Mock args with `verbose=True` flag
+- **Mock Setup**: Mock args with `verbosity="verbose"` 
 - **Output Verification**: Check for tool interaction details and performance metrics
 - **Pattern Matching**: Verify presence of expected verbose-only content
 - **Integration**: Extend existing test infrastructure
 
 ## ALGORITHM
 ```
-1. Setup mock args with prompt and verbose=True
+1. Setup mock args with prompt and verbosity="verbose"
 2. Mock ask_claude_code_api_detailed_sync with rich response data
 3. Call execute_prompt function
 4. Capture output and verify verbose-specific content:
@@ -39,7 +39,7 @@ This adds the first verbosity level beyond the default just-text format.
 ```
 
 ## DATA
-- **Input**: `argparse.Namespace` with `prompt` and `verbose=True`
+- **Input**: `argparse.Namespace` with `prompt` and `verbosity="verbose"`
 - **Mock Response**: Enhanced Claude API response with tool interactions and metrics
 - **Assertions**: 
   - Contains Claude response

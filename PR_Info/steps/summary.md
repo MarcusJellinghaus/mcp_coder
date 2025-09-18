@@ -7,9 +7,9 @@ Add a new `prompt` command to the MCP Coder CLI that allows users to execute arb
 Enable users to run:
 ```bash
 mcp-coder prompt "What is the capital of France?"
-mcp-coder prompt "Explain async/await" --verbose
-mcp-coder prompt "Debug this error" --raw --store-response
-mcp-coder prompt "Follow up question" --continue-from response_20250918_143022.json
+mcp-coder prompt "Explain async/await" --verbosity=verbose
+mcp-coder prompt "Debug this error" --verbosity=raw --store-response
+mcp-coder prompt "Follow up question" --continue-from response_2025-09-18T14-30-22.json
 ```
 
 ## Technical Approach
@@ -48,26 +48,27 @@ _load_previous_chat(file_path) -> dict         # Load for continuation
 
 ## Verbosity Levels
 
-### --just-text (default)
+### Default (just-text)
 - Claude's response text
 - Tool interactions summary (e.g., "Used 3 tools: file_read, web_search, calculator")
 
-### --verbose  
+### --verbosity=verbose  
 - Claude's response text
 - Detailed tool interactions with parameters
 - Performance metrics (duration, cost, tokens)
 - Session information (model, working directory)
 
-### --raw
-- Everything from --verbose
+### --verbosity=raw
+- Everything from verbose
 - Complete raw JSON API response structures
 - Full MCP server status and available tools
 - Raw message content for maximum debugging
 
 ## Storage & Continuation Features
-- **--store-response**: Save complete session to `.mcp-coder/responses/response_TIMESTAMP.json`
+- **--store-response**: Save complete session to `.mcp-coder/responses/response_ISO-TIMESTAMP.json`
 - **--continue-from**: Load previous session for follow-up questions
 - **Session Structure**: Include prompt, context, responses, metadata for full conversation continuity
+- **File Format**: ISO timestamp format (e.g., `response_2025-09-18T14-30-22.json`)
 
 ## Test Strategy
 - **5 Essential Tests**: Core functionality without over-testing

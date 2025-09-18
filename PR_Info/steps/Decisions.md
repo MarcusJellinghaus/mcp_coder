@@ -103,3 +103,50 @@ Tool Interactions:
 - `_store_response()` - session storage
 - `_load_previous_chat()` - continuation loading
 **Rationale**: Follows single responsibility principle and KISS approach
+
+## Refined Decisions from Plan Review (September 2025)
+
+### 16. Verbosity Implementation - SINGLE FLAG WITH VALUES
+**Decision**: Use single `--verbosity` flag instead of separate boolean flags
+- Command: `--verbosity={just-text|verbose|raw}`
+- Default: `just-text` when no flag specified
+- Examples: `mcp-coder prompt "question" --verbosity=verbose`
+**Rationale**: Cleaner CLI interface, more intuitive than multiple boolean flags
+
+### 17. Implementation Steps - KEEP 12 GRANULAR STEPS
+**Decision**: Maintain the detailed 12-step TDD approach
+**Rationale**: Provides better safety and easier debugging, chosen over consolidation for quality
+
+### 18. Test Coverage - KEEP 5 COMPREHENSIVE TESTS
+**Decision**: Maintain all 5 essential tests without consolidation
+- `test_basic_prompt_success()`
+- `test_prompt_api_error()`
+- `test_verbosity_levels()`
+- `test_store_response()`
+- `test_continue_from()`
+**Rationale**: Aligns with granular approach, ensures thorough testing coverage
+
+### 19. CLI Integration - TOP-LEVEL COMMAND
+**Decision**: Add `prompt` as top-level command alongside `help`, `verify`, `commit`
+**Implementation**: Extend `create_parser()` in `main.py` with prompt subparser
+**Rationale**: Follows established CLI pattern, easily accessible
+
+### 20. Error Handling - MAINTAIN "LET IT CRASH"
+**Decision**: Keep current "let it crash" approach for initial implementation
+**Future**: Fine-tune error handling based on actual usage patterns
+**Rationale**: Maintains KISS principles, allows for raw debugging experience
+
+### 21. Storage Location - PROJECT-SPECIFIC
+**Decision**: Keep `.mcp-coder/responses/` in current working directory
+**Rationale**: Makes sessions project-specific, logical for development workflows
+
+### 22. Session Management - IMPLEMENT BASIC FIRST
+**Decision**: No session file management (size limits, cleanup) in initial implementation
+**Future**: Add if needed based on usage patterns
+**Rationale**: Focus on core functionality first
+
+### 23. Session File Naming - ISO FORMAT
+**Decision**: Use ISO timestamp format for session files
+- Format: `response_2025-09-18T14-30-22.json`
+- Change from: `response_20250918_143022.json`
+**Rationale**: More standardized and readable format

@@ -45,12 +45,12 @@ This is the final step to complete the prompt command implementation with full d
 - **Commands Addition**: 
   ```
   "prompt <text>              Execute prompt via Claude API with configurable debug output
-                             Supports --verbose, --raw, --store-response, --continue-from"
+                             Supports --verbosity, --store-response, --continue-from"
   ```
 - **Examples**:
-  - `"mcp-coder prompt 'What is Python?'"` (basic usage)
-  - `"mcp-coder prompt 'Explain async/await' --verbose"` (detailed debug)
-  - `"mcp-coder prompt 'Debug this error' --raw --store-response"` (complete debug + storage)
-  - `"mcp-coder prompt 'Follow up question' --continue-from response_20250918_143022.json"` (continuation)
+  - `"mcp-coder prompt 'What is Python?'"` (basic usage - just-text default)
+  - `"mcp-coder prompt 'Explain async/await' --verbosity=verbose"` (detailed debug)
+  - `"mcp-coder prompt 'Debug this error' --verbosity=raw --store-response"` (complete debug + storage)
+  - `"mcp-coder prompt 'Follow up question' --continue-from response_2025-09-18T14-30-22.json"` (continuation)
 - **Feature Descriptions**: Brief inline explanations of verbosity levels and storage
 - **Format**: Consistent with existing command documentation style

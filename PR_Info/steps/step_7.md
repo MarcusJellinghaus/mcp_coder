@@ -47,5 +47,5 @@ This adds the foundation for conversation continuity and detailed debugging stor
   - `prompt`: Original user prompt
   - `response_data`: Complete API response
   - `metadata`: Timestamp, working directory, model info
-- **File Path**: `.mcp-coder/responses/response_YYYYMMDD_HHMMSS.json`
+- **File Path**: `.mcp-coder/responses/response_YYYY-MM-DDTHH-MM-SS.json`
 - **Assertions**: Verify file operations and JSON content structure

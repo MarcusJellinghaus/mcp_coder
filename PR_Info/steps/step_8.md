@@ -27,7 +27,7 @@ Build on existing functionality, adding the storage layer for conversation conti
 - **Storage Integration**: Check args.store_response flag, call _store_response() after API call
 - **Directory Creation**: Use os.makedirs() to ensure response directory exists
 - **JSON Storage**: Save complete session data as JSON with proper formatting
-- **Timestamp Naming**: Generate filename like `response_20250918_143022.json`
+- **Timestamp Naming**: Generate filename like `response_2025-09-18T14-30-22.json`
 
 ## ALGORITHM
 ```
@@ -43,7 +43,7 @@ Build on existing functionality, adding the storage layer for conversation conti
 
 ## DATA
 - **Input**: Enhanced `argparse.Namespace` with `store_response` attribute
-- **Storage Location**: `.mcp-coder/responses/response_TIMESTAMP.json`
+- **Storage Location**: `.mcp-coder/responses/response_ISO-TIMESTAMP.json`
 - **JSON Structure**:
   ```json
   {

@@ -28,18 +28,15 @@ Follow the patterns used for existing commands like help, verify, and commit, bu
 - **Complete Subparser**: Add prompt subparser with all flags and options
 - **Parameter Definitions**:
   - `prompt` (positional): The prompt text
-  - `--verbose`: Enable verbose output
-  - `--raw`: Enable raw debug output  
+  - `--verbosity`: Choose output level (just-text, verbose, raw) with just-text default
   - `--store-response`: Store session data
   - `--continue-from`: Continue from previous session file
-- **Mutual Exclusion**: Handle verbosity level conflicts appropriately
 
 ## ALGORITHM
 ```
 1. Add comprehensive prompt subparser in create_parser():
    - Positional prompt argument
-   - --verbose flag for detailed output
-   - --raw flag for complete debug output
+   - --verbosity option with choices (just-text, verbose, raw) and just-text default
    - --store-response flag for session storage
    - --continue-from option for session continuation
 2. Import execute_prompt in main.py
@@ -54,10 +51,9 @@ Follow the patterns used for existing commands like help, verify, and commit, bu
       help="Execute prompt via Claude API with debug output")
   prompt_parser.add_argument("prompt", 
       help="The prompt to send to Claude")
-  prompt_parser.add_argument("--verbose", action="store_true",
-      help="Show detailed debug information")
-  prompt_parser.add_argument("--raw", action="store_true",
-      help="Show complete raw debug output including JSON")
+  prompt_parser.add_argument("--verbosity", 
+      choices=["just-text", "verbose", "raw"], default="just-text",
+      help="Output verbosity level (default: just-text)")
   prompt_parser.add_argument("--store-response", action="store_true",
       help="Store complete session data for continuation")
   prompt_parser.add_argument("--continue-from", type=str,
