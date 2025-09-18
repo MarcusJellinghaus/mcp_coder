@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from src.mcp_coder.cli.commands.commit import (
+from mcp_coder.cli.commands.commit import (
     execute_commit_auto,
     generate_commit_message_with_llm,
     parse_llm_commit_response,
@@ -20,9 +20,9 @@ from src.mcp_coder.cli.commands.commit import (
 class TestExecuteCommitAuto:
     """Tests for execute_commit_auto function."""
 
-    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
-    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     def test_execute_commit_auto_success(
         self,
         mock_commit: Mock,
@@ -46,7 +46,7 @@ class TestExecuteCommitAuto:
 
         assert result == 0
         captured = capsys.readouterr()
-        captured_out = captured.out or ""
+        captured_out: str = captured.out or ""
         assert "SUCCESS: Commit created: abc1234" in captured_out
 
         # Verify function calls
@@ -54,9 +54,9 @@ class TestExecuteCommitAuto:
         mock_generate.assert_called_once()
         mock_commit.assert_called_once_with("feat: add new feature", Path.cwd())
 
-    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
-    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_with_preview_confirmed(
         self,
@@ -83,7 +83,7 @@ class TestExecuteCommitAuto:
 
         assert result == 0
         captured = capsys.readouterr()
-        captured_out = captured.out or ""
+        captured_out: str = captured.out or ""
         assert "Generated commit message:" in captured_out
         assert "feat: add new feature" in captured_out
         assert "SUCCESS: Commit created: abc1234" in captured_out
@@ -91,9 +91,9 @@ class TestExecuteCommitAuto:
         # Verify input was called
         mock_input.assert_called_once_with("\nProceed with commit? (Y/n): ")
 
-    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
-    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_preview_empty_input_proceeds(
         self,
@@ -120,14 +120,14 @@ class TestExecuteCommitAuto:
 
         assert result == 0
         captured = capsys.readouterr()
-        captured_out = captured.out or ""
+        captured_out: str = captured.out or ""
         assert "Generated commit message:" in captured_out
         assert "SUCCESS: Commit created: abc1234" in captured_out
         # Should NOT see "Commit cancelled"
         assert "Commit cancelled" not in captured_out
 
-    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("builtins.input")
     def test_execute_commit_auto_with_preview_cancelled(
         self,
@@ -148,13 +148,13 @@ class TestExecuteCommitAuto:
 
         assert result == 0
         captured = capsys.readouterr()
-        captured_out = captured.out or ""
+        captured_out: str = captured.out or ""
         assert "Generated commit message:" in captured_out
         assert "Commit cancelled." in captured_out
 
-    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
-    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_preview_various_cancel_inputs(
         self,
@@ -202,6 +202,7 @@ class TestExecuteCommitAuto:
             assert result == 0, f"Failed to proceed with input: '{proceed_input}'"
             # Should have proceeded to commit
             captured = capsys.readouterr()
+            captured_out: str = captured.out or ""
             if proceed_input != "":  # Empty string test might not show success message
                 continue
             # For empty string (default), should proceed
@@ -209,7 +210,7 @@ class TestExecuteCommitAuto:
             result = execute_commit_auto(args)
             assert result == 0
 
-    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     def test_execute_commit_auto_not_git_repo(
         self, mock_validate: Mock, capsys: pytest.CaptureFixture[str]
     ) -> None:
@@ -222,11 +223,11 @@ class TestExecuteCommitAuto:
 
         assert result == 1
         captured = capsys.readouterr()
-        captured_err = captured.err or ""
+        captured_err: str = captured.err or ""
         assert "Error: Not a git repository" in captured_err
 
-    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     def test_execute_commit_auto_no_changes(
         self,
         mock_generate: Mock,
@@ -247,16 +248,16 @@ class TestExecuteCommitAuto:
 
         assert result == 2
         captured = capsys.readouterr()
-        captured_err = captured.err or ""
+        captured_err: str = captured.err or ""
         assert "Error: No changes to commit" in captured_err
 
 
 class TestPreviewModeLogic:
     """Tests specifically for preview mode user input logic."""
 
-    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
-    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_preview_mode_cancel_variations(
         self,
@@ -279,9 +280,9 @@ class TestPreviewModeLogic:
             mock_commit.assert_not_called()
             mock_commit.reset_mock()
 
-    @patch("src.mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
-    @patch("src.mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_preview_mode_proceed_variations(
         self,
@@ -325,10 +326,10 @@ class TestPreviewModeLogic:
 class TestGenerateCommitMessageWithLLM:
     """Tests for generate_commit_message_with_llm function."""
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
-    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
-    @patch("src.mcp_coder.cli.commands.commit.ask_llm")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.get_prompt")
+    @patch("mcp_coder.cli.commands.commit.ask_llm")
     def test_generate_commit_message_with_llm_success(
         self,
         mock_ask_llm: Mock,
@@ -356,7 +357,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.assert_called_once_with(project_dir)
         mock_ask_llm.assert_called_once()
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
     def test_generate_commit_message_with_llm_stage_failure(
         self, mock_stage: Mock
     ) -> None:
@@ -369,11 +370,12 @@ class TestGenerateCommitMessageWithLLM:
 
         assert success is False
         assert message == ""
-        assert "Failed to stage changes in repository" in error
-        assert "write permissions" in error
+        error_str: str = error or ""
+        assert "Failed to stage changes in repository" in error_str
+        assert "write permissions" in error_str
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
     def test_generate_commit_message_with_llm_no_changes(
         self, mock_get_diff: Mock, mock_stage: Mock
     ) -> None:
@@ -387,13 +389,14 @@ class TestGenerateCommitMessageWithLLM:
 
         assert success is False
         assert message == ""
-        assert "No changes to commit" in error
-        assert "modified, added, or deleted files" in error
+        error_str: str = error or ""
+        assert "No changes to commit" in error_str
+        assert "modified, added, or deleted files" in error_str
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
-    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
-    @patch("src.mcp_coder.cli.commands.commit.ask_llm")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.get_prompt")
+    @patch("mcp_coder.cli.commands.commit.ask_llm")
     def test_generate_commit_message_with_llm_failure(
         self,
         mock_ask_llm: Mock,
@@ -414,8 +417,9 @@ class TestGenerateCommitMessageWithLLM:
 
         assert success is False
         assert message == ""
-        assert "LLM communication failed" in error
-        assert "internet connection" in error
+        error_str: str = error or ""
+        assert "LLM communication failed" in error_str
+        assert "internet connection" in error_str
 
 
 class TestParseLLMCommitResponse:
@@ -470,9 +474,9 @@ with proper error handling."""
 class TestValidateGitRepository:
     """Tests for validate_git_repository function."""
 
-    @patch("src.mcp_coder.cli.commands.commit.is_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.is_git_repository")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
     def test_validate_git_repository_valid(
         self, mock_stage: Mock, mock_get_diff: Mock, mock_is_git: Mock
     ) -> None:
@@ -487,7 +491,7 @@ class TestValidateGitRepository:
         assert success is True
         assert error is None
 
-    @patch("src.mcp_coder.cli.commands.commit.is_git_repository")
+    @patch("mcp_coder.cli.commands.commit.is_git_repository")
     def test_validate_git_repository_invalid(self, mock_is_git: Mock) -> None:
         """Test git repository validation failure."""
         mock_is_git.return_value = False
@@ -499,9 +503,9 @@ class TestValidateGitRepository:
         assert success is False
         assert error == "Not a git repository"
 
-    @patch("src.mcp_coder.cli.commands.commit.is_git_repository")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.is_git_repository")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
     def test_validate_git_repository_no_changes(
         self, mock_stage: Mock, mock_get_diff: Mock, mock_is_git: Mock
     ) -> None:
@@ -521,7 +525,7 @@ class TestValidateGitRepository:
 class TestGenerateCommitMessageWithLLMExtended:
     """Additional tests for the improved generate_commit_message_with_llm function."""
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
     def test_stage_exception_handling(self, mock_stage: Mock) -> None:
         """Test staging operation exception handling."""
         mock_stage.side_effect = Exception("Permission denied")
@@ -531,12 +535,13 @@ class TestGenerateCommitMessageWithLLMExtended:
 
         assert success is False
         assert message == ""
-        assert "Error staging changes" in error
-        assert "Permission denied" in error
-        assert "git repository is accessible" in error
+        error_str: str = error or ""
+        assert "Error staging changes" in error_str
+        assert "Permission denied" in error_str
+        assert "git repository is accessible" in error_str
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
     def test_git_diff_none_handling(
         self, mock_get_diff: Mock, mock_stage: Mock
     ) -> None:
@@ -549,12 +554,13 @@ class TestGenerateCommitMessageWithLLMExtended:
 
         assert success is False
         assert message == ""
-        assert "Failed to retrieve git diff" in error
-        assert "invalid state" in error
+        error_str: str = error or ""
+        assert "Failed to retrieve git diff" in error_str
+        assert "invalid state" in error_str
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
-    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.get_prompt")
     def test_prompt_file_not_found(
         self, mock_get_prompt: Mock, mock_get_diff: Mock, mock_stage: Mock
     ) -> None:
@@ -568,13 +574,14 @@ class TestGenerateCommitMessageWithLLMExtended:
 
         assert success is False
         assert message == ""
-        assert "Commit prompt template not found" in error
-        assert "prompts.md not found" in error
+        error_str: str = error or ""
+        assert "Commit prompt template not found" in error_str
+        assert "prompts.md not found" in error_str
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
-    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
-    @patch("src.mcp_coder.cli.commands.commit.ask_llm")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.get_prompt")
+    @patch("mcp_coder.cli.commands.commit.ask_llm")
     def test_empty_llm_response(
         self,
         mock_ask_llm: Mock,
@@ -593,14 +600,15 @@ class TestGenerateCommitMessageWithLLMExtended:
 
         assert success is False
         assert message == ""
-        assert "LLM returned empty or null response" in error
-        assert "AI service may be unavailable" in error
+        error_str: str = error or ""
+        assert "LLM returned empty or null response" in error_str
+        assert "AI service may be unavailable" in error_str
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
-    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
-    @patch("src.mcp_coder.cli.commands.commit.ask_llm")
-    @patch("src.mcp_coder.cli.commands.commit.parse_llm_commit_response")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.get_prompt")
+    @patch("mcp_coder.cli.commands.commit.ask_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_commit_response")
     def test_empty_parsed_commit_message(
         self,
         mock_parse: Mock,
@@ -621,14 +629,15 @@ class TestGenerateCommitMessageWithLLMExtended:
 
         assert success is False
         assert message == ""
-        assert "LLM generated an empty commit message" in error
-        assert "AI may not have understood" in error
+        error_str: str = error or ""
+        assert "LLM generated an empty commit message" in error_str
+        assert "AI may not have understood" in error_str
 
-    @patch("src.mcp_coder.cli.commands.commit.stage_all_changes")
-    @patch("src.mcp_coder.cli.commands.commit.get_git_diff_for_commit")
-    @patch("src.mcp_coder.cli.commands.commit.get_prompt")
-    @patch("src.mcp_coder.cli.commands.commit.ask_llm")
-    @patch("src.mcp_coder.cli.commands.commit.parse_llm_commit_response")
+    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.cli.commands.commit.get_git_diff_for_commit")
+    @patch("mcp_coder.cli.commands.commit.get_prompt")
+    @patch("mcp_coder.cli.commands.commit.ask_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_commit_response")
     def test_invalid_commit_message_format(
         self,
         mock_parse: Mock,
@@ -650,5 +659,6 @@ class TestGenerateCommitMessageWithLLMExtended:
 
         assert success is False
         assert message == ""
-        assert "LLM generated a commit message with empty first line" in error
-        assert "invalid for git commits" in error
+        error_str: str = error or ""
+        assert "LLM generated a commit message with empty first line" in error_str
+        assert "invalid for git commits" in error_str

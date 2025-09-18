@@ -6,7 +6,7 @@ from io import StringIO
 
 import pytest
 
-from src.mcp_coder.cli.commands.help import (
+from mcp_coder.cli.commands.help import (
     execute_help,
     get_help_text,
     get_usage_examples,

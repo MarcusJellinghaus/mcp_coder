@@ -25,10 +25,7 @@ def get_clipboard_text() -> Tuple[bool, str, Optional[str]]:
         # Get clipboard content
         clipboard_text = pyperclip.paste()
 
-        if clipboard_text is None:
-            return False, "", "Clipboard is empty"
-
-        if not clipboard_text.strip():
+        if clipboard_text is None or not clipboard_text.strip():
             return False, "", "Clipboard is empty"
 
         logger.debug("Successfully retrieved clipboard text")
