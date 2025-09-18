@@ -13,7 +13,7 @@ from src.mcp_coder.cli.commands.help import (
 )
 
 
-def test_execute_help_returns_success(capsys):
+def test_execute_help_returns_success(capsys) -> None:
     """Test help command returns exit code 0."""
     args = argparse.Namespace(command="help")
 
@@ -26,7 +26,7 @@ def test_execute_help_returns_success(capsys):
     )
 
 
-def test_get_help_text_contains_all_commands():
+def test_get_help_text_contains_all_commands() -> None:
     """Test help text includes all available commands."""
     help_text = get_help_text()
 
@@ -40,7 +40,7 @@ def test_get_help_text_contains_all_commands():
     assert "https://github.com/MarcusJellinghaus/mcp_coder" in help_text
 
 
-def test_get_usage_examples_has_examples():
+def test_get_usage_examples_has_examples() -> None:
     """Test usage examples are provided."""
     examples = get_usage_examples()
 
@@ -50,7 +50,7 @@ def test_get_usage_examples_has_examples():
     assert "mcp-coder commit clipboard" in examples
 
 
-def test_help_text_formatting():
+def test_help_text_formatting() -> None:
     """Test help text is properly formatted."""
     help_text = get_help_text()
 
@@ -64,7 +64,7 @@ def test_help_text_formatting():
     assert any("EXAMPLES:" in line for line in lines)
 
 
-def test_help_text_consistency():
+def test_help_text_consistency() -> None:
     """Test that help text is consistent with examples."""
     help_text = get_help_text()
     examples = get_usage_examples()

@@ -16,7 +16,7 @@ class TestGetClipboardText:
     """Tests for get_clipboard_text function."""
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_success(self, mock_paste):
+    def test_get_clipboard_text_success(self, mock_paste) -> None:
         """Test successful clipboard text retrieval."""
         # Setup mock
         mock_paste.return_value = "test commit message"
@@ -31,7 +31,7 @@ class TestGetClipboardText:
         mock_paste.assert_called_once()
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_empty(self, mock_paste):
+    def test_get_clipboard_text_empty(self, mock_paste) -> None:
         """Test handling of empty clipboard."""
         # Setup mock
         mock_paste.return_value = "   "  # Only whitespace
@@ -46,7 +46,7 @@ class TestGetClipboardText:
         mock_paste.assert_called_once()
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_none_result(self, mock_paste):
+    def test_get_clipboard_text_none_result(self, mock_paste) -> None:
         """Test handling when paste returns None."""
         # Setup mock
         mock_paste.return_value = None
@@ -61,7 +61,7 @@ class TestGetClipboardText:
         mock_paste.assert_called_once()
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_pyperclip_exception(self, mock_paste):
+    def test_get_clipboard_text_pyperclip_exception(self, mock_paste) -> None:
         """Test handling of pyperclip exceptions."""
         # Setup mock
         mock_paste.side_effect = pyperclip.PyperclipException(
@@ -78,7 +78,7 @@ class TestGetClipboardText:
         mock_paste.assert_called_once()
 
     @patch("mcp_coder.utils.clipboard.pyperclip.paste")
-    def test_get_clipboard_text_unexpected_error(self, mock_paste):
+    def test_get_clipboard_text_unexpected_error(self, mock_paste) -> None:
         """Test handling of unexpected errors."""
         # Setup mock
         mock_paste.side_effect = RuntimeError("unexpected error")
@@ -96,7 +96,7 @@ class TestGetClipboardText:
 class TestValidateCommitMessage:
     """Tests for validate_commit_message function."""
 
-    def test_validate_commit_message_empty(self):
+    def test_validate_commit_message_empty(self) -> None:
         """Test validation of empty commit message."""
         # Empty string
         valid, error = validate_commit_message("")
@@ -108,7 +108,7 @@ class TestValidateCommitMessage:
         assert valid is False
         assert error == "Commit message cannot be empty"
 
-    def test_validate_commit_message_single_line_valid(self):
+    def test_validate_commit_message_single_line_valid(self) -> None:
         """Test validation of valid single line commit messages."""
         test_cases = [
             "fix: resolve authentication bug",
@@ -122,7 +122,7 @@ class TestValidateCommitMessage:
             assert valid is True, f"Failed for message: {message}"
             assert error is None
 
-    def test_validate_commit_message_single_line_long(self):
+    def test_validate_commit_message_single_line_long(self) -> None:
         """Test validation of long single line commit message."""
         # Create a message longer than 72 characters
         long_message = "fix: " + "a" * 70  # 74 characters total
@@ -134,7 +134,7 @@ class TestValidateCommitMessage:
             assert error is None
             mock_logger.warning.assert_called_once()
 
-    def test_validate_commit_message_multi_line_valid(self):
+    def test_validate_commit_message_multi_line_valid(self) -> None:
         """Test validation of valid multi-line commit messages."""
         message = """feat: add user registration
 
@@ -145,7 +145,7 @@ Includes form validation and database integration."""
         assert valid is True
         assert error is None
 
-    def test_validate_commit_message_multi_line_invalid(self):
+    def test_validate_commit_message_multi_line_invalid(self) -> None:
         """Test validation of invalid multi-line commit messages."""
         message = """feat: add user registration
 Implements user signup with email validation.
@@ -155,7 +155,7 @@ More details here."""
         assert valid is False
         assert error == "Multi-line commit message must have empty second line"
 
-    def test_validate_commit_message_empty_first_line(self):
+    def test_validate_commit_message_empty_first_line(self) -> None:
         """Test validation with empty first line."""
         message = "\nSome body text"
 
@@ -163,7 +163,7 @@ More details here."""
         assert valid is False
         assert error == "Commit message cannot be empty"
 
-    def test_validate_commit_message_only_empty_lines(self):
+    def test_validate_commit_message_only_empty_lines(self) -> None:
         """Test validation with only empty lines."""
         message = "\n\n\n"
 
@@ -175,13 +175,13 @@ More details here."""
 class TestParseCommitMessage:
     """Tests for parse_commit_message function."""
 
-    def test_parse_commit_message_empty(self):
+    def test_parse_commit_message_empty(self) -> None:
         """Test parsing empty commit message."""
         summary, body = parse_commit_message("")
         assert summary == ""
         assert body is None
 
-    def test_parse_commit_message_single_line(self):
+    def test_parse_commit_message_single_line(self) -> None:
         """Test parsing single line commit message."""
         message = "fix: resolve authentication bug"
         summary, body = parse_commit_message(message)
@@ -189,7 +189,7 @@ class TestParseCommitMessage:
         assert summary == "fix: resolve authentication bug"
         assert body is None
 
-    def test_parse_commit_message_single_line_with_whitespace(self):
+    def test_parse_commit_message_single_line_with_whitespace(self) -> None:
         """Test parsing single line with whitespace."""
         message = "  fix: resolve authentication bug  "
         summary, body = parse_commit_message(message)
@@ -197,7 +197,7 @@ class TestParseCommitMessage:
         assert summary == "fix: resolve authentication bug"
         assert body is None
 
-    def test_parse_commit_message_multi_line_valid(self):
+    def test_parse_commit_message_multi_line_valid(self) -> None:
         """Test parsing valid multi-line commit message."""
         message = """feat: add user registration
 
@@ -213,7 +213,7 @@ Includes form validation and database integration.
 Also adds unit tests for the new functionality."""
         assert body == expected_body
 
-    def test_parse_commit_message_multi_line_with_trailing_empty_lines(self):
+    def test_parse_commit_message_multi_line_with_trailing_empty_lines(self) -> None:
         """Test parsing multi-line message with trailing empty lines."""
         message = """feat: add user registration
 
@@ -226,7 +226,7 @@ Implements user signup functionality.
         assert summary == "feat: add user registration"
         assert body == "Implements user signup functionality."
 
-    def test_parse_commit_message_multi_line_invalid_format(self):
+    def test_parse_commit_message_multi_line_invalid_format(self) -> None:
         """Test parsing multi-line message with invalid format (no empty second line)."""
         message = """feat: add user registration
 Implements user signup functionality.
@@ -237,7 +237,7 @@ More details here."""
         assert summary == "feat: add user registration"
         assert body is None  # No valid body due to invalid format
 
-    def test_parse_commit_message_only_summary_and_empty_line(self):
+    def test_parse_commit_message_only_summary_and_empty_line(self) -> None:
         """Test parsing message with only summary and empty line."""
         message = """fix: resolve bug
 
@@ -248,7 +248,7 @@ More details here."""
         assert summary == "fix: resolve bug"
         assert body is None
 
-    def test_parse_commit_message_preserves_body_formatting(self):
+    def test_parse_commit_message_preserves_body_formatting(self) -> None:
         """Test that body formatting is preserved."""
         message = """feat: add configuration system
 
