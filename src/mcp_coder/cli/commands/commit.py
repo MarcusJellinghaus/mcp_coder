@@ -105,7 +105,7 @@ def generate_commit_message_with_llm(
     logger.debug("Loading commit message generation prompt")
     try:
         base_prompt = get_prompt(
-            "src/mcp_coder/prompts/prompts.md", "Git Commit Message Generation"
+            "mcp_coder/prompts/prompts.md", "Git Commit Message Generation"
         )
         logger.debug(
             "Commit prompt loaded successfully, %d characters", len(base_prompt)
