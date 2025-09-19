@@ -43,7 +43,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 
     # 3. Preview mode - simple inline confirmation
     if args.preview:
-        print(f"\nGenerated commit message:")
+        print("\nGenerated commit message:")
         print("=" * 50)
         print(commit_message)
         print("=" * 50)

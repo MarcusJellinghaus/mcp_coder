@@ -216,14 +216,15 @@ def _run_subprocess(
                                         and hasattr(signal, "SIGTERM")
                                         and hasattr(signal, "SIGKILL")
                                     ):
-                                        os.killpg(
-                                            os.getpgid(popen_proc.pid), signal.SIGTERM
+                                        # Type ignore needed because mypy doesn't understand hasattr checks on some platforms
+                                        os.killpg(  # type: ignore[attr-defined,unused-ignore]
+                                            os.getpgid(popen_proc.pid), signal.SIGTERM  # type: ignore[attr-defined,unused-ignore]
                                         )
                                         time.sleep(0.5)
                                         if popen_proc.poll() is None:
-                                            os.killpg(
-                                                os.getpgid(popen_proc.pid),
-                                                signal.SIGKILL,
+                                            os.killpg(  # type: ignore[attr-defined,unused-ignore]
+                                                os.getpgid(popen_proc.pid),  # type: ignore[attr-defined,unused-ignore]
+                                                signal.SIGKILL,  # type: ignore[attr-defined,unused-ignore]
                                             )
                                     else:
                                         popen_proc.terminate()
@@ -375,13 +376,14 @@ def _run_subprocess(
                                     and hasattr(signal, "SIGTERM")
                                     and hasattr(signal, "SIGKILL")
                                 ):
-                                    os.killpg(
-                                        os.getpgid(popen_proc.pid), signal.SIGTERM
+                                    # Type ignore needed because mypy doesn't understand hasattr checks on some platforms
+                                    os.killpg(  # type: ignore[attr-defined,unused-ignore]
+                                        os.getpgid(popen_proc.pid), signal.SIGTERM  # type: ignore[attr-defined,unused-ignore]
                                     )
                                     time.sleep(0.5)
                                     if popen_proc.poll() is None:
-                                        os.killpg(
-                                            os.getpgid(popen_proc.pid), signal.SIGKILL
+                                        os.killpg(  # type: ignore[attr-defined,unused-ignore]
+                                            os.getpgid(popen_proc.pid), signal.SIGKILL  # type: ignore[attr-defined,unused-ignore]
                                         )
                                 else:
                                     popen_proc.kill()

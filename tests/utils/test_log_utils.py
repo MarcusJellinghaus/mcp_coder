@@ -64,7 +64,9 @@ class TestSetupLogging:
             handlers = root_logger.handlers
             # In testing environment, we may have additional handlers from pytest
             # so we check that at least one file handler was added
-            file_handlers = [h for h in handlers if isinstance(h, logging.FileHandler)]
+            file_handlers: list[logging.FileHandler] = [
+                h for h in handlers if isinstance(h, logging.FileHandler)
+            ]
             assert len(file_handlers) >= 1, "At least one file handler should be added"
             assert root_logger.level == logging.DEBUG
 
@@ -72,9 +74,11 @@ class TestSetupLogging:
             assert log_file.parent.exists()
 
             # Verify our specific file handler exists with correct path
-            our_file_handler = None
+            our_file_handler: logging.FileHandler | None = None
             for handler in file_handlers:
-                if handler.baseFilename == str(log_file.absolute()):
+                if isinstance(
+                    handler, logging.FileHandler
+                ) and handler.baseFilename == str(log_file.absolute()):
                     our_file_handler = handler
                     break
 
@@ -85,12 +89,12 @@ class TestSetupLogging:
         finally:
             # Comprehensive cleanup - close and remove handlers to avoid resource leaks
             # 1. Close and remove all current handlers
-            for handler in root_logger.handlers[:]:
+            for handler in root_logger.handlers[:]:  # type: ignore[assignment]
                 handler.close()
                 root_logger.removeHandler(handler)
 
             # 2. Restore original handlers and level
-            for handler in initial_handlers:
+            for handler in initial_handlers:  # type: ignore[assignment]
                 root_logger.addHandler(handler)
             root_logger.setLevel(initial_level)
 
