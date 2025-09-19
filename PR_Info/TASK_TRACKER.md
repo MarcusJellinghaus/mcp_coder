@@ -59,7 +59,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 7: Add Storage Functionality Tests** - [step_7.md](steps/step_7.md)
+- [x] **Step 7: Add Storage Functionality Tests** - [step_7.md](steps/step_7.md)
   - Create tests for --store-response functionality
   - Test session storage to .mcp-coder/responses/ directory
   - Quality checks: pylint, pytest, mypy

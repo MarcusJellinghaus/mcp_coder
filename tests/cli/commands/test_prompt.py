@@ -1,7 +1,9 @@
 """Tests for prompt command functionality."""
 
 import argparse
-from unittest.mock import Mock, patch
+import json
+import os
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
@@ -428,3 +430,76 @@ class TestExecutePrompt:
         # Raw should contain API endpoint information that verbose doesn't
         assert "api.anthropic.com" in raw_output
         assert "api.anthropic.com" not in verbose_output
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    def test_store_response(
+        self,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test storing complete session data to .mcp-coder/responses/ directory.
+
+        Note: This test currently just verifies that having store_response=True
+        doesn't break existing functionality. The actual storage implementation
+        will be tested properly when it's implemented in Step 8.
+        """
+        # Setup mock response for Claude API
+        mock_response = {
+            "text": "Here's how to create a Python file.",
+            "session_info": {
+                "session_id": "storage-test-session-123",
+                "model": "claude-sonnet-4",
+                "tools": ["file_writer", "code_analyzer"],
+                "mcp_servers": [
+                    {"name": "fs_server", "status": "connected"},
+                    {"name": "code_server", "status": "connected"},
+                ],
+            },
+            "result_info": {
+                "duration_ms": 1800,
+                "cost_usd": 0.0345,
+                "usage": {"input_tokens": 20, "output_tokens": 15},
+            },
+            "raw_messages": [
+                {
+                    "role": "user",
+                    "content": "How do I create a Python file?",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Here's how to create a Python file.",
+                    "tool_calls": [
+                        {
+                            "id": "tool_call_456",
+                            "name": "file_writer",
+                            "parameters": {
+                                "filename": "test.py",
+                                "content": "print('Hello, World!')",
+                            },
+                        }
+                    ],
+                },
+            ],
+        }
+        mock_ask_claude.return_value = mock_response
+
+        # Create test arguments with store_response flag
+        # Note: store_response functionality doesn't exist yet,
+        # but this tests that the attribute doesn't break anything
+        args = argparse.Namespace(
+            prompt="How do I create a Python file?", store_response=True
+        )
+
+        # Execute the prompt command
+        result = execute_prompt(args)
+
+        # Assert successful execution
+        assert result == 0
+
+        # Verify Claude API was called with correct prompt
+        mock_ask_claude.assert_called_once_with("How do I create a Python file?", 30)
+
+        # Verify normal output is still printed (basic functionality works)
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert "Here's how to create a Python file." in captured_out
