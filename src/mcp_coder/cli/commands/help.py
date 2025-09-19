@@ -28,7 +28,17 @@ COMMANDS:
     help                    Show help information
     verify                  Verify Claude CLI installation and configuration
     prompt <text>           Execute prompt via Claude API with configurable debug output
-                           Supports --verbosity, --store-response, --continue-from
+                           
+                           Parameters:
+                           <text>                 The prompt/question to send to Claude
+                           --verbosity LEVEL      Output detail level:
+                                                  • just-text (default): Claude's response + tool summary
+                                                  • verbose: + tool interactions + performance metrics
+                                                  • raw: + complete JSON structures + API responses
+                           --store-response       Save complete session data to .mcp-coder/responses/
+                                                  for later continuation or reference
+                           --continue-from FILE   Continue conversation from previous stored session
+                                                  (enhances prompt with previous context)
     commit auto             Auto-generate commit message using LLM
     commit auto --preview   Show generated message and ask for confirmation
     commit clipboard        Use commit message from clipboard
@@ -48,24 +58,21 @@ def get_usage_examples() -> str:
     mcp-coder help                    # Show this help
     mcp-coder verify                  # Check Claude CLI installation
     
-    # Prompt command examples (basic usage - just-text output by default)
+    # Basic prompt usage (default just-text output)
     mcp-coder prompt "What is Python?"
     mcp-coder prompt "Explain how async/await works"
     
-    # Verbose output with detailed debug info and tool interactions
-    mcp-coder prompt "Debug this error" --verbosity=verbose
+    # Verbosity levels:
+    mcp-coder prompt "Debug this error" --verbosity just-text     # Default: response + tool summary
+    mcp-coder prompt "Debug this error" --verbosity verbose       # + performance metrics + session info
+    mcp-coder prompt "Debug this error" --verbosity raw           # + complete JSON + API responses
     
-    # Raw output with complete JSON structures and API responses
-    mcp-coder prompt "Analyze code patterns" --verbosity=raw
+    # Session storage and continuation:
+    mcp-coder prompt "Start project planning" --store-response                      # Save session
+    mcp-coder prompt "What's next?" --continue-from response_2025-09-19T14-30-22.json # Continue conversation
     
-    # Store session for later continuation
-    mcp-coder prompt "Start project planning" --store-response
-    
-    # Continue from previous stored session
-    mcp-coder prompt "Follow up question" --continue-from response_2025-09-19T14-30-22.json
-    
-    # Combined: verbose output with storage for complex debugging
-    mcp-coder prompt "Complex analysis task" --verbosity=verbose --store-response
+    # Combined usage for complex workflows:
+    mcp-coder prompt "Complex analysis" --verbosity verbose --store-response         # Debug + save
     
     # Commit command examples
     mcp-coder commit auto             # Analyze changes and auto-commit
