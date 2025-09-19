@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -57,7 +58,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
     except Exception as e:
         # Handle API errors
         logger.error("Prompt command failed: %s", str(e))
-        print(f"Error: {str(e)}", file=__import__("sys").stderr)
+        print(f"Error: {str(e)}", file=sys.stderr)
         return 1
 
 
