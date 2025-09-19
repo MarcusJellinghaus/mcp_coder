@@ -47,7 +47,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 5: Add Raw Verbosity Level Tests** - [step_5.md](steps/step_5.md)
+- [x] **Step 5: Add Raw Verbosity Level Tests** - [step_5.md](steps/step_5.md)
   - Create tests for --raw output format
   - Test complete debug output including JSON structures
   - Quality checks: pylint, pytest, mypy

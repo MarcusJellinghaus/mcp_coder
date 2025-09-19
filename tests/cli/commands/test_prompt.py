@@ -225,3 +225,206 @@ class TestExecutePrompt:
             and "1.0" not in just_text_output
             and "0.01" not in just_text_output
         )
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    def test_raw_output(
+        self,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test raw output format with complete debug output including JSON structures."""
+        # Setup comprehensive mock response with complete JSON structures
+        mock_response = {
+            "text": "Here's the complete debugging information.",
+            "session_info": {
+                "session_id": "raw-debug-session-999",
+                "model": "claude-sonnet-4",
+                "tools": ["file_system", "code_analyzer", "debug_tool"],
+                "mcp_servers": [
+                    {"name": "fs_mcp", "status": "connected", "version": "1.0.0"},
+                    {"name": "debug_mcp", "status": "connected", "version": "2.1.0"},
+                ],
+            },
+            "result_info": {
+                "duration_ms": 3450,
+                "cost_usd": 0.0789,
+                "usage": {"input_tokens": 42, "output_tokens": 28},
+                "api_version": "2024-03-01",
+            },
+            "raw_messages": [
+                {
+                    "role": "user",
+                    "content": "Debug this system",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Here's the complete debugging information.",
+                    "tool_calls": [
+                        {
+                            "id": "tool_call_123",
+                            "name": "file_system",
+                            "parameters": {
+                                "action": "read",
+                                "path": "/debug/logs.txt",
+                                "options": {"encoding": "utf-8"},
+                            },
+                        }
+                    ],
+                },
+            ],
+            "api_metadata": {
+                "request_id": "req_abc123xyz789",
+                "endpoint": "https://api.anthropic.com/v1/messages",
+                "headers": {"x-api-version": "2024-03-01"},
+            },
+        }
+        mock_ask_claude.return_value = mock_response
+
+        # Create test arguments with raw verbosity
+        args = argparse.Namespace(prompt="Debug this system", verbosity="raw")
+
+        # Execute the prompt command
+        result = execute_prompt(args)
+
+        # Assert successful execution
+        assert result == 0
+
+        # Verify Claude API was called with correct prompt
+        mock_ask_claude.assert_called_once_with("Debug this system", 30)
+
+        # Capture output for raw format verification
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+
+        # Verify Claude response is present
+        assert "Here's the complete debugging information." in captured_out
+
+        # Verify raw output contains everything from verbose level
+        # Performance metrics
+        assert (
+            "3450" in captured_out or "3.45" in captured_out
+        )  # Duration in ms or seconds
+        assert "0.0789" in captured_out  # Cost
+        assert "42" in captured_out  # Input tokens
+        assert "28" in captured_out  # Output tokens
+
+        # Session information
+        assert "raw-debug-session-999" in captured_out
+        assert "claude-sonnet-4" in captured_out
+
+        # MCP server information
+        assert "fs_mcp" in captured_out
+        assert "debug_mcp" in captured_out
+        assert "connected" in captured_out
+
+        # Tool interactions
+        assert "file_system" in captured_out
+        assert "/debug/logs.txt" in captured_out
+
+        # Verify raw-specific content (complete JSON structures)
+        # Raw should contain JSON-like structures and complete API metadata
+        assert "tool_call_123" in captured_out  # Tool call ID from raw messages
+        assert "req_abc123xyz789" in captured_out  # Request ID from API metadata
+        assert "api.anthropic.com" in captured_out  # API endpoint
+        assert "2024-03-01" in captured_out  # API version
+        assert "utf-8" in captured_out  # Deep parameter from tool call
+
+        # Verify JSON structure patterns are present
+        # Raw output should include complete JSON representations
+        json_indicators = [
+            "{",  # JSON opening brace
+            "}",  # JSON closing brace
+            '"',  # JSON string quotes
+            "[",  # JSON array opening
+            "]",  # JSON array closing
+        ]
+        for indicator in json_indicators:
+            assert indicator in captured_out
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    def test_raw_vs_verbose_difference(
+        self,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that raw output contains more detail than verbose output."""
+        # Setup mock response with rich data for comparison
+        mock_response = {
+            "text": "Comparison test response.",
+            "session_info": {
+                "session_id": "comparison-raw-verbose-101",
+                "model": "claude-sonnet-4",
+                "tools": ["comparison_tool"],
+                "mcp_servers": [{"name": "comp_server", "status": "connected"}],
+            },
+            "result_info": {
+                "duration_ms": 2000,
+                "cost_usd": 0.02,
+                "usage": {"input_tokens": 10, "output_tokens": 5},
+            },
+            "raw_messages": [
+                {
+                    "role": "user",
+                    "content": "Compare verbosity levels",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Comparison test response.",
+                    "tool_calls": [
+                        {
+                            "id": "unique_tool_id_456",
+                            "name": "comparison_tool",
+                            "parameters": {"mode": "test"},
+                        }
+                    ],
+                },
+            ],
+            "api_metadata": {
+                "request_id": "unique_request_789",
+                "endpoint": "https://api.anthropic.com/v1/messages",
+            },
+        }
+        mock_ask_claude.return_value = mock_response
+
+        # Test verbose output
+        args_verbose = argparse.Namespace(
+            prompt="Compare verbosity levels", verbosity="verbose"
+        )
+        execute_prompt(args_verbose)
+        verbose_output = capsys.readouterr().out or ""
+
+        # Reset mock call count
+        mock_ask_claude.reset_mock()
+        mock_ask_claude.return_value = mock_response
+
+        # Test raw output
+        args_raw = argparse.Namespace(
+            prompt="Compare verbosity levels", verbosity="raw"
+        )
+        execute_prompt(args_raw)
+        raw_output = capsys.readouterr().out or ""
+
+        # Verify both contain the basic response
+        assert "Comparison test response." in verbose_output
+        assert "Comparison test response." in raw_output
+
+        # Verify both contain common verbose elements
+        assert "comparison-raw-verbose-101" in verbose_output
+        assert "comparison-raw-verbose-101" in raw_output
+        assert "2000" in verbose_output or "2.0" in verbose_output
+        assert "2000" in raw_output or "2.0" in raw_output
+
+        # Verify raw contains additional details not in verbose
+        assert len(raw_output) > len(verbose_output)
+
+        # Raw should contain complete API metadata that verbose doesn't
+        assert "unique_request_789" in raw_output
+        assert "unique_request_789" not in verbose_output
+
+        # Raw should contain detailed tool call IDs that verbose doesn't
+        assert "unique_tool_id_456" in raw_output
+        assert "unique_tool_id_456" not in verbose_output
+
+        # Raw should contain API endpoint information that verbose doesn't
+        assert "api.anthropic.com" in raw_output
+        assert "api.anthropic.com" not in verbose_output
