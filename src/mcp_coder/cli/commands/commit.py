@@ -61,7 +61,16 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         print(f"Error: {commit_result['error']}", file=sys.stderr)
         return 2
 
+    # Show commit message summary in output
+    commit_lines = commit_message.strip().split('\n')
+    first_line = commit_lines[0].strip()
+    total_lines = len([line for line in commit_lines if line.strip()])
+    
     print(f"SUCCESS: Commit created: {commit_result['commit_hash']}")
+    if total_lines == 1:
+        print(f"Message: {first_line}")
+    else:
+        print(f"Message: {first_line} ({total_lines} lines)")
     return 0
 
 
