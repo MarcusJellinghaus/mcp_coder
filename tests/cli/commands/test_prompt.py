@@ -492,7 +492,9 @@ class TestExecutePrompt:
         )
 
         # Mock the storage function to return a fake path
-        mock_store_response.return_value = "/fake/path/response_2025-01-01T12-00-00.json"
+        mock_store_response.return_value = (
+            "/fake/path/response_2025-01-01T12-00-00.json"
+        )
 
         # Execute the prompt command
         result = execute_prompt(args)
@@ -504,7 +506,9 @@ class TestExecutePrompt:
         mock_ask_claude.assert_called_once_with("How do I create a Python file?", 30)
 
         # Verify storage function was called with correct parameters
-        mock_store_response.assert_called_once_with(mock_response, "How do I create a Python file?")
+        mock_store_response.assert_called_once_with(
+            mock_response, "How do I create a Python file?"
+        )
 
         # Verify normal output is still printed (basic functionality works)
         captured = capsys.readouterr()

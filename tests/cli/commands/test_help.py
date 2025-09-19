@@ -81,12 +81,12 @@ def test_prompt_command_documentation() -> None:
     # Check command is listed
     assert "prompt <text>" in help_text
     assert "Execute prompt via Claude API with configurable debug output" in help_text
-    
+
     # Check that the detailed parameter documentation is present
     assert "--verbosity LEVEL" in help_text
     assert "--store-response" in help_text
     assert "--continue-from FILE" in help_text
-    
+
     # Check verbosity level descriptions
     assert "just-text (default)" in help_text
     assert "verbose: + tool interactions + performance metrics" in help_text

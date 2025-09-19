@@ -178,7 +178,9 @@ def _run_subprocess(
                         # Kill the process and all children
                         if popen_proc:
                             elapsed_time = time.time() - subprocess_start_time
-                            cmd_display = ' '.join(command[:3]) + ('...' if len(command) > 3 else '')
+                            cmd_display = " ".join(command[:3]) + (
+                                "..." if len(command) > 3 else ""
+                            )
                             logger.warning(
                                 f"Killing timed out process (STDIO isolation, PID: {popen_proc.pid}): "
                                 f"command='{cmd_display}', timeout={options.timeout_seconds}s, "
@@ -346,7 +348,9 @@ def _run_subprocess(
                     # Kill the process tree on timeout
                     if popen_proc:
                         elapsed_time = time.time() - subprocess_start_time
-                        cmd_display = ' '.join(command[:3]) + ('...' if len(command) > 3 else '')
+                        cmd_display = " ".join(command[:3]) + (
+                            "..." if len(command) > 3 else ""
+                        )
                         logger.warning(
                             f"Killing timed out process (regular execution, PID: {popen_proc.pid}): "
                             f"command='{cmd_display}', timeout={options.timeout_seconds}s, "
