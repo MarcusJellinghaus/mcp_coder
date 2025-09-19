@@ -40,7 +40,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
             logger.info("Response stored to: %s", stored_path)
 
         # Route to appropriate formatter based on verbosity level
-        verbosity = getattr(args, "verbosity", "just_text")
+        verbosity = getattr(args, "verbosity", "just-text")
         if verbosity == "raw":
             formatted_output = _format_raw(response_data)
         elif verbosity == "verbose":
