@@ -1,8 +1,11 @@
 """Prompt command for the MCP Coder CLI."""
 
 import argparse
+import json
 import logging
-from typing import Any, Dict
+import os
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 from ...llm_providers.claude.claude_code_api import ask_claude_code_api_detailed_sync
 
@@ -23,6 +26,11 @@ def execute_prompt(args: argparse.Namespace) -> int:
     try:
         # Call Claude API using detailed function
         response_data = ask_claude_code_api_detailed_sync(args.prompt, 30)
+
+        # Store response if requested
+        if getattr(args, "store_response", False):
+            stored_path = _store_response(response_data, args.prompt)
+            logger.info("Response stored to: %s", stored_path)
 
         # Route to appropriate formatter based on verbosity level
         verbosity = getattr(args, "verbosity", "just_text")
@@ -78,6 +86,53 @@ def _format_just_text(response_data: Dict[str, Any]) -> str:
     return "\n".join(formatted_parts)
 
 
+def _store_response(
+    response_data: Dict[str, Any], prompt: str, store_path: Optional[str] = None
+) -> str:
+    """Store complete session data to .mcp-coder/responses/ directory.
+
+    Args:
+        response_data: Response dictionary from ask_claude_code_api_detailed_sync
+        prompt: Original user prompt
+        store_path: Optional custom path for storage directory
+
+    Returns:
+        File path of stored session for potential user reference
+    """
+    # Determine storage directory
+    if store_path is None:
+        storage_dir = ".mcp-coder/responses"
+    else:
+        storage_dir = store_path
+
+    # Create storage directory if it doesn't exist
+    os.makedirs(storage_dir, exist_ok=True)
+
+    # Generate timestamp-based filename
+    timestamp = datetime.now().isoformat().replace(":", "-").split(".")[0]
+    filename = f"response_{timestamp}.json"
+    file_path = os.path.join(storage_dir, filename)
+
+    # Create complete session JSON structure
+    session_data = {
+        "prompt": prompt,
+        "response_data": response_data,
+        "metadata": {
+            "timestamp": datetime.now().isoformat() + "Z",
+            "working_directory": os.getcwd(),
+            "model": response_data.get("session_info", {}).get(
+                "model", "claude-3-5-sonnet"
+            ),
+        },
+    }
+
+    # Write JSON file
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(session_data, f, indent=2, default=str)
+
+    return file_path
+
+
 def _format_raw(response_data: Dict[str, Any]) -> str:
     """Format response data as raw output with complete debug output including JSON structures.
 
@@ -87,7 +142,6 @@ def _format_raw(response_data: Dict[str, Any]) -> str:
     Returns:
         Formatted string with complete debugging information including JSON structures
     """
-    import json
 
     # Start with everything from verbose format
     verbose_output = _format_verbose(response_data)

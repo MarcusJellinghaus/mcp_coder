@@ -1,0 +1,57 @@
+{
+  "prompt": "How do I create a Python file?",
+  "response_data": {
+    "text": "Here's how to create a Python file.",
+    "session_info": {
+      "session_id": "storage-test-session-123",
+      "model": "claude-sonnet-4",
+      "tools": [
+        "file_writer",
+        "code_analyzer"
+      ],
+      "mcp_servers": [
+        {
+          "name": "fs_server",
+          "status": "connected"
+        },
+        {
+          "name": "code_server",
+          "status": "connected"
+        }
+      ]
+    },
+    "result_info": {
+      "duration_ms": 1800,
+      "cost_usd": 0.0345,
+      "usage": {
+        "input_tokens": 20,
+        "output_tokens": 15
+      }
+    },
+    "raw_messages": [
+      {
+        "role": "user",
+        "content": "How do I create a Python file?"
+      },
+      {
+        "role": "assistant",
+        "content": "Here's how to create a Python file.",
+        "tool_calls": [
+          {
+            "id": "tool_call_456",
+            "name": "file_writer",
+            "parameters": {
+              "filename": "test.py",
+              "content": "print('Hello, World!')"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "timestamp": "2025-09-19T07:08:10.344330Z",
+    "working_directory": "C:\\Users\\Marcus\\Documents\\GitHub\\mcp_coder",
+    "model": "claude-sonnet-4"
+  }
+}
