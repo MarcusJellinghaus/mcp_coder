@@ -24,8 +24,14 @@ def execute_prompt(args: argparse.Namespace) -> int:
     logger.info("Executing prompt command")
 
     try:
+        # Handle continuation from previous session if requested
+        enhanced_prompt = args.prompt
+        if getattr(args, "continue_from", None):
+            previous_context = _load_previous_chat(args.continue_from)
+            enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
+
         # Call Claude API using detailed function
-        response_data = ask_claude_code_api_detailed_sync(args.prompt, 30)
+        response_data = ask_claude_code_api_detailed_sync(enhanced_prompt, 30)
 
         # Store response if requested
         if getattr(args, "store_response", False):
@@ -255,3 +261,69 @@ def _format_verbose(response_data: Dict[str, Any]) -> str:
             formatted_parts.append(f"    - {server_name}: {server_status}")
 
     return "\n".join(formatted_parts)
+
+
+def _load_previous_chat(file_path: str) -> Dict[str, Any]:
+    """Load stored session from JSON file for continuation.
+
+    Args:
+        file_path: Path to the stored session JSON file
+
+    Returns:
+        Dictionary containing previous session context
+
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        json.JSONDecodeError: If file contains invalid JSON
+        KeyError: If file is missing required fields
+    """
+    logger.info("Loading previous chat from: %s", file_path)
+
+    # Check if file exists
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Previous session file not found: {file_path}")
+
+    # Read and parse JSON file
+    with open(file_path, "r", encoding="utf-8") as f:
+        session_data = json.load(f)
+
+    # Validate required fields
+    required_fields = ["prompt", "response_data"]
+    for field in required_fields:
+        if field not in session_data:
+            raise KeyError(f"Missing required field '{field}' in session file")
+
+    # Extract previous conversation context
+    previous_prompt = session_data["prompt"]
+    previous_response = session_data["response_data"].get("text", "")
+
+    return {
+        "previous_prompt": previous_prompt,
+        "previous_response": previous_response,
+        "metadata": session_data.get("metadata", {}),
+    }
+
+
+def _build_context_prompt(previous_context: Dict[str, Any], new_prompt: str) -> str:
+    """Build enhanced prompt with previous conversation context.
+
+    Args:
+        previous_context: Context from previous session
+        new_prompt: New prompt from user
+
+    Returns:
+        Enhanced prompt combining previous context with new prompt
+    """
+    previous_prompt = previous_context.get("previous_prompt", "")
+    previous_response = previous_context.get("previous_response", "")
+
+    # Build context-aware prompt
+    context_parts = [
+        "Previous conversation:",
+        f"User: {previous_prompt}",
+        f"Assistant: {previous_response}",
+        "",
+        f"Current question: {new_prompt}",
+    ]
+
+    return "\n".join(context_parts)

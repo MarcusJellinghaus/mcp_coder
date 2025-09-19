@@ -687,7 +687,12 @@ class TestExecutePrompt:
         captured = capsys.readouterr()
         captured_err: str = captured.err or ""
         assert "Error" in captured_err
-        assert "invalid" in captured_err.lower() or "json" in captured_err.lower()
+        # Accept Python's standard JSON parsing error messages
+        assert (
+            "expecting" in captured_err.lower()
+            or "invalid" in captured_err.lower()
+            or "json" in captured_err.lower()
+        )
 
     @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
     @patch("builtins.open", new_callable=mock_open)
