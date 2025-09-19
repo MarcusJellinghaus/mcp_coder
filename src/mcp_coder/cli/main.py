@@ -123,7 +123,9 @@ def handle_no_command(args: argparse.Namespace) -> int:
     print("Available commands:")
     print("  help                    Show detailed help information")
     print("  verify                  Verify Claude CLI installation and configuration")
-    print("  prompt TEXT             Execute prompt via Claude API with debug output")
+    print(
+        "  prompt TEXT             Execute prompt via Claude API with configurable debug output"
+    )
     print("  commit auto             Auto-generate and create commit")
     print("  commit clipboard        Commit using message from clipboard")
     print("")
