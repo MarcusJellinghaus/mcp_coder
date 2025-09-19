@@ -9,6 +9,7 @@ from .commands import (
     execute_commit_auto,
     execute_commit_clipboard,
     execute_help,
+    execute_prompt,
     execute_verify,
 )
 
@@ -61,6 +62,28 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         "verify", help="Verify Claude CLI installation and configuration"
     )
 
+    # Prompt command - Execute prompt via Claude API with debug output
+    prompt_parser = subparsers.add_parser(
+        "prompt", help="Execute prompt via Claude API with debug output"
+    )
+    prompt_parser.add_argument("prompt", help="The prompt to send to Claude")
+    prompt_parser.add_argument(
+        "--verbosity",
+        choices=["just-text", "verbose", "raw"],
+        default="just-text",
+        help="Output verbosity level (default: just-text)",
+    )
+    prompt_parser.add_argument(
+        "--store-response",
+        action="store_true",
+        help="Store complete session data for continuation",
+    )
+    prompt_parser.add_argument(
+        "--continue-from",
+        type=str,
+        help="Continue from previous stored session file",
+    )
+
     # Commit commands - Step 5
     commit_parser = subparsers.add_parser("commit", help="Git commit operations")
     commit_subparsers = commit_parser.add_subparsers(
@@ -100,6 +123,9 @@ def handle_no_command(args: argparse.Namespace) -> int:
     print("Available commands:")
     print("  help                    Show detailed help information")
     print("  verify                  Verify Claude CLI installation and configuration")
+    print(
+        "  prompt TEXT             Execute prompt via Claude API with configurable debug output"
+    )
     print("  commit auto             Auto-generate and create commit")
     print("  commit clipboard        Commit using message from clipboard")
     print("")
@@ -133,6 +159,8 @@ def main() -> int:
             return execute_help(args)
         elif args.command == "verify":
             return execute_verify(args)
+        elif args.command == "prompt":
+            return execute_prompt(args)
         elif args.command == "commit" and hasattr(args, "commit_mode"):
             if args.commit_mode == "auto":
                 return execute_commit_auto(args)

@@ -43,7 +43,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 
     # 3. Preview mode - simple inline confirmation
     if args.preview:
-        print(f"\nGenerated commit message:")
+        print("\nGenerated commit message:")
         print("=" * 50)
         print(commit_message)
         print("=" * 50)
@@ -61,7 +61,16 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         print(f"Error: {commit_result['error']}", file=sys.stderr)
         return 2
 
+    # Show commit message summary in output
+    commit_lines = commit_message.strip().split("\n")
+    first_line = commit_lines[0].strip()
+    total_lines = len([line for line in commit_lines if line.strip()])
+
     print(f"SUCCESS: Commit created: {commit_result['commit_hash']}")
+    if total_lines == 1:
+        print(f"Message: {first_line}")
+    else:
+        print(f"Message: {first_line} ({total_lines} lines)")
     return 0
 
 
@@ -135,7 +144,7 @@ def generate_commit_message_with_llm(
 
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
         print("Calling LLM for auto generated commit message...")
-        response = ask_llm(full_prompt, provider="claude", method="api")
+        response = ask_llm(full_prompt, provider="claude", method="api", timeout=30)
 
         if not response or not response.strip():
             error_msg = "LLM returned empty or null response. The AI service may be unavailable or overloaded. Try again in a moment."

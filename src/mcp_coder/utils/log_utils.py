@@ -18,6 +18,19 @@ T = TypeVar("T")
 stdlogger = logging.getLogger(__name__)
 
 
+def _is_testing_environment() -> bool:
+    """Check if we're currently running in a testing environment (pytest)."""
+    import sys
+
+    # Check if pytest is running
+    return (
+        "pytest" in sys.modules
+        or "_pytest" in sys.modules
+        or hasattr(sys, "_called_from_test")
+        or "PYTEST_CURRENT_TEST" in os.environ
+    )
+
+
 def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
     """Configure logging - if log_file specified, logs only to file; otherwise to console."""
     # Set log level
@@ -25,10 +38,15 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
     if not isinstance(numeric_level, int):
         raise ValueError(f"Invalid log level: {log_level}")
 
-    # Clear existing handlers
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
+    # Don't clear handlers if we're in a testing environment (pytest)
+    # This prevents conflicts with pytest's logging capture
+    if not _is_testing_environment():
+        # Clear existing handlers
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+    else:
+        root_logger = logging.getLogger()
 
     root_logger.setLevel(numeric_level)
 
@@ -43,40 +61,62 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
         # Create directory if needed
         os.makedirs(os.path.dirname(os.path.abspath(log_file)), exist_ok=True)
 
+        # In testing environment, only add handler if it doesn't already exist
+        if _is_testing_environment():
+            # Check if file handler for this file already exists
+            file_handler_exists = any(
+                isinstance(h, logging.FileHandler)
+                and h.baseFilename == os.path.abspath(log_file)
+                for h in root_logger.handlers
+            )
+            if file_handler_exists:
+                return  # Handler already exists, don't add another
+
         # Configure JSON file handler
         json_handler = logging.FileHandler(log_file)
         json_handler.setLevel(numeric_level)
 
         # This formatter ensures timestamp and level are included as separate fields in JSON
         json_formatter = JsonFormatter(
-            fmt="%(timestamp)s %(level)s %(name)s %(message)s %(module)s %(funcName)s %(lineno)d",
-            timestamp=True,
+            fmt="%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(funcName)s %(lineno)d"
         )
         json_handler.setFormatter(json_formatter)
         root_logger.addHandler(json_handler)
 
         # Configure structlog processors for file logging
-        structlog.configure(
-            processors=[
-                structlog.stdlib.filter_by_level,
-                structlog.stdlib.add_logger_name,
-                structlog.stdlib.add_log_level,
-                structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
-                structlog.processors.StackInfoRenderer(),
-                structlog.processors.format_exc_info,
-                structlog.processors.UnicodeDecoder(),
-                structlog.processors.JSONRenderer(),  # Use JSONRenderer instead of wrap_for_formatter
-            ],
-            context_class=dict,
-            logger_factory=structlog.stdlib.LoggerFactory(),
-            wrapper_class=structlog.stdlib.BoundLogger,
-            cache_logger_on_first_use=True,
-        )
+        # Only configure if not in testing environment to avoid conflicts
+        if not _is_testing_environment():
+            structlog.configure(
+                processors=[
+                    structlog.stdlib.filter_by_level,
+                    structlog.stdlib.add_logger_name,
+                    structlog.stdlib.add_log_level,
+                    structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+                    structlog.processors.StackInfoRenderer(),
+                    structlog.processors.format_exc_info,
+                    structlog.processors.UnicodeDecoder(),
+                    structlog.processors.JSONRenderer(),
+                ],
+                context_class=dict,
+                logger_factory=structlog.stdlib.LoggerFactory(),
+                wrapper_class=structlog.stdlib.BoundLogger,
+                cache_logger_on_first_use=True,
+            )
 
         # Log initialization message to file only
         stdlogger.info("Logging initialized: file=%s, level=%s", log_file, log_level)
     else:
         # CONSOLE LOGGING ONLY (fallback when no file specified)
+        # In testing environment, only add handler if no console handler exists
+        if _is_testing_environment():
+            console_handler_exists = any(
+                isinstance(h, logging.StreamHandler)
+                and not isinstance(h, logging.FileHandler)
+                for h in root_logger.handlers
+            )
+            if console_handler_exists:
+                return  # Console handler already exists, don't add another
+
         console_handler = logging.StreamHandler()
         console_handler.setLevel(numeric_level)
         console_formatter = logging.Formatter(
@@ -86,23 +126,24 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
         root_logger.addHandler(console_handler)
 
         # Configure structlog processors for console logging
-        # This ensures structlog respects the log level set for the CLI
-        structlog.configure(
-            processors=[
-                structlog.stdlib.filter_by_level,  # This will respect the logging level
-                structlog.stdlib.add_logger_name,
-                structlog.stdlib.add_log_level,
-                structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
-                structlog.processors.StackInfoRenderer(),
-                structlog.processors.format_exc_info,
-                structlog.processors.UnicodeDecoder(),
-                structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-            ],
-            context_class=dict,
-            logger_factory=structlog.stdlib.LoggerFactory(),
-            wrapper_class=structlog.stdlib.BoundLogger,
-            cache_logger_on_first_use=True,
-        )
+        # Only configure if not in testing environment to avoid conflicts
+        if not _is_testing_environment():
+            structlog.configure(
+                processors=[
+                    structlog.stdlib.filter_by_level,  # This will respect the logging level
+                    structlog.stdlib.add_logger_name,
+                    structlog.stdlib.add_log_level,
+                    structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+                    structlog.processors.StackInfoRenderer(),
+                    structlog.processors.format_exc_info,
+                    structlog.processors.UnicodeDecoder(),
+                    structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+                ],
+                context_class=dict,
+                logger_factory=structlog.stdlib.LoggerFactory(),
+                wrapper_class=structlog.stdlib.BoundLogger,
+                cache_logger_on_first_use=True,
+            )
 
         stdlogger.info("Logging initialized: console=%s", log_level)
 
@@ -158,11 +199,11 @@ def log_function_call(func: Callable[..., T]) -> Callable[..., T]:
             isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers
         )
 
-        # Log function call - always provide 'event' as the first parameter
+        # Log function call
         if has_structured:
             structlogger = structlog.get_logger(module_name)
             structlogger.debug(
-                f"Calling function {func_name}",  # This is the 'event' parameter
+                "Calling function",
                 function=func_name,
                 parameters=serializable_params,
                 module=module_name,
@@ -199,7 +240,7 @@ def log_function_call(func: Callable[..., T]) -> Callable[..., T]:
             # Log completion
             if has_structured:
                 structlogger.debug(
-                    f"Function {func_name} completed",  # This is the 'event' parameter
+                    "Function completed",
                     function=func_name,
                     execution_time_ms=elapsed_ms,
                     status="success",
@@ -222,7 +263,7 @@ def log_function_call(func: Callable[..., T]) -> Callable[..., T]:
 
             if has_structured:
                 structlogger.error(
-                    f"Function {func_name} failed",  # This is the 'event' parameter
+                    "Function failed",
                     function=func_name,
                     execution_time_ms=elapsed_ms,
                     error_type=type(e).__name__,

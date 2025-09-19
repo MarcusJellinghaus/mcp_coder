@@ -114,6 +114,8 @@ def _run_subprocess(
     Returns:
         CompletedProcess with execution results
     """
+    # Track start time for timeout logging
+    subprocess_start_time = time.time()
     # Prepare environment
     env = options.env or os.environ.copy()
     if is_python_command(command):
@@ -175,8 +177,14 @@ def _run_subprocess(
                     except subprocess.TimeoutExpired:
                         # Kill the process and all children
                         if popen_proc:
+                            elapsed_time = time.time() - subprocess_start_time
+                            cmd_display = " ".join(command[:3]) + (
+                                "..." if len(command) > 3 else ""
+                            )
                             logger.warning(
-                                f"Killing timed out process (PID: {popen_proc.pid})"
+                                f"Killing timed out process (STDIO isolation, PID: {popen_proc.pid}): "
+                                f"command='{cmd_display}', timeout={options.timeout_seconds}s, "
+                                f"elapsed={elapsed_time:.1f}s, cwd='{options.cwd or 'current'}'"
                             )
 
                             # On Windows, use taskkill to kill process tree
@@ -216,14 +224,15 @@ def _run_subprocess(
                                         and hasattr(signal, "SIGTERM")
                                         and hasattr(signal, "SIGKILL")
                                     ):
-                                        os.killpg(
-                                            os.getpgid(popen_proc.pid), signal.SIGTERM
+                                        # Type ignore needed because mypy doesn't understand hasattr checks on some platforms
+                                        os.killpg(  # type: ignore[attr-defined,unused-ignore]
+                                            os.getpgid(popen_proc.pid), signal.SIGTERM  # type: ignore[attr-defined,unused-ignore]
                                         )
                                         time.sleep(0.5)
                                         if popen_proc.poll() is None:
-                                            os.killpg(
-                                                os.getpgid(popen_proc.pid),
-                                                signal.SIGKILL,
+                                            os.killpg(  # type: ignore[attr-defined,unused-ignore]
+                                                os.getpgid(popen_proc.pid),  # type: ignore[attr-defined,unused-ignore]
+                                                signal.SIGKILL,  # type: ignore[attr-defined,unused-ignore]
                                             )
                                     else:
                                         popen_proc.terminate()
@@ -338,8 +347,14 @@ def _run_subprocess(
                 except subprocess.TimeoutExpired:
                     # Kill the process tree on timeout
                     if popen_proc:
+                        elapsed_time = time.time() - subprocess_start_time
+                        cmd_display = " ".join(command[:3]) + (
+                            "..." if len(command) > 3 else ""
+                        )
                         logger.warning(
-                            f"Killing timed out process (regular execution, PID: {popen_proc.pid})"
+                            f"Killing timed out process (regular execution, PID: {popen_proc.pid}): "
+                            f"command='{cmd_display}', timeout={options.timeout_seconds}s, "
+                            f"elapsed={elapsed_time:.1f}s, cwd='{options.cwd or 'current'}'"
                         )
 
                         if os.name == "nt":
@@ -375,13 +390,14 @@ def _run_subprocess(
                                     and hasattr(signal, "SIGTERM")
                                     and hasattr(signal, "SIGKILL")
                                 ):
-                                    os.killpg(
-                                        os.getpgid(popen_proc.pid), signal.SIGTERM
+                                    # Type ignore needed because mypy doesn't understand hasattr checks on some platforms
+                                    os.killpg(  # type: ignore[attr-defined,unused-ignore]
+                                        os.getpgid(popen_proc.pid), signal.SIGTERM  # type: ignore[attr-defined,unused-ignore]
                                     )
                                     time.sleep(0.5)
                                     if popen_proc.poll() is None:
-                                        os.killpg(
-                                            os.getpgid(popen_proc.pid), signal.SIGKILL
+                                        os.killpg(  # type: ignore[attr-defined,unused-ignore]
+                                            os.getpgid(popen_proc.pid), signal.SIGKILL  # type: ignore[attr-defined,unused-ignore]
                                         )
                                 else:
                                     popen_proc.kill()
