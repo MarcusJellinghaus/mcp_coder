@@ -26,7 +26,9 @@ def execute_prompt(args: argparse.Namespace) -> int:
 
         # Route to appropriate formatter based on verbosity level
         verbosity = getattr(args, "verbosity", "just_text")
-        if verbosity == "verbose":
+        if verbosity == "raw":
+            formatted_output = _format_raw(response_data)
+        elif verbosity == "verbose":
             formatted_output = _format_verbose(response_data)
         else:
             # Default to just-text format
@@ -72,6 +74,53 @@ def _format_just_text(response_data: Dict[str, Any]) -> str:
     if response_text:
         formatted_parts.append(response_text)
     formatted_parts.append(f"\n--- {tool_summary} ---")
+
+    return "\n".join(formatted_parts)
+
+
+def _format_raw(response_data: Dict[str, Any]) -> str:
+    """Format response data as raw output with complete debug output including JSON structures.
+
+    Args:
+        response_data: Response dictionary from ask_claude_code_api_detailed_sync
+
+    Returns:
+        Formatted string with complete debugging information including JSON structures
+    """
+    import json
+
+    # Start with everything from verbose format
+    verbose_output = _format_verbose(response_data)
+
+    # Extract additional data for raw output
+    raw_messages = response_data.get("raw_messages", [])
+    api_metadata = response_data.get("api_metadata", {})
+
+    # Build additional raw output sections
+    formatted_parts = [verbose_output, ""]
+
+    # Complete JSON API Response section
+    formatted_parts.append("=== Complete JSON API Response ===")
+    formatted_parts.append(json.dumps(response_data, indent=2, default=str))
+    formatted_parts.append("")
+
+    # Raw Messages section with complete details
+    formatted_parts.append("=== Raw Messages ===")
+    if raw_messages:
+        for i, message in enumerate(raw_messages):
+            formatted_parts.append(f"Message {i + 1}:")
+            formatted_parts.append(json.dumps(message, indent=2, default=str))
+            formatted_parts.append("")
+    else:
+        formatted_parts.append("  No raw messages available")
+        formatted_parts.append("")
+
+    # API Metadata section
+    formatted_parts.append("=== API Metadata ===")
+    if api_metadata:
+        formatted_parts.append(json.dumps(api_metadata, indent=2, default=str))
+    else:
+        formatted_parts.append("  No API metadata available")
 
     return "\n".join(formatted_parts)
 
