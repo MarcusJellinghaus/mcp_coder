@@ -503,3 +503,344 @@ class TestExecutePrompt:
         captured = capsys.readouterr()
         captured_out: str = captured.out or ""
         assert "Here's how to create a Python file." in captured_out
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("os.path.exists")
+    def test_continue_from_success(
+        self,
+        mock_exists: Mock,
+        mock_file_open: Mock,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test successful continuation from stored response file."""
+        # Setup mock for stored response file
+        stored_response = {
+            "prompt": "How do I create a Python file?",
+            "response_data": {
+                "text": "Here's how to create a Python file.",
+                "session_info": {
+                    "session_id": "previous-session-456",
+                    "model": "claude-sonnet-4",
+                    "tools": ["file_writer"],
+                    "mcp_servers": [{"name": "fs_server", "status": "connected"}],
+                },
+                "result_info": {
+                    "duration_ms": 1500,
+                    "cost_usd": 0.025,
+                    "usage": {"input_tokens": 15, "output_tokens": 12},
+                },
+                "raw_messages": [
+                    {
+                        "role": "user",
+                        "content": "How do I create a Python file?",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "Here's how to create a Python file.",
+                    },
+                ],
+            },
+            "metadata": {
+                "timestamp": "2025-09-19T10:30:00Z",
+                "working_directory": "/test/dir",
+                "model": "claude-sonnet-4",
+            },
+        }
+
+        # Setup mock file system
+        mock_exists.return_value = True
+        mock_file_open.return_value.read.return_value = json.dumps(stored_response)
+
+        # Setup mock response for new Claude API call
+        new_response = {
+            "text": "Now let's also add some error handling to that file.",
+            "session_info": {
+                "session_id": "continuation-session-789",
+                "model": "claude-sonnet-4",
+                "tools": ["file_writer", "code_analyzer"],
+                "mcp_servers": [{"name": "fs_server", "status": "connected"}],
+            },
+            "result_info": {
+                "duration_ms": 1800,
+                "cost_usd": 0.030,
+                "usage": {"input_tokens": 25, "output_tokens": 18},
+            },
+            "raw_messages": [],
+        }
+        mock_ask_claude.return_value = new_response
+
+        # Create test arguments with continue_from parameter
+        args = argparse.Namespace(
+            prompt="Add error handling",
+            continue_from="path/to/previous_response.json",
+        )
+
+        # Execute the prompt command
+        result = execute_prompt(args)
+
+        # Assert successful execution
+        assert result == 0
+
+        # Verify file reading operations
+        mock_exists.assert_called_once_with("path/to/previous_response.json")
+        mock_file_open.assert_called_once_with(
+            "path/to/previous_response.json", "r", encoding="utf-8"
+        )
+
+        # Verify Claude API was called with enhanced context
+        # Should include both previous context and new prompt
+        mock_ask_claude.assert_called_once()
+        api_call_args = mock_ask_claude.call_args
+        enhanced_prompt = api_call_args[0][0]  # First positional argument
+
+        # Verify the enhanced prompt contains previous context
+        assert "How do I create a Python file?" in enhanced_prompt
+        assert "Here's how to create a Python file." in enhanced_prompt
+        assert "Add error handling" in enhanced_prompt
+        assert (
+            "Previous conversation:" in enhanced_prompt or "Context:" in enhanced_prompt
+        )
+
+        # Verify normal output is displayed
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert "Now let's also add some error handling to that file." in captured_out
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    @patch("os.path.exists")
+    def test_continue_from_file_not_found(
+        self,
+        mock_exists: Mock,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test error handling when continue_from file doesn't exist."""
+        # Setup mock file system - file doesn't exist
+        mock_exists.return_value = False
+
+        # Create test arguments with continue_from parameter pointing to non-existent file
+        args = argparse.Namespace(
+            prompt="Continue conversation",
+            continue_from="path/to/nonexistent_file.json",
+        )
+
+        # Execute the prompt command
+        result = execute_prompt(args)
+
+        # Assert error return code
+        assert result == 1
+
+        # Verify file existence check was called
+        mock_exists.assert_called_once_with("path/to/nonexistent_file.json")
+
+        # Verify Claude API was NOT called (due to file error)
+        mock_ask_claude.assert_not_called()
+
+        # Verify error message is displayed
+        captured = capsys.readouterr()
+        captured_err: str = captured.err or ""
+        assert "Error" in captured_err
+        assert (
+            "nonexistent_file.json" in captured_err
+            or "not found" in captured_err.lower()
+        )
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("os.path.exists")
+    def test_continue_from_invalid_json(
+        self,
+        mock_exists: Mock,
+        mock_file_open: Mock,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test error handling when continue_from file contains invalid JSON."""
+        # Setup mock file system - file exists but contains invalid JSON
+        mock_exists.return_value = True
+        mock_file_open.return_value.read.return_value = "{ invalid json content }"
+
+        # Create test arguments with continue_from parameter
+        args = argparse.Namespace(
+            prompt="Continue conversation",
+            continue_from="path/to/invalid.json",
+        )
+
+        # Execute the prompt command
+        result = execute_prompt(args)
+
+        # Assert error return code
+        assert result == 1
+
+        # Verify file operations were attempted
+        mock_exists.assert_called_once_with("path/to/invalid.json")
+        mock_file_open.assert_called_once_with(
+            "path/to/invalid.json", "r", encoding="utf-8"
+        )
+
+        # Verify Claude API was NOT called (due to JSON error)
+        mock_ask_claude.assert_not_called()
+
+        # Verify error message is displayed
+        captured = capsys.readouterr()
+        captured_err: str = captured.err or ""
+        assert "Error" in captured_err
+        assert "invalid" in captured_err.lower() or "json" in captured_err.lower()
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("os.path.exists")
+    def test_continue_from_missing_required_fields(
+        self,
+        mock_exists: Mock,
+        mock_file_open: Mock,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test error handling when continue_from file has missing required fields."""
+        # Setup mock for incomplete stored response (missing prompt or response_data)
+        incomplete_response = {
+            "metadata": {
+                "timestamp": "2025-09-19T10:30:00Z",
+                "working_directory": "/test/dir",
+            }
+            # Missing "prompt" and "response_data" fields
+        }
+
+        # Setup mock file system
+        mock_exists.return_value = True
+        mock_file_open.return_value.read.return_value = json.dumps(incomplete_response)
+
+        # Create test arguments with continue_from parameter
+        args = argparse.Namespace(
+            prompt="Continue conversation",
+            continue_from="path/to/incomplete.json",
+        )
+
+        # Execute the prompt command
+        result = execute_prompt(args)
+
+        # Assert error return code
+        assert result == 1
+
+        # Verify file operations were attempted
+        mock_exists.assert_called_once_with("path/to/incomplete.json")
+        mock_file_open.assert_called_once_with(
+            "path/to/incomplete.json", "r", encoding="utf-8"
+        )
+
+        # Verify Claude API was NOT called (due to missing data)
+        mock_ask_claude.assert_not_called()
+
+        # Verify error message is displayed
+        captured = capsys.readouterr()
+        captured_err: str = captured.err or ""
+        assert "Error" in captured_err
+        assert (
+            "missing" in captured_err.lower()
+            or "required" in captured_err.lower()
+            or "invalid" in captured_err.lower()
+        )
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("os.path.exists")
+    def test_continue_from_with_verbosity(
+        self,
+        mock_exists: Mock,
+        mock_file_open: Mock,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test continuation functionality works with different verbosity levels."""
+        # Setup mock for stored response file
+        stored_response = {
+            "prompt": "What is Python?",
+            "response_data": {
+                "text": "Python is a programming language.",
+                "session_info": {
+                    "session_id": "verbose-continuation-123",
+                    "model": "claude-sonnet-4",
+                    "tools": ["code_analyzer"],
+                    "mcp_servers": [{"name": "test_server", "status": "connected"}],
+                },
+                "result_info": {
+                    "duration_ms": 1200,
+                    "cost_usd": 0.020,
+                    "usage": {"input_tokens": 10, "output_tokens": 8},
+                },
+                "raw_messages": [],
+            },
+            "metadata": {
+                "timestamp": "2025-09-19T11:00:00Z",
+                "working_directory": "/test/dir",
+                "model": "claude-sonnet-4",
+            },
+        }
+
+        # Setup mock file system
+        mock_exists.return_value = True
+        mock_file_open.return_value.read.return_value = json.dumps(stored_response)
+
+        # Setup mock response for new Claude API call
+        new_response = {
+            "text": "Here are some advanced Python features.",
+            "session_info": {
+                "session_id": "verbose-continuation-new-456",
+                "model": "claude-sonnet-4",
+                "tools": ["code_analyzer", "file_writer"],
+                "mcp_servers": [{"name": "test_server", "status": "connected"}],
+            },
+            "result_info": {
+                "duration_ms": 2500,
+                "cost_usd": 0.040,
+                "usage": {"input_tokens": 30, "output_tokens": 22},
+            },
+            "raw_messages": [],
+        }
+        mock_ask_claude.return_value = new_response
+
+        # Create test arguments with continue_from and verbose verbosity
+        args = argparse.Namespace(
+            prompt="Tell me about advanced features",
+            continue_from="path/to/previous.json",
+            verbosity="verbose",
+        )
+
+        # Execute the prompt command
+        result = execute_prompt(args)
+
+        # Assert successful execution
+        assert result == 0
+
+        # Verify file reading operations
+        mock_exists.assert_called_once_with("path/to/previous.json")
+        mock_file_open.assert_called_once_with(
+            "path/to/previous.json", "r", encoding="utf-8"
+        )
+
+        # Verify Claude API was called with enhanced context
+        mock_ask_claude.assert_called_once()
+        api_call_args = mock_ask_claude.call_args
+        enhanced_prompt = api_call_args[0][0]
+
+        # Verify the enhanced prompt contains previous context
+        assert "What is Python?" in enhanced_prompt
+        assert "Python is a programming language." in enhanced_prompt
+        assert "Tell me about advanced features" in enhanced_prompt
+
+        # Verify verbose output format is applied
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+
+        # Should contain the main response
+        assert "Here are some advanced Python features." in captured_out
+
+        # Should contain verbose-specific information (session info, metrics)
+        assert "verbose-continuation-new-456" in captured_out  # New session ID
+        assert "2500" in captured_out or "2.5" in captured_out  # Duration
+        assert "0.040" in captured_out  # Cost
+        assert "30" in captured_out  # Input tokens
+        assert "22" in captured_out  # Output tokens
