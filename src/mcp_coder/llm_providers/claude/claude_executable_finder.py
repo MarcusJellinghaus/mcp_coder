@@ -82,7 +82,7 @@ def find_claude_executable(
                 # Test with a simple command that should exit quickly
                 result = execute_command(
                     [str(claude_path), "--help"],
-                    timeout_seconds=300,
+                    timeout_seconds=10,
                 )
                 # Accept both 0 (success) and 1 (help shown) as valid
                 if result.return_code not in [0, 1]:
