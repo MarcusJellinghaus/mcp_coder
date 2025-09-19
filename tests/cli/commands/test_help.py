@@ -81,12 +81,21 @@ def test_prompt_command_documentation() -> None:
     # Check command is listed
     assert "prompt <text>" in help_text
     assert "Execute prompt via Claude API with configurable debug output" in help_text
-    assert "Supports --verbosity, --store-response, --continue-from" in help_text
+    
+    # Check that the detailed parameter documentation is present
+    assert "--verbosity LEVEL" in help_text
+    assert "--store-response" in help_text
+    assert "--continue-from FILE" in help_text
+    
+    # Check verbosity level descriptions
+    assert "just-text (default)" in help_text
+    assert "verbose: + tool interactions + performance metrics" in help_text
+    assert "raw: + complete JSON structures + API responses" in help_text
 
     # Check all verbosity levels are documented in examples
-    assert "--verbosity=verbose" in examples
-    assert "--verbosity=raw" in examples
-    assert "just-text output by default" in examples
+    assert "--verbosity verbose" in examples
+    assert "--verbosity raw" in examples
+    assert "just-text" in examples
 
     # Check storage functionality is documented
     assert "--store-response" in examples
@@ -94,6 +103,6 @@ def test_prompt_command_documentation() -> None:
 
     # Check various usage patterns are shown
     assert 'mcp-coder prompt "What is Python?"' in examples
-    assert 'mcp-coder prompt "Debug this error" --verbosity=verbose' in examples
-    assert 'mcp-coder prompt "Analyze code patterns" --verbosity=raw' in examples
+    assert 'mcp-coder prompt "Debug this error" --verbosity verbose' in examples
+    assert 'mcp-coder prompt "Debug this error" --verbosity raw' in examples
     assert "response_2025-09-19T14-30-22.json" in examples

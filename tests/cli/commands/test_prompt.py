@@ -432,16 +432,17 @@ class TestExecutePrompt:
         assert "api.anthropic.com" not in verbose_output
 
     @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    @patch("mcp_coder.cli.commands.prompt._store_response")
     def test_store_response(
         self,
+        mock_store_response: Mock,
         mock_ask_claude: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test storing complete session data to .mcp-coder/responses/ directory.
 
-        Note: This test currently just verifies that having store_response=True
-        doesn't break existing functionality. The actual storage implementation
-        will be tested properly when it's implemented in Step 8.
+        Note: This test mocks the _store_response function to prevent actual file creation
+        during testing, while verifying the storage functionality is called properly.
         """
         # Setup mock response for Claude API
         mock_response = {
@@ -490,6 +491,9 @@ class TestExecutePrompt:
             prompt="How do I create a Python file?", store_response=True
         )
 
+        # Mock the storage function to return a fake path
+        mock_store_response.return_value = "/fake/path/response_2025-01-01T12-00-00.json"
+
         # Execute the prompt command
         result = execute_prompt(args)
 
@@ -498,6 +502,9 @@ class TestExecutePrompt:
 
         # Verify Claude API was called with correct prompt
         mock_ask_claude.assert_called_once_with("How do I create a Python file?", 30)
+
+        # Verify storage function was called with correct parameters
+        mock_store_response.assert_called_once_with(mock_response, "How do I create a Python file?")
 
         # Verify normal output is still printed (basic functionality works)
         captured = capsys.readouterr()
