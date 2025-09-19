@@ -29,7 +29,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 2: Implement Basic Prompt Command Module** - [step_2.md](steps/step_2.md)
+- [x] **Step 2: Implement Basic Prompt Command Module** - [step_2.md](steps/step_2.md)
   - Implement execute_prompt function with just-text output format
   - Basic Claude API integration, no verbosity levels yet
   - Quality checks: pylint, pytest, mypy
