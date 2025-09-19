@@ -23,7 +23,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Implementation Steps (TDD Approach - 12 Small Steps)
 
-- [ ] **Step 1: Create Basic Prompt Command Tests** - [step_1.md](steps/step_1.md)
+- [x] **Step 1: Create Basic Prompt Command Tests** - [step_1.md](steps/step_1.md)
   - Create tests for basic prompt execution (success/error cases)
   - Foundation for TDD approach with just-text output
   - Quality checks: pylint, pytest, mypy
