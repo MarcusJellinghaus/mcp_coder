@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv:*)",
+      "mcp__code-checker__run_all_checks"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "code-checker",
+    "filesystem"
+  ]
+}
