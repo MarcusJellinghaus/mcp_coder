@@ -891,10 +891,11 @@ class TestExecutePrompt:
             },
             "raw_messages": [
                 # Real SDK objects instead of dictionaries
-                SystemMessage(subtype="session_start", data={"model": "claude-sonnet-4"}),
+                SystemMessage(
+                    subtype="session_start", data={"model": "claude-sonnet-4"}
+                ),
                 AssistantMessage(
-                    content=[TextBlock(text="SDK response")],
-                    model="claude-sonnet-4"
+                    content=[TextBlock(text="SDK response")], model="claude-sonnet-4"
                 ),
                 ResultMessage(
                     subtype="conversation_complete",
@@ -903,7 +904,7 @@ class TestExecutePrompt:
                     is_error=False,
                     num_turns=1,
                     session_id="sdk-test-session",
-                    total_cost_usd=0.025
+                    total_cost_usd=0.025,
                 ),
             ],
         }
@@ -950,10 +951,12 @@ class TestExecutePrompt:
             },
             "raw_messages": [
                 # Real SDK objects that need custom JSON serialization
-                SystemMessage(subtype="initialization", data={"tools": ["code_executor"]}),
+                SystemMessage(
+                    subtype="initialization", data={"tools": ["code_executor"]}
+                ),
                 AssistantMessage(
                     content=[TextBlock(text="Raw test response")],
-                    model="claude-sonnet-4"
+                    model="claude-sonnet-4",
                 ),
                 ResultMessage(
                     subtype="final_result",
@@ -962,7 +965,7 @@ class TestExecutePrompt:
                     is_error=False,
                     num_turns=1,
                     session_id="raw-sdk-test",
-                    total_cost_usd=0.030
+                    total_cost_usd=0.030,
                 ),
             ],
         }
@@ -1008,7 +1011,9 @@ class TestExecutePrompt:
                 "usage": {"input_tokens": 18, "output_tokens": 14},
             },
             "raw_messages": [
-                SystemMessage(subtype="session_start", data={"model": "claude-sonnet-4"}),
+                SystemMessage(
+                    subtype="session_start", data={"model": "claude-sonnet-4"}
+                ),
                 # This AssistantMessage should have tool calls that verbose mode extracts
                 AssistantMessage(
                     content=[
@@ -1016,7 +1021,7 @@ class TestExecutePrompt:
                         # Note: Real SDK might have ToolUseBlock objects here
                         # but for this test we're focusing on the message.get() issue
                     ],
-                    model="claude-sonnet-4"
+                    model="claude-sonnet-4",
                 ),
                 ResultMessage(
                     subtype="complete",
@@ -1025,7 +1030,7 @@ class TestExecutePrompt:
                     is_error=False,
                     num_turns=1,
                     session_id="tool-test-session",
-                    total_cost_usd=0.028
+                    total_cost_usd=0.028,
                 ),
             ],
         }
