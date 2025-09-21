@@ -55,6 +55,12 @@ def _extract_tool_interactions(raw_messages: List[Any]) -> List[str]:
 - `_get_message_tool_calls()`: `[{"name": "tool_name", "parameters": {...}}]`
 - `_extract_tool_interactions()`: `["tool_name: {...}", "other_tool: {...}"]`
 
+**SDK Structure** (from official Anthropic docs):
+- `SystemMessage`: has `subtype`, `data` attributes
+- `AssistantMessage`: has `content`, `model` attributes  
+- `ResultMessage`: has `subtype`, `duration_ms`, `session_id`, etc.
+- Tool calls are in `AssistantMessage.content` as `ToolUseBlock` objects
+
 ## Integration Points
 - **Backward Compatibility**: Functions must work with existing dictionary test mocks
 - **Forward Compatibility**: Functions must work with real Claude SDK message objects  

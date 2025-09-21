@@ -1,87 +1,90 @@
-# Step 4: Fix _format_raw() to Properly Serialize SDK Objects
+# Step 4: Add Edge Case Testing & Error Handling
 
 ## LLM Prompt
 ```
-Based on the summary in pr_info/steps/summary.md and the fixes from Step 3, implement Step 4 to fix the _format_raw() function. The raw output format needs to properly serialize Claude SDK message objects to JSON, which requires custom serialization since SDK objects aren't directly JSON-serializable.
+Based on the summary in pr_info/steps/summary.md and the completed fixes from Steps 2-3, implement Step 4 to add comprehensive edge case testing and robust error handling for SDK message objects.
 
-This step should make the tests from Step 1 pass for raw output format and complete the fix for the original error.
+Since the core functionality is now working, this step ensures the solution handles edge cases gracefully and provides comprehensive test coverage for unusual scenarios.
 ```
 
 ## WHERE
-- **File**: `src/mcp_coder/cli/commands/prompt.py`
-- **Function**: `_format_raw()` (lines 73-110)
-- **Specific Fix**: JSON serialization sections (lines 88-103)
+- **Test File**: `tests/cli/commands/test_prompt.py`
+- **Function**: Add `test_edge_cases_sdk_message_handling()`
+- **File**: `src/mcp_coder/cli/commands/prompt.py` (utility functions)
+- **Scope**: Edge cases, error handling, malformed data scenarios
 
 ## WHAT
-- **Function**: Update `_format_raw(response_data: Dict[str, Any]) -> str`
-- **Target**: Fix JSON serialization of SDK message objects
-- **Scope**: Raw messages JSON section and complete API response JSON section
+- **Test**: Comprehensive edge case testing for SDK message handling
+- **Enhancement**: Improve error handling in utility functions
+- **Coverage**: Test malformed SDK objects, missing attributes, empty data
 
 ## HOW
-- **Add**: Custom serialization function `_serialize_message_for_json()`
-- **Replace**: Direct `json.dumps()` with SDK-aware serialization
-- **Handle**: Convert SDK objects to serializable dictionaries
-- **Maintain**: Existing JSON structure and formatting
+- **Test Scenarios**: Empty messages, None values, malformed SDK objects
+- **Error Handling**: Graceful fallbacks for missing attributes
+- **Edge Cases**: Mixed message types, invalid data structures
+- **Robustness**: Ensure no crashes with unexpected input
 
 ## ALGORITHM
 ```python
-# Custom SDK object serialization for raw output
-1. Check if object is SDK message using _is_sdk_message()
-2. For SDK objects: convert to dict with relevant attributes
-3. For other objects: use default JSON serialization
-4. Apply custom serializer to both raw_messages and complete response
-5. Maintain existing JSON formatting (indent=2, default=str)
+# Edge case testing and error handling
+1. Test with empty raw_messages lists
+2. Test with None values and missing attributes
+3. Test with malformed SDK objects (incomplete attributes)
+4. Test with mixed valid/invalid message combinations
+5. Verify graceful degradation rather than crashes
 ```
 
 ## DATA
-**New Function**:
+**Edge Case Test Scenarios**:
 ```python
-def _serialize_message_for_json(obj: Any) -> Any:
-    """Convert SDK message objects to JSON-serializable format."""
-    if _is_sdk_message(obj):
-        return {
-            "type": type(obj).__name__,
-            "role": _get_message_role(obj),
-            "tool_calls": _get_message_tool_calls(obj),
-            # Add other relevant attributes
-        }
-    return obj
+# Test with empty/None data
+mock_response_empty = {
+    "text": "Response",
+    "raw_messages": []
+}
+
+# Test with malformed SDK objects
+mock_malformed_sdk = {
+    "text": "Response", 
+    "raw_messages": [MockSDKObject(missing_attributes=True)]
+}
+
+# Test with mixed valid/invalid messages
+mock_mixed_messages = {
+    "text": "Response",
+    "raw_messages": [valid_dict, malformed_sdk_obj, None]
+}
 ```
 
-**Updated JSON Serialization**:
-```python
-# Before
-json.dumps(response_data, indent=2, default=str)  # ❌ Fails on SDK objects
-
-# After  
-json.dumps(response_data, indent=2, default=_serialize_message_for_json)  # ✅ Works
-```
-
-**Output Structure**: Same JSON format but with properly serialized SDK objects
+**Error Handling Enhancements**:
+- Graceful handling of missing attributes (getattr with defaults)
+- Safe iteration over potentially empty/None collections
+- Fallback to string representation for unknown object types
 
 ## Integration Points
-- **Utility Functions**: Use message detection and access utilities from Step 2
-- **JSON Compatibility**: Ensure output is valid JSON with meaningful structure
-- **Debug Information**: Preserve all debugging information from SDK objects
-- **Existing Format**: Maintain compatibility with current raw output expectations
+- **Existing Functionality**: Build on the working solution from Steps 2-3
+- **Comprehensive Coverage**: Test all possible edge cases and error scenarios
+- **Production Readiness**: Ensure robust handling of real-world data variations
+- **Error Resilience**: No crashes or unexpected failures with malformed input
 
 ## Validation Criteria
-- `_format_raw()` successfully serializes responses containing SDK message objects
-- JSON output is valid and properly formatted
-- Raw output includes all relevant information from SDK objects
-- SDK object attributes are properly represented in JSON format
-- Tests from Step 1 for raw format should now pass
-- No impact on responses with dictionary message objects
+- All edge case tests pass without throwing exceptions
+- Utility functions handle None/missing attributes gracefully
+- Empty message lists don't cause errors
+- Malformed SDK objects fall back to safe string representation
+- **Edge case integration test should pass**
+- Mixed valid/invalid message combinations work correctly
+- Performance remains acceptable with edge case handling
 
 ## Expected Changes
-- **New Function**: `_serialize_message_for_json()` (~15 lines)
-- **Modified Lines**: ~5 lines in `_format_raw()` for JSON serialization
-- **Functionality**: Enhanced JSON serialization capability
-- **Compatibility**: Full backward compatibility with existing raw output format
-- **Error Resolution**: Eliminates JSON serialization errors for SDK objects
+- **New Test**: `test_edge_cases_sdk_message_handling()` (~50 lines)
+- **Enhanced Error Handling**: ~10 lines across utility functions
+- **Functionality**: Robust edge case handling + comprehensive testing
+- **Reliability**: Production-ready error resilience
+- **Coverage**: Complete test coverage for unusual scenarios
 
 ## Technical Details
-- **SDK Object Handling**: Convert SystemMessage, AssistantMessage, ResultMessage to dicts
-- **Attribute Preservation**: Include session_id, role, content, tool_calls, etc.
-- **Type Information**: Include object type name for debugging clarity
-- **Fallback Strategy**: Graceful handling of unknown object types
+- **Safe Attribute Access**: Use getattr() with defaults instead of direct access
+- **None Handling**: Check for None values before processing
+- **Type Validation**: Verify object structure before accessing attributes
+- **Fallback Strategy**: Always provide meaningful output even with malformed input

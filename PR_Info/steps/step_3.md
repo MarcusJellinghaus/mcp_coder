@@ -1,73 +1,78 @@
-# Step 3: Fix _format_verbose() to Handle Both Message Formats
+# Step 3: Fix _format_raw() JSON Serialization & Add Verbosity Tests
 
 ## LLM Prompt
 ```
-Based on the summary in pr_info/steps/summary.md and using the utilities created in Step 2, implement Step 3 to fix the _format_verbose() function. Replace the problematic message.get("role") calls with the unified access utilities to handle both dictionary and SDK message objects.
+Based on the summary in pr_info/steps/summary.md and the fixes from Step 2, implement Step 3 to fix the _format_raw() function for proper JSON serialization of SDK objects. Also add comprehensive integration tests for all verbosity levels.
 
-This step should resolve the AttributeError and make the tests from Step 1 start passing for verbose output.
+Step 2 already fixed verbose output, so this step completes the raw output fix and adds thorough testing across all output formats.
 ```
 
 ## WHERE
 - **File**: `src/mcp_coder/cli/commands/prompt.py`
-- **Function**: `_format_verbose()` (lines 112-177)
-- **Specific Fix**: Tool interactions extraction section (lines 158-166)
+- **Function**: `_format_raw()` (lines 73-110)
+- **Test File**: `tests/cli/commands/test_prompt.py`
+- **New Test**: `test_all_verbosity_levels_with_sdk_objects()`
 
 ## WHAT
-- **Function**: Update `_format_verbose(response_data: Dict[str, Any]) -> str`
-- **Target**: Replace manual message parsing with utility functions
-- **Scope**: Fix tool interaction extraction and message processing
+- **Function**: Update `_format_raw(response_data: Dict[str, Any]) -> str`
+- **Function**: Add `_serialize_message_for_json(obj: Any) -> Any`
+- **Test**: Comprehensive integration test for all verbosity levels
 
 ## HOW
-- **Replace**: `message.get("role") == "assistant"` with `_get_message_role(message) == "assistant"`
-- **Replace**: `"tool_calls" in message` with `bool(_get_message_tool_calls(message))`
-- **Replace**: Manual tool call iteration with `_extract_tool_interactions(raw_messages)`
-- **Integration**: Use new utility functions throughout tool interaction section
+- **Add**: Custom JSON serialization function `_serialize_message_for_json()`
+- **Replace**: Direct `json.dumps()` with SDK-aware serialization
+- **Handle**: Convert SDK objects to serializable dictionaries using official structure
+- **Test**: Create comprehensive test covering just-text, verbose, and raw output formats
 
 ## ALGORITHM
 ```python
-# Updated tool interaction extraction in _format_verbose()
-1. Get raw_messages from response_data
-2. Call _extract_tool_interactions(raw_messages) to get formatted list
-3. If tool_interactions exist, add them to formatted output
-4. If no tool interactions, add "No tool calls made" message
-5. Continue with existing performance metrics and session info
+# Custom SDK object serialization for raw output
+1. Check if object is SDK message using _is_sdk_message()
+2. For SDK objects: convert to dict with relevant attributes based on official structure
+3. For other objects: use default JSON serialization
+4. Apply custom serializer to both raw_messages and complete response
+5. Test all verbosity levels with same SDK data for consistency
 ```
 
 ## DATA
-**Before (Problematic Code)**:
+**New Function**:
 ```python
-tool_interactions = []
-for message in raw_messages:
-    if message.get("role") == "assistant" and "tool_calls" in message:  # ❌ Fails on SDK objects
-        for tool_call in message.get("tool_calls", []):
-            tool_name = tool_call.get("name", "unknown_tool")
-            tool_params = tool_call.get("parameters", {})
-            tool_interactions.append(f"  - {tool_name}: {tool_params}")
+def _serialize_message_for_json(obj: Any) -> Any:
+    """Convert SDK message objects to JSON-serializable format."""
+    if _is_sdk_message(obj):
+        # Use official SDK structure
+        if hasattr(obj, 'subtype'):  # SystemMessage or ResultMessage
+            return {"type": type(obj).__name__, "subtype": obj.subtype, ...}
+        elif hasattr(obj, 'content'):  # AssistantMessage
+            return {"type": type(obj).__name__, "content": obj.content, ...}
+    return obj
 ```
 
-**After (Fixed Code)**:
+**Updated JSON Serialization**:
 ```python
-tool_interactions = _extract_tool_interactions(raw_messages)  # ✅ Works with both formats
-```
+# Before
+json.dumps(response_data, indent=2, default=str)  # ❌ Fails on SDK objects
 
-**Function Return**: Same string format as before, but now works with SDK objects
+# After  
+json.dumps(response_data, indent=2, default=_serialize_message_for_json)  # ✅ Works
+```
 
 ## Integration Points
-- **Utility Functions**: Use `_extract_tool_interactions()` from Step 2
-- **Backward Compatibility**: Maintain exact same output format for existing tests
-- **Error Handling**: Graceful fallback if tool extraction fails
-- **Performance**: No significant performance impact
+- **JSON Compatibility**: Ensure output is valid JSON with meaningful structure
+- **SDK Structure**: Use official Anthropic SDK structure for serialization
+- **Debug Information**: Preserve all debugging information from SDK objects
+- **Comprehensive Testing**: Test all three verbosity levels with same SDK data
 
 ## Validation Criteria
-- `_format_verbose()` no longer throws AttributeError with SDK message objects
-- Tool interaction extraction works with both dictionary and SDK message formats
-- Existing tests continue to pass with same output format
-- Verbose output includes tool interactions when present
-- Tests from Step 1 for verbose format should now pass
-- No regression in existing functionality
+- `_format_raw()` successfully serializes responses containing SDK message objects
+- JSON output is valid and properly formatted using official SDK structure
+- All verbosity levels (just-text, verbose, raw) work with SDK objects
+- **Integration test covering all verbosity levels should pass**
+- No impact on responses with dictionary message objects
+- Raw output includes all relevant information from SDK objects
 
 ## Expected Changes
-- **Lines Modified**: ~10 lines in `_format_verbose()` function
-- **Functionality**: Same output format, expanded input compatibility
-- **Error Reduction**: Eliminates AttributeError for SDK objects
-- **Test Impact**: Step 1 verbose tests should pass after this change
+- **New Function**: `_serialize_message_for_json()` (~20 lines)
+- **Modified Lines**: ~5 lines in `_format_raw()` for JSON serialization
+- **New Test**: Comprehensive integration test for all verbosity levels
+- **Functionality**: Enhanced JSON serialization + thorough testing
