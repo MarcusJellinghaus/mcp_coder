@@ -1,11 +1,9 @@
 # Performance Test Management Workflow
 
-## 🚀 Quick Start
-**Run this command to begin performance analysis:**
-```cmd
-.\tools\pytest_wf_1_gather_slow_tests.bat
+## 🚀 Quick Start Prompt
 ```
-Then follow Step 2 in `complete_workflow.md` to analyze results with LLM.
+Review `tests/performance_management/TASK_TRACKER.md` and execute the next incomplete task in the performance analysis workflow. Follow the process outlined in `complete_workflow.md`.
+```
 
 ---
 
