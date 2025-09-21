@@ -2,7 +2,7 @@
 
 ## 🚀 Quick Start Prompt
 ```
-Review `tests/performance_management/TASK_TRACKER.md` and execute the next incomplete task in the performance analysis workflow. Follow the process outlined in `complete_workflow.md`.
+Review `tests/performance_management/TASK_TRACKER.md` and provide a concise summary of what the next incomplete task is and what you'll do. Then execute only that one step and stop.
 ```
 
 ---
