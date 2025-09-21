@@ -83,6 +83,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         type=str,
         help="Continue from previous stored session file",
     )
+    prompt_parser.add_argument(
+        "--timeout",
+        type=int,
+        default=60,
+        help="Timeout in seconds for the Claude API request (default: 60)",
+    )
 
     # Commit commands - Step 5
     commit_parser = subparsers.add_parser("commit", help="Git commit operations")
@@ -124,7 +130,7 @@ def handle_no_command(args: argparse.Namespace) -> int:
     print("  help                    Show detailed help information")
     print("  verify                  Verify Claude CLI installation and configuration")
     print(
-        "  prompt TEXT             Execute prompt via Claude API with configurable debug output"
+        "  prompt TEXT             Execute prompt via Claude API with debug output"
     )
     print("  commit auto             Auto-generate and create commit")
     print("  commit clipboard        Commit using message from clipboard")

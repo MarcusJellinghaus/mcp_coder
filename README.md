@@ -121,7 +121,7 @@ if is_git_repository(repo_path):
 
 ### High-Level Interface
 
-#### `ask_llm(question, provider="claude", method="cli", timeout=30)`
+#### `ask_llm(question, provider="claude", method="cli", timeout=60)`
 
 Main entry point for LLM interactions with extensible provider support.
 
@@ -129,20 +129,20 @@ Main entry point for LLM interactions with extensible provider support.
 - `question` (str): The question to ask the LLM
 - `provider` (str): LLM provider to use (currently supports "claude")
 - `method` (str): Implementation method ("cli" or "api")
-- `timeout` (int): Request timeout in seconds (default: 30)
+- `timeout` (int): Request timeout in seconds (default: 60)
 
 **Returns:** LLM response as string
 
 ### Claude-Specific Interface
 
-#### `ask_claude_code(question, method="cli", timeout=30)`
+#### `ask_claude_code(question, method="cli", timeout=60)`
 
 Claude Code interface with routing between CLI and API methods.
 
 **Parameters:**
 - `question` (str): The question to ask Claude
 - `method` (str): Implementation method ("cli" or "api")
-- `timeout` (int): Request timeout in seconds (default: 30)
+- `timeout` (int): Request timeout in seconds (default: 60)
 
 **Returns:** Claude's response as string
 
@@ -160,13 +160,13 @@ Claude Code interface with routing between CLI and API methods.
 
 ### Legacy Interface
 
-#### `ask_claude(question, timeout=30)`
+#### `ask_claude(question, timeout=60)`
 
 Backward-compatible interface using CLI method.
 
 **Parameters:**
 - `question` (str): The question to ask Claude
-- `timeout` (int): Request timeout in seconds (default: 30)
+- `timeout` (int): Request timeout in seconds (default: 60)
 
 **Returns:** Claude's response as string
 

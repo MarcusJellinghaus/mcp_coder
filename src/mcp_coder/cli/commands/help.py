@@ -39,6 +39,7 @@ COMMANDS:
                                                   for later continuation or reference
                            --continue-from FILE   Continue conversation from previous stored session
                                                   (enhances prompt with previous context)
+                           --timeout SECONDS      Timeout for Claude API request in seconds (default: 60)
     commit auto             Auto-generate commit message using LLM
     commit auto --preview   Show generated message and ask for confirmation
     commit clipboard        Use commit message from clipboard
@@ -66,6 +67,10 @@ def get_usage_examples() -> str:
     mcp-coder prompt "Debug this error" --verbosity just-text     # Default: response + tool summary
     mcp-coder prompt "Debug this error" --verbosity verbose       # + performance metrics + session info
     mcp-coder prompt "Debug this error" --verbosity raw           # + complete JSON + API responses
+
+    # Timeout control:
+    mcp-coder prompt "Complex analysis" --timeout 120             # 2 minute timeout for complex requests
+    mcp-coder prompt "Quick question" --timeout 30               # 30 second timeout for simple requests
     
     # Session storage and continuation:
     mcp-coder prompt "Start project planning" --store-response                      # Save session

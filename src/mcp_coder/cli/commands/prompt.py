@@ -24,13 +24,8 @@ import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from ...llm_providers.claude.claude_code_api import (
-    AssistantMessage,
-    ResultMessage,
-    SystemMessage,
-    TextBlock,
-    ask_claude_code_api_detailed_sync,
-)
+# Import function only at module level, import classes at runtime to avoid circular reference
+from ...llm_providers.claude.claude_code_api import ask_claude_code_api_detailed_sync
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +57,18 @@ def _is_sdk_message(message: Any) -> bool:
     if message is None:
         return False
 
-    # Check if it's one of the known SDK message types
-    return isinstance(message, (SystemMessage, AssistantMessage, ResultMessage))
+    # Import SDK classes at runtime to avoid circular reference
+    try:
+        from ...llm_providers.claude.claude_code_api import (
+            AssistantMessage,
+            ResultMessage,
+            SystemMessage,
+        )
+        # Check if it's one of the known SDK message types
+        return isinstance(message, (SystemMessage, AssistantMessage, ResultMessage))
+    except ImportError:
+        # If SDK classes can't be imported, assume it's not an SDK message
+        return False
 
 
 def _get_message_role(message: Any) -> Optional[str]:
@@ -98,12 +103,20 @@ def _get_message_role(message: Any) -> Optional[str]:
             if isinstance(role_value, str):
                 return role_value
         # Infer role from SDK message type
-        if isinstance(message, AssistantMessage):
-            return "assistant"
-        elif isinstance(message, SystemMessage):
-            return "system"
-        elif isinstance(message, ResultMessage):
-            return "result"
+        try:
+            from ...llm_providers.claude.claude_code_api import (
+                AssistantMessage,
+                ResultMessage,
+                SystemMessage,
+            )
+            if isinstance(message, AssistantMessage):
+                return "assistant"
+            elif isinstance(message, SystemMessage):
+                return "system"
+            elif isinstance(message, ResultMessage):
+                return "result"
+        except ImportError:
+            pass
         return None
     else:
         # For dictionaries, use .get() method with fallback
@@ -127,7 +140,13 @@ def _get_message_tool_calls(message: Any) -> List[Dict[str, Any]]:
 
     if _is_sdk_message(message):
         # For SDK objects, check for content with ToolUseBlock objects
-        if isinstance(message, AssistantMessage) and hasattr(message, "content"):
+        try:
+            from ...llm_providers.claude.claude_code_api import AssistantMessage
+            is_assistant = isinstance(message, AssistantMessage)
+        except ImportError:
+            is_assistant = False
+
+        if is_assistant and hasattr(message, "content"):
             tool_calls: List[Dict[str, Any]] = []
             content = getattr(message, "content", None)
             if content is not None:
@@ -181,53 +200,59 @@ def _serialize_message_for_json(obj: Any) -> Any:
 
     if _is_sdk_message(obj):
         # Use official SDK structure for serialization
-        if isinstance(obj, SystemMessage):
-            return {
-                "type": "SystemMessage",
-                "subtype": getattr(obj, "subtype", None),
-                "data": getattr(obj, "data", {}),
-            }
-        elif isinstance(obj, AssistantMessage):
-            content_data = []
-            content = getattr(obj, "content", None)
-            if content is not None:
-                try:
-                    for block in content:
-                        if hasattr(block, "text"):  # TextBlock
-                            content_data.append(
-                                {"type": "text", "text": getattr(block, "text", "")}
-                            )
-                        else:
-                            # Other block types - use string representation
-                            content_data.append({"type": "unknown", "data": str(block)})
-                except (TypeError, AttributeError):
-                    # Handle cases where content is not iterable or has issues
-                    content_data.append({"type": "error", "data": str(content)})
-            return {
-                "type": "AssistantMessage",
-                "content": content_data,
-                "model": getattr(obj, "model", None),
-            }
-        elif isinstance(obj, ResultMessage):
-            return {
-                "type": "ResultMessage",
-                "subtype": getattr(obj, "subtype", None),
-                "duration_ms": getattr(obj, "duration_ms", None),
-                "duration_api_ms": getattr(obj, "duration_api_ms", None),
-                "is_error": getattr(obj, "is_error", None),
-                "num_turns": getattr(obj, "num_turns", None),
-                "session_id": getattr(obj, "session_id", None),
-                "total_cost_usd": getattr(obj, "total_cost_usd", None),
-            }
-        else:
-            # Fallback for unknown SDK message types or malformed objects
+        try:
+            from ...llm_providers.claude.claude_code_api import (
+                AssistantMessage,
+                ResultMessage,
+                SystemMessage,
+            )
+
+            if isinstance(obj, SystemMessage):
+                return {
+                    "type": "SystemMessage",
+                    "subtype": getattr(obj, "subtype", None),
+                    "data": getattr(obj, "data", {}),
+                }
+            elif isinstance(obj, AssistantMessage):
+                content_data = []
+                content = getattr(obj, "content", None)
+                if content is not None:
+                    try:
+                        for block in content:
+                            if hasattr(block, "text"):  # TextBlock
+                                content_data.append(
+                                    {"type": "text", "text": getattr(block, "text", "")}
+                                )
+                            else:
+                                # Other block types - use string representation
+                                content_data.append({"type": "unknown", "data": str(block)})
+                    except (TypeError, AttributeError):
+                        # Handle cases where content is not iterable or has issues
+                        content_data.append({"type": "error", "data": str(content)})
+                return {
+                    "type": "AssistantMessage",
+                    "content": content_data,
+                    "model": getattr(obj, "model", None),
+                }
+            elif isinstance(obj, ResultMessage):
+                return {
+                    "type": "ResultMessage",
+                    "subtype": getattr(obj, "subtype", None),
+                    "duration_ms": getattr(obj, "duration_ms", None),
+                    "duration_api_ms": getattr(obj, "duration_api_ms", None),
+                    "is_error": getattr(obj, "is_error", None),
+                    "num_turns": getattr(obj, "num_turns", None),
+                    "session_id": getattr(obj, "session_id", None),
+                    "total_cost_usd": getattr(obj, "total_cost_usd", None),
+                }
+        except ImportError:
+            # If SDK classes can't be imported, fall back to type name
             try:
                 return {"type": type(obj).__name__, "data": str(obj)}
             except Exception as e:
-                # Log the error for debugging purposes
                 logger.debug(f"Failed to serialize object {type(obj).__name__}: {e}")
-                # Final fallback for objects that can't be stringified
                 return {"type": "unknown", "data": "<unserializable object>"}
+
     # For non-SDK objects, use default serialization
     return obj
 
@@ -289,8 +314,9 @@ def execute_prompt(args: argparse.Namespace) -> int:
             previous_context = _load_previous_chat(args.continue_from)
             enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
 
-        # Call Claude API using detailed function
-        response_data = ask_claude_code_api_detailed_sync(enhanced_prompt, 30)
+        # Call Claude API using detailed function with user-specified timeout
+        timeout = getattr(args, "timeout", 60)
+        response_data = ask_claude_code_api_detailed_sync(enhanced_prompt, timeout)
 
         # Store response if requested
         if getattr(args, "store_response", False):
