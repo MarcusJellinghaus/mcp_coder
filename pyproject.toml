@@ -58,6 +58,9 @@ markers = [
     "git_integration: tests with file system git operations (repos, commits)", 
     "claude_integration: tests requiring Claude CLI/API (network, auth needed)"
 ]
+# run usually with -m "not git_integration and not claude_integration"  for the fast unit tests
+# use e.g. -m "git_integration or claude_integration" to run a group of the slower tests
+
 # Default pytest options:
 # --strict-markers: Fail if unknown markers are used (prevents typos)
 # --tb=short: Show concise error tracebacks (not full stack traces)

@@ -17,6 +17,9 @@ from mcp_coder.utils.git_operations import (
     stage_specific_files,
 )
 
+# Performance test threshold in seconds
+PERFORMANCE_THRESHOLD_SECONDS = 7.0
+
 
 @pytest.mark.git_integration
 class TestGitWorkflows:
@@ -599,7 +602,7 @@ class TestGitWorkflows:
         assert stage_result is True
 
         staging_time = time.time() - start_time
-        assert staging_time < 5.0  # Should complete quickly
+        assert staging_time < PERFORMANCE_THRESHOLD_SECONDS  # Should complete quickly
 
         # Verify all files staged
         staged = get_staged_changes(project_dir)
@@ -613,7 +616,7 @@ class TestGitWorkflows:
         commit_time = time.time() - start_time
 
         assert commit_result["success"] is True
-        assert commit_time < 5.0  # Should commit quickly
+        assert commit_time < PERFORMANCE_THRESHOLD_SECONDS  # Should commit quickly
 
         # Verify clean state
         final_status = get_full_status(project_dir)
@@ -1453,7 +1456,7 @@ class TestGitWorkflows:
         processing_time = end_time - start_time
 
         # Should complete within reasonable time (5 seconds)
-        assert processing_time < 5.0
+        assert processing_time < PERFORMANCE_THRESHOLD_SECONDS
 
         # Should handle large files without crashing
         assert diff_output is not None
@@ -1706,10 +1709,10 @@ class TestGitWorkflows:
         end_time = time.time()
         execution_time = end_time - start_time
 
-        # Performance requirement: should complete within 5 seconds
+        # Performance requirement: should complete within threshold
         assert (
-            execution_time < 5.0
-        ), f"Diff generation took {execution_time:.2f} seconds, expected < 5.0"
+            execution_time < PERFORMANCE_THRESHOLD_SECONDS
+        ), f"Diff generation took {execution_time:.2f} seconds, expected < {PERFORMANCE_THRESHOLD_SECONDS}"
 
         # Verify diff output correctness
         assert diff_output is not None

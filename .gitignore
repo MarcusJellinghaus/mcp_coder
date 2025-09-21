@@ -28,3 +28,5 @@ venv/
 /.mcp.json
 .claude/settings.local.json
 checks_output.txt
+bash.exe.stackdump
+/.mcp-coder/responses
