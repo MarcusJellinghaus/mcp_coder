@@ -183,6 +183,31 @@ class TestSDKMessageDetection:
         custom_obj = CustomObject()
         assert _is_sdk_message(custom_obj) is False
 
+    @pytest.mark.integration
+    def test_real_sdk_objects_if_available(self):
+        """Test with real SDK objects when SDK is available."""
+        try:
+            from mcp_coder.llm_providers.claude.claude_code_api import (
+                SystemMessage,
+                TextBlock,
+            )
+
+            # Test with real SDK objects
+            system_msg = SystemMessage(subtype="test", data={})
+            assert _is_sdk_message(system_msg) is True
+            assert _get_message_role(system_msg) == "system"
+
+            # Test graceful handling
+            assert _get_message_tool_calls(system_msg) == []
+
+            # Test TextBlock creation (basic SDK object validation)
+            text_block = TextBlock(text="Hello, world!")
+            assert hasattr(text_block, "text")
+            assert text_block.text == "Hello, world!"
+
+        except ImportError:
+            pytest.skip("SDK not available for integration testing")
+
 
 class TestJSONSerialization:
     """Test _serialize_message_for_json utility function."""
