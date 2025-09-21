@@ -74,11 +74,11 @@ echo SUCCESS: Marker analysis completed successfully
 
 echo.
 echo ============================================
-echo Analysis complete. Next steps:
-echo 1. Review marker analysis: %marker_output%
-echo 2. Update slow_tests_inventory.md with marker information
-echo 3. Use LLM prompts to analyze marker strategy
-echo 4. Plan marker standardization
+echo Marker analysis complete. Next steps:
+echo 1. COPY this marker analysis file to your LLM: %marker_output%
+echo 2. Tell your LLM: "Please analyze the marker analysis output"
+echo 3. LLM will update TASK_TRACKER.md Step 3 as complete
+echo 4. Continue with Step 4 as guided by LLM
 echo ============================================
 echo.
 

@@ -68,10 +68,10 @@ echo SUCCESS: Validation analysis completed
 echo.
 echo ============================================
 echo Validation complete. Next steps:
-echo 1. Compare results with baseline measurements
-echo 2. Update performance_analysis.md with improvements
-echo 3. Document successful optimizations
-echo 4. Plan next optimization phase
+echo 1. COPY this validation file to your LLM: %validation_output%
+echo 2. Tell your LLM: "Please analyze the validation results"
+echo 3. LLM will update TASK_TRACKER.md Step 5 as complete
+echo 4. Continue with final steps as guided by LLM
 echo ============================================
 echo.
 

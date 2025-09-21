@@ -38,12 +38,11 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo ============================================
 echo Analysis complete. Next steps:
-echo 1. Share this output file with your LLM: %output_file%
-echo 2. Follow Step 2 in tests\performance_management\complete_workflow.md
-echo 3. Use the LLM prompt in complete_workflow.md for analysis
-echo 4. Update slow_tests_inventory.md with findings
-echo 5. Delete output file %output_file% after analysis is complete
-echo 6. Update TASK_TRACKER.md to track progress
+echo 1. COPY this output file path to your LLM: %output_file%
+echo 2. Tell your LLM: "Please read and analyze the output file"
+echo 3. Use Step 2 from tests\performance_management\complete_workflow.md
+echo 4. LLM will provide analysis and update TASK_TRACKER.md
+echo 5. Continue with next steps as guided by LLM
 echo ============================================
 echo.
 
