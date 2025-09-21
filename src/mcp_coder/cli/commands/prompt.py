@@ -1,4 +1,20 @@
-"""Prompt command for the MCP Coder CLI."""
+"""Prompt command for the MCP Coder CLI.
+
+Dual Message Format Compatibility:
+This module handles two different message formats to maintain backward compatibility:
+
+1. Dictionary format: Used in tests and legacy code
+   - Accessed with .get() method: message.get("role")
+   - Example: {"role": "assistant", "content": "text"}
+
+2. SDK object format: Used in production with real Claude API
+   - Accessed with attributes: message.role or message.subtype
+   - Example: SystemMessage(subtype="test", data={...})
+
+The utility functions (_is_sdk_message, _get_message_role, etc.) provide unified
+access to both formats, preventing AttributeError when SDK objects are accessed
+with dictionary methods like .get(). This fixes the original issue where
+'SystemMessage' object has no attribute 'get' occurred in verbose/raw output."""
 
 import argparse
 import json
