@@ -29,6 +29,7 @@ from ...llm_providers.claude.claude_code_api import (
     ResultMessage,
     SystemMessage,
     TextBlock,
+    UserMessage,
     ask_claude_code_api_detailed_sync,
 )
 
@@ -40,7 +41,7 @@ def _is_sdk_message(message: Any) -> bool:
     """Check if message is a Claude SDK object vs dictionary.
 
     This utility function distinguishes between Claude SDK message objects
-    (SystemMessage, AssistantMessage, ResultMessage) and plain dictionaries.
+    (SystemMessage, AssistantMessage, ResultMessage, UserMessage) and plain dictionaries.
     It's essential for the unified handling approach that fixes the
     AttributeError when SDK objects are accessed with .get() method.
 
@@ -63,7 +64,7 @@ def _is_sdk_message(message: Any) -> bool:
         return False
 
     # Check if it's one of the known SDK message types
-    return isinstance(message, (SystemMessage, AssistantMessage, ResultMessage))
+    return isinstance(message, (SystemMessage, AssistantMessage, ResultMessage, UserMessage))
 
 
 def _get_message_role(message: Any) -> Optional[str]:
@@ -179,57 +180,101 @@ def _serialize_message_for_json(obj: Any) -> Any:
     if obj is None:
         return None
 
-    if _is_sdk_message(obj):
-        # Use official SDK structure for serialization
-        if isinstance(obj, SystemMessage):
-            return {
-                "type": "SystemMessage",
-                "subtype": getattr(obj, "subtype", None),
-                "data": getattr(obj, "data", {}),
-            }
-        elif isinstance(obj, AssistantMessage):
-            content_data = []
-            content = getattr(obj, "content", None)
-            if content is not None:
+    try:
+        if _is_sdk_message(obj):
+            # Use official SDK structure for serialization
+            if isinstance(obj, SystemMessage):
+                return {
+                    "type": "SystemMessage",
+                    "subtype": getattr(obj, "subtype", None),
+                    "data": getattr(obj, "data", {}),
+                }
+            elif isinstance(obj, AssistantMessage):
+                content_data = []
+                content = getattr(obj, "content", None)
+                if content is not None:
+                    try:
+                        for block in content:
+                            if hasattr(block, "text"):  # TextBlock
+                                content_data.append(
+                                    {"type": "text", "text": getattr(block, "text", "")}
+                                )
+                            elif hasattr(block, "name") and hasattr(block, "input"):  # ToolUseBlock
+                                content_data.append({
+                                    "type": "tool_use",
+                                    "id": getattr(block, "id", ""),
+                                    "name": getattr(block, "name", ""),
+                                    "input": getattr(block, "input", {}),
+                                })
+                            else:
+                                # Other block types - use string representation
+                                content_data.append({"type": "unknown", "data": str(block)})
+                    except (TypeError, AttributeError):
+                        # Handle cases where content is not iterable or has issues
+                        content_data.append({"type": "error", "data": str(content)})
+                return {
+                    "type": "AssistantMessage",
+                    "content": content_data,
+                    "model": getattr(obj, "model", None),
+                }
+            elif isinstance(obj, UserMessage):
+                content_data = []
+                content = getattr(obj, "content", None)
+                if content is not None:
+                    try:
+                        for block in content:
+                            if hasattr(block, "tool_use_id"):  # ToolResultBlock
+                                # Safely extract tool result content
+                                tool_content = getattr(block, "content", "")
+                                # Truncate very long content to prevent circular references
+                                if isinstance(tool_content, str) and len(tool_content) > 500:
+                                    tool_content = tool_content[:500] + "... [truncated]"
+                                content_data.append({
+                                    "type": "tool_result",
+                                    "tool_use_id": getattr(block, "tool_use_id", ""),
+                                    "content": str(tool_content),
+                                    "is_error": getattr(block, "is_error", False),
+                                })
+                            else:
+                                # Other block types - use string representation, safely truncated
+                                block_str = str(block)
+                                if len(block_str) > 500:
+                                    block_str = block_str[:500] + "... [truncated]"
+                                content_data.append({"type": "unknown", "data": block_str})
+                    except (TypeError, AttributeError) as e:
+                        # Handle cases where content is not iterable or has issues
+                        content_data.append({"type": "error", "data": f"Serialization error: {str(e)}"})
+                return {
+                    "type": "UserMessage",
+                    "content": content_data,
+                    "parent_tool_use_id": getattr(obj, "parent_tool_use_id", None),
+                }
+            elif isinstance(obj, ResultMessage):
+                return {
+                    "type": "ResultMessage",
+                    "subtype": getattr(obj, "subtype", None),
+                    "duration_ms": getattr(obj, "duration_ms", None),
+                    "duration_api_ms": getattr(obj, "duration_api_ms", None),
+                    "is_error": getattr(obj, "is_error", None),
+                    "num_turns": getattr(obj, "num_turns", None),
+                    "session_id": getattr(obj, "session_id", None),
+                    "total_cost_usd": getattr(obj, "total_cost_usd", None),
+                }
+            else:
+                # Fallback for unknown SDK message types or malformed objects
                 try:
-                    for block in content:
-                        if hasattr(block, "text"):  # TextBlock
-                            content_data.append(
-                                {"type": "text", "text": getattr(block, "text", "")}
-                            )
-                        else:
-                            # Other block types - use string representation
-                            content_data.append({"type": "unknown", "data": str(block)})
-                except (TypeError, AttributeError):
-                    # Handle cases where content is not iterable or has issues
-                    content_data.append({"type": "error", "data": str(content)})
-            return {
-                "type": "AssistantMessage",
-                "content": content_data,
-                "model": getattr(obj, "model", None),
-            }
-        elif isinstance(obj, ResultMessage):
-            return {
-                "type": "ResultMessage",
-                "subtype": getattr(obj, "subtype", None),
-                "duration_ms": getattr(obj, "duration_ms", None),
-                "duration_api_ms": getattr(obj, "duration_api_ms", None),
-                "is_error": getattr(obj, "is_error", None),
-                "num_turns": getattr(obj, "num_turns", None),
-                "session_id": getattr(obj, "session_id", None),
-                "total_cost_usd": getattr(obj, "total_cost_usd", None),
-            }
-        else:
-            # Fallback for unknown SDK message types or malformed objects
-            try:
-                return {"type": type(obj).__name__, "data": str(obj)}
-            except Exception as e:
-                # Log the error for debugging purposes
-                logger.debug(f"Failed to serialize object {type(obj).__name__}: {e}")
-                # Final fallback for objects that can't be stringified
-                return {"type": "unknown", "data": "<unserializable object>"}
-    # For non-SDK objects, use default serialization
-    return obj
+                    return {"type": type(obj).__name__, "data": str(obj)}
+                except Exception as e:
+                    # Log the error for debugging purposes
+                    logger.debug(f"Failed to serialize object {type(obj).__name__}: {e}")
+                    # Final fallback for objects that can't be stringified
+                    return {"type": "unknown", "data": "<unserializable object>"}
+        # For non-SDK objects, return unchanged (let json.dumps handle them)
+        return obj
+    except Exception as e:
+        # Catch any remaining serialization errors
+        logger.debug(f"Serialization error for {type(obj).__name__}: {e}")
+        return f"<serialization error: {type(obj).__name__}>"
 
 
 def _extract_tool_interactions(raw_messages: List[Any]) -> List[str]:

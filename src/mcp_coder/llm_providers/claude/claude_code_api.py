@@ -14,6 +14,7 @@ from claude_code_sdk import (
     ResultMessage,
     SystemMessage,
     TextBlock,
+    UserMessage,
     query,
 )
 from claude_code_sdk._errors import CLINotFoundError
@@ -33,6 +34,7 @@ __all__ = [
     "TextBlock",
     "SystemMessage",
     "ResultMessage",
+    "UserMessage",
     "ClaudeCodeOptions",
     "query",
     "ask_claude_code_api",
