@@ -35,7 +35,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [ ] **Step 3**: Fix Raw JSON Serialization & Add Verbosity Tests - [step_3.md](steps/step_3.md)
+- [x] **Step 3**: Fix Raw JSON Serialization & Add Verbosity Tests - [step_3.md](steps/step_3.md)
   - Create custom JSON serializer for SDK objects using official structure
   - Fix `_format_raw()` to handle SDK object serialization
   - Add comprehensive integration test for all verbosity levels
