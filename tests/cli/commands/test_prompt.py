@@ -1394,3 +1394,307 @@ class TestExecutePrompt:
         # - No JSON serialization errors from SDK objects
         # - No crashes from None values or missing attributes
         # - Meaningful output even with malformed data
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    def test_real_world_sdk_message_integration(
+        self,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test complete real-world integration scenario with actual SDK objects.
+
+        This is the comprehensive integration test that simulates the exact scenario
+        that led to the original AttributeError bug. It uses realistic SDK message
+        combinations to ensure the complete fix works end-to-end without regression.
+        """
+        # Create realistic SDK message objects that would appear in real usage
+        mock_response = {
+            "text": "I'll help you create a Python file with error handling.",
+            "session_info": {
+                "session_id": "integration-test-session-real-world",
+                "model": "claude-sonnet-4",
+                "tools": ["file_reader", "file_writer", "code_executor"],
+                "mcp_servers": [
+                    {"name": "fs_server", "status": "connected", "version": "1.3.0"},
+                    {"name": "code_server", "status": "connected", "version": "2.0.1"},
+                ],
+            },
+            "result_info": {
+                "duration_ms": 3250,
+                "cost_usd": 0.0672,
+                "usage": {"input_tokens": 48, "output_tokens": 32},
+                "api_version": "2024-03-01",
+            },
+            "raw_messages": [
+                # Real SDK objects that would cause the original AttributeError
+                SystemMessage(
+                    subtype="session_initialization",
+                    data={
+                        "model": "claude-sonnet-4",
+                        "tools": ["file_reader", "file_writer", "code_executor"],
+                        "session_start": True,
+                    },
+                ),
+                AssistantMessage(
+                    content=[
+                        TextBlock(
+                            text="I'll help you create a Python file with error handling."
+                        )
+                    ],
+                    model="claude-sonnet-4",
+                ),
+                ResultMessage(
+                    subtype="task_complete",
+                    duration_ms=3250,
+                    duration_api_ms=2100,
+                    is_error=False,
+                    num_turns=2,
+                    session_id="integration-test-session-real-world",
+                    total_cost_usd=0.0672,
+                ),
+            ],
+            "api_metadata": {
+                "request_id": "req_integration_test_xyz789",
+                "endpoint": "https://api.anthropic.com/v1/messages",
+                "headers": {"x-api-version": "2024-03-01"},
+            },
+        }
+        mock_ask_claude.return_value = mock_response
+
+        # Test all three verbosity levels with the same realistic data
+        # This ensures the complete fix works across all output formats
+        for verbosity in ["just-text", "verbose", "raw"]:
+            # Reset mock for each test
+            mock_ask_claude.reset_mock()
+            mock_ask_claude.return_value = mock_response
+
+            # Create args for this verbosity level
+            if verbosity == "just-text":
+                args = argparse.Namespace(
+                    prompt="Create a Python file with error handling"
+                )
+            else:
+                args = argparse.Namespace(
+                    prompt="Create a Python file with error handling",
+                    verbosity=verbosity,
+                )
+
+            # Execute the prompt command - this should NOT raise AttributeError
+            result = execute_prompt(args)
+
+            # Assert successful execution (the original bug would cause exit code 1)
+            assert result == 0, f"Failed for verbosity level: {verbosity}"
+
+            # Verify Claude API was called
+            mock_ask_claude.assert_called_once_with(
+                "Create a Python file with error handling", 30
+            )
+
+            # Capture output for verification
+            captured = capsys.readouterr()
+            captured_out: str = captured.out or ""
+
+            # Verify basic response is present in all formats
+            assert (
+                "I'll help you create a Python file with error handling."
+                in captured_out
+            ), f"Missing response text for verbosity: {verbosity}"
+
+            # Verify verbosity-specific content
+            if verbosity == "just-text":
+                assert "Used 3 tools:" in captured_out
+                assert "file_reader" in captured_out
+                assert "file_writer" in captured_out
+                assert "code_executor" in captured_out
+            elif verbosity == "verbose":
+                # Should contain all verbose-specific information
+                assert "integration-test-session-real-world" in captured_out
+                assert "3250" in captured_out or "3.25" in captured_out
+                assert "0.0672" in captured_out
+                assert "48" in captured_out  # Input tokens
+                assert "32" in captured_out  # Output tokens
+                assert "fs_server" in captured_out
+                assert "code_server" in captured_out
+            elif verbosity == "raw":
+                # Should contain all raw-specific information including JSON structures
+                assert "req_integration_test_xyz789" in captured_out
+                assert "api.anthropic.com" in captured_out
+                assert "SystemMessage" in captured_out
+                assert "AssistantMessage" in captured_out
+                assert "ResultMessage" in captured_out
+                assert "session_initialization" in captured_out
+                assert "task_complete" in captured_out
+                # Verify JSON structure is present
+                assert "{" in captured_out
+                assert "}" in captured_out
+
+        # Final verification: No exceptions were raised during SDK object handling
+        # This confirms that both the .get() AttributeError and JSON serialization
+        # issues have been completely resolved for real-world SDK usage scenarios
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    def test_complete_sdk_integration_end_to_end(
+        self,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test complete end-to-end integration with comprehensive SDK scenarios.
+
+        This test validates the entire solution works from start to finish with
+        various SDK object combinations, ensuring no regression and providing
+        confidence for production use.
+        """
+        # Create comprehensive test scenarios with different SDK object combinations
+        test_scenarios = [
+            {
+                "name": "Standard workflow with all message types",
+                "response": {
+                    "text": "Processing your file operation request.",
+                    "session_info": {
+                        "session_id": "end-to-end-scenario-1",
+                        "model": "claude-sonnet-4",
+                        "tools": ["file_operations", "validation"],
+                        "mcp_servers": [{"name": "fs_mcp", "status": "connected"}],
+                    },
+                    "result_info": {
+                        "duration_ms": 2500,
+                        "cost_usd": 0.045,
+                        "usage": {"input_tokens": 25, "output_tokens": 18},
+                    },
+                    "raw_messages": [
+                        SystemMessage(
+                            subtype="workflow_start", data={"workflow": "file_ops"}
+                        ),
+                        AssistantMessage(
+                            content=[
+                                TextBlock(
+                                    text="Processing your file operation request."
+                                )
+                            ],
+                            model="claude-sonnet-4",
+                        ),
+                        ResultMessage(
+                            subtype="workflow_complete",
+                            duration_ms=2500,
+                            duration_api_ms=1800,
+                            is_error=False,
+                            num_turns=1,
+                            session_id="end-to-end-scenario-1",
+                            total_cost_usd=0.045,
+                        ),
+                    ],
+                },
+            },
+            {
+                "name": "Complex multi-turn conversation",
+                "response": {
+                    "text": "Let me analyze your code and provide suggestions.",
+                    "session_info": {
+                        "session_id": "end-to-end-scenario-2",
+                        "model": "claude-sonnet-4",
+                        "tools": ["code_analyzer", "file_reader", "documentation"],
+                        "mcp_servers": [
+                            {"name": "analysis_server", "status": "connected"},
+                            {"name": "docs_server", "status": "connected"},
+                        ],
+                    },
+                    "result_info": {
+                        "duration_ms": 4200,
+                        "cost_usd": 0.089,
+                        "usage": {"input_tokens": 65, "output_tokens": 42},
+                    },
+                    "raw_messages": [
+                        SystemMessage(
+                            subtype="analysis_session",
+                            data={
+                                "analysis_type": "code_review",
+                                "tools": [
+                                    "code_analyzer",
+                                    "file_reader",
+                                    "documentation",
+                                ],
+                            },
+                        ),
+                        AssistantMessage(
+                            content=[
+                                TextBlock(
+                                    text="Let me analyze your code and provide suggestions."
+                                )
+                            ],
+                            model="claude-sonnet-4",
+                        ),
+                        ResultMessage(
+                            subtype="analysis_complete",
+                            duration_ms=4200,
+                            duration_api_ms=3400,
+                            is_error=False,
+                            num_turns=3,
+                            session_id="end-to-end-scenario-2",
+                            total_cost_usd=0.089,
+                        ),
+                    ],
+                    "api_metadata": {
+                        "request_id": "req_end_to_end_analysis_456",
+                        "endpoint": "https://api.anthropic.com/v1/messages",
+                    },
+                },
+            },
+        ]
+
+        # Test each scenario with all verbosity levels
+        for scenario in test_scenarios:
+            scenario_name = scenario["name"]
+            mock_response = scenario["response"]
+
+            for verbosity in ["just-text", "verbose", "raw"]:
+                # Set up mock for this scenario
+                mock_ask_claude.reset_mock()
+                mock_ask_claude.return_value = mock_response
+
+                # Create appropriate args
+                if verbosity == "just-text":
+                    args = argparse.Namespace(prompt=f"Test {scenario_name}")
+                else:
+                    args = argparse.Namespace(
+                        prompt=f"Test {scenario_name}", verbosity=verbosity
+                    )
+
+                # Execute the command
+                result = execute_prompt(args)
+
+                # Verify successful execution
+                assert (
+                    result == 0
+                ), f"Failed for scenario '{scenario_name}' with verbosity '{verbosity}'"
+
+                # Verify API call was made
+                mock_ask_claude.assert_called_once_with(f"Test {scenario_name}", 30)
+
+                # Capture and verify output
+                captured = capsys.readouterr()
+                captured_out: str = captured.out or ""
+
+                # Verify response text is present
+                expected_text = mock_response["text"]
+                assert (
+                    expected_text in captured_out
+                ), f"Missing response for scenario '{scenario_name}' verbosity '{verbosity}'"
+
+                # Verify no error content in stderr
+                captured_err: str = captured.err or ""
+                assert (
+                    "AttributeError" not in captured_err
+                ), f"AttributeError found in stderr for scenario '{scenario_name}'"
+                assert (
+                    "get" not in captured_err.lower()
+                ), f"'get' error found in stderr for scenario '{scenario_name}'"
+                assert (
+                    "json" not in captured_err.lower()
+                    or "error" not in captured_err.lower()
+                ), f"JSON error found in stderr for scenario '{scenario_name}'"
+
+        # Verify total API calls match expected count (2 scenarios × 3 verbosity levels)
+        assert mock_ask_claude.call_count == 6
+
+        # Final validation: All scenarios completed without any SDK object handling errors
+        # This provides comprehensive confidence that the fix is complete and robust

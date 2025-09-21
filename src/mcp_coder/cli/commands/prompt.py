@@ -23,11 +23,24 @@ logger = logging.getLogger(__name__)
 def _is_sdk_message(message: Any) -> bool:
     """Check if message is a Claude SDK object vs dictionary.
 
+    This utility function distinguishes between Claude SDK message objects
+    (SystemMessage, AssistantMessage, ResultMessage) and plain dictionaries.
+    It's essential for the unified handling approach that fixes the
+    AttributeError when SDK objects are accessed with .get() method.
+
     Args:
-        message: Message object to check
+        message: Message object to check (can be SDK object, dict, or None)
 
     Returns:
-        True if message is a Claude SDK object, False if dictionary
+        True if message is a Claude SDK object, False for dictionaries or None
+
+    Example:
+        >>> _is_sdk_message({"role": "user"})  # Dictionary
+        False
+        >>> _is_sdk_message(SystemMessage(subtype="test"))  # SDK object
+        True
+        >>> _is_sdk_message(None)  # None value
+        False
     """
     # Handle None values gracefully
     if message is None:
@@ -40,11 +53,23 @@ def _is_sdk_message(message: Any) -> bool:
 def _get_message_role(message: Any) -> Optional[str]:
     """Get role from message (SDK object or dict).
 
+    This unified accessor safely extracts role information from both
+    SDK objects and dictionaries, preventing AttributeError when SDK
+    objects are accessed with dictionary methods.
+
     Args:
-        message: Message object (SDK object or dictionary)
+        message: Message object (SDK object, dictionary, or None)
 
     Returns:
-        Role string ("assistant", "user", etc.) or None if not available
+        Role string ("assistant", "user", "system", "result") or None if not available
+
+    Example:
+        >>> _get_message_role({"role": "user"})  # Dictionary access
+        "user"
+        >>> _get_message_role(AssistantMessage(...))  # SDK object access
+        "assistant"
+        >>> _get_message_role(None)  # Graceful None handling
+        None
     """
     # Handle None values gracefully
     if message is None:
