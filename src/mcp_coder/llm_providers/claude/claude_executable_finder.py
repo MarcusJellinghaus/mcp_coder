@@ -46,13 +46,14 @@ def _get_claude_search_paths() -> List[str]:
 
 
 def find_claude_executable(
-    *, test_execution: bool = False, return_none_if_not_found: bool = False
+    *, test_execution: bool = False, return_none_if_not_found: bool = False, fast_mode: bool = True
 ) -> Optional[str]:
     """Find Claude Code CLI executable with flexible options.
 
     Args:
         test_execution: If True, test that the executable actually works
         return_none_if_not_found: If True, return None instead of raising FileNotFoundError
+        fast_mode: If True, skip execution tests and just check file existence (default: True)
 
     Returns:
         Path to Claude executable, or None if not found and return_none_if_not_found=True
@@ -76,13 +77,13 @@ def find_claude_executable(
         if hasattr(os, "access") and not os.access(claude_path, os.X_OK):
             continue
 
-        # If testing execution is requested, verify the executable works
-        if test_execution:
+        # If testing execution is requested and fast mode is disabled, verify the executable works
+        if test_execution and not fast_mode:
             try:
                 # Test with a simple command that should exit quickly
                 result = execute_command(
                     [str(claude_path), "--help"],
-                    timeout_seconds=10,
+                    timeout_seconds=15,
                 )
                 # Accept both 0 (success) and 1 (help shown) as valid
                 if result.return_code not in [0, 1]:
@@ -99,12 +100,12 @@ def find_claude_executable(
     # No working Claude executable found
     if return_none_if_not_found:
         return None
-    else:
-        raise FileNotFoundError(
-            "Claude Code CLI not found. Please ensure it's installed and accessible.\n"
-            "Install with: npm install -g @anthropic-ai/claude-code\n"
-            f"Searched locations: {[str(path) for path in search_paths]}"
-        )
+
+    raise FileNotFoundError(
+        "Claude Code CLI not found. Please ensure it's installed and accessible.\n"
+        "Install with: npm install -g @anthropic-ai/claude-code\n"
+        f"Searched locations: {[str(path) for path in search_paths]}"
+    )
 
 
 def setup_claude_path() -> Optional[str]:
@@ -155,8 +156,8 @@ def verify_claude_installation() -> dict[str, Any]:
     }
 
     try:
-        # Find the executable
-        claude_path = find_claude_executable(test_execution=True)
+        # Find the executable (disable fast mode for thorough verification)
+        claude_path = find_claude_executable(test_execution=True, fast_mode=False)
         result["found"] = True
         result["path"] = claude_path
 
@@ -164,7 +165,7 @@ def verify_claude_installation() -> dict[str, Any]:
         try:
             version_result = execute_command(
                 [str(claude_path), "--version"],
-                timeout_seconds=10,
+                timeout_seconds=15,
             )
             if version_result.return_code == 0:
                 result["version"] = version_result.stdout.strip()
