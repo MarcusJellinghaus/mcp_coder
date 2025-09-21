@@ -22,7 +22,7 @@ import logging
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from ...llm_providers.claude.claude_code_api import (
     AssistantMessage,
@@ -149,11 +149,16 @@ def _get_message_tool_calls(message: Any) -> List[Dict[str, Any]]:
 def _serialize_message_for_json(obj: Any) -> Any:
     """Convert SDK message objects to JSON-serializable format.
 
+    This function serves as a custom JSON serializer for json.dumps() default parameter.
+    It converts Claude SDK message objects to dictionaries while leaving other
+    JSON-serializable objects unchanged.
+
     Args:
         obj: Object to serialize (SDK message or any other object)
 
     Returns:
-        JSON-serializable representation using official SDK structure
+        For SDK objects: Dictionary representation using official SDK structure
+        For other objects: The object unchanged (handled by json.dumps)
     """
     # Handle None values gracefully
     if obj is None:
@@ -203,7 +208,9 @@ def _serialize_message_for_json(obj: Any) -> Any:
             # Fallback for unknown SDK message types or malformed objects
             try:
                 return {"type": type(obj).__name__, "data": str(obj)}
-            except Exception:
+            except Exception as e:
+                # Log the error for debugging purposes
+                logger.debug(f"Failed to serialize object {type(obj).__name__}: {e}")
                 # Final fallback for objects that can't be stringified
                 return {"type": "unknown", "data": "<unserializable object>"}
     # For non-SDK objects, use default serialization

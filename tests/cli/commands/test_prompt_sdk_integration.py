@@ -803,8 +803,7 @@ class TestPromptSDKIntegration:
             mock_response = scenario["response"]
 
             for verbosity in ["just-text", "verbose", "raw"]:
-                # Set up mock for this scenario
-                mock_ask_claude.reset_mock()
+                # Set up mock response for this scenario (but don't reset call count)
                 mock_ask_claude.return_value = mock_response
 
                 # Create appropriate args
@@ -823,8 +822,7 @@ class TestPromptSDKIntegration:
                     result == 0
                 ), f"Failed for scenario '{scenario_name}' with verbosity '{verbosity}'"
 
-                # Verify API call was made
-                mock_ask_claude.assert_called_once_with(f"Test {scenario_name}", 30)
+                # Note: We'll verify all API calls at the end rather than individually
 
                 # Capture and verify output
                 captured = capsys.readouterr()
@@ -851,6 +849,20 @@ class TestPromptSDKIntegration:
 
         # Verify total API calls match expected count (2 scenarios × 3 verbosity levels)
         assert mock_ask_claude.call_count == 6
+        
+        # Verify the specific calls were made with correct prompts
+        expected_calls = [
+            ("Test Standard workflow with all message types", 30),  # 3 times
+            ("Test Standard workflow with all message types", 30),
+            ("Test Standard workflow with all message types", 30),
+            ("Test Complex multi-turn conversation", 30),  # 3 times
+            ("Test Complex multi-turn conversation", 30),
+            ("Test Complex multi-turn conversation", 30),
+        ]
+        actual_calls = [call[0] for call in mock_ask_claude.call_args_list]
+        assert len(actual_calls) == 6
+        assert actual_calls[0:3] == [expected_calls[0]] * 3  # First scenario, 3 verbosity levels
+        assert actual_calls[3:6] == [expected_calls[3]] * 3  # Second scenario, 3 verbosity levels
 
         # Final validation: All scenarios completed without any SDK object handling errors
         # This provides comprehensive confidence that the fix is complete and robust
