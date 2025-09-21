@@ -137,18 +137,16 @@ def _get_message_tool_calls(message: Any) -> List[Dict[str, Any]]:
                         if hasattr(block, "name") and hasattr(block, "input"):
                             tool_name = getattr(block, "name", "unknown_tool")
                             tool_input = getattr(block, "input", {})
-                            tool_calls.append({
-                                "name": tool_name,
-                                "parameters": tool_input
-                            })
+                            tool_calls.append(
+                                {"name": tool_name, "parameters": tool_input}
+                            )
                         # Also check for 'parameters' attribute as alternative to 'input'
                         elif hasattr(block, "name") and hasattr(block, "parameters"):
                             tool_name = getattr(block, "name", "unknown_tool")
                             tool_params = getattr(block, "parameters", {})
-                            tool_calls.append({
-                                "name": tool_name,
-                                "parameters": tool_params
-                            })
+                            tool_calls.append(
+                                {"name": tool_name, "parameters": tool_params}
+                            )
                 except (TypeError, AttributeError) as e:
                     # Handle cases where content is not iterable or has issues
                     logger.debug(f"Error extracting tool calls from SDK content: {e}")

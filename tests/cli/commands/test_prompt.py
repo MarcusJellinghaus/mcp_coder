@@ -860,17 +860,3 @@ class TestExecutePrompt:
         assert "0.040" in captured_out  # Cost
         assert "30" in captured_out  # Input tokens
         assert "22" in captured_out  # Output tokens
-
-
-
-
-
-
-
-
-
-
-
-
-
-

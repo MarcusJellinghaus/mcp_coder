@@ -5,8 +5,9 @@ both dictionary and SDK object message formats. They test our code's behavior
 with controlled inputs rather than relying on external SDK behavior.
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from mcp_coder.cli.commands.prompt import (
     _extract_tool_interactions,
@@ -51,6 +52,7 @@ class TestMessageRoleExtraction:
 
     def test_non_dictionary_object(self):
         """Test handling of non-dictionary objects without SDK type."""
+
         class MockObject:
             def __init__(self):
                 self.role = "custom_role"
@@ -73,7 +75,7 @@ class TestToolCallExtraction:
             "tool_calls": [
                 {"name": "file_reader", "parameters": {"path": "/test/file.py"}},
                 {"name": "calculator", "parameters": {"expression": "2+2"}},
-            ]
+            ],
         }
         tool_calls = _get_message_tool_calls(message_with_tools)
         assert len(tool_calls) == 2
@@ -102,6 +104,7 @@ class TestToolCallExtraction:
 
     def test_non_dictionary_object(self):
         """Test handling of non-dictionary, non-SDK objects."""
+
         class MockObject:
             def __init__(self):
                 self.tool_calls = [{"name": "test_tool"}]
@@ -112,6 +115,42 @@ class TestToolCallExtraction:
 
 class TestSDKMessageDetection:
     """Test _is_sdk_message utility function."""
+
+    def test_sdk_message_detection_basic(self):
+        """Test that isinstance() logic works with SDK objects using mock classes."""
+
+        # Create mock classes that can be used with isinstance()
+        class MockSystemMessage:
+            pass
+
+        class MockAssistantMessage:
+            pass
+
+        class MockResultMessage:
+            pass
+
+        # Mock the SDK classes in the prompt module
+        with (
+            patch("mcp_coder.cli.commands.prompt.SystemMessage", MockSystemMessage),
+            patch(
+                "mcp_coder.cli.commands.prompt.AssistantMessage", MockAssistantMessage
+            ),
+            patch("mcp_coder.cli.commands.prompt.ResultMessage", MockResultMessage),
+        ):
+
+            # Create instances of mock classes
+            mock_system_instance = MockSystemMessage()
+            mock_assistant_instance = MockAssistantMessage()
+            mock_result_instance = MockResultMessage()
+
+            # Test our core isinstance() logic with each type
+            assert _is_sdk_message(mock_system_instance) is True
+            assert _is_sdk_message(mock_assistant_instance) is True
+            assert _is_sdk_message(mock_result_instance) is True
+
+            # Test that non-SDK objects return False
+            assert _is_sdk_message({"role": "user"}) is False
+            assert _is_sdk_message(None) is False
 
     def test_none_values(self):
         """Test that None values are handled gracefully."""
@@ -136,6 +175,7 @@ class TestSDKMessageDetection:
 
     def test_custom_object_detection(self):
         """Test that custom objects are correctly identified as non-SDK."""
+
         class CustomObject:
             def __init__(self):
                 self.some_attr = "value"
@@ -160,6 +200,7 @@ class TestJSONSerialization:
 
     def test_unknown_object_fallback(self):
         """Test fallback behavior for unknown object types."""
+
         class UnknownObject:
             def __init__(self):
                 self.some_attr = "value"
@@ -187,7 +228,7 @@ class TestToolInteractionExtraction:
                 "tool_calls": [
                     {"name": "file_reader", "parameters": {"path": "/test/file.py"}},
                     {"name": "calculator", "parameters": {"expression": "2+2"}},
-                ]
+                ],
             },
         ]
         result = _extract_tool_interactions(messages)
@@ -203,7 +244,7 @@ class TestToolInteractionExtraction:
             {"role": "assistant", "tool_calls": []},  # Empty tool calls
             {
                 "role": "assistant",
-                "tool_calls": [{"name": "test_tool", "parameters": {"arg": "value"}}]
+                "tool_calls": [{"name": "test_tool", "parameters": {"arg": "value"}}],
             },
         ]
         result = _extract_tool_interactions(messages)
