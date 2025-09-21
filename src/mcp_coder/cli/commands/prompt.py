@@ -12,6 +12,7 @@ from ...llm_providers.claude.claude_code_api import (
     AssistantMessage,
     ResultMessage,
     SystemMessage,
+    TextBlock,
     ask_claude_code_api_detailed_sync,
 )
 
@@ -88,6 +89,55 @@ def _get_message_tool_calls(message: Any) -> List[Dict[str, Any]]:
             if isinstance(tool_calls_result, list):
                 return tool_calls_result
         return []
+
+
+def _serialize_message_for_json(obj: Any) -> Any:
+    """Convert SDK message objects to JSON-serializable format.
+
+    Args:
+        obj: Object to serialize (SDK message or any other object)
+
+    Returns:
+        JSON-serializable representation using official SDK structure
+    """
+    if _is_sdk_message(obj):
+        # Use official SDK structure for serialization
+        if isinstance(obj, SystemMessage):
+            return {
+                "type": "SystemMessage",
+                "subtype": getattr(obj, "subtype", None),
+                "data": getattr(obj, "data", {}),
+            }
+        elif isinstance(obj, AssistantMessage):
+            content_data = []
+            if hasattr(obj, "content") and obj.content:
+                for block in obj.content:
+                    if hasattr(block, "text"):  # TextBlock
+                        content_data.append({"type": "text", "text": block.text})
+                    else:
+                        # Other block types - use string representation
+                        content_data.append({"type": "unknown", "data": str(block)})
+            return {
+                "type": "AssistantMessage",
+                "content": content_data,
+                "model": getattr(obj, "model", None),
+            }
+        elif isinstance(obj, ResultMessage):
+            return {
+                "type": "ResultMessage",
+                "subtype": getattr(obj, "subtype", None),
+                "duration_ms": getattr(obj, "duration_ms", None),
+                "duration_api_ms": getattr(obj, "duration_api_ms", None),
+                "is_error": getattr(obj, "is_error", None),
+                "num_turns": getattr(obj, "num_turns", None),
+                "session_id": getattr(obj, "session_id", None),
+                "total_cost_usd": getattr(obj, "total_cost_usd", None),
+            }
+        else:
+            # Fallback for unknown SDK message types
+            return {"type": type(obj).__name__, "data": str(obj)}
+    # For non-SDK objects, use default serialization
+    return obj
 
 
 def _extract_tool_interactions(raw_messages: List[Any]) -> List[str]:
@@ -265,7 +315,9 @@ def _format_raw(response_data: Dict[str, Any]) -> str:
 
     # Complete JSON API Response section
     formatted_parts.append("=== Complete JSON API Response ===")
-    formatted_parts.append(json.dumps(response_data, indent=2, default=str))
+    formatted_parts.append(
+        json.dumps(response_data, indent=2, default=_serialize_message_for_json)
+    )
     formatted_parts.append("")
 
     # Raw Messages section with complete details
@@ -273,7 +325,9 @@ def _format_raw(response_data: Dict[str, Any]) -> str:
     if raw_messages:
         for i, message in enumerate(raw_messages):
             formatted_parts.append(f"Message {i + 1}:")
-            formatted_parts.append(json.dumps(message, indent=2, default=str))
+            formatted_parts.append(
+                json.dumps(message, indent=2, default=_serialize_message_for_json)
+            )
             formatted_parts.append("")
     else:
         formatted_parts.append("  No raw messages available")
@@ -282,7 +336,9 @@ def _format_raw(response_data: Dict[str, Any]) -> str:
     # API Metadata section
     formatted_parts.append("=== API Metadata ===")
     if api_metadata:
-        formatted_parts.append(json.dumps(api_metadata, indent=2, default=str))
+        formatted_parts.append(
+            json.dumps(api_metadata, indent=2, default=_serialize_message_for_json)
+        )
     else:
         formatted_parts.append("  No API metadata available")
 

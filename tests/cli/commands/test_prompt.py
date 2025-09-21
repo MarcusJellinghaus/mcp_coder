@@ -1052,3 +1052,150 @@ class TestExecutePrompt:
         captured = capsys.readouterr()
         captured_out: str = captured.out or ""
         assert "Tool interaction test" in captured_out
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    def test_all_verbosity_levels_with_sdk_objects(
+        self,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test comprehensive integration test for all verbosity levels with SDK objects.
+
+        This test ensures that all three verbosity levels (just-text, verbose, raw)
+        work correctly with the same SDK object data, verifying the complete fix
+        for both verbose output and raw JSON serialization.
+        """
+        # Create comprehensive mock response with actual SDK message objects
+        # This data will be used across all three verbosity levels for consistency
+        mock_response = {
+            "text": "Comprehensive test response for all verbosity levels",
+            "session_info": {
+                "session_id": "comprehensive-test-session-999",
+                "model": "claude-sonnet-4",
+                "tools": ["file_system", "code_analyzer", "debug_tool"],
+                "mcp_servers": [
+                    {"name": "fs_server", "status": "connected", "version": "1.2.0"},
+                    {"name": "debug_server", "status": "connected", "version": "2.1.0"},
+                ],
+            },
+            "result_info": {
+                "duration_ms": 2750,
+                "cost_usd": 0.0567,
+                "usage": {"input_tokens": 35, "output_tokens": 24},
+                "api_version": "2024-03-01",
+            },
+            "raw_messages": [
+                # Real SDK objects that test both verbose extraction and raw serialization
+                SystemMessage(
+                    subtype="session_initialization",
+                    data={
+                        "model": "claude-sonnet-4",
+                        "tools": ["file_system", "code_analyzer", "debug_tool"],
+                    },
+                ),
+                AssistantMessage(
+                    content=[
+                        TextBlock(
+                            text="Comprehensive test response for all verbosity levels"
+                        )
+                    ],
+                    model="claude-sonnet-4",
+                ),
+                ResultMessage(
+                    subtype="comprehensive_complete",
+                    duration_ms=2750,
+                    duration_api_ms=1650,
+                    is_error=False,
+                    num_turns=1,
+                    session_id="comprehensive-test-session-999",
+                    total_cost_usd=0.0567,
+                ),
+            ],
+            "api_metadata": {
+                "request_id": "req_comprehensive_test_abc123",
+                "endpoint": "https://api.anthropic.com/v1/messages",
+                "headers": {"x-api-version": "2024-03-01"},
+            },
+        }
+        mock_ask_claude.return_value = mock_response
+
+        # Test 1: Just-text verbosity level (default)
+        args_just_text = argparse.Namespace(prompt="Test all verbosity levels")
+        result_just_text = execute_prompt(args_just_text)
+        just_text_output = capsys.readouterr().out or ""
+
+        # Assert just-text succeeds and contains basic response
+        assert result_just_text == 0
+        assert (
+            "Comprehensive test response for all verbosity levels" in just_text_output
+        )
+        assert "Used 3 tools:" in just_text_output  # Tool summary
+
+        # Test 2: Verbose verbosity level
+        args_verbose = argparse.Namespace(
+            prompt="Test all verbosity levels", verbosity="verbose"
+        )
+        result_verbose = execute_prompt(args_verbose)
+        verbose_output = capsys.readouterr().out or ""
+
+        # Assert verbose succeeds and contains detailed information
+        assert result_verbose == 0
+        assert "Comprehensive test response for all verbosity levels" in verbose_output
+
+        # Verify verbose-specific content
+        assert "comprehensive-test-session-999" in verbose_output  # Session ID
+        assert "2750" in verbose_output or "2.75" in verbose_output  # Duration
+        assert "0.0567" in verbose_output  # Cost
+        assert "35" in verbose_output  # Input tokens
+        assert "24" in verbose_output  # Output tokens
+        assert "fs_server" in verbose_output  # MCP server info
+        assert "debug_server" in verbose_output
+        assert "connected" in verbose_output
+
+        # Verify verbose has more content than just-text
+        assert len(verbose_output) > len(just_text_output)
+
+        # Test 3: Raw verbosity level
+        args_raw = argparse.Namespace(
+            prompt="Test all verbosity levels", verbosity="raw"
+        )
+        result_raw = execute_prompt(args_raw)
+        raw_output = capsys.readouterr().out or ""
+
+        # Assert raw succeeds and contains complete debugging information
+        assert result_raw == 0
+        assert "Comprehensive test response for all verbosity levels" in raw_output
+
+        # Verify raw contains everything from verbose
+        assert "comprehensive-test-session-999" in raw_output
+        assert "2750" in raw_output or "2.75" in raw_output
+        assert "0.0567" in raw_output
+        assert "35" in raw_output
+        assert "24" in raw_output
+
+        # Verify raw-specific content (JSON serialization of SDK objects)
+        assert "req_comprehensive_test_abc123" in raw_output  # API metadata
+        assert "api.anthropic.com" in raw_output  # API endpoint
+        assert "session_initialization" in raw_output  # SDK object subtype
+        assert "comprehensive_complete" in raw_output  # Result message subtype
+        assert "SystemMessage" in raw_output  # SDK object type
+        assert "AssistantMessage" in raw_output
+        assert "ResultMessage" in raw_output
+
+        # Verify JSON structure patterns are present (successful serialization)
+        json_indicators = ["{", "}", '"', "[", "]"]
+        for indicator in json_indicators:
+            assert indicator in raw_output
+
+        # Verify raw has more content than verbose
+        assert len(raw_output) > len(verbose_output)
+
+        # Verify all API calls were made with the same prompt
+        assert mock_ask_claude.call_count == 3
+        for call in mock_ask_claude.call_args_list:
+            assert call[0][0] == "Test all verbosity levels"
+            assert call[0][1] == 30  # Timeout
+
+        # Final verification: No exceptions were raised during SDK object handling
+        # This confirms that both the verbose .get() AttributeError issue and
+        # the raw JSON serialization issue have been resolved
