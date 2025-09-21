@@ -264,11 +264,11 @@ class TestCLIEntryPoint:
 
         assert callable(main)
 
-    def test_main_can_be_imported_from_package(self) -> None:
-        """Test that main can be imported from package root."""
-        from mcp_coder import cli_main
+    def test_main_can_be_imported_from_cli_module(self) -> None:
+        """Test that main can be imported from CLI module."""
+        from mcp_coder.cli.main import main
 
-        assert callable(cli_main)
+        assert callable(main)
 
 
 class TestCLIIntegration:
