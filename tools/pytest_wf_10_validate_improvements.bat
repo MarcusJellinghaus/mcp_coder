@@ -40,21 +40,21 @@ echo MARKER-BASED PERFORMANCE TEST >> "%validation_output%"
 echo ============================================ >> "%validation_output%"
 echo. >> "%validation_output%"
 
-echo Testing slow test exclusion... >> "%validation_output%"
-echo Command: pytest -m "not slow" --durations=10 tests/ >> "%validation_output%"
+echo Testing integration test exclusion (from pyproject.toml)... >> "%validation_output%"
+echo Command: pytest -m "not git_integration and not claude_integration" --durations=10 tests/ >> "%validation_output%"
 echo. >> "%validation_output%"
-pytest -m "not slow" --durations=10 tests/ >> "%validation_output%" 2>&1
+pytest -m "not git_integration and not claude_integration" --durations=10 tests/ >> "%validation_output%" 2>&1
 
 echo. >> "%validation_output%"
 echo ============================================ >> "%validation_output%"
-echo SLOW TESTS ONLY >> "%validation_output%"
+echo INTEGRATION TESTS ONLY >> "%validation_output%"
 echo ============================================ >> "%validation_output%"
 echo. >> "%validation_output%"
 
-echo Testing slow tests only... >> "%validation_output%"
-echo Command: pytest -m "slow" --durations=0 tests/ >> "%validation_output%"
+echo Testing integration tests only... >> "%validation_output%"
+echo Command: pytest -m "git_integration or claude_integration" --durations=0 tests/ >> "%validation_output%"
 echo. >> "%validation_output%"
-pytest -m "slow" --durations=0 tests/ >> "%validation_output%" 2>&1
+pytest -m "git_integration or claude_integration" --durations=0 tests/ >> "%validation_output%" 2>&1
 
 if %ERRORLEVEL% neq 0 (
     echo.

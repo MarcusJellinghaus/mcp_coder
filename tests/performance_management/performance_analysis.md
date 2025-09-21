@@ -98,13 +98,10 @@
 ### Immediate Actions (High Priority)
 *Changes that can be implemented quickly with high impact*
 
-1. **Add Performance Markers**
-   ```python
-   @pytest.mark.slow
-   @pytest.mark.integration
-   def test_expensive_operation():
-       # Test code
-   ```
+1. **Add Markers from pyproject.toml**
+   - See `[tool.pytest.ini_options]` section for marker definitions
+   - Add appropriate markers to slow tests based on their category
+   - Follow marker usage guidelines in pyproject.toml
 
 2. **Optimize Specific Tests**
    - [Test name]: [Specific optimization]
@@ -112,11 +109,14 @@
 
 3. **Implement CI Optimizations**
    ```bash
-   # Fast CI pipeline
-   pytest -m "not slow and not integration"
+   # Fast CI pipeline (from pyproject.toml)
+   pytest -m "not git_integration and not claude_integration"
    
-   # Nightly full run
+   # Full test run
    pytest
+   
+   # Integration test groups
+   pytest -m "git_integration or claude_integration"
    ```
 
 ### Medium-Term Actions

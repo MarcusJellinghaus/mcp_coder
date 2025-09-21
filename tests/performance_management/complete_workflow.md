@@ -17,9 +17,9 @@ Analyze this pytest duration output and provide:
 
 [PASTE PYTEST DURATION OUTPUT HERE]
 
-1. **Top 10 Slowest Tests**: List with execution times and likely causes (database, network, file I/O, etc.)
+1. **Top 10 Slowest Tests**: List with execution times and likely causes (integration, file I/O, etc.)
 2. **Optimization Recommendations**: Specific suggestions for the slowest tests
-3. **Marker Strategy**: Suggest pytest markers for categorizing tests
+3. **Marker Strategy**: Use markers defined in pyproject.toml for categorizing tests
 4. **Priority Assessment**: Which tests to optimize first (high impact, low effort)
 
 Format with clear sections and actionable recommendations.
@@ -80,30 +80,26 @@ Provide:
 
 ## Recommended Marker Strategy
 
-Add these markers to slow tests:
-```python
-@pytest.mark.slow           # Tests >2 seconds
-@pytest.mark.very_slow      # Tests >10 seconds
-@pytest.mark.integration    # External system tests
-@pytest.mark.database       # Database operation tests
-@pytest.mark.network        # Network/API tests
-@pytest.mark.file_io        # File operation tests
-```
+Use the markers defined in `pyproject.toml`:
+- See `[tool.pytest.ini_options]` section for current marker definitions
+- Add appropriate markers to slow tests based on their category
+- Follow the usage comments in pyproject.toml for CI exclusion patterns
 
 ## CI Integration Commands
 
+Use the patterns defined in `pyproject.toml`:
+
 ```cmd
-# Fast CI (exclude slow tests)
-pytest -m "not slow"
+# Fast CI (exclude integration tests) - as documented in pyproject.toml
+pytest -m "not git_integration and not claude_integration"
 
 # Full test run
 pytest
 
-# Only slow tests
-pytest -m "slow"
-
-# Integration tests only
-pytest -m "integration"
+# Run specific integration test groups
+pytest -m "git_integration"
+pytest -m "claude_integration"
+pytest -m "git_integration or claude_integration"
 ```
 
 ## Files to Update

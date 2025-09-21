@@ -51,8 +51,8 @@ echo ============================================ >> "%marker_output%"
 echo. >> "%marker_output%"
 
 REM Search for performance-related markers specifically
-echo Searching for slow/performance markers... >> "%marker_output%"
-findstr /s /n /i "slow\|performance\|integration\|heavy" tests\*.py >> "%marker_output%" 2>nul
+echo Searching for pytest markers defined in pyproject.toml... >> "%marker_output%"
+findstr /s /n /i "git_integration\|claude_integration" tests\*.py >> "%marker_output%" 2>nul
 
 echo. >> "%marker_output%"
 echo ============================================ >> "%marker_output%"
@@ -61,8 +61,8 @@ echo ============================================ >> "%marker_output%"
 echo. >> "%marker_output%"
 
 REM Search for potential performance issues in test code
-echo Searching for database/network/file operations... >> "%marker_output%"
-findstr /s /n /i "sleep\|time\.sleep\|database\|db\|network\|requests\|open\|file\|subprocess" tests\*.py >> "%marker_output%" 2>nul
+echo Searching for potential performance issues... >> "%marker_output%"
+findstr /s /n /i "sleep\|time\.sleep\|requests\|subprocess\|claude" tests\*.py >> "%marker_output%" 2>nul
 
 if %ERRORLEVEL% neq 0 (
     echo.

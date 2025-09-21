@@ -63,35 +63,26 @@
 ## Marker Analysis
 
 ### Current Markers Found
-*List of pytest markers discovered in slow tests*
+*Pytest markers are defined in pyproject.toml*
 
-- `slow` - [COUNT] tests
-- `integration` - [COUNT] tests
-- `database` - [COUNT] tests
-- `network` - [COUNT] tests
-- `heavy` - [COUNT] tests
-- [Add others as discovered]
+- See `[tool.pytest.ini_options]` section in pyproject.toml for current marker definitions
+- Check marker usage patterns in actual test files below
+- [Update counts after analysis]
 
 ### Recommended Marker Strategy
-*Proposed marker improvements*
+*Use markers from pyproject.toml*
 
-1. **Standardize slow test markers**:
-   - `@pytest.mark.slow` for tests >2 seconds
-   - `@pytest.mark.very_slow` for tests >10 seconds
+1. **Follow pyproject.toml definitions**:
+   - See `[tool.pytest.ini_options]` markers section for current definitions
+   - Use the CI patterns documented in the comments
 
-2. **Category markers**:
-   - `@pytest.mark.integration`
-   - `@pytest.mark.database`
-   - `@pytest.mark.network`
-   - `@pytest.mark.file_io`
-
-3. **Exclusion patterns for CI**:
+2. **CI exclusion patterns** (from pyproject.toml):
    ```bash
-   # Fast CI run
-   pytest -m "not slow"
+   # Fast CI run (exclude integration tests)
+   pytest -m "not git_integration and not claude_integration"
    
-   # Full test run
-   pytest -m "slow or not slow"
+   # Run integration test groups
+   pytest -m "git_integration or claude_integration"
    ```
 
 ## Optimization Opportunities
