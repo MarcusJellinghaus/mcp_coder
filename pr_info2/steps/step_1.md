@@ -1,59 +1,54 @@
-# Step 1: Add SDK Object Detection Tests
+# Step 1: Core SDK Detection Test (Mock Test)
 
 ## LLM Prompt
 ```
-Based on the summary in pr_info2/steps/summary.md, implement Step 1 to add comprehensive tests for the _is_sdk_message() function. The current tests only verify non-SDK objects return False, but we need to test that actual SDK objects return True using controlled mocks.
+Based on the summary in pr_info2/steps/summary.md, implement the minimal Step 1 to add a focused test for the _is_sdk_message() function. This test should verify that the isinstance() logic works correctly with SDK objects using a simple mock.
 
-Focus on testing the isinstance() checks that are the core of the SDK object detection logic.
+Focus on testing the core logic that prevents the original AttributeError bug.
 ```
 
 ## WHERE
 - **Test File**: `tests/cli/commands/test_prompt_sdk_utilities.py`
-- **Test Class**: `TestSDKMessageDetection` (existing class, add new methods)
+- **Test Class**: `TestSDKMessageDetection` (existing class, add new method)
 
 ## WHAT
-- **Function**: `test_mocked_system_message_detection()`
-- **Function**: `test_mocked_assistant_message_detection()`
-- **Function**: `test_mocked_result_message_detection()`
+- **Function**: `test_sdk_message_detection_basic()`
 
 ## HOW
-- **Mocking Strategy**: Use `@patch` to mock SDK classes and test isinstance() behavior
-- **Import Addition**: `from unittest.mock import patch, MagicMock`
-- **Test Pattern**: Mock each SDK class, create instance, verify detection
+- **Mocking Strategy**: Use `@patch` to mock one SDK class and test isinstance() behavior
+- **Import Addition**: `from unittest.mock import patch`
+- **Test Pattern**: Mock SDK class, create instance, verify detection vs dictionary/None
 
 ## ALGORITHM
 ```python
-# SDK object detection testing with mocks
-1. Mock the SDK class (SystemMessage, AssistantMessage, or ResultMessage)
+# Minimal SDK object detection testing
+1. Mock the SystemMessage class 
 2. Create mock instance using mocked class
-3. Call _is_sdk_message() with mock instance
-4. Verify it returns True (isinstance check succeeds)
-5. Verify original isinstance() behavior is preserved
+3. Call _is_sdk_message() with mock instance, dictionary, and None
+4. Verify isinstance check works correctly for all cases
 ```
 
 ## DATA
-**Test Structure**:
+**Test Implementation**:
 ```python
 @patch('mcp_coder.cli.commands.prompt.SystemMessage')
-def test_mocked_system_message_detection(self, mock_system_message_class):
+def test_sdk_message_detection_basic(self, mock_system_message_class):
+    """Test that isinstance() logic works with SDK objects."""
     mock_instance = mock_system_message_class.return_value
-    result = _is_sdk_message(mock_instance)
-    assert result is True
+    
+    # Test our core isinstance() logic
+    assert _is_sdk_message(mock_instance) is True
+    assert _is_sdk_message({"role": "user"}) is False
+    assert _is_sdk_message(None) is False
 ```
-
-**Expected Results**:
-- `_is_sdk_message()` returns `True` for all mocked SDK objects
-- `isinstance()` checks work correctly with mocked classes
-- Tests verify the actual code path that was causing the original bug
 
 ## Integration Points
 - **Existing Tests**: Add to existing `TestSDKMessageDetection` class
-- **Mock Strategy**: Use controlled mocks rather than real SDK instances
-- **Coverage Gap**: Fill the missing SDK object detection test coverage
+- **Mock Strategy**: Simple single-class mock to validate isinstance() logic
+- **Coverage**: Validates the exact code path that prevents AttributeError
 
 ## Validation Criteria
-- Test verifies `_is_sdk_message()` returns `True` for SystemMessage mocks
-- Test verifies `_is_sdk_message()` returns `True` for AssistantMessage mocks  
-- Test verifies `_is_sdk_message()` returns `True` for ResultMessage mocks
-- Tests use proper mocking to avoid external dependencies
-- Tests validate the isinstance() logic that prevents AttributeError
+- Test verifies `_is_sdk_message()` returns `True` for mocked SDK objects
+- Test verifies `_is_sdk_message()` returns `False` for dictionaries and None
+- Test validates the isinstance() logic that was the core of the original bug fix
+- Implementation takes ~15 minutes
