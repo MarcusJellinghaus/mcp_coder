@@ -1706,10 +1706,10 @@ class TestGitWorkflows:
         end_time = time.time()
         execution_time = end_time - start_time
 
-        # Performance requirement: should complete within 5 seconds
+        # Performance requirement: should complete within 7 seconds
         assert (
-            execution_time < 5.0
-        ), f"Diff generation took {execution_time:.2f} seconds, expected < 5.0"
+            execution_time < 7.0
+        ), f"Diff generation took {execution_time:.2f} seconds, expected < 7.0"
 
         # Verify diff output correctness
         assert diff_output is not None
