@@ -64,7 +64,9 @@ def _is_sdk_message(message: Any) -> bool:
         return False
 
     # Check if it's one of the known SDK message types
-    return isinstance(message, (SystemMessage, AssistantMessage, ResultMessage, UserMessage))
+    return isinstance(
+        message, (SystemMessage, AssistantMessage, ResultMessage, UserMessage)
+    )
 
 
 def _get_message_role(message: Any) -> Optional[str]:
@@ -199,16 +201,22 @@ def _serialize_message_for_json(obj: Any) -> Any:
                                 content_data.append(
                                     {"type": "text", "text": getattr(block, "text", "")}
                                 )
-                            elif hasattr(block, "name") and hasattr(block, "input"):  # ToolUseBlock
-                                content_data.append({
-                                    "type": "tool_use",
-                                    "id": getattr(block, "id", ""),
-                                    "name": getattr(block, "name", ""),
-                                    "input": getattr(block, "input", {}),
-                                })
+                            elif hasattr(block, "name") and hasattr(
+                                block, "input"
+                            ):  # ToolUseBlock
+                                content_data.append(
+                                    {
+                                        "type": "tool_use",
+                                        "id": getattr(block, "id", ""),
+                                        "name": getattr(block, "name", ""),
+                                        "input": getattr(block, "input", {}),
+                                    }
+                                )
                             else:
                                 # Other block types - use string representation
-                                content_data.append({"type": "unknown", "data": str(block)})
+                                content_data.append(
+                                    {"type": "unknown", "data": str(block)}
+                                )
                     except (TypeError, AttributeError):
                         # Handle cases where content is not iterable or has issues
                         content_data.append({"type": "error", "data": str(content)})
@@ -227,23 +235,36 @@ def _serialize_message_for_json(obj: Any) -> Any:
                                 # Safely extract tool result content
                                 tool_content = getattr(block, "content", "")
                                 # Truncate very long content to prevent circular references
-                                if isinstance(tool_content, str) and len(tool_content) > 500:
-                                    tool_content = tool_content[:500] + "... [truncated]"
-                                content_data.append({
-                                    "type": "tool_result",
-                                    "tool_use_id": getattr(block, "tool_use_id", ""),
-                                    "content": str(tool_content),
-                                    "is_error": getattr(block, "is_error", False),
-                                })
+                                if (
+                                    isinstance(tool_content, str)
+                                    and len(tool_content) > 500
+                                ):
+                                    tool_content = (
+                                        tool_content[:500] + "... [truncated]"
+                                    )
+                                content_data.append(
+                                    {
+                                        "type": "tool_result",
+                                        "tool_use_id": getattr(
+                                            block, "tool_use_id", ""
+                                        ),
+                                        "content": str(tool_content),
+                                        "is_error": getattr(block, "is_error", False),
+                                    }
+                                )
                             else:
                                 # Other block types - use string representation, safely truncated
                                 block_str = str(block)
                                 if len(block_str) > 500:
                                     block_str = block_str[:500] + "... [truncated]"
-                                content_data.append({"type": "unknown", "data": block_str})
+                                content_data.append(
+                                    {"type": "unknown", "data": block_str}
+                                )
                     except (TypeError, AttributeError) as e:
                         # Handle cases where content is not iterable or has issues
-                        content_data.append({"type": "error", "data": f"Serialization error: {str(e)}"})
+                        content_data.append(
+                            {"type": "error", "data": f"Serialization error: {str(e)}"}
+                        )
                 return {
                     "type": "UserMessage",
                     "content": content_data,
@@ -266,7 +287,9 @@ def _serialize_message_for_json(obj: Any) -> Any:
                     return {"type": type(obj).__name__, "data": str(obj)}
                 except Exception as e:
                     # Log the error for debugging purposes
-                    logger.debug(f"Failed to serialize object {type(obj).__name__}: {e}")
+                    logger.debug(
+                        f"Failed to serialize object {type(obj).__name__}: {e}"
+                    )
                     # Final fallback for objects that can't be stringified
                     return {"type": "unknown", "data": "<unserializable object>"}
         # For non-SDK objects, return unchanged (let json.dumps handle them)
@@ -474,7 +497,9 @@ def _format_raw(response_data: Dict[str, Any]) -> str:
         # If serialization fails (e.g., circular reference), fall back to string representation
         formatted_parts.append(f"JSON serialization failed: {e}")
         formatted_parts.append(f"Response data type: {type(response_data)}")
-        formatted_parts.append(f"Response data keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Not a dict'}")
+        formatted_parts.append(
+            f"Response data keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Not a dict'}"
+        )
     formatted_parts.append("")
 
     # Raw Messages section with complete details
@@ -490,7 +515,9 @@ def _format_raw(response_data: Dict[str, Any]) -> str:
                 # If individual message serialization fails, show basic info
                 formatted_parts.append(f"Message serialization failed: {e}")
                 formatted_parts.append(f"Message type: {type(message)}")
-                formatted_parts.append(f"Message string representation: {str(message)[:200]}...")
+                formatted_parts.append(
+                    f"Message string representation: {str(message)[:200]}..."
+                )
             formatted_parts.append("")
     else:
         formatted_parts.append("  No raw messages available")

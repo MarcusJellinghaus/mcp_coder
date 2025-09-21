@@ -46,7 +46,10 @@ def _get_claude_search_paths() -> List[str]:
 
 
 def find_claude_executable(
-    *, test_execution: bool = False, return_none_if_not_found: bool = False, fast_mode: bool = True
+    *,
+    test_execution: bool = False,
+    return_none_if_not_found: bool = False,
+    fast_mode: bool = True,
 ) -> Optional[str]:
     """Find Claude Code CLI executable with flexible options.
 
