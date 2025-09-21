@@ -290,7 +290,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
             enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
 
         # Call Claude API using detailed function with user-specified timeout
-        timeout = getattr(args, "timeout", 60)
+        timeout = getattr(args, "timeout", 30)
         response_data = ask_claude_code_api_detailed_sync(enhanced_prompt, timeout)
 
         # Store response if requested
