@@ -8,6 +8,12 @@ from unittest.mock import Mock, mock_open, patch
 import pytest
 
 from mcp_coder.cli.commands.prompt import execute_prompt
+from mcp_coder.llm_providers.claude.claude_code_api import (
+    AssistantMessage,
+    ResultMessage,
+    SystemMessage,
+    TextBlock,
+)
 
 
 class TestExecutePrompt:
@@ -860,3 +866,184 @@ class TestExecutePrompt:
         assert "0.040" in captured_out  # Cost
         assert "30" in captured_out  # Input tokens
         assert "22" in captured_out  # Output tokens
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    def test_verbose_with_sdk_message_objects(
+        self,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test verbose output with actual SDK message objects (reproduces AttributeError)."""
+        # Create mock response with actual SDK message objects in raw_messages
+        # This should initially fail with: 'SystemMessage' object has no attribute 'get'
+        mock_response = {
+            "text": "SDK message test response",
+            "session_info": {
+                "session_id": "sdk-test-session",
+                "model": "claude-sonnet-4",
+                "tools": ["file_reader"],
+                "mcp_servers": [{"name": "test_server", "status": "connected"}],
+            },
+            "result_info": {
+                "duration_ms": 1500,
+                "cost_usd": 0.025,
+                "usage": {"input_tokens": 15, "output_tokens": 10},
+            },
+            "raw_messages": [
+                # Real SDK objects instead of dictionaries
+                SystemMessage(subtype="session_start", data={"model": "claude-sonnet-4"}),
+                AssistantMessage(
+                    content=[TextBlock(text="SDK response")],
+                    model="claude-sonnet-4"
+                ),
+                ResultMessage(
+                    subtype="conversation_complete",
+                    duration_ms=1500,
+                    duration_api_ms=800,
+                    is_error=False,
+                    num_turns=1,
+                    session_id="sdk-test-session",
+                    total_cost_usd=0.025
+                ),
+            ],
+        }
+        mock_ask_claude.return_value = mock_response
+
+        # Create test arguments with verbose verbosity
+        args = argparse.Namespace(prompt="Test SDK objects", verbosity="verbose")
+
+        # Execute the prompt command - this should initially fail with AttributeError
+        result = execute_prompt(args)
+
+        # After fix implementation, this should succeed
+        assert result == 0
+
+        # Verify Claude API was called
+        mock_ask_claude.assert_called_once_with("Test SDK objects", 30)
+
+        # Verify output contains the response
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert "SDK message test response" in captured_out
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    def test_raw_with_sdk_message_objects(
+        self,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test raw output with actual SDK message objects (reproduces JSON serialization error)."""
+        # Create mock response with actual SDK message objects in raw_messages
+        # This should initially fail with JSON serialization errors
+        mock_response = {
+            "text": "Raw SDK test response",
+            "session_info": {
+                "session_id": "raw-sdk-test",
+                "model": "claude-sonnet-4",
+                "tools": ["code_executor"],
+                "mcp_servers": [{"name": "executor_server", "status": "connected"}],
+            },
+            "result_info": {
+                "duration_ms": 2000,
+                "cost_usd": 0.030,
+                "usage": {"input_tokens": 20, "output_tokens": 12},
+            },
+            "raw_messages": [
+                # Real SDK objects that need custom JSON serialization
+                SystemMessage(subtype="initialization", data={"tools": ["code_executor"]}),
+                AssistantMessage(
+                    content=[TextBlock(text="Raw test response")],
+                    model="claude-sonnet-4"
+                ),
+                ResultMessage(
+                    subtype="final_result",
+                    duration_ms=2000,
+                    duration_api_ms=1200,
+                    is_error=False,
+                    num_turns=1,
+                    session_id="raw-sdk-test",
+                    total_cost_usd=0.030
+                ),
+            ],
+        }
+        mock_ask_claude.return_value = mock_response
+
+        # Create test arguments with raw verbosity
+        args = argparse.Namespace(prompt="Test raw SDK", verbosity="raw")
+
+        # Execute the prompt command - this should initially fail with JSON error
+        result = execute_prompt(args)
+
+        # After fix implementation, this should succeed
+        assert result == 0
+
+        # Verify Claude API was called
+        mock_ask_claude.assert_called_once_with("Test raw SDK", 30)
+
+        # Verify output contains the response
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert "Raw SDK test response" in captured_out
+
+    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    def test_tool_interaction_extraction_sdk_objects(
+        self,
+        mock_ask_claude: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test tool interaction extraction from SDK message objects."""
+        # Create mock response with SDK objects that have tool interactions
+        # This tests the specific tool extraction logic that fails with .get()
+        mock_response = {
+            "text": "Tool interaction test",
+            "session_info": {
+                "session_id": "tool-test-session",
+                "model": "claude-sonnet-4",
+                "tools": ["file_writer", "bash"],
+                "mcp_servers": [{"name": "fs_server", "status": "connected"}],
+            },
+            "result_info": {
+                "duration_ms": 1800,
+                "cost_usd": 0.028,
+                "usage": {"input_tokens": 18, "output_tokens": 14},
+            },
+            "raw_messages": [
+                SystemMessage(subtype="session_start", data={"model": "claude-sonnet-4"}),
+                # This AssistantMessage should have tool calls that verbose mode extracts
+                AssistantMessage(
+                    content=[
+                        TextBlock(text="I'll create a file for you"),
+                        # Note: Real SDK might have ToolUseBlock objects here
+                        # but for this test we're focusing on the message.get() issue
+                    ],
+                    model="claude-sonnet-4"
+                ),
+                ResultMessage(
+                    subtype="complete",
+                    duration_ms=1800,
+                    duration_api_ms=1000,
+                    is_error=False,
+                    num_turns=1,
+                    session_id="tool-test-session",
+                    total_cost_usd=0.028
+                ),
+            ],
+        }
+        mock_ask_claude.return_value = mock_response
+
+        # Create test arguments with verbose verbosity to trigger tool extraction
+        args = argparse.Namespace(prompt="Create a file", verbosity="verbose")
+
+        # Execute the prompt command - this should initially fail in tool extraction
+        result = execute_prompt(args)
+
+        # After fix implementation, this should succeed
+        assert result == 0
+
+        # Verify Claude API was called
+        mock_ask_claude.assert_called_once_with("Create a file", 30)
+
+        # Verify output contains the response
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert "Tool interaction test" in captured_out
