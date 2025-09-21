@@ -6,11 +6,114 @@ import logging
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from ...llm_providers.claude.claude_code_api import ask_claude_code_api_detailed_sync
+from ...llm_providers.claude.claude_code_api import (
+    AssistantMessage,
+    ResultMessage,
+    SystemMessage,
+    ask_claude_code_api_detailed_sync,
+)
 
 logger = logging.getLogger(__name__)
+
+
+# Utility functions for SDK message object handling
+def _is_sdk_message(message: Any) -> bool:
+    """Check if message is a Claude SDK object vs dictionary.
+
+    Args:
+        message: Message object to check
+
+    Returns:
+        True if message is a Claude SDK object, False if dictionary
+    """
+    # Check if it's one of the known SDK message types
+    return isinstance(message, (SystemMessage, AssistantMessage, ResultMessage))
+
+
+def _get_message_role(message: Any) -> Optional[str]:
+    """Get role from message (SDK object or dict).
+
+    Args:
+        message: Message object (SDK object or dictionary)
+
+    Returns:
+        Role string ("assistant", "user", etc.) or None if not available
+    """
+    if _is_sdk_message(message):
+        # For SDK objects, check for role attribute or infer from type
+        if hasattr(message, "role"):
+            role_value = getattr(message, "role", None)
+            if isinstance(role_value, str):
+                return role_value
+        # Infer role from SDK message type
+        if isinstance(message, AssistantMessage):
+            return "assistant"
+        elif isinstance(message, SystemMessage):
+            return "system"
+        elif isinstance(message, ResultMessage):
+            return "result"
+        return None
+    else:
+        # For dictionaries, use .get() method with fallback
+        if isinstance(message, dict):
+            return message.get("role")
+        return None
+
+
+def _get_message_tool_calls(message: Any) -> List[Dict[str, Any]]:
+    """Get tool calls from message (SDK object or dict).
+
+    Args:
+        message: Message object (SDK object or dictionary)
+
+    Returns:
+        List of tool call dictionaries
+    """
+    if _is_sdk_message(message):
+        # For SDK objects, check for content with ToolUseBlock objects
+        if isinstance(message, AssistantMessage) and hasattr(message, "content"):
+            tool_calls: List[Dict[str, Any]] = []
+            for block in message.content:
+                # Check if this is a tool use block (will implement in later steps)
+                # For now, return empty list as we're focusing on fixing .get() errors
+                pass
+            return tool_calls
+        return []
+    else:
+        # For dictionaries, use .get() method with fallback
+        if isinstance(message, dict):
+            tool_calls_result = message.get("tool_calls", [])
+            if isinstance(tool_calls_result, list):
+                return tool_calls_result
+        return []
+
+
+def _extract_tool_interactions(raw_messages: List[Any]) -> List[str]:
+    """Extract tool interaction summaries from raw messages.
+
+    Args:
+        raw_messages: List of message objects (SDK objects or dictionaries)
+
+    Returns:
+        List of tool interaction summary strings
+    """
+    tool_interactions = []
+
+    for message in raw_messages:
+        # Use unified accessor to get role
+        role = _get_message_role(message)
+        if role == "assistant":
+            # Use unified accessor to get tool calls
+            tool_calls = _get_message_tool_calls(message)
+            for tool_call in tool_calls:
+                if isinstance(tool_call, dict):
+                    tool_name = tool_call.get("name", "unknown_tool")
+                    tool_params = tool_call.get("parameters", {})
+                    tool_interactions.append(f"  - {tool_name}: {tool_params}")
+
+    return tool_interactions
 
 
 def execute_prompt(args: argparse.Namespace) -> int:
@@ -213,15 +316,9 @@ def _format_verbose(response_data: Dict[str, Any]) -> str:
     input_tokens = usage.get("input_tokens", 0)
     output_tokens = usage.get("output_tokens", 0)
 
-    # Extract tool interactions from raw messages
+    # Extract tool interactions from raw messages using utility functions
     raw_messages = response_data.get("raw_messages", [])
-    tool_interactions = []
-    for message in raw_messages:
-        if message.get("role") == "assistant" and "tool_calls" in message:
-            for tool_call in message.get("tool_calls", []):
-                tool_name = tool_call.get("name", "unknown_tool")
-                tool_params = tool_call.get("parameters", {})
-                tool_interactions.append(f"  - {tool_name}: {tool_params}")
+    tool_interactions = _extract_tool_interactions(raw_messages)
 
     # Build formatted output sections
     formatted_parts = []

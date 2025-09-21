@@ -28,7 +28,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [ ] **Step 2**: Create Utilities & Fix Verbose Output (Minimal Working Fix) - [step_2.md](steps/step_2.md)
+- [x] **Step 2**: Create Utilities & Fix Verbose Output (Minimal Working Fix) - [step_2.md](steps/step_2.md)
   - Create 4 utility functions for SDK object handling
   - Fix `_format_verbose()` to use utilities and resolve AttributeError
   - Add basic integration test
