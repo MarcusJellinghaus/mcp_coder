@@ -29,6 +29,10 @@ def _is_sdk_message(message: Any) -> bool:
     Returns:
         True if message is a Claude SDK object, False if dictionary
     """
+    # Handle None values gracefully
+    if message is None:
+        return False
+
     # Check if it's one of the known SDK message types
     return isinstance(message, (SystemMessage, AssistantMessage, ResultMessage))
 
@@ -42,6 +46,10 @@ def _get_message_role(message: Any) -> Optional[str]:
     Returns:
         Role string ("assistant", "user", etc.) or None if not available
     """
+    # Handle None values gracefully
+    if message is None:
+        return None
+
     if _is_sdk_message(message):
         # For SDK objects, check for role attribute or infer from type
         if hasattr(message, "role"):
@@ -72,14 +80,20 @@ def _get_message_tool_calls(message: Any) -> List[Dict[str, Any]]:
     Returns:
         List of tool call dictionaries
     """
+    # Handle None values gracefully
+    if message is None:
+        return []
+
     if _is_sdk_message(message):
         # For SDK objects, check for content with ToolUseBlock objects
         if isinstance(message, AssistantMessage) and hasattr(message, "content"):
             tool_calls: List[Dict[str, Any]] = []
-            for block in message.content:
-                # Check if this is a tool use block (will implement in later steps)
-                # For now, return empty list as we're focusing on fixing .get() errors
-                pass
+            content = getattr(message, "content", None)
+            if content is not None:
+                for block in content:
+                    # Check if this is a tool use block (will implement in later steps)
+                    # For now, return empty list as we're focusing on fixing .get() errors
+                    pass
             return tool_calls
         return []
     else:
@@ -100,6 +114,10 @@ def _serialize_message_for_json(obj: Any) -> Any:
     Returns:
         JSON-serializable representation using official SDK structure
     """
+    # Handle None values gracefully
+    if obj is None:
+        return None
+
     if _is_sdk_message(obj):
         # Use official SDK structure for serialization
         if isinstance(obj, SystemMessage):
@@ -110,13 +128,20 @@ def _serialize_message_for_json(obj: Any) -> Any:
             }
         elif isinstance(obj, AssistantMessage):
             content_data = []
-            if hasattr(obj, "content") and obj.content:
-                for block in obj.content:
-                    if hasattr(block, "text"):  # TextBlock
-                        content_data.append({"type": "text", "text": block.text})
-                    else:
-                        # Other block types - use string representation
-                        content_data.append({"type": "unknown", "data": str(block)})
+            content = getattr(obj, "content", None)
+            if content is not None:
+                try:
+                    for block in content:
+                        if hasattr(block, "text"):  # TextBlock
+                            content_data.append(
+                                {"type": "text", "text": getattr(block, "text", "")}
+                            )
+                        else:
+                            # Other block types - use string representation
+                            content_data.append({"type": "unknown", "data": str(block)})
+                except (TypeError, AttributeError):
+                    # Handle cases where content is not iterable or has issues
+                    content_data.append({"type": "error", "data": str(content)})
             return {
                 "type": "AssistantMessage",
                 "content": content_data,
@@ -134,8 +159,12 @@ def _serialize_message_for_json(obj: Any) -> Any:
                 "total_cost_usd": getattr(obj, "total_cost_usd", None),
             }
         else:
-            # Fallback for unknown SDK message types
-            return {"type": type(obj).__name__, "data": str(obj)}
+            # Fallback for unknown SDK message types or malformed objects
+            try:
+                return {"type": type(obj).__name__, "data": str(obj)}
+            except Exception:
+                # Final fallback for objects that can't be stringified
+                return {"type": "unknown", "data": "<unserializable object>"}
     # For non-SDK objects, use default serialization
     return obj
 
@@ -149,19 +178,32 @@ def _extract_tool_interactions(raw_messages: List[Any]) -> List[str]:
     Returns:
         List of tool interaction summary strings
     """
-    tool_interactions = []
+    tool_interactions: List[str] = []
+
+    # Handle None or empty list gracefully
+    if not raw_messages:
+        return tool_interactions
 
     for message in raw_messages:
-        # Use unified accessor to get role
-        role = _get_message_role(message)
-        if role == "assistant":
-            # Use unified accessor to get tool calls
-            tool_calls = _get_message_tool_calls(message)
-            for tool_call in tool_calls:
-                if isinstance(tool_call, dict):
-                    tool_name = tool_call.get("name", "unknown_tool")
-                    tool_params = tool_call.get("parameters", {})
-                    tool_interactions.append(f"  - {tool_name}: {tool_params}")
+        # Skip None messages
+        if message is None:
+            continue
+
+        try:
+            # Use unified accessor to get role
+            role = _get_message_role(message)
+            if role == "assistant":
+                # Use unified accessor to get tool calls
+                tool_calls = _get_message_tool_calls(message)
+                for tool_call in tool_calls:
+                    if isinstance(tool_call, dict):
+                        tool_name = tool_call.get("name", "unknown_tool")
+                        tool_params = tool_call.get("parameters", {})
+                        tool_interactions.append(f"  - {tool_name}: {tool_params}")
+        except (AttributeError, TypeError, KeyError) as e:
+            # Log the error but continue processing other messages
+            logger.debug(f"Error processing message for tool interactions: {e}")
+            continue
 
     return tool_interactions
 
