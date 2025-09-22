@@ -2,9 +2,9 @@
 
 ## LLM Prompt
 ```
-Implement focused tests for the new --continue-from-last CLI parameter integration in test_prompt.py only. Tests should cover argument processing, mutual exclusivity, and integration with the file discovery utility.
+Implement focused tests for the new --continue CLI parameter integration in test_prompt.py only. Tests should cover argument processing, mutual exclusivity, and integration with the file discovery utility.
 
-Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue-from-last parameter for mcp-coder prompt command.
+Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue parameter for mcp-coder prompt command.
 
 This is step 4 of 7: Test-driven development for CLI integration, focusing only on test_prompt.py (Decision #2).
 ```
@@ -18,9 +18,9 @@ This is step 4 of 7: Test-driven development for CLI integration, focusing only 
 Add test methods for CLI integration:
 
 ```python
-def test_continue_from_last_success(self) -> None:
-def test_continue_from_last_no_files(self) -> None:
-def test_continue_from_last_with_user_feedback(self) -> None:
+def test_continue_success(self) -> None:
+def test_continue_no_files(self) -> None:
+def test_continue_with_user_feedback(self) -> None:
 def test_mutual_exclusivity_handled_by_argparse(self) -> None:
 ```
 
@@ -44,9 +44,9 @@ def test_mutual_exclusivity_handled_by_argparse(self) -> None:
 **Test Argument Structures**:
 ```python
 # Success case
-args_continue_last = argparse.Namespace(
+args_continue = argparse.Namespace(
     prompt="Follow up question",
-    continue_from_last=True,
+    continue=True,
     continue_from=None,  # Mutual exclusivity
     verbosity="just-text"
 )
@@ -54,7 +54,7 @@ args_continue_last = argparse.Namespace(
 # No files case
 args_no_files = argparse.Namespace(
     prompt="Test question",
-    continue_from_last=True,
+    continue=True,
     continue_from=None
 )
 ```
@@ -70,7 +70,7 @@ mock_find_latest.return_value = None
 
 **Expected Behaviors**:
 - **Success**: Claude API called with enhanced context prompt + user feedback shown
-- **No files**: Error message "No previous response files found" and exit code 1
+- **No files**: Info message "No previous response files found, starting new conversation" and continue execution
 - **Mutual exclusivity**: Handled automatically by argparse (no custom validation needed)
 - **Integration**: Same continuation logic as existing `--continue-from`
-- **User feedback**: Selected filename displayed to user (Decision #6)
+- **User feedback**: Selected filename displayed to user (Decision #11)

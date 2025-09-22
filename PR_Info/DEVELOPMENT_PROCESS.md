@@ -112,14 +112,14 @@ Please offer, whenever possible, simple options like
 
 Wait for end of discussion
 ```
-
----
 Please summarise changes you want to do to the project plan for confirmation 
 ( one liner bullet points)
----
-Please ask me whether I agree (Y/N)
----
+and
+please ask me whether I agree (Y/N)
+```
+
 After the agreement:
+```
 Can you update the plan by updating the different files in folder `pr_info`
 (including creating the `steps/` subfolder for implementation details)
 Please do targeted changes.

@@ -2,9 +2,9 @@
 
 ## LLM Prompt
 ```
-Run comprehensive code quality checks and final validation for the --continue-from-last parameter implementation. Ensure all tests pass, code follows style guidelines, and the feature works end-to-end with the refactored help system.
+Run comprehensive code quality checks and final validation for the --continue parameter implementation. Ensure all tests pass, code follows style guidelines, and the feature works end-to-end with the refactored help system.
 
-Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue-from-last parameter for mcp-coder prompt command.
+Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue parameter for mcp-coder prompt command.
 
 This is step 7 of 7: Final validation and cleanup after implementing the complete feature.
 ```
@@ -50,26 +50,26 @@ black src/mcp_coder/cli/commands/prompt.py src/mcp_coder/cli/main.py src/mcp_cod
 - test_find_latest_response_file_success()
 - test_find_latest_response_file_edge_cases()
 - test_find_latest_response_file_sorting_and_validation()
-- test_continue_from_last_success()
-- test_continue_from_last_no_files()
-- test_continue_from_last_with_user_feedback()
+- test_continue_success()
+- test_continue_no_files()
+- test_continue_with_user_feedback()
 - test_mutual_exclusivity_handled_by_argparse()
 ```
 
 **Manual Test Commands**:
 ```bash
 # Test new parameter
-mcp-coder prompt "Test question" --continue-from-last
+mcp-coder prompt "Test question" --continue
 
 # Test mutual exclusivity (should error)
-mcp-coder prompt "Test" --continue-from file.json --continue-from-last
+mcp-coder prompt "Test" --continue-from file.json --continue
 
 # Test help system (refactored)
 mcp-coder help
 mcp-coder prompt --help
 
 # Test user feedback
-mcp-coder prompt "Test" --continue-from-last  # Should show selected file
+mcp-coder prompt "Test" --continue  # Should show selected file
 ```
 
 **Success Criteria**:

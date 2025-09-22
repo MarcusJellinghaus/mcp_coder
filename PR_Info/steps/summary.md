@@ -1,15 +1,15 @@
-# Implementation Summary: Add --continue-from-last Parameter
+# Implementation Summary: Add --continue Parameter
 
 ## Overview
-Add a new `--continue-from-last` parameter to the `mcp-coder prompt` command that automatically finds and continues from the most recent response file in the `.mcp-coder/responses/` directory.
+Add a new `--continue` parameter to the `mcp-coder prompt` command that automatically finds and continues from the most recent response file in the `.mcp-coder/responses/` directory.
 
 ## Feature Requirements
-- **New CLI Parameter**: `--continue-from-last` flag (no arguments)
+- **New CLI Parameter**: `--continue` flag (no arguments)
 - **Automatic File Discovery**: Find the most recent `response_*.json` file in `.mcp-coder/responses/`
 - **Strict File Validation**: Only files with proper ISO timestamp pattern (`response_2025-09-19T14-30-22.json`)
 - **User Feedback**: Show which file was selected for transparency
-- **Mutual Exclusivity**: Cannot use both `--continue-from` and `--continue-from-last` together
-- **Error Handling**: Show info "No previous response files found" when no files exist
+- **Mutual Exclusivity**: Cannot use both `--continue-from` and `--continue` together
+- **Error Handling**: Show info "No previous response files found, starting new conversation" and continue with empty context
 - **Documentation**: Update README.md, CLI help text, and refactor help system
 
 ## Technical Approach

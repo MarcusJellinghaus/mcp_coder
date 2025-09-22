@@ -47,3 +47,39 @@ Decisions made during project plan review and discussion for the --continue-from
 **Decision**: Keep 6 implementation steps, add help refactoring as new Step 1
 - Total: 7 steps (including help system refactoring)
 - **Rationale**: Maintain granular approach while addressing help system first
+
+## Updated Decisions from Final Review
+
+### 9. Parameter Name Change
+**Decision**: Change parameter name from `--continue-from-last` to `--continue`
+- **Rationale**: Shorter, cleaner, easier to type while maintaining clarity
+
+### 10. Error Handling for No Files
+**Decision**: Continue execution with empty context instead of exit code 1
+- Show info message: "No previous response files found, starting new conversation"
+- **Rationale**: More user-friendly, allows seamless workflow continuation
+
+### 11. User Feedback Detail Level
+**Decision**: Keep both count and filename display
+- Format: "Found X previous sessions, continuing from: filename"
+- **Rationale**: Provides full transparency and context to users
+
+### 12. File Pattern Validation
+**Decision**: Maintain strict ISO timestamp validation
+- Only accept files matching: `response_YYYY-MM-DDTHH-MM-SS.json`
+- **Rationale**: Ensures predictable sorting and reliable behavior
+
+### 13. Directory Configuration
+**Decision**: Keep hardcoded `.mcp-coder/responses/` directory
+- No environment variables or command line configuration
+- **Rationale**: Simplicity for initial implementation
+
+### 14. Implementation Approach
+**Decision**: Design only for current `--continue` feature
+- No over-engineering for future session management features
+- **Rationale**: Implement what's needed now, refactor later if required
+
+### 15. Step Order and Structure
+**Decision**: Keep current 7-step implementation order exactly as planned
+- Maintain granular approach with separate testing and implementation steps
+- **Rationale**: Proven structure, clear separation of concerns

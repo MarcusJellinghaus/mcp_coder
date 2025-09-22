@@ -4,7 +4,7 @@
 ```
 Implement the _find_latest_response_file() utility function with strict ISO timestamp validation and user feedback. The function should only accept properly formatted response files and show which file was selected.
 
-Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue-from-last parameter for mcp-coder prompt command.
+Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue parameter for mcp-coder prompt command.
 
 This is step 3 of 7: Implementing the core utility function with strict validation after TDD from step 2.
 ```
@@ -67,6 +67,6 @@ print(f"Found {len(valid_files)} previous sessions, continuing from: {selected_f
 
 **Return Values**:
 - **Success**: `"/path/to/.mcp-coder/responses/response_2025-09-19T14-30-22.json"`
-- **No directory/files**: `None` (with info message per Decision #4)
-- **No valid files**: `None` (strict validation)
+- **No directory/files**: `None` (caller handles info message and continues)
+- **No valid files**: `None` (strict validation, caller handles continuation)
 - **Error cases**: `None` (with logging)

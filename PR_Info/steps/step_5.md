@@ -2,9 +2,9 @@
 
 ## LLM Prompt
 ```
-Implement the CLI integration for --continue-from-last parameter. Add the argument to the parser with mutual exclusivity validation, and integrate with the existing prompt execution logic using the strict validation utility function.
+Implement the CLI integration for --continue parameter. Add the argument to the parser with mutual exclusivity validation, and integrate with the existing prompt execution logic using the strict validation utility function.
 
-Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue-from-last parameter for mcp-coder prompt command.
+Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue parameter for mcp-coder prompt command.
 
 This is step 5 of 7: Implementing CLI integration after TDD from step 4.
 ```
@@ -18,7 +18,7 @@ This is step 5 of 7: Implementing CLI integration after TDD from step 4.
 **Main modifications**:
 ```python
 # In main.py
-# Add mutually exclusive group and --continue-from-last parameter
+# Add mutually exclusive group and --continue parameter
 
 # In prompt.py  
 def execute_prompt(args: argparse.Namespace) -> int:
@@ -26,7 +26,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
 ```
 
 ## HOW
-- **Argument Group**: Use argparse mutually exclusive group for `--continue-from` and `--continue-from-last`
+- **Argument Group**: Use argparse mutually exclusive group for `--continue-from` and `--continue`
 - **Integration Point**: Modify existing continue_from logic in `execute_prompt()`
 - **Error Handling**: Show info message "No previous response files found" per Decision #4
 - **User Feedback**: Let utility function handle showing selected file per Decision #6
@@ -34,8 +34,8 @@ def execute_prompt(args: argparse.Namespace) -> int:
 ## ALGORITHM
 ```
 1. CREATE mutually exclusive argument group in parser
-2. ADD --continue-from-last flag to the group
-3. MODIFY execute_prompt() to check continue_from_last flag
+2. ADD --continue flag to the group
+3. MODIFY execute_prompt() to check continue flag
 4. CALL _find_latest_response_file() if flag is set
 5. HANDLE None return with specific error message
 6. INTEGRATE with existing _load_previous_chat() logic
@@ -52,7 +52,7 @@ continue_group.add_argument(
     help="Continue from previous stored session file"
 )
 continue_group.add_argument(
-    "--continue-from-last", 
+    "--continue", 
     action="store_true",
     help="Continue from the most recent stored session (auto-finds latest response file)"
 )
@@ -64,11 +64,11 @@ continue_group.add_argument(
 continue_file_path = None
 if getattr(args, "continue_from", None):
     continue_file_path = args.continue_from
-elif getattr(args, "continue_from_last", False):
+elif getattr(args, "continue", False):
     continue_file_path = _find_latest_response_file()
     if continue_file_path is None:
-        print("No previous response files found")  # Decision #4
-        return 1
+        print("No previous response files found, starting new conversation")  # Decision #10
+        # Continue execution with empty context instead of returning
         
 if continue_file_path:
     # Use existing continuation logic
@@ -77,6 +77,6 @@ if continue_file_path:
 ```
 
 **Error Handling**:
-- **No files found**: "No previous response files found" (Decision #4)
-- **Directory missing**: Same error message (handled by utility function)
+- **No files found**: "No previous response files found, starting new conversation" (Decision #10)
+- **Directory missing**: Same info message, continue execution (handled by utility function)
 - **Mutual exclusivity**: Handled automatically by argparse

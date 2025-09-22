@@ -4,7 +4,7 @@
 ```
 Implement focused tests for a utility function that finds the most recent response file in .mcp-coder/responses/ directory. Use 3 core test methods with strict file validation and comprehensive edge case coverage.
 
-Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - we're implementing --continue-from-last parameter for mcp-coder prompt command.
+Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - we're implementing --continue parameter for mcp-coder prompt command.
 
 This is step 2 of 7: Test-driven development for the core utility function with reduced complexity.
 ```
@@ -64,7 +64,7 @@ test_files = [
 
 **Expected Return Values**:
 - **Success**: Full path to latest valid response file
-- **No directory**: `None`
-- **No valid files**: `None` 
+- **No directory**: `None` (caller will show info message and continue)
+- **No valid files**: `None` (caller will show info message and continue)
 - **Mixed files**: Path to latest valid response file only (strict validation)
 - **Invalid formats**: `None` (ignores files that don't match ISO pattern)
