@@ -34,7 +34,7 @@ def test_mutual_exclusivity_handled_by_argparse(self) -> None:
 ## ALGORITHM
 ```
 1. MOCK _find_latest_response_file() with controlled responses
-2. CREATE args with continue_from_last=True
+2. CREATE args with continue=True
 3. CALL execute_prompt() and verify behavior
 4. TEST user feedback is displayed correctly
 5. VERIFY integration with existing continue_from logic

@@ -1,7 +1,7 @@
 # Implementation Decisions
 
 ## Overview
-Decisions made during project plan review and discussion for the --continue-from-last parameter feature.
+Decisions made during project plan review and discussion for the --continue parameter feature.
 
 ## Key Decisions
 
@@ -33,7 +33,7 @@ Decisions made during project plan review and discussion for the --continue-from
 - **Rationale**: Ensure reliable sorting and avoid confusion
 
 ### 6. User Feedback
-**Decision**: Show which file was selected when using `--continue-from-last`
+**Decision**: Show which file was selected when using `--continue`
 - Display selected filename to user
 - **Rationale**: Helpful for user awareness and debugging
 
@@ -51,7 +51,7 @@ Decisions made during project plan review and discussion for the --continue-from
 ## Updated Decisions from Final Review
 
 ### 9. Parameter Name Change
-**Decision**: Change parameter name from `--continue-from-last` to `--continue`
+**Decision**: Use parameter name `--continue` consistently
 - **Rationale**: Shorter, cleaner, easier to type while maintaining clarity
 
 ### 10. Error Handling for No Files

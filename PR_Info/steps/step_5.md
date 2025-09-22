@@ -1,4 +1,4 @@
-# Step 5: Implement CLI Integration for --continue-from-last
+# Step 5: Implement CLI Integration for --continue
 
 ## LLM Prompt
 ```
@@ -22,7 +22,7 @@ This is step 5 of 7: Implementing CLI integration after TDD from step 4.
 
 # In prompt.py  
 def execute_prompt(args: argparse.Namespace) -> int:
-    # Add logic to handle continue_from_last with error message per Decision #4
+    # Add logic to handle continue with error message per Decision #4
 ```
 
 ## HOW

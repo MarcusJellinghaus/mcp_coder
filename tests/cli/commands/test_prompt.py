@@ -1193,59 +1193,59 @@ class TestExecutePrompt:
         """Test that argument structure supports mutual exclusivity design.
 
         This test verifies the argument structure that will be used in Step 5
-        when --continue-from-last is implemented. The actual argparse validation
+        when --continue is implemented. The actual argparse validation
         happens at the CLI level using mutually_exclusive_group().
         """
         # Test that we can create valid argument combinations for future implementation
 
-        # Valid: continue_from_last=True, continue_from=None (future implementation)
+        # Valid: continue_last=True, continue_from=None (current implementation)
         args_continue = argparse.Namespace(
-            prompt="Follow up question", continue_from_last=True, continue_from=None
+            prompt="Follow up question", continue_last=True, continue_from=None
         )
-        assert args_continue.continue_from_last is True
+        assert args_continue.continue_last is True
         assert args_continue.continue_from is None
 
-        # Valid: continue_from_last=None/False, continue_from="path" (current implementation)
+        # Valid: continue_last=False, continue_from="path" (existing implementation)
         args_continue_from = argparse.Namespace(
             prompt="Follow up question",
-            continue_from_last=False,
+            continue_last=False,
             continue_from="path/to/file.json",
         )
-        assert args_continue_from.continue_from_last is False
+        assert args_continue_from.continue_last is False
         assert args_continue_from.continue_from == "path/to/file.json"
 
         # Valid: Neither option set (normal operation)
         args_normal = argparse.Namespace(
-            prompt="Normal question", continue_from_last=False, continue_from=None
+            prompt="Normal question", continue_last=False, continue_from=None
         )
-        assert args_normal.continue_from_last is False
+        assert args_normal.continue_last is False
         assert args_normal.continue_from is None
 
         # Verify that the argument patterns are consistent and support mutual exclusivity
         # This ensures Step 5 implementation will work correctly
         # Using explicit boolean checks to satisfy mypy
         assert not (
-            bool(args_continue.continue_from_last) and bool(args_continue.continue_from)
+            bool(args_continue.continue_last) and bool(args_continue.continue_from)
         )
         assert not (
-            bool(args_continue_from.continue_from_last)
+            bool(args_continue_from.continue_last)
             and bool(args_continue_from.continue_from)
         )
         assert not (
-            bool(args_normal.continue_from_last) and bool(args_normal.continue_from)
+            bool(args_normal.continue_last) and bool(args_normal.continue_from)
         )
 
     def test_continue_success_integration(self) -> None:
-        """Test CLI integration for --continue-from-last success case with file discovery and user feedback.
+        """Test CLI integration for --continue success case with file discovery and user feedback.
 
         This test focuses on the CLI integration aspects that will be implemented in Step 5:
-        - Test argument processing with continue_from_last=True
+        - Test argument processing with continue=True
         - Verify integration with existing continuation logic using continue_from
         - Test user feedback functionality
 
         Since Step 5 hasn't been implemented yet, this test simulates the expected
         integration by testing the current continue_from functionality that will be
-        leveraged by the new --continue-from-last argument.
+        leveraged by the new --continue argument.
         """
         with (
             patch(
@@ -1426,7 +1426,7 @@ class TestExecutePrompt:
     def test_continue_with_user_feedback_integration(self) -> None:
         """Test CLI integration with user feedback showing selected filename.
 
-        This test verifies that when --continue-from-last finds a file,
+        This test verifies that when --continue finds a file,
         the user sees clear feedback about which file was selected.
 
         Since Step 5 hasn't been implemented yet, this test verifies:
