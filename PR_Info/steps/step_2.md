@@ -2,13 +2,13 @@
 
 ## LLM Prompt
 ```
-Based on the Code Formatters Implementation Summary, implement Step 2: Create a configuration reader that parses pyproject.toml to extract Black and isort settings. This should provide a clean interface for accessing tool configurations with proper defaults.
+Based on the Code Formatters Implementation Summary, implement Step 2 using TDD: First write comprehensive unit tests for configuration reading from pyproject.toml, including edge cases and line-length conflict warnings. Then implement minimal config reader functions to pass the tests.
 ```
 
 ## WHERE
-- `src/mcp_coder/formatters/config_reader.py` - Configuration parsing logic
-- `tests/formatters/test_config_reader.py` - Unit tests for config parsing
-- `tests/formatters/test_data/` - Test pyproject.toml files
+- `tests/formatters/test_config_reader.py` - **START HERE: Write unit tests first (TDD)**
+- `tests/formatters/test_data/` - Test pyproject.toml files for various scenarios
+- `src/mcp_coder/formatters/config_reader.py` - Minimal configuration parsing (implement after tests)
 
 ## WHAT
 ### Main Functions
@@ -76,12 +76,37 @@ from .models import FormatterConfig
 - Default target directories: `["src", "tests"]` (only existing ones)
 
 ### Configuration Validation
-- Simple warning if `tool.black.line-length` != `tool.isort.line_length`
+- **Simple warning implementation**: Check if `tool.black.line-length` != `tool.isort.line_length`
+- Log warning message if conflict detected (~10 lines of code)
 - No complex conflict resolution - just inform users of potential issues
+- **Decision**: Implement as decided - helpful user feedback without complexity
 
-## Tests Required
-1. Test parsing valid pyproject.toml with both tool sections
-2. Test parsing with missing tool sections (should use defaults)
-3. Test parsing with missing pyproject.toml file
-4. Test configuration conflict warning (different line lengths)
-5. Test target directory detection (only existing directories)
+## Tests Required (TDD - Write These First!)
+1. **Valid pyproject.toml parsing**
+   - Both tool.black and tool.isort sections present
+   - Various configuration combinations
+   - Custom line lengths, target versions, profiles
+
+2. **Missing sections handling**
+   - Missing tool.black section (use defaults)
+   - Missing tool.isort section (use defaults)
+   - Empty tool sections
+
+3. **Missing pyproject.toml file**
+   - Should return defaults gracefully
+   - No errors thrown
+
+4. **Line-length conflict warning** 
+   - Different line-length values between Black/isort
+   - Same line-length values (no warning)
+   - Missing line-length in one tool (no warning)
+
+5. **Target directory handling**
+   - Default ["src", "tests"] when directories exist
+   - Custom target directories from config
+   - Non-existent directories filtered out
+
+6. **Error handling**
+   - Malformed TOML files
+   - Invalid configuration values
+   - Graceful degradation to defaults

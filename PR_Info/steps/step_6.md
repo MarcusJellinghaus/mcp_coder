@@ -2,14 +2,14 @@
 
 ## LLM Prompt
 ```
-Based on the Code Formatters Implementation Summary, implement Step 6: Create comprehensive tests for all formatter functionality, add the formatter_integration pytest marker, and ensure all code quality checks pass. This includes creating test data files and integration tests.
+Based on the Code Formatters Implementation Summary, implement Step 6: Create comprehensive test data files, add the formatter_integration pytest marker to pyproject.toml, and run all quality assurance checks (pylint, pytest, mypy) to ensure the TDD-implemented formatter system passes all quality gates.
 ```
 
 ## WHERE
-- `pyproject.toml` - Add `formatter_integration` pytest marker
-- `tests/formatters/` - All test files (created in previous steps)
-- `tests/formatters/test_data/` - Test data and sample code files
-- `tests/formatters/conftest.py` - Test fixtures and configuration
+- `pyproject.toml` - Add `formatter_integration` pytest marker (update markers list)
+- `tests/formatters/test_data/` - Test data and sample code files for integration tests
+- `tests/formatters/conftest.py` - Test fixtures and configuration for TDD tests
+- **Note**: Individual test files already created in steps 1-5 using TDD approach
 
 ## WHAT
 ### Test Data Files
@@ -20,19 +20,20 @@ Based on the Code Formatters Implementation Summary, implement Step 6: Create co
 # Edge cases and error conditions
 ```
 
-### Integration Test Functions
+### Integration Test Functions (Already Created in Previous Steps)
 ```python
+# These tests were already written in steps 3-5 using TDD approach:
 @pytest.mark.formatter_integration
 def test_black_formatter_integration():
-    """Test Black formatter with real files"""
+    """Test Black formatter with real files - stdout parsing"""
 
 @pytest.mark.formatter_integration  
 def test_isort_formatter_integration():
-    """Test isort formatter with real files"""
+    """Test isort formatter with real files - API change detection"""
     
 @pytest.mark.formatter_integration
 def test_combined_formatting_workflow():
-    """Test running both formatters together"""
+    """Test format_code() with both formatters"""
 ```
 
 ### Quality Assurance Functions
@@ -106,8 +107,9 @@ from myproject.models import Model
 - Different target directories
 - Missing tool sections
 
-### pytest Markers Update
+### pytest Markers Update (pyproject.toml)
 ```toml
+[tool.pytest.ini_options]
 markers = [
     "git_integration: tests with file system git operations (repos, commits)", 
     "claude_integration: tests requiring Claude CLI/API (network, auth needed)",
@@ -115,26 +117,26 @@ markers = [
 ]
 ```
 
-## Tests Required
-1. **Integration tests with formatter_integration marker:**
-   - Test Black formatting of badly formatted code
-   - Test isort sorting of mixed import styles
-   - Test both formatters on same project
-   - Test with custom configuration from pyproject.toml
-   - Test with missing target directories
-   - Test performance with larger codebases
+## Tasks Required (Final Integration)
+1. **Test data creation:**
+   - Create sample unformatted Python files for Black testing
+   - Create sample files with unsorted imports for isort testing
+   - Create various pyproject.toml configurations for config testing
+   - Create conftest.py with shared fixtures
    
-2. **Error handling and edge cases:**
-   - Test with syntax errors in Python files (fail fast)
-   - Test with missing pyproject.toml
-   - Test with read-only files
+2. **pytest marker configuration:**
+   - Add `formatter_integration` to pyproject.toml markers
+   - Verify marker is applied to appropriate tests
+   - Test that marker filtering works correctly
    
-3. **Quality assurance verification:**
-   - All pylint checks pass (errors/fatal only)
-   - All pytest tests pass including `formatter_integration` marker
-   - All mypy type checking passes
+3. **Quality assurance execution:**
+   - Run `mcp__checker__run_pylint_check` - must pass (errors/fatal only)
+   - Run `mcp__checker__run_pytest_check` - all tests including integration
+   - Run `mcp__checker__run_mypy_check` - strict type checking must pass
+   - Fix any issues found by quality checks
 
-4. **Documentation and examples:**
-   - Add docstring examples for main API functions
-   - Verify all public functions have proper type hints
-   - Test that imports work as documented
+4. **Final verification:**
+   - Test complete workflow: install → import → use formatters
+   - Verify all TDD-created tests pass
+   - Confirm all decided features are implemented
+   - Document any remaining limitations or future enhancements

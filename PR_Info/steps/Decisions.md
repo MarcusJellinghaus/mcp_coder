@@ -84,3 +84,111 @@ This document records the decisions made during project plan review to simplify 
 
 ## Result
 The simplified plan maintains all core objectives while reducing implementation complexity by approximately 40-50%, focusing on essential functionality and following KISS principles throughout.
+
+
+---
+
+# Updated Project Plan Decisions - September 2025
+
+## Overview
+Additional decisions made during detailed project plan review to further optimize the implementation approach while maintaining all functionality.
+
+## Refined Implementation Decisions
+
+### 1. API Design - Combined + Individual Functions
+**Decision:** Include both individual and simple combined functions
+- **Chosen:** Option B - Individual functions + simple 10-line combined wrapper
+- **Rationale:** Combined function just calls the two others and aggregates results - very simple
+- **Implementation:** `format_code()` calls `format_with_black()` and `format_with_isort()`, returns dict
+- **Impact:** Maximum user flexibility with minimal code overhead
+
+### 2. Configuration Warning - Line Length Conflicts
+**Decision:** Add simple line-length conflict warning
+- **Chosen:** Option B - Simple warning when Black/isort line lengths differ
+- **Rationale:** Helpful user feedback without complex validation
+- **Implementation:** ~10 lines of code to compare `tool.black.line-length` vs `tool.isort.line_length`
+- **Impact:** Minimal complexity, useful user guidance
+
+### 3. Configuration Implementation - Minimal Module
+**Decision:** Simplified config_reader.py module
+- **Chosen:** Option C - Minimal config reader with basic TOML parsing
+- **Rationale:** Good balance of organization without over-engineering
+- **Implementation:** Simple functions to read tool configs from pyproject.toml
+- **Impact:** Clean code organization, reduced complexity vs original plan
+
+### 4. Data Models - Keep Type Safety
+**Decision:** Retain FormatterConfig dataclass
+- **Chosen:** Option A - Keep structured FormatterConfig dataclass
+- **Rationale:** Type safety and self-documenting interfaces worth the small overhead
+- **Implementation:** ~10 lines for dataclass, provides clear API contracts
+- **Impact:** Better maintainability and IDE support
+
+### 5. Error Handling - Fail Fast
+**Decision:** Simplest possible error handling
+- **Chosen:** Option A - Fail fast with basic try/catch
+- **Rationale:** Most simple approach, clear behavior
+- **Implementation:** Single try/catch per formatter, return error in FormatterResult
+- **Impact:** Minimal error handling code, predictable behavior
+
+### 6. Change Detection - Parse Tool Outputs
+**Decision:** Use tool outputs directly instead of file modification times
+- **Chosen:** Option A - Parse Black stdout + use isort API returns
+- **Rationale:** Get change information "for free" from tools themselves
+- **Implementation:** Parse `"reformatted file.py"` from Black, use `isort.api.sort_file()` boolean
+- **Impact:** Eliminates all file modification time complexity, more accurate
+
+### 7. Testing Scope - Core Functionality First
+**Decision:** Focus on essential tests initially
+- **Chosen:** Option A - Core functionality + basic error cases (~15-20 tests)
+- **Rationale:** Get working system quickly, expand tests as needed
+- **Implementation:** Happy path, basic config, simple error scenarios
+- **Impact:** Faster initial development, maintainable test suite
+
+### 8. Project Structure - Minimal Files
+**Decision:** 5-file structure without separate utils.py
+- **Chosen:** Option A - Minimal structure (models, config, black, isort, __init__)
+- **Rationale:** Keep it simple, inline utilities where needed
+- **Implementation:** `get_python_files()` can be in formatter files or inlined
+- **Impact:** Fewer files to manage, simpler project organization
+
+### 9. Implementation Approach - Test-Driven Development
+**Decision:** TDD step-by-step learning approach
+- **Chosen:** Custom Option D - Write tests first, then implement each component
+- **Rationale:** Learning-focused, ensures robust implementation
+- **Implementation:** Models→Config→Black→isort→API, tests before code each step
+- **Impact:** Better understanding, higher code quality, incremental progress
+
+## Final Architecture Summary
+
+### Project Structure
+```
+src/mcp_coder/formatters/
+├── __init__.py           # Exports + format_code() wrapper (~20 lines)
+├── models.py             # FormatterResult, FormatterConfig, FileChange (~30 lines)
+├── config_reader.py      # Simple TOML reading + line-length warning (~40 lines)
+├── black_formatter.py    # Black implementation with stdout parsing (~60 lines)
+└── isort_formatter.py    # isort API implementation (~50 lines)
+```
+
+### Key Simplifications Achieved
+- **Tool output parsing** eliminates complex change detection
+- **Fail-fast error handling** reduces error management code
+- **Simple combined API** provides flexibility without complexity
+- **TDD approach** ensures quality while learning
+- **Minimal file structure** reduces organizational overhead
+
+### Maintained Capabilities
+✅ Full Black and isort formatting functionality
+✅ Configuration from pyproject.toml
+✅ Detailed change reporting (which files modified)
+✅ Both individual and combined formatter APIs
+✅ Type-safe interfaces with proper error handling
+✅ Comprehensive test coverage with integration tests
+✅ Simple line-length conflict warnings
+
+## Implementation Impact
+- **~60% reduction** in total code lines vs original plan
+- **~70% reduction** in complexity (fewer edge cases, simpler logic)
+- **Maintained 100%** of core functionality requirements
+- **TDD approach** ensures robust, well-tested implementation
+- **Learning-optimized** step-by-step progression

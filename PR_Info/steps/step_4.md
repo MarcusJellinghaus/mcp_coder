@@ -2,13 +2,13 @@
 
 ## LLM Prompt
 ```
-Based on the Code Formatters Implementation Summary, implement Step 4: Create the isort formatter using isort's Python API for efficient import sorting. This should integrate with pyproject.toml configuration and provide the same detailed feedback as the Black formatter.
+Based on the Code Formatters Implementation Summary, implement Step 4 using TDD: First write comprehensive unit and integration tests for isort formatting using the Python API with direct change detection. Then implement the isort formatter to pass the tests using isort.api.sort_file() return values for change detection.
 ```
 
 ## WHERE
-- `src/mcp_coder/formatters/isort_formatter.py` - isort formatting implementation  
-- `tests/formatters/test_isort_formatter.py` - Unit and integration tests
-- Update `tests/formatters/test_data/sample_code/` - Add files with unsorted imports
+- `tests/formatters/test_isort_formatter.py` - **START HERE: Write unit and integration tests first (TDD)**
+- `tests/formatters/test_data/sample_code/` - Add files with unsorted imports for testing
+- `src/mcp_coder/formatters/isort_formatter.py` - isort implementation with API change detection (implement after tests)
 
 ## WHAT
 ### Main Functions
@@ -78,10 +78,12 @@ changed = isort.api.sort_file(file_path, config=isort_config)
    - Test isort API integration (mocked)
    
 2. **Integration tests (formatter_integration marker):**
-   - Test sorting unsorted imports
-   - Test sorting already sorted imports (no changes)
+   - Test sorting unsorted imports (verify `isort.api.sort_file()` returns True)
+   - Test sorting already sorted imports (verify returns False)
    - Test with float_to_top configuration
    - Test with profile="black" compatibility
    - Test with mixed import styles (relative, absolute, third-party)
    - Test error handling with syntax errors in imports
    - Test with custom isort configuration from pyproject.toml
+   - Test isort.Config object creation from FormatterConfig
+   - Test file-by-file processing and change aggregation

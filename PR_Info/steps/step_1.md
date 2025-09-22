@@ -2,14 +2,14 @@
 
 ## LLM Prompt
 ```
-Based on the Code Formatters Implementation Summary, implement Step 1: Create the basic project structure and data models for the formatters module. Focus on creating clean, type-safe data structures that will support the formatting workflow.
+Based on the Code Formatters Implementation Summary, implement Step 1 using TDD: First write comprehensive unit tests for the data models (FormatterResult, FormatterConfig, FileChange), then implement the models to pass the tests. Focus on creating clean, type-safe data structures with simplified change detection using tool output parsing.
 ```
 
 ## WHERE
-- `src/mcp_coder/formatters/__init__.py` - Package initialization and main API
-- `src/mcp_coder/formatters/models.py` - Data structures and types
-- `tests/formatters/test_models.py` - Unit tests for data models
-- `pyproject.toml` - Add new pytest marker
+- `tests/formatters/test_models.py` - **START HERE: Write unit tests first (TDD)**
+- `src/mcp_coder/formatters/models.py` - Data structures and types (implement after tests)
+- `src/mcp_coder/formatters/__init__.py` - Package initialization (basic exports only)
+- `pyproject.toml` - Add `formatter_integration` pytest marker
 
 ## WHAT
 ### Main Functions/Classes
@@ -59,18 +59,33 @@ from ..utils.subprocess_runner import CommandResult
 
 ### FormatterResult  
 - `success: bool` - Whether formatting completed successfully
-- `files_changed: List[FileChange]` - List of files that were modified
+- `files_changed: List[FileChange]` - Files modified (parsed from tool outputs)
 - `execution_time_ms: int` - Time taken to complete formatting
+- `formatter_name: str` - Name of formatter used ("black" or "isort")
 - `error_message: Optional[str]` - Error details if failed
-- `formatter_name: str` - Name of formatter used
-- `command_result: Optional[CommandResult]` - Raw subprocess result
+- **Removed:** `command_result` field (not needed with simplified approach)
 
 ### FileChange
 - `file_path: Path` - Path to the changed file
 - `had_changes: bool` - Whether the file was actually modified
 
-## Tests Required
-1. Test data model creation and validation
-2. Test FormatterResult with various scenarios (success, failure, no changes)
-3. Test FileChange simple change detection
-4. Test FormatterConfig validation
+## Tests Required (TDD - Write These First!)
+1. **FormatterConfig creation and validation**
+   - Test with various tool names and settings
+   - Test with different target directories
+   - Test invalid configurations
+
+2. **FormatterResult scenarios** 
+   - Success with file changes
+   - Success with no changes
+   - Failure with error message
+   - Various execution times
+
+3. **FileChange data structure**
+   - File path handling
+   - Change status tracking
+   - Path validation
+
+4. **Data model integration**
+   - Test that all models work together
+   - Test serialization/deserialization if needed

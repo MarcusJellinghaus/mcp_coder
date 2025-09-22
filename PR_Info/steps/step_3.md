@@ -2,14 +2,14 @@
 
 ## LLM Prompt
 ```
-Based on the Code Formatters Implementation Summary, implement Step 3: Create the Black formatter that can format Python files, detect changes, and provide detailed feedback. Use the simplified approach of running Black directly and comparing before/after states.
+Based on the Code Formatters Implementation Summary, implement Step 3 using TDD: First write comprehensive unit and integration tests for Black formatting with stdout parsing for change detection. Then implement the Black formatter to pass the tests using simplified tool output parsing instead of file modification times.
 ```
 
 ## WHERE
-- `src/mcp_coder/formatters/black_formatter.py` - Black formatting implementation
-- `src/mcp_coder/formatters/utils.py` - Common formatting utilities
-- `tests/formatters/test_black_formatter.py` - Unit and integration tests
-- `tests/formatters/test_data/sample_code/` - Sample Python files for testing
+- `tests/formatters/test_black_formatter.py` - **START HERE: Write unit and integration tests first (TDD)**
+- `tests/formatters/test_data/sample_code/` - Sample Python files for testing (unformatted code)
+- `src/mcp_coder/formatters/black_formatter.py` - Black implementation with stdout parsing (implement after tests)
+- **Note**: Inline `get_python_files()` utility directly in this file (no separate utils.py)
 
 ## WHAT
 ### Main Functions
@@ -19,8 +19,9 @@ def format_with_black(project_root: Path, target_dirs: Optional[List[str]] = Non
 
 # Note: _get_python_files will be moved to utils.py in step 5
     
-def _detect_black_changes(py_files: List[Path]) -> List[FileChange]:
-    """Run Black and detect which files were changed using modification time"""
+def _parse_black_output(stdout: str) -> List[Path]:
+    """Parse Black stdout to find files that were reformatted"""
+    # Parse lines like 'reformatted /path/to/file.py'
     
 def _build_black_command(config: FormatterConfig) -> List[str]:
     """Build Black command with configuration options"""
@@ -35,10 +36,9 @@ def _build_black_command(config: FormatterConfig) -> List[str]:
 
 ### Dependencies
 ```python
-import time
-import os
+import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 from ..utils.subprocess_runner import execute_command
 from .models import FormatterConfig, FormatterResult, FileChange
 from .config_reader import get_black_config
@@ -47,11 +47,11 @@ from .config_reader import get_black_config
 ## ALGORITHM
 ```
 1. Load Black configuration from pyproject.toml
-2. Get list of Python files in target directories
-3. Capture modification times before formatting
-4. Build and execute Black command using subprocess_runner
-5. Compare modification times to detect changed files
-6. Return FormatterResult with success status and simple change list
+2. Get list of Python files in target directories (inline utility function)
+3. Build and execute Black command using subprocess_runner
+4. Parse Black's stdout for 'reformatted file.py' lines
+5. Create FileChange objects for reformatted files
+6. Return FormatterResult with success status and parsed change list
 ```
 
 ## DATA
@@ -61,10 +61,12 @@ from .config_reader import get_black_config
 - Add `--target-version` from config  
 - Add target directories as arguments
 
-### File Detection
-- Find `.py` files recursively in target directories
-- Use file modification time to detect changes after Black runs
-- Simple change detection - no complex hashing or diff generation
+### Change Detection (Updated Approach)
+- Parse Black stdout for lines containing 'reformatted'
+- Extract file paths from formatted output lines
+- Create FileChange objects for each reformatted file
+- Much simpler than file modification time tracking
+- More accurate since it comes directly from Black
 
 ### Return Values
 - `FormatterResult` with:
@@ -81,9 +83,10 @@ from .config_reader import get_black_config
    - Test change detection logic
    
 2. **Integration tests (formatter_integration marker):**
-   - Test formatting unformatted Python code
-   - Test formatting already formatted code (no changes)
+   - Test formatting unformatted Python code (parse 'reformatted' output)
+   - Test formatting already formatted code (no 'reformatted' output)
    - Test with missing target directories
-   - Test with invalid Python syntax
-   - Test with custom Black configuration
-   - Test error handling when Black fails
+   - Test with invalid Python syntax (Black error handling)
+   - Test with custom Black configuration from pyproject.toml
+   - Test stdout parsing with various Black output formats
+   - Test error handling when Black command fails
