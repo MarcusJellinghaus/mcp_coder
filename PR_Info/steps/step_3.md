@@ -17,11 +17,11 @@ Based on the Code Formatters Implementation Summary, implement Step 3: Create th
 def format_with_black(project_root: Path, target_dirs: Optional[List[str]] = None) -> FormatterResult:
     """Format code using Black and return detailed results"""
 
-def _capture_file_states(directories: List[Path]) -> Dict[Path, str]:
-    """Capture content hashes of Python files before formatting"""
+def _get_python_files(directories: List[Path]) -> List[Path]:
+    """Get list of Python files in target directories"""
     
-def _detect_changes(before_states: Dict[Path, str], directories: List[Path]) -> List[FileChange]:
-    """Compare file states to detect what changed during formatting"""
+def _detect_black_changes(py_files: List[Path]) -> List[FileChange]:
+    """Run Black and detect which files were changed using modification time"""
     
 def _build_black_command(config: FormatterConfig) -> List[str]:
     """Build Black command with configuration options"""
@@ -36,8 +36,8 @@ def _build_black_command(config: FormatterConfig) -> List[str]:
 
 ### Dependencies
 ```python
-import hashlib
 import time
+import os
 from pathlib import Path
 from typing import Dict, List, Optional
 from ..utils.subprocess_runner import execute_command
@@ -48,11 +48,11 @@ from .config_reader import get_black_config
 ## ALGORITHM
 ```
 1. Load Black configuration from pyproject.toml
-2. Capture content hashes of all Python files in target directories
-3. Build and execute Black command using subprocess_runner
-4. Compare file states to detect changes
-5. Generate FileChange objects for modified files with diffs
-6. Return FormatterResult with success status and change details
+2. Get list of Python files in target directories
+3. Capture modification times before formatting
+4. Build and execute Black command using subprocess_runner
+5. Compare modification times to detect changed files
+6. Return FormatterResult with success status and simple change list
 ```
 
 ## DATA
@@ -64,8 +64,8 @@ from .config_reader import get_black_config
 
 ### File Detection
 - Find `.py` files recursively in target directories
-- Calculate SHA-256 hash of file content for comparison
-- Generate unified diff for changed files
+- Use file modification time to detect changes after Black runs
+- Simple change detection - no complex hashing or diff generation
 
 ### Return Values
 - `FormatterResult` with:

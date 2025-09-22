@@ -24,7 +24,7 @@ class FormatterResult:
     
 @dataclass
 class FileChange:
-    """Details about changes made to a file"""
+    """Simple record of file changes during formatting"""
 ```
 
 ## HOW
@@ -68,9 +68,6 @@ from ..utils.subprocess_runner import CommandResult
 ### FileChange
 - `file_path: Path` - Path to the changed file
 - `had_changes: bool` - Whether the file was actually modified
-- `diff: Optional[str]` - Diff showing changes (if available)
-- `before_hash: Optional[str]` - Hash of content before formatting
-- `after_hash: Optional[str]` - Hash of content after formatting
 
 ## Tests Required
 1. Test data model creation and validation

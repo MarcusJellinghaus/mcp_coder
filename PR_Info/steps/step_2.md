@@ -75,11 +75,13 @@ from .models import FormatterConfig
 - Empty dict if pyproject.toml missing or malformed
 - Default target directories: `["src", "tests"]` (only existing ones)
 
+### Configuration Validation
+- Simple warning if `tool.black.line-length` != `tool.isort.line_length`
+- No complex conflict resolution - just inform users of potential issues
+
 ## Tests Required
 1. Test parsing valid pyproject.toml with both tool sections
 2. Test parsing with missing tool sections (should use defaults)
 3. Test parsing with missing pyproject.toml file
-4. Test parsing with malformed TOML
-5. Test default configuration application
-6. Test target directory detection (only existing directories)
-7. Test integration with actual project pyproject.toml
+4. Test configuration conflict warning (different line lengths)
+5. Test target directory detection (only existing directories)

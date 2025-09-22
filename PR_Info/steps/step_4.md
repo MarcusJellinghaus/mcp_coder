@@ -16,14 +16,11 @@ Based on the Code Formatters Implementation Summary, implement Step 4: Create th
 def format_with_isort(project_root: Path, target_dirs: Optional[List[str]] = None) -> FormatterResult:
     """Format imports using isort API and return detailed results"""
 
-def _apply_isort_to_files(py_files: List[Path], isort_config: Dict[str, Any]) -> List[FileChange]:
-    """Apply isort to individual files and track changes"""
+def _apply_isort_to_files(py_files: List[Path], isort_config) -> List[FileChange]:
+    """Apply isort to files using isort.api.sort_file() and detect changes"""
     
-def _convert_config_to_isort_settings(config: FormatterConfig) -> Dict[str, Any]:
-    """Convert FormatterConfig to isort-compatible settings dict"""
-    
-def _get_python_files(directories: List[Path]) -> List[Path]:
-    """Recursively find all Python files in directories"""
+def _convert_config_to_isort_settings(config: FormatterConfig):
+    """Convert FormatterConfig to isort.Config object"""
 ```
 
 ## HOW
@@ -36,21 +33,21 @@ def _get_python_files(directories: List[Path]) -> List[Path]:
 ### Dependencies
 ```python
 import isort
+import isort.api
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import List, Optional
 from .models import FormatterConfig, FormatterResult, FileChange
 from .config_reader import get_isort_config
-from .utils import capture_file_states, detect_changes
 ```
 
 ## ALGORITHM
 ```
 1. Load isort configuration from pyproject.toml  
-2. Convert config to isort.Config object with proper settings
+2. Convert config to isort.Config object
 3. Find all Python files in target directories
-4. Capture file states before processing
-5. Apply isort.api.sort_file() to each Python file
-6. Detect changes and generate FileChange objects with diffs
+4. Apply isort.api.sort_file() to each file (returns whether file changed)
+5. Collect FileChange objects for files that were modified
+6. Return FormatterResult with success status and change list
 ```
 
 ## DATA
@@ -62,11 +59,9 @@ from .utils import capture_file_states, detect_changes
 
 ### isort API Usage
 ```python
-# Check if file needs sorting
-result = isort.api.check_file(file_path, config=isort_config)
-
-# Sort file in place  
+# Sort file and detect if it changed
 changed = isort.api.sort_file(file_path, config=isort_config)
+# Returns True if file was modified, False if no changes needed
 ```
 
 ### Return Values

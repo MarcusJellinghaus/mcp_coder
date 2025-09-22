@@ -125,21 +125,14 @@ markers = [
    - Test performance with larger codebases
    
 2. **Error handling and edge cases:**
-   - Test with syntax errors in Python files
-   - Test with binary files in target directories
+   - Test with syntax errors in Python files (fail fast)
    - Test with missing pyproject.toml
-   - Test with malformed pyproject.toml
    - Test with read-only files
-   - Test with symlinks and special files
    
 3. **Quality assurance verification:**
    - All pylint checks pass (errors/fatal only)
-   - All pytest markers run successfully:
-     - Unit tests: `pytest -m "not git_integration and not claude_integration and not formatter_integration"`
-     - Formatter tests: `pytest -m "formatter_integration"`  
-     - Integration tests: `pytest -m "git_integration or claude_integration"`
+   - All pytest tests pass including `formatter_integration` marker
    - All mypy type checking passes
-   - Test coverage meets requirements
 
 4. **Documentation and examples:**
    - Add docstring examples for main API functions
