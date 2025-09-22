@@ -5,7 +5,7 @@ import json
 import os
 import shutil
 import tempfile
-from typing import Callable, Optional
+from typing import Any, Dict, List, Optional
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -16,6 +16,118 @@ from mcp_coder.cli.commands.prompt import _find_latest_response_file, execute_pr
 
 class TestExecutePrompt:
     """Tests for execute_prompt function."""
+
+    # Test constants to avoid magic strings
+    FAKE_RESPONSE_PATH = "/fake/path/response_2025-09-19T14-30-22.json"
+    FAKE_SESSION_ID = "test-session-456"
+    DEFAULT_MODEL = "claude-sonnet-4"
+
+    VALID_TIMESTAMPS = [
+        "response_2025-09-19T14-30-20.json",
+        "response_2025-09-19T14-30-22.json",
+        "response_2025-09-19T14-30-25.json",
+    ]
+
+    INVALID_FILES = [
+        "response_abc_2025.json",
+        "other_file.json",
+        "response_invalid.json",
+    ]
+
+    @pytest.fixture
+    def sample_stored_response(self) -> Dict[str, Any]:
+        """Standard stored response data for continuation tests."""
+        return {
+            "prompt": "How do I create a Python file?",
+            "response_data": {
+                "text": "Here's how to create a Python file.",
+                "session_info": {
+                    "session_id": "previous-session-456",
+                    "model": self.DEFAULT_MODEL,
+                    "tools": ["file_writer"],
+                    "mcp_servers": [{"name": "fs_server", "status": "connected"}],
+                },
+                "result_info": {
+                    "duration_ms": 1500,
+                    "cost_usd": 0.025,
+                    "usage": {"input_tokens": 15, "output_tokens": 12},
+                },
+                "raw_messages": [
+                    {"role": "user", "content": "How do I create a Python file?"},
+                    {
+                        "role": "assistant",
+                        "content": "Here's how to create a Python file.",
+                    },
+                ],
+            },
+            "metadata": {
+                "timestamp": "2025-09-19T10:30:00Z",
+                "working_directory": "/test/dir",
+                "model": self.DEFAULT_MODEL,
+            },
+        }
+
+    @pytest.fixture
+    def sample_claude_response(self) -> Dict[str, Any]:
+        """Standard Claude API response for tests."""
+        return {
+            "text": "Now let's also add some error handling to that file.",
+            "session_info": {
+                "session_id": "continuation-session-789",
+                "model": self.DEFAULT_MODEL,
+                "tools": ["file_writer", "code_analyzer"],
+                "mcp_servers": [{"name": "fs_server", "status": "connected"}],
+            },
+            "result_info": {
+                "duration_ms": 1800,
+                "cost_usd": 0.030,
+                "usage": {"input_tokens": 25, "output_tokens": 18},
+            },
+            "raw_messages": [],
+        }
+
+    def _setup_file_discovery_mocks(
+        self,
+        mock_find_latest: Mock,
+        mock_exists: Mock,
+        mock_file_open: Mock,
+        return_file: Optional[str] = None,
+        stored_response: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Set up common mocks for file discovery tests."""
+        if return_file is None:
+            return_file = self.FAKE_RESPONSE_PATH
+
+        mock_find_latest.return_value = return_file
+        mock_exists.return_value = return_file is not None
+
+        if return_file and stored_response:
+            mock_file_open.return_value.read.return_value = json.dumps(stored_response)
+
+    def _create_test_files_in_temp_dir(
+        self, temp_dir: str, filenames: List[str]
+    ) -> None:
+        """Create test response files in temporary directory."""
+        for filename in filenames:
+            file_path = os.path.join(temp_dir, filename)
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump({"test": "data", "filename": filename}, f)
+
+    def _create_continue_args(
+        self,
+        prompt: str = "Test prompt",
+        continue_from: Optional[str] = None,
+        continue_flag: bool = False,
+        verbosity: str = "just-text",
+    ) -> argparse.Namespace:
+        """Create standardized argument namespace for continue tests."""
+        args = argparse.Namespace(prompt=prompt, verbosity=verbosity)
+
+        # Set continue options
+        setattr(args, "continue_from", continue_from)
+        setattr(args, "continue", continue_flag)
+
+        return args
 
     @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
     def test_basic_prompt_success(
@@ -868,17 +980,8 @@ class TestExecutePrompt:
     def test_find_latest_response_file_success(self) -> None:
         """Test successful discovery of latest response file with proper sorting."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create test response files with different timestamps
-            test_files = [
-                "response_2025-09-19T14-30-20.json",  # Oldest
-                "response_2025-09-19T14-30-22.json",  # Middle
-                "response_2025-09-19T14-30-25.json",  # Latest (expected result)
-            ]
-
-            for filename in test_files:
-                file_path = os.path.join(temp_dir, filename)
-                with open(file_path, "w", encoding="utf-8") as f:
-                    json.dump({"test": "data"}, f)
+            # Use constants and helper method
+            self._create_test_files_in_temp_dir(temp_dir, self.VALID_TIMESTAMPS)
 
             # Call the function
             result = _find_latest_response_file(temp_dir)
@@ -921,20 +1024,9 @@ class TestExecutePrompt:
     def test_find_latest_response_file_mixed_valid_invalid(self) -> None:
         """Test file discovery ignores invalid files and selects latest valid file."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create mix of valid and invalid response files
-            test_files = [
-                "response_2025-09-19T14-30-22.json",  # Valid - middle timestamp
-                "response_2025-09-19T14-30-20.json",  # Valid - oldest timestamp
-                "response_2025-09-19T14-30-25.json",  # Valid - latest timestamp (expected)
-                "response_abc_2025.json",  # Invalid format
-                "response_not_iso.json",  # Invalid format
-                "other_file.json",  # Not a response file
-            ]
-
-            for filename in test_files:
-                file_path = os.path.join(temp_dir, filename)
-                with open(file_path, "w", encoding="utf-8") as f:
-                    json.dump({"test": "data", "filename": filename}, f)
+            # Use constants and helper method
+            test_files = self.VALID_TIMESTAMPS + self.INVALID_FILES
+            self._create_test_files_in_temp_dir(temp_dir, test_files)
 
             # Call the function
             result = _find_latest_response_file(temp_dir)
@@ -1036,17 +1128,8 @@ class TestExecutePrompt:
     ) -> None:
         """Test that user feedback message shows correct count and filename."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create exactly 3 valid files to test the count
-            test_files = [
-                "response_2025-09-19T14-30-20.json",
-                "response_2025-09-19T14-30-22.json",
-                "response_2025-09-19T14-30-25.json",  # Latest
-            ]
-
-            for filename in test_files:
-                file_path = os.path.join(temp_dir, filename)
-                with open(file_path, "w", encoding="utf-8") as f:
-                    json.dump({"test": "data"}, f)
+            # Use constants and helper method
+            self._create_test_files_in_temp_dir(temp_dir, self.VALID_TIMESTAMPS)
 
             # Call the function
             result = _find_latest_response_file(temp_dir)
@@ -1070,89 +1153,29 @@ class TestExecutePrompt:
         mock_ask_claude: Mock,
         mock_find_latest: Mock,
         capsys: pytest.CaptureFixture[str],
+        sample_stored_response: Dict[str, Any],
+        sample_claude_response: Dict[str, Any],
     ) -> None:
-        """Test successful --continue execution with file discovery and user feedback.
-
-        This test simulates the future --continue-from-last functionality by
-        manually calling the file discovery and loading functions that will be
-        integrated in Step 5.
-        """
-        # Setup mock for file discovery
-        mock_find_latest.return_value = "/fake/path/response_2025-09-19T14-30-22.json"
-
-        # Setup mock for stored response file reading
-        stored_response = {
-            "prompt": "How do I create a Python file?",
-            "response_data": {
-                "text": "Here's how to create a Python file.",
-                "session_info": {
-                    "session_id": "previous-session-456",
-                    "model": "claude-sonnet-4",
-                    "tools": ["file_writer"],
-                    "mcp_servers": [{"name": "fs_server", "status": "connected"}],
-                },
-                "result_info": {
-                    "duration_ms": 1500,
-                    "cost_usd": 0.025,
-                    "usage": {"input_tokens": 15, "output_tokens": 12},
-                },
-                "raw_messages": [
-                    {
-                        "role": "user",
-                        "content": "How do I create a Python file?",
-                    },
-                    {
-                        "role": "assistant",
-                        "content": "Here's how to create a Python file.",
-                    },
-                ],
-            },
-            "metadata": {
-                "timestamp": "2025-09-19T10:30:00Z",
-                "working_directory": "/test/dir",
-                "model": "claude-sonnet-4",
-            },
-        }
-
-        # Setup mock response for new Claude API call
-        new_response = {
-            "text": "Now let's also add some error handling to that file.",
-            "session_info": {
-                "session_id": "continuation-session-789",
-                "model": "claude-sonnet-4",
-                "tools": ["file_writer", "code_analyzer"],
-                "mcp_servers": [{"name": "fs_server", "status": "connected"}],
-            },
-            "result_info": {
-                "duration_ms": 1800,
-                "cost_usd": 0.030,
-                "usage": {"input_tokens": 25, "output_tokens": 18},
-            },
-            "raw_messages": [],
-        }
-        mock_ask_claude.return_value = new_response
+        """Test successful --continue execution with file discovery and user feedback."""
+        mock_ask_claude.return_value = sample_claude_response
 
         # Mock file operations for reading stored response
         with (
             patch("os.path.exists") as mock_exists,
-            patch("builtins.open", mock_open(read_data=json.dumps(stored_response))),
+            patch(
+                "builtins.open", mock_open(read_data=json.dumps(sample_stored_response))
+            ),
         ):
-
+            # Setup mocks manually for this test
+            mock_find_latest.return_value = self.FAKE_RESPONSE_PATH
             mock_exists.return_value = True
 
-            # Test file discovery functionality that will be used in Step 5
-            from mcp_coder.cli.commands.prompt import _find_latest_response_file
-
-            latest_file = _find_latest_response_file()
-
-            # Verify file discovery was called
-            mock_find_latest.assert_called_once()
+            # The test doesn't actually call _find_latest_response_file directly
+            # since we're testing continue_from, not continue functionality
 
             # Test current continue_from functionality as baseline
-            args = argparse.Namespace(
-                prompt="Add error handling",
-                continue_from="/fake/path/response_2025-09-19T14-30-22.json",
-                verbosity="just-text",
+            args = self._create_continue_args(
+                prompt="Add error handling", continue_from=self.FAKE_RESPONSE_PATH
             )
 
             # Execute the prompt command
@@ -1175,16 +1198,10 @@ class TestExecutePrompt:
                 or "Context:" in enhanced_prompt
             )
 
-            # Verify user feedback about file selection is shown
+            # Verify normal output is displayed
             captured = capsys.readouterr()
             captured_out: str = captured.out or ""
-            # The _find_latest_response_file function would show user feedback when files are found
-            # This test verifies the integration point for Step 5
-
-            # Verify normal output is displayed
-            assert (
-                "Now let's also add some error handling to that file." in captured_out
-            )
+            assert sample_claude_response["text"] in captured_out
 
     @patch("mcp_coder.cli.commands.prompt.glob.glob")
     @patch("mcp_coder.cli.commands.prompt.os.path.exists")
@@ -1332,18 +1349,12 @@ class TestExecutePrompt:
         )
         assert not (bool(args_normal.continue_last) and bool(args_normal.continue_from))
 
-    def test_continue_success_integration(self) -> None:
-        """Test CLI integration for --continue success case with file discovery and user feedback.
-
-        This test focuses on the CLI integration aspects that will be implemented in Step 5:
-        - Test argument processing with continue=True
-        - Verify integration with existing continuation logic using continue_from
-        - Test user feedback functionality
-
-        Since Step 5 hasn't been implemented yet, this test simulates the expected
-        integration by testing the current continue_from functionality that will be
-        leveraged by the new --continue argument.
-        """
+    def test_continue_success_integration(
+        self,
+        sample_stored_response: Dict[str, Any],
+        sample_claude_response: Dict[str, Any],
+    ) -> None:
+        """Test CLI integration for --continue success case."""
         with (
             patch(
                 "mcp_coder.cli.commands.prompt._find_latest_response_file"
@@ -1354,97 +1365,35 @@ class TestExecutePrompt:
             patch("builtins.open", mock_open()) as mock_file_open,
             patch("os.path.exists") as mock_exists,
         ):
-
-            # Setup mock for file discovery (Step 5 will use this)
-            mock_find_latest.return_value = (
-                "/fake/path/response_2025-09-19T14-30-22.json"
+            # Use helper method for setup
+            self._setup_file_discovery_mocks(
+                mock_find_latest,
+                mock_exists,
+                mock_file_open,
+                stored_response=sample_stored_response,
             )
-
-            # Setup mock for stored response file
-            stored_response = {
-                "prompt": "How do I create a Python file?",
-                "response_data": {
-                    "text": "Here's how to create a Python file.",
-                    "session_info": {
-                        "session_id": "previous-session-456",
-                        "model": "claude-sonnet-4",
-                        "tools": ["file_writer"],
-                        "mcp_servers": [{"name": "fs_server", "status": "connected"}],
-                    },
-                    "result_info": {
-                        "duration_ms": 1500,
-                        "cost_usd": 0.025,
-                        "usage": {"input_tokens": 15, "output_tokens": 12},
-                    },
-                    "raw_messages": [
-                        {
-                            "role": "user",
-                            "content": "How do I create a Python file?",
-                        },
-                        {
-                            "role": "assistant",
-                            "content": "Here's how to create a Python file.",
-                        },
-                    ],
-                },
-                "metadata": {
-                    "timestamp": "2025-09-19T10:30:00Z",
-                    "working_directory": "/test/dir",
-                    "model": "claude-sonnet-4",
-                },
-            }
-
-            # Setup mock file system
-            mock_exists.return_value = True
-            mock_file_open.return_value.read.return_value = json.dumps(stored_response)
-
-            # Setup mock response for new Claude API call
-            new_response = {
-                "text": "Now let's also add some error handling to that file.",
-                "session_info": {
-                    "session_id": "continuation-session-789",
-                    "model": "claude-sonnet-4",
-                    "tools": ["file_writer", "code_analyzer"],
-                    "mcp_servers": [{"name": "fs_server", "status": "connected"}],
-                },
-                "result_info": {
-                    "duration_ms": 1800,
-                    "cost_usd": 0.030,
-                    "usage": {"input_tokens": 25, "output_tokens": 18},
-                },
-                "raw_messages": [],
-            }
-            mock_ask_claude.return_value = new_response
+            mock_ask_claude.return_value = sample_claude_response
 
             # Test the current continue_from functionality that Step 5 will leverage
-            # Step 5 will: 1) call _find_latest_response_file(), 2) set continue_from to result
-            latest_file = mock_find_latest.return_value
-
-            # Create test arguments using current continue_from (Step 5 will set this automatically)
-            args = argparse.Namespace(
-                prompt="Add error handling",
-                continue_from=latest_file,  # Step 5 will set this from _find_latest_response_file()
-                verbosity="just-text",
+            # Create test arguments using helper method
+            args = self._create_continue_args(
+                prompt="Add error handling", continue_from=self.FAKE_RESPONSE_PATH
             )
 
-            # Execute the prompt command (using existing continue_from logic)
+            # Execute the prompt command
             result = execute_prompt(args)
-
-            # Assert successful execution
             assert result == 0
 
-            # Verify file reading operations (Step 5 integration will work through this path)
-            mock_exists.assert_called_once_with(
-                "/fake/path/response_2025-09-19T14-30-22.json"
-            )
+            # Verify file operations
+            mock_exists.assert_called_once_with(self.FAKE_RESPONSE_PATH)
             mock_file_open.assert_called_once_with(
-                "/fake/path/response_2025-09-19T14-30-22.json", "r", encoding="utf-8"
+                self.FAKE_RESPONSE_PATH, "r", encoding="utf-8"
             )
 
             # Verify Claude API was called with enhanced context
             mock_ask_claude.assert_called_once()
             api_call_args = mock_ask_claude.call_args
-            enhanced_prompt = api_call_args[0][0]  # First positional argument
+            enhanced_prompt = api_call_args[0][0]
 
             # Verify the enhanced prompt contains previous context
             assert "How do I create a Python file?" in enhanced_prompt
@@ -1455,10 +1404,8 @@ class TestExecutePrompt:
                 or "Context:" in enhanced_prompt
             )
 
-            # Test that _find_latest_response_file() is available for Step 5
-            # Call it to verify it works (Step 5 will integrate this call)
-            discovered_file = mock_find_latest.return_value
-            assert discovered_file == "/fake/path/response_2025-09-19T14-30-22.json"
+            # Verify file discovery works for Step 5 integration
+            assert mock_find_latest.return_value == self.FAKE_RESPONSE_PATH
 
     def test_continue_no_files_integration(self) -> None:
         """Test CLI integration when no response files are found.
@@ -1521,16 +1468,48 @@ class TestExecutePrompt:
             mock_ask_claude.assert_called_once_with("Tell me about Python", 30)
 
     def test_continue_with_user_feedback_integration(self) -> None:
-        """Test CLI integration with user feedback showing selected filename.
+        """Test CLI integration with user feedback showing selected filename."""
+        # Create custom response data for this specific test
+        test_stored_response = {
+            "prompt": "Previous question about testing",
+            "response_data": {
+                "text": "Here's how to write tests.",
+                "session_info": {
+                    "session_id": self.FAKE_SESSION_ID,
+                    "model": self.DEFAULT_MODEL,
+                    "tools": ["test_runner"],
+                    "mcp_servers": [{"name": "test_server", "status": "connected"}],
+                },
+                "result_info": {
+                    "duration_ms": 1800,
+                    "cost_usd": 0.035,
+                    "usage": {"input_tokens": 20, "output_tokens": 15},
+                },
+                "raw_messages": [],
+            },
+            "metadata": {
+                "timestamp": "2025-09-22T16:45:30Z",
+                "working_directory": "/test/dir",
+                "model": self.DEFAULT_MODEL,
+            },
+        }
 
-        This test verifies that when --continue finds a file,
-        the user sees clear feedback about which file was selected.
+        test_claude_response = {
+            "text": "Let's add more advanced testing patterns.",
+            "session_info": {
+                "session_id": "continuation-session-789",
+                "model": self.DEFAULT_MODEL,
+                "tools": ["test_runner", "code_analyzer"],
+                "mcp_servers": [{"name": "test_server", "status": "connected"}],
+            },
+            "result_info": {
+                "duration_ms": 2200,
+                "cost_usd": 0.042,
+                "usage": {"input_tokens": 28, "output_tokens": 20},
+            },
+            "raw_messages": [],
+        }
 
-        Since Step 5 hasn't been implemented yet, this test verifies:
-        1. The _find_latest_response_file function can return specific filenames
-        2. User feedback functionality is ready for integration
-        3. The continue_from functionality works correctly (Step 5 will use this)
-        """
         with (
             patch(
                 "mcp_coder.cli.commands.prompt._find_latest_response_file"
@@ -1541,71 +1520,25 @@ class TestExecutePrompt:
             patch("builtins.open", mock_open()) as mock_file_open,
             patch("os.path.exists") as mock_exists,
         ):
-
-            # Setup mock for file discovery with specific filename
             selected_file = "/fake/responses/response_2025-09-22T16-45-30.json"
-            mock_find_latest.return_value = selected_file
 
-            # Setup mock for stored response file
-            stored_response = {
-                "prompt": "Previous question about testing",
-                "response_data": {
-                    "text": "Here's how to write tests.",
-                    "session_info": {
-                        "session_id": "test-session-456",
-                        "model": "claude-sonnet-4",
-                        "tools": ["test_runner"],
-                        "mcp_servers": [{"name": "test_server", "status": "connected"}],
-                    },
-                    "result_info": {
-                        "duration_ms": 1800,
-                        "cost_usd": 0.035,
-                        "usage": {"input_tokens": 20, "output_tokens": 15},
-                    },
-                    "raw_messages": [],
-                },
-                "metadata": {
-                    "timestamp": "2025-09-22T16:45:30Z",
-                    "working_directory": "/test/dir",
-                    "model": "claude-sonnet-4",
-                },
-            }
+            # Use helper method for setup
+            self._setup_file_discovery_mocks(
+                mock_find_latest,
+                mock_exists,
+                mock_file_open,
+                return_file=selected_file,
+                stored_response=test_stored_response,
+            )
+            mock_ask_claude.return_value = test_claude_response
 
-            # Setup mock file system
-            mock_exists.return_value = True
-            mock_file_open.return_value.read.return_value = json.dumps(stored_response)
-
-            # Setup mock response for new Claude API call
-            new_response = {
-                "text": "Let's add more advanced testing patterns.",
-                "session_info": {
-                    "session_id": "continuation-session-789",
-                    "model": "claude-sonnet-4",
-                    "tools": ["test_runner", "code_analyzer"],
-                    "mcp_servers": [{"name": "test_server", "status": "connected"}],
-                },
-                "result_info": {
-                    "duration_ms": 2200,
-                    "cost_usd": 0.042,
-                    "usage": {"input_tokens": 28, "output_tokens": 20},
-                },
-                "raw_messages": [],
-            }
-            mock_ask_claude.return_value = new_response
-
-            # Test using current continue_from functionality (Step 5 will set this from _find_latest_response_file)
-            latest_file = mock_find_latest.return_value
-
-            args = argparse.Namespace(
-                prompt="Add advanced testing patterns",
-                continue_from=latest_file,  # Step 5 will set this automatically
-                verbosity="just-text",
+            # Create args using helper method
+            args = self._create_continue_args(
+                prompt="Add advanced testing patterns", continue_from=selected_file
             )
 
             # Execute the prompt command
             result = execute_prompt(args)
-
-            # Assert successful execution
             assert result == 0
 
             # Verify Claude API was called with enhanced context
@@ -1618,7 +1551,6 @@ class TestExecutePrompt:
             assert "Here's how to write tests." in enhanced_prompt
             assert "Add advanced testing patterns" in enhanced_prompt
 
-            # Test that _find_latest_response_file() returns the expected file for Step 5
-            discovered_file = mock_find_latest.return_value
-            assert discovered_file == selected_file
-            assert "response_2025-09-22T16-45-30.json" in discovered_file
+            # Verify file discovery functionality
+            assert mock_find_latest.return_value == selected_file
+            assert "response_2025-09-22T16-45-30.json" in selected_file
