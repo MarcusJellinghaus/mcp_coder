@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import tempfile
+from typing import Callable, Optional
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -12,13 +13,12 @@ import pytest
 from mcp_coder.cli.commands.prompt import execute_prompt
 
 # _find_latest_response_file will be imported when implemented in Step 3
+_find_latest_response_file: Optional[Callable[[str], Optional[str]]] = None
 try:
-    from mcp_coder.cli.commands.prompt import (
-        _find_latest_response_file,  # type: ignore[attr-defined]
-    )
+    from mcp_coder.cli.commands.prompt import _find_latest_response_file
 except ImportError:
     # Function not yet implemented - tests will be skipped
-    _find_latest_response_file = None
+    pass
 
 
 class TestExecutePrompt:

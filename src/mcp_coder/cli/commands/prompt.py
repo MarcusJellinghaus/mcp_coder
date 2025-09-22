@@ -17,9 +17,12 @@ with dictionary methods like .get(). This fixes the original issue where
 'SystemMessage' object has no attribute 'get' occurred in verbose/raw output."""
 
 import argparse
+import glob
 import json
 import logging
 import os
+import os.path
+import re
 import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
@@ -675,3 +678,85 @@ def _build_context_prompt(previous_context: Dict[str, Any], new_prompt: str) -> 
     ]
 
     return "\n".join(context_parts)
+
+
+def _find_latest_response_file(
+    responses_dir: str = ".mcp-coder/responses",
+) -> Optional[str]:
+    """Find the most recent response file by filename timestamp with strict validation.
+
+    Args:
+        responses_dir: Directory containing response files
+
+    Returns:
+        Path to latest response file, or None if none found
+    """
+    logger.debug("Searching for response files in: %s", responses_dir)
+
+    # Check if responses directory exists
+    if not os.path.exists(responses_dir):
+        logger.debug("Responses directory does not exist: %s", responses_dir)
+        return None
+
+    try:
+        # Use glob to find response files with the expected pattern
+        pattern = os.path.join(responses_dir, "response_*.json")
+        response_files = glob.glob(pattern)
+
+        if not response_files:
+            logger.debug("No response files found in: %s", responses_dir)
+            return None
+
+        # ISO timestamp pattern: response_YYYY-MM-DDTHH-MM-SS.json
+        timestamp_pattern = (
+            r"^response_(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})\.json$"
+        )
+
+        # Validate each file matches strict ISO timestamp pattern with valid date/time values
+        valid_files = []
+        for file_path in response_files:
+            filename = os.path.basename(file_path)
+            match = re.match(timestamp_pattern, filename)
+            if match:
+                # Extract date/time components for validation
+                year, month, day, hour, minute, second = match.groups()
+
+                # Validate ranges for date/time components
+                if (
+                    1 <= int(month) <= 12  # Valid month
+                    and 1 <= int(day) <= 31  # Valid day (simplified check)
+                    and 0 <= int(hour) <= 23  # Valid hour
+                    and 0 <= int(minute) <= 59  # Valid minute
+                    and 0 <= int(second) <= 59
+                ):  # Valid second
+                    valid_files.append(file_path)
+                else:
+                    logger.debug(
+                        "Skipping invalid date/time values in filename: %s", filename
+                    )
+            else:
+                logger.debug("Skipping invalid filename format: %s", filename)
+
+        if not valid_files:
+            logger.debug("No valid response files found with ISO timestamp format")
+            return None
+
+        # Sort validated filenames by timestamp (lexicographic sort works for ISO format)
+        valid_files.sort()
+        latest_file = valid_files[-1]  # Last file after sorting is the latest
+
+        # Show selected filename to user for transparency (Decision #6)
+        selected_filename = os.path.basename(latest_file)
+        print(
+            f"Found {len(valid_files)} previous sessions, continuing from: {selected_filename}"
+        )
+
+        logger.debug("Selected latest response file: %s", latest_file)
+        return latest_file
+
+    except (OSError, IOError) as e:
+        logger.debug("Error accessing response directory %s: %s", responses_dir, e)
+        return None
+    except Exception as e:
+        logger.debug("Unexpected error finding response files: %s", e)
+        return None
