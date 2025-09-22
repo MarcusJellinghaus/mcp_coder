@@ -22,62 +22,57 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Implementation Steps
-- [x] **Step 1**: Refactor Help System - [step_1.md](steps/step_1.md)
-  - Replace handle_no_command() with get_help_text()
-  - Remove examples from help functions
-  - Simplify help text generation
-  - Quality checks: pylint, pytest, mypy
-  - Git commit preparation
 
-- [x] **Step 2**: Test Implementation for Response File Discovery Utility - [step_2.md](steps/step_2.md)
-  - Create 3 focused tests for utility function
-  - Test strict ISO timestamp validation
-  - Test edge cases and file sorting
-  - Quality checks: pylint, pytest, mypy
-  - Git commit preparation
+- [ ] **Step 1: Setup Project Structure and Data Models** - [steps/step_1.md](steps/step_1.md)
+  - [ ] Write comprehensive unit tests for data models (FormatterResult, FormatterConfig, FileChange)
+  - [ ] Implement data models to pass tests
+  - [ ] Run quality checks (pylint, pytest, mypy)
+  - [ ] Prepare git commit
 
-- [x] **Step 3**: Implement Response File Discovery Utility Function - [step_3.md](steps/step_3.md)
-  - Implement _find_latest_response_file() with strict validation
-  - Add user feedback showing selected file
-  - Handle error cases gracefully
-  - Quality checks: pylint, pytest, mypy
-  - Git commit preparation
+- [ ] **Step 2: Configuration Reader Implementation** - [steps/step_2.md](steps/step_2.md)
+  - [ ] Write unit tests for configuration reading from pyproject.toml
+  - [ ] Implement minimal config reader functions
+  - [ ] Add line-length conflict warning functionality
+  - [ ] Run quality checks (pylint, pytest, mypy)
+  - [ ] Prepare git commit
 
-- [x] **Step 4**: Test Implementation for CLI Integration - [step_4.md](steps/step_4.md)
-  - Create focused CLI integration tests in test_prompt.py only
-  - Test mutual exclusivity and error handling
-  - Test user feedback functionality
-  - Quality checks: pylint, pytest, mypy
-  - Git commit preparation
+- [ ] **Step 3: Black Formatter Implementation** - [steps/step_3.md](steps/step_3.md)
+  - [ ] Write unit and integration tests for Black formatting
+  - [ ] Implement Black formatter with stdout parsing for change detection
+  - [ ] Add inline utility functions for Python file discovery
+  - [ ] Run quality checks (pylint, pytest, mypy)
+  - [ ] Prepare git commit
 
-- [x] **Step 5**: Implement CLI Integration for --continue-from-last - [step_5.md](steps/step_5.md)
-  - Add mutually exclusive CLI argument
-  - Integrate with existing continuation logic
-  - Handle error cases with proper messages
-  - Quality checks: pylint, pytest, mypy
-  - Git commit preparation
+- [ ] **Step 4: isort Formatter Implementation** - [steps/step_4.md](steps/step_4.md)
+  - [ ] Write unit and integration tests for isort formatting
+  - [ ] Implement isort formatter using Python API with direct change detection
+  - [ ] Add configuration conversion for isort settings
+  - [ ] Run quality checks (pylint, pytest, mypy)
+  - [ ] Prepare git commit
 
-- [x] **Step 6**: Update Documentation - [step_6.md](steps/step_6.md)
-  - Update README.md with usage examples
-  - Update CLI argument help text
-  - Update simplified help.py (no examples)
-  - Quality checks: pylint, pytest, mypy
-  - Git commit preparation
+- [ ] **Step 5: Main API Implementation** - [steps/step_5.md](steps/step_5.md)
+  - [ ] Write unit and integration tests for main API functions
+  - [ ] Implement combined format_code() wrapper function
+  - [ ] Clean up exports in __init__.py
+  - [ ] Run quality checks (pylint, pytest, mypy)
+  - [ ] Prepare git commit
 
-- [x] **Step 7**: Final Validation & Code Quality Checks - [step_7.md](steps/step_7.md)
-  - Run comprehensive quality checks
-  - Verify end-to-end functionality
-  - Test help system and documentation
-  - Quality checks: pylint, pytest, mypy
-  - Git commit preparation
+- [ ] **Step 6: Comprehensive Testing and Quality Assurance** - [steps/step_6.md](steps/step_6.md)
+  - [ ] Create test data files and sample code for integration tests
+  - [ ] Add formatter_integration pytest marker to pyproject.toml
+  - [ ] Run comprehensive quality checks (pylint, pytest, mypy)
+  - [ ] Fix any issues found by quality checks
+  - [ ] Prepare git commit
 
-### Feature Completion
-- [ ] **PR Review**: Review entire feature implementation
-  - Run comprehensive code quality checks
-  - Review implementation against original requirements
-  - Identify any remaining issues or improvements
+### Pull Request
 
-- [ ] **Create Summary**: Generate feature summary and documentation
-  - Document what was implemented and why
-  - Create PR description for external review
-  - Clean up PR_Info folder
+- [ ] **PR Review** - Review entire pull request for the feature
+  - [ ] Run detailed PR review using tools/pr_review.bat
+  - [ ] Address any issues found during review
+  - [ ] Run final quality checks (pylint, pytest, mypy)
+
+- [ ] **Create Summary** - Generate comprehensive feature summary
+  - [ ] Create PR description and documentation
+  - [ ] Update summary.md with implementation details
+  - [ ] Clean up PR_Info folder (remove steps/, clear tasks)
+  - [ ] Final verification of feature completeness
