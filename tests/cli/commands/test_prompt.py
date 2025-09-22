@@ -3,11 +3,22 @@
 import argparse
 import json
 import os
+import shutil
+import tempfile
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
 from mcp_coder.cli.commands.prompt import execute_prompt
+
+# _find_latest_response_file will be imported when implemented in Step 3
+try:
+    from mcp_coder.cli.commands.prompt import (
+        _find_latest_response_file,  # type: ignore[attr-defined]
+    )
+except ImportError:
+    # Function not yet implemented - tests will be skipped
+    _find_latest_response_file = None
 
 
 class TestExecutePrompt:
@@ -860,3 +871,114 @@ class TestExecutePrompt:
         assert "0.040" in captured_out  # Cost
         assert "30" in captured_out  # Input tokens
         assert "22" in captured_out  # Output tokens
+
+    @pytest.mark.skipif(
+        _find_latest_response_file is None,
+        reason="_find_latest_response_file not yet implemented",
+    )
+    def test_find_latest_response_file_success(self) -> None:
+        """Test successful discovery of latest response file with proper sorting."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test response files with different timestamps
+            test_files = [
+                "response_2025-09-19T14-30-20.json",  # Oldest
+                "response_2025-09-19T14-30-22.json",  # Middle
+                "response_2025-09-19T14-30-25.json",  # Latest (expected result)
+            ]
+
+            for filename in test_files:
+                file_path = os.path.join(temp_dir, filename)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump({"test": "data"}, f)
+
+            # Call the function
+            result = _find_latest_response_file(temp_dir)
+
+            # Verify it returns the latest file
+            expected_path = os.path.join(temp_dir, "response_2025-09-19T14-30-25.json")
+            assert result == expected_path
+            assert os.path.exists(result)
+
+    @pytest.mark.skipif(
+        _find_latest_response_file is None,
+        reason="_find_latest_response_file not yet implemented",
+    )
+    def test_find_latest_response_file_edge_cases(self) -> None:
+        """Test edge cases: no directory, no files, mixed file types."""
+        # Test 1: Non-existent directory
+        non_existent_dir = "/path/that/does/not/exist"
+        result = _find_latest_response_file(non_existent_dir)
+        assert result is None
+
+        # Test 2: Empty directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = _find_latest_response_file(temp_dir)
+            assert result is None
+
+        # Test 3: Directory with no valid response files
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create some non-response files
+            invalid_files = [
+                "other_file.json",
+                "response_invalid.json",
+                "not_a_response.txt",
+                "readme.md",
+            ]
+
+            for filename in invalid_files:
+                file_path = os.path.join(temp_dir, filename)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write("test content")
+
+            result = _find_latest_response_file(temp_dir)
+            assert result is None
+
+    @pytest.mark.skipif(
+        _find_latest_response_file is None,
+        reason="_find_latest_response_file not yet implemented",
+    )
+    def test_find_latest_response_file_sorting_and_validation(self) -> None:
+        """Test strict ISO timestamp validation and proper file sorting."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create mix of valid and invalid response files
+            test_files = [
+                "response_2025-09-19T14-30-22.json",  # Valid - middle timestamp
+                "response_2025-09-19T14-30-20.json",  # Valid - oldest timestamp
+                "response_2025-09-19T14-30-25.json",  # Valid - latest timestamp (expected)
+                "response_abc_2025.json",  # Invalid format
+                "response_2025-13-45T99-99-99.json",  # Invalid date/time values
+                "response_.json",  # Invalid - missing timestamp
+                "response_not_iso.json",  # Invalid format
+                "other_file.json",  # Not a response file
+            ]
+
+            for filename in test_files:
+                file_path = os.path.join(temp_dir, filename)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump({"test": "data", "filename": filename}, f)
+
+            # Call the function
+            result = _find_latest_response_file(temp_dir)
+
+            # Verify it returns only the latest VALID file
+            expected_path = os.path.join(temp_dir, "response_2025-09-19T14-30-25.json")
+            assert result == expected_path
+
+            # Verify the file exists and contains expected data
+            assert os.path.exists(result)
+            with open(result, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                assert data["filename"] == "response_2025-09-19T14-30-25.json"
+
+            # Test with only invalid files
+            # Remove all valid files
+            for filename in [
+                "response_2025-09-19T14-30-22.json",
+                "response_2025-09-19T14-30-20.json",
+                "response_2025-09-19T14-30-25.json",
+            ]:
+                os.remove(os.path.join(temp_dir, filename))
+
+            # Should return None when only invalid files remain
+            result = _find_latest_response_file(temp_dir)
+            assert result is None
