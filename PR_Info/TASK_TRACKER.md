@@ -29,12 +29,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run quality checks (pylint, pytest, mypy)
   - [x] Prepare git commit
 
-- [ ] **Step 2: Configuration Reader Implementation** - [steps/step_2.md](steps/step_2.md)
-  - [ ] Write unit tests for configuration reading from pyproject.toml
-  - [ ] Implement minimal config reader functions
-  - [ ] Add line-length conflict warning functionality
-  - [ ] Run quality checks (pylint, pytest, mypy)
-  - [ ] Prepare git commit
+- [x] **Step 2: Configuration Reader Implementation** - [steps/step_2.md](steps/step_2.md)
+  - [x] Write unit tests for configuration reading from pyproject.toml
+  - [x] Implement minimal config reader functions
+  - [x] Add line-length conflict warning functionality
+  - [x] Run quality checks (pylint, pytest, mypy)
+  - [x] Prepare git commit
 
 - [ ] **Step 3: Black Formatter Implementation** - [steps/step_3.md](steps/step_3.md)
   - [ ] Write unit and integration tests for Black formatting

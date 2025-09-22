@@ -140,9 +140,16 @@ marking each step as incomplete [ ] and linking to the corresponding step file.
 Review `pr_info/DEVELOPMENT_PROCESS.md` for context on the workflow and task requirements.
 
 Each task should include the 3 quality checks (pylint, pytest, mypy) and
-git commit preparation as outlined in the development process.
+git commit preparation as outlined in the development process. Do NOT commit code.
 
 Also add the pull request tasks for PR review and summary creation at the end in a section "Pull request"
+```
+
+Possible follow up question:
+```
+Did you implement everything of the current step?
+Do you have a commit message?
+Did you tick of the tasks in the task tracker?
 ```
 
 **Objective:** Complete each implementation step with full validation
