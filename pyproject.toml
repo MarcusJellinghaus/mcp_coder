@@ -57,7 +57,8 @@ mcp_coder = ["prompts/*.md"]
 testpaths = ["tests"]
 markers = [
     "git_integration: tests with file system git operations (repos, commits)", 
-    "claude_integration: tests requiring Claude CLI/API (network, auth needed)"
+    "claude_integration: tests requiring Claude CLI/API (network, auth needed)",
+    "formatter_integration: tests for code formatter integration (black, isort)"
 ]
 # run usually with -m "not git_integration and not claude_integration"  for the fast unit tests
 # use e.g. -m "git_integration or claude_integration" to run a group of the slower tests
