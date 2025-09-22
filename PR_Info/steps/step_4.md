@@ -74,12 +74,10 @@ changed = isort.api.sort_file(file_path, config=isort_config)
 ## Tests Required
 1. **Unit tests (mocked):**
    - Test configuration conversion to isort settings
-   - Test Python file discovery logic (reuse `_get_python_files` from Black formatter)
+   - Test Python file discovery logic
    - Test isort API integration (mocked)
    
 2. **Integration tests (formatter_integration marker):**
-   - **Use multiline strings for test file content** (like Black formatter tests)
-   - **Create files dynamically in temp directories during tests**
    - Test sorting unsorted imports (verify `isort.api.sort_file()` returns True)
    - Test sorting already sorted imports (verify returns False)
    - Test with float_to_top configuration
@@ -89,34 +87,3 @@ changed = isort.api.sort_file(file_path, config=isort_config)
    - Test with custom isort configuration from pyproject.toml
    - Test isort.Config object creation from FormatterConfig
    - Test file-by-file processing and change aggregation
-
-### Test File Content Examples (Use as multiline strings in tests)
-```python
-# Unformatted imports content:
-UNFORMATTED_IMPORTS = '''
-import os
-from pathlib import Path
-import sys
-from typing import List, Dict
-import re
-from collections import defaultdict
-'''
-
-# Well-formatted imports content:
-FORMATTED_IMPORTS = '''
-from collections import defaultdict
-import os
-from pathlib import Path
-import re
-import sys
-from typing import Dict, List
-'''
-
-# Create files in tests like:
-pyproject_content = '''[tool.isort]
-profile = "black"
-line_length = 88'''
-(tmp_path / "pyproject.toml").write_text(pyproject_content)
-test_file = src_dir / "test.py"
-test_file.write_text(UNFORMATTED_IMPORTS)
-```
