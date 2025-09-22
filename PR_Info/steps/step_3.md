@@ -1,78 +1,72 @@
-# Step 3: Test Implementation for CLI Integration
+# Step 3: Implement Response File Discovery Utility Function
 
 ## LLM Prompt
 ```
-Implement comprehensive tests for the new --continue-from-last CLI parameter integration. Tests should cover argument parsing, mutual exclusivity with --continue-from, and integration with the file discovery utility.
+Implement the _find_latest_response_file() utility function with strict ISO timestamp validation and user feedback. The function should only accept properly formatted response files and show which file was selected.
 
-Reference: PR_Info/steps/summary.md - implementing --continue-from-last parameter for mcp-coder prompt command.
+Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue-from-last parameter for mcp-coder prompt command.
 
-This is step 3 of 6: Test-driven development for CLI integration after implementing the utility function.
+This is step 3 of 7: Implementing the core utility function with strict validation after TDD from step 2.
 ```
 
 ## WHERE
-- **File**: `tests/cli/commands/test_prompt.py`
-- **Test Class**: Add new test methods to existing `TestExecutePrompt` class
-- **Additional File**: `tests/cli/test_main.py` for argument parsing tests
+- **File**: `src/mcp_coder/cli/commands/prompt.py`
+- **Location**: Add function after existing utility functions (after `_build_context_prompt`)
+- **Imports**: Add `glob`, `os.path`, `re` to existing imports
 
 ## WHAT
-Add test methods for CLI integration:
-
+Main function signature:
 ```python
-# In test_prompt.py
-def test_continue_from_last_success(self) -> None:
-def test_continue_from_last_no_files(self) -> None:
-def test_continue_from_last_with_verbosity(self) -> None:
-
-# In test_main.py  
-def test_continue_from_last_argument_parsing(self) -> None:
-def test_mutual_exclusivity_validation(self) -> None:
+def _find_latest_response_file(responses_dir: str = ".mcp-coder/responses") -> Optional[str]:
+    """Find the most recent response file by filename timestamp with strict validation."""
 ```
 
 ## HOW
-- **Mock Strategy**: Mock `_find_latest_response_file()` to control return values
-- **Argument Testing**: Use `argparse.Namespace` objects to simulate CLI args
-- **Integration Testing**: Test full flow from CLI args to Claude API call
-- **Error Testing**: Verify proper error handling and exit codes
+- **Integration**: Place after existing helper functions, before `execute_prompt()`
+- **Strict Validation**: Use regex to validate ISO timestamp pattern
+- **User Feedback**: Print selected filename to user (per Decision #6)
+- **Error Handling**: Use try-catch for directory access and file operations
+- **Logging**: Add debug logging for file discovery process
 
 ## ALGORITHM
 ```
-1. MOCK _find_latest_response_file() with controlled responses
-2. CREATE args with continue_from_last=True
-3. CALL execute_prompt() and verify behavior
-4. TEST mutual exclusivity raises appropriate errors
-5. VERIFY integration with existing continue_from logic
+1. CHECK if responses directory exists, return None if not
+2. GLOB for "response_*.json" pattern in directory
+3. VALIDATE each file matches strict ISO timestamp pattern using regex
+4. SORT validated filenames by timestamp (lexicographic sort works for ISO format)
+5. SHOW selected filename to user for transparency
+6. RETURN latest file path or None if no valid files found
 ```
 
 ## DATA
-**Test Argument Structures**:
+**Function Implementation**:
 ```python
-# Success case
-args_continue_last = argparse.Namespace(
-    prompt="Follow up question",
-    continue_from_last=True,
-    continue_from=None,  # Mutual exclusivity
-    verbosity="just-text"
-)
-
-# Mutual exclusivity error case  
-args_both_continue = argparse.Namespace(
-    prompt="Test question",
-    continue_from_last=True,
-    continue_from="path/to/file.json"  # Should cause error
-)
+def _find_latest_response_file(responses_dir: str = ".mcp-coder/responses") -> Optional[str]:
+    """Find the most recent response file by filename timestamp with strict validation.
+    
+    Args:
+        responses_dir: Directory containing response files
+        
+    Returns:
+        Path to latest response file, or None if none found
+    """
+    # Implementation with strict validation and user feedback
 ```
 
-**Mock Return Values**:
+**Validation Pattern**:
 ```python
-# Mock successful file discovery
-mock_find_latest.return_value = "/fake/path/response_2025-09-19T14-30-22.json"
-
-# Mock no files found
-mock_find_latest.return_value = None
+# ISO timestamp pattern: response_YYYY-MM-DDTHH-MM-SS.json
+timestamp_pattern = r"^response_\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.json$"
 ```
 
-**Expected Behaviors**:
-- **Success**: Claude API called with enhanced context prompt
-- **No files**: Error message and exit code 1
-- **Mutual exclusivity**: Argument parsing error before execution
-- **Integration**: Same continuation logic as existing `--continue-from`
+**User Feedback**:
+```python
+# Show selected file to user (Decision #6)
+print(f"Found {len(valid_files)} previous sessions, continuing from: {selected_file}")
+```
+
+**Return Values**:
+- **Success**: `"/path/to/.mcp-coder/responses/response_2025-09-19T14-30-22.json"`
+- **No directory/files**: `None` (with info message per Decision #4)
+- **No valid files**: `None` (strict validation)
+- **Error cases**: `None` (with logging)

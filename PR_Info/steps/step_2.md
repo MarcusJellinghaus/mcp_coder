@@ -1,68 +1,70 @@
-# Step 2: Implement Response File Discovery Utility Function
+# Step 2: Test Implementation for Response File Discovery Utility
 
 ## LLM Prompt
 ```
-Implement the _find_latest_response_file() utility function in the prompt command module. The function should find the most recent response_*.json file by sorting filenames with ISO timestamps.
+Implement focused tests for a utility function that finds the most recent response file in .mcp-coder/responses/ directory. Use 3 core test methods with strict file validation and comprehensive edge case coverage.
 
-Reference: PR_Info/steps/summary.md - implementing --continue-from-last parameter for mcp-coder prompt command.
+Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - we're implementing --continue-from-last parameter for mcp-coder prompt command.
 
-This is step 2 of 6: Implementing the core utility function after TDD from step 1.
+This is step 2 of 7: Test-driven development for the core utility function with reduced complexity.
 ```
 
 ## WHERE
-- **File**: `src/mcp_coder/cli/commands/prompt.py`
-- **Location**: Add function after existing utility functions (after `_build_context_prompt`)
-- **Imports**: Add `glob`, `os.path` to existing imports
+- **File**: `tests/cli/commands/test_prompt.py`
+- **Test Class**: Add new test methods to existing `TestExecutePrompt` class
+- **Import**: Add `os`, `tempfile`, `shutil` for file system testing
 
 ## WHAT
-Main function signature:
+Add 3 focused test methods for `_find_latest_response_file()` utility function:
+
 ```python
-def _find_latest_response_file(responses_dir: str = ".mcp-coder/responses") -> Optional[str]:
-    """Find the most recent response file by filename timestamp."""
+def test_find_latest_response_file_success(self) -> None:
+def test_find_latest_response_file_edge_cases(self) -> None:
+def test_find_latest_response_file_sorting_and_validation(self) -> None:
 ```
 
 ## HOW
-- **Integration**: Place after existing helper functions, before `execute_prompt()`
-- **Error Handling**: Use try-catch for directory access and file operations
-- **Logging**: Add debug logging for file discovery process
-- **Type Hints**: Follow existing code patterns with proper typing
+- **Mock Strategy**: Use `tempfile.TemporaryDirectory()` for isolated file system tests
+- **File Creation**: Create realistic `response_*.json` files with different timestamps
+- **Strict Validation**: Test ISO timestamp pattern validation
+- **Edge Cases**: Combine no directory and no files scenarios
 
 ## ALGORITHM
 ```
-1. CHECK if responses directory exists, return None if not
-2. GLOB for "response_*.json" pattern in directory
-3. FILTER valid response files (proper naming pattern)
-4. SORT filenames by timestamp (lexicographic sort works for ISO format)
-5. RETURN latest file path or None if no valid files found
+1. CREATE temporary directory with response files (various scenarios)
+2. CALL _find_latest_response_file(directory_path)
+3. ASSERT correct file is returned (latest by filename with proper format)
+4. TEST edge cases (no dir, no files, mixed files, invalid formats)
+5. VERIFY strict validation works correctly
 ```
 
 ## DATA
-**Function Implementation**:
+**Function Signature** (to be implemented):
 ```python
 def _find_latest_response_file(responses_dir: str = ".mcp-coder/responses") -> Optional[str]:
-    """Find the most recent response file by filename timestamp.
+    """Find the most recent response file by filename timestamp with strict validation.
     
-    Args:
-        responses_dir: Directory containing response files
-        
     Returns:
-        Path to latest response file, or None if none found
+        str: Path to latest response file, or None if none found
     """
-    # Implementation here...
 ```
 
-**Internal Data Structures**:
+**Test Data Structures**:
 ```python
-# File pattern matching
-pattern = os.path.join(responses_dir, "response_*.json")
-matching_files: List[str] = glob.glob(pattern)
-
-# Sorting (ISO timestamp allows lexicographic sorting)
-sorted_files: List[str] = sorted(matching_files, reverse=True)
+# Test files with different timestamps and validation scenarios
+test_files = [
+    "response_2025-09-19T14-30-22.json",  # Valid - middle timestamp
+    "response_2025-09-19T14-30-20.json",  # Valid - oldest timestamp
+    "response_2025-09-19T14-30-25.json",  # Valid - latest timestamp (expected result)
+    "other_file.json",                    # Invalid - should be ignored
+    "response_invalid.json",              # Invalid - should be ignored
+    "response_abc_2025.json"              # Invalid - should be ignored
+]
 ```
 
-**Return Values**:
-- **Success**: `"/path/to/.mcp-coder/responses/response_2025-09-19T14-30-22.json"`
+**Expected Return Values**:
+- **Success**: Full path to latest valid response file
 - **No directory**: `None`
-- **No files**: `None`
-- **Error cases**: `None` (with logging)
+- **No valid files**: `None` 
+- **Mixed files**: Path to latest valid response file only (strict validation)
+- **Invalid formats**: `None` (ignores files that don't match ISO pattern)

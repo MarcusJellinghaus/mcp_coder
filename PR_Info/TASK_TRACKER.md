@@ -22,37 +22,52 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Implementation Steps
-- [x] **Step 1**: Add Test Coverage for SDK Message Object Handling - [step_1.md](steps/step_1.md)
-  - Create failing tests that reproduce AttributeError with SDK objects
-  - Test both verbose and raw output scenarios
+- [ ] **Step 1**: Refactor Help System - [step_1.md](steps/step_1.md)
+  - Replace handle_no_command() with get_help_text()
+  - Remove examples from help functions
+  - Simplify help text generation
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [x] **Step 2**: Create Utilities & Fix Verbose Output (Minimal Working Fix) - [step_2.md](steps/step_2.md)
-  - Create 4 utility functions for SDK object handling
-  - Fix `_format_verbose()` to use utilities and resolve AttributeError
-  - Add basic integration test
+- [ ] **Step 2**: Test Implementation for Response File Discovery Utility - [step_2.md](steps/step_2.md)
+  - Create 3 focused tests for utility function
+  - Test strict ISO timestamp validation
+  - Test edge cases and file sorting
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [x] **Step 3**: Fix Raw JSON Serialization & Add Verbosity Tests - [step_3.md](steps/step_3.md)
-  - Create custom JSON serializer for SDK objects using official structure
-  - Fix `_format_raw()` to handle SDK object serialization
-  - Add comprehensive integration test for all verbosity levels
+- [ ] **Step 3**: Implement Response File Discovery Utility Function - [step_3.md](steps/step_3.md)
+  - Implement _find_latest_response_file() with strict validation
+  - Add user feedback showing selected file
+  - Handle error cases gracefully
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [x] **Step 4**: Add Edge Case Testing & Error Handling - [step_4.md](steps/step_4.md)
-  - Create comprehensive edge case tests
-  - Enhance error handling in utility functions
-  - Test malformed SDK objects and empty data scenarios
+- [ ] **Step 4**: Test Implementation for CLI Integration - [step_4.md](steps/step_4.md)
+  - Create focused CLI integration tests in test_prompt.py only
+  - Test mutual exclusivity and error handling
+  - Test user feedback functionality
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [ ] **Step 5**: Final Integration Test & Documentation - [step_5.md](steps/step_5.md)
-  - Add final comprehensive end-to-end integration test
-  - Update function docstrings and documentation
-  - Validate complete solution works in all scenarios
+- [ ] **Step 5**: Implement CLI Integration for --continue-from-last - [step_5.md](steps/step_5.md)
+  - Add mutually exclusive CLI argument
+  - Integrate with existing continuation logic
+  - Handle error cases with proper messages
+  - Quality checks: pylint, pytest, mypy
+  - Git commit preparation
+
+- [ ] **Step 6**: Update Documentation - [step_6.md](steps/step_6.md)
+  - Update README.md with usage examples
+  - Update CLI argument help text
+  - Update simplified help.py (no examples)
+  - Quality checks: pylint, pytest, mypy
+  - Git commit preparation
+
+- [ ] **Step 7**: Final Validation & Code Quality Checks - [step_7.md](steps/step_7.md)
+  - Run comprehensive quality checks
+  - Verify end-to-end functionality
+  - Test help system and documentation
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 

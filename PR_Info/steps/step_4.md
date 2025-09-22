@@ -1,80 +1,76 @@
-# Step 4: Implement CLI Integration for --continue-from-last
+# Step 4: Test Implementation for CLI Integration
 
 ## LLM Prompt
 ```
-Implement the CLI integration for --continue-from-last parameter. Add the argument to the parser with mutual exclusivity validation, and integrate with the existing prompt execution logic.
+Implement focused tests for the new --continue-from-last CLI parameter integration in test_prompt.py only. Tests should cover argument processing, mutual exclusivity, and integration with the file discovery utility.
 
-Reference: PR_Info/steps/summary.md - implementing --continue-from-last parameter for mcp-coder prompt command.
+Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue-from-last parameter for mcp-coder prompt command.
 
-This is step 4 of 6: Implementing CLI integration after TDD from step 3.
+This is step 4 of 7: Test-driven development for CLI integration, focusing only on test_prompt.py (Decision #2).
 ```
 
 ## WHERE
-- **File 1**: `src/mcp_coder/cli/main.py` - Add CLI argument
-- **File 2**: `src/mcp_coder/cli/commands/prompt.py` - Add integration logic
-- **Location**: Modify existing `prompt_parser.add_argument()` calls and `execute_prompt()` function
+- **File**: `tests/cli/commands/test_prompt.py`
+- **Test Class**: Add new test methods to existing `TestExecutePrompt` class
+- **Focus**: Only CLI integration testing (no separate test_main.py modifications)
 
 ## WHAT
-**Main modifications**:
-```python
-# In main.py
-prompt_parser.add_argument("--continue-from-last", action="store_true")
+Add test methods for CLI integration:
 
-# In prompt.py  
-def execute_prompt(args: argparse.Namespace) -> int:
-    # Add logic to handle continue_from_last
+```python
+def test_continue_from_last_success(self) -> None:
+def test_continue_from_last_no_files(self) -> None:
+def test_continue_from_last_with_user_feedback(self) -> None:
+def test_mutual_exclusivity_handled_by_argparse(self) -> None:
 ```
 
 ## HOW
-- **Argument Group**: Use argparse mutually exclusive group for `--continue-from` and `--continue-from-last`
-- **Integration Point**: Modify existing continue_from logic in `execute_prompt()`
-- **Error Handling**: Consistent error patterns with existing code
-- **Logging**: Add appropriate debug/info logging
+- **Mock Strategy**: Mock `_find_latest_response_file()` to control return values
+- **Argument Testing**: Use `argparse.Namespace` objects to simulate CLI args
+- **Integration Testing**: Test full flow from CLI args to Claude API call
+- **User Feedback**: Test that selected filename is shown to user
+- **Error Testing**: Verify proper error handling and exit codes
 
 ## ALGORITHM
 ```
-1. CREATE mutually exclusive argument group in parser
-2. ADD --continue-from-last flag to the group
-3. MODIFY execute_prompt() to check continue_from_last flag
-4. CALL _find_latest_response_file() if flag is set
-5. INTEGRATE with existing _load_previous_chat() logic
+1. MOCK _find_latest_response_file() with controlled responses
+2. CREATE args with continue_from_last=True
+3. CALL execute_prompt() and verify behavior
+4. TEST user feedback is displayed correctly
+5. VERIFY integration with existing continue_from logic
 ```
 
 ## DATA
-**CLI Argument Structure**:
+**Test Argument Structures**:
 ```python
-# In main.py
-continue_group = prompt_parser.add_mutually_exclusive_group()
-continue_group.add_argument(
-    "--continue-from",
-    type=str,
-    help="Continue from previous stored session file"
+# Success case
+args_continue_last = argparse.Namespace(
+    prompt="Follow up question",
+    continue_from_last=True,
+    continue_from=None,  # Mutual exclusivity
+    verbosity="just-text"
 )
-continue_group.add_argument(
-    "--continue-from-last", 
-    action="store_true",
-    help="Continue from the most recent stored session"
+
+# No files case
+args_no_files = argparse.Namespace(
+    prompt="Test question",
+    continue_from_last=True,
+    continue_from=None
 )
 ```
 
-**Integration Logic**:
+**Mock Return Values**:
 ```python
-# In execute_prompt()
-continue_file_path = None
-if getattr(args, "continue_from", None):
-    continue_file_path = args.continue_from
-elif getattr(args, "continue_from_last", False):
-    continue_file_path = _find_latest_response_file()
-    if continue_file_path is None:
-        # Handle no files found error
-        
-if continue_file_path:
-    # Use existing continuation logic
-    previous_context = _load_previous_chat(continue_file_path)
-    enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
+# Mock successful file discovery
+mock_find_latest.return_value = "/fake/path/response_2025-09-19T14-30-22.json"
+
+# Mock no files found (Decision #4)
+mock_find_latest.return_value = None
 ```
 
-**Error Handling**:
-- **No files found**: "Error: No previous response files found in .mcp-coder/responses/"
-- **Directory missing**: Same error message (handled by utility function)
-- **Mutual exclusivity**: Handled automatically by argparse
+**Expected Behaviors**:
+- **Success**: Claude API called with enhanced context prompt + user feedback shown
+- **No files**: Error message "No previous response files found" and exit code 1
+- **Mutual exclusivity**: Handled automatically by argparse (no custom validation needed)
+- **Integration**: Same continuation logic as existing `--continue-from`
+- **User feedback**: Selected filename displayed to user (Decision #6)

@@ -1,81 +1,70 @@
-# Step 6: Final Validation & Code Quality Checks
+# Step 6: Update Documentation
 
 ## LLM Prompt
 ```
-Run comprehensive code quality checks and final validation for the --continue-from-last parameter implementation. Ensure all tests pass, code follows style guidelines, and the feature works end-to-end.
+Update documentation to reflect the new --continue-from-last parameter using the simplified approach. Update README.md, CLI argument help text, and simplified help.py without examples.
 
-Reference: PR_Info/steps/summary.md - implementing --continue-from-last parameter for mcp-coder prompt command.
+Reference: PR_Info/steps/summary.md and PR_Info/steps/Decisions.md - implementing --continue-from-last parameter for mcp-coder prompt command.
 
-This is step 6 of 6: Final validation and cleanup after implementing the complete feature.
+This is step 6 of 7: Documentation updates using the refactored help system from step 1.
 ```
 
 ## WHERE
-- **Test Execution**: Run all pytest markers and code quality tools
-- **Integration Testing**: Verify end-to-end functionality 
-- **Code Review**: Final review of all modified files
+- **File 1**: `README.md` - Update examples section
+- **File 2**: `src/mcp_coder/cli/main.py` - Update argument help text
+- **File 3**: `src/mcp_coder/cli/commands/help.py` - Update simplified help text (no examples)
 
 ## WHAT
-**Quality checks to perform**:
-```bash
-# Run all test suites
-pytest -m "not git_integration and not claude_integration"  # Fast unit tests
-pytest -m "git_integration"                                 # Git integration tests  
-pytest -m "claude_integration"                              # Claude API tests
-
-# Code quality checks
-pylint src/mcp_coder/cli/commands/prompt.py src/mcp_coder/cli/main.py
-mypy src/mcp_coder/cli/commands/prompt.py src/mcp_coder/cli/main.py  
-black src/mcp_coder/cli/commands/prompt.py src/mcp_coder/cli/main.py
+**Documentation sections to update**:
+```python
+# README.md: Add usage examples to existing examples section
+# main.py: Clear, descriptive argument help text
+# help.py: Update get_help_text() to mention new parameter (no examples per Decision #3)
 ```
 
 ## HOW
-- **Systematic Testing**: Run each test marker separately as specified
-- **Error Resolution**: Fix any issues found by quality tools
-- **Manual Testing**: Verify CLI behavior with actual commands
-- **Regression Testing**: Ensure existing functionality still works
+- **Consistency**: Follow existing documentation patterns and style
+- **Examples**: Add practical examples to README only (Decision #3)
+- **Context**: Explain when to use `--continue-from-last` vs `--continue-from`
+- **Simplicity**: Use refactored help system from Step 1
 
 ## ALGORITHM
 ```
-1. RUN all unit tests and verify new tests pass
-2. EXECUTE code quality checks (pylint, mypy, black)
-3. PERFORM manual CLI testing with new parameter
-4. VERIFY backward compatibility with existing features
-5. VALIDATE documentation accuracy and completeness
+1. UPDATE README.md examples section with new parameter usage
+2. UPDATE CLI argument help text for clarity and user guidance
+3. UPDATE simplified get_help_text() to mention new parameter (no examples)
+4. ENSURE consistency across all documentation
+5. VERIFY help system works with refactored structure
 ```
 
 ## DATA
-**Test Coverage Validation**:
+**README.md Addition**:
+```markdown
+# Session storage and continuation examples:
+mcp-coder prompt "Start project planning" --store-response
+mcp-coder prompt "What's next?" --continue-from response_2025-09-19T14-30-22.json
+mcp-coder prompt "What's next?" --continue-from-last  # Auto-finds latest session
+```
+
+**main.py Help Text**:
 ```python
-# New test methods implemented:
-- test_find_latest_response_file_success()
-- test_find_latest_response_file_no_directory() 
-- test_find_latest_response_file_no_files()
-- test_find_latest_response_file_sorting_order()
-- test_continue_from_last_success()
-- test_continue_from_last_no_files()
-- test_mutual_exclusivity_validation()
+continue_group.add_argument(
+    "--continue-from-last",
+    action="store_true", 
+    help="Continue from the most recent stored session (automatically finds latest response file)"
+)
 ```
 
-**Manual Test Commands**:
-```bash
-# Test new parameter
-mcp-coder prompt "Test question" --continue-from-last
-
-# Test mutual exclusivity (should error)
-mcp-coder prompt "Test" --continue-from file.json --continue-from-last
-
-# Test with verbosity
-mcp-coder prompt "Test" --continue-from-last --verbosity verbose
-
-# Test help display
-mcp-coder help
-mcp-coder prompt --help
+**help.py Updates** (simplified, no examples):
+```python
+# In get_help_text() - simple mention of new parameter
+--continue-from FILE   Continue conversation from previous stored session
+--continue-from-last   Continue from the most recent stored session
 ```
 
-**Success Criteria**:
-- All tests pass (100% success rate)
-- Code quality tools report no issues
-- Manual testing shows expected behavior
-- Documentation is accurate and complete
-- Backward compatibility maintained
-- Error cases handled gracefully
+**Documentation Themes**:
+- **Convenience**: Emphasize ease of use (no need to remember filenames)
+- **Workflow**: Show how it fits into development workflows in README
+- **Clarity**: Distinguish from `--continue-from` clearly
+- **Requirements**: Mention need for existing response files
+- **Simplicity**: Use refactored help system without examples (Decision #3)
