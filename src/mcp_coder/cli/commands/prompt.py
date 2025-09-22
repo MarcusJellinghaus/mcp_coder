@@ -356,8 +356,18 @@ def execute_prompt(args: argparse.Namespace) -> int:
     try:
         # Handle continuation from previous session if requested
         enhanced_prompt = args.prompt
+        continue_file_path = None
+
         if getattr(args, "continue_from", None):
-            previous_context = _load_previous_chat(args.continue_from)
+            continue_file_path = args.continue_from
+        elif getattr(args, "continue", False):
+            continue_file_path = _find_latest_response_file()
+            if continue_file_path is None:
+                print("No previous response files found, starting new conversation")
+                # Continue execution with empty context instead of returning
+
+        if continue_file_path:
+            previous_context = _load_previous_chat(continue_file_path)
             enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
 
         # Call Claude API using detailed function with user-specified timeout

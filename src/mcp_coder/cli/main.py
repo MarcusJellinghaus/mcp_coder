@@ -79,11 +79,20 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         action="store_true",
         help="Store complete session data for continuation",
     )
-    prompt_parser.add_argument(
+
+    # Create mutually exclusive group for continue options
+    continue_group = prompt_parser.add_mutually_exclusive_group()
+    continue_group.add_argument(
         "--continue-from",
         type=str,
         help="Continue from previous stored session file",
     )
+    continue_group.add_argument(
+        "--continue",
+        action="store_true",
+        help="Continue from the most recent stored session (auto-finds latest response file)",
+    )
+
     prompt_parser.add_argument(
         "--timeout",
         type=int,
