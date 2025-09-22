@@ -43,6 +43,8 @@ COMMANDS:
                                                   for later continuation or reference
                            --continue-from FILE   Continue conversation from previous stored session
                                                   (enhances prompt with previous context)
+                           --continue             Continue from the most recent stored session
+                                                  (automatically finds latest response file)
                            --timeout SECONDS      Timeout for Claude API request in seconds (default: 60)
     commit auto             Auto-generate commit message using LLM
     commit auto --preview   Show generated message and ask for confirmation
@@ -79,6 +81,7 @@ def get_usage_examples() -> str:
     # Session storage and continuation:
     mcp-coder prompt "Start project planning" --store-response                      # Save session
     mcp-coder prompt "What's next?" --continue-from response_2025-09-19T14-30-22.json # Continue conversation
+    mcp-coder prompt "What's next?" --continue                                      # Continue from most recent session
     
     # Combined usage for complex workflows:
     mcp-coder prompt "Complex analysis" --verbosity verbose --store-response         # Debug + save
