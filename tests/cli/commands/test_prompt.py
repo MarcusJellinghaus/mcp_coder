@@ -918,8 +918,8 @@ class TestExecutePrompt:
             result = _find_latest_response_file(temp_dir)
             assert result is None
 
-    def test_find_latest_response_file_sorting_and_validation(self) -> None:
-        """Test strict ISO timestamp validation and proper file sorting."""
+    def test_find_latest_response_file_mixed_valid_invalid(self) -> None:
+        """Test file discovery ignores invalid files and selects latest valid file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create mix of valid and invalid response files
             test_files = [
@@ -927,8 +927,6 @@ class TestExecutePrompt:
                 "response_2025-09-19T14-30-20.json",  # Valid - oldest timestamp
                 "response_2025-09-19T14-30-25.json",  # Valid - latest timestamp (expected)
                 "response_abc_2025.json",  # Invalid format
-                "response_2025-13-45T99-99-99.json",  # Invalid date/time values
-                "response_.json",  # Invalid - missing timestamp
                 "response_not_iso.json",  # Invalid format
                 "other_file.json",  # Not a response file
             ]
@@ -951,11 +949,52 @@ class TestExecutePrompt:
                 data = json.load(f)
                 assert data["filename"] == "response_2025-09-19T14-30-25.json"
 
-            # Test with only invalid files
+    def test_find_latest_response_file_invalid_datetime_values(self) -> None:
+        """Test strict validation rejects files with invalid date/time values."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create files with invalid date/time values but correct format
+            invalid_files = [
+                "response_2025-13-45T99-99-99.json",  # Invalid month, day, hour, minute, second
+                "response_2025-00-01T12-00-00.json",  # Invalid month (0)
+                "response_2025-12-32T12-00-00.json",  # Invalid day (32)
+                "response_2025-12-01T25-00-00.json",  # Invalid hour (25)
+                "response_2025-12-01T12-61-00.json",  # Invalid minute (61)
+                "response_2025-12-01T12-00-61.json",  # Invalid second (61)
+            ]
+
+            for filename in invalid_files:
+                file_path = os.path.join(temp_dir, filename)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump({"test": "data"}, f)
+
+            # Should return None when all files have invalid date/time values
+            result = _find_latest_response_file(temp_dir)
+            assert result is None
+
+    def test_find_latest_response_file_only_invalid_files_remain(self) -> None:
+        """Test behavior when valid files are removed leaving only invalid ones."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # First create both valid and invalid files
+            all_files = [
+                "response_2025-09-19T14-30-22.json",  # Valid
+                "response_2025-09-19T14-30-25.json",  # Valid
+                "response_abc_2025.json",  # Invalid format
+                "other_file.json",  # Not a response file
+            ]
+
+            for filename in all_files:
+                file_path = os.path.join(temp_dir, filename)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump({"test": "data"}, f)
+
+            # Verify it initially finds valid files
+            result = _find_latest_response_file(temp_dir)
+            assert result is not None
+            assert "response_2025-09-19T14-30-25.json" in result
+
             # Remove all valid files
             for filename in [
                 "response_2025-09-19T14-30-22.json",
-                "response_2025-09-19T14-30-20.json",
                 "response_2025-09-19T14-30-25.json",
             ]:
                 os.remove(os.path.join(temp_dir, filename))
@@ -963,6 +1002,66 @@ class TestExecutePrompt:
             # Should return None when only invalid files remain
             result = _find_latest_response_file(temp_dir)
             assert result is None
+
+    def test_find_latest_response_file_lexicographic_sorting(self) -> None:
+        """Test that files are sorted lexicographically to find the latest timestamp."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create files in non-chronological order to test sorting
+            test_files = [
+                "response_2025-09-20T10-00-00.json",  # Later date
+                "response_2025-09-19T23-59-59.json",  # Earlier date, later time
+                "response_2025-09-20T09-59-59.json",  # Later date, earlier time
+                "response_2025-09-20T10-00-01.json",  # Latest overall (expected result)
+            ]
+
+            for filename in test_files:
+                file_path = os.path.join(temp_dir, filename)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump({"filename": filename}, f)
+
+            # Call the function
+            result = _find_latest_response_file(temp_dir)
+
+            # Verify it returns the lexicographically latest file
+            expected_path = os.path.join(temp_dir, "response_2025-09-20T10-00-01.json")
+            assert result == expected_path
+
+            # Verify the file contains expected data
+            with open(result, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                assert data["filename"] == "response_2025-09-20T10-00-01.json"
+
+    def test_find_latest_response_file_user_feedback_message(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test that user feedback message shows correct count and filename."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create exactly 3 valid files to test the count
+            test_files = [
+                "response_2025-09-19T14-30-20.json",
+                "response_2025-09-19T14-30-22.json",
+                "response_2025-09-19T14-30-25.json",  # Latest
+            ]
+
+            for filename in test_files:
+                file_path = os.path.join(temp_dir, filename)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump({"test": "data"}, f)
+
+            # Call the function
+            result = _find_latest_response_file(temp_dir)
+
+            # Verify return value
+            assert result is not None
+            assert "response_2025-09-19T14-30-25.json" in result
+
+            # Verify user feedback message
+            captured = capsys.readouterr()
+            captured_out = captured.out or ""
+            assert (
+                "Found 3 previous sessions, continuing from: response_2025-09-19T14-30-25.json"
+                in captured_out
+            )
 
     @patch("mcp_coder.cli.commands.prompt._find_latest_response_file")
     @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
@@ -1231,9 +1330,7 @@ class TestExecutePrompt:
             bool(args_continue_from.continue_last)
             and bool(args_continue_from.continue_from)
         )
-        assert not (
-            bool(args_normal.continue_last) and bool(args_normal.continue_from)
-        )
+        assert not (bool(args_normal.continue_last) and bool(args_normal.continue_from))
 
     def test_continue_success_integration(self) -> None:
         """Test CLI integration for --continue success case with file discovery and user feedback.

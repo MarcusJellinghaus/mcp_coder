@@ -718,32 +718,21 @@ def _find_latest_response_file(
             return None
 
         # ISO timestamp pattern: response_YYYY-MM-DDTHH-MM-SS.json
-        timestamp_pattern = (
-            r"^response_(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})\.json$"
-        )
+        timestamp_pattern = r"^response_(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})\.json$"
 
-        # Validate each file matches strict ISO timestamp pattern with valid date/time values
+        # Validate each file matches strict ISO timestamp pattern
         valid_files = []
         for file_path in response_files:
             filename = os.path.basename(file_path)
             match = re.match(timestamp_pattern, filename)
             if match:
-                # Extract date/time components for validation
-                year, month, day, hour, minute, second = match.groups()
-
-                # Validate ranges for date/time components
-                if (
-                    1 <= int(month) <= 12  # Valid month
-                    and 1 <= int(day) <= 31  # Valid day (simplified check)
-                    and 0 <= int(hour) <= 23  # Valid hour
-                    and 0 <= int(minute) <= 59  # Valid minute
-                    and 0 <= int(second) <= 59
-                ):  # Valid second
+                timestamp_str = match.group(1)  # Extract the timestamp part
+                try:
+                    # Use datetime.strptime for robust validation
+                    datetime.strptime(timestamp_str, "%Y-%m-%dT%H-%M-%S")
                     valid_files.append(file_path)
-                else:
-                    logger.debug(
-                        "Skipping invalid date/time values in filename: %s", filename
-                    )
+                except ValueError:
+                    logger.debug("Invalid timestamp in filename: %s", filename)
             else:
                 logger.debug("Skipping invalid filename format: %s", filename)
 
