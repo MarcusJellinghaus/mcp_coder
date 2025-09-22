@@ -36,12 +36,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run quality checks (pylint, pytest, mypy)
   - [x] Prepare git commit
 
-- [ ] **Step 3: Black Formatter Implementation** - [steps/step_3.md](steps/step_3.md)
-  - [ ] Write unit and integration tests for Black formatting
-  - [ ] Implement Black formatter with stdout parsing for change detection
-  - [ ] Add inline utility functions for Python file discovery
-  - [ ] Run quality checks (pylint, pytest, mypy)
-  - [ ] Prepare git commit
+- [x] **Step 3: Black Formatter Implementation** - [steps/step_3.md](steps/step_3.md)
+  - [x] Write unit and integration tests for Black formatting
+  - [x] Implement Black formatter with stdout parsing for change detection
+  - [x] Add inline utility functions for Python file discovery
+  - [x] Run quality checks (pylint, pytest, mypy)
+  - [x] Prepare git commit
 
 - [ ] **Step 4: isort Formatter Implementation** - [steps/step_4.md](steps/step_4.md)
   - [ ] Write unit and integration tests for isort formatting
