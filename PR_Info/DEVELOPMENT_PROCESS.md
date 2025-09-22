@@ -120,8 +120,7 @@ please ask me whether I agree (Y/N)
 
 After the agreement:
 ```
-Can you update the plan by updating the different files in folder `pr_info`
-(including creating the `steps/` subfolder for implementation details)
+Can you update the plan by updating the different files in folder `pr_info\steps`
 Please do targeted changes.
 Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`
 ```
