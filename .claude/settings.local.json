@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mv:*)",
       "mcp__code-checker__run_all_checks",
       "mcp__code-checker__run_pylint_check",
       "mcp__code-checker__run_pytest_check",
