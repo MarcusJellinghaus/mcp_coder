@@ -17,43 +17,50 @@ This is step 1 of 7: Help system refactoring before implementing the main featur
 ## WHAT
 **Main changes**:
 ```python
-# Remove handle_no_command() function
-# Update get_help_text() to be the primary help function
-# Remove get_usage_examples() and related example code
-# Simplify help text generation
+# Add parameter to get_help_text(include_examples: bool = False)
+# Update execute_help() to call get_help_text(include_examples=True)
+# Update handle_no_command() to call get_help_text(include_examples=False)
+# Keep get_usage_examples() but only call it when include_examples=True
 ```
 
 ## HOW
-- **Code Removal**: Remove `handle_no_command()` function entirely
-- **Function Update**: Make `get_help_text()` the main help function
-- **Cleanup**: Remove example generation code
-- **Integration**: Update any callers to use `get_help_text()` directly
+- **Function Update**: Add `include_examples` parameter to `get_help_text()`
+- **Help Command**: Update `execute_help()` to call with `include_examples=True`
+- **No Command**: Update `handle_no_command()` to call with `include_examples=False`
+- **Conditional Logic**: Only call `get_usage_examples()` when `include_examples=True`
 
 ## ALGORITHM
 ```
-1. REMOVE handle_no_command() function
-2. UPDATE get_help_text() to be standalone (no examples)
-3. REMOVE get_usage_examples() function
-4. CLEAN UP any example-related imports or code
-5. VERIFY help system still works correctly
+1. ADD include_examples parameter to get_help_text() with default False
+2. UPDATE get_help_text() to conditionally include examples based on parameter
+3. UPDATE execute_help() to call get_help_text(include_examples=True)
+4. UPDATE handle_no_command() to call get_help_text(include_examples=False)
+5. VERIFY both help scenarios work correctly
 ```
 
 ## DATA
-**Function to Remove**:
-```python
-def handle_no_command() -> None:
-    # This entire function should be removed
-```
-
 **Function to Update**:
 ```python
-def get_help_text() -> str:
-    """Return help text without examples."""
-    # Update implementation to be simpler
+def get_help_text(include_examples: bool = False) -> str:
+    """Get help text with optional examples.
+    
+    Args:
+        include_examples: If True, include usage examples section
+    """
+    # Implementation with conditional examples
+```
+
+**Updated Callers**:
+```python
+# In execute_help()
+help_text = get_help_text(include_examples=True)
+
+# In handle_no_command()
+help_text = get_help_text(include_examples=False)
 ```
 
 **Expected Result**:
-- Simplified help system
-- No example generation in help functions
+- Single parameterized help function
+- Examples shown in help command but not in no-command scenario
 - Clean foundation for documentation updates
 - Maintained help functionality for users

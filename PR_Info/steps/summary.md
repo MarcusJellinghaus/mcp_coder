@@ -13,7 +13,7 @@ Add a new `--continue` parameter to the `mcp-coder prompt` command that automati
 - **Documentation**: Update README.md, CLI help text, and refactor help system
 
 ## Technical Approach
-1. **Refactor help system** - replace `handle_no_command()` with `get_help_text()`, remove examples
+1. **Refactor help system** - add `include_examples` parameter to `get_help_text()`, preserve examples in help command
 2. **Add CLI parameter** with argparse mutual exclusivity validation
 3. **Create utility function** with strict file validation and user feedback
 4. **Integrate with existing continuation logic** (reuse `_load_previous_chat` and `_build_context_prompt`)

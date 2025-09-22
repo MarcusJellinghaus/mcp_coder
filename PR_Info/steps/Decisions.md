@@ -17,10 +17,10 @@ Decisions made during project plan review and discussion for the --continue-from
 - **Rationale**: Argparse handles mutual exclusivity automatically, focus on functionality
 
 ### 3. Documentation Strategy
-**Decision**: Update README.md + CLI argument help + simplified help.py
-- Remove examples from help text (keep only in README.md)
-- Use `get_help_text()` instead of `handle_no_command()`
-- **Rationale**: Simplified help system, avoid duplication
+**Decision**: Update README.md + CLI argument help + parameterized help.py
+- Remove examples from short help, keep in detailed help command
+- Use `get_help_text(include_examples=bool)` for both scenarios
+- **Rationale**: Single function approach, examples where users expect them
 
 ### 4. Error Handling
 **Decision**: Show info message "No previous response files found"
@@ -39,8 +39,8 @@ Decisions made during project plan review and discussion for the --continue-from
 
 ### 7. Help System Refactoring
 **Decision**: Add help system refactoring as Step 1
-- Replace `handle_no_command()` with `get_help_text()`
-- Remove examples from help functions
+- Add `include_examples` parameter to `get_help_text()`
+- Preserve examples in help command, remove from no-command scenario
 - **Rationale**: Prerequisite for clean documentation updates
 
 ### 8. Step Structure
@@ -83,3 +83,23 @@ Decisions made during project plan review and discussion for the --continue-from
 **Decision**: Keep current 7-step implementation order exactly as planned
 - Maintain granular approach with separate testing and implementation steps
 - **Rationale**: Proven structure, clear separation of concerns
+
+## Help System Refactoring Decisions (Step 1 Review)
+
+### 16. Help Function Structure
+**Decision**: Use single `get_help_text(include_examples: bool = False)` function
+- Replace multiple help functions with one parameterized function
+- Default to no examples (safe for short help)
+- **Rationale**: DRY principle, single source of truth, easier maintenance
+
+### 17. Examples Placement Strategy
+**Decision**: Keep examples in help command, remove from no-command scenario
+- `mcp-coder help` → `get_help_text(include_examples=True)` (with examples)
+- `mcp-coder` (no command) → `get_help_text(include_examples=False)` (without examples)
+- **Rationale**: Users expect examples when explicitly asking for help, but not in error scenarios
+
+### 18. Function Removal Strategy
+**Decision**: Remove `handle_no_command()` and `get_usage_examples()` dependencies
+- Keep `get_usage_examples()` function but only call it when needed
+- Update `handle_no_command()` to use new parameterized function
+- **Rationale**: Cleaner architecture while preserving existing functionality
