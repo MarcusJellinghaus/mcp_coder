@@ -36,3 +36,7 @@ Prefer these tools for access and managing files:
       "mcp__filesystem__move_file",
       "mcp__filesystem__edit_file"
 ```
+
+## Issue with MCP servers
+
+If the the tools mentioened above are not accessible to you, please raise it immidiatly.
