@@ -82,6 +82,19 @@ response = ask_claude("How should I structure this new feature?")
 print(response)
 ```
 
+### Session Storage and Continuation
+
+```bash
+# Start a conversation and store the response
+mcp-coder prompt "Start project planning" --store-response
+
+# Continue from a specific session file
+mcp-coder prompt "What's next?" --continue-from response_2025-09-19T14-30-22.json
+
+# Continue from the most recent session (automatic discovery)
+mcp-coder prompt "What's next?" --continue
+```
+
 ### Git Operations
 
 ```python

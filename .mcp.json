@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "code-checker": {
+      "type": "stdio",
+      "command": "${USERPROFILE}\\Documents\\GitHub\\mcp_coder\\.venv\\Scripts\\mcp-code-checker.exe",
+      "args": [
+        "--project-dir",
+        "${USERPROFILE}\\Documents\\GitHub\\mcp_coder",
+        "--python-executable",
+        "${USERPROFILE}\\Documents\\GitHub\\mcp_coder\\.venv\\Scripts\\python.exe",
+        "--venv-path",
+        "${USERPROFILE}\\Documents\\GitHub\\mcp_coder\\.venv",
+        "--test-folder",
+        "tests",
+        "--log-level",
+        "INFO"
+      ],
+      "env": {
+        "PYTHONPATH": "${USERPROFILE}\\Documents\\GitHub\\mcp_coder\\"
+      }
+    },
+    "filesystem": {
+      "type": "stdio",
+      "command": "${USERPROFILE}\\Documents\\GitHub\\mcp_coder\\.venv\\Scripts\\mcp-server-filesystem.exe",
+      "args": [
+        "--project-dir",
+        "${USERPROFILE}\\Documents\\GitHub\\mcp_coder",
+        "--log-level",
+        "INFO",
+        "--reference-project",
+        "p_fs=${USERPROFILE}\\Documents\\GitHub\\mcp_server_filesystem",
+        "--reference-project",
+        "p_config=${USERPROFILE}\\Documents\\GitHub\\mcp-config",
+        "--reference-project",
+        "p_checker=${USERPROFILE}\\Documents\\GitHub\\mcp-code-checker"
+      ],
+      "env": {
+        "PYTHONPATH": "${USERPROFILE}\\Documents\\GitHub\\mcp_coder\\.venv\\Lib\\"
+      }
+    }
+  }
+}

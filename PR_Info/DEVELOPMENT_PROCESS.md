@@ -112,19 +112,20 @@ Please offer, whenever possible, simple options like
 
 Wait for end of discussion
 ```
-
----
 Please summarise changes you want to do to the project plan for confirmation 
 ( one liner bullet points)
----
-Please ask me whether I agree (Y/N)
----
+and
+please ask me whether I agree (Y/N)
+```
+
 After the agreement:
-Can you update the plan by updating the different files in folder `pr_info`
-(including creating the `steps/` subfolder for implementation details)
+```
+Can you update the plan by updating the different files in folder `pr_info\steps`
 Please do targeted changes.
 Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`
 ```
+
+Possibly review the project plan one more time (see above) or continue with the next step.
 
 #### Task Tracker Update Prompt:
 ```

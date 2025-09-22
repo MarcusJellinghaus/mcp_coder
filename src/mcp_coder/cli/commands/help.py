@@ -10,15 +10,19 @@ def execute_help(args: argparse.Namespace) -> int:
     """Execute help command. Returns exit code."""
     logger.info("Executing help command")
 
-    help_text = get_help_text()
+    help_text = get_help_text(include_examples=True)
     print(help_text)
 
     logger.info("Help command completed successfully")
     return 0
 
 
-def get_help_text() -> str:
-    """Get comprehensive help text for all commands."""
+def get_help_text(include_examples: bool = False) -> str:
+    """Get comprehensive help text for all commands.
+
+    Args:
+        include_examples: If True, include usage examples section
+    """
     help_content = """MCP Coder - AI-powered software development automation toolkit
 
 USAGE:
@@ -28,7 +32,7 @@ COMMANDS:
     help                    Show help information
     verify                  Verify Claude CLI installation and configuration
     prompt <text>           Execute prompt via Claude API with configurable debug output
-                           
+
                            Parameters:
                            <text>                 The prompt/question to send to Claude
                            --verbosity LEVEL      Output detail level:
@@ -39,6 +43,8 @@ COMMANDS:
                                                   for later continuation or reference
                            --continue-from FILE   Continue conversation from previous stored session
                                                   (enhances prompt with previous context)
+                           --continue             Continue from the most recent stored session
+                                                  (automatically finds latest response file)
                            --timeout SECONDS      Timeout for Claude API request in seconds (default: 60)
     commit auto             Auto-generate commit message using LLM
     commit auto --preview   Show generated message and ask for confirmation
@@ -47,7 +53,7 @@ COMMANDS:
 {examples}
 
 For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder""".format(
-        examples=get_usage_examples()
+        examples=get_usage_examples() if include_examples else ""
     )
 
     return help_content
@@ -75,6 +81,7 @@ def get_usage_examples() -> str:
     # Session storage and continuation:
     mcp-coder prompt "Start project planning" --store-response                      # Save session
     mcp-coder prompt "What's next?" --continue-from response_2025-09-19T14-30-22.json # Continue conversation
+    mcp-coder prompt "What's next?" --continue                                      # Continue from most recent session
     
     # Combined usage for complex workflows:
     mcp-coder prompt "Complex analysis" --verbosity verbose --store-response         # Debug + save

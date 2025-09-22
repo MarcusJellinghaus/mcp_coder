@@ -25,8 +25,8 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-/.mcp.json
-.claude/settings.local.json
+# /.mcp.json
+# .claude/settings.local.json
 checks_output.txt
 bash.exe.stackdump
 /.mcp-coder/responses
