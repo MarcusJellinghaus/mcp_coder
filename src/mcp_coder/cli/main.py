@@ -12,6 +12,7 @@ from .commands import (
     execute_prompt,
     execute_verify,
 )
+from .commands.help import get_help_text
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
@@ -117,24 +118,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 def handle_no_command(args: argparse.Namespace) -> int:
     """Handle case when no command is provided."""
     logger.info("No command provided, showing help")
-    print("mcp-coder: AI-powered software development automation toolkit")
-    print("")
-    print("Usage: mcp-coder [--log-level LEVEL] COMMAND [OPTIONS]")
-    print("")
-    print("Global options:")
-    print(
-        "  --log-level LEVEL       Set logging verbosity: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: WARNING)"
-    )
-    print("")
-    print("Available commands:")
-    print("  help                    Show detailed help information")
-    print("  verify                  Verify Claude CLI installation and configuration")
-    print("  prompt TEXT             Execute prompt via Claude API with debug output")
-    print("  commit auto             Auto-generate and create commit")
-    print("  commit clipboard        Commit using message from clipboard")
-    print("")
-    print("For more information, run: mcp-coder help")
-    print("Or visit: https://github.com/MarcusJellinghaus/mcp_coder")
+
+    help_text = get_help_text(include_examples=False)
+    print(help_text)
 
     return 1  # Exit with error code since no command was provided
 

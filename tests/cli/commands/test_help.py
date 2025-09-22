@@ -28,7 +28,7 @@ def test_execute_help_returns_success(capsys: pytest.CaptureFixture[str]) -> Non
 
 def test_get_help_text_contains_all_commands() -> None:
     """Test help text includes all available commands."""
-    help_text = get_help_text()
+    help_text = get_help_text(include_examples=True)
 
     assert "MCP Coder - AI-powered software development automation toolkit" in help_text
     assert "USAGE:" in help_text
@@ -50,9 +50,23 @@ def test_get_usage_examples_has_examples() -> None:
     assert "mcp-coder commit clipboard" in examples
 
 
+def test_get_help_text_without_examples() -> None:
+    """Test help text without examples doesn't include examples section."""
+    help_text = get_help_text(include_examples=False)
+
+    assert "MCP Coder - AI-powered software development automation toolkit" in help_text
+    assert "USAGE:" in help_text
+    assert "COMMANDS:" in help_text
+    assert "help" in help_text
+    assert "commit auto" in help_text
+    assert "commit clipboard" in help_text
+    assert "EXAMPLES:" not in help_text  # Should not include examples
+    assert "https://github.com/MarcusJellinghaus/mcp_coder" in help_text
+
+
 def test_help_text_formatting() -> None:
     """Test help text is properly formatted."""
-    help_text = get_help_text()
+    help_text = get_help_text(include_examples=True)
 
     # Check that the help text has proper structure
     lines = help_text.split("\n")
@@ -66,7 +80,7 @@ def test_help_text_formatting() -> None:
 
 def test_help_text_consistency() -> None:
     """Test that help text is consistent with examples."""
-    help_text = get_help_text()
+    help_text = get_help_text(include_examples=True)
     examples = get_usage_examples()
 
     # Examples should be included in help text
@@ -75,7 +89,7 @@ def test_help_text_consistency() -> None:
 
 def test_prompt_command_documentation() -> None:
     """Test that prompt command is fully documented with all features."""
-    help_text = get_help_text()
+    help_text = get_help_text(include_examples=True)
     examples = get_usage_examples()
 
     # Check command is listed

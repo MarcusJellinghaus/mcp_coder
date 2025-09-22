@@ -10,15 +10,19 @@ def execute_help(args: argparse.Namespace) -> int:
     """Execute help command. Returns exit code."""
     logger.info("Executing help command")
 
-    help_text = get_help_text()
+    help_text = get_help_text(include_examples=True)
     print(help_text)
 
     logger.info("Help command completed successfully")
     return 0
 
 
-def get_help_text() -> str:
-    """Get comprehensive help text for all commands."""
+def get_help_text(include_examples: bool = False) -> str:
+    """Get comprehensive help text for all commands.
+
+    Args:
+        include_examples: If True, include usage examples section
+    """
     help_content = """MCP Coder - AI-powered software development automation toolkit
 
 USAGE:
@@ -28,7 +32,7 @@ COMMANDS:
     help                    Show help information
     verify                  Verify Claude CLI installation and configuration
     prompt <text>           Execute prompt via Claude API with configurable debug output
-                           
+
                            Parameters:
                            <text>                 The prompt/question to send to Claude
                            --verbosity LEVEL      Output detail level:
@@ -47,7 +51,7 @@ COMMANDS:
 {examples}
 
 For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder""".format(
-        examples=get_usage_examples()
+        examples=get_usage_examples() if include_examples else ""
     )
 
     return help_content
