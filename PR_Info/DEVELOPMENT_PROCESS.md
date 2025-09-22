@@ -126,6 +126,8 @@ Please do targeted changes.
 Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`
 ```
 
+Possibly review the project plan one more time (see above) or continue with the next step.
+
 #### Task Tracker Update Prompt:
 ```
 Please read the implementation steps in `pr_info/steps/` and
