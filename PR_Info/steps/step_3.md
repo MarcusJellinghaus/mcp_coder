@@ -17,8 +17,7 @@ Based on the Code Formatters Implementation Summary, implement Step 3: Create th
 def format_with_black(project_root: Path, target_dirs: Optional[List[str]] = None) -> FormatterResult:
     """Format code using Black and return detailed results"""
 
-def _get_python_files(directories: List[Path]) -> List[Path]:
-    """Get list of Python files in target directories"""
+# Note: _get_python_files will be moved to utils.py in step 5
     
 def _detect_black_changes(py_files: List[Path]) -> List[FileChange]:
     """Run Black and detect which files were changed using modification time"""
@@ -32,7 +31,7 @@ def _build_black_command(config: FormatterConfig) -> List[str]:
 - Use `execute_command` from `subprocess_runner.py`
 - Import `FormatterConfig`, `FormatterResult`, `FileChange` from models
 - Use `get_black_config` from config_reader
-- Import `hashlib` for content hashing
+- No content hashing needed (using modification time approach)
 
 ### Dependencies
 ```python

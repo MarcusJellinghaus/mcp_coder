@@ -44,7 +44,7 @@ from ..utils.subprocess_runner import CommandResult
 ## ALGORITHM
 ```
 1. Define FormatterConfig with tool name, settings dict, target directories
-2. Define FileChange with file path, before content, after content, diff
+2. Define FileChange with file path and change status (simplified)
 3. Define FormatterResult with success flag, changes list, execution time, errors
 4. Create type aliases for common patterns
 5. Export public API in __init__.py
@@ -72,5 +72,5 @@ from ..utils.subprocess_runner import CommandResult
 ## Tests Required
 1. Test data model creation and validation
 2. Test FormatterResult with various scenarios (success, failure, no changes)
-3. Test FileChange diff handling
+3. Test FileChange simple change detection
 4. Test FormatterConfig validation

@@ -34,8 +34,8 @@ def format_with_isort(project_root: Path, target_dirs: List[str] = None) -> Form
 ### Integration Points
 - Import all formatter implementations  
 - Import all data models for public API
-- Use `difflib.unified_diff` for diff generation
 - Handle Path objects consistently across all utilities
+- Keep utilities minimal (only essential file discovery)
 
 ### Dependencies
 ```python

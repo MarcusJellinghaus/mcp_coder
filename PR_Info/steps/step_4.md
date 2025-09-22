@@ -26,8 +26,7 @@ def _convert_config_to_isort_settings(config: FormatterConfig):
 ## HOW
 ### Integration Points
 - Import `isort.api` and `isort.Config` for programmatic access
-- Use same change detection pattern as Black formatter
-- Reuse `_capture_file_states` and `_detect_changes` from utils.py
+- Use isort.api.sort_file() which returns change status directly (no complex change detection needed)
 - Use `get_isort_config` from config_reader
 
 ### Dependencies
@@ -76,7 +75,7 @@ changed = isort.api.sort_file(file_path, config=isort_config)
 1. **Unit tests (mocked):**
    - Test configuration conversion to isort settings
    - Test Python file discovery logic
-   - Test change detection with mock files
+   - Test isort API integration (mocked)
    
 2. **Integration tests (formatter_integration marker):**
    - Test sorting unsorted imports
