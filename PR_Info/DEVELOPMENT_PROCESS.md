@@ -140,7 +140,7 @@ marking each step as incomplete [ ] and linking to the corresponding step file.
 Review `pr_info/DEVELOPMENT_PROCESS.md` for context on the workflow and task requirements.
 
 Each task should include the 3 quality checks (pylint, pytest, mypy) and
-git commit preparation as outlined in the development process. Do NOT commit code.
+git commit preparation as outlined in the development process.
 
 Also add the pull request tasks for PR review and summary creation at the end in a section "Pull request"
 ```
@@ -208,7 +208,7 @@ Please implement!
 Please verify your implementation running the various checks of the MCP server and by solving potential issues (and repeat).
 Please do not invent extra complexity not mentioned in the project plan.
 Please let me know in case you encounter any issues or need a decision.
-Please provide a short concise commit message stating the step name in the title.
+Please provide a short concise commit message stating the step name in the title. Don not perform a commit!
 Once you are done, please check again that task description on `pr_info/TASK_TRACKER.md` to ensure that everything is done.
 Once everything is done, please mark the task as done.
 Please work only on one task. Do not pick further tasks.
