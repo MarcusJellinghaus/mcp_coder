@@ -2,90 +2,77 @@
 
 ## LLM Prompt
 ```
-Based on the Code Formatters Implementation Summary, implement Step 1 using TDD: First write comprehensive unit tests for the data models (FormatterResult, FormatterConfig, FileChange), then implement the models to pass the tests. Focus on creating clean, type-safe data structures with simplified change detection using tool output parsing.
+Based on the Step 0 analysis findings, implement Step 1 using TDD: First write comprehensive unit tests for the simplified FormatterResult dataclass, then implement the model to pass the tests. Focus on creating a clean, minimal data structure for formatter results using findings from tool behavior analysis.
 ```
 
 ## WHERE
-- `tests/formatters/test_models.py` - **START HERE: Write unit tests first (TDD)**
-- `src/mcp_coder/formatters/models.py` - Data structures and types (implement after tests)
-- `src/mcp_coder/formatters/__init__.py` - Package initialization (basic exports only)
-- `pyproject.toml` - Add `formatter_integration` pytest marker
+- `tests/formatters/test_formatter_result.py` - **START HERE: Write unit tests first (TDD)**
+- `src/mcp_coder/formatters/__init__.py` - FormatterResult dataclass + package initialization
+- `pyproject.toml` - Verify `formatter_integration` pytest marker exists
 
 ## WHAT
 ### Main Functions/Classes
 ```python
 @dataclass
-class FormatterConfig:
-    """Configuration for a code formatter"""
-    
-@dataclass  
 class FormatterResult:
-    """Result of running a formatter"""
-    
-@dataclass
-class FileChange:
-    """Simple record of file changes during formatting"""
+    """Simplified result of running a formatter"""
+    success: bool
+    files_changed: List[str]  # File paths as strings
+    formatter_name: str
+    error_message: Optional[str] = None
 ```
 
 ## HOW
 ### Integration Points
-- Add `formatter_integration` marker to pyproject.toml
-- Import models in `__init__.py` for public API
-- Use subprocess_runner from existing utils
+- Verify `formatter_integration` marker exists in pyproject.toml
+- Define FormatterResult directly in `__init__.py` for simple API
+- Use findings from Step 0 analysis for realistic test scenarios
 
 ### Dependencies
 ```python
 from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Dict, Optional, Any
-from ..utils.subprocess_runner import CommandResult
+from typing import List, Optional
 ```
 
 ## ALGORITHM
 ```
-1. Define FormatterConfig with tool name, settings dict, target directories
-2. Define FileChange with file path and change status (simplified)
-3. Define FormatterResult with success flag, changes list, execution time, errors
-4. Create type aliases for common patterns
-5. Export public API in __init__.py
+1. Define simplified FormatterResult dataclass in __init__.py
+2. Include basic exports for public API
+3. Create comprehensive unit tests covering all scenarios
+4. Use Step 0 analysis findings to inform test cases
+5. Ensure FormatterResult supports both Black and isort use cases
 ```
 
 ## DATA
-### FormatterConfig
-- `tool_name: str` - Name of the formatter tool
-- `settings: Dict[str, Any]` - Tool-specific configuration
-- `target_directories: List[Path]` - Directories to format
-- `project_root: Path` - Root directory of project
-
-### FormatterResult  
+### FormatterResult (Simplified)
 - `success: bool` - Whether formatting completed successfully
-- `files_changed: List[FileChange]` - Files modified (parsed from tool outputs)
-- `execution_time_ms: int` - Time taken to complete formatting
+- `files_changed: List[str]` - File paths that were modified (from tool output parsing)
 - `formatter_name: str` - Name of formatter used ("black" or "isort")
-- `error_message: Optional[str]` - Error details if failed
-- **Removed:** `command_result` field (not needed with simplified approach)
+- `error_message: Optional[str]` - Error details if failed (None for success)
 
-### FileChange
-- `file_path: Path` - Path to the changed file
-- `had_changes: bool` - Whether the file was actually modified
+**Removed from original plan:**
+- FormatterConfig dataclass (using inline config reading)
+- FileChange dataclass (using simple string list)
+- execution_time_ms field (not essential for core functionality)
 
 ## Tests Required (TDD - Write These First!)
-1. **FormatterConfig creation and validation**
-   - Test with various tool names and settings
-   - Test with different target directories
-   - Test invalid configurations
-
-2. **FormatterResult scenarios** 
-   - Success with file changes
-   - Success with no changes
+1. **FormatterResult creation and validation**
+   - Success with file changes (list of file paths)
+   - Success with no changes (empty list)
    - Failure with error message
-   - Various execution times
+   - Different formatter names ("black", "isort")
 
-3. **FileChange data structure**
-   - File path handling
-   - Change status tracking
-   - Path validation
+2. **FormatterResult edge cases**
+   - None vs empty string for error_message
+   - Empty vs populated files_changed list
+   - Validation of formatter_name values
 
-4. **Data model integration**
-   - Test that all models work together
-   - Test serialization/deserialization if needed
+3. **FormatterResult usage patterns**
+   - Test creation from actual tool output (based on Step 0 findings)
+   - Test representation and string formatting
+   - Test equality and comparison if needed
+
+4. **Integration readiness**
+   - Ensure FormatterResult supports expected usage in formatters
+   - Test with realistic file path examples
+   - Verify dataclass behavior (repr, equality, etc.)

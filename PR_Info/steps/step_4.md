@@ -1,89 +1,124 @@
-# Step 4: isort Formatter Implementation
+# Step 4: Combined API Implementation
 
 ## LLM Prompt
 ```
-Based on the Code Formatters Implementation Summary, implement Step 4 using TDD: First write comprehensive unit and integration tests for isort formatting using the Python API with direct change detection. Then implement the isort formatter to pass the tests using isort.api.sort_file() return values for change detection.
+Based on Steps 2 and 3 implementations, implement Step 4 using TDD: First write comprehensive unit and integration tests for the combined API functions, then implement the simple format_code() wrapper and clean exports in __init__.py. Include line-length conflict warning feature.
 ```
 
 ## WHERE
-- `tests/formatters/test_isort_formatter.py` - **START HERE: Write unit and integration tests first (TDD)**
-- `tests/formatters/test_data/sample_code/` - Add files with unsorted imports for testing
-- `src/mcp_coder/formatters/isort_formatter.py` - isort implementation with API change detection (implement after tests)
+- `tests/formatters/test_main_api.py` - **START HERE: Write unit and integration tests first (TDD)**
+- `src/mcp_coder/formatters/__init__.py` - Main API exports and combined function (implement after tests)
 
 ## WHAT
-### Main Functions
+### Main API Functions
 ```python
-def format_with_isort(project_root: Path, target_dirs: Optional[List[str]] = None) -> FormatterResult:
-    """Format imports using isort API and return detailed results"""
-
-def _apply_isort_to_files(py_files: List[Path], isort_config) -> List[FileChange]:
-    """Apply isort to files using isort.api.sort_file() and detect changes"""
+def format_code(project_root: Path, formatters: List[str] = None, target_dirs: List[str] = None) -> Dict[str, FormatterResult]:
+    """Run multiple formatters and return combined results"""
     
-def _convert_config_to_isort_settings(config: FormatterConfig):
-    """Convert FormatterConfig to isort.Config object"""
+def format_with_black(project_root: Path, target_dirs: List[str] = None) -> FormatterResult:
+    """Format code with Black (re-export from black_formatter)"""
+    
+def format_with_isort(project_root: Path, target_dirs: List[str] = None) -> FormatterResult:
+    """Sort imports with isort (re-export from isort_formatter)"""
+
+def _check_line_length_conflict(project_root: Path):
+    """Warn if Black and isort have different line lengths (~10 lines)"""
 ```
 
 ## HOW
 ### Integration Points
-- Import `isort.api` and `isort.Config` for programmatic access
-- Use isort.api.sort_file() which returns change status directly (no complex change detection needed)
-- Use `get_isort_config` from config_reader
+- Import both formatter implementations for re-export
+- Import FormatterResult for type annotations
+- Simple combined function calls individual formatters
+- Clean, minimal API surface with line-length conflict warning
 
 ### Dependencies
 ```python
-import isort
-import isort.api
+import tomllib
 from pathlib import Path
-from typing import List, Optional
-from .models import FormatterConfig, FormatterResult, FileChange
-from .config_reader import get_isort_config
+from typing import Dict, List, Optional
+from .black_formatter import format_with_black
+from .isort_formatter import format_with_isort
 ```
 
 ## ALGORITHM
 ```
-1. Load isort configuration from pyproject.toml  
-2. Convert config to isort.Config object
-3. Find all Python files in target directories
-4. Apply isort.api.sort_file() to each file (returns whether file changed)
-5. Collect FileChange objects for files that were modified
-6. Return FormatterResult with success status and change list
+1. Define FormatterResult dataclass in __init__.py
+2. Import and re-export individual formatter functions
+3. Implement simple format_code() that calls both formatters
+4. Add line-length conflict warning function
+5. Provide clean public API with proper exports
+6. Include comprehensive tests for combined functionality
 ```
 
 ## DATA
-### isort Configuration Mapping
-- `profile` → `isort.Config(profile=value)`
-- `line_length` → `isort.Config(line_length=value)`
-- `float_to_top` → `isort.Config(float_to_top=value)`
-- Additional settings from pyproject.toml as needed
-
-### isort API Usage
+### FormatterResult Definition
 ```python
-# Sort file and detect if it changed
-changed = isort.api.sort_file(file_path, config=isort_config)
-# Returns True if file was modified, False if no changes needed
+@dataclass
+class FormatterResult:
+    success: bool
+    files_changed: List[str]
+    formatter_name: str
+    error_message: Optional[str] = None
 ```
 
-### Return Values
-- `FormatterResult` with:
-  - `success: True` (isort API rarely fails, handles errors gracefully)
-  - `files_changed: List[FileChange]` - Files with import changes
-  - `execution_time_ms: int` - Time taken for sorting
-  - `formatter_name: "isort"`
-  - `error_message: Optional[str]` - If unexpected errors occur
+### Combined API Return
+```python
+{
+    "black": FormatterResult(...),
+    "isort": FormatterResult(...),
+}
+```
 
-## Tests Required
-1. **Unit tests (mocked):**
-   - Test configuration conversion to isort settings
-   - Test Python file discovery logic
-   - Test isort API integration (mocked)
+### Line-Length Conflict Warning
+```python
+def _check_line_length_conflict(project_root: Path):
+    """Simple warning when Black/isort line lengths differ"""
+    try:
+        with open(project_root / "pyproject.toml", "rb") as f:
+            data = tomllib.load(f)
+        
+        black_length = data.get("tool", {}).get("black", {}).get("line-length", 88)
+        isort_length = data.get("tool", {}).get("isort", {}).get("line_length", 88)
+        
+        if black_length != isort_length:
+            print(f"WARNING: Black line-length ({black_length}) != isort line_length ({isort_length})")
+    except (FileNotFoundError, tomllib.TOMLDecodeError):
+        pass  # No warning if config can't be read
+```
+
+### Target Directory Defaults
+- Same logic as individual formatters
+- Default to ["src", "tests"] if exist, otherwise ["."]
+- Allow override via function parameter
+
+## Tests Required (TDD - Write These First!)
+1. **Combined API function tests:**
+   - Test `format_code()` with both formatters (default behavior)
+   - Test `format_code()` with specific formatters list (["black"] only, ["isort"] only)
+   - Test `format_code()` with custom target directories
+   - Test aggregated results from multiple formatters
+   - Test error handling when one formatter fails
    
-2. **Integration tests (formatter_integration marker):**
-   - Test sorting unsorted imports (verify `isort.api.sort_file()` returns True)
-   - Test sorting already sorted imports (verify returns False)
-   - Test with float_to_top configuration
-   - Test with profile="black" compatibility
-   - Test with mixed import styles (relative, absolute, third-party)
-   - Test error handling with syntax errors in imports
-   - Test with custom isort configuration from pyproject.toml
-   - Test isort.Config object creation from FormatterConfig
-   - Test file-by-file processing and change aggregation
+2. **Individual formatter re-export tests:**
+   - Test `format_with_black()` import and execution
+   - Test `format_with_isort()` import and execution
+   - Verify functions work identically to direct imports
+
+3. **Line-length conflict warning tests:**
+   - Test warning when Black/isort line lengths differ
+   - Test no warning when line lengths match
+   - Test no warning when config file missing
+   - Test no warning when one tool section missing
+
+4. **Public API and exports:**
+   - Verify all expected functions/classes are exported
+   - Test import statements work correctly (`from mcp_coder.formatters import ...`)
+   - Test that FormatterResult is accessible
+   - Test that __all__ list is complete and accurate
+
+5. **Integration tests (formatter_integration marker):**
+   - Test complete workflow: both formatters on real files
+   - Test combined formatting with line-length conflicts
+   - Test target directory handling in combined mode
+   - Test error scenarios with both formatters

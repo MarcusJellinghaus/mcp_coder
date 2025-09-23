@@ -192,3 +192,145 @@ src/mcp_coder/formatters/
 - **Maintained 100%** of core functionality requirements
 - **TDD approach** ensures robust, well-tested implementation
 - **Learning-optimized** step-by-step progression
+
+
+---
+
+# Final Project Plan Decisions - September 2025 Review
+
+## Overview
+Final decisions made during comprehensive step-by-step project plan review to maximize simplicity while maintaining all core functionality.
+
+## Major Architectural Simplifications
+
+### 1. Test Data Strategy
+**Decision:** Simple multiline strings in test files
+- **Chosen:** Option A - Multiline string constants in each test file where needed
+- **Rationale:** Keeps tests self-contained, no external file management
+- **Implementation:** Test code stored as string constants directly in test functions
+- **Impact:** Eliminates test data file management, easier debugging
+
+### 2. Pre-Implementation Analysis
+**Decision:** Add Step 0 for tool behavior analysis
+- **Chosen:** Option B - Create analysis script to understand Black/isort output patterns first
+- **Rationale:** Understanding exact tool behavior eliminates guesswork in implementation
+- **Implementation:** `analysis/formatter_analysis.py` + `analysis/findings.md`
+- **Impact:** More reliable implementation, fewer edge case surprises
+
+### 3. Data Model Ultra-Simplification
+**Decision:** Simplified FormatterResult structure
+- **Chosen:** Option B - Remove execution_time_ms, use List[str] for files
+- **Rationale:** Core functionality doesn't need timing, string paths are simpler than objects
+- **Implementation:** `FormatterResult(success, files_changed: List[str], formatter_name, error_message)`
+- **Impact:** Eliminates FileChange dataclass entirely, reduces type complexity
+
+### 4. Configuration Reading Approach
+**Decision:** Inline configuration in each formatter
+- **Chosen:** Option B - Each formatter reads its own config directly (~10-15 lines each)
+- **Rationale:** Self-contained formatters, no shared configuration complexity
+- **Implementation:** `_get_black_config()` and `_get_isort_config()` functions inline
+- **Impact:** Eliminates config_reader.py file and FormatterConfig dataclass
+
+### 5. File Discovery Strategy
+**Decision:** Use CLI for both Black and isort (no file discovery)
+- **Chosen:** Let both tools handle their own file discovery and filtering
+- **Rationale:** Tools handle .gitignore, exclusions, and edge cases better than custom logic
+- **Implementation:** Pass target directories to both tools, parse their output for changes
+- **Impact:** Eliminates all file discovery utility functions, simpler and more reliable
+
+### 6. isort Implementation Method
+**Decision:** Use isort CLI instead of Python API
+- **Original:** isort.api.sort_file() for direct change detection
+- **Chosen:** isort CLI for consistency with Black approach
+- **Rationale:** Consistent approach for both tools, tools handle their own file filtering
+- **Implementation:** Parse isort CLI output for change detection
+- **Impact:** Uniform implementation pattern, eliminates API complexity
+
+### 7. Error Handling for Development
+**Decision:** Detailed debug output during development
+- **Chosen:** Comprehensive debug printing in tests for development, clean up later
+- **Rationale:** Need good debugging during TDD implementation phase
+- **Implementation:** Print exit codes, stdout, stderr during development
+- **Impact:** Better development experience, easier troubleshooting
+
+### 8. Final Project Structure
+**Decision:** Ultra-minimal 3-file structure
+- **Chosen:** Option A - Only `__init__.py`, `black_formatter.py`, `isort_formatter.py`
+- **Rationale:** Eliminated models.py and config_reader.py through other decisions
+- **Implementation:** FormatterResult in __init__.py, inline config in each formatter
+- **Impact:** Simplest possible organization, ~110 total lines vs ~200 original
+
+### 9. Target Directory Defaults
+**Decision:** Smart defaults with fallback
+- **Chosen:** Option A - Default to ["src", "tests"] if exist, otherwise current directory
+- **Rationale:** Works for most Python projects, reasonable fallback
+- **Implementation:** Check directory existence, use ["."] as fallback
+- **Impact:** User-friendly defaults, works out-of-box for most projects
+
+### 10. Integration Test Dependencies
+**Decision:** Assume tools are installed
+- **Chosen:** Option A - Let tests fail if Black/isort missing
+- **Rationale:** Simple approach, developers running formatter tests should have tools
+- **Implementation:** No skipif logic, direct tool execution
+- **Impact:** Simplest test setup, clear failure mode
+
+### 11. Configuration Conflict Handling
+**Decision:** Simple line-length warning
+- **Chosen:** Option B - Warn when Black/isort line-length differs (~10 lines)
+- **Rationale:** Helpful user feedback without complex validation
+- **Implementation:** Check configs, print warning if line-length mismatch
+- **Impact:** User-friendly feature with minimal complexity
+
+### 12. Implementation Step Structure
+**Decision:** Clean 6-step approach (renumbered)
+- **Chosen:** Option A - Renumber to Step 0-5 for clean sequence
+- **Rationale:** Step 2 (config reader) eliminated, clean numbering better
+- **Implementation:** Step 0-5 sequence with no gaps
+- **Impact:** Clear, sequential implementation plan
+
+## Final Architecture Summary
+
+### Ultra-Simplified Project Structure
+```
+src/mcp_coder/formatters/
+├── __init__.py           # FormatterResult dataclass + API functions (~40 lines)
+├── black_formatter.py    # Black CLI implementation + inline config (~40 lines)
+└── isort_formatter.py    # isort CLI implementation + inline config (~30 lines)
+```
+**Total: ~110 lines (vs original ~400+ lines)**
+
+### Completely Eliminated Components
+- ❌ `models.py` - FormatterResult moved to __init__.py
+- ❌ `config_reader.py` - Configuration reading inlined
+- ❌ `FileChange` dataclass - Using simple string lists
+- ❌ `FormatterConfig` dataclass - Using simple dicts
+- ❌ File discovery utilities - Tools handle their own files
+- ❌ isort Python API complexity - Using CLI consistently
+- ❌ Separate test data files - Using multiline strings
+- ❌ Complex error handling - Simple approach for development
+
+### Maintained Core Features
+✅ Full Black and isort formatting functionality
+✅ Configuration from pyproject.toml (inline reading)
+✅ Change detection from tool output parsing
+✅ Both individual and combined formatter APIs
+✅ Line-length conflict warnings
+✅ TDD implementation approach
+✅ Integration test capabilities
+✅ Debug-friendly development approach
+
+## Implementation Impact
+- **~75% reduction** in code complexity vs original plan
+- **~65% reduction** in total lines of code
+- **100% maintenance** of core functionality
+- **Improved developer experience** through simplification
+- **Faster implementation** due to reduced scope
+- **Easier testing** with simplified components
+
+## Updated Step Sequence
+**Step 0:** Tool Behavior Analysis (new)
+**Step 1:** Project Structure + FormatterResult dataclass
+**Step 2:** Black Formatter Implementation (with inline config)
+**Step 3:** isort Formatter Implementation (with inline config)
+**Step 4:** Combined API Implementation
+**Step 5:** Integration Testing and Quality Assurance
