@@ -7,9 +7,9 @@ to verify the behavioral patterns documented in findings.md.
 """
 
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
-import sys
 
 # Test samples
 UNFORMATTED = 'def test(a,b,c):\n    x=1+2+3\n    return x\n'
