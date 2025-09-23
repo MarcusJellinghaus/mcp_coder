@@ -16,7 +16,7 @@ from mcp_coder.formatters.config_reader import (
 class TestConfigReader:
     """Test configuration reading functionality."""
 
-    def test_read_existing_configuration(self):
+    def test_read_existing_configuration(self) -> None:
         """Test reading existing Black and isort configuration from pyproject.toml."""
         # Create a temporary pyproject.toml with formatter configuration
         config_content = """
@@ -51,7 +51,7 @@ float_to_top = true
         finally:
             os.unlink(temp_file)
 
-    def test_read_missing_configuration(self):
+    def test_read_missing_configuration(self) -> None:
         """Test reading configuration when sections are missing."""
         # Create a temporary pyproject.toml without formatter sections
         config_content = """
@@ -78,7 +78,7 @@ version = "0.1.0"
         finally:
             os.unlink(temp_file)
 
-    def test_line_length_conflict_detection(self):
+    def test_line_length_conflict_detection(self) -> None:
         """Test detection of line-length conflicts between Black and isort."""
         # Configuration with conflicting line lengths
         config_with_conflict = {
@@ -94,7 +94,7 @@ version = "0.1.0"
         assert "100" in warning
         assert "88" in warning
 
-    def test_no_line_length_conflict(self):
+    def test_no_line_length_conflict(self) -> None:
         """Test no warning when line lengths match."""
         # Configuration with matching line lengths
         config_no_conflict = {
@@ -105,7 +105,7 @@ version = "0.1.0"
         warning = check_line_length_conflicts(config_no_conflict)
         assert warning is None
 
-    def test_missing_line_length_config(self):
+    def test_missing_line_length_config(self) -> None:
         """Test behavior when line-length config is missing."""
         # Configuration without line-length settings
         config_missing = {

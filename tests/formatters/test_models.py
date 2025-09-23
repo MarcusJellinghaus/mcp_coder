@@ -9,7 +9,7 @@ from mcp_coder.formatters.models import FormatterResult
 class TestFormatterResult:
     """Test FormatterResult dataclass creation scenarios."""
 
-    def test_success_with_changes(self):
+    def test_success_with_changes(self) -> None:
         """Test FormatterResult creation for successful formatting with changes."""
         result = FormatterResult(
             success=True,
@@ -22,7 +22,7 @@ class TestFormatterResult:
         assert result.formatter_name == "black"
         assert result.error_message is None
 
-    def test_failure_with_error(self):
+    def test_failure_with_error(self) -> None:
         """Test FormatterResult creation for failed formatting with error."""
         result = FormatterResult(
             success=False,
@@ -36,7 +36,7 @@ class TestFormatterResult:
         assert result.formatter_name == "isort"
         assert result.error_message == "syntax error in file.py"
 
-    def test_success_no_changes(self):
+    def test_success_no_changes(self) -> None:
         """Test FormatterResult creation for successful formatting with no changes."""
         result = FormatterResult(success=True, files_changed=[], formatter_name="black")
 
@@ -45,7 +45,7 @@ class TestFormatterResult:
         assert result.formatter_name == "black"
         assert result.error_message is None
 
-    def test_subprocess_integration_pattern(self):
+    def test_subprocess_integration_pattern(self) -> None:
         """Test FormatterResult supports subprocess.CompletedProcess integration patterns."""
         # Simulate patterns from Step 0 analysis - exit code 0 = success, no changes
         result_no_changes = FormatterResult(
