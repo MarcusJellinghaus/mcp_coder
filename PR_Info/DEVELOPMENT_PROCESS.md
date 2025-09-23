@@ -145,13 +145,6 @@ git commit preparation as outlined in the development process.
 Also add the pull request tasks for PR review and summary creation at the end in a section "Pull request"
 ```
 
-Possible follow up question:
-```
-Did you implement everything of the current step?
-Do you have a commit message?
-Did you tick of the tasks in the task tracker?
-```
-
 **Objective:** Complete each implementation step with full validation
 
 Each step consists of two main phases:
@@ -216,6 +209,13 @@ Please work only on one task. Do not pick further tasks.
 Please also take a look at the tests\readme and only run those tests that are required in your context -i.e. avoid slow integration tests.
 ```
 
+Possible follow up question:
+```
+Did you implement everything of the current step?
+Do you have a commit message?
+Did you tick of the tasks in the task tracker?
+```
+
 **Common Implementation Failures & Responses:**
 
 - **Third-party dependencies needed:**
@@ -230,6 +230,7 @@ Please also take a look at the tests\readme and only run those tests that are re
   - *Incorrect task description:* May need implementation with next task
   - *Third-party library issues:* Library doesn't work as expected, causes confusion
   - *Response:* Fix issue, improve task description, update plan
+  - *Initial technology evaluation missing* Add a step 0 to evaluate a technology. Execute that, update plan
 
 - **Implementation works but requires no changes:**
   - Task was unnecessary or already implemented
