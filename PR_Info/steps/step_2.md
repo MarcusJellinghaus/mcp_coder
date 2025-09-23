@@ -2,7 +2,7 @@
 
 ## LLM Prompt
 ```
-Based on the Step 0 analysis findings, implement Step 2 using TDD: First write comprehensive unit and integration tests for Black formatting with CLI and stdout parsing for change detection. Then implement the Black formatter to pass the tests using tool output parsing patterns discovered in Step 0.
+Based on the Step 0 analysis findings, implement Step 2 using TDD: First write comprehensive unit and integration tests for Black formatting using proven exit code change detection (0=no changes, 1=changes needed). Then implement the Black formatter using the two-phase approach (check first, format if needed) and inline config reading patterns discovered in Step 0.
 ```
 
 ## WHERE
@@ -13,16 +13,16 @@ Based on the Step 0 analysis findings, implement Step 2 using TDD: First write c
 ### Main Functions
 ```python
 def format_with_black(project_root: Path, target_dirs: Optional[List[str]] = None) -> FormatterResult:
-    """Format code using Black CLI and return detailed results"""
+    """Format code using proven Black CLI patterns with exit code detection"""
 
 def _get_black_config(project_root: Path) -> dict:
-    """Read Black configuration inline from pyproject.toml"""
+    """Read Black configuration inline using validated tomllib patterns"""
     
-def _parse_black_output(stdout: str) -> List[str]:
-    """Parse Black stdout to find files that were reformatted"""
+def _check_black_changes(file_path: str, config: dict) -> bool:
+    """Check if Black formatting needed using --check (exit code pattern)"""
     
-def _build_black_command(config: dict, target_dirs: List[str]) -> List[str]:
-    """Build Black command with configuration options"""
+def _apply_black_formatting(file_path: str, config: dict) -> bool:
+    """Apply Black formatting and return success status"""
 ```
 
 ## HOW
@@ -37,18 +37,20 @@ def _build_black_command(config: dict, target_dirs: List[str]) -> List[str]:
 import subprocess
 import tomllib
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from . import FormatterResult
 ```
 
-## ALGORITHM
+## ALGORITHM (Based on Step 0 Analysis)
 ```
-1. Read Black configuration inline from pyproject.toml (with defaults)
-2. Determine target directories (default to ["src", "tests"] if exist, else ["."]) 
-3. Build Black CLI command with configuration options
-4. Execute Black command using subprocess
-5. Parse Black stdout for "reformatted file.py" patterns (from Step 0 analysis)
-6. Return FormatterResult with success status and list of changed files
+1. Read Black configuration inline using validated tomllib pattern
+2. Determine target files/directories to process
+3. For each file:
+   a. Check if formatting needed: black --check {file} (exit 0=no changes, 1=changes needed)
+   b. If changes needed (exit 1): apply formatting: black {file}
+   c. If error (exit 123+): collect error message from stderr
+4. Collect all files that were actually changed
+5. Return FormatterResult with success status and changed file list
 ```
 
 ## DATA
@@ -65,17 +67,20 @@ from . import FormatterResult
 - Check if "tests" directory exists, include if present  
 - If neither exists, default to ["."]
 
-### Command Building
-- Base command: `["black"]`
-- Add `--line-length` from config
-- Add `--target-version` from config  
-- Add target directories as final arguments
+### Command Building (Analysis-Proven Patterns)
+- Check command: `["black", "--check", file_path]` + config options
+- Format command: `["black", file_path]` + config options
+- Config options: `--line-length`, `--target-version` from pyproject.toml
+- Let Black handle file discovery when given directories
 
 ### Change Detection (Based on Step 0 Analysis)
-- Parse Black stdout for lines containing "reformatted"
-- Extract file paths from formatted output lines
-- Create list of changed file paths for FormatterResult
-- Much simpler and more accurate than file modification tracking
+- Use exit codes for reliable change detection (no parsing needed):
+  - Exit 0: No changes needed
+  - Exit 1: Changes were needed/applied
+  - Exit 123+: Syntax errors or other failures
+- Two-phase approach: check first, then format only if needed
+- Track files that actually get formatted (exit 1 → format → success)
+- Much more reliable than output parsing or file modification tracking
 
 ### Return Values
 - `FormatterResult` with:
@@ -85,28 +90,27 @@ from . import FormatterResult
   - `error_message: Optional[str]` - If Black failed
 
 ## Tests Required (TDD - Write These First!)
-1. **Unit tests (mocked subprocess):**
-   - Test command building with different configurations
-   - Test Black output parsing with Step 0 analysis patterns
+1. **Unit tests (mocked subprocess) based on analysis patterns:**
+   - Test check command building with different configurations
+   - Test format command building with config options
+   - Test exit code interpretation (0, 1, 123+ scenarios)
    - Test config reading with various pyproject.toml scenarios
-   - Test target directory determination logic
    
-2. **Integration tests (formatter_integration marker):**
-   - Test formatting unformatted Python code (expect "reformatted" output)
-   - Test formatting already formatted code (expect no "reformatted" output)
-   - Test with missing target directories
-   - Test with invalid Python syntax (Black error handling)
+2. **Integration tests (formatter_integration marker) using analysis scenarios:**
+   - Test formatting unformatted Python code (expect exit 1 → format → success)
+   - Test already formatted code (expect exit 0 → no changes)
+   - Test with syntax errors (expect exit 123 → error handling)
    - Test with custom Black configuration from pyproject.toml
-   - Test error handling when Black command fails
+   - Test two-phase approach: check then format only if needed
    
-3. **Configuration tests:**
+3. **Configuration tests using validated patterns:**
    - Missing pyproject.toml file (use defaults)
    - Missing tool.black section (use defaults)
    - Custom line-length and target-version settings
-   - Invalid configuration values (graceful handling)
+   - Inline tomllib reading error handling
    
-4. **Real-world scenarios (based on Step 0 findings):**
-   - Multiple files with mixed formatting needs
-   - Files that don't need formatting
-   - Syntax error handling
-   - Various Black stdout/stderr patterns
+4. **Real-world scenarios from Step 0 analysis:**
+   - Use actual unformatted code samples from analysis
+   - Test with code that triggers different exit codes
+   - Test error scenarios documented in analysis
+   - Verify exit code patterns match analysis findings

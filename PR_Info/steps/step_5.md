@@ -2,7 +2,7 @@
 
 ## LLM Prompt
 ```
-Based on the complete formatter implementation from Steps 0-4, implement Step 5: Create comprehensive integration test scenarios with realistic test data, run all quality assurance checks (pylint, pytest, mypy), and ensure the TDD-implemented formatter system passes all quality gates.
+Based on the complete formatter implementation from Steps 0-4 using analysis-proven patterns, implement Step 5: Create comprehensive integration test scenarios using real code samples from Step 0 analysis, run all quality assurance checks (pylint, pytest, mypy), and ensure the TDD-implemented formatter system with exit code detection passes all quality gates.
 ```
 
 ## WHERE
@@ -13,18 +13,18 @@ Based on the complete formatter implementation from Steps 0-4, implement Step 5:
 ## WHAT
 ### Integration Test Functions
 ```python
-# These test the complete workflow built in previous steps:
+# These test the complete workflow using analysis findings:
 @pytest.mark.formatter_integration
-def test_complete_formatting_workflow():
-    """Test full Black + isort formatting on realistic code samples"""
+def test_complete_formatting_workflow_with_exit_codes():
+    """Test full Black + isort formatting using exit code patterns from analysis"""
 
 @pytest.mark.formatter_integration  
-def test_real_world_scenarios():
-    """Test formatters with complex, realistic Python projects"""
+def test_analysis_based_scenarios():
+    """Test formatters with code samples discovered in Step 0 analysis"""
     
 @pytest.mark.formatter_integration
-def test_error_handling_scenarios():
-    """Test various error conditions with real files"""
+def test_exit_code_error_scenarios():
+    """Test error conditions using documented exit code patterns"""
 ```
 
 ### Quality Assurance Functions
@@ -37,7 +37,7 @@ def run_all_quality_checks() -> Dict[str, bool]:
 ### Integration Points
 - Use actual formatter execution (not mocked) for integration tests
 - Create temporary directories for test isolation
-- Verify real before/after file changes
+- Verify exit code patterns from Step 0 analysis
 - Test complete import chain from package root
 
 ### Test Dependencies
@@ -49,14 +49,16 @@ from mcp_coder.formatters import format_code, format_with_black, format_with_iso
 ```
 
 ## ALGORITHM
-### Integration Test Flow
+### Integration Test Flow (Analysis-Based)
 ```
-1. Create temporary project directory with realistic sample files
-2. Copy unformatted Python code and test pyproject.toml configurations
-3. Run formatter functions on temporary project
-4. Verify expected changes were made using actual file content
-5. Check that properly formatted code shows no changes (idempotent)
-6. Clean up temporary files
+1. Create temporary project directory with code samples from Step 0 analysis
+2. Create test pyproject.toml with configurations tested in analysis
+3. Run formatter functions and verify exit code patterns (0, 1, 123+)
+4. Test that unformatted code triggers exit 1 → formatting → success
+5. Test that formatted code triggers exit 0 → no changes
+6. Test that syntax errors trigger exit 123+ → error handling
+7. Verify idempotent behavior using exit code detection
+8. Clean up temporary files
 ```
 
 ### Quality Check Flow
@@ -69,63 +71,83 @@ from mcp_coder.formatters import format_code, format_with_black, format_with_iso
 ```
 
 ## DATA
-### Sample Test Files (Multiline Strings in Tests)
-**Unformatted Python code:**
+### Sample Test Files (From Step 0 Analysis)
+**Unformatted Python code (analysis sample):**
 ```python
 UNFORMATTED_CODE = '''
-def badly_formatted_function(param1,param2,param3):
-    x=1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16+17+18+19+20+21+22+23+24
-    if x>100:return True
-    else:return False
+def test(a,b,c):
+    x=1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16+17+18+19+20+21+22+23+24+25
+    return x
+
+class MyClass:
+    def __init__(self,name,age):
+        self.name=name
+        self.age=age
 '''
 ```
 
-**Unsorted imports:**
+**Unsorted imports (analysis sample):**
 ```python
 UNSORTED_IMPORTS = '''
 import os
-from myproject.utils import helper
+from myproject import utils
 import sys
-from typing import List, Dict
-import pathlib
-from myproject.models import Model, User
+from typing import List
+from collections import defaultdict
 import json
+'''
+```
+
+**Syntax error sample (for exit code 123 testing):**
+```python
+SYNTAX_ERROR_CODE = '''
+def test(a,b,c):
+    x = 1 +
+    return x
 '''
 ```
 
 **Test pyproject.toml variations:**
 - Default configuration
 - Custom line lengths  
-- Line-length conflicts
+- Line-length conflicts (Black vs isort)
 - Missing tool sections
 
 ## Tasks Required (Final Integration)
-1. **Integration test creation:**
-   - Create comprehensive test scenarios using multiline string test data
-   - Test complete workflow: install → import → use formatters
-   - Test real-world scenarios with complex code samples
-   - Test error handling with actual malformed files
+1. **Integration test creation using analysis patterns:**
+   - Create comprehensive test scenarios using code samples from Step 0
+   - Test complete workflow with exit code detection patterns
+   - Test real-world scenarios with analysis-documented problematic code
+   - Test error handling using known exit code patterns (123+ scenarios)
    
 2. **Test fixtures and configuration:**
    - Create conftest.py with shared fixtures for temp directories
-   - Test data factory functions for various code samples
+   - Test data factory functions using analysis code samples
    - Setup/teardown for integration test isolation
+   - Fixtures for pyproject.toml configurations tested in analysis
    
-3. **Quality assurance execution:**
-   - Run `mcp__checker__run_pylint_check` - must pass (errors/fatal only)
-   - Run `mcp__checker__run_pytest_check` - all tests including integration
-   - Run `mcp__checker__run_mypy_check` - strict type checking must pass
-   - Fix any issues found by quality checks
+3. **Quality assurance execution (analysis-confident):**
+   - Run `mcp__checker__run_pylint_check` - should pass with simple codebase
+   - Run `mcp__checker__run_pytest_check` - all TDD tests + integration
+   - Run `mcp__checker__run_mypy_check` - strict typing on minimal codebase
+   - Address any issues (should be minimal with proven patterns)
 
-4. **Final verification:**
+4. **Final verification using analysis insights:**
    - Test import statements work correctly from package root
    - Verify all TDD-created tests from Steps 1-4 pass
-   - Confirm all decided features are implemented
-   - Test line-length conflict warning functionality
-   - Document any remaining limitations or future enhancements
+   - Confirm exit code patterns work as documented in analysis
+   - Test line-length conflict warning with analysis scenarios
+   - Verify implementation matches analysis findings
    
-5. **Real-world testing:**
-   - Test on actual unformatted Python files
-   - Verify idempotent behavior (formatting twice gives same result)
-   - Test with various pyproject.toml configurations
-   - Test target directory handling edge cases
+5. **Real-world testing with analysis scenarios:**
+   - Test with unformatted code samples from Step 0
+   - Verify idempotent behavior using exit code detection (format twice = same result)
+   - Test with various pyproject.toml configurations from analysis
+   - Test error scenarios documented in Step 0 findings
+   - Confirm all exit code patterns work as analyzed
+   
+6. **Documentation and completion:**
+   - Document implementation matches Step 0 analysis findings
+   - Record any deviations from analysis (should be minimal)
+   - Verify ultra-simplified architecture (~135 lines achieved)
+   - Confirm 75% complexity reduction vs original plan

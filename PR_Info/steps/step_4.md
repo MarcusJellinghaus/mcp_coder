@@ -2,7 +2,7 @@
 
 ## LLM Prompt
 ```
-Based on Steps 2 and 3 implementations, implement Step 4 using TDD: First write comprehensive unit and integration tests for the combined API functions, then implement the simple format_code() wrapper and clean exports in __init__.py. Include line-length conflict warning feature.
+Based on Steps 2 and 3 implementations using analysis-proven patterns, implement Step 4 using TDD: First write comprehensive unit and integration tests for the combined API functions, then implement the simple format_code() wrapper and clean exports in __init__.py. Include the analysis-identified line-length conflict warning feature.
 ```
 
 ## WHERE
@@ -13,16 +13,16 @@ Based on Steps 2 and 3 implementations, implement Step 4 using TDD: First write 
 ### Main API Functions
 ```python
 def format_code(project_root: Path, formatters: List[str] = None, target_dirs: List[str] = None) -> Dict[str, FormatterResult]:
-    """Run multiple formatters and return combined results"""
+    """Run multiple formatters using analysis-proven patterns and return combined results"""
     
 def format_with_black(project_root: Path, target_dirs: List[str] = None) -> FormatterResult:
-    """Format code with Black (re-export from black_formatter)"""
+    """Format code with Black (re-export from black_formatter with exit code detection)"""
     
 def format_with_isort(project_root: Path, target_dirs: List[str] = None) -> FormatterResult:
-    """Sort imports with isort (re-export from isort_formatter)"""
+    """Sort imports with isort (re-export from isort_formatter with exit code detection)"""
 
 def _check_line_length_conflict(project_root: Path):
-    """Warn if Black and isort have different line lengths (~10 lines)"""
+    """Warn about most common config conflict identified in analysis (~10 lines)"""
 ```
 
 ## HOW
@@ -36,19 +36,19 @@ def _check_line_length_conflict(project_root: Path):
 ```python
 import tomllib
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from .black_formatter import format_with_black
 from .isort_formatter import format_with_isort
 ```
 
-## ALGORITHM
+## ALGORITHM (Based on Analysis Insights)
 ```
-1. Define FormatterResult dataclass in __init__.py
-2. Import and re-export individual formatter functions
-3. Implement simple format_code() that calls both formatters
-4. Add line-length conflict warning function
+1. Define FormatterResult dataclass in __init__.py (using exit code patterns)
+2. Import and re-export individual formatter functions (both use same patterns)
+3. Implement simple format_code() that calls both formatters sequentially
+4. Add line-length conflict warning function (analysis-identified issue)
 5. Provide clean public API with proper exports
-6. Include comprehensive tests for combined functionality
+6. Include comprehensive tests for combined functionality using analysis scenarios
 ```
 
 ## DATA
@@ -70,19 +70,23 @@ class FormatterResult:
 }
 ```
 
-### Line-Length Conflict Warning
+### Line-Length Conflict Warning (Analysis-Based)
 ```python
 def _check_line_length_conflict(project_root: Path):
-    """Simple warning when Black/isort line lengths differ"""
+    """Warn about most common configuration conflict identified in Step 0 analysis"""
     try:
         with open(project_root / "pyproject.toml", "rb") as f:
             data = tomllib.load(f)
         
-        black_length = data.get("tool", {}).get("black", {}).get("line-length", 88)
-        isort_length = data.get("tool", {}).get("isort", {}).get("line_length", 88)
+        black_config = data.get("tool", {}).get("black", {})
+        isort_config = data.get("tool", {}).get("isort", {})
+        
+        black_length = black_config.get("line-length", 88)  # Black default
+        isort_length = isort_config.get("line_length", 88)   # isort uses underscore
         
         if black_length != isort_length:
-            print(f"WARNING: Black line-length ({black_length}) != isort line_length ({isort_length})")
+            print(f"⚠️  Line length mismatch: Black={black_length}, isort={isort_length}")
+            print("   Consider setting isort.line_length to match Black's line-length")
     except (FileNotFoundError, tomllib.TOMLDecodeError):
         pass  # No warning if config can't be read
 ```
@@ -93,32 +97,35 @@ def _check_line_length_conflict(project_root: Path):
 - Allow override via function parameter
 
 ## Tests Required (TDD - Write These First!)
-1. **Combined API function tests:**
-   - Test `format_code()` with both formatters (default behavior)
+1. **Combined API function tests using analysis patterns:**
+   - Test `format_code()` with both formatters (sequential execution)
    - Test `format_code()` with specific formatters list (["black"] only, ["isort"] only)
-   - Test `format_code()` with custom target directories
-   - Test aggregated results from multiple formatters
-   - Test error handling when one formatter fails
+   - Test aggregated FormatterResults from both tools
+   - Test error handling when one formatter fails (exit codes)
+   - Test that both formatters use same exit code patterns
    
 2. **Individual formatter re-export tests:**
-   - Test `format_with_black()` import and execution
-   - Test `format_with_isort()` import and execution
+   - Test `format_with_black()` import and execution (exit code detection)
+   - Test `format_with_isort()` import and execution (exit code detection)
    - Verify functions work identically to direct imports
+   - Test consistency of FormatterResult structure
 
-3. **Line-length conflict warning tests:**
-   - Test warning when Black/isort line lengths differ
+3. **Line-length conflict warning tests (analysis-based):**
+   - Test warning when Black/isort line lengths differ (most common issue)
    - Test no warning when line lengths match
    - Test no warning when config file missing
-   - Test no warning when one tool section missing
+   - Test warning message format and helpfulness
+   - Test with actual config scenarios from analysis
 
 4. **Public API and exports:**
    - Verify all expected functions/classes are exported
    - Test import statements work correctly (`from mcp_coder.formatters import ...`)
-   - Test that FormatterResult is accessible
-   - Test that __all__ list is complete and accurate
+   - Test that FormatterResult is accessible with proper typing
+   - Test that __all__ list includes analysis-based components
 
-5. **Integration tests (formatter_integration marker):**
-   - Test complete workflow: both formatters on real files
+5. **Integration tests (formatter_integration marker) using analysis scenarios:**
+   - Test complete workflow: both formatters on real files from analysis
+   - Test with unformatted code and unsorted imports from Step 0
    - Test combined formatting with line-length conflicts
-   - Test target directory handling in combined mode
-   - Test error scenarios with both formatters
+   - Test exit code consistency across both tools
+   - Test error scenarios documented in analysis
