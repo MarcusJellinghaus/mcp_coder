@@ -277,7 +277,8 @@ class TestCLIIntegration:
     @pytest.mark.skipif(
         sys.platform == "win32"
         and subprocess.run(
-            ["where", "python"], capture_output=True, check=False
+            ["where", "python"],
+            capture_output=True,
         ).returncode
         != 0,
         reason="Python not available via 'python' command on Windows",
@@ -294,7 +295,6 @@ class TestCLIIntegration:
                 capture_output=True,
                 text=True,
                 timeout=10,
-                check=False,
             )
             # Should exit with code 1 (no command provided) and show help
             assert result.returncode == 1
