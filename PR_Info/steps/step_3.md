@@ -85,29 +85,15 @@ from . import FormatterResult
   - `formatter_name: "isort"`
   - `error_message: Optional[str]` - If isort failed
 
-## Tests Required (TDD - Write These First!)
-1. **Unit tests (mocked subprocess) based on analysis patterns:**
-   - Test check command building with different configurations
-   - Test sort command building with config options
-   - Test exit code interpretation (0, 1 scenarios plus stderr analysis)
-   - Test config reading with various pyproject.toml scenarios
-   
-2. **Integration tests (formatter_integration marker) using analysis scenarios:**
-   - Test sorting unsorted imports (expect exit 1 → sort → success)
-   - Test already sorted imports (expect exit 0 → no changes)
-   - Test with syntax errors in imports (expect exit 1 + stderr)
-   - Test with profile="black" compatibility
-   - Test two-phase approach: check then sort only if needed
-   
-3. **Configuration tests using validated patterns:**
-   - Missing pyproject.toml file (use defaults)
-   - Missing tool.isort section (use defaults)
-   - Custom profile and line_length settings
-   - Black compatibility settings (profile="black")
-   
-4. **Real-world scenarios from Step 0 analysis:**
-   - Use actual unsorted import samples from analysis
-   - Test with import code that triggers different exit codes
-   - Test error scenarios documented in analysis
-   - Verify exit code patterns match analysis findings
-   - Test line-length compatibility with Black settings
+## Tests Required (TDD - Write 6 Tests First!)
+1. **Core import sorting scenarios (3 tests)**
+   - Unsorted imports: Test format_with_isort() on imports needing sorting (exit 1 → success)
+   - Already sorted: Test on properly sorted imports (exit 0 → no changes)
+   - Import errors: Test error handling with malformed import syntax (exit 1 + stderr)
+
+2. **Configuration integration (2 tests)**
+   - Default config: Test with missing pyproject.toml (use isort defaults)
+   - Black compatibility: Test with profile="black" and custom line_length from pyproject.toml
+
+3. **Real-world analysis scenario (1 test)**
+   - Analysis import sample: Use actual unsorted imports from Step 0 findings to verify patterns

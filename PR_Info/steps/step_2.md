@@ -89,28 +89,15 @@ from . import FormatterResult
   - `formatter_name: "black"`
   - `error_message: Optional[str]` - If Black failed
 
-## Tests Required (TDD - Write These First!)
-1. **Unit tests (mocked subprocess) based on analysis patterns:**
-   - Test check command building with different configurations
-   - Test format command building with config options
-   - Test exit code interpretation (0, 1, 123+ scenarios)
-   - Test config reading with various pyproject.toml scenarios
-   
-2. **Integration tests (formatter_integration marker) using analysis scenarios:**
-   - Test formatting unformatted Python code (expect exit 1 → format → success)
-   - Test already formatted code (expect exit 0 → no changes)
-   - Test with syntax errors (expect exit 123 → error handling)
-   - Test with custom Black configuration from pyproject.toml
-   - Test two-phase approach: check then format only if needed
-   
-3. **Configuration tests using validated patterns:**
-   - Missing pyproject.toml file (use defaults)
-   - Missing tool.black section (use defaults)
-   - Custom line-length and target-version settings
-   - Inline tomllib reading error handling
-   
-4. **Real-world scenarios from Step 0 analysis:**
-   - Use actual unformatted code samples from analysis
-   - Test with code that triggers different exit codes
-   - Test error scenarios documented in analysis
-   - Verify exit code patterns match analysis findings
+## Tests Required (TDD - Write 6 Tests First!)
+1. **Core formatting scenarios (3 tests)**
+   - Unformatted code: Test format_with_black() on code needing formatting (exit 1 → success)
+   - Already formatted: Test on properly formatted code (exit 0 → no changes)
+   - Syntax error: Test error handling with malformed code (exit 123 → error)
+
+2. **Configuration integration (2 tests)**
+   - Default config: Test with missing pyproject.toml (use Black defaults)
+   - Custom config: Test with custom line-length and target-version from pyproject.toml
+
+3. **Real-world analysis scenario (1 test)**
+   - Analysis code sample: Use actual unformatted code from Step 0 findings to verify patterns

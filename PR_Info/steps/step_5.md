@@ -113,41 +113,21 @@ def test(a,b,c):
 - Line-length conflicts (Black vs isort)
 - Missing tool sections
 
-## Tasks Required (Final Integration)
-1. **Integration test creation using analysis patterns:**
-   - Create comprehensive test scenarios using code samples from Step 0
-   - Test complete workflow with exit code detection patterns
-   - Test real-world scenarios with analysis-documented problematic code
-   - Test error handling using known exit code patterns (123+ scenarios)
-   
-2. **Test fixtures and configuration:**
-   - Create conftest.py with shared fixtures for temp directories
-   - Test data factory functions using analysis code samples
-   - Setup/teardown for integration test isolation
-   - Fixtures for pyproject.toml configurations tested in analysis
-   
-3. **Quality assurance execution (analysis-confident):**
-   - Run `mcp__checker__run_pylint_check` - should pass with simple codebase
-   - Run `mcp__checker__run_pytest_check` - all TDD tests + integration
-   - Run `mcp__checker__run_mypy_check` - strict typing on minimal codebase
-   - Address any issues (should be minimal with proven patterns)
+## Tasks Required (Final Integration - 6 Tests + QA)
+1. **End-to-end workflow tests (3 tests)**
+   - Complete formatting: Test unformatted code + unsorted imports → both formatted
+   - Idempotent behavior: Format same files twice, verify no changes on second run
+   - Error resilience: Test mixed scenarios (one file succeeds, one fails)
 
-4. **Final verification using analysis insights:**
-   - Test import statements work correctly from package root
-   - Verify all TDD-created tests from Steps 1-4 pass
-   - Confirm exit code patterns work as documented in analysis
-   - Test line-length conflict warning with analysis scenarios
-   - Verify implementation matches analysis findings
-   
-5. **Real-world testing with analysis scenarios:**
-   - Test with unformatted code samples from Step 0
-   - Verify idempotent behavior using exit code detection (format twice = same result)
-   - Test with various pyproject.toml configurations from analysis
-   - Test error scenarios documented in Step 0 findings
-   - Confirm all exit code patterns work as analyzed
-   
-6. **Documentation and completion:**
-   - Document implementation matches Step 0 analysis findings
-   - Record any deviations from analysis (should be minimal)
-   - Verify ultra-simplified architecture (~135 lines achieved)
-   - Confirm 75% complexity reduction vs original plan
+2. **Analysis scenario validation (2 tests)**
+   - Step 0 code samples: Use actual problematic code from analysis findings
+   - Configuration conflicts: Test real pyproject.toml scenarios from analysis
+
+3. **Quality gates validation (1 test)**
+   - Tool integration: Verify all 30 tests pass, quality checks (pylint/mypy) pass
+
+4. **Quality assurance execution:**
+   - Run `checker on p MCP Coder:run_pylint_check` - should pass with clean codebase
+   - Run `checker on p MCP Coder:run_pytest_check` - all 30 TDD tests pass
+   - Run `checker on p MCP Coder:run_mypy_check` - strict typing validation
+   - Address any issues (should be minimal with proven patterns)

@@ -14,14 +14,16 @@ Implement Black and isort code formatters as Python functions within the `mcp_co
 - **Proven patterns**: All implementation strategies tested and verified in Step 0
 - **Ultra-simplified architecture**: 3 files total, maximum simplicity with high reliability
 
-## Architecture (Ultra-Simplified - Based on Step 0 Analysis)
+## Architecture (Refined 5-File Structure - Based on Step 0 Analysis)
 ```
 src/mcp_coder/formatters/
-├── __init__.py           # FormatterResult dataclass + API functions (~50 lines)
-├── black_formatter.py    # Black CLI integration + inline config (~45 lines)
-└── isort_formatter.py    # isort CLI integration + inline config (~40 lines)
+├── __init__.py           # Exports and combined API (~25 lines)
+├── models.py             # FormatterResult dataclass (~15 lines)
+├── config_reader.py      # Configuration reading + line-length warning (~35 lines)
+├── black_formatter.py    # Black CLI integration (~40 lines)
+└── isort_formatter.py    # isort CLI integration (~40 lines)
 ```
-**Total: ~135 lines** (66% reduction from original 400+ line estimate)
+**Total: ~155 lines** (Clear separation of concerns, easier debugging)
 
 ## Configuration Sources
 - **Black**: `[tool.black]` section in pyproject.toml (inline reading)
@@ -42,12 +44,12 @@ src/mcp_coder/formatters/
 - `tomllib` - Python 3.11+ standard library for TOML parsing
 - `subprocess` - Python standard library for CLI execution
 
-## Test Strategy (TDD Approach)
-- **Test-first development**: Each step starts with comprehensive unit tests
+## Test Strategy (Hybrid TDD Approach)
+- **Test-first development**: Each step starts with focused unit tests (30 total tests)
 - **Integration marker**: `formatter_integration` for tests that actually format files
-- **Multiline string test data**: No external test files, code samples in tests
+- **Balanced coverage**: 6 tests per step focusing on essential scenarios from analysis
 - **Real tool integration**: Test actual Black/isort CLI execution, not just mocks
-- **Step 0 analysis**: Understand tool behavior before implementing
+- **Analysis-driven scenarios**: Use proven patterns and code samples from Step 0
 
 ## Updated Step Sequence
 **Step 0:** Tool Behavior Analysis (new)
@@ -68,4 +70,6 @@ src/mcp_coder/formatters/
 - **Test scenarios**: Real-world code samples from analysis findings
 
 ## Result
-Analysis-driven plan maintains all core objectives while reducing implementation complexity by **75%** and code volume by **66%**. Step 0 analysis eliminates guesswork and provides proven, reliable patterns for immediate implementation with high confidence.
+Refined analysis-driven plan maintains all core objectives with **hybrid testing approach (30 tests)**, **separate implementation steps for easier debugging**, and **5-file structure for clear organization**. Step 0 analysis eliminates guesswork and provides proven, reliable patterns for immediate implementation with high confidence.
+
+**Timeline Estimate**: ~3.25 hours (45-45-45-30-30 minutes per step)

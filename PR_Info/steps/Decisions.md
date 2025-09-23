@@ -378,3 +378,130 @@ src/mcp_coder/formatters/
 
 ## Ready for Implementation
 Step 0 analysis provides concrete, proven patterns for immediate implementation of Steps 1-5 with high confidence and minimal risk.
+
+
+---
+
+# Project Plan Refinement Decisions - September 23, 2025
+
+## Overview
+Additional decisions made during detailed project plan review to optimize the implementation approach while maintaining all functionality and addressing complexity concerns.
+
+## Refinement Decisions Based on Discussion
+
+### 1. Testing Strategy - Hybrid Approach
+**Decision:** C - Hybrid approach (30 tests, good balance of speed and coverage)
+- **Rationale:** Provides sufficient confidence while being more efficient than comprehensive approach
+- **Distribution:** 6 tests per step (Steps 1-5)
+- **Focus:** Essential scenarios from Step 0 analysis rather than exhaustive edge cases
+- **Impact:** Faster development while maintaining quality assurance
+
+### 2. Implementation Steps Structure - Separate Steps
+**Decision:** A - Keep separate steps for Black (Step 2) and isort (Step 3)
+- **Rationale:** Easier to debug if one tool has issues, follows TDD approach well
+- **Benefits:** Clear separation allows focused testing and implementation
+- **Trade-off:** Slightly more time vs easier troubleshooting
+- **Impact:** Maintains development clarity and debugging capability
+
+### 3. File Organization - Clear Separation
+**Decision:** A - Keep current 5-file structure for clear separation
+- **Chosen Structure:**
+  - `models.py` - FormatterResult dataclass (~15 lines)
+  - `config_reader.py` - Configuration + line-length warning (~35 lines)
+  - `black_formatter.py` - Black implementation (~40 lines)
+  - `isort_formatter.py` - isort implementation (~40 lines)
+  - `__init__.py` - Exports and combined API (~25 lines)
+- **Rationale:** Clear separation makes codebase easier to navigate and maintain
+- **Impact:** Slightly more files but much better organization and maintainability
+
+### 4. Line-Length Conflict Warning - Include Feature
+**Decision:** A - Include warning feature (helpful for users, slightly more testing needed)
+- **Implementation:** Simple warning when Black/isort line lengths differ
+- **Benefits:** Addresses most common configuration conflict identified in Step 0 analysis
+- **Cost:** ~10 lines of code + 1 additional test
+- **Impact:** Helpful user guidance with minimal complexity overhead
+
+### 5. Timeline Expectations - Realistic Approach
+**Decision:** A - Timeline sounds reasonable (~3.25 hours total)
+- **Step breakdown:**
+  - Step 1: 45 minutes (Foundation + config + 6 tests)
+  - Step 2: 45 minutes (Black formatter + 6 tests)
+  - Step 3: 45 minutes (isort formatter + 6 tests)
+  - Step 4: 30 minutes (Combined API + 6 tests)
+  - Step 5: 30 minutes (Integration + 6 tests + QA)
+- **Rationale:** Step 0 analysis provides strong foundation for confident implementation
+- **Impact:** Achievable timeline with quality TDD approach
+
+### 6. Step Scope Balance - Balanced Approach
+**Decision:** A - Keep steps as outlined (balanced scope per step)
+- **Each step focus:** Substantial but manageable scope with 6 tests each
+- **Benefits:** Each step delivers meaningful progress without overwhelming complexity
+- **TDD alignment:** Each step starts with 6 targeted tests, then implements to pass
+- **Impact:** Consistent development rhythm with clear milestones
+
+## Updated Test Distribution (30 Total Tests)
+
+### Step 1: Foundation & Data Models (6 tests)
+- FormatterResult creation scenarios (2 tests)
+- Configuration reading (2 tests)  
+- Line-length conflict warning (1 test)
+- Integration readiness (1 test)
+
+### Step 2: Black Formatter Implementation (6 tests)
+- Core formatting scenarios (3 tests)
+- Configuration integration (2 tests)
+- Real-world analysis scenario (1 test)
+
+### Step 3: isort Formatter Implementation (6 tests)
+- Core import sorting scenarios (3 tests)
+- Configuration integration (2 tests)
+- Real-world analysis scenario (1 test)
+
+### Step 4: Combined API Implementation (6 tests)
+- Combined API core functionality (3 tests)
+- API exports and imports (2 tests)
+- Line-length conflict integration (1 test)
+
+### Step 5: Integration Testing & QA (6 tests)
+- End-to-end workflow tests (3 tests)
+- Analysis scenario validation (2 tests)
+- Quality gates validation (1 test)
+
+## Architectural Summary
+
+### Refined 5-File Structure (~155 lines total)
+```
+src/mcp_coder/formatters/
+├── models.py             # FormatterResult dataclass (~15 lines)
+├── config_reader.py      # Configuration + line-length warning (~35 lines)
+├── black_formatter.py    # Black CLI integration (~40 lines)
+├── isort_formatter.py    # isort CLI integration (~40 lines)
+└── __init__.py          # Exports and combined API (~25 lines)
+```
+
+### Key Benefits Achieved
+✅ **Balanced testing approach** - 30 tests provide good coverage without over-engineering
+✅ **Clear debugging path** - Separate formatter steps allow focused troubleshooting
+✅ **Organized codebase** - 5-file structure with clear separation of concerns
+✅ **User-helpful features** - Line-length conflict warnings based on analysis findings
+✅ **Realistic timeline** - ~3.25 hours with proven patterns from Step 0 analysis
+✅ **Consistent development** - 6 tests per step provides steady progress rhythm
+
+### Maintained Capabilities
+✅ Full Black and isort formatting functionality with exit code detection
+✅ Configuration reading from pyproject.toml with inline patterns
+✅ Combined and individual formatter APIs with proper exports
+✅ Line-length conflict detection and user warnings
+✅ Comprehensive quality assurance (pylint, pytest, mypy)
+✅ Analysis-proven implementation patterns and test scenarios
+✅ TDD approach with focused, essential test coverage
+
+## Implementation Confidence
+**High confidence areas** from decisions and Step 0 analysis:
+- Tool behavior patterns and exit codes (thoroughly analyzed)
+- File organization and separation of concerns (proven approach)
+- Testing strategy balances coverage with efficiency
+- Timeline realistic given analysis foundation
+- TDD approach with focused test scenarios
+
+**Ready for implementation** with refined plan that maintains all functionality while optimizing development approach based on thorough discussion and analysis.

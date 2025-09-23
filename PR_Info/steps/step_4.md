@@ -96,36 +96,15 @@ def _check_line_length_conflict(project_root: Path):
 - Default to ["src", "tests"] if exist, otherwise ["."]
 - Allow override via function parameter
 
-## Tests Required (TDD - Write These First!)
-1. **Combined API function tests using analysis patterns:**
-   - Test `format_code()` with both formatters (sequential execution)
-   - Test `format_code()` with specific formatters list (["black"] only, ["isort"] only)
-   - Test aggregated FormatterResults from both tools
-   - Test error handling when one formatter fails (exit codes)
-   - Test that both formatters use same exit code patterns
-   
-2. **Individual formatter re-export tests:**
-   - Test `format_with_black()` import and execution (exit code detection)
-   - Test `format_with_isort()` import and execution (exit code detection)
-   - Verify functions work identically to direct imports
-   - Test consistency of FormatterResult structure
+## Tests Required (TDD - Write 6 Tests First!)
+1. **Combined API core functionality (3 tests)**
+   - Both formatters: Test `format_code()` running Black + isort sequentially
+   - Individual selection: Test `format_code(formatters=["black"])` runs only Black
+   - Error handling: Test when one formatter fails, other still runs
 
-3. **Line-length conflict warning tests (analysis-based):**
-   - Test warning when Black/isort line lengths differ (most common issue)
-   - Test no warning when line lengths match
-   - Test no warning when config file missing
-   - Test warning message format and helpfulness
-   - Test with actual config scenarios from analysis
+2. **API exports and imports (2 tests)**
+   - Re-exports: Verify `format_with_black()` and `format_with_isort()` work from __init__.py
+   - Public API: Test all expected functions/classes are importable
 
-4. **Public API and exports:**
-   - Verify all expected functions/classes are exported
-   - Test import statements work correctly (`from mcp_coder.formatters import ...`)
-   - Test that FormatterResult is accessible with proper typing
-   - Test that __all__ list includes analysis-based components
-
-5. **Integration tests (formatter_integration marker) using analysis scenarios:**
-   - Test complete workflow: both formatters on real files from analysis
-   - Test with unformatted code and unsorted imports from Step 0
-   - Test combined formatting with line-length conflicts
-   - Test exit code consistency across both tools
-   - Test error scenarios documented in analysis
+3. **Line-length conflict integration (1 test)**
+   - Warning display: Test that `format_code()` shows warning when Black/isort line lengths differ

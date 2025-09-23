@@ -6,8 +6,11 @@ Based on the Step 0 analysis findings, implement Step 1 using TDD: First write c
 ```
 
 ## WHERE
-- `tests/formatters/test_formatter_result.py` - **START HERE: Write unit tests first (TDD)**
-- `src/mcp_coder/formatters/__init__.py` - FormatterResult dataclass + package initialization
+- `tests/formatters/test_models.py` - **START HERE: Write 2 FormatterResult tests first (TDD)**
+- `tests/formatters/test_config_reader.py` - **THEN: Write 3 configuration tests (TDD)**
+- `src/mcp_coder/formatters/models.py` - FormatterResult dataclass
+- `src/mcp_coder/formatters/config_reader.py` - Configuration reading + line-length warning
+- `src/mcp_coder/formatters/__init__.py` - Package exports
 - `pyproject.toml` - Verify `formatter_integration` pytest marker exists
 
 ## WHAT
@@ -58,27 +61,17 @@ from typing import List, Optional
 - Simple string paths sufficient (no complex objects needed)
 - Error messages from subprocess stderr when exit != 0 or 1
 
-## Tests Required (TDD - Write These First!)
-1. **FormatterResult creation based on analysis patterns**
-   - Success with file changes (exit code 1 → changes made)
-   - Success with no changes (exit code 0 → no changes)
-   - Failure with error message (exit code 123+ → error)
-   - Different formatter names ("black", "isort")
+## Tests Required (TDD - Write 6 Tests First!)
+1. **FormatterResult creation scenarios (2 tests)**
+   - Success with changes: `FormatterResult(success=True, files_changed=["file.py"], formatter_name="black")`
+   - Failure with error: `FormatterResult(success=False, files_changed=[], formatter_name="black", error_message="syntax error")`
 
-2. **FormatterResult exit code scenarios**
-   - Test creation from subprocess results (returncode 0, 1, 123)
-   - Test error message extraction from stderr
-   - Test file path lists from different sources
-   - Validation of formatter_name values
+2. **Configuration reading (2 tests)**
+   - Found configuration: Read `[tool.black]` and `[tool.isort]` from pyproject.toml
+   - Missing configuration: Return defaults when sections not found
 
-3. **FormatterResult usage patterns from analysis**
-   - Test creation from actual Black tool scenarios (Step 0 examples)
-   - Test creation from actual isort tool scenarios (Step 0 examples)
-   - Test representation and string formatting
-   - Test equality and comparison for testing
+3. **Line-length conflict warning (1 test)**
+   - Conflict detection: Black line-length=100, isort line_length=88 → warning message
 
-4. **Integration readiness for proven patterns**
-   - Ensure FormatterResult supports exit code → success mapping
-   - Test with realistic file path examples from analysis
-   - Test compatibility with subprocess.CompletedProcess patterns
-   - Verify dataclass behavior (repr, equality, etc.)
+4. **Integration readiness (1 test)**
+   - Exit code mapping: Verify FormatterResult supports subprocess.CompletedProcess integration patterns
