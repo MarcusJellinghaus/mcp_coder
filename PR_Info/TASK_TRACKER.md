@@ -48,15 +48,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy check and fix any type issues
   - [x] Prepare git commit with concise message
 
-- [ ] **Step 3: isort Formatter Implementation** - [steps/step_3.md](steps/step_3.md)
-  - [ ] Write comprehensive unit and integration tests first (TDD)
-  - [ ] Implement isort formatter with exit code change detection
-  - [ ] Implement two-phase approach (check first, format if needed)
-  - [ ] Add inline configuration reading using tomllib patterns
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest and verify all tests pass
-  - [ ] Run mypy check and fix any type issues
-  - [ ] Prepare git commit with concise message
+- [x] **Step 3: isort Formatter Implementation** - [steps/step_3.md](steps/step_3.md)
+  - [x] Write comprehensive unit and integration tests first (TDD)
+  - [x] Implement isort formatter with exit code change detection
+  - [x] Implement two-phase approach (check first, format if needed)
+  - [x] Add inline configuration reading using tomllib patterns
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest and verify all tests pass
+  - [x] Run mypy check and fix any type issues
+  - [x] Prepare git commit with concise message
 
 - [ ] **Step 4: Combined API Implementation** - [steps/step_4.md](steps/step_4.md)
   - [ ] Write comprehensive unit and integration tests first (TDD)
