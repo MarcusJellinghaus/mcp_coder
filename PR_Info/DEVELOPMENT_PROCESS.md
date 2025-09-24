@@ -143,13 +143,15 @@ Please offer, whenever possible, simple options like
     - comprehensive
     - with several edge cases
     - essentials
-  - possible answer
-    - essentials
-  - data model
-    - do we need all fields
-    - do we need the data model at all?
-    - stay type safe / explicit (often yet)
-  
+- possible answer
+  - essentials
+- data model
+  - do we need all fields
+  - do we need the data model at all?
+  - stay type safe / explicit (often yet)
+- performance
+  - the question is even asked when processing small amounts of data
+- generic extensions like config files, logging, e  
 ```
 
 Wait for end of discussion - in case of unclarity
@@ -187,6 +189,9 @@ git commit preparation as outlined in the development process.
 
 Also add the pull request tasks for PR review and summary creation at the end in a section "Pull request"
 ```
+- Prompt could be enhanced to generate the task tracker and add new tasks 
+- commit afterwards with `Update TASK_TRACKER.md with implementation steps and PR tasks`
+
 
 **Objective:** Complete each implementation step with full validation
 
@@ -258,8 +263,16 @@ Did you tick of the tasks in the task tracker?
     - run pylint and pytest after that
     - run formatter after that
     - commit with auto and/or with mypy fixing info, or ask session for a commit message
-      - `Please provide a concise commit message  in markdown code format (```)` 
+      ```
+      Please provide a concise commit message  in markdown code format (```)
+      ``` 
       - triple ticks might or might not be provided
+      - Claude might add a useless footer:
+        ``` 
+         🤖 Generated with [Claude Code](https://claude.ai/code)
+
+          Co-Authored-By: Claude <noreply@anthropic.com>
+        ```
 
 - **Third-party dependencies needed:**
   - New Python packages required beyond current `pyproject.toml`
