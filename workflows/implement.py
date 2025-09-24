@@ -35,7 +35,6 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import commit_all_changes
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
-
 # Constants
 PR_INFO_DIR = "pr_info"
 CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
@@ -159,19 +158,13 @@ def commit_changes() -> bool:
         return False
 
 
-def main() -> None:
-    """Main workflow orchestration function."""
-    log_step("Starting implement workflow...")
-    
-    # Step 1: Check prerequisites
-    if not check_prerequisites():
-        sys.exit(1)
-    
-    # Step 2: Check for incomplete tasks (entrance condition)
+def process_single_task() -> bool:
+    """Process a single implementation task. Returns True if successful, False if failed."""
+    # Get next incomplete task
     next_task = get_next_task()
     if not next_task:
-        log_step("No incomplete tasks found - workflow complete")
-        sys.exit(0)
+        log_step("No incomplete tasks found")
+        return False
     
     # Step 3: Get implementation prompt template
     log_step("Loading implementation prompt template...")
@@ -179,7 +172,7 @@ def main() -> None:
         prompt_template = get_prompt("mcp_coder/prompts/prompts.md", "Implementation Prompt Template using task tracker")
     except Exception as e:
         print(f"Error loading prompt template: {e}")
-        sys.exit(1)
+        return False
     
     # Step 4: Call LLM with prompt
     log_step("Calling LLM for implementation...")
@@ -195,13 +188,13 @@ Please implement this task step by step."""
         
         if not response or not response.strip():
             print("Error: LLM returned empty response")
-            sys.exit(1)
+            return False
         
         log_step("LLM response received successfully")
     
     except Exception as e:
         print(f"Error calling LLM: {e}")
-        sys.exit(1)
+        return False
     
     # Step 5: Save conversation
     try:
@@ -225,17 +218,45 @@ Generated on: {datetime.now().isoformat()}
     
     except Exception as e:
         print(f"Error saving conversation: {e}")
-        sys.exit(1)
+        return False
     
     # Step 6: Run formatters
     if not run_formatters():
-        sys.exit(1)
+        return False
     
     # Step 7: Commit changes
     if not commit_changes():
+        return False
+    
+    log_step(f"Task completed successfully: {next_task}")
+    return True
+
+
+def main() -> None:
+    """Main workflow orchestration function - processes all implementation tasks in sequence."""
+    log_step("Starting implement workflow...")
+    
+    # Step 1: Check prerequisites
+    if not check_prerequisites():
         sys.exit(1)
     
-    log_step("Implement workflow completed successfully!")
+    # Step 2: Process all incomplete tasks in a loop
+    completed_tasks = 0
+    while True:
+        success = process_single_task()
+        if not success:
+            # No more tasks or error occurred
+            break
+        
+        completed_tasks += 1
+        log_step(f"Completed {completed_tasks} task(s). Checking for more...")
+    
+    if completed_tasks > 0:
+        log_step(f"Implement workflow completed successfully! Processed {completed_tasks} task(s).")
+    else:
+        log_step("No incomplete implementation tasks found - workflow complete")
+    
+    sys.exit(0)
 
 
 if __name__ == "__main__":
