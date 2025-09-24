@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
 """
-Simple implement workflow script that orchestrates existing mcp-coder functionality.
+Continuous implement workflow script that orchestrates existing mcp-coder functionality.
 
-This script automates the implementation process by:
-1. Checking for incomplete tasks using task_tracker
-2. Getting prompt using get_prompt()
-3. Calling LLM using ask_llm()
-4. Saving conversation to pr_info/.conversations/
-5. Formatting code using formatters
-6. Committing using subprocess call to mcp-coder commit auto
+This script automates the implementation process by processing ALL incomplete implementation
+tasks in sequence until the entire feature is complete.
 
-Algorithm:
-1. Check prerequisites (git status, task tracker exists)
-2. Check for incomplete tasks (entrance condition)
-3. Get implementation prompt template using get_prompt()
-4. Call LLM with prompt using ask_llm()
-5. Save conversation to pr_info/.conversations/step_N.md
-6. Run formatters (black, isort) using existing format_code()
-7. Commit changes using generate_commit_message_with_llm() and commit_all_changes()
-8. Early exit on failures with clear error messages
+For each incomplete task, it:
+1. Gets implementation prompt template using get_prompt()
+2. Calls LLM with task-specific prompt using ask_llm()
+3. Saves conversation to pr_info/.conversations/step_N.md
+4. Runs formatters (black, isort) using existing format_code()
+5. Commits changes using generate_commit_message_with_llm() and commit_all_changes()
+6. Continues to next incomplete task
+
+Workflow Algorithm:
+1. Check prerequisites once (git status, task tracker exists)
+2. Loop through all incomplete implementation tasks:
+   a. Get next incomplete task from task_tracker
+   b. Process single task (prompt → LLM → save → format → commit)
+   c. Continue until no more incomplete tasks
+3. Exit with summary of completed tasks
+4. Graceful error handling - continues processing remaining tasks if possible
 """
 
 import os
