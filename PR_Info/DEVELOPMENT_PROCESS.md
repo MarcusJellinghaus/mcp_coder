@@ -376,6 +376,10 @@ Run certain checks in an automated way and deal with possibly highlighted issues
   - Saves result as `PR_Info/summary.md`
   - Provides structured prompt for LLM summary generation
   - Cleans up development artifacts: deletes `steps/` subfolder and clears Tasks section from `TASK_TRACKER.md`
+  - commit everything except `PR_Info/summary.md` with commit message
+    ```
+    pr_info\steps cleaned up
+    ```
 
 - could be automated
   - get base_branch (or assume main)
