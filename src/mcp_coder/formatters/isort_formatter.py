@@ -3,17 +3,16 @@
 Based on Step 0 analysis findings, this module implements isort formatting using:
 - Two-phase approach (check first, format if needed)
 - Exit code change detection (0=no changes, 1=changes needed)
-- Inline configuration reading using tomllib patterns
+- Shared configuration reading using utility patterns
 """
 
-import tomllib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from mcp_coder.utils.subprocess_runner import execute_command
 
 from .models import FormatterResult
-from .utils import find_python_files, get_default_target_dirs
+from .utils import find_python_files, get_default_target_dirs, read_tool_config
 
 
 def format_with_isort(
@@ -80,7 +79,7 @@ def format_with_isort(
 
 
 def _get_isort_config(project_root: Path) -> Dict[str, Any]:
-    """Read isort configuration inline using validated tomllib patterns.
+    """Read isort configuration using shared utility.
 
     Args:
         project_root: Root directory to search for pyproject.toml
@@ -88,32 +87,8 @@ def _get_isort_config(project_root: Path) -> Dict[str, Any]:
     Returns:
         Dictionary with isort configuration, using defaults if not found
     """
-    # Default isort configuration with Black compatibility
-    config = {"profile": "black", "line_length": 88, "float_to_top": True}
-
-    # Try to read from pyproject.toml
-    pyproject_path = project_root / "pyproject.toml"
-    if pyproject_path.exists():
-        try:
-            with open(pyproject_path, "rb") as f:
-                pyproject_data = tomllib.load(f)
-
-            # Extract isort configuration
-            isort_config = pyproject_data.get("tool", {}).get("isort", {})
-
-            # Update config with values from pyproject.toml
-            if "profile" in isort_config:
-                config["profile"] = isort_config["profile"]
-            if "line_length" in isort_config:
-                config["line_length"] = isort_config["line_length"]
-            if "float_to_top" in isort_config:
-                config["float_to_top"] = isort_config["float_to_top"]
-
-        except (tomllib.TOMLDecodeError, OSError):
-            # Use defaults if file can't be read
-            pass
-
-    return config
+    defaults = {"profile": "black", "line_length": 88, "float_to_top": True}
+    return read_tool_config(project_root, "isort", defaults)
 
 
 def _check_isort_changes(file_path: str, config: Dict[str, Any]) -> bool:

@@ -3,17 +3,16 @@
 Based on Step 0 analysis findings, this module implements Black formatting using:
 - Two-phase approach (check first, format if needed)
 - Exit code change detection (0=no changes, 1=changes needed)
-- Inline configuration reading using tomllib patterns
+- Shared configuration reading using utility patterns
 """
 
-import tomllib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from mcp_coder.utils.subprocess_runner import execute_command
 
 from .models import FormatterResult
-from .utils import find_python_files, get_default_target_dirs
+from .utils import find_python_files, get_default_target_dirs, read_tool_config
 
 
 def format_with_black(
@@ -80,7 +79,7 @@ def format_with_black(
 
 
 def _get_black_config(project_root: Path) -> Dict[str, Any]:
-    """Read Black configuration inline using validated tomllib patterns.
+    """Read Black configuration using shared utility.
 
     Args:
         project_root: Root directory to search for pyproject.toml
@@ -88,30 +87,8 @@ def _get_black_config(project_root: Path) -> Dict[str, Any]:
     Returns:
         Dictionary with Black configuration, using defaults if not found
     """
-    # Default Black configuration
-    config = {"line-length": 88, "target-version": ["py311"]}
-
-    # Try to read from pyproject.toml
-    pyproject_path = project_root / "pyproject.toml"
-    if pyproject_path.exists():
-        try:
-            with open(pyproject_path, "rb") as f:
-                pyproject_data = tomllib.load(f)
-
-            # Extract Black configuration
-            black_config = pyproject_data.get("tool", {}).get("black", {})
-
-            # Update config with values from pyproject.toml
-            if "line-length" in black_config:
-                config["line-length"] = black_config["line-length"]
-            if "target-version" in black_config:
-                config["target-version"] = black_config["target-version"]
-
-        except (tomllib.TOMLDecodeError, OSError):
-            # Use defaults if file can't be read
-            pass
-
-    return config
+    defaults = {"line-length": 88, "target-version": ["py311"]}
+    return read_tool_config(project_root, "black", defaults)
 
 
 def _check_black_changes(file_path: str, config: Dict[str, Any]) -> bool:
