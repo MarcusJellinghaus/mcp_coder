@@ -136,7 +136,7 @@ Please offer, whenever possible, simple options like
 - C
 ```
 
-```typical questions and answers
+**typical questions and answers**:
 - reduce number of steps: actually, constant/more steps are better
 - number of test cases:
   - possible options eg 
@@ -152,7 +152,11 @@ Please offer, whenever possible, simple options like
 - performance
   - the question is even asked when processing small amounts of data
 - generic extensions like config files, logging, e  
-```
+
+
+**Possible issues to double-check**:
+- Are the tests following the folder structure similar to the implemented features?
+
 
 Wait for end of discussion - in case of unclarity
 ```
@@ -311,16 +315,14 @@ And tell me what needs to be done
 Please tell me whether this is feasible, how complicated it is, whether it could be simplified or whether it needs to broken down in several sub tasks.
 ```
 
-
-
-
 #### 2.2 Commit Preparation
 
 **Process:**
-- Parse commit message from chat conversation
-- If no commit message found, ask user for commit message
-- Create commit summary
-- User performs manual commit
+- format
+- get commit message
+  - Parse commit message from chat conversation
+  - If no commit message found, auto create one
+- commit changes
 
 **Commit Message Prompt when working on a step:**
 ```
@@ -336,10 +338,8 @@ This could benefit from `format_and_commit` tool.
 
 **Tools:**
 - `tools/format_all.bat` - Run all formatting tools (ruff, black, isort)
-- `tools/commit_summary.bat` - Generate commit summary prompt with git diff and copy to clipboard
-  - Includes both staged and untracked files
-  - Provides structured format for commit message generation
-  - Handles git status and diff extraction
+- `mcp-coder commit clipboard` - to commit all changes with a commit message from the clipboard
+- `mcp-coder commit auto` - to commit all changes with a commit message generated via LLM from the git diff
 
 ### 3. Feature Completion
 

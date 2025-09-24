@@ -33,7 +33,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [ ] **Step 2: Implement Section Parsing and Task Extraction** - [step_2.md](steps/step_2.md)
   - [ ] Implement _find_implementation_section() with case-insensitive header matching
-  - [ ] Implement _parse_task_lines() to extract TaskInfo objects with indentation levels
+  - [x] Implement _parse_task_lines() to extract TaskInfo objects with indentation levels
   - [ ] Add helper functions for task line detection and name cleaning
   - [ ] Handle edge cases: malformed markdown, mixed task formats
   - [ ] Run pylint, pytest, mypy checks and fix any issues
@@ -44,14 +44,6 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [ ] Implement is_task_done() function with case-insensitive exact matching
   - [ ] Add task name normalization for comparison
   - [ ] Create comprehensive tests for public API functions
-  - [ ] Run pylint, pytest, mypy checks and fix any issues
-  - [ ] Prepare git commit for step completion
-
-- [ ] **Step 4: Integration and Module Exports** - [step_4.md](steps/step_4.md)
-  - [ ] Add task tracker exports to workflow_utils/__init__.py
-  - [ ] Create integration tests for cross-module functionality
-  - [ ] Verify backward compatibility with existing utils functionality
-  - [ ] Add comprehensive docstrings and type hints
   - [ ] Run pylint, pytest, mypy checks and fix any issues
   - [ ] Prepare git commit for step completion
 
