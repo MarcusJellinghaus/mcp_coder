@@ -64,7 +64,7 @@ def git_push(project_dir: Path) -> dict[str, any]:
 - No remote named 'origin'
 - Network connectivity issues
 - Authentication failures
-- Nothing to push (up to date)
+- Nothing to push (up-to-date) - should handle gracefully
 
 ### Integration Points
 - Use existing `is_git_repository()` for validation
