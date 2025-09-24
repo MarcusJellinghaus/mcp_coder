@@ -20,7 +20,8 @@ Implement a lightweight workflow system for mcp-coder that provides simple Pytho
 ### New Files
 ```
 workflows/
-├── README.md                    # Documentation and tool references
+├── README.md                    # Documentation and tool references + usage examples
+├── TROUBLESHOOTING.md          # Common issues and solutions
 ├── implement.py                 # First workflow script
 └── implement.bat               # Batch runner for implement.py
 pr_info/
@@ -58,8 +59,15 @@ PR_Info/DEVELOPMENT_PROCESS.md    # Replace prompt with link
 - `workflow_utils.task_tracker` for task management
 
 ## Complexity Avoided (KISS)
-- No complex error handling or logging systems
-- No configuration files or settings
+- No complex error recovery mechanisms (simple "fail fast" approach)
+- No configuration files or settings (hardcoded sensible defaults)
 - No unit tests for workflow scripts
-- No sophisticated conversation management
-- No multi-task loops or complex state management
+- No sophisticated conversation management (simple file versioning)
+- No multi-task loops or complex state management (linear execution flow)
+
+## Enhanced Design Elements
+- **Enhanced Error Handling:** Meaningful messages with early exit on failures
+- **Prerequisite Validation:** Verify dependencies before execution
+- **Consistent Logging:** Timestamp format with clear user feedback
+- **Comprehensive Testing:** Error scenarios and troubleshooting documentation
+- **Return Status Codes:** Better flow control without over-engineering

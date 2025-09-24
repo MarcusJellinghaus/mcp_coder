@@ -129,7 +129,7 @@ This is important so that unit tests can work.
 
 Wait for presentation of overall plan
 ```
-Can we go through all suggested changes and questions step by step?
+Can we go through all open suggested changes and questions step by step?
 You explain, ask and I answer until we discussed all topics?
 Please offer, whenever possible, simple options like 
 - A
@@ -170,7 +170,11 @@ After the agreement:
 ```
 Can you update the plan by updating the different files in folder `pr_info\steps`
 Please do targeted changes.
-Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`
+
+Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`.
+Only put those decisions that we discussed, no invented decisions 
+( For each decision that you log, consider whether you discussed it with me and when I said so )
+
 ```
 
 Possibly review the project plan one more time (see above) or continue with the next step.

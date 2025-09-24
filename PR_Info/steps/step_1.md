@@ -12,6 +12,7 @@ Set up the foundational structure for the workflow system with documentation and
 ### Main Functions
 - No functions needed - just file/folder creation
 - Document the workflow concept and reference standard tools
+- Focus only on infrastructure setup (Python script moved to Step 3)
 
 ## HOW
 ### Integration Points  
@@ -22,10 +23,11 @@ Set up the foundational structure for the workflow system with documentation and
 ## ALGORITHM
 ```
 1. Create workflows directory
-2. Write README with concept explanation
+2. Write README with concept explanation and usage examples
 3. List standard tools (prompts, formatters, commit, task_tracker)
-4. Create placeholder batch file
+4. Create minimal batch file placeholder
 5. Document the pattern for future workflows
+6. Keep scope simple - no Python script creation yet
 ```
 
 ## DATA
@@ -35,10 +37,11 @@ Set up the foundational structure for the workflow system with documentation and
 - Directory structure established for workflow pattern
 
 ## Implementation Notes
-- Keep README simple and focused
+- Keep README simple and focused with practical usage examples
 - Reference existing functionality rather than reinventing
 - Establish clear pattern for future workflow additions
 - No code complexity - just documentation and structure
+- Simplified scope: focus only on foundation laying
 
 ## LLM Prompt
 ```

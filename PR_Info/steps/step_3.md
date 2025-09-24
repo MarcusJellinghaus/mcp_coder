@@ -11,32 +11,37 @@ Create the core implement.py workflow script that orchestrates existing mcp-code
 ### Main Functions
 ```python
 def main() -> None
+def check_prerequisites() -> bool           # NEW: Verify dependencies
 def get_next_task() -> str | None  
 def save_conversation(content: str, step_num: int) -> None
-def run_formatters() -> None
-def commit_changes() -> None
+def run_formatters() -> bool                # Enhanced: Return success status
+def commit_changes() -> bool                # Enhanced: Return success status
+def log_step(message: str) -> None          # NEW: Consistent logging
 ```
 
 ## HOW
 ### Integration Points
 ```python
-# Imports
+# Imports - Direct API calls only, no subprocess/CLI calls
 sys.path.append('../src')  # Simple path addition
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.llm_interface import ask_llm  
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 from mcp_coder.formatters import format_code
-import subprocess  # For commit command
+from mcp_coder.utils.git_operations import commit_all_changes
+from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 ```
 
 ## ALGORITHM
 ```
-1. Check for incomplete tasks (entrance condition)
-2. Get implementation prompt template using get_prompt()
-3. Call LLM with prompt using ask_llm()  
-4. Save conversation to pr_info/.conversations/step_N.md
-5. Run formatters (black, isort) using existing format_code()
-6. Commit changes using subprocess call to mcp-coder commit auto
+1. Check prerequisites (git status, task tracker exists)
+2. Check for incomplete tasks (entrance condition)
+3. Get implementation prompt template using get_prompt()
+4. Call LLM with prompt using ask_llm()  
+5. Save conversation to pr_info/.conversations/step_N.md
+6. Run formatters (black, isort) using existing format_code()
+7. Commit changes using generate_commit_message_with_llm() and commit_all_changes()
+8. Early exit on failures with clear error messages
 ```
 
 ## DATA
@@ -55,14 +60,16 @@ PR_INFO_DIR: str = "pr_info"
 CONVERSATIONS_DIR: str = f"{PR_INFO_DIR}/.conversations"
 incomplete_tasks: List[str]  # From task tracker
 response: str  # From LLM
+# Conversation file naming: step_1.md, step_1_2.md, step_1_3.md (incremental numbering)
 ```
 
 ## Implementation Notes
-- Keep error handling minimal (KISS principle)
+- Enhanced error handling with meaningful messages and early exit
 - Use existing APIs without modification
-- Simple timestamp logging with print statements
+- Consistent logging format with timestamps
 - Single task execution - no loops
 - Basic file versioning for conversations
+- Return status codes for better flow control
 
 ## LLM Prompt  
 ```
