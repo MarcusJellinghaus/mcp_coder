@@ -204,7 +204,7 @@ Follow existing format in TASK_TRACKER.md or standard checkbox format. Review `p
 - Prompt could be enhanced to generate the task tracker and add new tasks 
 - commit afterwards with 
   ```
-  Update TASK_TRACKER.md with implementation steps and PR tasks
+  TASK_TRACKER.md with implementation steps and PR tasks updated
   ```
 
 **Objective:** Complete each implementation step with full validation
