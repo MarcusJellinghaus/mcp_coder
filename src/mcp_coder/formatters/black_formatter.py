@@ -10,8 +10,9 @@ import tomllib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from mcp_coder.formatters import FormatterResult
 from mcp_coder.utils.subprocess_runner import execute_command
+
+from .models import FormatterResult
 
 
 def format_with_black(

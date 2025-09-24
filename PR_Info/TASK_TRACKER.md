@@ -51,22 +51,22 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] **Step 3: isort Formatter Implementation** - [steps/step_3.md](steps/step_3.md)
   - [x] Write comprehensive unit and integration tests first (TDD)
   - [x] Implement isort formatter with exit code change detection
-  - [x] Implement two-phase approach (check first, format if needed)
+  - [x] Implement two-phase approach (check first, format if needed)3
   - [x] Add inline configuration reading using tomllib patterns
   - [x] Run pylint check and fix any issues
   - [x] Run pytest and verify all tests pass
   - [x] Run mypy check and fix any type issues
   - [x] Prepare git commit with concise message
 
-- [ ] **Step 4: Combined API Implementation** - [steps/step_4.md](steps/step_4.md)
-  - [ ] Write comprehensive unit and integration tests first (TDD)
-  - [ ] Implement combined format_code() function
-  - [ ] Add line-length conflict warning feature
-  - [ ] Create clean API exports in __init__.py
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest and verify all tests pass
-  - [ ] Run mypy check and fix any type issues
-  - [ ] Prepare git commit with concise message
+- [x] **Step 4: Combined API Implementation** - [steps/step_4.md](steps/step_4.md)
+  - [x] Write comprehensive unit and integration tests first (TDD)
+  - [x] Implement combined format_code() function
+  - [x] Add line-length conflict warning feature
+  - [x] Create clean API exports in __init__.py
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest and verify all tests pass
+  - [x] Run mypy check and fix any type issues
+  - [x] Prepare git commit with concise message
 
 - [ ] **Step 5: Integration Testing and Quality Assurance** - [steps/step_5.md](steps/step_5.md)
   - [ ] Create comprehensive integration tests using real code samples
