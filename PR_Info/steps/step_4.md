@@ -5,42 +5,48 @@ Following the summary and Steps 1-3, integrate the task tracker functionality in
 
 ## WHERE: File Paths and Module Structure
 ```
-src/mcp_coder/utils/__init__.py         # Modified: Add task tracker exports
-src/mcp_coder/utils/task_tracker.py     # Finalized: Complete implementation
-tests/utils/test_task_tracker.py        # Finalized: Complete test suite
-tests/test_integration_task_tracker.py  # New: Cross-module integration tests
+src/mcp_coder/workflow_utils/__init__.py         # Modified: Add task tracker exports
+src/mcp_coder/workflow_utils/task_tracker.py     # Finalized: Complete implementation
+tests/workflow_utils/test_task_tracker.py        # Finalized: Complete test suite
+tests/test_integration_task_tracker.py          # New: Cross-module integration tests
 ```
 
 ## WHAT: Main Functions with Signatures
 ```python
-# In src/mcp_coder/utils/__init__.py - ADD to existing exports:
+# In src/mcp_coder/workflow_utils/__init__.py - ADD exports:
 from .task_tracker import (
     get_incomplete_tasks,
     is_task_done,
     TaskInfo,  # Optional: export data model for advanced users
+    TaskTrackerError,
+    TaskTrackerFileNotFoundError, 
+    TaskTrackerSectionNotFoundError,
 )
 
-# Update __all__ list to include new exports:
+# Create __all__ list:
 __all__ = [
-    # ... existing exports ...
     # Task tracker operations
     "get_incomplete_tasks",
     "is_task_done", 
     "TaskInfo",
+    # Exception types
+    "TaskTrackerError",
+    "TaskTrackerFileNotFoundError",
+    "TaskTrackerSectionNotFoundError",
 ]
 ```
 
 ## HOW: Integration Points
-- Add task tracker imports to existing `__init__.py` without disrupting current exports
-- Maintain backward compatibility with all existing utils functionality
-- Follow established patterns from other utils modules (git_operations, subprocess_runner)
-- Add integration tests that verify imports work from different modules
-- Ensure task tracker functions are available at package level: `from mcp_coder.utils import get_incomplete_tasks`
+- Create new workflow_utils package exports without disrupting existing code
+- Follow established patterns from other project modules
+- Add integration tests that verify cross-module functionality
+- Test imports work from different levels: `from mcp_coder.workflow_utils import get_incomplete_tasks`
+- Ensure new package follows existing project structure conventions
 
 ## ALGORITHM: Integration Logic
 ```python
-# 1. Add imports to utils/__init__.py following existing patterns
-# 2. Update __all__ list with new task tracker exports
+# 1. Create workflow_utils/__init__.py with task tracker exports
+# 2. Export all public functions and exception types
 # 3. Create integration tests that verify cross-module functionality
 # 4. Test imports work from main package level
 # 5. Validate no conflicts with existing functionality
@@ -50,8 +56,8 @@ __all__ = [
 ## DATA: Integration Verification
 ```python
 # Import verification tests
-from mcp_coder.utils import get_incomplete_tasks, is_task_done
-from mcp_coder.utils import TaskInfo  # Data model access
+from mcp_coder.workflow_utils import get_incomplete_tasks, is_task_done
+from mcp_coder.workflow_utils import TaskInfo, TaskTrackerError  # Advanced usage
 
 # Function availability checks
 callable: get_incomplete_tasks  # Should be accessible

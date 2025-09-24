@@ -5,46 +5,51 @@ Following the summary and Steps 1-2, implement the main public API functions tha
 
 ## WHERE: File Paths and Module Structure
 ```
-src/mcp_coder/utils/task_tracker.py     # Add: Public API functions  
-tests/utils/test_task_tracker.py        # Add: Public API tests
-tests/utils/test_data/                  # Add: Integration test files
-├── real_world_tracker.md              # Realistic TASK_TRACKER.md example
-└── edge_case_tracker.md               # Various edge cases combined
+src/mcp_coder/workflow_utils/task_tracker.py     # Add: Public API functions  
+tests/workflow_utils/test_task_tracker.py        # Add: Public API tests
 ```
 
 ## WHAT: Main Functions with Signatures
 ```python
-def get_incomplete_tasks(folder_path: str = "PR_Info") -> list[str]:
+def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
     """Get list of incomplete task names from Implementation Steps section.
     
     Args:
-        folder_path: Path to folder containing TASK_TRACKER.md (default: "PR_Info")
+        folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
         
     Returns:
-        List of incomplete task names, empty list if file/section not found
+        List of incomplete task names
+        
+    Raises:
+        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
     """
 
-def is_task_done(task_name: str, folder_path: str = "PR_Info") -> bool:
+def is_task_done(task_name: str, folder_path: str = "pr_info") -> bool:
     """Check if specific task is marked as complete.
     
     Args:
-        task_name: Name of task to check (supports partial matching)
-        folder_path: Path to folder containing TASK_TRACKER.md (default: "PR_Info")
+        task_name: Name of task to check (case-insensitive exact match)
+        folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
         
     Returns:
-        True if task is complete ([x] or [X]), False otherwise
+        True if task is complete ([x] or [X]), False if incomplete or not found
+        
+    Raises:
+        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
     """
 
 def _normalize_task_name(name: str) -> str:
-    """Normalize task name for fuzzy matching."""
+    """Normalize task name for case-insensitive exact matching."""
 ```
 
 ## HOW: Integration Points
 - Build on all functions from Steps 1-2
 - Use `_read_task_tracker()`, `_find_implementation_section()`, `_parse_task_lines()`
-- Add fuzzy string matching for task name comparison
-- Follow existing utils module patterns for default parameters
-- Handle errors gracefully (return empty lists/False instead of exceptions)
+- Add case-insensitive exact matching for task name comparison
+- Follow existing workflow_utils patterns for default parameters
+- Raise specific exceptions instead of returning empty results
 
 ## ALGORITHM: Public API Logic
 ```python
@@ -56,8 +61,8 @@ def _normalize_task_name(name: str) -> str:
 
 # is_task_done():
 # 1. Get all tasks from Implementation Steps section
-# 2. Normalize input task_name for comparison
-# 3. Find matching task using fuzzy name matching
+# 2. Normalize input task_name for comparison (lowercase, strip whitespace)
+# 3. Find exact matching task using case-insensitive comparison
 # 4. Return completion status or False if not found
 ```
 
@@ -69,11 +74,12 @@ list[str]: [
     "Implement core parser", 
     "Add integration tests"
 ]
-list[str]: []  # When no incomplete tasks or file not found
+# Raises exceptions for missing file/section
 
 # is_task_done() returns
 bool: True   # Task found and marked complete [x]/[X]
 bool: False  # Task incomplete [ ] or not found
+# Raises exceptions for missing file/section
 
 # _normalize_task_name() returns  
 str: "setup project structure"  # Lowercase, normalized spacing

@@ -5,12 +5,11 @@ Following the summary and Step 1 foundation, implement the core markdown parsing
 
 ## WHERE: File Paths and Module Structure
 ```
-src/mcp_coder/utils/task_tracker.py     # Add: Section parsing functions
-tests/utils/test_task_tracker.py        # Add: Section parsing tests
-tests/utils/test_data/                  # Add: More complex test files
-├── multiple_sections.md               # Test with Implementation + Pull Request sections
-├── malformed_tasks.md                 # Test edge cases in task formatting
-└── case_insensitive.md                # Test case variations in headers
+src/mcp_coder/workflow_utils/task_tracker.py     # Add: Section parsing functions
+tests/workflow_utils/test_task_tracker.py        # Add: Section parsing tests
+tests/workflow_utils/test_data/                  # Add: More complex test files
+├── real_world_tracker.md                      # Realistic TASK_TRACKER.md example
+└── case_insensitive.md                      # Test case variations in headers
 ```
 
 ## WHAT: Main Functions with Signatures
@@ -18,47 +17,48 @@ tests/utils/test_data/                  # Add: More complex test files
 import re
 from typing import Tuple
 
-def _find_implementation_section(content: str) -> Optional[str]:
-    """Find and extract Implementation Steps section, excluding Pull Request section."""
+def _find_implementation_section(content: str) -> str:
+    """Find and extract Implementation Steps section, raise TaskTrackerSectionNotFoundError if missing."""
 
 def _parse_task_lines(section_content: str) -> list[TaskInfo]:
-    """Parse individual task lines and extract TaskInfo objects."""
+    """Parse individual task lines and extract TaskInfo objects with indentation levels."""
 
-def _clean_task_name(raw_line: str) -> str:
-    """Clean task name by removing markdown formatting, links, and whitespace."""
-
-def _is_task_line(line: str) -> Tuple[bool, bool]:
-    """Check if line is a task and whether it's complete. Returns (is_task, is_complete)."""
+# Additional helpers extracted if needed during implementation:
+# def _clean_task_name(raw_line: str) -> str:
+# def _is_task_line(line: str) -> Tuple[bool, bool]:
 ```
 
 ## HOW: Integration Points
-- Import `re` for regex pattern matching
+- Import `re` for regex pattern matching if needed
 - Use existing `TaskInfo` dataclass from Step 1  
 - Build on `_read_task_tracker()` function from Step 1
-- Follow existing error handling patterns in utils modules
+- Raise TaskTrackerSectionNotFoundError for missing sections
+- Follow existing error handling patterns in workflow_utils
 
 ## ALGORITHM: Section Parsing Logic
 ```python
 # 1. Split content into sections by markdown headers (## or ###)
 # 2. Find section with "Implementation Steps" in title (case-insensitive)
-# 3. Stop at "Pull Request" section if encountered
-# 4. Parse each line for task patterns: "- [ ]" or "- [x]"/"- [X]"  
-# 5. Clean task names by removing prefixes, links, and extra whitespace
-# 6. Return list of TaskInfo objects with line numbers
+# 3. Stop at "Pull Request" section if encountered  
+# 4. Parse each line for task patterns: "- [ ]" or "- [x]"/"- [X]"
+# 5. Track indentation levels (count leading spaces/tabs)
+# 6. Clean task names by removing prefixes and extra whitespace
+# 7. Return list of TaskInfo objects with line numbers and indentation
 ```
 
 ## DATA: Return Values and Data Structures
 ```python
 # _find_implementation_section() returns
-Optional[str]: "- [ ] Setup project\n- [x] Implement core\n..."
-Optional[str]: None  # When section not found
+str: "- [ ] Setup project\n- [x] Implement core\n..."
+# Raises TaskTrackerSectionNotFoundError when section not found
 
 # _parse_task_lines() returns
 list[TaskInfo]: [
-    TaskInfo("Setup project", False, 12),
-    TaskInfo("Implement core", True, 13)
+    TaskInfo("Setup project", False, 12, 0),      # Top-level task
+    TaskInfo("Implement core", True, 13, 1)       # Indented task
 ]
 
+# Helper functions (if extracted during implementation)
 # _is_task_line() returns  
 Tuple[bool, bool]: (True, False)   # Is task, not complete
 Tuple[bool, bool]: (True, True)    # Is task, complete
