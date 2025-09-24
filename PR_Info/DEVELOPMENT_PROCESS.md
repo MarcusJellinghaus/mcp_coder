@@ -57,6 +57,7 @@ Do not yet modify any code!
 ```
 ## Python Project Implementation Plan Request
 Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** with self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
+Can you also give a summary of the architectural / design changes in the summary document?
 
 ### Requirements:
 - Follow **Test-Driven Development** where applicable. 
