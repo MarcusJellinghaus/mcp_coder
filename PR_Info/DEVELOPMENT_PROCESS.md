@@ -320,6 +320,15 @@ Run certain checks in an automated way and deal with possibly highlighted issues
   - Provides structured prompt for LLM summary generation
   - Cleans up development artifacts: deletes `steps/` subfolder and clears Tasks section from `TASK_TRACKER.md`
 
+- could be automated
+  - get base_branch (or assume main)
+  - read PR_Info\pr_summary.md text into temp variable and delete file later.
+  - delete PR_Info\pr_summary.md file
+  - commit file cleanup
+  - push
+  - create PR
+  - split pr_summary in header and text
+
 **Final Clean State:**
 After feature completion, the cleaned `TASK_TRACKER.md` should contain only the template structure:
 ```markdown
