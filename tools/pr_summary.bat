@@ -90,7 +90,9 @@ REM Generate git diff and create PR summary prompt
     echo Can you please create a limited size summary for a pull request?
     echo Please do not refer to the files in `PR_Info` directly !
     echo Please save the pull request summary in markdown file ^(as `PR_Info\pr_summary.md`^) so that I can easily copy/paste it.
-    echo Last step: 1^) Delete the `PR_Info/steps/` subfolder and 2^) Clear the Tasks section from `TASK_TRACKER.md` ^(keep the template structure^)
+    echo Last steps:
+    echo     1^) Delete the `PR_Info/steps/` subfolder and the `PR_Info/.conversations/` subfolder and
+    echo     2^) Clear the Tasks section from `TASK_TRACKER.md` ^(keep the template structure^)
     echo.
     echo Current branch: %CURRENT_BRANCH%
     echo Base branch:    %BASE_BRANCH%
