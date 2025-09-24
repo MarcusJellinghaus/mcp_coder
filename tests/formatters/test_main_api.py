@@ -6,7 +6,7 @@ re-exports, and line-length conflict warning integration.
 
 import tempfile
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
 import pytest
@@ -21,8 +21,8 @@ class TestCombinedAPICoreFunctionality:
     @patch("mcp_coder.formatters.format_with_black")
     @patch("mcp_coder.formatters.format_with_isort")
     def test_format_code_runs_both_formatters_sequentially(
-        self, mock_isort, mock_black
-    ):
+        self, mock_isort: Mock, mock_black: Mock
+    ) -> None:
         """Test format_code() running Black + isort sequentially."""
         # Setup
         mock_black.return_value = FormatterResult(
@@ -61,8 +61,8 @@ class TestCombinedAPICoreFunctionality:
     @patch("mcp_coder.formatters.format_with_black")
     @patch("mcp_coder.formatters.format_with_isort")
     def test_format_code_with_individual_formatter_selection(
-        self, mock_isort, mock_black
-    ):
+        self, mock_isort: Mock, mock_black: Mock
+    ) -> None:
         """Test format_code(formatters=["black"]) runs only Black."""
         # Setup
         mock_black.return_value = FormatterResult(
@@ -93,8 +93,8 @@ class TestCombinedAPICoreFunctionality:
     @patch("mcp_coder.formatters.format_with_black")
     @patch("mcp_coder.formatters.format_with_isort")
     def test_format_code_error_handling_one_formatter_fails(
-        self, mock_isort, mock_black
-    ):
+        self, mock_isort: Mock, mock_black: Mock
+    ) -> None:
         """Test when one formatter fails, other still runs."""
         # Setup - Black fails, isort succeeds
         mock_black.return_value = FormatterResult(
@@ -138,7 +138,9 @@ class TestAPIExportsAndImports:
 
     @patch("mcp_coder.formatters.black_formatter.format_with_black")
     @patch("mcp_coder.formatters.isort_formatter.format_with_isort")
-    def test_re_exports_work_from_init(self, mock_isort_module, mock_black_module):
+    def test_re_exports_work_from_init(
+        self, mock_isort_module: Mock, mock_black_module: Mock
+    ) -> None:
         """Verify format_with_black() and format_with_isort() work from __init__.py."""
         # Setup mock returns
         mock_black_module.return_value = FormatterResult(
@@ -164,7 +166,7 @@ class TestAPIExportsAndImports:
             assert isinstance(isort_result, FormatterResult)
             assert isort_result.formatter_name == "isort"
 
-    def test_public_api_imports(self):
+    def test_public_api_imports(self) -> None:
         """Test all expected functions/classes are importable."""
         # Test all expected imports work
         from mcp_coder.formatters import (
@@ -186,7 +188,9 @@ class TestLineLengthConflictIntegration:
     """Test line-length conflict integration (1 test)."""
 
     @patch("builtins.print")
-    def test_format_code_shows_line_length_conflict_warning(self, mock_print):
+    def test_format_code_shows_line_length_conflict_warning(
+        self, mock_print: Mock
+    ) -> None:
         """Test that format_code() shows warning when Black/isort line lengths differ."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project_root = Path(temp_dir)
