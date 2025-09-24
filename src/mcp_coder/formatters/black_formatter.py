@@ -6,6 +6,7 @@ Based on Step 1 requirements, this module implements Black formatting using:
 - Eliminates custom file discovery, letting Black handle file scanning
 """
 
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -55,7 +56,7 @@ def format_with_black(
             error_message=None,
         )
 
-    except Exception as e:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
         return FormatterResult(
             success=False,
             files_changed=[],
@@ -106,7 +107,7 @@ def _format_black_directory(target_path: Path, config: Dict[str, Any]) -> List[s
         return _parse_black_output(result.stderr)
     else:
         # Syntax error or other failure
-        raise Exception(f"Black formatting failed: {result.stderr}")
+        raise subprocess.CalledProcessError(result.return_code, command, result.stderr)
 
 
 def _parse_black_output(stderr: str) -> List[str]:

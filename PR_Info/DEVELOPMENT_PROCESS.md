@@ -198,7 +198,7 @@ Once you are done, please check again that task description on `pr_info/TASK_TRA
 Once everything is done, please mark the task as done.
 Please work only on one task. Do not pick further tasks.
 
-Please also take a look at the tests\readme and only run those tests that are required in your context -i.e. avoid slow integration tests.
+Please also take a look at the tests\readme.md and only run those tests that are required in your context -i.e. avoid slow integration tests.
 ```
 
 Possible follow up question:
@@ -229,6 +229,10 @@ Did you tick of the tasks in the task tracker?
   - *Response:* Mark as complete, update plan for remaining tasks
   
 - ** Check for slower and slower unit tests **
+
+- ** Check for file / folder / module names **
+  - Files or folders might have wrong location or names. Eg test files should follow the same folder structure like the code.
+
 
 ** Possible prompt for too complex task**
 
