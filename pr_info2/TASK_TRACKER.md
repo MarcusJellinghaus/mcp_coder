@@ -33,14 +33,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy check and fix any type issues
   - [ ] Prepare git commit with concise message
 
-- [ ] **Step 2: Refactor isort Formatter to Directory-Based Approach** - [steps/step_2.md](steps/step_2.md)
-  - [ ] Update isort formatter tests to expect directory-based formatting calls (TDD)
-  - [ ] Refactor isort formatter implementation to pass directories directly to isort CLI
-  - [ ] Implement output parsing to determine changed files from isort stdout
-  - [ ] Eliminate custom `find_python_files()` usage in isort formatter
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest and verify all tests pass
-  - [ ] Run mypy check and fix any type issues
+- [x] **Step 2: Refactor isort Formatter to Directory-Based Approach** - [steps/step_2.md](steps/step_2.md)
+  - [x] Update isort formatter tests to expect directory-based formatting calls (TDD)
+  - [x] Refactor isort formatter implementation to pass directories directly to isort CLI
+  - [x] Implement output parsing to determine changed files from isort stdout
+  - [x] Eliminate custom `find_python_files()` usage in isort formatter
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest and verify all tests pass
+  - [x] Run mypy check and fix any type issues
   - [ ] Prepare git commit with concise message
 
 - [ ] **Step 3: Clean Up Utils Module and Remove File Discovery** - [steps/step_3.md](steps/step_3.md)
