@@ -24,6 +24,7 @@ Workflow Algorithm:
 4. Graceful error handling - continues processing remaining tasks if possible
 """
 
+import argparse
 import os
 import re
 import sys
@@ -36,6 +37,7 @@ from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import commit_all_changes, git_push
+from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 # Constants
@@ -259,8 +261,28 @@ Generated on: {datetime.now().isoformat()}
     return True
 
 
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments including log level."""
+    parser = argparse.ArgumentParser(
+        description="Continuous implement workflow script that orchestrates existing mcp-coder functionality."
+    )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="Set the logging level (default: INFO)"
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
     """Main workflow orchestration function - processes all implementation tasks in sequence."""
+    # Parse command line arguments
+    args = parse_arguments()
+    
+    # Setup logging early
+    setup_logging(args.log_level)
+    
     log_step("Starting implement workflow...")
     
     # Step 1: Check prerequisites
