@@ -1,54 +1,90 @@
 # Task Tracker Parser Implementation Summary
 
 ## Overview
-Implement a simple task tracker parser to extract incomplete tasks from `TASK_TRACKER.md` files, enabling automated workflow management.
+Implement a simple, focused task tracker parser to extract incomplete implementation tasks from `TASK_TRACKER.md` files. This enables automated workflow management and task status checking for development processes.
 
 ## Core Requirements
-- Parse markdown task lists with GitHub-style checkboxes (`[ ]`, `[x]`, `[X]`)
-- Extract incomplete tasks from "Implementation Steps" section
-- Provide task completion status checking
-- Support configurable folder paths (default: `PR_Info`)
+- Parse markdown files with GitHub-style task checkboxes (`[ ]`, `[x]`, `[X]`)
+- Extract incomplete tasks from "Implementation Steps" section only
+- Exclude tasks from "Pull Request" section
+- Provide task completion status checking functionality
+- Support configurable folder paths with sensible defaults
 
 ## Architecture & Design Changes
 
 ### New Module Structure
 ```
-src/mcp_coder/workflow_utils/
-├── __init__.py
-└── task_tracker.py
+src/mcp_coder/utils/
+├── task_tracker.py          # New: Task tracker parsing functionality
+└── __init__.py             # Modified: Add task tracker exports
+
+tests/utils/
+├── test_task_tracker.py     # New: Unit tests for task tracker
+└── conftest.py             # Modified: Add task tracker test fixtures
 ```
 
 ### Core Components
-1. **Task Data Model**: Simple dataclass for task representation
-2. **Parser Functions**: Two main functions for task extraction and status checking
-3. **Utility Functions**: Markdown section parsing and task name cleaning
 
-### API Design
+#### 1. Data Models (Minimal)
 ```python
-# Primary functions
-get_incomplete_tasks(folder: str = "PR_Info") -> list[str]
-is_task_done(task_name: str, folder: str = "PR_Info") -> bool
-
-# Data model
 @dataclass
-class Task:
+class TaskInfo:
     name: str
     is_complete: bool
+    line_number: int
+```
+
+#### 2. Public API (2 functions only)
+```python
+def get_incomplete_tasks(folder_path: str = "PR_Info") -> list[str]:
+    """Get list of incomplete task names from Implementation Steps section"""
+
+def is_task_done(task_name: str, folder_path: str = "PR_Info") -> bool:
+    """Check if specific task is marked as complete"""
+```
+
+#### 3. Internal Helpers (Simple parsing)
+```python
+def _read_task_tracker(folder_path: str) -> str:
+    """Read TASK_TRACKER.md content"""
+
+def _find_implementation_section(content: str) -> str:
+    """Extract Implementation Steps section, skip Pull Request section"""
+
+def _parse_task_lines(section_content: str) -> list[TaskInfo]:
+    """Parse task lines with [ ]/[x] markers"""
+
+def _clean_task_name(raw_line: str) -> str:
+    """Clean task name by removing markdown formatting"""
 ```
 
 ### Integration Points
-- Add to `src/mcp_coder/utils/__init__.py` exports
-- Follow existing project patterns for error handling and logging
+- Add exports to `src/mcp_coder/utils/__init__.py`
+- Follow existing project patterns for error handling
 - Use standard library only (no external dependencies)
+- Integrate with existing test infrastructure using `conftest.py`
 
-## Implementation Approach
-- **Test-Driven Development**: Write tests first for each function
-- **KISS Principle**: Minimal complexity, maximum maintainability  
-- **Clean Code**: Clear function names, single responsibility
-- **Error Handling**: Graceful degradation for missing files/sections
+### Design Principles Applied
+- **KISS**: Only essential functionality, no over-engineering
+- **Single Responsibility**: Each function has one clear purpose
+- **Fail Fast**: Clear error messages for missing files/sections
+- **Test-Driven**: Comprehensive test coverage for all scenarios
+
+### Error Handling Strategy
+- Graceful handling of missing files (return empty lists)
+- Clear error messages for malformed markdown
+- Robust section parsing (case-insensitive headers)
+- Safe task name matching (fuzzy string comparison)
 
 ## Benefits
-- Enables programmatic task tracking for development workflows
-- Supports automated progress monitoring
+- Enables automated task progress tracking
+- Supports development workflow automation
+- Simple API that's easy to use and maintain
 - Integrates seamlessly with existing codebase patterns
-- Simple API that's easy to use and extend
+- Follows established project conventions
+
+## Implementation Approach
+1. **Test-First Development**: Write comprehensive tests before implementation
+2. **Incremental Development**: Build functionality step-by-step
+3. **Clean Integration**: Follow existing project structure and patterns
+4. **Minimal Dependencies**: Use only standard library functions
