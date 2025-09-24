@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Optional, TypedDict
+from typing import Optional, TypedDict
 
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
@@ -736,7 +736,7 @@ def _format_diff_sections(
     return "\n\n".join(sections)
 
 
-def git_push(project_dir: Path) -> dict[str, Any]:
+def git_push(project_dir: Path) -> PushResult:
     """
     Push current branch to origin remote.
 
