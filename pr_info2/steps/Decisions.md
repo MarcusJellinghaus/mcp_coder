@@ -50,10 +50,10 @@ This document records the decisions made during project plan review to refine th
 - **Impact:** Maintains clean architecture despite small overhead
 
 ### 6. Performance Requirements
-**Decision:** Simple performance expectation (Option A)
-- **Chosen:** Just "faster than current approach"
-- **Rationale:** No need for specific benchmarks, directory-based will be inherently faster
-- **Impact:** No complex performance measurement requirements
+**Decision:** No performance measurement required
+- **Chosen:** Architectural improvement without measurement validation
+- **Rationale:** Directory-based approach inherently eliminates Python file scanning overhead
+- **Impact:** Focus quality validation on functional correctness rather than performance metrics
 
 ### 7. Backward Compatibility
 **Decision:** API compatibility only (Option A)
@@ -129,3 +129,28 @@ def _parse_black_output(stdout: str) -> List[str]:
 
 ## Result
 Refined plan maintains all core functionality while reducing implementation complexity through single-phase execution and focused testing, with clear architecture and stable API compatibility.
+
+---
+
+## Additional Refinement Decisions (September 2025)
+
+### 12. Performance Measurement Removal
+**Decision:** Remove performance measurement requirements from Step 5
+- **Chosen:** Eliminate manual performance validation and measurement
+- **Context:** Performance improvement is inherent to directory-based approach (eliminates Python file scanning)
+- **Rationale:** 
+  - Performance benefit is architectural, not requiring measurement
+  - Focus validation effort on functional correctness
+  - Avoid unnecessary complexity in quality assurance
+- **Implementation:** 
+  - Remove `validate_performance_improvement()` function
+  - Remove performance comparison from quality checks
+  - Update success criteria to focus on implementation correctness
+  - Change "Performance improved" to "Directory-based execution eliminates custom file scanning"
+- **Impact:** Simpler Step 5 validation, faster completion, focus on essential quality gates
+
+### Technical Impact of Refinement
+- **Simplified Step 5:** Focus on pylint, pytest, mypy checks only
+- **Clearer Success Criteria:** Functional validation over performance measurement
+- **Faster Completion:** Remove manual measurement overhead
+- **Essential Focus:** Validate what matters (correctness, API compatibility, tool integration)

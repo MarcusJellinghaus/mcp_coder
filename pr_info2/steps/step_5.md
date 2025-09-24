@@ -29,9 +29,6 @@ def run_mypy_check():
 def validate_api_contract():
     """Verify FormatterResult API unchanged"""
 
-def validate_performance_improvement():
-    """Check that file discovery overhead is eliminated"""
-
 def validate_tool_exclusions():
     """Test that .gitignore and tool exclusions work"""
 ```
@@ -49,7 +46,6 @@ def validate_tool_exclusions():
 2. Run `checker on p MCP Coder:run_pytest_check` with formatter_integration marker
 3. Run `checker on p MCP Coder:run_mypy_check` on formatter modules
 4. Manual validation of .gitignore respect
-5. Performance comparison (before/after measurements)
 ```
 
 ## ALGORITHM
@@ -74,16 +70,7 @@ pytest_result = "✅ Passed: 36+ formatter tests"
 mypy_result = "No type errors found"
 ```
 
-### Performance Validation
-```python
-# Before: Custom file discovery + individual file processing
-# After: Directory-based processing with tool-native file discovery
 
-# Measurable improvements:
-# - Reduced Python execution time (no file scanning loops)
-# - Respects .gitignore automatically
-# - Leverages tool-specific optimizations
-```
 
 ### API Contract Validation
 ```python
@@ -110,12 +97,11 @@ def format_code(project_root: Path, formatters: Optional[List[str]] = None, targ
 2. **Real-world validation (1 test)**
    - Test on project with .gitignore exclusions
    - Verify directory-based execution respects tool exclusions
-   - Confirm performance improvement over file-by-file approach
 
 ## Success Criteria
 ✅ **Code Quality**: Pylint, pytest, mypy all pass  
 ✅ **Functionality**: All focused test scenarios work (15-20 tests total)  
-✅ **Performance**: Measurable improvement (no custom file scanning)  
+✅ **Implementation**: Directory-based execution eliminates custom file scanning  
 ✅ **Tool Integration**: .gitignore and tool exclusions respected  
 ✅ **API Contract**: No breaking changes to public interface  
 ✅ **Code Simplicity**: 65+ lines removed, single-phase execution  
@@ -126,6 +112,6 @@ def format_code(project_root: Path, formatters: Optional[List[str]] = None, targ
 - [ ] Run `checker on p MCP Coder:run_pytest_check --markers=["formatter_integration"]`
 - [ ] Run `checker on p MCP Coder:run_mypy_check --target-directories=["src/mcp_coder/formatters"]`
 - [ ] Test real project with .gitignore exclusions
-- [ ] Verify single-phase execution performance improvement
+- [ ] Verify single-phase execution works correctly
 - [ ] Confirm API backward compatibility maintained
 - [ ] Validate error logging only (no progress logging)

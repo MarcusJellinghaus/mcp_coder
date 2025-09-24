@@ -32,7 +32,7 @@ Use single-phase execution (format directly, no separate check step) and parse t
 - **Eliminates custom file discovery complexity**
 - **Single-phase execution** (simpler command flow)
 - **Respects tool-native exclusions** (.gitignore, etc.)
-- **Improved performance** (no Python-level file scanning)
+- **Eliminates Python-level file scanning overhead**
 - **Focused testing** (3-4 tests per step vs 6-7)
 - **Aligns with documented analysis** from Step 0
 
@@ -47,4 +47,4 @@ Use single-phase execution (format directly, no separate check step) and parse t
 - Same public API behavior (`FormatterResult` unchanged)
 - Pylint, pytest, and mypy checks pass
 - Formatters respect .gitignore and tool exclusions
-- Performance improved (no custom file scanning)
+- Directory-based execution eliminates custom file scanning
