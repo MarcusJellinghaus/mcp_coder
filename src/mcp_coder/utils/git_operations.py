@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Optional, TypedDict
+from typing import Any, Optional, TypedDict
 
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
@@ -38,6 +38,14 @@ class CommitResult(TypedDict):
 
     success: bool
     commit_hash: Optional[str]
+    error: Optional[str]
+
+
+# Type alias for git push result structure
+class PushResult(TypedDict):
+    """Result of a git push operation."""
+
+    success: bool
     error: Optional[str]
 
 
@@ -726,3 +734,45 @@ def _format_diff_sections(
         sections.append(f"=== UNTRACKED FILES ===\n{untracked_diff}")
 
     return "\n\n".join(sections)
+
+
+def git_push(project_dir: Path) -> dict[str, Any]:
+    """
+    Push current branch to origin remote.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        Dictionary containing:
+        - success: True if push succeeded, False otherwise
+        - error: Error message if failed, None if successful
+    """
+    logger.debug("Pushing current branch to origin for %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        error_msg = f"Directory is not a git repository: {project_dir}"
+        logger.error(error_msg)
+        return {"success": False, "error": error_msg}
+
+    try:
+        repo = Repo(project_dir, search_parent_directories=False)
+
+        # Get current branch name
+        current_branch = repo.active_branch.name
+        logger.debug("Current branch: %s", current_branch)
+
+        # Execute git push origin <current_branch>
+        repo.git.push("origin", current_branch)
+
+        logger.info("Successfully pushed branch '%s' to origin", current_branch)
+        return {"success": True, "error": None}
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        error_msg = f"Git error during push: {e}"
+        logger.error(error_msg)
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        error_msg = f"Unexpected error during push: {e}"
+        logger.error(error_msg)
+        return {"success": False, "error": error_msg}

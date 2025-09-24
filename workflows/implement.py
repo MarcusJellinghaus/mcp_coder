@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
 """
-Simple implement workflow script that orchestrates existing mcp-coder functionality.
+Continuous implement workflow script that orchestrates existing mcp-coder functionality.
 
-This script automates the implementation process by:
-1. Checking for incomplete tasks using task_tracker
-2. Getting prompt using get_prompt()
-3. Calling LLM using ask_llm()
-4. Saving conversation to pr_info/.conversations/
-5. Formatting code using formatters
-6. Committing using subprocess call to mcp-coder commit auto
+This script automates the implementation process by processing ALL incomplete implementation
+tasks in sequence until the entire feature is complete.
 
-Algorithm:
-1. Check prerequisites (git status, task tracker exists)
-2. Check for incomplete tasks (entrance condition)
-3. Get implementation prompt template using get_prompt()
-4. Call LLM with prompt using ask_llm()
-5. Save conversation to pr_info/.conversations/step_N.md
-6. Run formatters (black, isort) using existing format_code()
-7. Commit changes using generate_commit_message_with_llm() and commit_all_changes()
-8. Early exit on failures with clear error messages
+For each incomplete task, it:
+1. Gets implementation prompt template using get_prompt()
+2. Calls LLM with task-specific prompt using ask_llm()
+3. Saves conversation to pr_info/.conversations/step_N.md
+4. Runs formatters (black, isort) using existing format_code()
+5. Commits changes using generate_commit_message_with_llm() and commit_all_changes()
+6. Pushes changes to remote repository using git_push()
+7. Continues to next incomplete task
+
+Workflow Algorithm:
+1. Check prerequisites once (git status, task tracker exists)
+2. Loop through all incomplete implementation tasks:
+   a. Get next incomplete task from task_tracker
+   b. Process single task (prompt → LLM → save → format → commit → push)
+   c. Continue until no more incomplete tasks
+3. Exit with summary of completed tasks
+4. Graceful error handling - continues processing remaining tasks if possible
 """
 
 import os
@@ -32,9 +35,8 @@ from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_operations import commit_all_changes
+from mcp_coder.utils.git_operations import commit_all_changes, git_push
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
-
 
 # Constants
 PR_INFO_DIR = "pr_info"
@@ -159,19 +161,33 @@ def commit_changes() -> bool:
         return False
 
 
-def main() -> None:
-    """Main workflow orchestration function."""
-    log_step("Starting implement workflow...")
+def push_changes() -> bool:
+    """Push changes to remote repository and return success status."""
+    log_step("Pushing changes to remote...")
     
-    # Step 1: Check prerequisites
-    if not check_prerequisites():
-        sys.exit(1)
+    try:
+        project_dir = Path.cwd()
+        push_result = git_push(project_dir)
+        
+        if not push_result["success"]:
+            print(f"Error pushing changes: {push_result['error']}")
+            return False
+        
+        log_step("Changes pushed successfully to remote")
+        return True
     
-    # Step 2: Check for incomplete tasks (entrance condition)
+    except Exception as e:
+        print(f"Error pushing changes: {e}")
+        return False
+
+
+def process_single_task() -> bool:
+    """Process a single implementation task. Returns True if successful, False if failed."""
+    # Get next incomplete task
     next_task = get_next_task()
     if not next_task:
-        log_step("No incomplete tasks found - workflow complete")
-        sys.exit(0)
+        log_step("No incomplete tasks found")
+        return False
     
     # Step 3: Get implementation prompt template
     log_step("Loading implementation prompt template...")
@@ -179,7 +195,7 @@ def main() -> None:
         prompt_template = get_prompt("mcp_coder/prompts/prompts.md", "Implementation Prompt Template using task tracker")
     except Exception as e:
         print(f"Error loading prompt template: {e}")
-        sys.exit(1)
+        return False
     
     # Step 4: Call LLM with prompt
     log_step("Calling LLM for implementation...")
@@ -195,13 +211,13 @@ Please implement this task step by step."""
         
         if not response or not response.strip():
             print("Error: LLM returned empty response")
-            sys.exit(1)
+            return False
         
         log_step("LLM response received successfully")
     
     except Exception as e:
         print(f"Error calling LLM: {e}")
-        sys.exit(1)
+        return False
     
     # Step 5: Save conversation
     try:
@@ -225,17 +241,49 @@ Generated on: {datetime.now().isoformat()}
     
     except Exception as e:
         print(f"Error saving conversation: {e}")
-        sys.exit(1)
+        return False
     
     # Step 6: Run formatters
     if not run_formatters():
-        sys.exit(1)
+        return False
     
     # Step 7: Commit changes
     if not commit_changes():
+        return False
+    
+    # Step 8: Push changes to remote
+    if not push_changes():
+        return False
+    
+    log_step(f"Task completed successfully: {next_task}")
+    return True
+
+
+def main() -> None:
+    """Main workflow orchestration function - processes all implementation tasks in sequence."""
+    log_step("Starting implement workflow...")
+    
+    # Step 1: Check prerequisites
+    if not check_prerequisites():
         sys.exit(1)
     
-    log_step("Implement workflow completed successfully!")
+    # Step 2: Process all incomplete tasks in a loop
+    completed_tasks = 0
+    while True:
+        success = process_single_task()
+        if not success:
+            # No more tasks or error occurred
+            break
+        
+        completed_tasks += 1
+        log_step(f"Completed {completed_tasks} task(s). Checking for more...")
+    
+    if completed_tasks > 0:
+        log_step(f"Implement workflow completed successfully! Processed {completed_tasks} task(s).")
+    else:
+        log_step("No incomplete implementation tasks found - workflow complete")
+    
+    sys.exit(0)
 
 
 if __name__ == "__main__":
