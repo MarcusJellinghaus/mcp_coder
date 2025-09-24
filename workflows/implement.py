@@ -191,7 +191,7 @@ Current task from TASK_TRACKER.md: {next_task}
 
 Please implement this task step by step."""
         
-        response = ask_llm(full_prompt, provider="claude", method="api", timeout=60)
+        response = ask_llm(full_prompt, provider="claude", method="api", timeout=600)
         
         if not response or not response.strip():
             print("Error: LLM returned empty response")
