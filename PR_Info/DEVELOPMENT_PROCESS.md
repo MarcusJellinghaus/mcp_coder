@@ -52,6 +52,14 @@ Do you understand the task below?
 What are the implementation steps?
 Do not yet modify any code!
 ```
+### Ask for simplification
+```
+First of all, I want to emphazise that you should really keep it simple
+
+Do not envisage unnecessary complexity or features not related to the issue I mentioned above.
+Can you review and come up with a simplistic plan following clean code, KISS and TDD?
+```
+
 
 #### Implementation Plan Creation Prompt:
 ```
