@@ -129,7 +129,7 @@ This is important so that unit tests can work.
 
 Wait for presentation of overall plan
 ```
-Can we go through all suggested changes and questions step by step?
+Can we go through all open suggested changes and questions step by step?
 You explain, ask and I answer until we discussed all topics?
 Please offer, whenever possible, simple options like 
 - A
@@ -170,7 +170,11 @@ After the agreement:
 ```
 Can you update the plan by updating the different files in folder `pr_info\steps`
 Please do targeted changes.
-Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`
+
+Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`.
+Only put those decisions that we discussed, no invented decisions 
+( For each decision that you log, consider whether you discussed it with me and when I said so )
+
 ```
 
 Possibly review the project plan one more time (see above) or continue with the next step.
@@ -196,8 +200,10 @@ git commit preparation as outlined in the development process.
 Also add the pull request tasks for PR review and summary creation at the end in a section "Pull request"
 ```
 - Prompt could be enhanced to generate the task tracker and add new tasks 
-- commit afterwards with `Update TASK_TRACKER.md with implementation steps and PR tasks`
-
+- commit afterwards with 
+  ```
+  Update TASK_TRACKER.md with implementation steps and PR tasks
+  ```
 
 **Objective:** Complete each implementation step with full validation
 
@@ -238,21 +244,7 @@ Each step consists of two main phases:
 
 **Implementation Prompt Template using task tracker**
 
-```
-Please look at `pr_info/TASK_TRACKER.md` and pick the next task that should be done.
-Please let me know on which task you are working on.
-Please implement!
-Please verify your implementation running the various checks of the MCP server and by solving potential issues (and repeat).
-Please do not invent extra complexity not mentioned in the project plan.
-Please let me know in case you encounter any issues or need a decision.
-Please provide a short concise commit message stating the step name in the title. Don not perform a commit!
-
-Once you are done, please check again that task description on `pr_info/TASK_TRACKER.md` to ensure that everything is done.
-Once everything is done, please mark the task as done.
-Please work only on one task. Do not pick further tasks.
-
-Please also take a look at the tests\readme.md and only run those tests that are required in your context -i.e. avoid slow integration tests.
-```
+See: [Implementation Prompt Template using task tracker](../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker) in `src/mcp_coder/prompts/prompts.md`
 
 Possible follow up question:
 ```
@@ -384,6 +376,10 @@ Run certain checks in an automated way and deal with possibly highlighted issues
   - Saves result as `PR_Info/summary.md`
   - Provides structured prompt for LLM summary generation
   - Cleans up development artifacts: deletes `steps/` subfolder and clears Tasks section from `TASK_TRACKER.md`
+  - commit everything except `PR_Info/summary.md` with commit message
+    ```
+    pr_info\steps cleaned up
+    ```
 
 - could be automated
   - get base_branch (or assume main)
