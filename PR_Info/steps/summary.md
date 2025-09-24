@@ -16,14 +16,17 @@ Implement a simple, focused task tracker parser to extract incomplete implementa
 
 ### New Module Structure
 ```
-src/mcp_coder/workflow_utils/
+src/mcp_coder/utils/
 ├── task_tracker.py          # New: Task tracker parsing functionality
-└── __init__.py             # New: Workflow utils exports
+└── __init__.py             # Updated: Export task tracker functions
 
-tests/workflow_utils/
+tests/utils/
 ├── test_task_tracker.py     # New: Unit tests for task tracker
 ├── test_data/              # New: Test markdown files
-└── __init__.py             # New: Test package
+└── __init__.py             # Test package
+
+tests/
+└── test_integration_task_tracker.py  # New: Simple integration tests (3 tests)
 ```
 
 ### Core Components
@@ -75,7 +78,8 @@ class TaskTrackerSectionNotFoundError(TaskTrackerError):
 ```
 
 ### Integration Points
-- Add exports to `src/mcp_coder/workflow_utils/__init__.py`
+- Add exports to `src/mcp_coder/utils/__init__.py` (integrate with existing utils)
+- Simple integration tests (3 focused tests: imports, basic functionality, error handling)
 - Follow existing project patterns for error handling
 - Use standard library only (no external dependencies)
 - Integrate with existing test infrastructure
@@ -100,7 +104,8 @@ class TaskTrackerSectionNotFoundError(TaskTrackerError):
 - Follows established project conventions
 
 ## Implementation Approach
-1. **Test-First Development**: Write comprehensive tests before implementation
+1. **Test-First Development**: Write comprehensive unit tests + simple integration tests
 2. **Incremental Development**: Build functionality step-by-step
-3. **Clean Integration**: Follow existing project structure and patterns
+3. **Clean Integration**: Integrate into existing utils package, simple focused integration tests
 4. **Minimal Dependencies**: Use only standard library functions
+5. **Keep It Simple**: Focused integration tests (3 tests max) to verify core functionality

@@ -87,14 +87,12 @@ str: "setup project structure"  # Lowercase, normalized spacing
 
 ## Tests to Implement (TDD)
 ```python
+# Main API tests in tests/utils/test_task_tracker.py
 def test_get_incomplete_tasks_basic():
     """Test getting incomplete tasks from valid tracker file."""
 
 def test_get_incomplete_tasks_empty_file():
     """Test behavior with missing or empty tracker file."""
-
-def test_get_incomplete_tasks_no_incomplete():
-    """Test when all tasks are complete."""
 
 def test_is_task_done_complete_task():
     """Test checking completion status of completed task."""
@@ -102,14 +100,15 @@ def test_is_task_done_complete_task():
 def test_is_task_done_incomplete_task():
     """Test checking completion status of incomplete task."""
 
-def test_is_task_done_fuzzy_matching():
-    """Test partial/fuzzy task name matching."""
+# Simple integration tests in tests/test_integration_task_tracker.py
+def test_imports_work():
+    """Test importing task tracker functions from utils package."""
 
-def test_is_task_done_nonexistent_task():
-    """Test behavior when task doesn't exist."""
+def test_basic_functionality():
+    """Test basic end-to-end functionality."""
 
-def test_integration_with_real_tracker():
-    """End-to-end test with realistic TASK_TRACKER.md file."""
+def test_missing_file_raises_error():
+    """Test error handling for missing tracker file."""
 ```
 
 ## LLM Prompt for Implementation
@@ -141,10 +140,12 @@ Create the main public API functions:
    - Support partial task name matches (e.g., "Setup" matches "Setup project structure")
    - Handle case variations and extra whitespace
 
-5. **Integration Testing**:
-   - Test end-to-end workflow with realistic TASK_TRACKER.md files
-   - Verify integration with existing project structure
-   - Test with actual PR_Info folder structure
+5. **Simple Integration Testing**:
+   - Create simple integration tests (3 focused tests)
+   - Verify imports work from mcp_coder.utils package
+   - Test basic end-to-end functionality with simple test data
+   - Test basic error handling (missing file)
 
 Keep implementation simple, robust, and user-friendly. Focus on graceful error handling and intuitive behavior.
+Keep integration tests minimal and focused on core functionality.
 ```
