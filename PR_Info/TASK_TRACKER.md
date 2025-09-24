@@ -39,13 +39,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run pylint, pytest, mypy checks and fix any issues
   - [x] Prepare git commit for step completion
 
-- [ ] **Step 3: Implement Public API Functions** - [step_3.md](steps/step_3.md)
-  - [ ] Implement get_incomplete_tasks() function
-  - [ ] Implement is_task_done() function with case-insensitive exact matching
-  - [ ] Add task name normalization for comparison
-  - [ ] Create comprehensive tests for public API functions
-  - [ ] Run pylint, pytest, mypy checks and fix any issues
-  - [ ] Prepare git commit for step completion
+- [x] **Step 3: Implement Public API Functions** - [step_3.md](steps/step_3.md)
+  - [x] Implement get_incomplete_tasks() function
+  - [x] Implement is_task_done() function with case-insensitive exact matching
+  - [x] Add task name normalization for comparison
+  - [x] Create comprehensive tests for public API functions
+  - [x] Run pylint, pytest, mypy checks and fix any issues
+  - [x] Prepare git commit for step completion
 
 - [ ] **Step 4: Integration and Module Exports** - [step_4.md](steps/step_4.md)
   - [ ] Add task tracker exports to workflow_utils/__init__.py

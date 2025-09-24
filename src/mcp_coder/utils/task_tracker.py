@@ -202,3 +202,79 @@ def _parse_task_lines(section_content: str) -> list[TaskInfo]:
             line_number += 1
 
     return tasks
+
+
+def _normalize_task_name(name: str) -> str:
+    """Normalize task name for case-insensitive exact matching.
+
+    Args:
+        name: Task name to normalize
+
+    Returns:
+        Normalized task name (lowercase, normalized whitespace)
+    """
+    return re.sub(r"\s+", " ", name.strip().lower())
+
+
+def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
+    """Get list of incomplete task names from Implementation Steps section.
+
+    Args:
+        folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
+
+    Returns:
+        List of incomplete task names
+
+    Raises:
+        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+    """
+    # Read the tracker file
+    content = _read_task_tracker(folder_path)
+
+    # Find the Implementation Steps section
+    section_content = _find_implementation_section(content)
+
+    # Parse all tasks
+    all_tasks = _parse_task_lines(section_content)
+
+    # Filter for incomplete tasks and return their names
+    incomplete_tasks = [task.name for task in all_tasks if not task.is_complete]
+
+    return incomplete_tasks
+
+
+def is_task_done(task_name: str, folder_path: str = "pr_info") -> bool:
+    """Check if specific task is marked as complete.
+
+    Args:
+        task_name: Name of task to check (case-insensitive exact match)
+        folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
+
+    Returns:
+        True if task is complete ([x] or [X]), False if incomplete or not found
+
+    Raises:
+        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+    """
+    # Read the tracker file
+    content = _read_task_tracker(folder_path)
+
+    # Find the Implementation Steps section
+    section_content = _find_implementation_section(content)
+
+    # Parse all tasks
+    all_tasks = _parse_task_lines(section_content)
+
+    # Normalize the input task name for comparison
+    normalized_input = _normalize_task_name(task_name)
+
+    # Find matching task using case-insensitive exact matching
+    for task in all_tasks:
+        normalized_task = _normalize_task_name(task.name)
+        if normalized_task == normalized_input:
+            return task.is_complete
+
+    # Task not found - return False
+    return False

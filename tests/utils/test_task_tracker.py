@@ -11,8 +11,11 @@ from mcp_coder.utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     TaskTrackerSectionNotFoundError,
     _find_implementation_section,
+    _normalize_task_name,
     _parse_task_lines,
     _read_task_tracker,
+    get_incomplete_tasks,
+    is_task_done,
 )
 
 
@@ -384,3 +387,329 @@ class TestParseTaskLines:
         assert "- [ ] Task 1" in content
         assert "- [ ] Task 2" in content
         assert "- [x]" not in content
+
+
+class TestGetIncompleteTasks:
+    """Test get_incomplete_tasks function."""
+
+    def test_get_incomplete_tasks_basic(self) -> None:
+        """Test getting incomplete tasks from valid tracker file."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [ ] Setup Data Models
+- [x] Implement Parser  
+- [ ] Add Tests
+  - [ ] Unit tests
+  - [x] Integration tests
+- [x] Documentation
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test function
+            result = get_incomplete_tasks(temp_dir)
+
+            # Should return only incomplete tasks
+            expected = ["Setup Data Models", "Add Tests", "Unit tests"]
+            assert result == expected
+
+    def test_get_incomplete_tasks_empty_file(self) -> None:
+        """Test behavior with missing tracker file."""
+        with TemporaryDirectory() as temp_dir:
+            # Test with missing file
+            with pytest.raises(TaskTrackerFileNotFoundError):
+                get_incomplete_tasks(temp_dir)
+
+    def test_get_incomplete_tasks_no_incomplete(self) -> None:
+        """Test when all tasks are complete."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker with all complete tasks
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [x] Setup Data Models
+- [x] Implement Parser  
+- [x] Add Tests
+  - [x] Unit tests
+  - [x] Integration tests
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test function
+            result = get_incomplete_tasks(temp_dir)
+
+            # Should return empty list
+            assert result == []
+
+    def test_get_incomplete_tasks_no_section(self) -> None:
+        """Test behavior when Implementation Steps section is missing."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker without Implementation Steps section
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+## Some Other Section
+
+- [ ] Not an implementation task
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test function
+            with pytest.raises(TaskTrackerSectionNotFoundError):
+                get_incomplete_tasks(temp_dir)
+
+    def test_get_incomplete_tasks_default_folder(self) -> None:
+        """Test get_incomplete_tasks with default folder path."""
+        # Create pr_info directory in current working dir for test
+        original_cwd = Path.cwd()
+
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            pr_info_path = temp_path / "pr_info"
+            pr_info_path.mkdir()
+
+            # Create test tracker file
+            tracker_path = pr_info_path / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [ ] Task 1
+- [x] Task 2
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Change to temp directory and test default parameter
+            import os
+
+            os.chdir(temp_path)
+
+            try:
+                result = get_incomplete_tasks()  # Using default "pr_info"
+                assert result == ["Task 1"]
+            finally:
+                # Restore original directory
+                os.chdir(original_cwd)
+
+    def test_get_incomplete_tasks_complex_names(self) -> None:
+        """Test with complex task names including markdown formatting."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [ ] **Step 1: Setup Data Models** - [step_1.md](steps/step_1.md)
+  - [x] Create TaskInfo dataclass
+  - [ ] Implement *exception hierarchy*
+- [x] **Step 2: Core Parser** with [link](file.md)
+- [ ] Step 3: [Another Link](path.md) and **formatting**
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test function
+            result = get_incomplete_tasks(temp_dir)
+
+            # Names should be cleaned of markdown formatting
+            expected = [
+                "Step 1: Setup Data Models",
+                "Implement exception hierarchy",
+                "Step 3: Another Link and formatting",
+            ]
+            assert result == expected
+
+
+class TestIsTaskDone:
+    """Test is_task_done function."""
+
+    def test_is_task_done_complete_task(self) -> None:
+        """Test checking completion status of completed task."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [ ] Setup Data Models
+- [x] Implement Parser  
+- [ ] Add Tests
+  - [x] Unit tests
+  - [ ] Integration tests
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test with exact task name
+            assert is_task_done("Implement Parser", temp_dir) is True
+            assert is_task_done("Unit tests", temp_dir) is True
+
+    def test_is_task_done_incomplete_task(self) -> None:
+        """Test checking completion status of incomplete task."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [ ] Setup Data Models
+- [x] Implement Parser  
+- [ ] Add Tests
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test with incomplete task
+            assert is_task_done("Setup Data Models", temp_dir) is False
+            assert is_task_done("Add Tests", temp_dir) is False
+
+    def test_is_task_done_case_insensitive_matching(self) -> None:
+        """Test case-insensitive exact task name matching."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [x] Setup Data Models
+- [ ] Implement Parser
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test case variations
+            assert is_task_done("setup data models", temp_dir) is True
+            assert is_task_done("SETUP DATA MODELS", temp_dir) is True
+            assert is_task_done("Setup Data Models", temp_dir) is True
+            assert is_task_done("implement parser", temp_dir) is False
+            assert is_task_done("IMPLEMENT PARSER", temp_dir) is False
+
+    def test_is_task_done_nonexistent_task(self) -> None:
+        """Test behavior when task doesn't exist."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [x] Setup Data Models
+- [ ] Implement Parser
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test with non-existent tasks
+            assert is_task_done("Nonexistent Task", temp_dir) is False
+            assert is_task_done("", temp_dir) is False
+            assert is_task_done("Some Random Task", temp_dir) is False
+
+    def test_is_task_done_with_markdown_formatting(self) -> None:
+        """Test task matching with markdown formatting in file."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [x] **Step 1: Setup Data Models** - [step_1.md](steps/step_1.md)
+- [ ] *Implement Core Parser*
+- [x] Step 2: [Documentation](docs.md) and **formatting**
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test matching cleaned names
+            assert is_task_done("Step 1: Setup Data Models", temp_dir) is True
+            assert is_task_done("Implement Core Parser", temp_dir) is False
+            assert (
+                is_task_done("Step 2: Documentation and formatting", temp_dir) is True
+            )
+
+    def test_is_task_done_default_folder(self) -> None:
+        """Test is_task_done with default folder path."""
+        original_cwd = Path.cwd()
+
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            pr_info_path = temp_path / "pr_info"
+            pr_info_path.mkdir()
+
+            # Create test tracker file
+            tracker_path = pr_info_path / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [x] Task 1
+- [ ] Task 2
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Change to temp directory and test default parameter
+            import os
+
+            os.chdir(temp_path)
+
+            try:
+                assert is_task_done("Task 1") is True  # Using default "pr_info"
+                assert is_task_done("Task 2") is False
+            finally:
+                os.chdir(original_cwd)
+
+    def test_is_task_done_missing_file(self) -> None:
+        """Test behavior with missing tracker file."""
+        with TemporaryDirectory() as temp_dir:
+            # Test with missing file
+            with pytest.raises(TaskTrackerFileNotFoundError):
+                is_task_done("Any Task", temp_dir)
+
+    def test_is_task_done_missing_section(self) -> None:
+        """Test behavior when Implementation Steps section is missing."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker without Implementation Steps section
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+## Some Other Section
+
+- [x] Not an implementation task
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test function
+            with pytest.raises(TaskTrackerSectionNotFoundError):
+                is_task_done("Any Task", temp_dir)
+
+
+class TestNormalizeTaskName:
+    """Test _normalize_task_name helper function."""
+
+    def test_normalize_basic_strings(self) -> None:
+        """Test basic string normalization."""
+        assert _normalize_task_name("Setup Data Models") == "setup data models"
+        assert _normalize_task_name("IMPLEMENT PARSER") == "implement parser"
+        assert _normalize_task_name("Add Tests") == "add tests"
+
+    def test_normalize_whitespace(self) -> None:
+        """Test whitespace normalization."""
+        assert _normalize_task_name("  Setup   Data   Models  ") == "setup data models"
+        assert _normalize_task_name("\tTabbed\tTask\t") == "tabbed task"
+        assert _normalize_task_name("\n\nNewline Task\n\n") == "newline task"
+
+    def test_normalize_mixed_case_whitespace(self) -> None:
+        """Test mixed case and whitespace normalization."""
+        assert _normalize_task_name("  Setup   DATA   Models  ") == "setup data models"
+        assert _normalize_task_name("IMPLEMENT    parser") == "implement parser"
+        assert _normalize_task_name("Add\tTESTS   ") == "add tests"
+
+    def test_normalize_empty_strings(self) -> None:
+        """Test normalization of empty or whitespace-only strings."""
+        assert _normalize_task_name("") == ""
+        assert _normalize_task_name("   ") == ""
+        assert _normalize_task_name("\t\n") == ""
