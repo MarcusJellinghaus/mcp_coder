@@ -44,7 +44,18 @@ Structured development workflow for **Feature Implementation** consisting of mul
 
 **Tools & Prompts:**
 
-#### Initial Analysis Prompt:
+#### First plan
+
+To work on an open issue, a branch should be generated and switched.
+Somebody should work on it.
+The branch should be checked out.
+The requiremenets and dev requirements should be installed.
+The MCP server should be configured.
+The Claude Code system prompt should be configured.
+
+Based on three prompts, an initial plan can be generated.
+
+##### Initial Analysis Prompt:
 ```
 ## Discuss implementation steps
 Please take a look at the existing solution
@@ -52,7 +63,7 @@ Do you understand the task below?
 What are the implementation steps?
 Do not yet modify any code!
 ```
-### Ask for simplification
+##### Ask for simplification
 ```
 First of all, I want to emphazise that you should really keep it simple
 
@@ -61,7 +72,7 @@ Can you review and come up with a simplistic plan following clean code, KISS and
 ```
 
 
-#### Implementation Plan Creation Prompt:
+##### Implementation Plan Creation Prompt:
 ```
 ## Python Project Implementation Plan Request
 Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** with self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
@@ -87,7 +98,16 @@ Can you also give a summary of the architectural / design changes in the summary
 **Issue:** Hardcoded `pr_info` path does not help for sub-problems.
 Simple hack:`pr_info2`. ( Could be also branch name or something?)
 
-#### Plan Review Prompt:
+**Commit** the initial plan with 
+```
+Initial plan generated
+``` 
+
+#### Plan Review
+
+The plan should be interactively reviewed, eg using Claude Desktop.
+Claude Desktop should be configured for that.
+
 ```
 Please review the project plan for a new feature in folder PR_Info\steps.
 Please revise the project plan with a balanced level of detail.
@@ -116,7 +136,7 @@ Please offer, whenever possible, simple options like
 - C
 ```
 
-Wait for end of discussion
+Wait for end of discussion - in case of unclarity
 ```
 Please summarise changes you want to do to the project plan for confirmation 
 ( one liner bullet points)
