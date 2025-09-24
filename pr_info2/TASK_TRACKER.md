@@ -53,14 +53,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy check and fix any type issues
   - [ ] Prepare git commit with concise message
 
-- [ ] **Step 4: Update Integration Tests and API Tests** - [steps/step_4.md](steps/step_4.md)
-  - [ ] Update integration tests to work with directory-based approach (TDD)
-  - [ ] Update main API tests to expect directory-based formatter calls
-  - [ ] Ensure test coverage maintains same level with simplified implementation
-  - [ ] Verify public API behavior remains unchanged from user perspective
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest and verify all tests pass
-  - [ ] Run mypy check and fix any type issues
+- [x] **Step 4: Update Integration Tests and API Tests** - [steps/step_4.md](steps/step_4.md)
+  - [x] Update integration tests to work with directory-based approach (TDD)
+  - [x] Update main API tests to expect directory-based formatter calls
+  - [x] Ensure test coverage maintains same level with simplified implementation
+  - [x] Verify public API behavior remains unchanged from user perspective
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest and verify all tests pass
+  - [x] Run mypy check and fix any type issues
   - [ ] Prepare git commit with concise message
 
 - [ ] **Step 5: Final Validation and Quality Assurance** - [steps/step_5.md](steps/step_5.md)

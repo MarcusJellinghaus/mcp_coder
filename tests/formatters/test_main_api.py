@@ -23,8 +23,8 @@ class TestCombinedAPICoreFunctionality:
     def test_format_code_runs_both_formatters_sequentially(
         self, mock_isort: Mock, mock_black: Mock
     ) -> None:
-        """Test format_code() running Black + isort sequentially."""
-        # Setup
+        """Test format_code() running Black + isort sequentially with directory-based execution."""
+        # Setup - formatters now work on directories and return files changed through output parsing
         mock_black.return_value = FormatterResult(
             success=True,
             files_changed=["src/test.py"],
@@ -45,11 +45,11 @@ class TestCombinedAPICoreFunctionality:
             # Execute
             result = format_code(project_root)
 
-            # Verify both formatters called
+            # Verify both formatters called with directory-based approach
             mock_black.assert_called_once_with(project_root, None)
             mock_isort.assert_called_once_with(project_root, None)
 
-            # Verify combined results
+            # Verify combined results from directory-based execution
             assert isinstance(result, dict)
             assert "black" in result
             assert "isort" in result
@@ -63,8 +63,8 @@ class TestCombinedAPICoreFunctionality:
     def test_format_code_with_individual_formatter_selection(
         self, mock_isort: Mock, mock_black: Mock
     ) -> None:
-        """Test format_code(formatters=["black"]) runs only Black."""
-        # Setup
+        """Test format_code(formatters=["black"]) runs only Black with directory-based execution."""
+        # Setup - Black formatter works on directory and returns files changed through output parsing
         mock_black.return_value = FormatterResult(
             success=True,
             files_changed=["src/test.py"],
@@ -77,14 +77,14 @@ class TestCombinedAPICoreFunctionality:
         with tempfile.TemporaryDirectory() as temp_dir:
             project_root = Path(temp_dir)
 
-            # Execute - only Black requested
+            # Execute - only Black requested with directory-based approach
             result = format_code(project_root, formatters=["black"])
 
-            # Verify only Black called
+            # Verify only Black called with directory-based execution
             mock_black.assert_called_once_with(project_root, None)
             mock_isort.assert_not_called()
 
-            # Verify results contain only Black
+            # Verify results contain only Black from directory-based execution
             assert isinstance(result, dict)
             assert "black" in result
             assert "isort" not in result
@@ -95,8 +95,8 @@ class TestCombinedAPICoreFunctionality:
     def test_format_code_error_handling_one_formatter_fails(
         self, mock_isort: Mock, mock_black: Mock
     ) -> None:
-        """Test when one formatter fails, other still runs."""
-        # Setup - Black fails, isort succeeds
+        """Test when one directory-based formatter fails, other still runs."""
+        # Setup - Black fails on directory processing, isort succeeds
         mock_black.return_value = FormatterResult(
             success=False,
             files_changed=[],
@@ -118,11 +118,11 @@ class TestCombinedAPICoreFunctionality:
             # Execute
             result = format_code(project_root)
 
-            # Verify both formatters called despite Black failure
+            # Verify both formatters called with directory-based approach despite Black failure
             mock_black.assert_called_once_with(project_root, None)
             mock_isort.assert_called_once_with(project_root, None)
 
-            # Verify combined results include both success and failure
+            # Verify combined results include both success and failure from directory processing
             assert isinstance(result, dict)
             assert "black" in result
             assert "isort" in result

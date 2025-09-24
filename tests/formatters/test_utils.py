@@ -55,8 +55,6 @@ class TestFormatterUtils:
             assert result == ["."]
 
 
-
-
 @pytest.mark.formatter_integration
 class TestConfigReading:
     """Test shared configuration reading functionality."""
@@ -169,5 +167,3 @@ line-length = 120
 
             # Should return defaults when TOML is invalid
             assert config == defaults
-
-
