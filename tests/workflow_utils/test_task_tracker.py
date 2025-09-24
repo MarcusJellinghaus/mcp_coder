@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from mcp_coder.utils.task_tracker import (
+from mcp_coder.workflow_utils.task_tracker import (
     TaskInfo,
     TaskTrackerError,
     TaskTrackerFileNotFoundError,

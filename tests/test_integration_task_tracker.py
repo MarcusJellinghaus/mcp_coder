@@ -1,6 +1,6 @@
 """Integration tests for task tracker functionality.
 
-Simple tests to verify task tracker integrates properly with utils package.
+Simple tests to verify task tracker integrates properly with workflow_utils package.
 """
 
 import tempfile
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.utils import (
+from mcp_coder.workflow_utils import (
     TaskTrackerFileNotFoundError,
     get_incomplete_tasks,
     is_task_done,
@@ -16,11 +16,11 @@ from mcp_coder.utils import (
 
 
 class TestTaskTrackerIntegration:
-    """Integration tests for task tracker with main utils package."""
+    """Integration tests for task tracker with workflow_utils package."""
 
     def test_imports_work(self):
-        """Test importing task tracker functions from utils package."""
-        from mcp_coder.utils import get_incomplete_tasks, is_task_done
+        """Test importing task tracker functions from workflow_utils package."""
+        from mcp_coder.workflow_utils import get_incomplete_tasks, is_task_done
 
         assert callable(get_incomplete_tasks)
         assert callable(is_task_done)

@@ -31,14 +31,6 @@ from .subprocess_runner import (
     execute_command,
     execute_subprocess,
 )
-from .task_tracker import (
-    TaskInfo,
-    TaskTrackerError,
-    TaskTrackerFileNotFoundError,
-    TaskTrackerSectionNotFoundError,
-    get_incomplete_tasks,
-    is_task_done,
-)
 
 __all__ = [
     # Clipboard operations
@@ -65,11 +57,4 @@ __all__ = [
     "CommandResult",
     "execute_command",
     "execute_subprocess",
-    # Task tracker operations
-    "get_incomplete_tasks",
-    "is_task_done",
-    "TaskInfo",
-    "TaskTrackerError",
-    "TaskTrackerFileNotFoundError",
-    "TaskTrackerSectionNotFoundError",
 ]
