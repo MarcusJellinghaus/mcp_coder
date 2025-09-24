@@ -32,14 +32,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy type checking
   - [x] Prepare git commit for step 1
 
-- [ ] **Step 2: Replace Print Statements with Structured Logging** - [details](steps/step_2.md)
-  - [ ] Replace `print()` statements with `logger.info()` and `logger.error()`
-  - [ ] Modify `log_step()` function to use structured logging
-  - [ ] Manual verification of logging output
-  - [ ] Run pylint checks on modified code
-  - [ ] Run pytest (manual verification only for workflow)
-  - [ ] Run mypy type checking
-  - [ ] Prepare git commit for step 2
+- [x] **Step 2: Replace Print Statements with Structured Logging** - [details](steps/step_2.md)
+  - [x] Replace `print()` statements with `logger.info()` and `logger.error()`
+  - [x] Modify `log_step()` function to use structured logging
+  - [x] Manual verification of logging output
+  - [x] Run pylint checks on modified code
+  - [x] Run pytest (manual verification only for workflow)
+  - [x] Run mypy type checking
+  - [x] Prepare git commit for step 2
 
 - [ ] **Step 3: Fix Data Files Log Level from Info to Debug** - [details](steps/step_3.md)
   - [ ] Extend tests in `tests/utils/test_data_files.py` for log level verification
