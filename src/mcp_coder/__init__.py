@@ -35,6 +35,7 @@ from .utils.git_operations import (
     commit_all_changes,
     commit_staged_files,
     get_full_status,
+    git_push,
     is_git_repository,
 )
 from .utils.subprocess_runner import (
@@ -64,6 +65,7 @@ __all__ = [
     "commit_all_changes",
     "commit_staged_files",
     "get_full_status",
+    "git_push",
     "is_git_repository",
     # Prompt management
     "get_prompt",

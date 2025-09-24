@@ -102,7 +102,8 @@ from mcp_coder import (
     is_git_repository,
     get_full_status,
     commit_all_changes,
-    commit_staged_files
+    commit_staged_files,
+    git_push
 )
 from pathlib import Path
 
@@ -128,6 +129,17 @@ if is_git_repository(repo_path):
     staged_result = commit_staged_files("Fix bug in parser", repo_path)
     if staged_result.success:
         print(f"Staged files committed: {staged_result.commit_hash}")
+        
+    # Complete commit + push workflow
+    commit_result = commit_all_changes("Add new feature", repo_path)
+    if commit_result.success:
+        push_result = git_push(repo_path)
+        if push_result["success"]:
+            print("Successfully committed and pushed changes")
+        else:
+            print(f"Push failed: {push_result['error']}")
+    else:
+        print(f"Commit failed: {commit_result.error}")
 ```
 
 ## 📋 API Reference

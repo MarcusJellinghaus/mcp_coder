@@ -37,7 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 3: Export Function and Update Documentation** - [step_3.md](./steps/step_3.md)
+- [x] **Step 3: Export Function and Update Documentation** - [step_3.md](./steps/step_3.md)
   - Export git_push function in src/mcp_coder/__init__.py public API
   - Add simple usage example to README.md Git Operations section
   - Follow existing patterns for exporting git operations
