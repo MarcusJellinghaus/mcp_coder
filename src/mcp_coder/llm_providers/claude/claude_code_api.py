@@ -133,13 +133,13 @@ def _verify_claude_before_use() -> Tuple[bool, Optional[str], Optional[str]]:
         return True, verification_result["path"], None
     else:
         error_msg = verification_result.get("error", "Claude CLI verification failed")
-        
+
         # If verification failed but we found Claude, provide more helpful error message
         if verification_result["found"] and verification_result["path"]:
             detailed_error = f"Claude found at {verification_result['path']} but version check failed: {error_msg}"
             logger.warning("Claude verification detailed error: %s", detailed_error)
             return False, verification_result.get("path"), detailed_error
-        
+
         return False, verification_result.get("path"), error_msg
 
 

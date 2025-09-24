@@ -170,9 +170,7 @@ def log_function_call(func: Callable[..., T]) -> Callable[..., T]:
                 dict(zip(func.__code__.co_varnames[1 : len(args)], args[1:]))
             )
         else:
-            log_params.update(
-                dict(zip(func.__code__.co_varnames[: len(args)], args))
-            )
+            log_params.update(dict(zip(func.__code__.co_varnames[: len(args)], args)))
 
         # Add keyword arguments
         log_params.update(kwargs)

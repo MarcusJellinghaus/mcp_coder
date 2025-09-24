@@ -78,7 +78,11 @@ def find_claude_executable(
 
         # On Unix-like systems, check if file is executable
         # On Windows, .exe files are automatically executable, so skip this check
-        if os.name != 'nt' and hasattr(os, "access") and not os.access(claude_path, os.X_OK):
+        if (
+            os.name != "nt"
+            and hasattr(os, "access")
+            and not os.access(claude_path, os.X_OK)
+        ):
             continue
 
         # If testing execution is requested and fast mode is disabled, verify the executable works
@@ -190,9 +194,13 @@ def verify_claude_installation() -> dict[str, Any]:
                         result["version"] = simple_result.stdout.strip()
                         result["works"] = True
                     else:
-                        result["error"] = f"Version check failed: {simple_result.stderr or version_result.stderr or 'No output'}"
+                        result["error"] = (
+                            f"Version check failed: {simple_result.stderr or version_result.stderr or 'No output'}"
+                        )
                 except Exception as fallback_e:
-                    result["error"] = f"Version check failed: {version_result.stderr} (fallback: {fallback_e})"
+                    result["error"] = (
+                        f"Version check failed: {version_result.stderr} (fallback: {fallback_e})"
+                    )
         except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
             # Try simple subprocess as final fallback
             try:
@@ -206,9 +214,13 @@ def verify_claude_installation() -> dict[str, Any]:
                     result["version"] = simple_result.stdout.strip()
                     result["works"] = True
                 else:
-                    result["error"] = f"Version check error: {e} (simple fallback: {simple_result.stderr or 'No output'})"
+                    result["error"] = (
+                        f"Version check error: {e} (simple fallback: {simple_result.stderr or 'No output'})"
+                    )
             except Exception as final_e:
-                result["error"] = f"Version check error: {e} (final fallback: {final_e})"
+                result["error"] = (
+                    f"Version check error: {e} (final fallback: {final_e})"
+                )
 
     except FileNotFoundError as e:
         result["error"] = str(e)
