@@ -66,7 +66,7 @@ class TestBlackFormatterCore:
     """Core directory-based formatting scenarios - 3 tests."""
 
     def test_format_directory_with_unformatted_code(
-        self, temp_project_dir: Path, unformatted_python_code: str, monkeypatch
+        self, temp_project_dir: Path, unformatted_python_code: str, monkeypatch: Any
     ) -> None:
         """Test directory-based Black execution with output parsing."""
         from mcp_coder.formatters.black_formatter import format_with_black
@@ -87,7 +87,7 @@ class TestBlackFormatterCore:
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
 
-        def mock_execute_command(cmd):
+        def mock_execute_command(cmd: Any) -> Any:
             return mock_result
 
         monkeypatch.setattr(
@@ -107,7 +107,7 @@ class TestBlackFormatterCore:
         # In a real scenario, we would verify the command was called correctly
 
     def test_format_directory_no_changes_needed(
-        self, temp_project_dir: Path, formatted_python_code: str, monkeypatch
+        self, temp_project_dir: Path, formatted_python_code: str, monkeypatch: Any
     ) -> None:
         """Test directory-based Black on already formatted code (exit 0 → no changes)."""
         from mcp_coder.formatters.black_formatter import format_with_black
@@ -126,7 +126,7 @@ class TestBlackFormatterCore:
         mock_result.stdout = ""
         mock_result.stderr = "All done! ✨ 🍰 ✨\n0 files reformatted."
 
-        def mock_execute_command(cmd):
+        def mock_execute_command(cmd: Any) -> Any:
             return mock_result
 
         monkeypatch.setattr(
@@ -143,7 +143,7 @@ class TestBlackFormatterCore:
         assert result.error_message is None
 
     def test_format_directory_with_syntax_errors(
-        self, temp_project_dir: Path, syntax_error_code: str, monkeypatch
+        self, temp_project_dir: Path, syntax_error_code: str, monkeypatch: Any
     ) -> None:
         """Test directory-based Black with syntax errors (exit 123 → error)."""
         from mcp_coder.formatters.black_formatter import format_with_black
@@ -164,7 +164,7 @@ class TestBlackFormatterCore:
             "error: cannot use --safe with this file; failed to parse source file"
         )
 
-        def mock_execute_command(cmd):
+        def mock_execute_command(cmd: Any) -> Any:
             return mock_result
 
         monkeypatch.setattr(
@@ -186,7 +186,7 @@ class TestBlackFormatterConfiguration:
     """Configuration integration - 2 tests."""
 
     def test_default_config_missing_pyproject(
-        self, temp_project_dir: Path, unformatted_python_code: str, monkeypatch
+        self, temp_project_dir: Path, unformatted_python_code: str, monkeypatch: Any
     ) -> None:
         """Test directory-based formatting with missing pyproject.toml (use Black defaults)."""
         from mcp_coder.formatters.black_formatter import format_with_black
@@ -207,7 +207,7 @@ class TestBlackFormatterConfiguration:
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
 
-        def mock_execute_command(cmd):
+        def mock_execute_command(cmd: Any) -> Any:
             return mock_result
 
         monkeypatch.setattr(
@@ -224,7 +224,7 @@ class TestBlackFormatterConfiguration:
         temp_project_dir: Path,
         unformatted_python_code: str,
         pyproject_toml_with_black_config: str,
-        monkeypatch,
+        monkeypatch: Any,
     ) -> None:
         """Test directory-based formatting with custom pyproject.toml configuration."""
         from mcp_coder.formatters.black_formatter import format_with_black
@@ -249,7 +249,7 @@ class TestBlackFormatterConfiguration:
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
 
-        def mock_execute_command(cmd):
+        def mock_execute_command(cmd: Any) -> Any:
             return mock_result
 
         monkeypatch.setattr(
@@ -265,7 +265,9 @@ class TestBlackFormatterConfiguration:
 class TestBlackFormatterRealWorld:
     """Real-world analysis scenario - 1 test."""
 
-    def test_analysis_code_sample(self, temp_project_dir: Path, monkeypatch) -> None:
+    def test_analysis_code_sample(
+        self, temp_project_dir: Path, monkeypatch: Any
+    ) -> None:
         """Use actual unformatted code from Step 0 findings to verify patterns."""
         from mcp_coder.formatters.black_formatter import format_with_black
 
@@ -312,7 +314,7 @@ if __name__=="__main__":
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
 
-        def mock_execute_command(cmd):
+        def mock_execute_command(cmd: Any) -> Any:
             return mock_result
 
         monkeypatch.setattr(
@@ -359,7 +361,7 @@ class TestBlackFormatterUtilities:
         assert changed_files == ["/path/with spaces/file.py"]
 
     def test_format_black_directory_function(
-        self, temp_project_dir: Path, unformatted_python_code: str, monkeypatch
+        self, temp_project_dir: Path, unformatted_python_code: str, monkeypatch: Any
     ) -> None:
         """Test _format_black_directory function directly."""
         from mcp_coder.formatters.black_formatter import _format_black_directory
@@ -380,7 +382,7 @@ class TestBlackFormatterUtilities:
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
 
-        def mock_execute_command(cmd):
+        def mock_execute_command(cmd: Any) -> Any:
             return mock_result
 
         monkeypatch.setattr(

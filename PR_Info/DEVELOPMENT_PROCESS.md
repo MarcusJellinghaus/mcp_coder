@@ -210,6 +210,15 @@ Did you tick of the tasks in the task tracker?
 
 **Common Implementation Failures & Responses:**
 
+- ** Checks do not work **
+  - Sometimes, mypy tests were forgotten and do not work:
+    - Prompt `please run mypy checks and work on possible issues` can fix it.
+    - run pylint and pytest after that
+    - run formatter after that
+    - commit with auto and/or with mypy fixing info, or ask session for a commit message
+      - `Please provide a concise commit message  in markdown code format (```)` 
+      - triple ticks might or might not be provided
+
 - **Third-party dependencies needed:**
   - New Python packages required beyond current `pyproject.toml`
   - Dependencies not available in project's virtual environment

@@ -82,7 +82,7 @@ class TestIsortFormatterCore:
     """Core import sorting scenarios - 3 tests."""
 
     def test_format_unsorted_imports_directory_based(
-        self, temp_project_dir: Path, unsorted_imports_code: str, monkeypatch
+        self, temp_project_dir: Path, unsorted_imports_code: str, monkeypatch: Any
     ) -> None:
         """Test directory-based isort formatting on imports needing sorting."""
         from mcp_coder.formatters.isort_formatter import format_with_isort
@@ -116,7 +116,7 @@ class TestIsortFormatterCore:
         #  but the mock result simulates directory-based execution)
 
     def test_format_already_sorted_imports_directory_based(
-        self, temp_project_dir: Path, sorted_imports_code: str, monkeypatch
+        self, temp_project_dir: Path, sorted_imports_code: str, monkeypatch: Any
     ) -> None:
         """Test directory-based isort on properly sorted imports (exit 0 → no changes)."""
         from mcp_coder.formatters.isort_formatter import format_with_isort
@@ -149,7 +149,7 @@ class TestIsortFormatterCore:
         # (Mock simulates no changes scenario)
 
     def test_format_error_handling_directory_based(
-        self, temp_project_dir: Path, import_error_code: str, monkeypatch
+        self, temp_project_dir: Path, import_error_code: str, monkeypatch: Any
     ) -> None:
         """Test directory-based isort error handling for syntax errors."""
         from mcp_coder.formatters.isort_formatter import format_with_isort
@@ -187,7 +187,7 @@ class TestIsortFormatterConfiguration:
     """Configuration integration - 2 tests."""
 
     def test_default_config_missing_pyproject(
-        self, temp_project_dir: Path, unsorted_imports_code: str, monkeypatch
+        self, temp_project_dir: Path, unsorted_imports_code: str, monkeypatch: Any
     ) -> None:
         """Test directory-based formatting with missing pyproject.toml (use isort defaults)."""
         from mcp_coder.formatters.isort_formatter import (
@@ -229,7 +229,7 @@ class TestIsortFormatterConfiguration:
         temp_project_dir: Path,
         unsorted_imports_code: str,
         pyproject_toml_with_isort_config: str,
-        monkeypatch,
+        monkeypatch: Any,
     ) -> None:
         """Test directory-based formatting with Black compatibility and custom line_length from pyproject.toml."""
         from mcp_coder.formatters.isort_formatter import (
@@ -273,7 +273,7 @@ class TestIsortFormatterRealWorld:
     """Real-world analysis scenario - 1 test."""
 
     def test_analysis_import_sample_directory_based(
-        self, temp_project_dir: Path, monkeypatch
+        self, temp_project_dir: Path, monkeypatch: Any
     ) -> None:
         """Test directory-based formatting with actual unsorted imports from Step 0 findings."""
         from mcp_coder.formatters.isort_formatter import format_with_isort
@@ -391,7 +391,7 @@ Processing file.py
         assert result_mixed == ["/path/to/changed.py"]
 
     def test_format_isort_directory_function(
-        self, temp_project_dir: Path, monkeypatch
+        self, temp_project_dir: Path, monkeypatch: Any
     ) -> None:
         """Test the _format_isort_directory function directly."""
         from mcp_coder.formatters.isort_formatter import _format_isort_directory
