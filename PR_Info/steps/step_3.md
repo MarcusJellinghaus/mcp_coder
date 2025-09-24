@@ -81,7 +81,7 @@ structured_logger.debug(
 Based on the summary in pr_info/steps/summary.md, implement Step 3: Fix data files log level in src/mcp_coder/utils/data_files.py.
 
 REQUIREMENTS:
-1. Follow TDD - extend tests/utils/test_data_files.py with log level tests
+1. Follow TDD - extend tests/utils/test_data_files.py with log level tests (NOTE: This is the only step with tests since data_files.py is core utility code)
 2. Find the EXACT line with "Found data file in installed package (via importlib)" message
 3. Change structured_logger.info( to structured_logger.debug( for this ONE line only
 4. Do NOT modify any other logging statements

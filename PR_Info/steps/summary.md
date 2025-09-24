@@ -34,15 +34,17 @@ Add `--log-level` parameter support to `workflows/implement.py` and replace prin
 - `src/mcp_coder/utils/data_files.py` - Change one log level from info to debug
 
 ### Test Files (TDD)
-- `tests/test_implement_workflow.py` - New test file for workflow functionality
+- `tests/utils/test_data_files.py` - Extended tests for log level changes (core utility only)
+- `workflows/implement.py` - Manual verification only (no unit tests for workflow script)
 
 ## Technical Approach
 
 ### Logging Strategy
 - Use existing `logging` module with `setup_logging()` from utils
 - Replace `print()` calls with `logger.info()`, `logger.error()` etc.
-- Maintain visual output format through proper log formatting
+- Use standard logging format (timestamps handled by logging system)
 - Default log level: INFO (maintains current visibility)
+- Invalid log levels handled automatically by argparse
 
 ### Backward Compatibility
 - All existing function signatures remain unchanged
@@ -60,3 +62,4 @@ Add `--log-level` parameter support to `workflows/implement.py` and replace prin
 - **Low Risk**: Changes are additive and non-breaking
 - **Minimal Surface Area**: Only touching output formatting, not business logic
 - **Easy Rollback**: Changes can be easily reverted if issues arise
+- **Simplified Testing**: Manual verification for workflow, unit tests only for core utilities

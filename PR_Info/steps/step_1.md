@@ -6,7 +6,6 @@ Implement command-line argument parsing for `--log-level` parameter and basic lo
 ## WHERE
 - **File**: `workflows/implement.py`
 - **Module**: Root workflow script
-- **Test File**: `tests/test_implement_workflow.py`
 
 ## WHAT
 ### Main Functions with Signatures
@@ -18,17 +17,10 @@ def main() -> None:
     """Modified main function with argument parsing and logging setup."""
 ```
 
-### Test Functions
-```python
-def test_parse_arguments_default():
-    """Test default log level is INFO."""
-    
-def test_parse_arguments_with_log_level():
-    """Test custom log level parsing."""
-    
-def test_main_initializes_logging():
-    """Test main() calls setup_logging with correct level."""
-```
+### Manual Verification
+- Run `python workflows/implement.py --help` to verify argument appears
+- Run `python workflows/implement.py --log-level DEBUG` to test parsing
+- Run `python workflows/implement.py --log-level INVALID` to test argparse error handling
 
 ## HOW
 ### Integration Points
@@ -70,17 +62,17 @@ args.log_level: str  # The selected log level
 Based on the summary in pr_info/steps/summary.md, implement Step 1: Add argument parsing and logging setup to workflows/implement.py.
 
 REQUIREMENTS:
-1. Follow TDD - write tests first in tests/test_implement_workflow.py
-2. Add argparse for --log-level parameter (choices: DEBUG, INFO, WARNING, ERROR, CRITICAL, default: INFO)  
-3. Modify main() to parse arguments and call setup_logging() early
-4. Keep all existing functionality unchanged
-5. Use existing mcp_coder.utils.log_utils.setup_logging()
+1. Add argparse for --log-level parameter (choices: DEBUG, INFO, WARNING, ERROR, CRITICAL, default: INFO)  
+2. Modify main() to parse arguments and call setup_logging() early
+3. Keep all existing functionality unchanged
+4. Use existing mcp_coder.utils.log_utils.setup_logging()
+5. Let argparse handle invalid arguments automatically
 
 DELIVERABLES:
-- Create tests/test_implement_workflow.py with 3 test functions
 - Add parse_arguments() function to workflows/implement.py  
 - Modify main() in workflows/implement.py to use argument parsing
 - Ensure all existing workflow logic remains intact
+- Manual verification of functionality
 
 CONSTRAINTS:
 - Minimal code changes
@@ -91,5 +83,5 @@ CONSTRAINTS:
 ## Verification Steps
 1. Run `python workflows/implement.py --help` to see new parameter
 2. Run `python workflows/implement.py --log-level DEBUG` to verify parsing
-3. Run tests: `pytest tests/test_implement_workflow.py -v`
+3. Run `python workflows/implement.py --log-level INVALID` to verify argparse error handling
 4. Verify existing workflow still functions normally

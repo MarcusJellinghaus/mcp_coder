@@ -6,7 +6,6 @@ Replace all `print()` statements in `workflows/implement.py` with proper logging
 ## WHERE
 - **File**: `workflows/implement.py`
 - **Functions to Modify**: `log_step()`, `check_prerequisites()`, `get_next_task()`, `save_conversation()`, `run_formatters()`, `commit_changes()`, `push_changes()`, `process_single_task()`
-- **Test File**: `tests/test_implement_workflow.py` (extend existing)
 
 ## WHAT
 ### Main Functions with Signatures
@@ -17,17 +16,10 @@ def log_step(message: str) -> None:
 # All other function signatures remain UNCHANGED
 ```
 
-### Test Functions
-```python
-def test_log_step_uses_logger():
-    """Test log_step calls logger.info instead of print."""
-    
-def test_error_messages_use_logger_error():
-    """Test error print statements replaced with logger.error."""
-    
-def test_logging_preserves_message_content():
-    """Test that log messages contain same information as before."""
-```
+### Manual Verification
+- Run workflow and verify same visual output with timestamps
+- Run `python workflows/implement.py --log-level DEBUG` for detailed output
+- Test error scenarios to ensure logger.error calls work correctly
 
 ## HOW
 ### Integration Points
@@ -76,18 +68,18 @@ def log_step(message: str) -> None:
 Based on the summary in pr_info/steps/summary.md, implement Step 2: Replace print statements with structured logging in workflows/implement.py.
 
 REQUIREMENTS:
-1. Follow TDD - extend tests/test_implement_workflow.py with logging tests
-2. Add logger = logging.getLogger(__name__) after imports
-3. Modify log_step() function to use logger.info() instead of print()
-4. Replace all print(f"Error: ...") with logger.error(...) 
-5. Keep ALL function signatures unchanged
-6. Preserve exact message content and workflow logic
+1. Add logger = logging.getLogger(__name__) after imports
+2. Modify log_step() function to use logger.info() instead of print()
+3. Replace all print(f"Error: ...") with logger.error(...) 
+4. Keep ALL function signatures unchanged
+5. Preserve exact message content and workflow logic
+6. Use standard logging format (let logging system handle timestamps)
 
 DELIVERABLES:
-- Add 3 new test functions to tests/test_implement_workflow.py
 - Modify log_step() internal implementation only
 - Replace error print statements with logger.error calls
 - Ensure workflow behavior is identical except for logging mechanism
+- Manual verification of logging output
 
 CONSTRAINTS:
 - Do NOT change any function signatures except internal implementation
@@ -102,8 +94,8 @@ VERIFICATION:
 ```
 
 ## Verification Steps
-1. Run `python workflows/implement.py` and verify same visual output
+1. Run `python workflows/implement.py` and verify similar visual output with proper timestamps
 2. Run `python workflows/implement.py --log-level DEBUG` and see additional details
-3. Run tests: `pytest tests/test_implement_workflow.py::test_log_step_uses_logger -v`
-4. Test error scenarios still work (missing files, git issues, etc.)
-5. Verify workflow completes successfully with structured logging
+3. Test error scenarios still work (missing files, git issues, etc.)
+4. Verify workflow completes successfully with structured logging
+5. Compare output format with previous version (should have standard logging timestamps)
