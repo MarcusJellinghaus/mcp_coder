@@ -41,14 +41,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy type checking
   - [x] Prepare git commit for step 2
 
-- [ ] **Step 3: Fix Data Files Log Level from Info to Debug** - [details](steps/step_3.md)
-  - [ ] Extend tests in `tests/utils/test_data_files.py` for log level verification
-  - [ ] Change log level from info to debug in `data_files.py`
-  - [ ] Verify data file message only appears at DEBUG level
-  - [ ] Run pylint checks on modified code
-  - [ ] Run pytest on data files tests
-  - [ ] Run mypy type checking
-  - [ ] Prepare git commit for step 3
+- [x] **Step 3: Fix Data Files Log Level from Info to Debug** - [details](steps/step_3.md)
+  - [x] Extend tests in `tests/utils/test_data_files.py` for log level verification
+  - [x] Change log level from info to debug in `data_files.py`
+  - [x] Verify data file message only appears at DEBUG level
+  - [x] Run pylint checks on modified code
+  - [x] Run pytest on data files tests
+  - [x] Run mypy type checking
+  - [x] Prepare git commit for step 3
 
 ### Pull Request
 
