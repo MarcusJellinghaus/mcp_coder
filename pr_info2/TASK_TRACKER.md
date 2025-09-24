@@ -23,14 +23,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Implementation Steps
 
-- [ ] **Step 1: Refactor Black Formatter to Directory-Based Approach** - [steps/step_1.md](steps/step_1.md)
-  - [ ] Update Black formatter tests to expect directory-based formatting calls (TDD)
-  - [ ] Refactor Black formatter implementation to pass directories directly to Black CLI
-  - [ ] Implement output parsing to determine changed files from Black stdout
-  - [ ] Eliminate custom `find_python_files()` usage in Black formatter
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest and verify all tests pass
-  - [ ] Run mypy check and fix any type issues
+- [x] **Step 1: Refactor Black Formatter to Directory-Based Approach** - [steps/step_1.md](steps/step_1.md)
+  - [x] Update Black formatter tests to expect directory-based formatting calls (TDD)
+  - [x] Refactor Black formatter implementation to pass directories directly to Black CLI
+  - [x] Implement output parsing to determine changed files from Black stdout
+  - [x] Eliminate custom `find_python_files()` usage in Black formatter
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest and verify all tests pass
+  - [x] Run mypy check and fix any type issues
   - [ ] Prepare git commit with concise message
 
 - [ ] **Step 2: Refactor isort Formatter to Directory-Based Approach** - [steps/step_2.md](steps/step_2.md)
