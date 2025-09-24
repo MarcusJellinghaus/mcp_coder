@@ -23,11 +23,12 @@ dependencies = [
     "structlog>=23.2.0",
     "python-json-logger>=3.3.0",
     "pyperclip>=1.8.2",
+    "black>=23.0.0",
+    "isort>=5.12.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "black",
     "pytest-asyncio",
     "types-pyperclip",
     "mcp-code-checker @ git+https://github.com/MarcusJellinghaus/mcp-code-checker.git",
@@ -56,10 +57,11 @@ mcp_coder = ["prompts/*.md"]
 testpaths = ["tests"]
 markers = [
     "git_integration: tests with file system git operations (repos, commits)", 
-    "claude_integration: tests requiring Claude CLI/API (network, auth needed)"
+    "claude_integration: tests requiring Claude CLI/API (network, auth needed)",
+    "formatter_integration: tests for code formatter integration (black, isort)"
 ]
-# run usually with -m "not git_integration and not claude_integration"  for the fast unit tests
-# use e.g. -m "git_integration or claude_integration" to run a group of the slower tests
+# run usually with -m "not git_integration and not claude_integration and not formatter_integration"  for the fast unit tests
+# use e.g. -m "git_integration or claude_integration or formatter_integration" to run a group of the slower tests
 
 # Default pytest options:
 # --strict-markers: Fail if unknown markers are used (prevents typos)

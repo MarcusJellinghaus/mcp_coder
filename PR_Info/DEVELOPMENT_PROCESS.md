@@ -57,6 +57,7 @@ Do not yet modify any code!
 ```
 ## Python Project Implementation Plan Request
 Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** with self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
+Can you also give a summary of the architectural / design changes in the summary document?
 
 ### Requirements:
 - Follow **Test-Driven Development** where applicable. 
@@ -97,9 +98,6 @@ so that I can install the requiremetns.
 This is important so that unit tests can work.
 ```
 
-
-
-
 Wait for presentation of overall plan
 ```
 Can we go through all suggested changes and questions step by step?
@@ -127,19 +125,26 @@ Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`
 
 Possibly review the project plan one more time (see above) or continue with the next step.
 
+
+### 2. Implementation Steps
+
+**Preparing for implementation:**
+
 #### Task Tracker Update Prompt:
 ```
 Please read the implementation steps in `pr_info/steps/` and
 update `pr_info/TASK_TRACKER.md` to add all the implementation steps as tasks in the Tasks section.
+
 Follow the task format specified in the TASK_TRACKER.md file,
 marking each step as incomplete [ ] and linking to the corresponding step file.
+
 Review `pr_info/DEVELOPMENT_PROCESS.md` for context on the workflow and task requirements.
+
 Each task should include the 3 quality checks (pylint, pytest, mypy) and
 git commit preparation as outlined in the development process.
-Also add the Feature Completion tasks for PR review and summary creation at the end.
-```
 
-### 2. Implementation Steps
+Also add the pull request tasks for PR review and summary creation at the end in a section "Pull request"
+```
 
 **Objective:** Complete each implementation step with full validation
 
@@ -178,17 +183,7 @@ Each step consists of two main phases:
   - Sequential execution: pylint → pytest → mypy
   - Only proceeds if previous checks pass
 
-**Implementation Prompt Template:**
-```
-Please review the implementation plan in PR_Info, especially the summary and steps/step_{XX}.md.
-Please implement!
-Please verify your implementation running the various checks of the MCP server and by solving potential issues (and repeat).
-Please do not invent extra complexity not mentioned in the project plan.
-Please let me know in case you encounter any issues or need a decision.
-Please work only on step {XX}
-```
-
-or using task tracker
+**Implementation Prompt Template using task tracker**
 
 ```
 Please look at `pr_info/TASK_TRACKER.md` and pick the next task that should be done.
@@ -197,15 +192,32 @@ Please implement!
 Please verify your implementation running the various checks of the MCP server and by solving potential issues (and repeat).
 Please do not invent extra complexity not mentioned in the project plan.
 Please let me know in case you encounter any issues or need a decision.
-Please provide a short concise commit message stating the step name in the title.
+Please provide a short concise commit message stating the step name in the title. Don not perform a commit!
+
 Once you are done, please check again that task description on `pr_info/TASK_TRACKER.md` to ensure that everything is done.
 Once everything is done, please mark the task as done.
 Please work only on one task. Do not pick further tasks.
 
-Please also take a look at the tests\readme and only run those tests that are required in your context -i.e. avoid slow integration tests.
+Please also take a look at the tests\readme.md and only run those tests that are required in your context -i.e. avoid slow integration tests.
+```
+
+Possible follow up question:
+```
+Did you implement everything of the current step?
+Do you have a commit message?
+Did you tick of the tasks in the task tracker?
 ```
 
 **Common Implementation Failures & Responses:**
+
+- ** Checks do not work **
+  - Sometimes, mypy tests were forgotten and do not work:
+    - Prompt `please run mypy checks and work on possible issues` can fix it.
+    - run pylint and pytest after that
+    - run formatter after that
+    - commit with auto and/or with mypy fixing info, or ask session for a commit message
+      - `Please provide a concise commit message  in markdown code format (```)` 
+      - triple ticks might or might not be provided
 
 - **Third-party dependencies needed:**
   - New Python packages required beyond current `pyproject.toml`
@@ -219,12 +231,17 @@ Please also take a look at the tests\readme and only run those tests that are re
   - *Incorrect task description:* May need implementation with next task
   - *Third-party library issues:* Library doesn't work as expected, causes confusion
   - *Response:* Fix issue, improve task description, update plan
+  - *Initial technology evaluation missing* Add a step 0 to evaluate a technology. Execute that, update plan
 
 - **Implementation works but requires no changes:**
   - Task was unnecessary or already implemented
   - *Response:* Mark as complete, update plan for remaining tasks
   
 - ** Check for slower and slower unit tests **
+
+- ** Check for file / folder / module names **
+  - Files or folders might have wrong location or names. Eg test files should follow the same folder structure like the code.
+
 
 ** Possible prompt for too complex task**
 
@@ -307,6 +324,15 @@ Run certain checks in an automated way and deal with possibly highlighted issues
   - Saves result as `PR_Info/summary.md`
   - Provides structured prompt for LLM summary generation
   - Cleans up development artifacts: deletes `steps/` subfolder and clears Tasks section from `TASK_TRACKER.md`
+
+- could be automated
+  - get base_branch (or assume main)
+  - read PR_Info\pr_summary.md text into temp variable and delete file later.
+  - delete PR_Info\pr_summary.md file
+  - commit file cleanup
+  - push
+  - create PR
+  - split pr_summary in header and text
 
 **Final Clean State:**
 After feature completion, the cleaned `TASK_TRACKER.md` should contain only the template structure:

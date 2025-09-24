@@ -1,50 +1,75 @@
-# Implementation Summary: Add --continue Parameter
+# Code Formatters Implementation Summary
 
-## Overview
-Add a new `--continue` parameter to the `mcp-coder prompt` command that automatically finds and continues from the most recent response file in the `.mcp-coder/responses/` directory.
+## Objective
+Implement Black and isort code formatters as Python functions within the `mcp_coder` package to provide programmatic code formatting capabilities with detailed change reporting.
 
-## Feature Requirements
-- **New CLI Parameter**: `--continue` flag (no arguments)
-- **Automatic File Discovery**: Find the most recent `response_*.json` file in `.mcp-coder/responses/`
-- **Strict File Validation**: Only files with proper ISO timestamp pattern (`response_2025-09-19T14-30-22.json`)
-- **User Feedback**: Show which file was selected for transparency
-- **Mutual Exclusivity**: Cannot use both `--continue-from` and `--continue` together
-- **Error Handling**: Show info "No previous response files found, starting new conversation" and continue with empty context
-- **Documentation**: Update README.md, CLI help text, and refactor help system
+## Key Features (Enhanced by Step 0 Analysis)
+- **Black formatter**: Format Python code using proven CLI patterns with exit code change detection
+- **isort formatter**: Sort imports using proven CLI patterns with exit code change detection
+- **Universal change detection**: Both tools use exit codes (0=no changes, 1=changes needed) - no file parsing needed
+- **Inline configuration**: Each formatter reads its own config using validated tomllib patterns
+- **Combined API**: Simple wrapper function plus individual formatter functions
+- **Line-length conflict warning**: Analysis-identified most common config conflict
+- **TDD implementation**: Test-driven development with analysis-backed test scenarios
+- **Proven patterns**: All implementation strategies tested and verified in Step 0
+- **Ultra-simplified architecture**: 3 files total, maximum simplicity with high reliability
 
-## Technical Approach
-1. **Refactor help system** - add `include_examples` parameter to `get_help_text()`, preserve examples in help command
-2. **Add CLI parameter** with argparse mutual exclusivity validation
-3. **Create utility function** with strict file validation and user feedback
-4. **Integrate with existing continuation logic** (reuse `_load_previous_chat` and `_build_context_prompt`)
-5. **Follow TDD principles** with focused test coverage (3 core tests)
-6. **Maintain backward compatibility** with existing `--continue-from` functionality
-
-## File Structure Impact
+## Architecture (Refined 5-File Structure - Based on Step 0 Analysis)
 ```
-src/mcp_coder/cli/
-├── main.py                    # Add new CLI parameter
-├── commands/help.py           # Refactor help system (Step 1)
-└── commands/prompt.py         # Add utility function + integration logic
-
-tests/cli/commands/
-└── test_prompt.py             # Add focused tests (3 core tests)
-
-PR_Info/steps/
-├── summary.md                 # This file
-├── step_1.md                  # Refactor help system
-├── step_2.md                  # Tests for utility function (3 focused tests)
-├── step_3.md                  # Implement utility function with validation
-├── step_4.md                  # Tests for CLI integration
-├── step_5.md                  # Implement CLI integration
-├── step_6.md                  # Update documentation
-└── step_7.md                  # Final validation & cleanup
+src/mcp_coder/formatters/
+├── __init__.py           # Exports and combined API (~25 lines)
+├── models.py             # FormatterResult dataclass (~15 lines)
+├── config_reader.py      # Configuration reading + line-length warning (~35 lines)
+├── black_formatter.py    # Black CLI integration (~40 lines)
+└── isort_formatter.py    # isort CLI integration (~40 lines)
 ```
+**Total: ~155 lines** (Clear separation of concerns, easier debugging)
 
-## Success Criteria
-- All existing tests pass
-- New functionality has >90% test coverage
-- Documentation is updated and accurate
-- CLI help reflects new parameter
-- Error cases are handled gracefully
-- Code follows existing patterns and style
+## Configuration Sources
+- **Black**: `[tool.black]` section in pyproject.toml (inline reading)
+- **isort**: `[tool.isort]` section in pyproject.toml (inline reading)
+- **Line-length conflict warning**: Simple warning when values differ
+
+## Implementation Approach (Analysis-Driven)
+- **TDD with Analysis Backing**: Write tests first using proven patterns from Step 0
+- **Exit code change detection**: Universal pattern (0=no changes, 1=changes needed) eliminates output parsing
+- **Two-phase formatting**: Check first (`--check`/`--check-only`), then format only if needed
+- **Inline configuration**: Validated tomllib reading patterns (~10 lines each)
+- **Tool-handled file discovery**: Let Black/isort handle file scanning and filtering
+- **Ultra-minimal structure**: 3 files total with proven, working patterns
+
+## Dependencies (Already Present)
+- `black>=23.0.0` - Already in main dependencies ✅
+- `isort>=5.12.0` - Already in main dependencies ✅
+- `tomllib` - Python 3.11+ standard library for TOML parsing
+- `subprocess` - Python standard library for CLI execution
+
+## Test Strategy (Hybrid TDD Approach)
+- **Test-first development**: Each step starts with focused unit tests (30 total tests)
+- **Integration marker**: `formatter_integration` for tests that actually format files
+- **Balanced coverage**: 6 tests per step focusing on essential scenarios from analysis
+- **Real tool integration**: Test actual Black/isort CLI execution, not just mocks
+- **Analysis-driven scenarios**: Use proven patterns and code samples from Step 0
+
+## Updated Step Sequence
+**Step 0:** Tool Behavior Analysis (new)
+**Step 1:** Project Structure + FormatterResult dataclass
+**Step 2:** Black Formatter Implementation (with inline config)
+**Step 3:** isort Formatter Implementation (with inline config)
+**Step 4:** Combined API Implementation
+**Step 5:** Integration Testing and Quality Assurance
+
+## Major Simplifications Achieved (Through Analysis)
+- **Exit code detection**: Replaces complex file modification tracking and parsing
+- **Tool output reliability**: Analysis proves simple string patterns sufficient
+- **Eliminated components**: models.py, config_reader.py, file discovery utilities
+- **Tool-handled scanning**: Black/isort handle .gitignore, exclusions, edge cases perfectly
+- **Configuration**: Proven inline tomllib reading (~10 lines each)
+- **Data models**: Simple FormatterResult with List[str] for changed files
+- **Error handling**: Standard subprocess patterns based on documented tool behavior
+- **Test scenarios**: Real-world code samples from analysis findings
+
+## Result
+Refined analysis-driven plan maintains all core objectives with **hybrid testing approach (30 tests)**, **separate implementation steps for easier debugging**, and **5-file structure for clear organization**. Step 0 analysis eliminates guesswork and provides proven, reliable patterns for immediate implementation with high confidence.
+
+**Timeline Estimate**: ~3.25 hours (45-45-45-30-30 minutes per step)

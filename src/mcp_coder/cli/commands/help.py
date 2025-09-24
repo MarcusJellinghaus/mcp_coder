@@ -23,7 +23,8 @@ def get_help_text(include_examples: bool = False) -> str:
     Args:
         include_examples: If True, include usage examples section
     """
-    help_content = """MCP Coder - AI-powered software development automation toolkit
+    examples = get_usage_examples() if include_examples else ""
+    help_content = f"""MCP Coder - AI-powered software development automation toolkit
 
 USAGE:
     mcp-coder <command> [options]
@@ -52,9 +53,7 @@ COMMANDS:
 
 {examples}
 
-For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder""".format(
-        examples=get_usage_examples() if include_examples else ""
-    )
+For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder"""
 
     return help_content
 

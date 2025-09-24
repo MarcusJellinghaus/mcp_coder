@@ -196,7 +196,7 @@ class TestLogFunctionCall:
         # Define a test function that returns a large list
         @log_function_call
         def large_result_func() -> list[int]:
-            return [i for i in range(1000)]
+            return list(range(1000))
 
         # Execute
         result = large_result_func()

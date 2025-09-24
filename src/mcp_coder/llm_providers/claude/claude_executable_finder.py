@@ -77,7 +77,12 @@ def find_claude_executable(
             continue
 
         # On Unix-like systems, check if file is executable
-        if hasattr(os, "access") and not os.access(claude_path, os.X_OK):
+        # On Windows, .exe files are automatically executable, so skip this check
+        if (
+            os.name != "nt"
+            and hasattr(os, "access")
+            and not os.access(claude_path, os.X_OK)
+        ):
             continue
 
         # If testing execution is requested and fast mode is disabled, verify the executable works
@@ -164,19 +169,58 @@ def verify_claude_installation() -> dict[str, Any]:
         result["found"] = True
         result["path"] = claude_path
 
-        # Get version information
+        # Get version information using simple subprocess to avoid complex runner issues
         try:
+            # First try with our complex runner
             version_result = execute_command(
                 [str(claude_path), "--version"],
                 timeout_seconds=15,
             )
-            if version_result.return_code == 0:
+            if version_result.return_code == 0 and version_result.stdout.strip():
                 result["version"] = version_result.stdout.strip()
                 result["works"] = True
             else:
-                result["error"] = f"Version check failed: {version_result.stderr}"
+                # If complex runner fails, try simple subprocess as fallback
+                try:
+                    simple_result = subprocess.run(
+                        [str(claude_path), "--version"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                        cwd=None,  # Use current directory
+                        env=None,  # Use current environment
+                    )
+                    if simple_result.returncode == 0 and simple_result.stdout.strip():
+                        result["version"] = simple_result.stdout.strip()
+                        result["works"] = True
+                    else:
+                        result["error"] = (
+                            f"Version check failed: {simple_result.stderr or version_result.stderr or 'No output'}"
+                        )
+                except Exception as fallback_e:
+                    result["error"] = (
+                        f"Version check failed: {version_result.stderr} (fallback: {fallback_e})"
+                    )
         except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
-            result["error"] = f"Version check error: {e}"
+            # Try simple subprocess as final fallback
+            try:
+                simple_result = subprocess.run(
+                    [str(claude_path), "--version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if simple_result.returncode == 0 and simple_result.stdout.strip():
+                    result["version"] = simple_result.stdout.strip()
+                    result["works"] = True
+                else:
+                    result["error"] = (
+                        f"Version check error: {e} (simple fallback: {simple_result.stderr or 'No output'})"
+                    )
+            except Exception as final_e:
+                result["error"] = (
+                    f"Version check error: {e} (final fallback: {final_e})"
+                )
 
     except FileNotFoundError as e:
         result["error"] = str(e)
