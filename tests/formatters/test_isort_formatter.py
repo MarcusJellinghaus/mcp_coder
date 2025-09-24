@@ -93,9 +93,9 @@ class TestIsortFormatterCore:
         test_file.write_text(unsorted_imports_code)
 
         # Mock execute_command to simulate isort directory-based execution
-        # Exit code 1 means changes were made, stdout contains "Fixing" messages
+        # Exit code 0 means success, stdout contains "Fixing" messages when changes made
         mock_result = CommandResult(
-            return_code=1, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
+            return_code=0, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
         )
         monkeypatch.setattr(
             "mcp_coder.formatters.isort_formatter.execute_command",
@@ -127,7 +127,7 @@ class TestIsortFormatterCore:
         test_file.write_text(sorted_imports_code)
 
         # Mock execute_command to simulate no changes needed
-        # Exit code 0 means no changes, empty stdout
+        # Exit code 0 means success with no changes, empty stdout
         mock_result = CommandResult(
             return_code=0, stdout="", stderr="", timed_out=False
         )
@@ -210,7 +210,7 @@ class TestIsortFormatterConfiguration:
 
         # Mock execute_command for directory-based execution
         mock_result = CommandResult(
-            return_code=1, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
+            return_code=0, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
         )
         monkeypatch.setattr(
             "mcp_coder.formatters.isort_formatter.execute_command",
@@ -254,7 +254,7 @@ class TestIsortFormatterConfiguration:
 
         # Mock execute_command for directory-based execution
         mock_result = CommandResult(
-            return_code=1, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
+            return_code=0, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
         )
         monkeypatch.setattr(
             "mcp_coder.formatters.isort_formatter.execute_command",
@@ -323,7 +323,7 @@ if __name__=="__main__":
 
         # Mock execute_command for directory-based execution
         mock_result = CommandResult(
-            return_code=1, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
+            return_code=0, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
         )
         monkeypatch.setattr(
             "mcp_coder.formatters.isort_formatter.execute_command",
@@ -403,7 +403,7 @@ Processing file.py
 
         # Mock execute_command for directory formatting
         mock_result = CommandResult(
-            return_code=1, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
+            return_code=0, stdout=f"Fixing {test_file}\n", stderr="", timed_out=False
         )
         monkeypatch.setattr(
             "mcp_coder.formatters.isort_formatter.execute_command",

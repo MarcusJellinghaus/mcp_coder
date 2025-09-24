@@ -102,27 +102,24 @@ def _format_black_directory(target_path: Path, config: Dict[str, Any]) -> List[s
     result = execute_command(command)
 
     if result.return_code == 0:
-        # No changes needed - return empty list
-        return []
-    elif result.return_code == 1:
-        # Changes applied - parse output to get changed files
-        return _parse_black_output(result.stdout)
+        # Success - parse stderr output to get changed files (Black outputs to stderr)
+        return _parse_black_output(result.stderr)
     else:
-        # Syntax error or other failure (exit code 123+)
+        # Syntax error or other failure
         raise Exception(f"Black formatting failed: {result.stderr}")
 
 
-def _parse_black_output(stdout: str) -> List[str]:
+def _parse_black_output(stderr: str) -> List[str]:
     """Parse Black output to extract list of files that were reformatted.
 
     Args:
-        stdout: Black command stdout containing reformatted file information
+        stderr: Black command stderr containing reformatted file information
 
     Returns:
         List of file paths that were reformatted
     """
     changed_files = []
-    for line in stdout.strip().split("\n"):
+    for line in stderr.strip().split("\n"):
         if line.startswith("reformatted "):
             # Extract filename from "reformatted /path/to/file.py"
             filename = line[12:]  # Remove "reformatted " prefix

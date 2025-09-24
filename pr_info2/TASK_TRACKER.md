@@ -43,14 +43,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy check and fix any type issues
   - [ ] Prepare git commit with concise message
 
-- [ ] **Step 3: Clean Up Utils Module and Remove File Discovery** - [steps/step_3.md](steps/step_3.md)
-  - [ ] Remove file discovery tests from utils test module (TDD)
-  - [ ] Remove `find_python_files()` function from utils module
-  - [ ] Clean up any unused imports related to file discovery
-  - [ ] Verify no other modules depend on `find_python_files()`
-  - [ ] Run pylint check and fix any issues
-  - [ ] Run pytest and verify all tests pass
-  - [ ] Run mypy check and fix any type issues
+- [x] **Step 3: Clean Up Utils Module and Remove File Discovery** - [steps/step_3.md](steps/step_3.md)
+  - [x] Remove file discovery tests from utils test module (TDD)
+  - [x] Remove `find_python_files()` function from utils module
+  - [x] Clean up any unused imports related to file discovery
+  - [x] Verify no other modules depend on `find_python_files()`
+  - [x] Run pylint check and fix any issues
+  - [x] Run pytest and verify all tests pass
+  - [x] Run mypy check and fix any type issues
   - [ ] Prepare git commit with concise message
 
 - [ ] **Step 4: Update Integration Tests and API Tests** - [steps/step_4.md](steps/step_4.md)

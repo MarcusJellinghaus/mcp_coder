@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from mcp_coder.formatters.utils import (
-    find_python_files,
     get_default_target_dirs,
     read_tool_config,
 )
@@ -55,47 +54,7 @@ class TestFormatterUtils:
 
             assert result == ["."]
 
-    def test_find_python_files_in_directory(self) -> None:
-        """Test finding Python files in a directory."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            test_dir = Path(temp_dir)
 
-            # Create Python files and other files
-            (test_dir / "module1.py").write_text("print('hello')")
-            (test_dir / "module2.py").write_text("import os")
-            (test_dir / "readme.txt").write_text("not python")
-            (test_dir / "subdir").mkdir()
-            (test_dir / "subdir" / "submodule.py").write_text("def func(): pass")
-
-            result = find_python_files(test_dir)
-
-            # Should find all Python files recursively
-            python_filenames = [f.name for f in result]
-            assert "module1.py" in python_filenames
-            assert "module2.py" in python_filenames
-            assert "submodule.py" in python_filenames
-            assert len(result) == 3
-
-    def test_find_python_files_single_file(self) -> None:
-        """Test finding Python files when given a single file path."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            test_file = Path(temp_dir) / "single.py"
-            test_file.write_text("print('single file')")
-
-            result = find_python_files(test_file)
-
-            assert len(result) == 1
-            assert result[0] == test_file
-
-    def test_find_python_files_non_python_single_file(self) -> None:
-        """Test finding Python files when given a non-Python file."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            test_file = Path(temp_dir) / "readme.txt"
-            test_file.write_text("not python")
-
-            result = find_python_files(test_file)
-
-            assert len(result) == 0
 
 
 @pytest.mark.formatter_integration
@@ -211,11 +170,4 @@ line-length = 120
             # Should return defaults when TOML is invalid
             assert config == defaults
 
-    def test_find_python_files_empty_directory(self) -> None:
-        """Test finding Python files in empty directory."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            test_dir = Path(temp_dir)
 
-            result = find_python_files(test_dir)
-
-            assert len(result) == 0

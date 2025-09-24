@@ -81,11 +81,11 @@ class TestBlackFormatterCore:
         from unittest.mock import Mock
 
         mock_result = Mock()
-        mock_result.return_code = 1  # Black returns 1 when files are reformatted
-        mock_result.stdout = (
+        mock_result.return_code = 0  # Black returns 0 when files are reformatted
+        mock_result.stdout = ""
+        mock_result.stderr = (
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
-        mock_result.stderr = ""
 
         def mock_execute_command(cmd):
             return mock_result
@@ -123,8 +123,8 @@ class TestBlackFormatterCore:
 
         mock_result = Mock()
         mock_result.return_code = 0  # Black returns 0 when no reformatting needed
-        mock_result.stdout = "All done! ✨ 🍰 ✨\n0 files reformatted."
-        mock_result.stderr = ""
+        mock_result.stdout = ""
+        mock_result.stderr = "All done! ✨ 🍰 ✨\n0 files reformatted."
 
         def mock_execute_command(cmd):
             return mock_result
@@ -201,11 +201,11 @@ class TestBlackFormatterConfiguration:
         from unittest.mock import Mock
 
         mock_result = Mock()
-        mock_result.return_code = 1
-        mock_result.stdout = (
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = (
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
-        mock_result.stderr = ""
 
         def mock_execute_command(cmd):
             return mock_result
@@ -243,11 +243,11 @@ class TestBlackFormatterConfiguration:
         from unittest.mock import Mock
 
         mock_result = Mock()
-        mock_result.return_code = 1
-        mock_result.stdout = (
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = (
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
-        mock_result.stderr = ""
 
         def mock_execute_command(cmd):
             return mock_result
@@ -306,11 +306,11 @@ if __name__=="__main__":
         from unittest.mock import Mock
 
         mock_result = Mock()
-        mock_result.return_code = 1
-        mock_result.stdout = (
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = (
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
-        mock_result.stderr = ""
 
         def mock_execute_command(cmd):
             return mock_result
@@ -333,29 +333,29 @@ class TestBlackFormatterUtilities:
     """Test directory-based utility functions."""
 
     def test_parse_black_output_with_reformatted_files(self) -> None:
-        """Test _parse_black_output function with various Black stdout formats."""
+        """Test _parse_black_output function with various Black stderr formats."""
         from mcp_coder.formatters.black_formatter import _parse_black_output
 
         # Test single file reformatted
-        stdout_single = (
+        stderr_single = (
             "reformatted /path/to/file.py\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
-        changed_files = _parse_black_output(stdout_single)
+        changed_files = _parse_black_output(stderr_single)
         assert changed_files == ["/path/to/file.py"]
 
         # Test multiple files reformatted
-        stdout_multiple = "reformatted /path/to/file1.py\nreformatted /path/to/file2.py\nAll done! ✨ 🍰 ✨\n2 files reformatted."
-        changed_files = _parse_black_output(stdout_multiple)
+        stderr_multiple = "reformatted /path/to/file1.py\nreformatted /path/to/file2.py\nAll done! ✨ 🍰 ✨\n2 files reformatted."
+        changed_files = _parse_black_output(stderr_multiple)
         assert changed_files == ["/path/to/file1.py", "/path/to/file2.py"]
 
         # Test no changes
-        stdout_no_changes = "All done! ✨ 🍰 ✨\n0 files reformatted."
-        changed_files = _parse_black_output(stdout_no_changes)
+        stderr_no_changes = "All done! ✨ 🍰 ✨\n0 files reformatted."
+        changed_files = _parse_black_output(stderr_no_changes)
         assert changed_files == []
 
         # Test files with spaces in paths
-        stdout_spaces = "reformatted /path/with spaces/file.py\nAll done! ✨ 🍰 ✨\n1 file reformatted."
-        changed_files = _parse_black_output(stdout_spaces)
+        stderr_spaces = "reformatted /path/with spaces/file.py\nAll done! ✨ 🍰 ✨\n1 file reformatted."
+        changed_files = _parse_black_output(stderr_spaces)
         assert changed_files == ["/path/with spaces/file.py"]
 
     def test_format_black_directory_function(
@@ -374,11 +374,11 @@ class TestBlackFormatterUtilities:
         from unittest.mock import Mock
 
         mock_result = Mock()
-        mock_result.return_code = 1
-        mock_result.stdout = (
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = (
             f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
         )
-        mock_result.stderr = ""
 
         def mock_execute_command(cmd):
             return mock_result

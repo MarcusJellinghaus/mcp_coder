@@ -103,13 +103,10 @@ def _format_isort_directory(target_path: Path, config: Dict[str, Any]) -> List[s
     result = execute_command(command)
 
     if result.return_code == 0:
-        # No changes needed - return empty list
-        return []
-    elif result.return_code == 1:
-        # Changes applied - parse output to get changed files
+        # Success - parse stdout output to get changed files
         return _parse_isort_output(result.stdout)
     else:
-        # Syntax error or other failure (exit code 123+)
+        # Syntax error or other failure
         raise RuntimeError(f"isort formatting failed: {result.stderr}")
 
 
