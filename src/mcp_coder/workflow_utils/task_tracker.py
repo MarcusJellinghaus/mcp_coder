@@ -7,7 +7,16 @@ checkboxes and extract incomplete implementation tasks for automated workflow ma
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Tuple
+
+# Compiled regex patterns for better performance
+CHECKBOX_PATTERN = re.compile(r"^-\s*\[([\s]|[xX])\]")
+BOLD_PATTERN = re.compile(r"\*\*([^*]+)\*\*")
+ITALIC_PATTERN = re.compile(r"\*([^*]+)\*")
+LINK_REFERENCE_PATTERN = re.compile(r"\s*-\s*\[[^\]]+\]\([^\)]+\)\s*$")
+MARKDOWN_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\([^\)]+\)")
+CHECKBOX_REMOVE_PATTERN = re.compile(r"^\s*-\s*\[[\s\w]\]\s*")
+WHITESPACE_PATTERN = re.compile(r"\s+")
 
 
 @dataclass
@@ -122,7 +131,7 @@ def _is_task_line(line: str) -> Tuple[bool, bool]:
     stripped = line.strip()
 
     # Match task lines: "- [ ]" or "- [x]" or "- [X]" only
-    match = re.match(r"^-\s*\[([\s]|[xX])\]", stripped)
+    match = CHECKBOX_PATTERN.match(stripped)
     if not match:
         return False, False
 
@@ -142,20 +151,20 @@ def _clean_task_name(raw_line: str) -> str:
         Cleaned task name
     """
     # Remove checkbox pattern at start
-    cleaned = re.sub(r"^\s*-\s*\[[\s\w]\]\s*", "", raw_line)
+    cleaned = CHECKBOX_REMOVE_PATTERN.sub("", raw_line)
 
     # Remove markdown bold/italic formatting
-    cleaned = re.sub(r"\*\*([^*]+)\*\*", r"\1", cleaned)  # **bold**
-    cleaned = re.sub(r"\*([^*]+)\*", r"\1", cleaned)  # *italic*
+    cleaned = BOLD_PATTERN.sub(r"\1", cleaned)  # **bold**
+    cleaned = ITALIC_PATTERN.sub(r"\1", cleaned)  # *italic*
 
     # Remove link references like "- [file.md](path)" at the end
-    cleaned = re.sub(r"\s*-\s*\[[^\]]+\]\([^\)]+\)\s*$", "", cleaned)
+    cleaned = LINK_REFERENCE_PATTERN.sub("", cleaned)
 
     # Remove markdown links: [text](url)
-    cleaned = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", cleaned)
+    cleaned = MARKDOWN_LINK_PATTERN.sub(r"\1", cleaned)
 
     # Clean up multiple spaces and strip
-    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    cleaned = WHITESPACE_PATTERN.sub(" ", cleaned).strip()
 
     return cleaned
 
@@ -208,7 +217,7 @@ def _normalize_task_name(name: str) -> str:
     Returns:
         Normalized task name (lowercase, normalized whitespace)
     """
-    return re.sub(r"\s+", " ", name.strip().lower())
+    return WHITESPACE_PATTERN.sub(" ", name.strip().lower())
 
 
 def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
