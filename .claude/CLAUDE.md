@@ -39,4 +39,4 @@ Prefer these tools for access and managing files:
 
 ## Issue with MCP servers
 
-If the tools mentioned above are not accessible to you, please raise it immidiatly.
+If the tools mentioned above are not accessible to you, please raise it immediately.
