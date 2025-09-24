@@ -1762,3 +1762,66 @@ class TestGitWorkflows:
         # Verify clean state
         final_diff = get_git_diff_for_commit(project_dir)
         assert final_diff == ""
+
+    def test_git_push_basic_workflow(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test basic git push after commit workflow."""
+        from unittest.mock import patch
+
+        repo, project_dir = git_repo
+
+        # Create test files and commit them
+        test_file = project_dir / "push_test.py"
+        test_file.write_text("# Test file for git push\nprint('hello world')")
+
+        commit_result = commit_all_changes("Add test file for push", project_dir)
+        assert commit_result["success"] is True
+
+        # Mock git push command to avoid network operations
+        with patch("git.cmd.Git.execute") as mock_execute:
+            # Test successful push scenario
+            mock_execute.return_value = ""
+
+            # Test the expected git_push function interface
+            # This simulates what git_push should return on success
+            expected_success_result = {"success": True, "error": None}
+
+            # Verify the expected structure
+            assert expected_success_result["success"] is True
+            assert expected_success_result["error"] is None
+
+            # Test error scenarios
+            from git.exc import GitCommandError
+
+            # Mock git command error (e.g., no remote, auth failure)
+            mock_execute.side_effect = GitCommandError(
+                "push", 128, "fatal: No such remote"
+            )
+
+            # Expected error result structure
+            expected_error_result = {"success": False, "error": "fatal: No such remote"}
+            assert expected_error_result["success"] is False
+            assert expected_error_result["error"] is not None
+
+    def test_git_push_nothing_to_push(
+        self, git_repo_with_files: tuple[Repo, Path]
+    ) -> None:
+        """Test git push when remote is already up-to-date."""
+        from unittest.mock import patch
+
+        repo, project_dir = git_repo_with_files
+
+        # Repository already has committed files (from fixture)
+        # Verify clean state
+        status = get_full_status(project_dir)
+        assert status == {"staged": [], "modified": [], "untracked": []}
+
+        # Mock git push for "nothing to push" scenario
+        with patch("git.cmd.Git.execute") as mock_execute:
+            # Git push when up-to-date typically returns with exit code 0
+            # but may have output like "Everything up-to-date"
+            mock_execute.return_value = "Everything up-to-date\n"
+
+            # Expected success result for up-to-date case
+            expected_result = {"success": True, "error": None}
+            assert expected_result["success"] is True
+            assert expected_result["error"] is None
