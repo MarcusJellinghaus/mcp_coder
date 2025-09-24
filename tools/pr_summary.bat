@@ -1,3 +1,4 @@
+@echo off
 REM ===========================================================================
 REM PR Summary Generator
 REM ===========================================================================
@@ -22,8 +23,6 @@ REM   - Creates PR_Info folder if needed
 REM   - Warns if diff is very large (>500KB)
 REM 
 REM ===========================================================================
-
-@echo off
 setlocal enabledelayedexpansion
 
 REM Check if we're in a git repository

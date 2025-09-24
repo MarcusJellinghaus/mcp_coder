@@ -1,3 +1,4 @@
+@echo off
 REM ===========================================================================
 REM PR Review Generator
 REM ===========================================================================
@@ -21,8 +22,6 @@ REM   - Copies complete prompt to clipboard for LLM paste
 REM   - Warns if diff is very large (>500KB)
 REM 
 REM ===========================================================================
-
-@echo off
 setlocal enabledelayedexpansion
 
 REM Check if we're in a git repository
