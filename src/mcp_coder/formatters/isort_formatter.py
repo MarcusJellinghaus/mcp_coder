@@ -1,9 +1,9 @@
-"""isort formatter implementation with exit code change detection.
+"""isort formatter implementation with directory-based approach.
 
-Based on Step 0 analysis findings, this module implements isort formatting using:
-- Two-phase approach (check first, format if needed)
-- Exit code change detection (0=no changes, 1=changes needed)
-- Shared configuration reading using utility patterns
+Based on Step 2 requirements, this module implements isort formatting using:
+- Directory-based execution (pass directories directly to isort CLI)
+- Output parsing to determine changed files from isort stdout
+- Eliminates custom file discovery, letting isort handle file scanning
 """
 
 from pathlib import Path
@@ -12,13 +12,13 @@ from typing import Any, Dict, List, Optional
 from mcp_coder.utils.subprocess_runner import execute_command
 
 from .models import FormatterResult
-from .utils import find_python_files, get_default_target_dirs, read_tool_config
+from .utils import get_default_target_dirs, read_tool_config
 
 
 def format_with_isort(
     project_root: Path, target_dirs: Optional[List[str]] = None
 ) -> FormatterResult:
-    """Format imports using proven isort CLI patterns with exit code detection.
+    """Format imports using directory-based isort CLI approach.
 
     Args:
         project_root: Root directory of the project
@@ -35,32 +35,18 @@ def format_with_isort(
         if target_dirs is None:
             target_dirs = get_default_target_dirs(project_root)
 
-        # Track files that were changed
+        # Track files that were changed across all directories
         files_changed = []
 
-        # Process each target directory
+        # Process each target directory using directory-based approach
         for target_dir in target_dirs:
             target_path = project_root / target_dir
             if not target_path.exists():
                 continue
 
-            # Find Python files to process
-            python_files = find_python_files(target_path)
-
-            for file_path in python_files:
-                # Check if import sorting is needed
-                if _check_isort_changes(str(file_path), config):
-                    # Apply import sorting
-                    if _apply_isort_formatting(str(file_path), config):
-                        files_changed.append(str(file_path))
-                    else:
-                        # Formatting failed
-                        return FormatterResult(
-                            success=False,
-                            files_changed=[],
-                            formatter_name="isort",
-                            error_message=f"Failed to format imports in {file_path}",
-                        )
+            # Format entire directory and get list of changed files
+            changed_files = _format_isort_directory(target_path, config)
+            files_changed.extend(changed_files)
 
         return FormatterResult(
             success=True,
@@ -69,7 +55,7 @@ def format_with_isort(
             error_message=None,
         )
 
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
         return FormatterResult(
             success=False,
             files_changed=[],
@@ -91,21 +77,21 @@ def _get_isort_config(project_root: Path) -> Dict[str, Any]:
     return read_tool_config(project_root, "isort", defaults)
 
 
-def _check_isort_changes(file_path: str, config: Dict[str, Any]) -> bool:
-    """Check if isort formatting needed using --check-only (exit code pattern).
+def _format_isort_directory(target_path: Path, config: Dict[str, Any]) -> List[str]:
+    """Format directory and return list of changed files from parsed output.
 
     Args:
-        file_path: Path to the Python file to check
+        target_path: Path to the directory to format
         config: isort configuration dictionary
 
     Returns:
-        True if formatting is needed, False if already sorted
+        List of file paths that were reformatted
 
     Raises:
-        Exception: If isort check command fails with syntax errors
+        Exception: If isort command fails with syntax errors or other issues
     """
-    # Build isort check command
-    command = ["isort", "--check-only", file_path]
+    # Build isort format command for directory
+    command = ["isort", str(target_path)]
 
     # Add configuration options
     command.extend(["--profile", config["profile"]])
@@ -113,41 +99,30 @@ def _check_isort_changes(file_path: str, config: Dict[str, Any]) -> bool:
     if config["float_to_top"]:
         command.append("--float-to-top")
 
-    # Execute isort check
+    # Execute isort formatting on directory
     result = execute_command(command)
 
     if result.return_code == 0:
-        # No changes needed
-        return False
-    elif result.return_code == 1:
-        # Changes needed (this is isort's way to indicate imports need sorting)
-        return True
+        # Success - parse stdout output to get changed files
+        return _parse_isort_output(result.stdout)
     else:
         # Syntax error or other failure
-        raise Exception(f"isort check failed: {result.stderr}")
+        raise RuntimeError(f"isort formatting failed: {result.stderr}")
 
 
-def _apply_isort_formatting(file_path: str, config: Dict[str, Any]) -> bool:
-    """Apply isort formatting and return success status.
+def _parse_isort_output(stdout: str) -> List[str]:
+    """Parse isort output to extract list of files that were fixed.
 
     Args:
-        file_path: Path to the Python file to format
-        config: isort configuration dictionary
+        stdout: isort command stdout containing fixed file information
 
     Returns:
-        True if formatting succeeded, False otherwise
+        List of file paths that were fixed
     """
-    # Build isort format command
-    command = ["isort", file_path]
-
-    # Add configuration options
-    command.extend(["--profile", config["profile"]])
-    command.extend(["--line-length", str(config["line_length"])])
-    if config["float_to_top"]:
-        command.append("--float-to-top")
-
-    # Execute isort formatting
-    result = execute_command(command)
-
-    # Return success status (exit 0 = success)
-    return result.return_code == 0
+    changed_files = []
+    for line in stdout.strip().split("\n"):
+        if line.startswith("Fixing "):
+            # Extract filename from "Fixing /path/to/file.py"
+            filename = line[7:]  # Remove "Fixing " prefix
+            changed_files.append(filename)
+    return changed_files

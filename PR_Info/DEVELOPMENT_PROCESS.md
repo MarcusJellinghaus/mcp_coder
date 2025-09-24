@@ -57,6 +57,7 @@ Do not yet modify any code!
 ```
 ## Python Project Implementation Plan Request
 Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** with self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
+Can you also give a summary of the architectural / design changes in the summary document?
 
 ### Requirements:
 - Follow **Test-Driven Development** where applicable. 
@@ -182,17 +183,7 @@ Each step consists of two main phases:
   - Sequential execution: pylint → pytest → mypy
   - Only proceeds if previous checks pass
 
-**Implementation Prompt Template:**
-```
-Please review the implementation plan in PR_Info, especially the summary and steps/step_{XX}.md.
-Please implement!
-Please verify your implementation running the various checks of the MCP server and by solving potential issues (and repeat).
-Please do not invent extra complexity not mentioned in the project plan.
-Please let me know in case you encounter any issues or need a decision.
-Please work only on step {XX}
-```
-
-or using task tracker
+**Implementation Prompt Template using task tracker**
 
 ```
 Please look at `pr_info/TASK_TRACKER.md` and pick the next task that should be done.
@@ -202,11 +193,12 @@ Please verify your implementation running the various checks of the MCP server a
 Please do not invent extra complexity not mentioned in the project plan.
 Please let me know in case you encounter any issues or need a decision.
 Please provide a short concise commit message stating the step name in the title. Don not perform a commit!
+
 Once you are done, please check again that task description on `pr_info/TASK_TRACKER.md` to ensure that everything is done.
 Once everything is done, please mark the task as done.
 Please work only on one task. Do not pick further tasks.
 
-Please also take a look at the tests\readme and only run those tests that are required in your context -i.e. avoid slow integration tests.
+Please also take a look at the tests\readme.md and only run those tests that are required in your context -i.e. avoid slow integration tests.
 ```
 
 Possible follow up question:
@@ -217,6 +209,15 @@ Did you tick of the tasks in the task tracker?
 ```
 
 **Common Implementation Failures & Responses:**
+
+- ** Checks do not work **
+  - Sometimes, mypy tests were forgotten and do not work:
+    - Prompt `please run mypy checks and work on possible issues` can fix it.
+    - run pylint and pytest after that
+    - run formatter after that
+    - commit with auto and/or with mypy fixing info, or ask session for a commit message
+      - `Please provide a concise commit message  in markdown code format (```)` 
+      - triple ticks might or might not be provided
 
 - **Third-party dependencies needed:**
   - New Python packages required beyond current `pyproject.toml`
@@ -237,6 +238,10 @@ Did you tick of the tasks in the task tracker?
   - *Response:* Mark as complete, update plan for remaining tasks
   
 - ** Check for slower and slower unit tests **
+
+- ** Check for file / folder / module names **
+  - Files or folders might have wrong location or names. Eg test files should follow the same folder structure like the code.
+
 
 ** Possible prompt for too complex task**
 

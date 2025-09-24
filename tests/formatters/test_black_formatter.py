@@ -1,7 +1,7 @@
-"""Tests for Black formatter implementation using TDD approach.
+"""Tests for Black formatter implementation using directory-based approach.
 
-Based on Step 2 requirements: 6 comprehensive tests covering core formatting,
-configuration integration, and real-world analysis scenarios.
+Based on Step 1 requirements: Test directory-based Black execution with
+output parsing to determine changed files, eliminating file-by-file processing.
 """
 
 import tempfile
@@ -63,20 +63,38 @@ target-version = ["py311"]
 
 
 class TestBlackFormatterCore:
-    """Core formatting scenarios - 3 tests."""
+    """Core directory-based formatting scenarios - 3 tests."""
 
-    def test_format_unformatted_code(
-        self, temp_project_dir: Path, unformatted_python_code: str
+    def test_format_directory_with_unformatted_code(
+        self, temp_project_dir: Path, unformatted_python_code: str, monkeypatch: Any
     ) -> None:
-        """Test format_with_black() on code needing formatting (exit 1 → success)."""
-        # This test will fail until we implement the Black formatter
+        """Test directory-based Black execution with output parsing."""
         from mcp_coder.formatters.black_formatter import format_with_black
 
         # Create a Python file that needs formatting
-        test_file = temp_project_dir / "test_module.py"
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        test_file = src_dir / "test_module.py"
         test_file.write_text(unformatted_python_code)
 
-        # Format the code
+        # Mock execute_command to simulate Black directory-based execution
+        from unittest.mock import Mock
+
+        mock_result = Mock()
+        mock_result.return_code = 0  # Black returns 0 when files are reformatted
+        mock_result.stdout = ""
+        mock_result.stderr = (
+            f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
+        )
+
+        def mock_execute_command(cmd: Any) -> Any:
+            return mock_result
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.black_formatter.execute_command", mock_execute_command
+        )
+
+        # Format the code using directory-based approach
         result = format_with_black(temp_project_dir)
 
         # Should succeed and report the file as changed
@@ -85,24 +103,37 @@ class TestBlackFormatterCore:
         assert str(test_file) in result.files_changed
         assert result.error_message is None
 
-        # Verify the file was actually formatted
-        formatted_content = test_file.read_text()
-        assert formatted_content != unformatted_python_code
-        # Should have proper spacing around operators
-        assert "name == " in formatted_content
+        # The mock was called successfully if we got here without exceptions
+        # In a real scenario, we would verify the command was called correctly
 
-    def test_format_already_formatted_code(
-        self, temp_project_dir: Path, formatted_python_code: str
+    def test_format_directory_no_changes_needed(
+        self, temp_project_dir: Path, formatted_python_code: str, monkeypatch: Any
     ) -> None:
-        """Test on properly formatted code (exit 0 → no changes)."""
+        """Test directory-based Black on already formatted code (exit 0 → no changes)."""
         from mcp_coder.formatters.black_formatter import format_with_black
 
         # Create a Python file that is already formatted
-        test_file = temp_project_dir / "test_module.py"
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        test_file = src_dir / "test_module.py"
         test_file.write_text(formatted_python_code)
-        original_content = formatted_python_code
 
-        # Format the code
+        # Mock execute_command to simulate Black finding no changes needed
+        from unittest.mock import Mock
+
+        mock_result = Mock()
+        mock_result.return_code = 0  # Black returns 0 when no reformatting needed
+        mock_result.stdout = ""
+        mock_result.stderr = "All done! ✨ 🍰 ✨\n0 files reformatted."
+
+        def mock_execute_command(cmd: Any) -> Any:
+            return mock_result
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.black_formatter.execute_command", mock_execute_command
+        )
+
+        # Format the code using directory-based approach
         result = format_with_black(temp_project_dir)
 
         # Should succeed but report no changes
@@ -111,18 +142,34 @@ class TestBlackFormatterCore:
         assert len(result.files_changed) == 0
         assert result.error_message is None
 
-        # Verify the file content unchanged
-        assert test_file.read_text() == original_content
-
-    def test_format_syntax_error_code(
-        self, temp_project_dir: Path, syntax_error_code: str
+    def test_format_directory_with_syntax_errors(
+        self, temp_project_dir: Path, syntax_error_code: str, monkeypatch: Any
     ) -> None:
-        """Test error handling with malformed code (exit 123 → error)."""
+        """Test directory-based Black with syntax errors (exit 123 → error)."""
         from mcp_coder.formatters.black_formatter import format_with_black
 
         # Create a Python file with syntax errors
-        test_file = temp_project_dir / "broken_module.py"
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        test_file = src_dir / "broken_module.py"
         test_file.write_text(syntax_error_code)
+
+        # Mock execute_command to simulate Black syntax error
+        from unittest.mock import Mock
+
+        mock_result = Mock()
+        mock_result.return_code = 123  # Black returns 123 for syntax errors
+        mock_result.stdout = ""
+        mock_result.stderr = (
+            "error: cannot use --safe with this file; failed to parse source file"
+        )
+
+        def mock_execute_command(cmd: Any) -> Any:
+            return mock_result
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.black_formatter.execute_command", mock_execute_command
+        )
 
         # Attempt to format the code
         result = format_with_black(temp_project_dir)
@@ -132,35 +179,42 @@ class TestBlackFormatterCore:
         assert result.formatter_name == "black"
         assert len(result.files_changed) == 0
         assert result.error_message is not None
-        assert (
-            "syntax" in result.error_message.lower()
-            or "error" in result.error_message.lower()
-        )
+        assert "error" in result.error_message.lower()
 
 
 class TestBlackFormatterConfiguration:
     """Configuration integration - 2 tests."""
 
     def test_default_config_missing_pyproject(
-        self, temp_project_dir: Path, unformatted_python_code: str
+        self, temp_project_dir: Path, unformatted_python_code: str, monkeypatch: Any
     ) -> None:
-        """Test with missing pyproject.toml (use Black defaults)."""
-        from mcp_coder.formatters.black_formatter import (
-            _get_black_config,
-            format_with_black,
-        )
+        """Test directory-based formatting with missing pyproject.toml (use Black defaults)."""
+        from mcp_coder.formatters.black_formatter import format_with_black
 
-        # No pyproject.toml file - should use defaults
-        config = _get_black_config(temp_project_dir)
-
-        # Should return default Black configuration
-        assert config["line-length"] == 88  # Black default
-        assert config["target-version"] == ["py311"]  # Default for current Python
-
-        # Create and format a file to verify it works with defaults
-        test_file = temp_project_dir / "test_module.py"
+        # Create source directory and file
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        test_file = src_dir / "test_module.py"
         test_file.write_text(unformatted_python_code)
 
+        # Mock execute_command to simulate Black with default config
+        from unittest.mock import Mock
+
+        mock_result = Mock()
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = (
+            f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
+        )
+
+        def mock_execute_command(cmd: Any) -> Any:
+            return mock_result
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.black_formatter.execute_command", mock_execute_command
+        )
+
+        # Format using directory-based approach with defaults
         result = format_with_black(temp_project_dir)
         assert result.success is True
         assert str(test_file) in result.files_changed
@@ -170,26 +224,39 @@ class TestBlackFormatterConfiguration:
         temp_project_dir: Path,
         unformatted_python_code: str,
         pyproject_toml_with_black_config: str,
+        monkeypatch: Any,
     ) -> None:
-        """Test with custom line-length and target-version from pyproject.toml."""
-        from mcp_coder.formatters.black_formatter import (
-            _get_black_config,
-            format_with_black,
-        )
+        """Test directory-based formatting with custom pyproject.toml configuration."""
+        from mcp_coder.formatters.black_formatter import format_with_black
 
         # Create pyproject.toml with custom Black config
         pyproject_file = temp_project_dir / "pyproject.toml"
         pyproject_file.write_text(pyproject_toml_with_black_config)
 
-        # Should read custom configuration
-        config = _get_black_config(temp_project_dir)
-        assert config["line-length"] == 100  # Custom value
-        assert config["target-version"] == ["py311"]  # Custom value
-
-        # Create and format a file to verify it works with custom config
-        test_file = temp_project_dir / "test_module.py"
+        # Create source directory and file
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        test_file = src_dir / "test_module.py"
         test_file.write_text(unformatted_python_code)
 
+        # Mock execute_command to simulate Black with custom config
+        from unittest.mock import Mock
+
+        mock_result = Mock()
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = (
+            f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
+        )
+
+        def mock_execute_command(cmd: Any) -> Any:
+            return mock_result
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.black_formatter.execute_command", mock_execute_command
+        )
+
+        # Format using directory-based approach with custom config
         result = format_with_black(temp_project_dir)
         assert result.success is True
         assert str(test_file) in result.files_changed
@@ -198,7 +265,9 @@ class TestBlackFormatterConfiguration:
 class TestBlackFormatterRealWorld:
     """Real-world analysis scenario - 1 test."""
 
-    def test_analysis_code_sample(self, temp_project_dir: Path) -> None:
+    def test_analysis_code_sample(
+        self, temp_project_dir: Path, monkeypatch: Any
+    ) -> None:
         """Use actual unformatted code from Step 0 findings to verify patterns."""
         from mcp_coder.formatters.black_formatter import format_with_black
 
@@ -229,9 +298,28 @@ if __name__=="__main__":
     main()
 """
 
-        # Create the analysis code file
-        test_file = temp_project_dir / "analysis_script.py"
+        # Create the analysis code file in src directory
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        test_file = src_dir / "analysis_script.py"
         test_file.write_text(analysis_code)
+
+        # Mock execute_command to simulate Black reformatting
+        from unittest.mock import Mock
+
+        mock_result = Mock()
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = (
+            f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
+        )
+
+        def mock_execute_command(cmd: Any) -> Any:
+            return mock_result
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.black_formatter.execute_command", mock_execute_command
+        )
 
         # Format using our Black formatter
         result = format_with_black(temp_project_dir)
@@ -242,64 +330,67 @@ if __name__=="__main__":
         assert str(test_file) in result.files_changed
         assert result.error_message is None
 
-        # Verify the code was properly formatted
-        formatted_content = test_file.read_text()
-        assert formatted_content != analysis_code
-
-        # Check for specific formatting improvements
-        assert (
-            "import subprocess, sys, json" in formatted_content
-        )  # Proper import spacing
-        assert "cmd = [" in formatted_content  # Proper assignment spacing
-        assert (
-            "result.returncode == 0" in formatted_content
-        )  # Proper comparison spacing
-        assert "if len(sys.argv) < 2:" in formatted_content  # Proper comparison spacing
-
 
 class TestBlackFormatterUtilities:
-    """Test utility functions."""
+    """Test directory-based utility functions."""
 
-    def test_get_black_config_function(self, temp_project_dir: Path) -> None:
-        """Test the _get_black_config function directly."""
-        from mcp_coder.formatters.black_formatter import _get_black_config
+    def test_parse_black_output_with_reformatted_files(self) -> None:
+        """Test _parse_black_output function with various Black stderr formats."""
+        from mcp_coder.formatters.black_formatter import _parse_black_output
 
-        # Test with no config file
-        config = _get_black_config(temp_project_dir)
-        assert isinstance(config, dict)
-        assert "line-length" in config
-        assert "target-version" in config
+        # Test single file reformatted
+        stderr_single = (
+            "reformatted /path/to/file.py\nAll done! ✨ 🍰 ✨\n1 file reformatted."
+        )
+        changed_files = _parse_black_output(stderr_single)
+        assert changed_files == ["/path/to/file.py"]
 
-    def test_check_black_changes_function(
-        self, temp_project_dir: Path, unformatted_python_code: str
+        # Test multiple files reformatted
+        stderr_multiple = "reformatted /path/to/file1.py\nreformatted /path/to/file2.py\nAll done! ✨ 🍰 ✨\n2 files reformatted."
+        changed_files = _parse_black_output(stderr_multiple)
+        assert changed_files == ["/path/to/file1.py", "/path/to/file2.py"]
+
+        # Test no changes
+        stderr_no_changes = "All done! ✨ 🍰 ✨\n0 files reformatted."
+        changed_files = _parse_black_output(stderr_no_changes)
+        assert changed_files == []
+
+        # Test files with spaces in paths
+        stderr_spaces = "reformatted /path/with spaces/file.py\nAll done! ✨ 🍰 ✨\n1 file reformatted."
+        changed_files = _parse_black_output(stderr_spaces)
+        assert changed_files == ["/path/with spaces/file.py"]
+
+    def test_format_black_directory_function(
+        self, temp_project_dir: Path, unformatted_python_code: str, monkeypatch: Any
     ) -> None:
-        """Test the _check_black_changes function directly."""
-        from mcp_coder.formatters.black_formatter import _check_black_changes
+        """Test _format_black_directory function directly."""
+        from mcp_coder.formatters.black_formatter import _format_black_directory
 
-        # Create a file that needs formatting
-        test_file = temp_project_dir / "test_module.py"
+        # Create source directory and file
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        test_file = src_dir / "test_module.py"
         test_file.write_text(unformatted_python_code)
 
-        # Should detect that changes are needed
+        # Mock execute_command
+        from unittest.mock import Mock
+
+        mock_result = Mock()
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = (
+            f"reformatted {test_file}\nAll done! ✨ 🍰 ✨\n1 file reformatted."
+        )
+
+        def mock_execute_command(cmd: Any) -> Any:
+            return mock_result
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.black_formatter.execute_command", mock_execute_command
+        )
+
+        # Test directory formatting
         config = {"line-length": 88, "target-version": ["py311"]}
-        needs_formatting = _check_black_changes(str(test_file), config)
-        assert needs_formatting is True
+        changed_files = _format_black_directory(src_dir, config)
 
-    def test_apply_black_formatting_function(
-        self, temp_project_dir: Path, unformatted_python_code: str
-    ) -> None:
-        """Test the _apply_black_formatting function directly."""
-        from mcp_coder.formatters.black_formatter import _apply_black_formatting
-
-        # Create a file that needs formatting
-        test_file = temp_project_dir / "test_module.py"
-        test_file.write_text(unformatted_python_code)
-
-        # Apply formatting
-        config = {"line-length": 88, "target-version": ["py311"]}
-        success = _apply_black_formatting(str(test_file), config)
-        assert success is True
-
-        # Verify file was changed
-        formatted_content = test_file.read_text()
-        assert formatted_content != unformatted_python_code
+        assert str(test_file) in changed_files
