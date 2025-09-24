@@ -11,13 +11,14 @@ For each incomplete task, it:
 3. Saves conversation to pr_info/.conversations/step_N.md
 4. Runs formatters (black, isort) using existing format_code()
 5. Commits changes using generate_commit_message_with_llm() and commit_all_changes()
-6. Continues to next incomplete task
+6. Pushes changes to remote repository using git_push()
+7. Continues to next incomplete task
 
 Workflow Algorithm:
 1. Check prerequisites once (git status, task tracker exists)
 2. Loop through all incomplete implementation tasks:
    a. Get next incomplete task from task_tracker
-   b. Process single task (prompt → LLM → save → format → commit)
+   b. Process single task (prompt → LLM → save → format → commit → push)
    c. Continue until no more incomplete tasks
 3. Exit with summary of completed tasks
 4. Graceful error handling - continues processing remaining tasks if possible
@@ -34,7 +35,7 @@ from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_operations import commit_all_changes
+from mcp_coder.utils.git_operations import commit_all_changes, git_push
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 # Constants
@@ -160,6 +161,26 @@ def commit_changes() -> bool:
         return False
 
 
+def push_changes() -> bool:
+    """Push changes to remote repository and return success status."""
+    log_step("Pushing changes to remote...")
+    
+    try:
+        project_dir = Path.cwd()
+        push_result = git_push(project_dir)
+        
+        if not push_result["success"]:
+            print(f"Error pushing changes: {push_result['error']}")
+            return False
+        
+        log_step("Changes pushed successfully to remote")
+        return True
+    
+    except Exception as e:
+        print(f"Error pushing changes: {e}")
+        return False
+
+
 def process_single_task() -> bool:
     """Process a single implementation task. Returns True if successful, False if failed."""
     # Get next incomplete task
@@ -228,6 +249,10 @@ Generated on: {datetime.now().isoformat()}
     
     # Step 7: Commit changes
     if not commit_changes():
+        return False
+    
+    # Step 8: Push changes to remote
+    if not push_changes():
         return False
     
     log_step(f"Task completed successfully: {next_task}")
