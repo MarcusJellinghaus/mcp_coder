@@ -265,7 +265,10 @@ Did you tick of the tasks in the task tracker?
 
 - ** Checks do not work **
   - Sometimes, mypy tests were forgotten and do not work:
-    - Prompt `please run mypy checks and work on possible issues` can fix it.
+    - Prompt 
+      ```
+      Please run mypy checks and work on possible issues and fix it.
+      ```
     - run pylint and pytest after that
     - run formatter after that
     - commit with auto and/or with mypy fixing info, or ask session for a commit message

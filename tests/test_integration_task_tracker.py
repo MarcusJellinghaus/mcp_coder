@@ -18,14 +18,14 @@ from mcp_coder.workflow_utils import (
 class TestTaskTrackerIntegration:
     """Integration tests for task tracker with workflow_utils package."""
 
-    def test_imports_work(self):
+    def test_imports_work(self) -> None:
         """Test importing task tracker functions from workflow_utils package."""
         from mcp_coder.workflow_utils import get_incomplete_tasks, is_task_done
 
         assert callable(get_incomplete_tasks)
         assert callable(is_task_done)
 
-    def test_basic_functionality(self):
+    def test_basic_functionality(self) -> None:
         """Test basic end-to-end functionality."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -48,7 +48,7 @@ class TestTaskTrackerIntegration:
             assert is_task_done("Complete task", str(temp_path))
             assert not is_task_done("Incomplete task", str(temp_path))
 
-    def test_missing_file_raises_error(self):
+    def test_missing_file_raises_error(self) -> None:
         """Test error handling for missing tracker file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             with pytest.raises(TaskTrackerFileNotFoundError):
