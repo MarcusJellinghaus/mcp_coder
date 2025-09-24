@@ -262,7 +262,7 @@ class TestParseTaskLines:
 
         assert tasks[4].name == "Step 2: Core Parser"
         assert tasks[4].is_complete is True
-        assert tasks[4].line_number == 5
+        assert tasks[4].line_number == 6  # Fixed: account for empty line
         assert tasks[4].indentation_level == 0
 
         # Check indented tasks
@@ -284,12 +284,12 @@ class TestParseTaskLines:
 
         assert tasks[5].name == "Implement section parsing"
         assert tasks[5].is_complete is True
-        assert tasks[5].line_number == 6
+        assert tasks[5].line_number == 7  # Fixed: account for empty line
         assert tasks[5].indentation_level == 1
 
         assert tasks[6].name == "Add task extraction logic"
         assert tasks[6].is_complete is True
-        assert tasks[6].line_number == 7
+        assert tasks[6].line_number == 8  # Fixed: account for empty line
         assert tasks[6].indentation_level == 1
 
     def test_parse_various_checkbox_formats(self) -> None:
@@ -713,3 +713,25 @@ class TestNormalizeTaskName:
         assert _normalize_task_name("") == ""
         assert _normalize_task_name("   ") == ""
         assert _normalize_task_name("\t\n") == ""
+
+    def test_parse_line_numbers_with_empty_lines(self) -> None:
+        """Test that line numbers correctly match file lines including empty lines."""
+        section_content = """- [ ] Task on line 1
+
+- [x] Task on line 3
+
+
+- [ ] Task on line 6"""
+        tasks = _parse_task_lines(section_content)
+
+        assert len(tasks) == 3
+
+        # Verify line numbers match actual positions including empty lines
+        assert tasks[0].name == "Task on line 1"
+        assert tasks[0].line_number == 1
+
+        assert tasks[1].name == "Task on line 3"
+        assert tasks[1].line_number == 3
+
+        assert tasks[2].name == "Task on line 6"
+        assert tasks[2].line_number == 6

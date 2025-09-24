@@ -174,9 +174,8 @@ def _parse_task_lines(section_content: str) -> list[TaskInfo]:
 
     lines = section_content.split("\n")
     tasks = []
-    line_number = 1
 
-    for line in lines:
+    for line_number, line in enumerate(lines, start=1):
         is_task, is_complete = _is_task_line(line)
 
         if is_task:
@@ -196,10 +195,6 @@ def _parse_task_lines(section_content: str) -> list[TaskInfo]:
                     indentation_level=indentation_level,
                 )
                 tasks.append(task_info)
-
-        # Only count non-empty lines for line numbering
-        if line.strip():
-            line_number += 1
 
     return tasks
 
