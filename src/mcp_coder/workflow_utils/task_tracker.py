@@ -232,6 +232,16 @@ def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
     Raises:
         TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
         TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+
+    Examples:
+        >>> get_incomplete_tasks("my_project")
+        ["Setup database", "Add authentication", "Write documentation"]
+
+        >>> get_incomplete_tasks()  # Uses default "pr_info" folder
+        ["Implement API endpoints", "Add unit tests"]
+
+        >>> get_incomplete_tasks("empty_project")
+        []  # No incomplete tasks found
     """
     # Read the tracker file
     content = _read_task_tracker(folder_path)
@@ -261,6 +271,19 @@ def is_task_done(task_name: str, folder_path: str = "pr_info") -> bool:
     Raises:
         TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
         TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+
+    Examples:
+        >>> is_task_done("Setup database", "my_project")
+        True  # Task is marked as [x]
+
+        >>> is_task_done("add authentication")  # Case-insensitive matching
+        False  # Task is marked as [ ] or not found
+
+        >>> is_task_done("Setup Database")  # Matches "setup database" in file
+        True  # Case-insensitive exact matching
+
+        >>> is_task_done("Nonexistent Task")
+        False  # Task not found in tracker
     """
     # Read the tracker file
     content = _read_task_tracker(folder_path)
