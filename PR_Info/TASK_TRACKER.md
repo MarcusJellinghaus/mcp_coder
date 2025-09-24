@@ -37,7 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 3: Create Simple Implement Workflow Script** - [step_3.md](./steps/step_3.md)
+- [x] **Step 3: Create Simple Implement Workflow Script** - [step_3.md](./steps/step_3.md)
   - Create workflows/implement.py orchestrating existing mcp-coder functionality
   - Implement task detection, LLM interaction, formatting, and commit
   - Add conversation storage in pr_info/.conversations/
