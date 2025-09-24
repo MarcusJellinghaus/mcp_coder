@@ -136,12 +136,26 @@ Please offer, whenever possible, simple options like
 - C
 ```
 
+```typical questions and answers
+- reduce number of steps: actually, constant/more steps are better
+- number of test cases:
+  - possible options eg 
+    - comprehensive
+    - with several edge cases
+    - essentials
+  - possible answer
+    - essentials
+  - data model
+    - do we need all fields
+    - do we need the data model at all?
+    - stay type safe / explicit (often yet)
+  
+```
+
 Wait for end of discussion - in case of unclarity
 ```
-Please summarise changes you want to do to the project plan for confirmation 
+Please summarise the changes you want to do to the project plan for confirmation as 
 ( one liner bullet points)
-and
-please ask me whether I agree (Y/N)
 ```
 
 After the agreement:
