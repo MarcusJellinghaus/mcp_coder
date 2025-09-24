@@ -186,18 +186,20 @@ Possibly review the project plan one more time (see above) or continue with the 
 
 #### Task Tracker Update Prompt:
 ```
-Please read the implementation steps in `pr_info/steps/` and
-update `pr_info/TASK_TRACKER.md` to add all the implementation steps as tasks in the Tasks section.
+Read implementation steps in `pr_info/steps/` and update/create `pr_info/TASK_TRACKER.md`:
 
-Follow the task format specified in the TASK_TRACKER.md file,
-marking each step as incomplete [ ] and linking to the corresponding step file.
+**If file doesn't exist:** Generate complete task tracker with all steps.
 
-Review `pr_info/DEVELOPMENT_PROCESS.md` for context on the workflow and task requirements.
+**If file exists:** Add missing tasks only. PRESERVE all existing checked boxes `[x]` - do not modify completed tasks.
 
-Each task should include the 3 quality checks (pylint, pytest, mypy) and
-git commit preparation as outlined in the development process.
+Each task should include:
+- Step implementation 
+- Quality checks: pylint, pytest, mypy
+- Git commit preparation
 
-Also add the pull request tasks for PR review and summary creation at the end in a section "Pull request"
+Add "Pull Request" section at end with PR review and summary tasks.
+
+Follow existing format in TASK_TRACKER.md or standard checkbox format. Review `pr_info/DEVELOPMENT_PROCESS.md` for context.
 ```
 - Prompt could be enhanced to generate the task tracker and add new tasks 
 - commit afterwards with 
