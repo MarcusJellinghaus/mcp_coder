@@ -99,7 +99,7 @@ class TestCompleteFormattingWorkflow:
     """Test complete end-to-end formatting workflows using real code samples."""
 
     def test_complete_formatting_workflow_with_exit_codes(self) -> None:
-        """Test full Black + isort formatting using exit code patterns from analysis."""
+        """Test full Black + isort formatting using directory-based approach."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project_root = Path(temp_dir)
 
@@ -118,28 +118,28 @@ line_length = 88
 """
             (project_root / "pyproject.toml").write_text(pyproject_content)
 
-            # Run formatters and verify results
+            # Run formatters with directory-based execution and verify results
             results = format_code(project_root)
 
-            # Both formatters should run successfully
+            # Both formatters should run successfully with directory-based approach
             assert "black" in results
             assert "isort" in results
             assert isinstance(results["black"], FormatterResult)
             assert isinstance(results["isort"], FormatterResult)
 
-            # At least one formatter should detect changes
+            # At least one formatter should detect changes through directory processing
             changes_detected = (
                 len(results["black"].files_changed) > 0
                 or len(results["isort"].files_changed) > 0
             )
             assert changes_detected
 
-            # Verify file was actually modified
+            # Verify file was actually modified by directory-based formatting
             formatted_content = python_file.read_text()
             assert formatted_content != UNSORTED_IMPORTS + "\n\n" + UNFORMATTED_CODE
 
     def test_idempotent_behavior_no_changes_on_second_run(self) -> None:
-        """Format same files twice, verify no changes on second run."""
+        """Format same directory twice, verify no changes on second run with directory-based approach."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project_root = Path(temp_dir)
 
@@ -158,27 +158,27 @@ line_length = 88
 """
             (project_root / "pyproject.toml").write_text(pyproject_content)
 
-            # First run - should format the code
+            # First run - should format the code using directory-based execution
             first_results = format_code(project_root)
 
-            # Second run - should detect no changes needed
+            # Second run - should detect no changes needed with directory-based execution
             second_results = format_code(project_root)
 
-            # First run should detect changes
+            # First run should detect changes through directory processing
             first_had_changes = (
                 len(first_results["black"].files_changed) > 0
                 or len(first_results["isort"].files_changed) > 0
             )
             assert first_had_changes
 
-            # Second run should detect no changes (idempotent)
+            # Second run should detect no changes (idempotent directory-based behavior)
             assert second_results["black"].success is True
             assert second_results["isort"].success is True
             assert len(second_results["black"].files_changed) == 0
             assert len(second_results["isort"].files_changed) == 0
 
     def test_error_resilience_mixed_scenarios(self) -> None:
-        """Test mixed scenarios where one file succeeds, one fails."""
+        """Test directory-based error handling where directory contains mixed valid/invalid files."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project_root = Path(temp_dir)
 
@@ -201,20 +201,20 @@ line_length = 88
 """
             (project_root / "pyproject.toml").write_text(pyproject_content)
 
-            # Run formatters - they should handle errors gracefully
+            # Run directory-based formatters - they should handle errors gracefully
             results = format_code(project_root)
 
-            # Results should be returned even if some files fail
+            # Results should be returned even if directory contains files with syntax errors
             assert "black" in results
             assert "isort" in results
             assert isinstance(results["black"], FormatterResult)
             assert isinstance(results["isort"], FormatterResult)
 
-            # Check that at least one formatter reports the failure
+            # Check that at least one formatter reports the failure from directory processing
             black_failed = not results["black"].success
             isort_failed = not results["isort"].success
 
-            # At least one should have failed due to syntax error
+            # At least one should have failed due to syntax error in directory
             assert black_failed or isort_failed
 
 
@@ -223,11 +223,11 @@ class TestAnalysisBasedScenarios:
     """Test scenarios based on Step 0 analysis findings."""
 
     def test_step0_code_samples_from_analysis(self) -> None:
-        """Test formatters with actual problematic code from analysis findings."""
+        """Test directory-based formatters with actual problematic code from analysis findings."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project_root = Path(temp_dir)
 
-            # Create multiple files with different formatting issues
+            # Create multiple files with different formatting issues in directory
             files_and_content = [
                 ("unformatted.py", UNFORMATTED_CODE),
                 ("unsorted.py", UNSORTED_IMPORTS),
@@ -249,17 +249,17 @@ line_length = 88
 """
             (project_root / "pyproject.toml").write_text(pyproject_content)
 
-            # Test individual formatters
+            # Test individual formatters using directory-based execution
             black_result = format_with_black(project_root)
             isort_result = format_with_isort(project_root)
 
-            # Both should handle the analysis samples successfully
+            # Both should handle the analysis samples successfully with directory processing
             assert isinstance(black_result, FormatterResult)
             assert isinstance(isort_result, FormatterResult)
 
-            # At least Black should detect changes in unformatted code
+            # At least Black should detect changes in directory containing unformatted code
             assert len(black_result.files_changed) > 0 or black_result.success
-            # At least isort should detect changes in unsorted imports
+            # At least isort should detect changes in directory containing unsorted imports
             assert len(isort_result.files_changed) > 0 or isort_result.success
 
     def test_configuration_conflicts_from_analysis(self) -> None:
@@ -389,7 +389,7 @@ class TestQualityGatesValidation:
             assert isort_result.formatter_name == "isort"
 
     def test_formatter_target_directory_handling(self) -> None:
-        """Test formatters properly handle target directory specifications."""
+        """Test directory-based formatters properly handle target directory specifications."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project_root = Path(temp_dir)
 
@@ -402,7 +402,7 @@ class TestQualityGatesValidation:
             (src_dir / "main.py").write_text(UNFORMATTED_CODE)
             (tests_dir / "test_main.py").write_text(UNFORMATTED_CODE)
 
-            # Test targeting specific directories
+            # Test directory-based execution targeting specific directories
             results = format_code(project_root, target_dirs=["src"])
 
             assert isinstance(results, dict)

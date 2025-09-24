@@ -31,27 +31,6 @@ def get_default_target_dirs(project_root: Path) -> List[str]:
     return target_dirs
 
 
-def find_python_files(directory: Path) -> List[Path]:
-    """Find all Python files in a directory recursively.
-
-    Args:
-        directory: Directory to search for Python files
-
-    Returns:
-        List of Python file paths
-    """
-    python_files = []
-
-    if directory.is_file() and directory.suffix == ".py":
-        python_files.append(directory)
-    elif directory.is_dir():
-        # Recursively find Python files
-        for file_path in directory.rglob("*.py"):
-            python_files.append(file_path)
-
-    return python_files
-
-
 def read_tool_config(
     project_root: Path, tool_name: str, defaults: Dict[str, Any]
 ) -> Dict[str, Any]:
