@@ -22,7 +22,7 @@ Algorithm:
 """
 
 import os
-import subprocess
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -34,9 +34,6 @@ from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import commit_all_changes
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
-
-# Add src to path for direct API calls
-sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 
 # Constants
@@ -179,7 +176,7 @@ def main() -> None:
     # Step 3: Get implementation prompt template
     log_step("Loading implementation prompt template...")
     try:
-        prompt_template = get_prompt("mcp_coder/prompts/prompts.md", "Implementation Prompt Template")
+        prompt_template = get_prompt("mcp_coder/prompts/prompts.md", "Implementation Prompt Template using task tracker")
     except Exception as e:
         print(f"Error loading prompt template: {e}")
         sys.exit(1)
@@ -209,8 +206,8 @@ Please implement this task step by step."""
     # Step 5: Save conversation
     try:
         # Extract step number from task for conversation naming
-        # Simple approach: use first word as step indicator
-        step_num = 3  # Default step number for Step 3 implementation
+        step_match = re.search(r'Step (\d+)', next_task)
+        step_num = int(step_match.group(1)) if step_match else 1
         
         conversation_content = f"""# Implementation Task: {next_task}
 
