@@ -200,8 +200,10 @@ git commit preparation as outlined in the development process.
 Also add the pull request tasks for PR review and summary creation at the end in a section "Pull request"
 ```
 - Prompt could be enhanced to generate the task tracker and add new tasks 
-- commit afterwards with `Update TASK_TRACKER.md with implementation steps and PR tasks`
-
+- commit afterwards with 
+  ```
+  Update TASK_TRACKER.md with implementation steps and PR tasks
+  ```
 
 **Objective:** Complete each implementation step with full validation
 
