@@ -157,6 +157,7 @@ Please offer, whenever possible, simple options like
 
 **Possible issues to double-check**:
 - Are the tests following the folder structure similar to the implemented features?
+- Do you implement something related to backwards compatibility?
 
 
 Wait for end of discussion - in case of unclarity
