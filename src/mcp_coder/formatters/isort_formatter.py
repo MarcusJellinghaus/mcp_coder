@@ -6,6 +6,7 @@ Based on Step 2 requirements, this module implements isort formatting using:
 - Eliminates custom file discovery, letting isort handle file scanning
 """
 
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -55,7 +56,7 @@ def format_with_isort(
             error_message=None,
         )
 
-    except (OSError, ValueError, RuntimeError) as e:
+    except (subprocess.CalledProcessError, OSError) as e:
         return FormatterResult(
             success=False,
             files_changed=[],
@@ -107,7 +108,7 @@ def _format_isort_directory(target_path: Path, config: Dict[str, Any]) -> List[s
         return _parse_isort_output(result.stdout)
     else:
         # Syntax error or other failure
-        raise RuntimeError(f"isort formatting failed: {result.stderr}")
+        raise subprocess.CalledProcessError(result.return_code, command, result.stderr)
 
 
 def _parse_isort_output(stdout: str) -> List[str]:

@@ -179,7 +179,8 @@ class TestIsortFormatterCore:
         assert result.success is False
         assert result.formatter_name == "isort"
         assert result.error_message is not None
-        assert "ERROR: Could not parse syntax" in result.error_message
+        # With subprocess.CalledProcessError, the stderr is included in the exception message
+        assert "returned non-zero exit status 123" in result.error_message
         assert len(result.files_changed) == 0
 
 
