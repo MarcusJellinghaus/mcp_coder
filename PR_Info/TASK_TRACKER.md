@@ -30,7 +30,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Prepare git commit
 
-- [ ] **Step 2: Move Implementation Prompt Template** - [step_2.md](./steps/step_2.md)
+- [x] **Step 2: Move Implementation Prompt Template** - [step_2.md](./steps/step_2.md)
   - Extract Implementation Prompt Template from DEVELOPMENT_PROCESS.md
   - Add to src/mcp_coder/prompts/prompts.md
   - Replace original with link reference
