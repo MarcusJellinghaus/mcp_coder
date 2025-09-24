@@ -31,13 +31,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run pylint, pytest, mypy checks and fix any issues
   - [x] Prepare git commit for step completion
 
-- [ ] **Step 2: Implement Section Parsing and Task Extraction** - [step_2.md](steps/step_2.md)
-  - [ ] Implement _find_implementation_section() with case-insensitive header matching
-  - [ ] Implement _parse_task_lines() to extract TaskInfo objects with indentation levels
-  - [ ] Add helper functions for task line detection and name cleaning
-  - [ ] Handle edge cases: malformed markdown, mixed task formats
-  - [ ] Run pylint, pytest, mypy checks and fix any issues
-  - [ ] Prepare git commit for step completion
+- [x] **Step 2: Implement Section Parsing and Task Extraction** - [step_2.md](steps/step_2.md)
+  - [x] Implement _find_implementation_section() with case-insensitive header matching
+  - [x] Implement _parse_task_lines() to extract TaskInfo objects with indentation levels
+  - [x] Add helper functions for task line detection and name cleaning
+  - [x] Handle edge cases: malformed markdown, mixed task formats
+  - [x] Run pylint, pytest, mypy checks and fix any issues
+  - [x] Prepare git commit for step completion
 
 - [ ] **Step 3: Implement Public API Functions** - [step_3.md](steps/step_3.md)
   - [ ] Implement get_incomplete_tasks() function

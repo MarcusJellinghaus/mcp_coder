@@ -77,6 +77,7 @@ Can you review and come up with a simplistic plan following clean code, KISS and
 ## Python Project Implementation Plan Request
 Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** with self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
 Can you also give a summary of the architectural / design changes in the summary document?
+Also list the folders \ modules \ files that should be created or modified by this implementation.
 
 ### Requirements:
 - Follow **Test-Driven Development** where applicable. 
