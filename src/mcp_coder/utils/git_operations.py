@@ -810,6 +810,49 @@ def is_working_directory_clean(project_dir: Path) -> bool:
     return total_changes == 0
 
 
+def get_current_branch_name(project_dir: Path) -> Optional[str]:
+    """
+    Get the name of the current active branch.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        Current branch name as string, or None if:
+        - Directory is not a git repository
+        - Repository is in detached HEAD state
+        - Error occurs during branch detection
+
+    Note:
+        Uses existing is_git_repository() validation and follows
+        established error handling patterns from other functions.
+    """
+    logger.debug("Getting current branch name for %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return None
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Use repo.active_branch to get current branch
+            # This will raise TypeError if in detached HEAD state
+            current_branch = repo.active_branch.name
+            logger.debug("Current branch: %s", current_branch)
+            return current_branch
+
+    except TypeError:
+        # Detached HEAD state - repo.active_branch raises TypeError
+        logger.debug("Repository is in detached HEAD state")
+        return None
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.debug("Git error getting current branch name: %s", e)
+        return None
+    except Exception as e:
+        logger.warning("Unexpected error getting current branch name: %s", e)
+        return None
+
+
 def git_push(project_dir: Path) -> dict[str, Any]:
     """
     Push current branch to origin remote.
