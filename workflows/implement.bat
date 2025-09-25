@@ -4,7 +4,7 @@ REM Created in Step 3: Create Simple Implement Workflow Script
 REM Updated to support --log-level parameter
 
 echo Starting implement workflow...
-python workflows/implement.py --project-dir . --log-level DEBUG
+python workflows/implement.py --project-dir . --log-level INFO
 
 if %ERRORLEVEL% neq 0 (
     echo Workflow failed with exit code %ERRORLEVEL%
