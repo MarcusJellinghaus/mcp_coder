@@ -70,6 +70,28 @@ Do NOT PROVIDE ANYTHING - just the commit message! NO WORDS BEFORE OR AFTER!
 
 ## Prompts for task tracker based workflows
 
+### Task Tracker Update
+
+This prompt is used to populate or update the TASK_TRACKER.md file with implementation steps from the plan.
+
+#### Task Tracker Update Prompt
+```
+Read implementation steps in `pr_info/steps/` and update/create `pr_info/TASK_TRACKER.md`:
+
+**If file doesn't exist:** Generate complete task tracker with all steps.
+
+**If file exists:** Add missing tasks only. PRESERVE all existing checked boxes `[x]` - do not modify completed tasks.
+
+Each task should include:
+- Step implementation 
+- Quality checks: pylint, pytest, mypy
+- Git commit preparation
+
+Add "Pull Request" section at end with PR review and summary tasks.
+
+Follow existing format in TASK_TRACKER.md or standard checkbox format. Review `pr_info/DEVELOPMENT_PROCESS.md` for context.
+```
+
 ### Implementation step
 
 This is the actual step where could should be written or modified. The actual task comes from task tracker and its links to the task description.

@@ -37,7 +37,7 @@ from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_operations import commit_all_changes, git_push
+from mcp_coder.utils.git_operations import commit_all_changes, git_push, get_full_status
 from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
@@ -52,6 +52,35 @@ logger = logging.getLogger(__name__)
 def log_step(message: str) -> None:
     """Log step with structured logging instead of print."""
     logger.info(message)
+
+
+def check_git_clean() -> bool:
+    """Check if git working directory is clean using existing git_operations functions."""
+    log_step("Checking git working directory status...")
+    
+    try:
+        project_dir = Path.cwd()
+        status = get_full_status(project_dir)
+        
+        # Check if there are any staged, modified, or untracked files
+        total_changes = len(status["staged"]) + len(status["modified"]) + len(status["untracked"])
+        
+        if total_changes > 0:
+            logger.error("Git working directory is not clean. Please commit or stash changes before running the workflow.")
+            if status["staged"]:
+                logger.error(f"Staged files: {status['staged']}")
+            if status["modified"]:
+                logger.error(f"Modified files: {status['modified']}")
+            if status["untracked"]:
+                logger.error(f"Untracked files: {status['untracked']}")
+            return False
+        
+        log_step("Git working directory is clean")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Error checking git status: {e}")
+        return False
 
 
 def check_prerequisites() -> bool:
@@ -71,6 +100,85 @@ def check_prerequisites() -> bool:
     
     log_step("Prerequisites check passed")
     return True
+
+
+def has_implementation_tasks() -> bool:
+    """Check if TASK_TRACKER.md has any implementation tasks using existing task_tracker functions."""
+    try:
+        # Use existing function to get incomplete tasks
+        incomplete_tasks = get_incomplete_tasks(PR_INFO_DIR)
+        # If we can get tasks, that means the tracker has implementation steps
+        return True
+    except Exception:
+        # If any exception occurs (file not found, section not found, etc.), 
+        # it means there are no proper implementation tasks
+        return False
+
+
+def prepare_task_tracker() -> bool:
+    """Prepare task tracker by populating it if it has no implementation steps."""
+    log_step("Checking if task tracker needs preparation...")
+    
+    # Check if pr_info/steps/ directory exists
+    steps_dir = Path(PR_INFO_DIR) / "steps"
+    if not steps_dir.exists():
+        logger.error(f"Directory {steps_dir} does not exist. Please create implementation steps first.")
+        return False
+    
+    # Check if task tracker already has implementation tasks
+    if has_implementation_tasks():
+        log_step("Task tracker already has implementation tasks. Skipping preparation.")
+        return True
+    
+    log_step("Task tracker has no implementation tasks. Generating tasks from implementation steps...")
+    
+    try:
+        # Get the Task Tracker Update Prompt
+        prompt_template = get_prompt("src/mcp_coder/prompts/prompts.md", "Task Tracker Update Prompt")
+        
+        # Call LLM with the prompt
+        response = ask_llm(prompt_template, provider="claude", method="api", timeout=300)
+        
+        if not response or not response.strip():
+            logger.error("LLM returned empty response for task tracker update")
+            return False
+        
+        log_step("LLM response received for task tracker update")
+        
+        # Check what files changed using existing git_operations
+        project_dir = Path.cwd()
+        status = get_full_status(project_dir)
+        
+        # Only staged and modified files should contain TASK_TRACKER.md
+        all_changed = status["staged"] + status["modified"] + status["untracked"]
+        task_tracker_file = f"{PR_INFO_DIR}/TASK_TRACKER.md"
+        
+        # Check if only TASK_TRACKER.md was modified
+        if len(all_changed) != 1 or task_tracker_file not in all_changed:
+            logger.error("Unexpected files were modified during task tracker update:")
+            logger.error(f"  Expected: [{task_tracker_file}]")
+            logger.error(f"  Found: {all_changed}")
+            return False
+        
+        # Verify that task tracker now has implementation steps
+        if not has_implementation_tasks():
+            logger.error("Task tracker still has no implementation steps after LLM update")
+            return False
+        
+        # Commit the changes
+        commit_message = "TASK_TRACKER.md with implementation steps and PR tasks updated"
+        commit_result = commit_all_changes(commit_message, project_dir)
+        
+        if not commit_result["success"]:
+            logger.error(f"Error committing task tracker changes: {commit_result['error']}")
+            return False
+        
+        log_step("Task tracker updated and committed successfully")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Error preparing task tracker: {e}")
+        return False
 
 
 def get_next_task() -> Optional[str]:
@@ -288,11 +396,18 @@ def main() -> None:
     
     log_step("Starting implement workflow...")
     
-    # Step 1: Check prerequisites
+    # Step 1: Check git status and prerequisites
+    if not check_git_clean():
+        sys.exit(1)
+    
     if not check_prerequisites():
         sys.exit(1)
     
-    # Step 2: Process all incomplete tasks in a loop
+    # Step 2: Prepare task tracker if needed
+    if not prepare_task_tracker():
+        sys.exit(1)
+    
+    # Step 3: Process all incomplete tasks in a loop
     completed_tasks = 0
     while True:
         success = process_single_task()
