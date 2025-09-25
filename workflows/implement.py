@@ -155,8 +155,8 @@ def prepare_task_tracker(project_dir: Path) -> bool:
         all_changed = status["staged"] + status["modified"] + status["untracked"]
         task_tracker_file = f"{PR_INFO_DIR}/TASK_TRACKER.md"
         
-        # Check if only TASK_TRACKER.md was modified
-        if len(all_changed) != 1 or task_tracker_file not in all_changed:
+        # Check if only TASK_TRACKER.md was modified (case-insensitive comparison)
+        if len(all_changed) != 1 or all_changed[0].casefold() != task_tracker_file.casefold():
             logger.error("Unexpected files were modified during task tracker update:")
             logger.error(f"  Expected: [{task_tracker_file}]")
             logger.error(f"  Found: {all_changed}")
