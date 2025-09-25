@@ -77,16 +77,16 @@ def _read_task_tracker(folder_path: str) -> str:
 
 
 def _find_implementation_section(content: str) -> str:
-    """Find and extract Implementation Steps section, raise exception if missing.
+    """Find and extract Implementation Steps or Tasks section, raise exception if missing.
 
     Args:
         content: Full TASK_TRACKER.md content
 
     Returns:
-        Content of Implementation Steps section (without header)
+        Content of Implementation Steps or Tasks section (without header)
 
     Raises:
-        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+        TaskTrackerSectionNotFoundError: If Implementation Steps or Tasks section not found
     """
     lines = content.split("\n")
     in_impl_section = False
@@ -97,7 +97,8 @@ def _find_implementation_section(content: str) -> str:
         if line.strip().startswith(("##", "###")):
             header_text = line.strip().lstrip("#").strip().lower()
 
-            if "implementation steps" in header_text:
+            # Look for either "implementation steps" or "tasks" sections
+            if "implementation steps" in header_text or header_text == "tasks":
                 in_impl_section = True
                 continue
             elif "pull request" in header_text and in_impl_section:
@@ -113,7 +114,7 @@ def _find_implementation_section(content: str) -> str:
 
     if not in_impl_section:
         raise TaskTrackerSectionNotFoundError(
-            "Implementation Steps section not found in TASK_TRACKER.md"
+            "Implementation Steps or Tasks section not found in TASK_TRACKER.md"
         )
 
     return "\n".join(impl_lines)
