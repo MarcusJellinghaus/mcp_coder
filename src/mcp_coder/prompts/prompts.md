@@ -1,16 +1,13 @@
-# My Prompts
+# Prompts
 
-This file contains your personal prompts for the mcp-coder project.
+This file contains prompts for the mcp-coder project.
 
 ## Getting Started
 
 Add your prompts below using the format shown in `prompt_instructions.md`.
-
-### Development Notes
-
 You can mix documentation and prompts in this file. Only headers followed by code blocks will be treated as prompts.
 
-# My Prompt Title
+### Example
 ```
 My lengthy explanation of what this prompt does and when to use it.
 
@@ -21,7 +18,15 @@ Use placeholders like [Insert code here] for variable content.
 Expected output format: [describe the expected response]
 ```
 
-# Git Commit Message Generation
+## Prompts for standard commands
+
+### Commit
+
+Context: A git commit message should be generated. A `git diff` will be added. 
+The respoonse will be used for committing the diff.  
+If the response contains seeral lines, the second line is expected to be empty to separate header and commit message details.
+
+#### Git Commit Message Generation
 ```
 Analyze the provided git diff and status information to generate a concise, professional commit message following conventional commit format.
 
@@ -59,10 +64,17 @@ EXAMPLES:
 
 Expected output: A properly formatted conventional commit message ready to use with git commit.
 
-Do not provide anything else - just the commit message!
+Do NOT PROVIDE ANYTHING - just the commit message! NO WORDS BEFORE OR AFTER! 
 ```
 
-# Implementation Prompt Template using task tracker
+
+## Prompts for task tracker based workflows
+
+### Implementation step
+
+This is the actual step where could should be written or modified. The actual task comes from task tracker and its links to the task description.
+
+#### Implementation Prompt Template using task tracker
 ```
 Please look at `pr_info/TASK_TRACKER.md` and pick the next task that should be done.
 Please let me know on which task you are working on.
