@@ -1,13 +1,12 @@
 """Git operations utilities for file system operations."""
 
 import logging
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Optional, TypedDict
+from typing import Any, Iterator, Optional, TypedDict
 
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
-from contextlib import contextmanager
-from typing import Iterator
 
 # Use same logging pattern as existing modules (see file_operations.py)
 logger = logging.getLogger(__name__)
@@ -21,21 +20,22 @@ def _close_repo_safely(repo: Repo) -> None:
     """Safely close a GitPython repository to prevent handle leaks on Windows."""
     try:
         # Close any active git command processes
-        if hasattr(repo, 'git') and hasattr(repo.git, '_proc') and repo.git._proc:
+        if hasattr(repo, "git") and hasattr(repo.git, "_proc") and repo.git._proc:
             try:
                 if repo.git._proc.poll() is None:  # Process still running
                     repo.git._proc.terminate()
                     import time
+
                     time.sleep(0.1)
                     if repo.git._proc.poll() is None:  # Still running, force kill
                         repo.git._proc.kill()
             except (OSError, AttributeError):
                 pass  # Ignore errors during process cleanup
-        
+
         # Close the repository if it has a close method
-        if hasattr(repo, 'close'):
+        if hasattr(repo, "close"):
             repo.close()
-            
+
     except (AttributeError, OSError, Exception) as e:
         # Log but don't raise - cleanup should be best effort
         logger.debug("Error during repository cleanup (non-critical): %s", e)
@@ -44,15 +44,15 @@ def _close_repo_safely(repo: Repo) -> None:
 @contextmanager
 def _safe_repo_context(project_dir: Path) -> Iterator[Repo]:
     """Context manager for safely handling GitPython repository objects.
-    
+
     Ensures proper cleanup of repository objects to prevent Windows handle issues.
-    
+
     Args:
         project_dir: Path to the git repository directory
-        
+
     Yields:
         Repo: GitPython repository object
-        
+
     Raises:
         InvalidGitRepositoryError: If directory is not a git repository
     """
@@ -409,7 +409,9 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
                     relative_paths.append(git_path)
                 except ValueError:
                     logger.error(
-                        "File %s is outside project directory %s", file_path, project_dir
+                        "File %s is outside project directory %s",
+                        file_path,
+                        project_dir,
                     )
                     return False
 
@@ -739,7 +741,9 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
 
             if has_commits:
                 try:
-                    staged_diff = repo.git.diff("--cached", "--unified=5", "--no-prefix")
+                    staged_diff = repo.git.diff(
+                        "--cached", "--unified=5", "--no-prefix"
+                    )
                 except GitCommandError as e:
                     logger.warning("Failed to get staged diff: %s", e)
 

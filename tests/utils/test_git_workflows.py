@@ -8,8 +8,11 @@ from git import Repo
 from mcp_coder.utils.git_operations import (
     commit_all_changes,
     commit_staged_files,
+    get_current_branch_name,
     get_full_status,
     get_git_diff_for_commit,
+    get_main_branch_name,
+    get_parent_branch_name,
     get_staged_changes,
     get_unstaged_changes,
     is_git_repository,
@@ -1848,3 +1851,166 @@ class TestGitWorkflows:
         """Test exception for non-git repository."""
         with pytest.raises(ValueError, match="Directory is not a git repository"):
             is_working_directory_clean(tmp_path)
+
+
+@pytest.mark.git_integration
+class TestGitBranchOperations:
+    """Test git branch operations without mocking."""
+
+    def test_get_current_branch_name_success(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test get_current_branch_name returns current branch name successfully."""
+        repo, project_dir = git_repo
+
+        # Create and commit a file so we have a proper HEAD
+        test_file = project_dir / "test.py"
+        test_file.write_text("# Test file")
+        commit_all_changes("Initial commit", project_dir)
+
+        # Test getting current branch name (should be main or master by default)
+        current_branch = get_current_branch_name(project_dir)
+        assert current_branch is not None
+        assert isinstance(current_branch, str)
+        assert len(current_branch) > 0
+        # Should be main or master (depending on git configuration)
+        assert current_branch in ["main", "master"]
+
+        # Create and switch to a new branch
+        repo.git.checkout("-b", "feature/test-branch")
+        current_branch = get_current_branch_name(project_dir)
+        assert current_branch == "feature/test-branch"
+
+        # Switch back to main/master
+        original_branch = "main" if "main" in [h.name for h in repo.heads] else "master"
+        repo.git.checkout(original_branch)
+        current_branch = get_current_branch_name(project_dir)
+        assert current_branch == original_branch
+
+    def test_get_current_branch_name_invalid_repo(self, tmp_path: Path) -> None:
+        """Test get_current_branch_name returns None for invalid repository."""
+        # Test with non-git directory
+        result = get_current_branch_name(tmp_path)
+        assert result is None
+
+    def test_get_current_branch_name_detached_head(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
+        """Test get_current_branch_name handles detached HEAD state gracefully."""
+        repo, project_dir = git_repo
+
+        # Create a commit so we can detach HEAD
+        test_file = project_dir / "test.py"
+        test_file.write_text("# Test file")
+        commit_result = commit_all_changes("Initial commit", project_dir)
+        assert commit_result["success"]
+
+        # Get the commit hash
+        commit_hash = commit_result["commit_hash"]
+        assert commit_hash is not None
+
+        # Detach HEAD by checking out the commit directly
+        repo.git.checkout(commit_hash)
+
+        # In detached HEAD state, function should return None or handle gracefully
+        current_branch = get_current_branch_name(project_dir)
+        # Should return None for detached HEAD (as per requirements)
+        assert current_branch is None
+
+    def test_get_main_branch_name_main_branch(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
+        """Test get_main_branch_name returns 'main' when main branch exists."""
+        repo, project_dir = git_repo
+
+        # Create a commit so branches are properly initialized
+        test_file = project_dir / "test.py"
+        test_file.write_text("# Test file")
+        commit_all_changes("Initial commit", project_dir)
+
+        # Ensure we have a main branch (rename if necessary)
+        current_branch = repo.active_branch.name
+        if current_branch == "master":
+            repo.git.branch("-m", "main")
+
+        # Test that get_main_branch_name returns 'main'
+        main_branch = get_main_branch_name(project_dir)
+        assert main_branch == "main"
+
+    def test_get_main_branch_name_master_branch(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
+        """Test get_main_branch_name returns 'master' when only master branch exists."""
+        repo, project_dir = git_repo
+
+        # Create a commit so branches are properly initialized
+        test_file = project_dir / "test.py"
+        test_file.write_text("# Test file")
+        commit_all_changes("Initial commit", project_dir)
+
+        # Ensure we have a master branch (rename if necessary)
+        current_branch = repo.active_branch.name
+        if current_branch == "main":
+            repo.git.branch("-m", "master")
+
+        # Test that get_main_branch_name returns 'master'
+        main_branch = get_main_branch_name(project_dir)
+        assert main_branch == "master"
+
+    def test_get_main_branch_name_invalid_repo(self, tmp_path: Path) -> None:
+        """Test get_main_branch_name returns None for invalid repository."""
+        # Test with non-git directory
+        result = get_main_branch_name(tmp_path)
+        assert result is None
+
+    def test_get_parent_branch_name_returns_main(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
+        """Test get_parent_branch_name returns main branch as parent."""
+        repo, project_dir = git_repo
+
+        # Create a commit so branches are properly initialized
+        test_file = project_dir / "test.py"
+        test_file.write_text("# Test file")
+        commit_all_changes("Initial commit", project_dir)
+
+        # Ensure we have a main branch
+        current_branch = repo.active_branch.name
+        if current_branch == "master":
+            repo.git.branch("-m", "main")
+
+        # Create a feature branch
+        repo.git.checkout("-b", "feature/test")
+
+        # Test that get_parent_branch_name returns 'main'
+        parent_branch = get_parent_branch_name(project_dir)
+        assert parent_branch == "main"
+
+        # Test from main branch itself (should still return 'main')
+        repo.git.checkout("main")
+        parent_branch = get_parent_branch_name(project_dir)
+        assert parent_branch == "main"
+
+    def test_get_parent_branch_name_invalid_repo(self, tmp_path: Path) -> None:
+        """Test get_parent_branch_name returns None for invalid repository."""
+        # Test with non-git directory
+        result = get_parent_branch_name(tmp_path)
+        assert result is None
+
+    def test_get_parent_branch_name_no_main_branch(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
+        """Test get_parent_branch_name returns None when no main/master branch exists."""
+        repo, project_dir = git_repo
+
+        # Create a commit so branches are properly initialized
+        test_file = project_dir / "test.py"
+        test_file.write_text("# Test file")
+        commit_all_changes("Initial commit", project_dir)
+
+        # Rename the main/master branch to something else
+        current_branch = repo.active_branch.name
+        repo.git.branch("-m", "custom-default")
+
+        # Now there's no 'main' or 'master' branch
+        # get_parent_branch_name should return None
+        parent_branch = get_parent_branch_name(project_dir)
+        assert parent_branch is None
