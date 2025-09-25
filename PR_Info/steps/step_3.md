@@ -1,137 +1,74 @@
-# Step 3: Update Git Operations Functions for Project Directory
+# Step 3: Implement get_main_branch_name Function
 
-## Overview
-Modify all functions that perform git operations to accept and use the `project_dir` parameter instead of hardcoded `Path.cwd()`. This includes git status checking, prerequisite validation, and path resolution for git-related operations.
+## Objective
+Implement `get_main_branch_name()` function to detect the main branch following modern Git conventions.
 
 ## WHERE
-- **File**: `workflows/implement.py`
-- **Functions**: `check_git_clean()`, `check_prerequisites()`, `has_implementation_tasks()`, `prepare_task_tracker()`
+- **File**: `src/mcp_coder/utils/git_operations.py`
+- **Location**: Add after `get_current_branch_name()` function
+- **Integration**: Follow same patterns as other functions in module
 
 ## WHAT
-
-### Modified Function Signatures
+### Function Signature  
 ```python
-def check_git_clean(project_dir: Path) -> bool
-def check_prerequisites(project_dir: Path) -> bool  
-def has_implementation_tasks(project_dir: Path) -> bool
-def prepare_task_tracker(project_dir: Path) -> bool
-```
+def get_main_branch_name(project_dir: Path) -> Optional[str]:
+    """
+    Get the name of the main branch (main or master).
 
-### Core Changes
-- Replace all `Path.cwd()` calls with `project_dir` parameter
-- Update git operation calls to use `project_dir` 
-- Fix path resolution for `PR_INFO_DIR` relative to `project_dir`
-- Update task tracker path operations
+    Args:
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        str: Name of main branch ("main" or "master") if found, None otherwise
+        
+    Note:
+        - Checks for "main" first (modern default)
+        - Falls back to "master" (legacy default)  
+        - Returns None if neither exists
+        - Returns None if not a git repository
+    """
+```
 
 ## HOW
-
 ### Integration Points
-- **git_operations**: `is_working_directory_clean(project_dir)`, `get_full_status(project_dir)`
-- **task_tracker**: `get_incomplete_tasks(str(project_dir / PR_INFO_DIR))`
-- **Path operations**: All paths relative to `project_dir` instead of current working directory
-- **Function calls**: Update all callers to pass `project_dir`
+- **Validation**: Use existing `is_git_repository(project_dir)` 
+- **Git Operations**: Use `repo.heads` to check branch existence
+- **Logging**: Follow existing `logger.debug()` pattern
+- **Error Handling**: Return `None` on any error, no exceptions
 
-### Path Resolution Changes
-```python
-# Old approach
-task_tracker_path = Path(PR_INFO_DIR) / "TASK_TRACKER.md"
-steps_dir = Path(PR_INFO_DIR) / "steps"
-
-# New approach  
-task_tracker_path = project_dir / PR_INFO_DIR / "TASK_TRACKER.md"
-steps_dir = project_dir / PR_INFO_DIR / "steps"
+## ALGORITHM  
+### Implementation Pseudocode
 ```
-
-## ALGORITHM
-
-### Function Update Pattern (5-6 steps)
-```pseudocode
-1. Add project_dir: Path parameter to function signature
-2. Replace Path.cwd() calls with project_dir usage
-3. Update all path operations to be relative to project_dir
-4. Update calls to external functions with project_dir parameter
-5. Update function documentation to reflect new parameter
-6. Test path resolution works correctly
-```
-
-### Git Operations Flow
-```pseudocode
-1. check_git_clean(project_dir) -> is_working_directory_clean(project_dir)
-2. check_prerequisites(project_dir) -> validate git_dir = project_dir / ".git"
-3. has_implementation_tasks(project_dir) -> get_incomplete_tasks(project_dir / PR_INFO_DIR)
-4. prepare_task_tracker(project_dir) -> all operations relative to project_dir
+1. Check if project_dir is git repository, return None if not
+2. Create Repo object from project_dir
+3. Check if 'main' branch exists in repo.heads, return "main" if yes
+4. Check if 'master' branch exists in repo.heads, return "master" if yes  
+5. Return None if neither exists
 ```
 
 ## DATA
+### Return Values
+- **Modern repo**: `"main"`
+- **Legacy repo**: `"master"`  
+- **No main branch**: `None`
+- **Invalid repo**: `None`
+- **Any error**: `None`
 
-### Function Parameters
-```python
-# All modified functions receive:
-project_dir: Path  # Absolute path to project root directory
+### Branch Detection Logic
+- Priority: `"main"` > `"master"` > `None`
+- Uses: `repo.heads["branch_name"]` existence check
+- Handles: `KeyError` when branch doesn't exist
+
+## LLM Prompt for Implementation
 ```
+Based on summary.md, step_1.md, and step_2.md, implement Step 3 by adding the get_main_branch_name function to src/mcp_coder/utils/git_operations.py.
 
-### Path Operations
-```python
-# Git repository validation
-git_dir: Path = project_dir / ".git"
+This function should:
+1. Use existing validation and error handling patterns
+2. Check for "main" branch first (modern Git default)  
+3. Fall back to "master" branch (legacy Git default)
+4. Return None if neither exists or any error occurs
+5. Use repo.heads to check branch existence
 
-# Task tracker operations  
-pr_info_dir: str = str(project_dir / PR_INFO_DIR)
-task_tracker_path: Path = project_dir / PR_INFO_DIR / "TASK_TRACKER.md"
-steps_dir: Path = project_dir / PR_INFO_DIR / "steps"
+Follow the same code style and patterns as get_current_branch_name. The function should pass the tests written in Step 1.
 ```
-
-### Return Values (unchanged)
-```python
-check_git_clean() -> bool
-check_prerequisites() -> bool  
-has_implementation_tasks() -> bool
-prepare_task_tracker() -> bool
-```
-
-## Function Call Updates
-
-### Updated call sites in main()
-```python
-def main() -> None:
-    # ... argument parsing ...
-    
-    if not check_git_clean(project_dir):          # Pass project_dir
-        sys.exit(1)
-    
-    if not check_prerequisites(project_dir):      # Pass project_dir
-        sys.exit(1)
-    
-    if not prepare_task_tracker(project_dir):     # Pass project_dir
-        sys.exit(1)
-```
-
-## LLM PROMPT
-
-Please read the **summary.md** file and implement **Step 3** exactly as specified.
-
-**Context**: We've added `--project-dir` parameter parsing (Step 2). Now we need to update git-related functions to use the project directory instead of current working directory.
-
-**Your Task**: Modify these functions in `workflows/implement.py`:
-
-1. **`check_git_clean(project_dir: Path)`** - Update to use `is_working_directory_clean(project_dir)` instead of `Path.cwd()`
-2. **`check_prerequisites(project_dir: Path)`** - Update git directory check to `project_dir / ".git"`
-3. **`has_implementation_tasks(project_dir: Path)`** - Update to use `project_dir / PR_INFO_DIR` for task tracker operations
-4. **`prepare_task_tracker(project_dir: Path)`** - Update all path operations and git calls to use `project_dir`
-5. **Update function calls in `main()`** - Pass `project_dir` to all modified functions
-
-**Specific Requirements**:
-- Add `project_dir: Path` parameter to all four function signatures
-- Replace `Path.cwd()` with `project_dir` throughout these functions
-- Update path operations: `project_dir / PR_INFO_DIR / "TASK_TRACKER.md"`, etc.
-- Update `get_incomplete_tasks()` call to use `str(project_dir / PR_INFO_DIR)`
-- Update `get_full_status()` and `commit_all_changes()` calls to use `project_dir`
-- Update function calls in `main()` to pass the resolved `project_dir`
-
-**Path Resolution Pattern**:
-```python
-# Old: Path(PR_INFO_DIR) / "file"
-# New: project_dir / PR_INFO_DIR / "file"
-```
-
-This step should maintain all existing functionality while making it work with any project directory.

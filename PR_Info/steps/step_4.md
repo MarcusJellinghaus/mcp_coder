@@ -1,159 +1,71 @@
-# Step 4: Update Task Processing and File Operations Functions
+# Step 4: Implement get_parent_branch_name Function  
 
-## Overview
-Modify the remaining functions that handle task processing, file operations, and conversations to accept and use the `project_dir` parameter. This completes the migration from hardcoded current working directory usage.
+## Objective
+Implement `get_parent_branch_name()` function using simple heuristic approach.
 
 ## WHERE
-- **File**: `workflows/implement.py`
-- **Functions**: `get_next_task()`, `save_conversation()`, `run_formatters()`, `process_single_task()`
+- **File**: `src/mcp_coder/utils/git_operations.py`
+- **Location**: Add after `get_main_branch_name()` function  
+- **Integration**: Uses `get_main_branch_name()` internally for consistency
 
 ## WHAT
-
-### Modified Function Signatures
+### Function Signature
 ```python
-def get_next_task(project_dir: Path) -> Optional[str]
-def save_conversation(project_dir: Path, content: str, step_num: int) -> None
-def run_formatters(project_dir: Path) -> bool
-def process_single_task(project_dir: Path) -> bool
-```
+def get_parent_branch_name(project_dir: Path) -> Optional[str]:
+    """
+    Get the name of the parent branch (typically main branch).
 
-### Core Changes
-- Update task tracker operations to use `project_dir`
-- Fix conversation directory path resolution 
-- Update formatter operations to use `project_dir` as root
-- Update all internal function calls to pass `project_dir`
+    Args:
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        str: Name of parent branch if main branch exists, None otherwise
+        
+    Note:
+        - Uses simple heuristic: most branches are created from main  
+        - Returns main branch name ("main" or "master")
+        - Returns None if no main branch found
+        - Returns None if not a git repository
+    """
+```
 
 ## HOW
-
 ### Integration Points
-- **task_tracker**: `get_incomplete_tasks(str(project_dir / PR_INFO_DIR))`
-- **formatters**: `format_code(project_dir, formatters=["black", "isort"])`
-- **Path operations**: Conversation directory relative to `project_dir`
-- **Function calls**: All internal calls must pass `project_dir` parameter
-
-### Path Resolution Updates
-```python
-# Old approach
-conversations_dir = Path(CONVERSATIONS_DIR)
-pr_info_dir = PR_INFO_DIR
-
-# New approach
-conversations_dir = project_dir / CONVERSATIONS_DIR  
-pr_info_dir = str(project_dir / PR_INFO_DIR)
-```
+- **Dependency**: Call `get_main_branch_name(project_dir)` internally
+- **Validation**: Relies on `get_main_branch_name()` for git repo validation
+- **Logging**: Follow existing `logger.debug()` pattern
+- **Error Handling**: Return result from `get_main_branch_name()` directly
 
 ## ALGORITHM
-
-### save_conversation() Update (5-6 steps)
-```pseudocode
-1. Add project_dir parameter to function signature
-2. Update conversations_dir = project_dir / CONVERSATIONS_DIR
-3. Create directory relative to project_dir if needed
-4. Generate filename and full path relative to project_dir
-5. Write conversation content to resolved path
-6. Log the absolute path where conversation was saved
+### Implementation Pseudocode  
 ```
-
-### run_formatters() Update
-```pseudocode
-1. Add project_dir parameter to function signature  
-2. Call format_code(project_dir, formatters=["black", "isort"])
-3. Remove hardcoded Path.cwd() usage
-4. Return success/failure status as before
+1. Call get_main_branch_name(project_dir)
+2. Return the result (main branch name or None)
+3. Log debug message about parent branch detection
+4. No additional error handling needed (delegated)
 ```
 
 ## DATA
+### Return Values
+- **With main branch**: `"main"` or `"master"` (same as main branch)
+- **No main branch**: `None`
+- **Invalid repo**: `None`
+- **Any error**: `None` (via delegation)
 
-### Function Parameters
-```python
-# All modified functions receive:
-project_dir: Path  # Absolute path to project root
+### Heuristic Logic
+- **Assumption**: 90% of branches are created from main/master
+- **Simplicity**: No complex merge-base or git log analysis
+- **Reliability**: Leverages existing main branch detection
 
-# save_conversation() specific:
-content: str       # Conversation content (unchanged)
-step_num: int     # Step number (unchanged)
-# Note: project_dir is now first parameter
+## LLM Prompt for Implementation
 ```
+Based on summary.md, step_1.md, step_2.md, and step_3.md, implement Step 4 by adding the get_parent_branch_name function to src/mcp_coder/utils/git_operations.py.
 
-### Path Operations
-```python
-# Conversation directory
-conversations_dir: Path = project_dir / CONVERSATIONS_DIR
+This function should:
+1. Use the get_main_branch_name() function internally  
+2. Return the main branch name as the parent branch (simple heuristic)
+3. Follow existing logging patterns
+4. Delegate all validation and error handling to get_main_branch_name()
 
-# Task tracker operations
-pr_info_dir: str = str(project_dir / PR_INFO_DIR)
-
-# Formatter root directory
-formatter_root: Path = project_dir
+Keep it extremely simple - just call get_main_branch_name() and return its result. This covers the majority of real-world use cases where feature branches come from main. The function should pass the tests written in Step 1.
 ```
-
-### Return Values (unchanged)
-```python
-get_next_task() -> Optional[str]
-save_conversation() -> None
-run_formatters() -> bool  
-process_single_task() -> bool
-```
-
-## Function Call Chain Updates
-
-### process_single_task() internal calls
-```python
-def process_single_task(project_dir: Path) -> bool:
-    next_task = get_next_task(project_dir)                    # Pass project_dir
-    # ... LLM processing ...
-    save_conversation(project_dir, conversation_content, step_num)  # Pass project_dir
-    run_formatters(project_dir)                               # Pass project_dir
-    # ... other operations ...
-```
-
-### Updated call site in main()
-```python
-def main() -> None:
-    # ... setup ...
-    while True:
-        success = process_single_task(project_dir)            # Pass project_dir
-        if not success:
-            break
-```
-
-## Constants Update
-
-### CONVERSATIONS_DIR path resolution
-```python
-# Update usage from:
-CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
-
-# To be used as:  
-conversations_dir = project_dir / PR_INFO_DIR / ".conversations"
-```
-
-## LLM PROMPT
-
-Please read the **summary.md** file and implement **Step 4** exactly as specified.
-
-**Context**: We've updated argument parsing (Step 2) and git operations (Step 3). Now we need to complete the migration by updating task processing and file operations functions.
-
-**Your Task**: Modify these functions in `workflows/implement.py`:
-
-1. **`get_next_task(project_dir: Path)`** - Update task tracker operations to use `project_dir / PR_INFO_DIR`
-2. **`save_conversation(project_dir: Path, content, step_num)`** - Update conversation directory to `project_dir / CONVERSATIONS_DIR`
-3. **`run_formatters(project_dir: Path)`** - Update to use `format_code(project_dir, ...)` instead of `Path.cwd()`
-4. **`process_single_task(project_dir: Path)`** - Update all internal function calls to pass `project_dir`
-5. **Update function calls in `main()`** - Pass `project_dir` to `process_single_task()`
-
-**Specific Requirements**:
-- Add `project_dir: Path` parameter to all function signatures
-- Update `get_incomplete_tasks()` call: `str(project_dir / PR_INFO_DIR)`
-- Fix conversation directory path: `project_dir / PR_INFO_DIR / ".conversations"`
-- Update `format_code()` call to use `project_dir` as root directory
-- Chain `project_dir` parameter through all function calls
-- Maintain all existing functionality and return types
-
-**Path Resolution Pattern**:
-```python
-# Old: Path(CONVERSATIONS_DIR)
-# New: project_dir / PR_INFO_DIR / ".conversations"
-```
-
-After this step, the workflow should work with any project directory specified via `--project-dir` parameter.
