@@ -901,6 +901,41 @@ def get_main_branch_name(project_dir: Path) -> Optional[str]:
         return None
 
 
+def get_parent_branch_name(project_dir: Path) -> Optional[str]:
+    """
+    Get the name of the parent branch (main or master).
+
+    This is a simple heuristic that returns the main branch as the parent branch.
+    In real-world scenarios, determining the actual parent branch is complex and
+    would require analyzing git history, but this provides a reasonable default.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        Parent branch name as string ("main" or "master"), or None if:
+        - Directory is not a git repository
+        - Neither "main" nor "master" branch exists
+        - Error occurs during branch detection
+
+    Note:
+        Delegates all validation and error handling to get_main_branch_name().
+        Uses existing logging patterns from other functions.
+    """
+    logger.debug("Getting parent branch name for %s", project_dir)
+
+    # Use simple heuristic: call get_main_branch_name() internally
+    # This delegates all validation and error handling
+    main_branch = get_main_branch_name(project_dir)
+
+    if main_branch:
+        logger.debug("Parent branch identified as: %s", main_branch)
+    else:
+        logger.debug("No main branch found, cannot determine parent branch")
+
+    return main_branch
+
+
 def git_push(project_dir: Path) -> dict[str, Any]:
     """
     Push current branch to origin remote.
