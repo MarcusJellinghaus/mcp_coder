@@ -37,7 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Follow existing error handling patterns
   - [x] Use `repo.active_branch.name` for branch detection
 - [x] **Step 2 Quality Checks**: Run pylint, pytest, mypy and fix any issues  
-- [ ] **Step 2 Commit**: Prepare git commit for function implementation
+- [x] **Step 2 Commit**: Prepare git commit for function implementation
 
 ### Step 3: Implement get_main_branch_name Function
 - [ ] **Step 3 Implementation**: Add `get_main_branch_name()` function to `src/mcp_coder/utils/git_operations.py`
