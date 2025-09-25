@@ -28,7 +28,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [ ] **Step 2: Add Project Directory Parameter to Argument Parser** - [step_2.md](./steps/step_2.md)
+- [x] **Step 2: Add Project Directory Parameter to Argument Parser** - [step_2.md](./steps/step_2.md)
   - Implement `--project-dir` argument parsing and path resolution functionality
   - Modify `parse_arguments()` to add `--project-dir` argument
   - Create new `resolve_project_dir()` function for path validation

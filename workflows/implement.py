@@ -376,9 +376,14 @@ Generated on: {datetime.now().isoformat()}
 
 
 def parse_arguments() -> argparse.Namespace:
-    """Parse command line arguments including log level."""
+    """Parse command line arguments including project directory and log level."""
     parser = argparse.ArgumentParser(
         description="Continuous implement workflow script that orchestrates existing mcp-coder functionality."
+    )
+    parser.add_argument(
+        "--project-dir",
+        metavar="PATH",
+        help="Project directory path (default: current directory)"
     )
     parser.add_argument(
         "--log-level",
@@ -389,18 +394,61 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
+    """Convert project directory argument to absolute Path, with validation."""
+    # Use current directory if no argument provided
+    if project_dir_arg is None:
+        project_path = Path.cwd()
+    else:
+        project_path = Path(project_dir_arg)
+    
+    # Resolve to absolute path
+    try:
+        project_path = project_path.resolve()
+    except (OSError, ValueError) as e:
+        logger.error(f"Invalid project directory path: {e}")
+        sys.exit(1)
+    
+    # Validate directory exists
+    if not project_path.exists():
+        logger.error(f"Project directory does not exist: {project_path}")
+        sys.exit(1)
+    
+    # Validate it's a directory
+    if not project_path.is_dir():
+        logger.error(f"Project path is not a directory: {project_path}")
+        sys.exit(1)
+    
+    # Validate directory is accessible
+    try:
+        # Test read access by listing directory
+        list(project_path.iterdir())
+    except PermissionError:
+        logger.error(f"No read access to project directory: {project_path}")
+        sys.exit(1)
+    
+    # Validate directory contains .git subdirectory
+    git_dir = project_path / ".git"
+    if not git_dir.exists():
+        logger.error(f"Project directory is not a git repository: {project_path}")
+        sys.exit(1)
+    
+    return project_path
+
+
 def main() -> None:
     """Main workflow orchestration function - processes all implementation tasks in sequence."""
     # Parse command line arguments
     args = parse_arguments()
+    project_dir = resolve_project_dir(args.project_dir)
     
     # Setup logging early
     setup_logging(args.log_level)
     
     log_step("Starting implement workflow...")
+    log_step(f"Using project directory: {project_dir}")
     
     # Step 1: Check git status and prerequisites
-    project_dir = Path.cwd()
     if not check_git_clean(project_dir):
         sys.exit(1)
     
