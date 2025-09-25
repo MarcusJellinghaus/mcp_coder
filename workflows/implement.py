@@ -100,13 +100,18 @@ def check_prerequisites(project_dir: Path) -> bool:
 
 
 def has_implementation_tasks(project_dir: Path) -> bool:
-    """Check if TASK_TRACKER.md has any implementation tasks using existing task_tracker functions."""
+    """Check if TASK_TRACKER.md has any implementation tasks (complete or incomplete)."""
     try:
-        # Use existing function to get incomplete tasks
+        from mcp_coder.workflow_utils.task_tracker import _read_task_tracker, _find_implementation_section, _parse_task_lines
+        
+        # Use internal functions to check for ANY tasks (complete or incomplete)
         pr_info_dir = str(project_dir / PR_INFO_DIR)
-        incomplete_tasks = get_incomplete_tasks(pr_info_dir)
-        # If we can get tasks, that means the tracker has implementation steps
-        return True
+        content = _read_task_tracker(pr_info_dir)
+        section_content = _find_implementation_section(content)
+        all_tasks = _parse_task_lines(section_content)
+        
+        # Return True if there are any tasks at all (complete or incomplete)
+        return len(all_tasks) > 0
     except Exception:
         # If any exception occurs (file not found, section not found, etc.), 
         # it means there are no proper implementation tasks
