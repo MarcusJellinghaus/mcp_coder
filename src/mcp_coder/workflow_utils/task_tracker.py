@@ -90,23 +90,31 @@ def _find_implementation_section(content: str) -> str:
     """
     lines = content.split("\n")
     in_impl_section = False
+    impl_section_level = 0  # Track the header level of the implementation section
     impl_lines = []
 
     for line in lines:
         # Check for section headers (## or ###)
         if line.strip().startswith(("##", "###")):
+            # Count the number of # characters to determine header level
+            header_level = len(line.strip()) - len(line.strip().lstrip("#"))
             header_text = line.strip().lstrip("#").strip().lower()
 
             # Look for either "implementation steps" or "tasks" sections
             if "implementation steps" in header_text or header_text == "tasks":
                 in_impl_section = True
+                impl_section_level = header_level
                 continue
-            elif "pull request" in header_text and in_impl_section:
-                # Stop parsing when we hit Pull Request section
-                break
             elif in_impl_section:
-                # Hit another section while in impl section - stop parsing
-                break
+                # Stop parsing when we hit Pull Request section
+                if "pull request" in header_text:
+                    break
+                # Stop parsing if we hit a same-level or higher-level section
+                # (lower numbers mean higher level: ## is level 2, ### is level 3)
+                elif header_level <= impl_section_level:
+                    break
+                # Otherwise, this is a subsection within our implementation section
+                # Continue collecting it
 
         # Collect lines if we're in the implementation section
         if in_impl_section:
