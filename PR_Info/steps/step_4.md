@@ -3,6 +3,8 @@
 ## Objective
 Implement `get_parent_branch_name()` function using simple heuristic approach.
 
+**Note**: This is the final implementation step - Steps 5-6 are removed/complete.
+
 ## WHERE
 - **File**: `src/mcp_coder/utils/git_operations.py`
 - **Location**: Add after `get_main_branch_name()` function  
