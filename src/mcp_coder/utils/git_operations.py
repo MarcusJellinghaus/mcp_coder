@@ -6,6 +6,8 @@ from typing import Any, Optional, TypedDict
 
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
+from contextlib import contextmanager
+from typing import Iterator
 
 # Use same logging pattern as existing modules (see file_operations.py)
 logger = logging.getLogger(__name__)
@@ -13,6 +15,54 @@ logger = logging.getLogger(__name__)
 # Constants for git operations
 PLACEHOLDER_HASH = "0" * 7
 GIT_SHORT_HASH_LENGTH = 7
+
+
+def _close_repo_safely(repo: Repo) -> None:
+    """Safely close a GitPython repository to prevent handle leaks on Windows."""
+    try:
+        # Close any active git command processes
+        if hasattr(repo, 'git') and hasattr(repo.git, '_proc') and repo.git._proc:
+            try:
+                if repo.git._proc.poll() is None:  # Process still running
+                    repo.git._proc.terminate()
+                    import time
+                    time.sleep(0.1)
+                    if repo.git._proc.poll() is None:  # Still running, force kill
+                        repo.git._proc.kill()
+            except (OSError, AttributeError):
+                pass  # Ignore errors during process cleanup
+        
+        # Close the repository if it has a close method
+        if hasattr(repo, 'close'):
+            repo.close()
+            
+    except (AttributeError, OSError, Exception) as e:
+        # Log but don't raise - cleanup should be best effort
+        logger.debug("Error during repository cleanup (non-critical): %s", e)
+
+
+@contextmanager
+def _safe_repo_context(project_dir: Path) -> Iterator[Repo]:
+    """Context manager for safely handling GitPython repository objects.
+    
+    Ensures proper cleanup of repository objects to prevent Windows handle issues.
+    
+    Args:
+        project_dir: Path to the git repository directory
+        
+    Yields:
+        Repo: GitPython repository object
+        
+    Raises:
+        InvalidGitRepositoryError: If directory is not a git repository
+    """
+    repo = None
+    try:
+        repo = Repo(project_dir, search_parent_directories=False)
+        yield repo
+    finally:
+        if repo:
+            _close_repo_safely(repo)
 
 
 def _normalize_git_path(path: Path, base_dir: Path) -> str:
@@ -62,9 +112,9 @@ def is_git_repository(project_dir: Path) -> bool:
     logger.debug("Checking if %s is a git repository", project_dir)
 
     try:
-        Repo(project_dir, search_parent_directories=False)
-        logger.debug("Detected as git repository: %s", project_dir)
-        return True
+        with _safe_repo_context(project_dir):
+            logger.debug("Detected as git repository: %s", project_dir)
+            return True
     except InvalidGitRepositoryError:
         logger.debug("Not a git repository: %s", project_dir)
         return False
@@ -88,28 +138,27 @@ def is_file_tracked(file_path: Path, project_dir: Path) -> bool:
         return False
 
     try:
-        repo = Repo(project_dir, search_parent_directories=False)
+        with _safe_repo_context(project_dir) as repo:
+            # Get git-compatible path
+            try:
+                git_path = _normalize_git_path(file_path, project_dir)
+            except ValueError:
+                # File is outside project directory
+                logger.debug(
+                    "File %s is outside project directory %s", file_path, project_dir
+                )
+                return False
 
-        # Get git-compatible path
-        try:
-            git_path = _normalize_git_path(file_path, project_dir)
-        except ValueError:
-            # File is outside project directory
-            logger.debug(
-                "File %s is outside project directory %s", file_path, project_dir
-            )
-            return False
-
-        # Use git ls-files to check if file is tracked
-        # This returns all files that git knows about (staged or committed)
-        try:
-            # Use ls-files with the specific file to avoid loading all files
-            result = repo.git.ls_files(git_path)
-            # If git returns the file path, it's tracked
-            return bool(result and git_path in result)
-        except GitCommandError:
-            # File is not tracked
-            return False
+            # Use git ls-files to check if file is tracked
+            # This returns all files that git knows about (staged or committed)
+            try:
+                # Use ls-files with the specific file to avoid loading all files
+                result = repo.git.ls_files(git_path)
+                # If git returns the file path, it's tracked
+                return bool(result and git_path in result)
+            except GitCommandError:
+                # File is not tracked
+                return False
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error checking if file is tracked: %s", e)
@@ -138,24 +187,23 @@ def git_move(source_path: Path, dest_path: Path, project_dir: Path) -> bool:
         return False
 
     try:
-        repo = Repo(project_dir, search_parent_directories=False)
+        with _safe_repo_context(project_dir) as repo:
+            # Get git-compatible paths
+            try:
+                source_git = _normalize_git_path(source_path, project_dir)
+                dest_git = _normalize_git_path(dest_path, project_dir)
+            except ValueError as e:
+                logger.error("Paths must be within project directory: %s", e)
+                return False
 
-        # Get git-compatible paths
-        try:
-            source_git = _normalize_git_path(source_path, project_dir)
-            dest_git = _normalize_git_path(dest_path, project_dir)
-        except ValueError as e:
-            logger.error("Paths must be within project directory: %s", e)
-            return False
+            # Execute git mv command
+            logger.info("Executing git mv from %s to %s", source_git, dest_git)
+            repo.git.mv(source_git, dest_git)
 
-        # Execute git mv command
-        logger.info("Executing git mv from %s to %s", source_git, dest_git)
-        repo.git.mv(source_git, dest_git)
-
-        logger.info(
-            "Successfully moved file using git from %s to %s", source_git, dest_git
-        )
-        return True
+            logger.info(
+                "Successfully moved file using git from %s to %s", source_git, dest_git
+            )
+            return True
 
     except GitCommandError as e:
         logger.error("Git move failed: %s", e)
@@ -183,17 +231,16 @@ def get_staged_changes(project_dir: Path) -> list[str]:
         return []
 
     try:
-        repo = Repo(project_dir, search_parent_directories=False)
+        with _safe_repo_context(project_dir) as repo:
+            # Use git diff --cached --name-only to get staged files
+            # This shows files that are staged for the next commit
+            staged_files = repo.git.diff("--cached", "--name-only").splitlines()
 
-        # Use git diff --cached --name-only to get staged files
-        # This shows files that are staged for the next commit
-        staged_files = repo.git.diff("--cached", "--name-only").splitlines()
+            # Filter out empty strings and ensure we have clean paths
+            staged_files = [f for f in staged_files if f.strip()]
 
-        # Filter out empty strings and ensure we have clean paths
-        staged_files = [f for f in staged_files if f.strip()]
-
-        logger.debug("Found %d staged files: %s", len(staged_files), staged_files)
-        return staged_files
+            logger.debug("Found %d staged files: %s", len(staged_files), staged_files)
+            return staged_files
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting staged changes: %s", e)
@@ -222,44 +269,43 @@ def get_unstaged_changes(project_dir: Path) -> dict[str, list[str]]:
         return {"modified": [], "untracked": []}
 
     try:
-        repo = Repo(project_dir, search_parent_directories=False)
+        with _safe_repo_context(project_dir) as repo:
+            # Use git status --porcelain to get file status
+            # Format: XY filename where X=index status, Y=working tree status
+            # We want files where Y is not empty (working tree changes)
+            # Use -u to show individual untracked files instead of just directories
+            status_output = repo.git.status("--porcelain", "-u").splitlines()
 
-        # Use git status --porcelain to get file status
-        # Format: XY filename where X=index status, Y=working tree status
-        # We want files where Y is not empty (working tree changes)
-        # Use -u to show individual untracked files instead of just directories
-        status_output = repo.git.status("--porcelain", "-u").splitlines()
+            modified_files = []
+            untracked_files = []
 
-        modified_files = []
-        untracked_files = []
+            for line in status_output:
+                if len(line) < 3:
+                    continue
 
-        for line in status_output:
-            if len(line) < 3:
-                continue
+                # Parse git status format: XY filename
+                index_status = line[0]  # Staged changes
+                working_status = line[1]  # Working tree changes
+                filename = line[3:]  # Skip space and get filename
 
-            # Parse git status format: XY filename
-            index_status = line[0]  # Staged changes
-            working_status = line[1]  # Working tree changes
-            filename = line[3:]  # Skip space and get filename
+                # Skip files that are only staged (no working tree changes)
+                if working_status == " ":
+                    continue
 
-            # Skip files that are only staged (no working tree changes)
-            if working_status == " ":
-                continue
+                # Untracked files have '??' status
+                if line.startswith("??"):
+                    untracked_files.append(filename)
+                else:
+                    # Any other working tree change (M, D, etc.)
+                    modified_files.append(filename)
 
-            # Untracked files have '??' status
-            if line.startswith("??"):
-                untracked_files.append(filename)
-            else:
-                # Any other working tree change (M, D, etc.)
-                modified_files.append(filename)
+            logger.debug(
+                "Found %d modified and %d untracked files",
+                len(modified_files),
+                len(untracked_files),
+            )
 
-        logger.debug(
-            "Found %d modified and %d untracked files",
-            len(modified_files),
-            len(untracked_files),
-        )
-
-        return {"modified": modified_files, "untracked": untracked_files}
+            return {"modified": modified_files, "untracked": untracked_files}
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting unstaged changes: %s", e)
@@ -348,34 +394,33 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
         return True
 
     try:
-        repo = Repo(project_dir, search_parent_directories=False)
+        with _safe_repo_context(project_dir) as repo:
+            # Validate and convert all file paths first
+            relative_paths = []
+            for file_path in files:
+                # Check if file exists
+                if not file_path.exists():
+                    logger.error("File does not exist: %s", file_path)
+                    return False
 
-        # Validate and convert all file paths first
-        relative_paths = []
-        for file_path in files:
-            # Check if file exists
-            if not file_path.exists():
-                logger.error("File does not exist: %s", file_path)
-                return False
+                # Get git-compatible path
+                try:
+                    git_path = _normalize_git_path(file_path, project_dir)
+                    relative_paths.append(git_path)
+                except ValueError:
+                    logger.error(
+                        "File %s is outside project directory %s", file_path, project_dir
+                    )
+                    return False
 
-            # Get git-compatible path
-            try:
-                git_path = _normalize_git_path(file_path, project_dir)
-                relative_paths.append(git_path)
-            except ValueError:
-                logger.error(
-                    "File %s is outside project directory %s", file_path, project_dir
-                )
-                return False
+            # Stage all files at once
+            logger.debug("Staging files: %s", relative_paths)
+            repo.index.add(relative_paths)
 
-        # Stage all files at once
-        logger.debug("Staging files: %s", relative_paths)
-        repo.index.add(relative_paths)
-
-        logger.debug(
-            "Successfully staged %d files: %s", len(relative_paths), relative_paths
-        )
-        return True
+            logger.debug(
+                "Successfully staged %d files: %s", len(relative_paths), relative_paths
+            )
+            return True
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error staging files: %s", e)
@@ -423,22 +468,21 @@ def stage_all_changes(project_dir: Path) -> bool:
 
         # Use git add --all to stage everything including deletions
         # This is more robust than trying to handle individual files
-        repo = Repo(project_dir, search_parent_directories=False)
+        with _safe_repo_context(project_dir) as repo:
+            logger.debug(
+                "Staging %d unstaged files using git add --all: %s",
+                len(all_unstaged_files),
+                all_unstaged_files,
+            )
 
-        logger.debug(
-            "Staging %d unstaged files using git add --all: %s",
-            len(all_unstaged_files),
-            all_unstaged_files,
-        )
+            # Use git add --all to stage all changes (additions, modifications, deletions)
+            repo.git.add("--all")
 
-        # Use git add --all to stage all changes (additions, modifications, deletions)
-        repo.git.add("--all")
+            logger.info(
+                "Successfully staged all %d unstaged changes", len(all_unstaged_files)
+            )
 
-        logger.info(
-            "Successfully staged all %d unstaged changes", len(all_unstaged_files)
-        )
-
-        return True
+            return True
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error staging all changes: %s", e)
@@ -492,19 +536,19 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
             return {"success": False, "commit_hash": None, "error": error_msg}
 
         # Create the commit
-        repo = Repo(project_dir, search_parent_directories=False)
-        commit = repo.index.commit(message.strip())
+        with _safe_repo_context(project_dir) as repo:
+            commit = repo.index.commit(message.strip())
 
-        # Get short commit hash
-        commit_hash = commit.hexsha[:GIT_SHORT_HASH_LENGTH]
+            # Get short commit hash
+            commit_hash = commit.hexsha[:GIT_SHORT_HASH_LENGTH]
 
-        logger.info(
-            "Successfully created commit %s with message: %s",
-            commit_hash,
-            message.strip(),
-        )
+            logger.info(
+                "Successfully created commit %s with message: %s",
+                commit_hash,
+                message.strip(),
+            )
 
-        return {"success": True, "commit_hash": commit_hash, "error": None}
+            return {"success": True, "commit_hash": commit_hash, "error": None}
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         error_msg = f"Git error creating commit: {e}"
@@ -680,35 +724,34 @@ def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
         return None
 
     try:
-        repo = Repo(project_dir, search_parent_directories=False)
-
-        # Simple check for empty repository (KISS approach)
-        has_commits = True
-        try:
-            list(repo.iter_commits(max_count=1))
-        except (GitCommandError, ValueError):
-            has_commits = False
-            logger.debug("Empty repository detected, showing untracked files only")
-
-        # Generate diff sections with individual error handling
-        staged_diff = ""
-        unstaged_diff = ""
-
-        if has_commits:
+        with _safe_repo_context(project_dir) as repo:
+            # Simple check for empty repository (KISS approach)
+            has_commits = True
             try:
-                staged_diff = repo.git.diff("--cached", "--unified=5", "--no-prefix")
-            except GitCommandError as e:
-                logger.warning("Failed to get staged diff: %s", e)
+                list(repo.iter_commits(max_count=1))
+            except (GitCommandError, ValueError):
+                has_commits = False
+                logger.debug("Empty repository detected, showing untracked files only")
 
-            try:
-                unstaged_diff = repo.git.diff("--unified=5", "--no-prefix")
-            except GitCommandError as e:
-                logger.warning("Failed to get unstaged diff: %s", e)
+            # Generate diff sections with individual error handling
+            staged_diff = ""
+            unstaged_diff = ""
 
-        # Always try to get untracked files
-        untracked_diff = _generate_untracked_diff(repo, project_dir)
+            if has_commits:
+                try:
+                    staged_diff = repo.git.diff("--cached", "--unified=5", "--no-prefix")
+                except GitCommandError as e:
+                    logger.warning("Failed to get staged diff: %s", e)
 
-        return _format_diff_sections(staged_diff, unstaged_diff, untracked_diff)
+                try:
+                    unstaged_diff = repo.git.diff("--unified=5", "--no-prefix")
+                except GitCommandError as e:
+                    logger.warning("Failed to get unstaged diff: %s", e)
+
+            # Always try to get untracked files
+            untracked_diff = _generate_untracked_diff(repo, project_dir)
+
+            return _format_diff_sections(staged_diff, unstaged_diff, untracked_diff)
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error generating diff: %s", e)
@@ -783,17 +826,16 @@ def git_push(project_dir: Path) -> dict[str, Any]:
         return {"success": False, "error": error_msg}
 
     try:
-        repo = Repo(project_dir, search_parent_directories=False)
+        with _safe_repo_context(project_dir) as repo:
+            # Get current branch name
+            current_branch = repo.active_branch.name
+            logger.debug("Current branch: %s", current_branch)
 
-        # Get current branch name
-        current_branch = repo.active_branch.name
-        logger.debug("Current branch: %s", current_branch)
+            # Execute git push origin <current_branch>
+            repo.git.push("origin", current_branch)
 
-        # Execute git push origin <current_branch>
-        repo.git.push("origin", current_branch)
-
-        logger.info("Successfully pushed branch '%s' to origin", current_branch)
-        return {"success": True, "error": None}
+            logger.info("Successfully pushed branch '%s' to origin", current_branch)
+            return {"success": True, "error": None}
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         error_msg = f"Git error during push: {e}"
