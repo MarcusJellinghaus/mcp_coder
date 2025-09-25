@@ -739,25 +739,27 @@ def _format_diff_sections(
 def is_working_directory_clean(project_dir: Path) -> bool:
     """
     Check if working directory has no uncommitted changes.
-    
+
     Args:
         project_dir: Path to the project directory containing git repository
-    
+
     Returns:
         True if no staged, modified, or untracked files exist, False otherwise
-    
+
     Raises:
         ValueError: If the directory is not a git repository
-    
+
     Note:
         Uses existing get_full_status() for consistency
     """
     if not is_git_repository(project_dir):
         raise ValueError(f"Directory is not a git repository: {project_dir}")
-    
+
     status = get_full_status(project_dir)
-    total_changes = len(status["staged"]) + len(status["modified"]) + len(status["untracked"])
-    
+    total_changes = (
+        len(status["staged"]) + len(status["modified"]) + len(status["untracked"])
+    )
+
     return total_changes == 0
 
 
