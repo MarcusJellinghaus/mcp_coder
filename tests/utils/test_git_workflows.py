@@ -13,6 +13,7 @@ from mcp_coder.utils.git_operations import (
     get_staged_changes,
     get_unstaged_changes,
     is_git_repository,
+    is_working_directory_clean,
     stage_all_changes,
     stage_specific_files,
 )
@@ -1825,3 +1826,25 @@ class TestGitWorkflows:
             expected_result = {"success": True, "error": None}
             assert expected_result["success"] is True
             assert expected_result["error"] is None
+
+    def test_is_working_directory_clean(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test is_working_directory_clean basic functionality."""
+        repo, project_dir = git_repo
+
+        # Clean repo
+        assert is_working_directory_clean(project_dir) is True
+
+        # Add untracked file
+        (project_dir / "test.py").write_text("# test")
+        assert is_working_directory_clean(project_dir) is False
+
+        # Clean up
+        commit_all_changes("Add test file", project_dir)
+        assert is_working_directory_clean(project_dir) is True
+
+    def test_is_working_directory_clean_non_git_repository(
+        self, tmp_path: Path
+    ) -> None:
+        """Test exception for non-git repository."""
+        with pytest.raises(ValueError, match="Directory is not a git repository"):
+            is_working_directory_clean(tmp_path)

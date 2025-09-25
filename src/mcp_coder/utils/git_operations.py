@@ -372,7 +372,7 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
         logger.debug("Staging files: %s", relative_paths)
         repo.index.add(relative_paths)
 
-        logger.info(
+        logger.debug(
             "Successfully staged %d files: %s", len(relative_paths), relative_paths
         )
         return True
@@ -567,7 +567,7 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
         commit_result = commit_staged_files(message, project_dir)
 
         if commit_result["success"]:
-            logger.info(
+            logger.debug(
                 "Successfully committed all changes with hash %s",
                 commit_result["commit_hash"],
             )
@@ -734,6 +734,33 @@ def _format_diff_sections(
         sections.append(f"=== UNTRACKED FILES ===\n{untracked_diff}")
 
     return "\n\n".join(sections)
+
+
+def is_working_directory_clean(project_dir: Path) -> bool:
+    """
+    Check if working directory has no uncommitted changes.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        True if no staged, modified, or untracked files exist, False otherwise
+
+    Raises:
+        ValueError: If the directory is not a git repository
+
+    Note:
+        Uses existing get_full_status() for consistency
+    """
+    if not is_git_repository(project_dir):
+        raise ValueError(f"Directory is not a git repository: {project_dir}")
+
+    status = get_full_status(project_dir)
+    total_changes = (
+        len(status["staged"]) + len(status["modified"]) + len(status["untracked"])
+    )
+
+    return total_changes == 0
 
 
 def git_push(project_dir: Path) -> dict[str, Any]:

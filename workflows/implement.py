@@ -37,13 +37,14 @@ from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_operations import commit_all_changes, git_push
+from mcp_coder.utils.git_operations import commit_all_changes, git_push, get_full_status, is_working_directory_clean
 from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 # Constants
 PR_INFO_DIR = "pr_info"
 CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
+PROMPTS_FILE_PATH = "mcp_coder/prompts/prompts.md"
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -54,17 +55,42 @@ def log_step(message: str) -> None:
     logger.info(message)
 
 
-def check_prerequisites() -> bool:
+def check_git_clean(project_dir: Path) -> bool:
+    """Check if git working directory is clean."""
+    log_step("Checking git working directory status...")
+    
+    try:
+        is_clean = is_working_directory_clean(project_dir)
+        
+        if not is_clean:
+            logger.error("Git working directory is not clean. Please commit or stash changes before running the workflow.")
+            # Get detailed status for error reporting
+            status = get_full_status(project_dir)
+            for category, files in status.items():
+                if files:
+                    logger.error(f"{category.capitalize()} files: {files}")
+            return False
+        
+        log_step("Git working directory is clean")
+        return True
+    
+    except ValueError as e:
+        logger.error(str(e))
+        return False
+
+
+def check_prerequisites(project_dir: Path) -> bool:
     """Verify dependencies and prerequisites are met."""
     log_step("Checking prerequisites...")
     
     # Check if we're in a git repository
-    if not os.path.exists(".git"):
-        logger.error("Not a git repository")
+    git_dir = project_dir / ".git"
+    if not git_dir.exists():
+        logger.error(f"Not a git repository: {project_dir}")
         return False
     
     # Check if task tracker exists
-    task_tracker_path = Path(PR_INFO_DIR) / "TASK_TRACKER.md"
+    task_tracker_path = project_dir / PR_INFO_DIR / "TASK_TRACKER.md"
     if not task_tracker_path.exists():
         logger.error(f"{task_tracker_path} not found")
         return False
@@ -73,12 +99,97 @@ def check_prerequisites() -> bool:
     return True
 
 
-def get_next_task() -> Optional[str]:
+def has_implementation_tasks(project_dir: Path) -> bool:
+    """Check if TASK_TRACKER.md has any implementation tasks (complete or incomplete)."""
+    try:
+        from mcp_coder.workflow_utils.task_tracker import _read_task_tracker, _find_implementation_section, _parse_task_lines
+        
+        # Use internal functions to check for ANY tasks (complete or incomplete)
+        pr_info_dir = str(project_dir / PR_INFO_DIR)
+        content = _read_task_tracker(pr_info_dir)
+        section_content = _find_implementation_section(content)
+        all_tasks = _parse_task_lines(section_content)
+        
+        # Return True if there are any tasks at all (complete or incomplete)
+        return len(all_tasks) > 0
+    except Exception:
+        # If any exception occurs (file not found, section not found, etc.), 
+        # it means there are no proper implementation tasks
+        return False
+
+
+def prepare_task_tracker(project_dir: Path) -> bool:
+    """Prepare task tracker by populating it if it has no implementation steps."""
+    log_step("Checking if task tracker needs preparation...")
+    
+    # Check if pr_info/steps/ directory exists
+    steps_dir = project_dir / PR_INFO_DIR / "steps"
+    if not steps_dir.exists():
+        logger.error(f"Directory {steps_dir} does not exist. Please create implementation steps first.")
+        return False
+    
+    # Check if task tracker already has implementation tasks
+    if has_implementation_tasks(project_dir):
+        log_step("Task tracker already has implementation tasks. Skipping preparation.")
+        return True
+    
+    log_step("Task tracker has no implementation tasks. Generating tasks from implementation steps...")
+    
+    try:
+        # Get the Task Tracker Update Prompt
+        prompt_template = get_prompt(PROMPTS_FILE_PATH, "Task Tracker Update Prompt")
+        
+        # Call LLM with the prompt
+        response = ask_llm(prompt_template, provider="claude", method="api", timeout=300)
+        
+        if not response or not response.strip():
+            logger.error("LLM returned empty response for task tracker update")
+            return False
+        
+        log_step("LLM response received for task tracker update")
+        
+        # Check what files changed using existing git_operations
+        status = get_full_status(project_dir)
+        
+        # Only staged and modified files should contain TASK_TRACKER.md
+        all_changed = status["staged"] + status["modified"] + status["untracked"]
+        task_tracker_file = f"{PR_INFO_DIR}/TASK_TRACKER.md"
+        
+        # Check if only TASK_TRACKER.md was modified (case-insensitive comparison)
+        if len(all_changed) != 1 or all_changed[0].casefold() != task_tracker_file.casefold():
+            logger.error("Unexpected files were modified during task tracker update:")
+            logger.error(f"  Expected: [{task_tracker_file}]")
+            logger.error(f"  Found: {all_changed}")
+            return False
+        
+        # Verify that task tracker now has implementation steps
+        if not has_implementation_tasks(project_dir):
+            logger.error("Task tracker still has no implementation steps after LLM update")
+            return False
+        
+        # Commit the changes
+        commit_message = "TASK_TRACKER.md with implementation steps and PR tasks updated"
+        commit_result = commit_all_changes(commit_message, project_dir)
+        
+        if not commit_result["success"]:
+            logger.error(f"Error committing task tracker changes: {commit_result['error']}")
+            return False
+        
+        log_step("Task tracker updated and committed successfully")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Error preparing task tracker: {e}")
+        return False
+
+
+def get_next_task(project_dir: Path) -> Optional[str]:
     """Get next incomplete task from task tracker."""
     log_step("Checking for incomplete tasks...")
     
     try:
-        incomplete_tasks = get_incomplete_tasks(PR_INFO_DIR)
+        pr_info_dir = str(project_dir / PR_INFO_DIR)
+        incomplete_tasks = get_incomplete_tasks(pr_info_dir)
         if not incomplete_tasks:
             log_step("No incomplete tasks found")
             return None
@@ -92,12 +203,12 @@ def get_next_task() -> Optional[str]:
         return None
 
 
-def save_conversation(content: str, step_num: int) -> None:
+def save_conversation(project_dir: Path, content: str, step_num: int) -> None:
     """Save conversation content to pr_info/.conversations/step_N.md."""
-    log_step(f"Saving conversation for step {step_num}...")
+    logger.debug(f"Saving conversation for step {step_num}...")
     
     # Create conversations directory if it doesn't exist
-    conversations_dir = Path(CONVERSATIONS_DIR)
+    conversations_dir = project_dir / PR_INFO_DIR / ".conversations"
     conversations_dir.mkdir(parents=True, exist_ok=True)
     
     # Find next available filename for this step
@@ -113,16 +224,15 @@ def save_conversation(content: str, step_num: int) -> None:
     conversation_path = conversations_dir / filename
     conversation_path.write_text(content, encoding="utf-8")
     
-    log_step(f"Conversation saved to {conversation_path}")
+    logger.debug(f"Conversation saved to {conversation_path.absolute()}")
 
 
-def run_formatters() -> bool:
+def run_formatters(project_dir: Path) -> bool:
     """Run code formatters (black, isort) and return success status."""
     log_step("Running code formatters...")
     
     try:
-        project_root = Path.cwd()
-        results = format_code(project_root, formatters=["black", "isort"])
+        results = format_code(project_dir, formatters=["black", "isort"])
         
         # Check if any formatter failed
         for formatter_name, result in results.items():
@@ -139,12 +249,11 @@ def run_formatters() -> bool:
         return False
 
 
-def commit_changes() -> bool:
+def commit_changes(project_dir: Path) -> bool:
     """Commit changes using existing git operations and return success status."""
     log_step("Committing changes...")
     
     try:
-        project_dir = Path.cwd()
         success, commit_message, error = generate_commit_message_with_llm(project_dir)
         
         if not success:
@@ -158,7 +267,10 @@ def commit_changes() -> bool:
             logger.error(f"Error committing changes: {commit_result['error']}")
             return False
         
-        log_step(f"Changes committed successfully: {commit_result['commit_hash']}")
+        # Show commit message first line along with hash
+        commit_lines = commit_message.strip().split("\n")
+        first_line = commit_lines[0].strip() if commit_lines else commit_message.strip()
+        log_step(f"Changes committed successfully: {commit_result['commit_hash']} - {first_line}")
         return True
     
     except Exception as e:
@@ -166,12 +278,11 @@ def commit_changes() -> bool:
         return False
 
 
-def push_changes() -> bool:
+def push_changes(project_dir: Path) -> bool:
     """Push changes to remote repository and return success status."""
     log_step("Pushing changes to remote...")
     
     try:
-        project_dir = Path.cwd()
         push_result = git_push(project_dir)
         
         if not push_result["success"]:
@@ -186,18 +297,18 @@ def push_changes() -> bool:
         return False
 
 
-def process_single_task() -> bool:
+def process_single_task(project_dir: Path) -> bool:
     """Process a single implementation task. Returns True if successful, False if failed."""
     # Get next incomplete task
-    next_task = get_next_task()
+    next_task = get_next_task(project_dir)
     if not next_task:
         log_step("No incomplete tasks found")
         return False
     
     # Step 3: Get implementation prompt template
-    log_step("Loading implementation prompt template...")
+    logger.debug("Loading implementation prompt template...")
     try:
-        prompt_template = get_prompt("mcp_coder/prompts/prompts.md", "Implementation Prompt Template using task tracker")
+        prompt_template = get_prompt(PROMPTS_FILE_PATH, "Implementation Prompt Template using task tracker")
     except Exception as e:
         logger.error(f"Error loading prompt template: {e}")
         return False
@@ -242,22 +353,22 @@ Please implement this task step by step."""
 Generated on: {datetime.now().isoformat()}
 """
         
-        save_conversation(conversation_content, step_num)
+        save_conversation(project_dir, conversation_content, step_num)
     
     except Exception as e:
         logger.error(f"Error saving conversation: {e}")
         return False
     
     # Step 6: Run formatters
-    if not run_formatters():
+    if not run_formatters(project_dir):
         return False
     
     # Step 7: Commit changes
-    if not commit_changes():
+    if not commit_changes(project_dir):
         return False
     
     # Step 8: Push changes to remote
-    if not push_changes():
+    if not push_changes(project_dir):
         return False
     
     log_step(f"Task completed successfully: {next_task}")
@@ -265,9 +376,14 @@ Generated on: {datetime.now().isoformat()}
 
 
 def parse_arguments() -> argparse.Namespace:
-    """Parse command line arguments including log level."""
+    """Parse command line arguments including project directory and log level."""
     parser = argparse.ArgumentParser(
         description="Continuous implement workflow script that orchestrates existing mcp-coder functionality."
+    )
+    parser.add_argument(
+        "--project-dir",
+        metavar="PATH",
+        help="Project directory path (default: current directory)"
     )
     parser.add_argument(
         "--log-level",
@@ -278,24 +394,75 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
+    """Convert project directory argument to absolute Path, with validation."""
+    # Use current directory if no argument provided
+    if project_dir_arg is None:
+        project_path = Path.cwd()
+    else:
+        project_path = Path(project_dir_arg)
+    
+    # Resolve to absolute path
+    try:
+        project_path = project_path.resolve()
+    except (OSError, ValueError) as e:
+        logger.error(f"Invalid project directory path: {e}")
+        sys.exit(1)
+    
+    # Validate directory exists
+    if not project_path.exists():
+        logger.error(f"Project directory does not exist: {project_path}")
+        sys.exit(1)
+    
+    # Validate it's a directory
+    if not project_path.is_dir():
+        logger.error(f"Project path is not a directory: {project_path}")
+        sys.exit(1)
+    
+    # Validate directory is accessible
+    try:
+        # Test read access by listing directory
+        list(project_path.iterdir())
+    except PermissionError:
+        logger.error(f"No read access to project directory: {project_path}")
+        sys.exit(1)
+    
+    # Validate directory contains .git subdirectory
+    git_dir = project_path / ".git"
+    if not git_dir.exists():
+        logger.error(f"Project directory is not a git repository: {project_path}")
+        sys.exit(1)
+    
+    return project_path
+
+
 def main() -> None:
     """Main workflow orchestration function - processes all implementation tasks in sequence."""
     # Parse command line arguments
     args = parse_arguments()
+    project_dir = resolve_project_dir(args.project_dir)
     
     # Setup logging early
     setup_logging(args.log_level)
     
     log_step("Starting implement workflow...")
+    log_step(f"Using project directory: {project_dir}")
     
-    # Step 1: Check prerequisites
-    if not check_prerequisites():
+    # Step 1: Check git status and prerequisites
+    if not check_git_clean(project_dir):
         sys.exit(1)
     
-    # Step 2: Process all incomplete tasks in a loop
+    if not check_prerequisites(project_dir):
+        sys.exit(1)
+    
+    # Step 2: Prepare task tracker if needed
+    if not prepare_task_tracker(project_dir):
+        sys.exit(1)
+    
+    # Step 3: Process all incomplete tasks in a loop
     completed_tasks = 0
     while True:
-        success = process_single_task()
+        success = process_single_task(project_dir)
         if not success:
             # No more tasks or error occurred
             break

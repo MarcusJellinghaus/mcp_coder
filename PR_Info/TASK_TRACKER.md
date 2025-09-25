@@ -23,43 +23,56 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Implementation Steps
 
-- [x] **Step 1: Add Argument Parsing and Basic Logging Setup** - [details](steps/step_1.md)
-  - [x] Implement argument parsing with `--log-level` parameter
-  - [x] Add logging setup using `setup_logging()` utility
-  - [x] Manual verification of argument parsing functionality
-  - [x] Run pylint checks on modified code
-  - [x] Run pytest (manual verification only for workflow)
-  - [x] Run mypy type checking
-  - [x] Prepare git commit for step 1
+- [x] **Step 1: REMOVED - No Testing Required** - [step_1.md](./steps/step_1.md)
+  - This step has been removed - no testing will be implemented for workflows
+  - Quality checks: pylint, pytest, mypy
+  - Git commit preparation
 
-- [x] **Step 2: Replace Print Statements with Structured Logging** - [details](steps/step_2.md)
-  - [x] Replace `print()` statements with `logger.info()` and `logger.error()`
-  - [x] Modify `log_step()` function to use structured logging
-  - [x] Manual verification of logging output
-  - [x] Run pylint checks on modified code
-  - [x] Run pytest (manual verification only for workflow)
-  - [x] Run mypy type checking
-  - [x] Prepare git commit for step 2
+- [x] **Step 2: Add Project Directory Parameter to Argument Parser** - [step_2.md](./steps/step_2.md)
+  - Implement `--project-dir` argument parsing and path resolution functionality
+  - Modify `parse_arguments()` to add `--project-dir` argument
+  - Create new `resolve_project_dir()` function for path validation
+  - Quality checks: pylint, pytest, mypy
+  - Git commit preparation
 
-- [x] **Step 3: Fix Data Files Log Level from Info to Debug** - [details](steps/step_3.md)
-  - [x] Extend tests in `tests/utils/test_data_files.py` for log level verification
-  - [x] Change log level from info to debug in `data_files.py`
-  - [x] Verify data file message only appears at DEBUG level
-  - [x] Run pylint checks on modified code
-  - [x] Run pytest on data files tests
-  - [x] Run mypy type checking
-  - [x] Prepare git commit for step 3
+- [x] **Step 3: Update Git Operations Functions for Project Directory** - [step_3.md](./steps/step_3.md)
+  - Modify git operation functions to accept `project_dir` parameter
+  - Update `check_git_clean()`, `check_prerequisites()`, `has_implementation_tasks()`, `prepare_task_tracker()`
+  - Replace `Path.cwd()` calls with `project_dir` parameter usage
+  - Quality checks: pylint, pytest, mypy
+  - Git commit preparation
+
+- [x] **Step 4: Update Task Processing and File Operations Functions** - [step_4.md](./steps/step_4.md)
+  - Modify remaining functions to accept `project_dir` parameter
+  - Update `get_next_task()`, `save_conversation()`, `run_formatters()`, `process_single_task()`
+  - Fix conversation directory and formatter operations path resolution
+  - Quality checks: pylint, pytest, mypy
+  - Git commit preparation
+
+- [x] **Step 5: Update Git Commit and Push Operations Functions** - [step_5.md](./steps/step_5.md)
+  - Modify git commit and push functions to use `project_dir` parameter
+  - Update `commit_changes()` and `push_changes()` function signatures
+  - Replace hardcoded `Path.cwd()` with `project_dir` in git operations
+  - Quality checks: pylint, pytest, mypy
+  - Git commit preparation
+
+- [x] **Step 6: Update Batch Script** - [step_6.md](./steps/step_6.md)
+  - Update `implement.bat` to use new `--project-dir` parameter
+  - Add `--project-dir .` to Python script call
+  - Maintain existing error handling and pause behavior
+  - Quality checks: pylint, pytest, mypy
+  - Git commit preparation
 
 ### Pull Request
 
-- [ ] **Detailed PR Review**
-  - [ ] Generate comprehensive feature review using `tools/pr_review.bat`
-  - [ ] Address any issues found during review
-  - [ ] Run final quality checks (pylint, pytest, mypy)
-  - [ ] Verify all tests pass and no side effects remain
+- [ ] **PR Review and Quality Checks**
+  - Run comprehensive code review using `tools/pr_review.bat`
+  - Address any issues found during PR review
+  - Ensure all quality checks pass across entire codebase
+  - Quality checks: pylint, pytest, mypy
 
-- [ ] **PR Summary and Cleanup**
-  - [ ] Generate PR summary using `tools/pr_summary.bat`
-  - [ ] Clean up PR_Info folder (remove steps/, clear Tasks section)
-  - [ ] Commit cleanup changes
-  - [ ] Prepare final PR description for external review
+- [ ] **PR Summary and Documentation**
+  - Generate PR summary using `tools/pr_summary.bat`
+  - Update documentation for new `--project-dir` functionality
+  - Clean up PR_Info folder (remove steps/ directory)
+  - Final commit and push

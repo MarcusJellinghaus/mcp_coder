@@ -115,7 +115,7 @@ def _verify_claude_before_use() -> Tuple[bool, Optional[str], Optional[str]]:
         # First try to setup the PATH
         claude_path = setup_claude_path()
         if claude_path:
-            logger.info("Claude CLI found and PATH configured: %s", claude_path)
+            logger.debug("Claude CLI found and PATH configured: %s", claude_path)
         else:
             logger.warning(
                 "setup_claude_path() returned None - Claude not found in standard locations"
@@ -127,7 +127,7 @@ def _verify_claude_before_use() -> Tuple[bool, Optional[str], Optional[str]]:
     # Run detailed verification
     verification_result = verify_claude_installation()
 
-    logger.info("Claude verification result: %s", verification_result)
+    logger.debug("Claude verification result: %s", verification_result)
 
     if verification_result["found"] and verification_result["works"]:
         return True, verification_result["path"], None
@@ -171,7 +171,7 @@ def _retry_with_backoff(
             )
             result = func()
             if attempt > 0:
-                logger.info("Function succeeded on attempt %d", attempt + 1)
+                logger.debug("Function succeeded on attempt %d", attempt + 1)
             return result
         except Exception as e:
             last_exception = e
@@ -219,7 +219,7 @@ def _create_claude_client() -> ClaudeCodeOptions:
         logger.error("Claude verification failed: %s", error_msg)
         raise RuntimeError(f"Claude CLI verification failed: {error_msg}")
 
-    logger.info("Claude CLI verified successfully at: %s", claude_path)
+    logger.debug("Claude CLI verified successfully at: %s", claude_path)
 
     # Use basic configuration - SDK should now find Claude
     return ClaudeCodeOptions()
@@ -383,7 +383,7 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
         # Only retry on specific errors that might be transient
         try:
             result = _retry_with_backoff(execute_request, max_retries=2, base_delay=0.5)
-            logger.info("Claude API request completed successfully")
+            logger.debug("Claude API request completed successfully")
             return str(result)
         except Exception as retry_error:
             # If retries failed, proceed to main error handling

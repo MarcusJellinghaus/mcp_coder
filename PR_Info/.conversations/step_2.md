@@ -1,4 +1,4 @@
-# Implementation Task: Step 2: Replace Print Statements with Structured Logging
+# Implementation Task: Step 2: Add Project Directory Parameter to Argument Parser
 
 ## Prompt Sent to LLM:
 Please look at `pr_info/TASK_TRACKER.md` and pick the next task that should be done.
@@ -15,52 +15,48 @@ Please work only on one task. Do not pick further tasks.
 
 Please also take a look at the tests\readme.md and only run those tests that are required in your context -i.e. avoid slow integration tests.
 
-Current task from TASK_TRACKER.md: Step 2: Replace Print Statements with Structured Logging
+Current task from TASK_TRACKER.md: Step 2: Add Project Directory Parameter to Argument Parser
 
 Please implement this task step by step.
 
 ## LLM Response:
-I'll help you implement Step 2: Replace Print Statements with Structured Logging. Let me first examine the task tracker to understand the requirements.Now let me check the details for Step 2:Now let me examine the current `workflows/implement.py` file to understand the current structure:Now let me create a todo list to track this implementation step:I'm working on **Step 2: Replace Print Statements with Structured Logging** from the TASK_TRACKER.md. Let me start implementing this step by step.Now let me add the logging import and logger setup to the file:Now let me replace the log_step() function to use logger.info():Now I need to find and replace all the print(f"Error: ...") statements with logger.error(). Let me search for all error print statements:Now I'll look for more error print statements that might not follow the exact "Error:" pattern:Now I'll replace all these error print statements with logger.error():Now let me perform manual verification by testing the workflow to ensure the logging output works correctly:Good! Let me test the script with INFO level to see if the logging works properly:Perfect! The logging is working correctly. I can see:
-1. The logging setup message from `log_utils`
-2. The structured logging messages from our `logger.info()` calls with timestamps and module names
-3. The workflow is actually running and processing the task
+I'll examine the task tracker and implement Step 2. Let me start by reading the task details.Let me read the specific details for Step 2:Now I'll set up the todo for this task and examine the current implementation:Now I need to examine the current imports and understand what needs to be added. I can see that `Optional` and `Path` are already imported, so I can proceed with implementation:Now I'll implement the changes according to the specification:Now I'll add the new `resolve_project_dir()` function. I'll add it after the `parse_arguments()` function:Now I'll update the `main()` function to use the resolved project directory:I need to remove the hardcoded `project_dir = Path.cwd()` line since we now have it resolved from the argument parser:Now I'll run the code quality checks to ensure the implementation is correct:Now let me check what tests exist to run the appropriate pytest checks:I'll run just the unit tests since they don't require git operations or Claude integration:Perfect! All code quality checks pass. Now I need to mark Step 2 as complete in the task tracker:## Step 2 Complete ✅
 
-Let me test with DEBUG level to see more verbose output:Let me try a simpler test to see if we can trigger an error message to verify logger.error works:Excellent! The error logging is working correctly too. The error message appears without the "Error:" prefix as intended, showing that `logger.error()` is being used properly.Now let me run the pylint checks as required by the CLAUDE.md instructions:The pylint warnings are about broad exception handling, which were already present in the original code. Since this task is specifically about replacing print statements with logging, and these warnings are not related to our changes, I can proceed with the other checks.Let me check the tests/readme.md file to understand what tests I should run:Since I'm only modifying logging in the implement.py workflow file, and the tests guide suggests running fast unit tests to avoid slow integration tests, let me run the unit tests:Great! The unit tests are passing. Now let me run mypy type checking:Excellent! All checks are passing. Let me mark the final task as completed:Now let me check the TASK_TRACKER.md again to ensure I've completed everything required for Step 2:Perfect! I have successfully completed all the requirements for Step 2:
+I have successfully implemented **Step 2: Add Project Directory Parameter to Argument Parser**. Here's what was accomplished:
 
-✅ **Completed Implementation:**
-1. ✅ Added `import logging` and `logger = logging.getLogger(__name__)`
-2. ✅ Modified `log_step()` function to use `logger.info()` instead of print statements
-3. ✅ Replaced all 14 `print(f"Error: ...")` statements with `logger.error()` calls
-4. ✅ Preserved all function signatures and workflow logic 
-5. ✅ Removed manual timestamp formatting (logging system handles it now)
-6. ✅ Manual verification shows structured logging working correctly
-7. ✅ Pylint checks passed (warnings are pre-existing)
-8. ✅ Pytest unit tests passed (374/374)
-9. ✅ Mypy type checking passed with no errors
+### Implementation Summary:
+1. **Enhanced `parse_arguments()`** - Added `--project-dir` argument with proper help text and metavar
+2. **Created `resolve_project_dir()`** - New function that:
+   - Converts relative paths to absolute paths using `Path.resolve()`
+   - Validates directory exists and is accessible
+   - Ensures it's a git repository (contains `.git`)
+   - Provides clear error messages and graceful exit on validation failures
+3. **Updated `main()`** - Now uses resolved project directory and logs the resolved path
 
-Now let me mark this step as completed in the TASK_TRACKER.md:## Step 2 Implementation Complete! ✅
+### Key Features:
+- **Optional parameter**: `--project-dir` defaults to current directory if not specified
+- **Path validation**: Comprehensive validation with clear error messages
+- **Absolute path conversion**: All relative paths converted to absolute immediately
+- **Git repository validation**: Ensures the directory is a git repository
+- **Error handling**: Graceful exit with `sys.exit(1)` on validation errors
 
-**Task Completed:** Step 2: Replace Print Statements with Structured Logging
+### Quality Assurance:
+- ✅ **Pylint**: No errors or fatal issues
+- ✅ **Mypy**: No type errors  
+- ✅ **Pytest**: 377/433 unit tests pass (excluded integration tests as instructed)
 
-**What was implemented:**
-- ✅ Added `import logging` and logger setup
-- ✅ Modified `log_step()` function to use `logger.info()` instead of print
-- ✅ Replaced all 14 error print statements with `logger.error()` calls
-- ✅ Preserved all function signatures and workflow behavior
-- ✅ All code quality checks passed (pylint, pytest, mypy)
-
-**Commit message suggestion:**
+### Commit Message:
 ```
-feat(workflows): replace print statements with structured logging
+feat: add --project-dir argument parsing and path resolution
 
-- Add logging import and logger setup in workflows/implement.py
-- Replace log_step() function to use logger.info() instead of print()
-- Replace all print(f"Error: ...") statements with logger.error() calls
-- Remove manual timestamp formatting (handled by logging system)
-- All function signatures and workflow logic preserved
+- Add --project-dir optional argument to parse_arguments()
+- Create resolve_project_dir() function for path validation
+- Update main() to use resolved project directory with logging
+- Validate directory exists, is accessible, and contains .git
+- Convert relative paths to absolute paths immediately
 ```
 
-The structured logging now provides proper timestamps and module names, making the workflow output more professional and consistent with the rest of the codebase. The workflow maintains identical behavior while using the established logging infrastructure.
+The implementation focuses purely on argument parsing and path resolution as specified, without modifying other functions yet. Step 2 is now complete and ready for the next implementation step.
 
 ---
-Generated on: 2025-09-25T01:08:19.332855
+Generated on: 2025-09-25T20:11:51.316021

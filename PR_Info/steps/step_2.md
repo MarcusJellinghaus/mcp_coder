@@ -1,101 +1,137 @@
-# Step 2: Replace Print Statements with Structured Logging
+# Step 2: Add Project Directory Parameter to Argument Parser
 
-## Objective
-Replace all `print()` statements in `workflows/implement.py` with proper logging calls while maintaining the same visual output format and behavior.
+## Overview
+Implement the `--project-dir` argument parsing and path resolution functionality in `workflows/implement.py`. This step focuses on the argument parsing and path resolution core functionality.
 
 ## WHERE
 - **File**: `workflows/implement.py`
-- **Functions to Modify**: `log_step()`, `check_prerequisites()`, `get_next_task()`, `save_conversation()`, `run_formatters()`, `commit_changes()`, `push_changes()`, `process_single_task()`
+- **Functions**: `parse_arguments()`, `resolve_project_dir()` (new function)
 
 ## WHAT
-### Main Functions with Signatures
+
+### Modified Function
 ```python
-def log_step(message: str) -> None:
-    """Log step with structured logging instead of print."""  # Modified internal implementation
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments including project directory and log level."""
     
-# All other function signatures remain UNCHANGED
+def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
+    """Convert project directory argument to absolute Path, with validation."""
 ```
 
-### Manual Verification
-- Run workflow and verify same visual output with timestamps
-- Run `python workflows/implement.py --log-level DEBUG` for detailed output
-- Test error scenarios to ensure logger.error calls work correctly
+### Function Signatures
+```python
+# Enhanced argument parser
+parse_arguments() -> argparse.Namespace  # Now includes project_dir field
+
+# New path resolution function  
+resolve_project_dir(project_dir_arg: Optional[str]) -> Path
+```
 
 ## HOW
-### Integration Points
-- **Import**: `import logging`
-- **Add**: `logger = logging.getLogger(__name__)` after imports
-- **Modify**: Internal implementation of `log_step()` function only
-- **Replace**: All `print(f"Error: ...")` → `logger.error(...)`
 
-### Logging Level Mapping
-- Error messages → `logger.error()`
-- Progress/status messages → `logger.info()` 
-- The `log_step()` function → `logger.info()` internally
+### Integration Points
+- **argparse**: Add `--project-dir` argument to existing parser
+- **pathlib**: Use `Path.resolve()` for absolute path conversion
+- **os.path**: Validate directory existence and permissions
+- **sys.exit()**: Handle fatal errors (invalid directories)
+
+### Imports (add these)
+```python
+from typing import Optional  # Already imported
+from pathlib import Path    # Already imported  
+import os                   # Already imported
+```
 
 ## ALGORITHM
+
+### Argument Parsing (5-6 steps)
+```pseudocode
+1. Create ArgumentParser with existing log_level argument
+2. Add --project-dir argument with help text and metavar
+3. Parse arguments and return namespace
+4. In main(), call resolve_project_dir() with parsed argument
+5. Use resolved path for all subsequent operations
+6. Handle validation errors with clear error messages
 ```
-1. Add logger = logging.getLogger(__name__) after imports
-2. Replace log_step() print() with logger.info(message)
-3. Find all print(f"Error: ...") statements
-4. Replace with logger.error(...) calls
-5. Remove timestamp formatting from log_step (handled by logging system)
-6. Preserve all message content and logic flow
+
+### Path Resolution Algorithm  
+```pseudocode
+1. If project_dir_arg is None, use Path.cwd()
+2. Create Path object from project_dir_arg
+3. Resolve to absolute path using Path.resolve()
+4. Validate directory exists and is accessible
+5. Validate directory contains .git subdirectory
+6. Return validated absolute Path object
 ```
 
 ## DATA
-### Modified Functions Internal Changes
+
+### Input Parameters
 ```python
-# Before
-def log_step(message: str) -> None:
-    timestamp = datetime.now().strftime("%H:%M:%S")
-    print(f"[{timestamp}] {message}")
+# parse_arguments() input: command line args
+# --project-dir "." | --project-dir "/abs/path" | --project-dir "rel/path" | (none)
 
-# After  
-def log_step(message: str) -> None:
-    logger.info(message)
+# resolve_project_dir() input
+project_dir_arg: Optional[str] = None | "." | "relative/path" | "/absolute/path"
 ```
 
-### Print Statement Replacements
+### Return Values
 ```python
-# Error cases: print(f"Error: ...") → logger.error("...")
-# No return value changes - all functions maintain existing signatures
+# parse_arguments() returns
+args: argparse.Namespace {
+    project_dir: Optional[str],  # Raw argument value
+    log_level: str              # Existing field
+}
+
+# resolve_project_dir() returns
+project_dir: Path  # Always absolute, validated path
 ```
 
-## LLM Prompt for Implementation
-
-```
-Based on the summary in pr_info/steps/summary.md, implement Step 2: Replace print statements with structured logging in workflows/implement.py.
-
-REQUIREMENTS:
-1. Add logger = logging.getLogger(__name__) after imports
-2. Modify log_step() function to use logger.info() instead of print()
-3. Replace all print(f"Error: ...") with logger.error(...) 
-4. Keep ALL function signatures unchanged
-5. Preserve exact message content and workflow logic
-6. Use standard logging format (let logging system handle timestamps)
-
-DELIVERABLES:
-- Modify log_step() internal implementation only
-- Replace error print statements with logger.error calls
-- Ensure workflow behavior is identical except for logging mechanism
-- Manual verification of logging output
-
-CONSTRAINTS:
-- Do NOT change any function signatures except internal implementation
-- Do NOT modify workflow logic, error handling, or control flow
-- Do NOT change message content - only the output mechanism
-- Remove timestamp formatting from log_step (logging system handles it)
-
-VERIFICATION:
-- All existing functionality works identically
-- Log messages appear with proper timestamps via logging system
-- Error messages still appear and stop workflow appropriately
+### Error Handling
+```python
+# Possible exceptions to handle
+FileNotFoundError   # Directory doesn't exist
+PermissionError     # No read access  
+ValueError          # Invalid path format
 ```
 
-## Verification Steps
-1. Run `python workflows/implement.py` and verify similar visual output with proper timestamps
-2. Run `python workflows/implement.py --log-level DEBUG` and see additional details
-3. Test error scenarios still work (missing files, git issues, etc.)
-4. Verify workflow completes successfully with structured logging
-5. Compare output format with previous version (should have standard logging timestamps)
+## Integration with main()
+
+### Updated main() function structure
+```python
+def main() -> None:
+    args = parse_arguments()
+    project_dir = resolve_project_dir(args.project_dir)  # New line
+    
+    setup_logging(args.log_level)
+    # All subsequent function calls pass project_dir parameter
+```
+
+## LLM PROMPT
+
+Please read the **summary.md** file and implement **Step 2** exactly as specified.
+
+**Context**: We're adding `--project-dir` parameter support to eliminate hardcoded `Path.cwd()` usage.
+
+**Your Task**: Modify `workflows/implement.py` to add:
+
+1. **Enhanced `parse_arguments()` function** - Add `--project-dir` argument that accepts optional path string
+2. **New `resolve_project_dir()` function** - Convert project directory argument to absolute Path with validation
+3. **Updated `main()` function** - Use resolved project directory and log it once after resolution
+
+**Specific Requirements**:
+- `--project-dir` argument should be optional, accept relative/absolute paths
+- `resolve_project_dir()` should convert relative paths to absolute paths  
+- Validate directory exists and is a git repository (contains .git)
+- Provide clear error messages for invalid directories
+- Default behavior (no `--project-dir`) should use current working directory
+- Convert to absolute path immediately and log the resolved project directory in main()
+- Don't modify other functions yet - just the argument parsing and path resolution
+
+**Implementation Details**:
+- Use `Path.resolve()` for absolute path conversion
+- Use `argparse` with clear help text and metavar
+- Handle `FileNotFoundError`, `PermissionError`, and invalid paths
+- Exit gracefully with `sys.exit(1)` on validation errors
+
+This step focuses purely on argument parsing and path resolution functionality.

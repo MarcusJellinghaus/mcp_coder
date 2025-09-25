@@ -1,65 +1,107 @@
-# Implementation Summary: Add Log Level Support to Implement Workflow
+# Project Directory Parameter Support for Implement Workflow
 
 ## Overview
-Add `--log-level` parameter support to `workflows/implement.py` and replace print statements with structured logging to provide better debugging capabilities and consistent output formatting.
+
+Add `--project-dir` parameter support to the implement workflow script (`workflows/implement.py`) to allow execution from any location while operating on a specified project directory. This replaces hardcoded current working directory (`Path.cwd()`) usage with configurable project directory support.
 
 ## Architectural Changes
 
+### Current Architecture Issues
+- **Hard-coded CWD dependency**: All operations assume script runs from project root
+- **Fixed path assumptions**: Uses `Path.cwd()` for git operations, formatters, and file paths
+- **Location-bound execution**: Cannot run workflow from outside project directory
+- **Batch file limitation**: `implement.bat` doesn't support project directory specification
+
+### New Architecture Design
+- **Configurable project root**: Accept `--project-dir` parameter (relative or absolute paths)
+- **Path resolution**: Convert relative paths to absolute paths for consistency
+- **Function parameter threading**: Pass `project_dir` through all function calls
+- **Batch script enhancement**: Update `implement.bat` to use current directory as default
+
 ### Design Principles Applied
-- **KISS Principle**: Minimal changes to existing code structure
-- **Single Responsibility**: Each function maintains its current purpose
-- **Dependency Injection**: Logging configuration injected at startup
-
-### Core Changes
-1. **Argument Parsing**: Add CLI parameter parsing using `argparse`
-2. **Logging Integration**: Replace print statements with structured logging
-3. **Log Level Configuration**: Allow runtime log level control
-4. **Output Standardization**: Consistent timestamp and format across all messages
-
-### Integration Points
-- Leverage existing `mcp_coder.utils.log_utils.setup_logging()`
-- Maintain compatibility with existing workflow functions
-- Preserve all current error handling and control flow
+- **KISS Principle**: Minimal changes - only add required parameter passing
+- **Consistency**: All functions receive same `project_dir: Path` parameter
+- **Backward compatibility**: Default behavior unchanged when no parameter provided
+- **Fail-fast**: Early validation of project directory existence and git repository status
 
 ## Files to be Modified
 
-### New Files
-- `pr_info/steps/summary.md` (this file)
-- `pr_info/steps/step_1.md` - Test and implement argument parsing
-- `pr_info/steps/step_2.md` - Test and implement logging integration
-- `pr_info/steps/step_3.md` - Test and fix data_files.py log level
+### Primary Files
+1. **`workflows/implement.py`** - Main workflow script
+   - Add `--project-dir` argument parsing
+   - Update all functions to accept `project_dir` parameter as first parameter
+   - Replace `Path.cwd()` calls with `project_dir` usage
+   - Update path operations for `PR_INFO_DIR` and `CONVERSATIONS_DIR`
+   - Log resolved project directory once in main()
 
-### Modified Files
-- `workflows/implement.py` - Add argument parsing and replace print statements
-- `src/mcp_coder/utils/data_files.py` - Change one log level from info to debug
+2. **`workflows/implement.bat`** - Batch script wrapper
+   - Add `--project-dir .` parameter to Python script call
 
-### Test Files (TDD)
-- `tests/utils/test_data_files.py` - Extended tests for log level changes (core utility only)
-- `workflows/implement.py` - Manual verification only (no unit tests for workflow script)
+## Key Functions Modified
 
-## Technical Approach
+### Function Signature Changes
+All these functions will receive a new `project_dir: Path` parameter as the **first parameter**:
 
-### Logging Strategy
-- Use existing `logging` module with `setup_logging()` from utils
-- Replace `print()` calls with `logger.info()`, `logger.error()` etc.
-- Use standard logging format (timestamps handled by logging system)
-- Default log level: INFO (maintains current visibility)
-- Invalid log levels handled automatically by argparse
+```python
+def check_git_clean(project_dir: Path) -> bool
+def check_prerequisites(project_dir: Path) -> bool  
+def has_implementation_tasks(project_dir: Path) -> bool
+def prepare_task_tracker(project_dir: Path) -> bool
+def get_next_task(project_dir: Path) -> Optional[str]
+def save_conversation(project_dir: Path, content: str, step_num: int) -> None
+def run_formatters(project_dir: Path) -> bool
+def commit_changes(project_dir: Path) -> bool
+def push_changes(project_dir: Path) -> bool
+def process_single_task(project_dir: Path) -> bool
+```
 
-### Backward Compatibility
-- All existing function signatures remain unchanged
-- Current workflow behavior preserved
-- Error handling logic untouched
-- `log_step()` function interface maintained (internal implementation only)
+### New Functions
+```python
+def resolve_project_dir(project_dir_arg: Optional[str]) -> Path
+def parse_arguments() -> argparse.Namespace  # Modified to include --project-dir
+```
 
-## Expected Benefits
-1. **Debugging**: `--log-level DEBUG` reveals detailed data file search process
-2. **Consistency**: All output through logging system with timestamps
-3. **Flexibility**: Runtime control of verbosity level
-4. **Maintainability**: Structured logging easier to modify and extend
+## Data Structures
 
-## Risk Assessment
-- **Low Risk**: Changes are additive and non-breaking
-- **Minimal Surface Area**: Only touching output formatting, not business logic
-- **Easy Rollback**: Changes can be easily reverted if issues arise
-- **Simplified Testing**: Manual verification for workflow, unit tests only for core utilities
+### Argument Parsing Structure
+```python
+# New argument structure
+args = {
+    'project_dir': Optional[str],  # e.g., ".", "/path/to/project", "relative/path"  
+    'log_level': str              # existing
+}
+```
+
+### Path Resolution
+```python
+# Resolved project directory
+project_dir: Path  # Always absolute path, e.g., Path("/full/path/to/project")
+```
+
+## Integration Points
+
+### Existing Dependencies
+- **Git operations**: `is_working_directory_clean()`, `get_full_status()`, `commit_all_changes()`, `git_push()`
+- **Task tracker**: `get_incomplete_tasks()` 
+- **Formatters**: `format_code()`
+- **LLM interface**: `ask_llm()`, `get_prompt()`
+
+### Modified Integration
+- All git operations will receive `project_dir` instead of `Path.cwd()`
+- Task tracker operations will use `str(project_dir / PR_INFO_DIR)` 
+- Formatter operations will receive `project_dir` as root
+- File operations will be relative to `project_dir`
+
+## Benefits
+
+### Operational Benefits
+- **Location independence**: Run workflow from any directory
+- **Multi-project support**: Switch between projects without navigation
+- **Automation friendly**: Easier integration with build systems and IDEs
+- **Testing improvement**: Run tests with temporary project directories
+
+### Development Benefits  
+- **Clean separation**: Project operations isolated from execution location
+- **Better testability**: Mock project directories in unit tests
+- **Consistent behavior**: Same results regardless of execution location
+- **Error reduction**: Eliminate "wrong directory" execution errors

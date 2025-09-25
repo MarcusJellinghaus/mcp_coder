@@ -1,114 +1,137 @@
-# Step 3: Fix Data Files Log Level from Info to Debug
+# Step 3: Update Git Operations Functions for Project Directory
 
-## Objective
-Change the specific log message "Found data file in installed package (via importlib)" from `info` to `debug` level in `data_files.py` so it only appears when `--log-level DEBUG` is used.
+## Overview
+Modify all functions that perform git operations to accept and use the `project_dir` parameter instead of hardcoded `Path.cwd()`. This includes git status checking, prerequisite validation, and path resolution for git-related operations.
 
 ## WHERE
-- **File**: `src/mcp_coder/utils/data_files.py`
-- **Function**: `find_data_file()` - Method 2/5 success case
-- **Line**: Around line 150-160 (the `structured_logger.info()` call)
-- **Test File**: `tests/utils/test_data_files.py` (extend existing)
+- **File**: `workflows/implement.py`
+- **Functions**: `check_git_clean()`, `check_prerequisites()`, `has_implementation_tasks()`, `prepare_task_tracker()`
 
 ## WHAT
-### Main Functions with Signatures
+
+### Modified Function Signatures
 ```python
-# NO function signature changes
-# ONLY internal logging level change in existing find_data_file() function
+def check_git_clean(project_dir: Path) -> bool
+def check_prerequisites(project_dir: Path) -> bool  
+def has_implementation_tasks(project_dir: Path) -> bool
+def prepare_task_tracker(project_dir: Path) -> bool
 ```
 
-### Test Functions
-```python
-def test_data_file_found_logs_debug_not_info():
-    """Test that successful data file discovery logs at debug level."""
-    
-def test_data_file_logging_with_info_level():
-    """Test that data file messages don't appear at INFO level."""
-    
-def test_data_file_logging_with_debug_level():
-    """Test that data file messages appear at DEBUG level."""
-```
+### Core Changes
+- Replace all `Path.cwd()` calls with `project_dir` parameter
+- Update git operation calls to use `project_dir` 
+- Fix path resolution for `PR_INFO_DIR` relative to `project_dir`
+- Update task tracker path operations
 
 ## HOW
+
 ### Integration Points
-- **Modify**: ONE line in `data_files.py` 
-- **Change**: `structured_logger.info(` → `structured_logger.debug(`
-- **Location**: Method 2/5 success case in `find_data_file()` function
-- **Specific Message**: "Found data file in installed package (via importlib)"
+- **git_operations**: `is_working_directory_clean(project_dir)`, `get_full_status(project_dir)`
+- **task_tracker**: `get_incomplete_tasks(str(project_dir / PR_INFO_DIR))`
+- **Path operations**: All paths relative to `project_dir` instead of current working directory
+- **Function calls**: Update all callers to pass `project_dir`
 
-### Exact Change Required
+### Path Resolution Changes
 ```python
-# Before (around line 150-160)
-structured_logger.info(
-    "Found data file in installed package (via importlib)",
-    method="importlib_spec", 
-    path=str(installed_file_absolute),
-)
+# Old approach
+task_tracker_path = Path(PR_INFO_DIR) / "TASK_TRACKER.md"
+steps_dir = Path(PR_INFO_DIR) / "steps"
 
-# After
-structured_logger.debug(
-    "Found data file in installed package (via importlib)",
-    method="importlib_spec",
-    path=str(installed_file_absolute), 
-)
+# New approach  
+task_tracker_path = project_dir / PR_INFO_DIR / "TASK_TRACKER.md"
+steps_dir = project_dir / PR_INFO_DIR / "steps"
 ```
 
 ## ALGORITHM
+
+### Function Update Pattern (5-6 steps)
+```pseudocode
+1. Add project_dir: Path parameter to function signature
+2. Replace Path.cwd() calls with project_dir usage
+3. Update all path operations to be relative to project_dir
+4. Update calls to external functions with project_dir parameter
+5. Update function documentation to reflect new parameter
+6. Test path resolution works correctly
 ```
-1. Locate find_data_file() function in data_files.py
-2. Find "METHOD 2/5" section (importlib search)
-3. Find the success case with "Found data file in installed package (via importlib)"
-4. Change structured_logger.info( to structured_logger.debug(
-5. Verify no other changes needed
+
+### Git Operations Flow
+```pseudocode
+1. check_git_clean(project_dir) -> is_working_directory_clean(project_dir)
+2. check_prerequisites(project_dir) -> validate git_dir = project_dir / ".git"
+3. has_implementation_tasks(project_dir) -> get_incomplete_tasks(project_dir / PR_INFO_DIR)
+4. prepare_task_tracker(project_dir) -> all operations relative to project_dir
 ```
 
 ## DATA
-### Modified Log Entry
+
+### Function Parameters
 ```python
-# Log level change only - all other data unchanged
-# Message: "Found data file in installed package (via importlib)"
-# Level: info → debug
-# Context data: method, path (unchanged)
+# All modified functions receive:
+project_dir: Path  # Absolute path to project root directory
 ```
 
-### Impact on Workflow Output
-- **INFO level**: Message will not appear (cleaner output)
-- **DEBUG level**: Message will appear (detailed debugging)
-- **All other functionality**: Completely unchanged
+### Path Operations
+```python
+# Git repository validation
+git_dir: Path = project_dir / ".git"
 
-## LLM Prompt for Implementation
-
-```
-Based on the summary in pr_info/steps/summary.md, implement Step 3: Fix data files log level in src/mcp_coder/utils/data_files.py.
-
-REQUIREMENTS:
-1. Follow TDD - extend tests/utils/test_data_files.py with log level tests (NOTE: This is the only step with tests since data_files.py is core utility code)
-2. Find the EXACT line with "Found data file in installed package (via importlib)" message
-3. Change structured_logger.info( to structured_logger.debug( for this ONE line only
-4. Do NOT modify any other logging statements
-5. Do NOT change any function logic or return values
-
-DELIVERABLES:
-- Add 3 new test functions to tests/utils/test_data_files.py
-- Change ONE log level in data_files.py from info to debug
-- Verify the specific message only appears at DEBUG level
-
-CONSTRAINTS:
-- Change ONLY the log level of this specific message
-- Do NOT modify any other parts of data_files.py
-- Do NOT change the message text or context data
-- Ensure all existing functionality works identically
-
-VERIFICATION TARGET:
-When running workflows/implement.py:
-- Default (INFO): Should NOT show "Found data file in installed package (via importlib)"
-- --log-level DEBUG: Should show the message with full debugging details
-
-The goal is to match the example output provided where this message only appears in debug mode.
+# Task tracker operations  
+pr_info_dir: str = str(project_dir / PR_INFO_DIR)
+task_tracker_path: Path = project_dir / PR_INFO_DIR / "TASK_TRACKER.md"
+steps_dir: Path = project_dir / PR_INFO_DIR / "steps"
 ```
 
-## Verification Steps  
-1. Run `python workflows/implement.py` (INFO level) - should NOT see the data file message
-2. Run `python workflows/implement.py --log-level DEBUG` - should see the data file message
-3. Run tests: `pytest tests/utils/test_data_files.py::test_data_file_found_logs_debug_not_info -v`
-4. Verify workflow still functions normally and finds data files correctly
-5. Compare output to expected example in original requirements
+### Return Values (unchanged)
+```python
+check_git_clean() -> bool
+check_prerequisites() -> bool  
+has_implementation_tasks() -> bool
+prepare_task_tracker() -> bool
+```
+
+## Function Call Updates
+
+### Updated call sites in main()
+```python
+def main() -> None:
+    # ... argument parsing ...
+    
+    if not check_git_clean(project_dir):          # Pass project_dir
+        sys.exit(1)
+    
+    if not check_prerequisites(project_dir):      # Pass project_dir
+        sys.exit(1)
+    
+    if not prepare_task_tracker(project_dir):     # Pass project_dir
+        sys.exit(1)
+```
+
+## LLM PROMPT
+
+Please read the **summary.md** file and implement **Step 3** exactly as specified.
+
+**Context**: We've added `--project-dir` parameter parsing (Step 2). Now we need to update git-related functions to use the project directory instead of current working directory.
+
+**Your Task**: Modify these functions in `workflows/implement.py`:
+
+1. **`check_git_clean(project_dir: Path)`** - Update to use `is_working_directory_clean(project_dir)` instead of `Path.cwd()`
+2. **`check_prerequisites(project_dir: Path)`** - Update git directory check to `project_dir / ".git"`
+3. **`has_implementation_tasks(project_dir: Path)`** - Update to use `project_dir / PR_INFO_DIR` for task tracker operations
+4. **`prepare_task_tracker(project_dir: Path)`** - Update all path operations and git calls to use `project_dir`
+5. **Update function calls in `main()`** - Pass `project_dir` to all modified functions
+
+**Specific Requirements**:
+- Add `project_dir: Path` parameter to all four function signatures
+- Replace `Path.cwd()` with `project_dir` throughout these functions
+- Update path operations: `project_dir / PR_INFO_DIR / "TASK_TRACKER.md"`, etc.
+- Update `get_incomplete_tasks()` call to use `str(project_dir / PR_INFO_DIR)`
+- Update `get_full_status()` and `commit_all_changes()` calls to use `project_dir`
+- Update function calls in `main()` to pass the resolved `project_dir`
+
+**Path Resolution Pattern**:
+```python
+# Old: Path(PR_INFO_DIR) / "file"
+# New: project_dir / PR_INFO_DIR / "file"
+```
+
+This step should maintain all existing functionality while making it work with any project directory.
