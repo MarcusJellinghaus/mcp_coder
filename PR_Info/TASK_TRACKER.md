@@ -40,12 +40,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] **Step 2 Commit**: Prepare git commit for function implementation
 
 ### Step 3: Implement get_main_branch_name Function
-- [ ] **Step 3 Implementation**: Add `get_main_branch_name()` function to `src/mcp_coder/utils/git_operations.py`
-  - [ ] Check for "main" branch first (modern Git default)
-  - [ ] Fall back to "master" branch (legacy Git default)
-  - [ ] Use `repo.heads` for branch existence checking
-  - [ ] Follow existing validation and error handling patterns
-- [ ] **Step 3 Quality Checks**: Run pylint, pytest, mypy and fix any issues
+- [x] **Step 3 Implementation**: Add `get_main_branch_name()` function to `src/mcp_coder/utils/git_operations.py`
+  - [x] Check for "main" branch first (modern Git default)
+  - [x] Fall back to "master" branch (legacy Git default)
+  - [x] Use `repo.heads` for branch existence checking
+  - [x] Follow existing validation and error handling patterns
+- [x] **Step 3 Quality Checks**: Run pylint, pytest, mypy and fix any issues
 - [ ] **Step 3 Commit**: Prepare git commit for function implementation
 
 ### Step 4: Implement get_parent_branch_name Function  

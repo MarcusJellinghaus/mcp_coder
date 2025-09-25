@@ -853,6 +853,54 @@ def get_current_branch_name(project_dir: Path) -> Optional[str]:
         return None
 
 
+def get_main_branch_name(project_dir: Path) -> Optional[str]:
+    """
+    Get the name of the main branch (main or master).
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        Main branch name as string ("main" or "master"), or None if:
+        - Directory is not a git repository
+        - Neither "main" nor "master" branch exists
+        - Error occurs during branch detection
+
+    Note:
+        Checks for "main" branch first (modern Git default), then falls back
+        to "master" branch (legacy Git default). Uses existing validation
+        and error handling patterns from other functions.
+    """
+    logger.debug("Getting main branch name for %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return None
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Check for "main" branch first (modern Git default)
+            if "main" in [head.name for head in repo.heads]:
+                logger.debug("Found main branch: main")
+                return "main"
+
+            # Fall back to "master" branch (legacy Git default)
+            if "master" in [head.name for head in repo.heads]:
+                logger.debug("Found main branch: master")
+                return "master"
+
+            # Neither main nor master branch found
+            logger.debug("Neither main nor master branch found")
+            return None
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.debug("Git error getting main branch name: %s", e)
+        return None
+    except Exception as e:
+        logger.warning("Unexpected error getting main branch name: %s", e)
+        return None
+
+
 def git_push(project_dir: Path) -> dict[str, Any]:
     """
     Push current branch to origin remote.
