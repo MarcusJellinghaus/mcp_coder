@@ -203,12 +203,12 @@ def get_next_task(project_dir: Path) -> Optional[str]:
         return None
 
 
-def save_conversation(content: str, step_num: int) -> None:
+def save_conversation(project_dir: Path, content: str, step_num: int) -> None:
     """Save conversation content to pr_info/.conversations/step_N.md."""
     log_step(f"Saving conversation for step {step_num}...")
     
     # Create conversations directory if it doesn't exist
-    conversations_dir = Path(CONVERSATIONS_DIR)
+    conversations_dir = project_dir / PR_INFO_DIR / ".conversations"
     conversations_dir.mkdir(parents=True, exist_ok=True)
     
     # Find next available filename for this step
@@ -224,16 +224,15 @@ def save_conversation(content: str, step_num: int) -> None:
     conversation_path = conversations_dir / filename
     conversation_path.write_text(content, encoding="utf-8")
     
-    log_step(f"Conversation saved to {conversation_path}")
+    log_step(f"Conversation saved to {conversation_path.absolute()}")
 
 
-def run_formatters() -> bool:
+def run_formatters(project_dir: Path) -> bool:
     """Run code formatters (black, isort) and return success status."""
     log_step("Running code formatters...")
     
     try:
-        project_root = Path.cwd()
-        results = format_code(project_root, formatters=["black", "isort"])
+        results = format_code(project_dir, formatters=["black", "isort"])
         
         # Check if any formatter failed
         for formatter_name, result in results.items():
@@ -250,12 +249,11 @@ def run_formatters() -> bool:
         return False
 
 
-def commit_changes() -> bool:
+def commit_changes(project_dir: Path) -> bool:
     """Commit changes using existing git operations and return success status."""
     log_step("Committing changes...")
     
     try:
-        project_dir = Path.cwd()
         success, commit_message, error = generate_commit_message_with_llm(project_dir)
         
         if not success:
@@ -277,12 +275,11 @@ def commit_changes() -> bool:
         return False
 
 
-def push_changes() -> bool:
+def push_changes(project_dir: Path) -> bool:
     """Push changes to remote repository and return success status."""
     log_step("Pushing changes to remote...")
     
     try:
-        project_dir = Path.cwd()
         push_result = git_push(project_dir)
         
         if not push_result["success"]:
@@ -353,22 +350,22 @@ Please implement this task step by step."""
 Generated on: {datetime.now().isoformat()}
 """
         
-        save_conversation(conversation_content, step_num)
+        save_conversation(project_dir, conversation_content, step_num)
     
     except Exception as e:
         logger.error(f"Error saving conversation: {e}")
         return False
     
     # Step 6: Run formatters
-    if not run_formatters():
+    if not run_formatters(project_dir):
         return False
     
     # Step 7: Commit changes
-    if not commit_changes():
+    if not commit_changes(project_dir):
         return False
     
     # Step 8: Push changes to remote
-    if not push_changes():
+    if not push_changes(project_dir):
         return False
     
     log_step(f"Task completed successfully: {next_task}")
