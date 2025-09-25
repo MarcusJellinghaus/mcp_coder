@@ -56,7 +56,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - Quality checks: pylint, pytest, mypy
   - Git commit preparation
 
-- [ ] **Step 6: Update Batch Script** - [step_6.md](./steps/step_6.md)
+- [x] **Step 6: Update Batch Script** - [step_6.md](./steps/step_6.md)
   - Update `implement.bat` to use new `--project-dir` parameter
   - Add `--project-dir .` to Python script call
   - Maintain existing error handling and pause behavior
