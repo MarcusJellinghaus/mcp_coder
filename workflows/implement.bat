@@ -12,4 +12,3 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo Workflow completed successfully!
-pause

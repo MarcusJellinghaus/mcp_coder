@@ -292,10 +292,10 @@ def push_changes() -> bool:
         return False
 
 
-def process_single_task() -> bool:
+def process_single_task(project_dir: Path) -> bool:
     """Process a single implementation task. Returns True if successful, False if failed."""
     # Get next incomplete task
-    next_task = get_next_task()
+    next_task = get_next_task(project_dir)
     if not next_task:
         log_step("No incomplete tasks found")
         return False
@@ -395,20 +395,21 @@ def main() -> None:
     log_step("Starting implement workflow...")
     
     # Step 1: Check git status and prerequisites
-    if not check_git_clean():
+    project_dir = Path.cwd()
+    if not check_git_clean(project_dir):
         sys.exit(1)
     
-    if not check_prerequisites():
+    if not check_prerequisites(project_dir):
         sys.exit(1)
     
     # Step 2: Prepare task tracker if needed
-    if not prepare_task_tracker():
+    if not prepare_task_tracker(project_dir):
         sys.exit(1)
     
     # Step 3: Process all incomplete tasks in a loop
     completed_tasks = 0
     while True:
-        success = process_single_task()
+        success = process_single_task(project_dir)
         if not success:
             # No more tasks or error occurred
             break
