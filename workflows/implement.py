@@ -37,7 +37,7 @@ from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_operations import commit_all_changes, git_push, get_full_status
+from mcp_coder.utils.git_operations import commit_all_changes, git_push, get_full_status, is_working_directory_clean
 from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
@@ -56,31 +56,26 @@ def log_step(message: str) -> None:
 
 
 def check_git_clean() -> bool:
-    """Check if git working directory is clean using existing git_operations functions."""
+    """Check if git working directory is clean."""
     log_step("Checking git working directory status...")
     
     try:
-        project_dir = Path.cwd()
-        status = get_full_status(project_dir)
+        is_clean = is_working_directory_clean(Path.cwd())
         
-        # Check if there are any staged, modified, or untracked files
-        total_changes = len(status["staged"]) + len(status["modified"]) + len(status["untracked"])
-        
-        if total_changes > 0:
+        if not is_clean:
             logger.error("Git working directory is not clean. Please commit or stash changes before running the workflow.")
-            if status["staged"]:
-                logger.error(f"Staged files: {status['staged']}")
-            if status["modified"]:
-                logger.error(f"Modified files: {status['modified']}")
-            if status["untracked"]:
-                logger.error(f"Untracked files: {status['untracked']}")
+            # Get detailed status for error reporting
+            status = get_full_status(Path.cwd())
+            for category, files in status.items():
+                if files:
+                    logger.error(f"{category.capitalize()} files: {files}")
             return False
         
         log_step("Git working directory is clean")
         return True
     
-    except Exception as e:
-        logger.error(f"Error checking git status: {e}")
+    except ValueError as e:
+        logger.error(str(e))
         return False
 
 
