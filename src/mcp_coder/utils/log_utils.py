@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar, cast
 
 import structlog
-from pythonjsonlogger.jsonlogger import JsonFormatter  # type: ignore[attr-defined]
+from pythonjsonlogger.json import JsonFormatter  # type: ignore[attr-defined]
 
 # Type variable for function return types
 T = TypeVar("T")
