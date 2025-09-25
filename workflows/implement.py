@@ -24,6 +24,8 @@ Workflow Algorithm:
 4. Graceful error handling - continues processing remaining tasks if possible
 """
 
+import argparse
+import logging
 import os
 import re
 import sys
@@ -36,17 +38,20 @@ from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import commit_all_changes, git_push
+from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 # Constants
 PR_INFO_DIR = "pr_info"
 CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
 
+# Setup logger
+logger = logging.getLogger(__name__)
+
 
 def log_step(message: str) -> None:
-    """Log step with timestamp for consistent logging format."""
-    timestamp = datetime.now().strftime("%H:%M:%S")
-    print(f"[{timestamp}] {message}")
+    """Log step with structured logging instead of print."""
+    logger.info(message)
 
 
 def check_prerequisites() -> bool:
@@ -55,13 +60,13 @@ def check_prerequisites() -> bool:
     
     # Check if we're in a git repository
     if not os.path.exists(".git"):
-        print("Error: Not a git repository")
+        logger.error("Not a git repository")
         return False
     
     # Check if task tracker exists
     task_tracker_path = Path(PR_INFO_DIR) / "TASK_TRACKER.md"
     if not task_tracker_path.exists():
-        print(f"Error: {task_tracker_path} not found")
+        logger.error(f"{task_tracker_path} not found")
         return False
     
     log_step("Prerequisites check passed")
@@ -83,7 +88,7 @@ def get_next_task() -> Optional[str]:
         return next_task
     
     except Exception as e:
-        print(f"Error getting incomplete tasks: {e}")
+        logger.error(f"Error getting incomplete tasks: {e}")
         return None
 
 
@@ -122,7 +127,7 @@ def run_formatters() -> bool:
         # Check if any formatter failed
         for formatter_name, result in results.items():
             if not result.success:
-                print(f"Error: {formatter_name} formatting failed: {result.error_message}")
+                logger.error(f"{formatter_name} formatting failed: {result.error_message}")
                 return False
             log_step(f"{formatter_name} formatting completed successfully")
         
@@ -130,7 +135,7 @@ def run_formatters() -> bool:
         return True
     
     except Exception as e:
-        print(f"Error running formatters: {e}")
+        logger.error(f"Error running formatters: {e}")
         return False
 
 
@@ -143,21 +148,21 @@ def commit_changes() -> bool:
         success, commit_message, error = generate_commit_message_with_llm(project_dir)
         
         if not success:
-            print(f"Error generating commit message: {error}")
+            logger.error(f"Error generating commit message: {error}")
             return False
         
         # Commit using the generated message
         commit_result = commit_all_changes(commit_message, project_dir)
         
         if not commit_result["success"]:
-            print(f"Error committing changes: {commit_result['error']}")
+            logger.error(f"Error committing changes: {commit_result['error']}")
             return False
         
         log_step(f"Changes committed successfully: {commit_result['commit_hash']}")
         return True
     
     except Exception as e:
-        print(f"Error committing changes: {e}")
+        logger.error(f"Error committing changes: {e}")
         return False
 
 
@@ -170,14 +175,14 @@ def push_changes() -> bool:
         push_result = git_push(project_dir)
         
         if not push_result["success"]:
-            print(f"Error pushing changes: {push_result['error']}")
+            logger.error(f"Error pushing changes: {push_result['error']}")
             return False
         
         log_step("Changes pushed successfully to remote")
         return True
     
     except Exception as e:
-        print(f"Error pushing changes: {e}")
+        logger.error(f"Error pushing changes: {e}")
         return False
 
 
@@ -194,7 +199,7 @@ def process_single_task() -> bool:
     try:
         prompt_template = get_prompt("mcp_coder/prompts/prompts.md", "Implementation Prompt Template using task tracker")
     except Exception as e:
-        print(f"Error loading prompt template: {e}")
+        logger.error(f"Error loading prompt template: {e}")
         return False
     
     # Step 4: Call LLM with prompt
@@ -210,13 +215,13 @@ Please implement this task step by step."""
         response = ask_llm(full_prompt, provider="claude", method="api", timeout=600)
         
         if not response or not response.strip():
-            print("Error: LLM returned empty response")
+            logger.error("LLM returned empty response")
             return False
         
         log_step("LLM response received successfully")
     
     except Exception as e:
-        print(f"Error calling LLM: {e}")
+        logger.error(f"Error calling LLM: {e}")
         return False
     
     # Step 5: Save conversation
@@ -240,7 +245,7 @@ Generated on: {datetime.now().isoformat()}
         save_conversation(conversation_content, step_num)
     
     except Exception as e:
-        print(f"Error saving conversation: {e}")
+        logger.error(f"Error saving conversation: {e}")
         return False
     
     # Step 6: Run formatters
@@ -259,8 +264,28 @@ Generated on: {datetime.now().isoformat()}
     return True
 
 
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments including log level."""
+    parser = argparse.ArgumentParser(
+        description="Continuous implement workflow script that orchestrates existing mcp-coder functionality."
+    )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="Set the logging level (default: INFO)"
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
     """Main workflow orchestration function - processes all implementation tasks in sequence."""
+    # Parse command line arguments
+    args = parse_arguments()
+    
+    # Setup logging early
+    setup_logging(args.log_level)
+    
     log_step("Starting implement workflow...")
     
     # Step 1: Check prerequisites

@@ -3,11 +3,14 @@
 Tests for the data_files utility module.
 """
 
+import logging
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import structlog
+from structlog.testing import LogCapture
 
 from mcp_coder.utils.data_files import (
     find_data_file,
@@ -141,6 +144,151 @@ class TestFindDataFile:
             development_base_dir=project_root,
         )
         assert result == first_md_file
+
+    def test_data_file_found_logs_debug_not_info(self) -> None:
+        """Test that successful data file discovery logs at debug level."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            package_dir = temp_path / "test_package"
+            test_file = package_dir / "data" / "test_script.py"
+            test_file.parent.mkdir(parents=True, exist_ok=True)
+            test_file.write_text("# test script")
+
+            # Mock importlib.util.find_spec to return our test location
+            mock_spec = MagicMock()
+            mock_spec.origin = str(package_dir / "__init__.py")
+
+            cap = LogCapture()
+            structlog.configure(processors=[cap])
+
+            with patch(
+                "mcp_coder.utils.data_files.importlib.util.find_spec",
+                return_value=mock_spec,
+            ):
+                result = find_data_file(
+                    package_name="test_package",
+                    relative_path="data/test_script.py",
+                    development_base_dir=None,  # Skip development lookup
+                )
+
+                assert result == test_file
+
+                # Check that the success message was logged at debug level
+                logged_messages = cap.entries
+                success_messages = [
+                    msg
+                    for msg in logged_messages
+                    if "Found data file in installed package (via importlib)"
+                    in msg.get("event", "")
+                ]
+
+                assert (
+                    len(success_messages) == 1
+                ), f"Expected 1 success message, found {len(success_messages)}"
+                # The message should be logged at debug level, not info level
+                assert success_messages[0]["log_level"] == "debug"
+
+    def test_data_file_logging_with_info_level(self) -> None:
+        """Test that data file messages don't appear at INFO level."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            package_dir = temp_path / "test_package"
+            test_file = package_dir / "data" / "test_script.py"
+            test_file.parent.mkdir(parents=True, exist_ok=True)
+            test_file.write_text("# test script")
+
+            # Mock importlib.util.find_spec to return our test location
+            mock_spec = MagicMock()
+            mock_spec.origin = str(package_dir / "__init__.py")
+
+            cap = LogCapture()
+            structlog.configure(processors=[cap])
+
+            with patch(
+                "mcp_coder.utils.data_files.importlib.util.find_spec",
+                return_value=mock_spec,
+            ):
+                result = find_data_file(
+                    package_name="test_package",
+                    relative_path="data/test_script.py",
+                    development_base_dir=None,  # Skip development lookup
+                )
+
+                assert result == test_file
+
+                # Check that the "Found data file" message is logged at DEBUG level, not INFO
+                logged_messages = cap.entries
+                success_messages = [
+                    msg
+                    for msg in logged_messages
+                    if "Found data file in installed package (via importlib)"
+                    in msg.get("event", "")
+                ]
+
+                # Should have exactly one debug message (not info)
+                assert (
+                    len(success_messages) == 1
+                ), f"Expected 1 success message, found {len(success_messages)}"
+                assert (
+                    success_messages[0]["log_level"] == "debug"
+                ), f"Expected debug level, got {success_messages[0]['log_level']}"
+
+                # Verify no success messages at INFO level
+                info_messages = [
+                    msg
+                    for msg in logged_messages
+                    if "Found data file in installed package (via importlib)"
+                    in msg.get("event", "")
+                    and msg.get("log_level") == "info"
+                ]
+                assert (
+                    len(info_messages) == 0
+                ), f"Found success message at INFO level: {info_messages}"
+
+    def test_data_file_logging_with_debug_level(self) -> None:
+        """Test that data file messages appear at DEBUG level."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            package_dir = temp_path / "test_package"
+            test_file = package_dir / "data" / "test_script.py"
+            test_file.parent.mkdir(parents=True, exist_ok=True)
+            test_file.write_text("# test script")
+
+            # Mock importlib.util.find_spec to return our test location
+            mock_spec = MagicMock()
+            mock_spec.origin = str(package_dir / "__init__.py")
+
+            # Set up logging to capture all levels including DEBUG
+            cap = LogCapture()
+            structlog.configure(processors=[cap])
+
+            with patch(
+                "mcp_coder.utils.data_files.importlib.util.find_spec",
+                return_value=mock_spec,
+            ):
+                result = find_data_file(
+                    package_name="test_package",
+                    relative_path="data/test_script.py",
+                    development_base_dir=None,  # Skip development lookup
+                )
+
+                assert result == test_file
+
+                # Check that "Found data file" message appears when debug is enabled
+                logged_messages = cap.entries
+                success_messages = [
+                    msg
+                    for msg in logged_messages
+                    if "Found data file in installed package (via importlib)"
+                    in msg.get("event", "")
+                ]
+
+                # Should have the success message
+                assert (
+                    len(success_messages) == 1
+                ), f"Expected 1 success message, found {len(success_messages)}"
+                # The message should be logged at debug level
+                assert success_messages[0]["log_level"] == "debug"
 
 
 class TestFindPackageDataFiles:

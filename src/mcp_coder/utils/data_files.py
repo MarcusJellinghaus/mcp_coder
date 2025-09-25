@@ -184,7 +184,7 @@ def find_data_file(
 
                 if installed_file.exists():
                     method_2_result = "SUCCESS"
-                    structured_logger.info(
+                    structured_logger.debug(
                         "Found data file in installed package (via importlib)",
                         method="importlib_spec",
                         path=str(installed_file_absolute),

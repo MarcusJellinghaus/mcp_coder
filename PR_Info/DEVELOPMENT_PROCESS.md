@@ -201,7 +201,7 @@ Add "Pull Request" section at end with PR review and summary tasks.
 
 Follow existing format in TASK_TRACKER.md or standard checkbox format. Review `pr_info/DEVELOPMENT_PROCESS.md` for context.
 ```
-- Prompt could be enhanced to generate the task tracker and add new tasks 
+
 - commit afterwards with 
   ```
   TASK_TRACKER.md with implementation steps and PR tasks updated
