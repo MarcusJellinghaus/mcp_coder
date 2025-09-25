@@ -44,6 +44,7 @@ from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 # Constants
 PR_INFO_DIR = "pr_info"
 CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
+PROMPTS_FILE_PATH = "mcp_coder/prompts/prompts.md"
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ def prepare_task_tracker() -> bool:
     
     try:
         # Get the Task Tracker Update Prompt
-        prompt_template = get_prompt("src/mcp_coder/prompts/prompts.md", "Task Tracker Update Prompt")
+        prompt_template = get_prompt(PROMPTS_FILE_PATH, "Task Tracker Update Prompt")
         
         # Call LLM with the prompt
         response = ask_llm(prompt_template, provider="claude", method="api", timeout=300)
@@ -305,7 +306,7 @@ def process_single_task() -> bool:
     # Step 3: Get implementation prompt template
     log_step("Loading implementation prompt template...")
     try:
-        prompt_template = get_prompt("mcp_coder/prompts/prompts.md", "Implementation Prompt Template using task tracker")
+        prompt_template = get_prompt(PROMPTS_FILE_PATH, "Implementation Prompt Template using task tracker")
     except Exception as e:
         logger.error(f"Error loading prompt template: {e}")
         return False
