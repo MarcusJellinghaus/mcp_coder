@@ -55,17 +55,17 @@ def log_step(message: str) -> None:
     logger.info(message)
 
 
-def check_git_clean() -> bool:
+def check_git_clean(project_dir: Path) -> bool:
     """Check if git working directory is clean."""
     log_step("Checking git working directory status...")
     
     try:
-        is_clean = is_working_directory_clean(Path.cwd())
+        is_clean = is_working_directory_clean(project_dir)
         
         if not is_clean:
             logger.error("Git working directory is not clean. Please commit or stash changes before running the workflow.")
             # Get detailed status for error reporting
-            status = get_full_status(Path.cwd())
+            status = get_full_status(project_dir)
             for category, files in status.items():
                 if files:
                     logger.error(f"{category.capitalize()} files: {files}")
@@ -79,17 +79,18 @@ def check_git_clean() -> bool:
         return False
 
 
-def check_prerequisites() -> bool:
+def check_prerequisites(project_dir: Path) -> bool:
     """Verify dependencies and prerequisites are met."""
     log_step("Checking prerequisites...")
     
     # Check if we're in a git repository
-    if not os.path.exists(".git"):
-        logger.error("Not a git repository")
+    git_dir = project_dir / ".git"
+    if not git_dir.exists():
+        logger.error(f"Not a git repository: {project_dir}")
         return False
     
     # Check if task tracker exists
-    task_tracker_path = Path(PR_INFO_DIR) / "TASK_TRACKER.md"
+    task_tracker_path = project_dir / PR_INFO_DIR / "TASK_TRACKER.md"
     if not task_tracker_path.exists():
         logger.error(f"{task_tracker_path} not found")
         return False
@@ -98,11 +99,12 @@ def check_prerequisites() -> bool:
     return True
 
 
-def has_implementation_tasks() -> bool:
+def has_implementation_tasks(project_dir: Path) -> bool:
     """Check if TASK_TRACKER.md has any implementation tasks using existing task_tracker functions."""
     try:
         # Use existing function to get incomplete tasks
-        incomplete_tasks = get_incomplete_tasks(PR_INFO_DIR)
+        pr_info_dir = str(project_dir / PR_INFO_DIR)
+        incomplete_tasks = get_incomplete_tasks(pr_info_dir)
         # If we can get tasks, that means the tracker has implementation steps
         return True
     except Exception:
@@ -111,18 +113,18 @@ def has_implementation_tasks() -> bool:
         return False
 
 
-def prepare_task_tracker() -> bool:
+def prepare_task_tracker(project_dir: Path) -> bool:
     """Prepare task tracker by populating it if it has no implementation steps."""
     log_step("Checking if task tracker needs preparation...")
     
     # Check if pr_info/steps/ directory exists
-    steps_dir = Path(PR_INFO_DIR) / "steps"
+    steps_dir = project_dir / PR_INFO_DIR / "steps"
     if not steps_dir.exists():
         logger.error(f"Directory {steps_dir} does not exist. Please create implementation steps first.")
         return False
     
     # Check if task tracker already has implementation tasks
-    if has_implementation_tasks():
+    if has_implementation_tasks(project_dir):
         log_step("Task tracker already has implementation tasks. Skipping preparation.")
         return True
     
@@ -142,7 +144,6 @@ def prepare_task_tracker() -> bool:
         log_step("LLM response received for task tracker update")
         
         # Check what files changed using existing git_operations
-        project_dir = Path.cwd()
         status = get_full_status(project_dir)
         
         # Only staged and modified files should contain TASK_TRACKER.md
@@ -157,7 +158,7 @@ def prepare_task_tracker() -> bool:
             return False
         
         # Verify that task tracker now has implementation steps
-        if not has_implementation_tasks():
+        if not has_implementation_tasks(project_dir):
             logger.error("Task tracker still has no implementation steps after LLM update")
             return False
         
@@ -177,12 +178,13 @@ def prepare_task_tracker() -> bool:
         return False
 
 
-def get_next_task() -> Optional[str]:
+def get_next_task(project_dir: Path) -> Optional[str]:
     """Get next incomplete task from task tracker."""
     log_step("Checking for incomplete tasks...")
     
     try:
-        incomplete_tasks = get_incomplete_tasks(PR_INFO_DIR)
+        pr_info_dir = str(project_dir / PR_INFO_DIR)
+        incomplete_tasks = get_incomplete_tasks(pr_info_dir)
         if not incomplete_tasks:
             log_step("No incomplete tasks found")
             return None
