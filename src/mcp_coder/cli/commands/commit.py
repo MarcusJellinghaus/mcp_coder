@@ -143,7 +143,7 @@ def generate_commit_message_with_llm(
             )
 
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
-        print("Calling LLM for auto generated commit message...")
+        logger.info("Calling LLM for auto generated commit message...")
         response = ask_llm(full_prompt, provider="claude", method="api", timeout=30)
 
         if not response or not response.strip():

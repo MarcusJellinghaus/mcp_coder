@@ -372,7 +372,7 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
         logger.debug("Staging files: %s", relative_paths)
         repo.index.add(relative_paths)
 
-        logger.info(
+        logger.debug(
             "Successfully staged %d files: %s", len(relative_paths), relative_paths
         )
         return True
@@ -567,7 +567,7 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
         commit_result = commit_staged_files(message, project_dir)
 
         if commit_result["success"]:
-            logger.info(
+            logger.debug(
                 "Successfully committed all changes with hash %s",
                 commit_result["commit_hash"],
             )

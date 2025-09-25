@@ -205,7 +205,7 @@ def get_next_task(project_dir: Path) -> Optional[str]:
 
 def save_conversation(project_dir: Path, content: str, step_num: int) -> None:
     """Save conversation content to pr_info/.conversations/step_N.md."""
-    log_step(f"Saving conversation for step {step_num}...")
+    logger.debug(f"Saving conversation for step {step_num}...")
     
     # Create conversations directory if it doesn't exist
     conversations_dir = project_dir / PR_INFO_DIR / ".conversations"
@@ -224,7 +224,7 @@ def save_conversation(project_dir: Path, content: str, step_num: int) -> None:
     conversation_path = conversations_dir / filename
     conversation_path.write_text(content, encoding="utf-8")
     
-    log_step(f"Conversation saved to {conversation_path.absolute()}")
+    logger.debug(f"Conversation saved to {conversation_path.absolute()}")
 
 
 def run_formatters(project_dir: Path) -> bool:
@@ -267,7 +267,10 @@ def commit_changes(project_dir: Path) -> bool:
             logger.error(f"Error committing changes: {commit_result['error']}")
             return False
         
-        log_step(f"Changes committed successfully: {commit_result['commit_hash']}")
+        # Show commit message first line along with hash
+        commit_lines = commit_message.strip().split("\n")
+        first_line = commit_lines[0].strip() if commit_lines else commit_message.strip()
+        log_step(f"Changes committed successfully: {commit_result['commit_hash']} - {first_line}")
         return True
     
     except Exception as e:
@@ -303,7 +306,7 @@ def process_single_task(project_dir: Path) -> bool:
         return False
     
     # Step 3: Get implementation prompt template
-    log_step("Loading implementation prompt template...")
+    logger.debug("Loading implementation prompt template...")
     try:
         prompt_template = get_prompt(PROMPTS_FILE_PATH, "Implementation Prompt Template using task tracker")
     except Exception as e:
