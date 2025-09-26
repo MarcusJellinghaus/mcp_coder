@@ -23,7 +23,7 @@ workflows/implement.py            - Add mypy check function + integration
 
 ## Files Created
 ```
-tests/test_mypy_integration.py    - Test mypy checking functionality
+(None - no test files needed for workflow integration)
 ```
 
 ## Core Algorithm
@@ -31,7 +31,8 @@ tests/test_mypy_integration.py    - Test mypy checking functionality
 1. LLM implements task
 2. Run mypy check via MCP
 3. If issues found:
-   - Prompt LLM to fix (max 3 attempts)
+   - Prompt LLM to fix with smart retry logic
+   - Only count retries when feedback is identical
    - Save each fix attempt to conversation
 4. Continue with formatters/commit regardless
 ```

@@ -1,58 +1,67 @@
-# Step 2: Create Mypy Integration Test
+# Step 2: Complete Mypy Integration
 
 ## WHERE
-- File: `tests/test_mypy_integration.py` (new file)
+- File: `workflows/implement.py`
 
 ## WHAT
-Create comprehensive test for mypy checking functionality before implementing it.
+Implement `check_and_fix_mypy()` function and integrate it into the main workflow.
 
-### Test Functions:
-1. `test_mypy_check_clean_code()` - Test when no mypy errors
-2. `test_mypy_check_with_errors()` - Test when mypy finds issues  
-3. `test_mypy_fix_loop()` - Test fix attempt loop with max retries
+### Function Signature:
+```python
+def check_and_fix_mypy(project_dir: Path, conversation_content: list) -> bool:
+    """Run mypy check and attempt fixes if issues found. Returns True if clean."""
+```
 
 ## HOW
-- **Test Framework**: Use pytest with existing patterns
-- **Mocking**: Mock MCP `run_mypy_check()` and `ask_llm()` calls
-- **Test Data**: Create sample mypy outputs (clean vs with errors)
+- **Function**: Add `check_and_fix_mypy()` before `process_single_task()` function  
+- **Integration**: Call from `process_single_task()` after LLM response, before formatters
+- **Smart retry**: Only count retries when mypy feedback is identical to previous attempts
 
 ## ALGORITHM
 ```
-1. Setup test fixtures for clean/error mypy outputs
-2. Test clean mypy case (no fixes needed)
-3. Test error case with successful fix
-4. Test max retry limit (3 attempts)
-5. Verify conversation logging works
+1. Run mypy check via MCP run_mypy_check()
+2. If no errors, return True  
+3. If errors found, retry loop:
+   - Get mypy fix prompt and call ask_llm()
+   - Append fix attempt to conversation_content
+   - Re-run mypy check
+   - Only increment retry counter if feedback identical to previous
+   - Stop after 3 identical feedbacks
+4. Integrate into process_single_task() after LLM response
+5. Return final mypy status (True if clean)
 ```
 
 ## DATA
-### Test Inputs:
-- **Clean mypy output**: `"Mypy check completed. No type errors found."`
-- **Error mypy output**: `"Mypy found type issues that need attention:\n\nsrc/file.py:10: error: ..."`
-- **Max retries**: `3`
+### Parameters:
+- **project_dir**: `Path` - Project directory for mypy check
+- **conversation_content**: `list[str]` - Conversation log to append to
 
-### Return Values:
-- **Success case**: `True` (no more errors)
-- **Max retries**: `False` (gave up after 3 attempts)
+### Return Value:
+- **bool**: `True` if mypy clean, `False` if issues remain
+
+### Internal Variables:
+- **max_identical_attempts**: `3`
+- **previous_outputs**: `list[str]` to track feedback history
+- **mypy_result**: `str` from MCP tool
 
 ## LLM Prompt for This Step
 
 ```
-Reference: pr_info/steps/summary.md  
+Reference: pr_info/steps/summary.md
 
-Implement Step 2: Create test file for mypy integration functionality.
+Implement Step 2: Complete mypy integration into workflows/implement.py
 
-Create tests/test_mypy_integration.py with comprehensive tests for the mypy checking feature that will be implemented in the next step.
+Tasks:
+1. Add check_and_fix_mypy() function with smart retry logic:
+   - Uses MCP run_mypy_check() tool
+   - Smart retry: only counts retries when mypy feedback is identical
+   - Stops after 3 identical feedbacks (no progress being made)
+   - Appends each fix attempt to conversation_content
 
-The tests should cover:
-1. Successful mypy check (no errors found)
-2. Mypy errors found and successfully fixed
-3. Max retry behavior (3 attempts then give up)
-4. Conversation logging of fix attempts
+2. Integrate into process_single_task() workflow:
+   - Call after LLM response and conversation save
+   - Call before run_formatters()
+   - Update conversation_content with fix attempts
 
-Use mocking to simulate MCP run_mypy_check() and ask_llm() responses.
-Follow existing test patterns in the tests/ directory.
-Use pytest framework.
-
-This is TDD - write the tests first before implementing the actual functionality.
+Use existing patterns: MCP function calls, ask_llm(), conversation logging.
 ```
