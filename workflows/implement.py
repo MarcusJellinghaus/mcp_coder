@@ -337,32 +337,42 @@ def push_changes(project_dir: Path) -> bool:
 
 
 def _run_mypy_check(project_dir: Path) -> Optional[str]:
-    """Run mypy check and return error output or None if clean."""
+    """Run mypy check using mcp-code-checker API and return error output or None if clean."""
     try:
-        # Use subprocess approach as MCP tools are not directly importable
-        # This maintains consistency with the original approach but in a helper function
-        import subprocess
-        import sys
+        # Import and use the mcp-code-checker API directly
+        # This is the correct approach as you pointed out
+        from mcp_code_checker.code_checker_mypy import run_mypy_check
         
-        # Run mypy using subprocess with strict checking
-        # Let mypy choose default directories (typically src/ and tests/)
-        result = subprocess.run(
-            [sys.executable, "-m", "mypy", "src", "--strict"],
-            capture_output=True, text=True, cwd=str(project_dir)
+        # Use the API with default settings
+        # Let the MCP tool decide on target directories and use strict mode
+        result = run_mypy_check(
+            project_dir=str(project_dir),
+            strict=True,
+            disable_error_codes=None,
+            target_directories=None,  # Let MCP tool choose defaults (src/, tests/)
+            follow_imports="normal",
+            cache_dir=None
         )
         
-        if result.returncode == 0:
+        # Handle the result based on what the API actually returns
+        # The API might return a result object or None/string
+        if result is None:
             return None  # No errors found
         
-        # Return combined stdout and stderr for error analysis
-        error_output = result.stdout + "\n" + result.stderr
-        return error_output.strip() if error_output.strip() else "Mypy check failed"
+        # If result is a string, use it directly
+        if isinstance(result, str):
+            return result if result.strip() else None
         
-    except FileNotFoundError:
-        # Mypy is not installed
-        raise Exception("mypy is not installed or not found in PATH")
+        # If result is an object, try to get string representation
+        # This handles cases where the API returns a result object
+        result_str = str(result)
+        return result_str if result_str.strip() else None
+        
+    except ImportError as e:
+        # mcp-code-checker not available - this is a critical error
+        raise Exception(f"mcp-code-checker is required but not available: {e}")
     except Exception as e:
-        raise Exception(f"Failed to run mypy check: {e}")
+        raise Exception(f"Failed to run mypy check via mcp-code-checker: {e}")
 
 
 def check_and_fix_mypy(project_dir: Path, conversation_content: list[str]) -> bool:
