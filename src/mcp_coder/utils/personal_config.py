@@ -4,7 +4,6 @@ This module provides functions to read personal configuration from TOML files
 located in platform-specific user configuration directories.
 """
 
-import platform
 import tomllib
 from pathlib import Path
 from typing import Optional
@@ -16,22 +15,10 @@ from .log_utils import log_function_call
 def get_config_file_path() -> Path:
     """Get the path to the personal configuration file.
 
-    Returns platform-specific path:
-    - Windows: %USERPROFILE%\\.mcp_coder\\config.toml
-    - macOS/Linux: ~/.mcp_coder/config.toml
-
     Returns:
-        Path object pointing to the configuration file location
+        Path object pointing to ~/.mcp_coder/config.toml
     """
-    system = platform.system()
-
-    if system == "Windows":
-        base_path = Path.home()
-    else:
-        # Unix-like systems (Linux, macOS, etc.)
-        base_path = Path.home()
-
-    return base_path / ".mcp_coder" / "config.toml"
+    return Path.home() / ".mcp_coder" / "config.toml"
 
 
 @log_function_call

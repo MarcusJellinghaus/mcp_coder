@@ -11,42 +11,8 @@ from mcp_coder.utils.personal_config import get_config_file_path, get_config_val
 class TestGetConfigFilePath:
     """Tests for get_config_file_path function."""
 
-    @patch("mcp_coder.utils.personal_config.platform.system")
-    def test_get_config_file_path_windows(self, mock_system: MagicMock) -> None:
-        """Test that Windows path is returned correctly."""
-        # Setup
-        mock_system.return_value = "Windows"
-
-        # Execute
-        result = get_config_file_path()
-
-        # Verify
-        expected = Path.home() / ".mcp_coder" / "config.toml"
-        assert result == expected
-        assert result.name == "config.toml"
-        assert ".mcp_coder" in str(result)
-
-    @patch("mcp_coder.utils.personal_config.platform.system")
-    def test_get_config_file_path_linux(self, mock_system: MagicMock) -> None:
-        """Test that Linux path is returned correctly."""
-        # Setup
-        mock_system.return_value = "Linux"
-
-        # Execute
-        result = get_config_file_path()
-
-        # Verify
-        expected = Path.home() / ".mcp_coder" / "config.toml"
-        assert result == expected
-        assert result.name == "config.toml"
-        assert ".mcp_coder" in str(result)
-
-    @patch("mcp_coder.utils.personal_config.platform.system")
-    def test_get_config_file_path_macos(self, mock_system: MagicMock) -> None:
-        """Test that macOS path is returned correctly."""
-        # Setup
-        mock_system.return_value = "Darwin"
-
+    def test_get_config_file_path_returns_correct_path(self) -> None:
+        """Test that config file path is returned correctly."""
         # Execute
         result = get_config_file_path()
 

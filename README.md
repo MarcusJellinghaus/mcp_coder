@@ -97,6 +97,8 @@ if missing_value is None:
 
 ### Setup Instructions
 
+**Note**: The configuration directory (`~/.mcp_coder`) will not be created automatically. You must manually create it before using personal configuration features.
+
 1. Create the configuration directory:
    ```bash
    # Windows (PowerShell)

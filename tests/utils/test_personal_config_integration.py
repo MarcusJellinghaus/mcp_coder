@@ -3,8 +3,6 @@
 These tests use real file operations (no mocking) to verify end-to-end functionality.
 """
 
-import platform
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -73,27 +71,19 @@ port = 5432
             expected_path = fake_home / ".mcp_coder" / "config.toml"
             assert config_path == expected_path
 
-    def test_cross_platform_path_consistency(self) -> None:
-        """Test that path generation is consistent across platforms."""
-        platforms_to_test = ["Windows", "Linux", "Darwin"]
-
-        paths = {}
-        for platform_name in platforms_to_test:
-            with patch(
-                "mcp_coder.utils.personal_config.platform.system",
-                return_value=platform_name,
-            ):
-                path = get_config_file_path()
-                paths[platform_name] = path
-
-        # All platforms should generate the same relative structure
-        for platform_name, path in paths.items():
-            assert path.name == "config.toml"
-            assert path.parent.name == ".mcp_coder"
-            # All should be relative to user's home directory
-            assert str(path).endswith(".mcp_coder/config.toml") or str(path).endswith(
-                ".mcp_coder\\config.toml"
-            )
+    def test_path_consistency(self) -> None:
+        """Test that path generation is consistent across multiple calls."""
+        # Test that multiple calls return the same path
+        path1 = get_config_file_path()
+        path2 = get_config_file_path()
+        
+        assert path1 == path2
+        assert path1.name == "config.toml"
+        assert path1.parent.name == ".mcp_coder"
+        # Should be relative to user's home directory
+        assert str(path1).endswith(".mcp_coder/config.toml") or str(path1).endswith(
+            ".mcp_coder\\config.toml"
+        )
 
     def test_malformed_config_file_handling(self, tmp_path: Path) -> None:
         """Test behavior with malformed TOML files."""
