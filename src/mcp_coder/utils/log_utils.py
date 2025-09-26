@@ -145,7 +145,7 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
                 cache_logger_on_first_use=True,
             )
 
-        stdlogger.info("Logging initialized: console=%s", log_level)
+        stdlogger.debug("Logging initialized: console=%s", log_level)
 
 
 def log_function_call(func: Callable[..., T]) -> Callable[..., T]:
