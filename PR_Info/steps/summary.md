@@ -1,64 +1,81 @@
-# Git Branch Name Functions Implementation Summary
+# Personal Configuration System - Implementation Summary
 
 ## Overview
-Add three simple branch name functions to the existing `git_operations.py` module to support branch identification functionality.
+Add a simple personal configuration system to store user credentials (like GitHub tokens) in a platform-appropriate config file using TOML format.
 
-## Architectural/Design Changes
+## Architectural Changes
 
 ### Design Philosophy
-- **KISS Principle**: Minimal complexity, maximum maintainability
-- **Consistency**: Follow existing patterns in `git_operations.py`
-- **Error Handling**: Return `None` on any error, no exceptions thrown
-- **Logging**: Use existing debug logging pattern
-- **Validation**: Leverage existing `is_git_repository()` function
+- **KISS Principle**: Minimal, focused functionality - only reading config values
+- **Single Responsibility**: One utility module for config file access
+- **Platform Agnostic**: Standard OS config directories
+- **Security Conscious**: Store in user-only accessible locations
 
-### Integration Points
-- **Module**: `src/mcp_coder/utils/git_operations.py` (existing)
-- **Testing**: `tests/utils/test_git_workflows.py` (existing)
-- **Dependencies**: No new dependencies, uses existing GitPython
+### Core Components
+1. **Configuration Reader**: Generic function to read any config value from TOML
+2. **Path Resolution**: OS-appropriate config directory detection
+3. **Error Handling**: Graceful fallbacks for missing files/values
 
-### Functions Added
-1. `get_current_branch_name(project_dir: Path) -> Optional[str]`
-2. `get_main_branch_name(project_dir: Path) -> Optional[str]` 
-3. `get_parent_branch_name(project_dir: Path) -> Optional[str]`
+## File Structure Changes
 
-## Files to be Created/Modified
+### New Files
+```
+src/mcp_coder/utils/personal_config.py    # Main implementation
+tests/utils/test_personal_config.py       # Unit tests
+```
 
-### Modified Files
-- `src/mcp_coder/utils/git_operations.py` - Add 3 new functions
-- `tests/utils/test_git_workflows.py` - Add test class with ~9 test methods
+### Configuration File Location
+- **Linux/Mac**: `~/.config/mcp-coder/config.toml`
+- **Windows**: `%APPDATA%/mcp-coder/config.toml`
 
-### No New Files Required
-- All functionality fits within existing module structure
-- No new dependencies or configuration files needed
+### Expected Config Format
+```toml
+[tokens]
+github = "ghp_xxxxxxxxxxxxxxxxxxxx"
 
-## Technical Approach
+[settings]
+# Future user preferences
+```
 
-### Current Branch Detection
-- Use `repo.active_branch.name` from GitPython
-- Handle detached HEAD gracefully (return None)
+## API Design
 
-### Main Branch Detection  
-- Check for `main` branch existence first (modern default)
-- Fall back to `master` branch (legacy default)
-- No complex remote querying needed
+### Public Interface
+```python
+def get_config_file_path() -> Path
+    """Get platform-specific config file path."""
 
-### Parent Branch Logic
-- Simple heuristic: return main branch name
-- Covers 90% of real-world use cases where feature branches come from main
-- No complex merge-base analysis required
+def get_config_value(section: str, key: str) -> Optional[str]
+    """Get config value from section.key, return None if not found."""
+```
 
-## Implementation Steps
-1. **Step 1**: Write failing tests for all three functions
-2. **Step 2**: Implement `get_current_branch_name()` to pass tests
-3. **Step 3**: Implement `get_main_branch_name()` to pass tests  
-4. **Step 4**: Implement `get_parent_branch_name()` to pass tests
-5. ~~**Step 5**: Add comprehensive edge case testing~~ **REMOVED** - Basic tests sufficient
-6. ~~**Step 6**: Update batch script~~ **ALREADY COMPLETE** - Script ready
+### Usage Example
+```python
+from mcp_coder.utils.personal_config import get_config_value
 
-## Benefits
-- **Simple**: Easy to understand and maintain
-- **Reliable**: Handles common edge cases gracefully  
-- **Consistent**: Follows existing codebase patterns
-- **Testable**: Full test coverage with TDD approach
-- **Extensible**: Can be enhanced later if needed without breaking changes
+github_token = get_config_value("tokens", "github")
+if github_token:
+    # Use token for GitHub operations
+```
+
+## Integration Points
+- No immediate CLI integration required
+- Future GitHub-related commands can import and use these functions
+- No breaking changes to existing code
+
+## Testing Strategy
+- Unit tests for path resolution on different platforms
+- Tests for config file reading with various scenarios
+- Mock file system operations for reliable testing
+
+## Security Considerations
+- Config file should be manually created by user
+- No automatic token writing (reduces security risk)
+- Standard OS config directories have appropriate permissions
+- No token validation or logging (avoid exposure)
+
+## Scope Limitations (KISS)
+- **No config writing** - user creates file manually
+- **No config validation** - simple key lookup only  
+- **No CLI config commands** - not needed initially
+- **No token encryption** - relies on OS file permissions
+- **No config migration** - simple, stable format

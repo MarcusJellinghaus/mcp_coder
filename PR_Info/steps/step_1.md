@@ -1,71 +1,81 @@
-# Step 1: Write Tests for Branch Name Functions
+# Step 1: Create Personal Config Tests (TDD Foundation)
 
 ## Objective
-Implement comprehensive tests for the three branch name functions following TDD methodology.
+Implement comprehensive unit tests for personal configuration functionality before writing the actual implementation, following TDD methodology.
 
-**Note**: These tests provide complete coverage - no additional edge case testing needed (Step 5 removed).
+## LLM Prompt
+```
+Implement unit tests for a personal configuration system as described in pr_info/steps/summary.md. 
+
+Create tests for:
+1. Platform-specific config file path resolution
+2. Reading config values from TOML files
+3. Handling missing files and keys gracefully
+
+Follow the test patterns established in the existing test suite. Use pytest fixtures and mocking where appropriate to ensure tests are isolated and deterministic.
+```
 
 ## WHERE
-- **File**: `tests/utils/test_git_workflows.py`  
-- **Test Class**: Add `TestGitBranchOperations` class within existing file
-- **Integration**: Add to existing `@pytest.mark.git_integration` test suite
+- **File**: `tests/utils/test_personal_config.py`
+- **Module**: New test module in utils test package
 
 ## WHAT
-### Test Methods to Implement
+Test functions to implement:
 ```python
-def test_get_current_branch_name_success(self, git_repo: tuple[Repo, Path]) -> None
-def test_get_current_branch_name_invalid_repo(self, tmp_path: Path) -> None  
-def test_get_current_branch_name_detached_head(self, git_repo: tuple[Repo, Path]) -> None
-
-def test_get_main_branch_name_with_main(self, git_repo: tuple[Repo, Path]) -> None
-def test_get_main_branch_name_with_master(self, git_repo: tuple[Repo, Path]) -> None  
-def test_get_main_branch_name_invalid_repo(self, tmp_path: Path) -> None
-
-def test_get_parent_branch_name_returns_main(self, git_repo: tuple[Repo, Path]) -> None
-def test_get_parent_branch_name_invalid_repo(self, tmp_path: Path) -> None
-def test_get_parent_branch_name_no_main_branch(self, git_repo: tuple[Repo, Path]) -> None
+def test_get_config_file_path_linux_mac()
+def test_get_config_file_path_windows() 
+def test_get_config_value_file_exists()
+def test_get_config_value_file_missing()
+def test_get_config_value_section_missing()
+def test_get_config_value_key_missing()
 ```
 
 ## HOW
 ### Integration Points
-- Import the functions (will fail initially): 
+- Import from `mcp_coder.utils.personal_config` (module doesn't exist yet - TDD)
+- Use `pytest.fixture` for test data setup
+- Use `unittest.mock.patch` for platform detection and file operations
+- Follow existing test patterns from `tests/utils/`
+
+### Test Data Setup
 ```python
-from mcp_coder.utils.git_operations import (
-    get_current_branch_name,
-    get_main_branch_name, 
-    get_parent_branch_name,
-    # ... existing imports
-)
+@pytest.fixture
+def sample_config_content():
+    return """
+[tokens]
+github = "ghp_test_token_123"
+
+[settings]
+default_branch = "main"
+"""
 ```
-- Use existing fixtures: `git_repo`, `git_repo_with_files`, `tmp_path`
-- Follow existing test patterns in the file
 
 ## ALGORITHM
-### Test Logic Pseudocode
+Test implementation pseudocode:
 ```
-1. Test current branch returns expected branch name
-2. Test invalid repo returns None  
-3. Test detached HEAD returns None
-4. Test main branch detection with main/master branches
-5. Test parent branch returns main branch name
+1. Mock platform.system() for Windows/Unix path tests
+2. Create temporary config files with known content
+3. Test path resolution returns correct OS-specific paths
+4. Test config value retrieval with various scenarios
+5. Assert None returned for missing files/sections/keys
+6. Verify no exceptions raised for missing resources
 ```
 
 ## DATA
-### Test Assertions Expected
-- **Success cases**: `assert result == "expected_branch_name"`
-- **Error cases**: `assert result is None`
-- **Type validation**: `assert isinstance(result, str) or result is None`
+### Test Inputs
+- Mock platform types: "Windows", "Linux", "Darwin"
+- Sample TOML config content with tokens and settings sections
+- Various section/key combinations for testing
 
-## LLM Prompt for Implementation
-```
-Based on the summary.md, implement Step 1 by adding a TestGitBranchOperations class to tests/utils/test_git_workflows.py. 
+### Expected Outputs
+- **Path resolution**: `Path` objects with correct platform-specific paths
+- **Value retrieval**: String values for existing keys, None for missing
+- **Error cases**: None (no exceptions) for all missing resource scenarios
 
-Write comprehensive tests for three functions that don't exist yet:
-- get_current_branch_name(project_dir: Path) -> Optional[str]  
-- get_main_branch_name(project_dir: Path) -> Optional[str]
-- get_parent_branch_name(project_dir: Path) -> Optional[str]
-
-Follow the existing test patterns in the file, use existing fixtures, and ensure all tests will initially fail since the functions don't exist yet. This is proper TDD - write failing tests first.
-
-The tests should cover success cases, invalid repo cases, and edge cases like detached HEAD and missing main/master branches.
-```
+## Acceptance Criteria
+- [ ] All tests fail initially (no implementation exists)
+- [ ] Tests cover Windows and Unix path resolution
+- [ ] Tests verify TOML parsing and key lookup
+- [ ] Tests handle all error cases gracefully
+- [ ] Tests are isolated and use mocking for file system operations
+- [ ] Test coverage includes edge cases (empty files, malformed TOML)
