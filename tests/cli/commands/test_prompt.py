@@ -1603,6 +1603,105 @@ class TestExecutePromptParameterMapping:
         # Verify return value is passed through
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.prompt._save_conversation_markdown")
+    def test_save_conversation_markdown_basic(self, mock_save_markdown: Mock) -> None:
+        """Test basic markdown file creation and content structure."""
+        # Test response data matching the expected function signature
+        test_response_data = {
+            "text": "This is Claude's response.",
+            "session_info": {
+                "session_id": "test-session-123",
+                "model": "claude-sonnet-4",
+                "tools": ["file_writer"],
+            },
+            "result_info": {
+                "duration_ms": 1500,
+                "cost_usd": 0.025,
+                "usage": {"input_tokens": 10, "output_tokens": 8},
+            },
+            "raw_messages": [],
+        }
+
+        test_prompt = "Create a Python file"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = os.path.join(temp_dir, "conversation.md")
+
+            # Access the private function through the module's namespace
+            import mcp_coder.cli.commands.prompt as prompt_module
+
+            save_function = getattr(prompt_module, "_save_conversation_markdown")
+
+            # Call the save function
+            save_function(test_response_data, test_prompt, file_path)
+
+            # Verify file was created
+            assert os.path.exists(file_path)
+
+            # Verify file contains expected content
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Check for key elements in markdown format
+            assert "Create a Python file" in content  # Original prompt
+            assert "This is Claude's response." in content  # Response text
+            assert "test-session-123" in content  # Session info
+            assert "claude-sonnet-4" in content  # Model info
+            assert "#" in content  # Markdown headers
+
+    @patch("mcp_coder.cli.commands.prompt._save_conversation_full_json")
+    def test_save_conversation_full_json_basic(self, mock_save_json: Mock) -> None:
+        """Test basic JSON file creation and structure."""
+        # Test response data matching the expected function signature
+        test_response_data = {
+            "text": "This is Claude's response.",
+            "session_info": {
+                "session_id": "test-session-123",
+                "model": "claude-sonnet-4",
+                "tools": ["file_writer"],
+            },
+            "result_info": {
+                "duration_ms": 1500,
+                "cost_usd": 0.025,
+                "usage": {"input_tokens": 10, "output_tokens": 8},
+            },
+            "raw_messages": [],
+        }
+
+        test_prompt = "Create a Python file"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = os.path.join(temp_dir, "conversation.json")
+
+            # Access the private function through the module's namespace
+            import mcp_coder.cli.commands.prompt as prompt_module
+
+            save_function = getattr(prompt_module, "_save_conversation_full_json")
+
+            # Call the save function
+            save_function(test_response_data, test_prompt, file_path)
+
+            # Verify file was created
+            assert os.path.exists(file_path)
+
+            # Verify file contains valid JSON with expected structure
+            with open(file_path, "r", encoding="utf-8") as f:
+                saved_data = json.load(f)
+
+            # Check for key elements in JSON structure
+            assert "prompt" in saved_data
+            assert "response_data" in saved_data
+            assert saved_data["prompt"] == "Create a Python file"
+            assert saved_data["response_data"]["text"] == "This is Claude's response."
+            assert (
+                saved_data["response_data"]["session_info"]["session_id"]
+                == "test-session-123"
+            )
+            assert (
+                saved_data["response_data"]["session_info"]["model"]
+                == "claude-sonnet-4"
+            )
+
     @pytest.mark.skip(
         reason="prompt_claude function not yet implemented - will be added in Step 3"
     )
