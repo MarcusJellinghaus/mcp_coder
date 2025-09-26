@@ -336,6 +336,35 @@ def push_changes(project_dir: Path) -> bool:
         return False
 
 
+def _run_mypy_check(project_dir: Path) -> Optional[str]:
+    """Run mypy check and return error output or None if clean."""
+    try:
+        # Use subprocess approach as MCP tools are not directly importable
+        # This maintains consistency with the original approach but in a helper function
+        import subprocess
+        import sys
+        
+        # Run mypy using subprocess with strict checking
+        # Let mypy choose default directories (typically src/ and tests/)
+        result = subprocess.run(
+            [sys.executable, "-m", "mypy", "src", "--strict"],
+            capture_output=True, text=True, cwd=str(project_dir)
+        )
+        
+        if result.returncode == 0:
+            return None  # No errors found
+        
+        # Return combined stdout and stderr for error analysis
+        error_output = result.stdout + "\n" + result.stderr
+        return error_output.strip() if error_output.strip() else "Mypy check failed"
+        
+    except FileNotFoundError:
+        # Mypy is not installed
+        raise Exception("mypy is not installed or not found in PATH")
+    except Exception as e:
+        raise Exception(f"Failed to run mypy check: {e}")
+
+
 def check_and_fix_mypy(project_dir: Path, conversation_content: list[str]) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean."""
     log_step("Running mypy type checking...")
@@ -344,35 +373,10 @@ def check_and_fix_mypy(project_dir: Path, conversation_content: list[str]) -> bo
     previous_outputs = []
     
     try:
-        # Use mypy directly via subprocess or mypy.api since we have mypy available
-        import subprocess
-        import sys
+        # Initial mypy check using MCP tool
+        mypy_result = _run_mypy_check(project_dir)
         
-        # Try to run mypy directly using subprocess
-        try:
-            result = subprocess.run(
-                [sys.executable, "-m", "mypy", "src", "workflows", "--strict"],
-                capture_output=True, text=True, cwd=str(project_dir)
-            )
-            if result.returncode == 0:
-                mypy_result = "mypy completed successfully - no type errors found"
-            else:
-                mypy_result = result.stdout + "\n" + result.stderr
-        except Exception as subprocess_error:
-            # If subprocess fails, try to import and use mypy directly
-            try:
-                import mypy.api
-                stdout, stderr, exit_status = mypy.api.run([
-                    "src", "workflows", "--strict", f"--python-executable={sys.executable}"
-                ])
-                if exit_status == 0:
-                    mypy_result = "mypy completed successfully - no type errors found"
-                else:
-                    mypy_result = stdout + "\n" + stderr
-            except ImportError:
-                raise Exception("Neither subprocess nor mypy.api available for type checking")
-        
-        if "No type errors found" in mypy_result or "mypy completed successfully" in mypy_result:
+        if mypy_result is None:
             log_step("Mypy check passed - no type errors found")
             return True
         
@@ -430,36 +434,25 @@ Mypy fix generated on: {datetime.now().isoformat()}
                 log_step("Applied mypy fixes from LLM")
                 
             except Exception as e:
-                logger.error(f"Error getting mypy fixes from LLM: {e}")
+                logger.error(f"Error getting mypy fixes from LLM on attempt {identical_count + 1}: {e}")
                 return False
             
             # Re-run mypy check to see if issues were resolved
             try:
-                # Run mypy again using the same approach as initial check
-                result = subprocess.run(
-                    [sys.executable, "-m", "mypy", "src", "workflows", "--strict"],
-                    capture_output=True, text=True, cwd=str(project_dir)
-                )
-                if result.returncode == 0:
-                    mypy_result = "mypy completed successfully - no type errors found"
-                else:
-                    mypy_result = result.stdout + "\n" + result.stderr
+                mypy_result = _run_mypy_check(project_dir)
                 
-                if "No type errors found" in mypy_result or "mypy completed successfully" in mypy_result:
+                if mypy_result is None:
                     log_step("Mypy check passed after fixes")
                     return True
                     
             except Exception as e:
-                logger.error(f"Error re-running mypy check: {e}")
+                logger.error(f"Error re-running mypy check on attempt {identical_count + 1}: {e}")
                 return False
         
         # If we get here, we couldn't fix all issues
         log_step("Could not resolve all mypy type errors")
         return False
         
-    except ImportError:
-        logger.error("Could not import MCP code checker tools")
-        return False
     except Exception as e:
         logger.error(f"Error during mypy check and fix: {e}")
         return False
