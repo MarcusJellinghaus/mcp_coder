@@ -343,21 +343,20 @@ def push_changes(project_dir: Path) -> bool:
 
 def _run_mypy_check(project_dir: Path) -> Optional[str]:
     """Run mypy check using our wrapper and return error output or None if clean."""
+    from mcp_coder.mcp_code_checker import run_mypy_check
+    
     try:
-        from mcp_coder.mcp_code_checker import run_mypy_check
-        
         result = run_mypy_check(project_dir)
         
-        if result.has_errors:
-            return result.output
+        # Check if there are errors
+        if (result.errors_found or 0) > 0:
+            # Return raw output for error details
+            return result.raw_output or "Mypy found type errors"
         else:
             return None  # No errors found
             
-    except ImportError as e:
-        # mcp_code_checker wrapper not available - this is a critical error
-        raise Exception(f"mcp_coder.mcp_code_checker is required but not available: {e}")
     except Exception as e:
-        raise Exception(f"Failed to run mypy check via mcp_coder wrapper: {e}")
+        raise Exception(f"Failed to run mypy check: {e}")
 
 
 def check_and_fix_mypy(project_dir: Path, step_num: int) -> bool:
