@@ -349,7 +349,7 @@ mypy src/
 
 ## 📚 Documentation
 
-- [Development Process](PR_Info/DEVELOPMENT_PROCESS.md) - Detailed methodology
+- [Development Process](pr_info/DEVELOPMENT_PROCESS.md) - Detailed methodology
 - [Project Vision](project_idea.md) - Comprehensive project overview
 
 ## 🔗 Related Projects

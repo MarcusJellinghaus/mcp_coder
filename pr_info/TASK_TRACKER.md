@@ -21,10 +21,4 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ## Tasks
 
-### Implementation Steps
-
 *Tasks will be added here during feature development*
-
-### Pull Request
-
-*PR tasks will be added here during feature development*
