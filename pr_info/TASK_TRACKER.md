@@ -22,10 +22,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Update Dependencies and Add Mypy Prompt
-- [ ] Step 1: Update Dependencies and Add Mypy Prompt - [Details](steps/step_1.md)
-  - [ ] Move mcp-code-checker from dev dependencies to main dependencies in pyproject.toml
-  - [ ] Add "Mypy Fix Prompt" section to src/mcp_coder/prompts/prompts.md
-  - [ ] Quality checks: Run pylint, pytest, mypy
+- [x] Step 1: Update Dependencies and Add Mypy Prompt - [Details](steps/step_1.md)
+  - [x] Move mcp-code-checker from dev dependencies to main dependencies in pyproject.toml
+  - [x] Add "Mypy Fix Prompt" section to src/mcp_coder/prompts/prompts.md
+  - [x] Quality checks: Run pylint, pytest, mypy
   - [ ] Git commit preparation and commit
 
 ### Step 2: Complete Mypy Integration
