@@ -23,16 +23,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Implementation Steps
 
-- [ ] **Step 1: Core Implementation with Essential Tests** - [Details](steps/step_1.md)
-  - [ ] Implement personal config module (`src/mcp_coder/utils/personal_config.py`)
-    - [ ] `get_config_file_path()` function with platform-specific path resolution
-    - [ ] `get_config_value()` function with TOML config reading and error handling
-  - [ ] Create essential unit tests (`tests/utils/test_personal_config.py`)
-    - [ ] Test platform-specific path resolution
-    - [ ] Test config value retrieval (success cases)
-    - [ ] Test missing file/section/key scenarios
-  - [ ] Run quality checks: pylint, pytest, mypy
-  - [ ] Git commit preparation
+- [x] **Step 1: Core Implementation with Essential Tests** - [Details](steps/step_1.md)
+  - [x] Implement personal config module (`src/mcp_coder/utils/personal_config.py`)
+    - [x] `get_config_file_path()` function with platform-specific path resolution
+    - [x] `get_config_value()` function with TOML config reading and error handling
+  - [x] Create essential unit tests (`tests/utils/test_personal_config.py`)
+    - [x] Test platform-specific path resolution
+    - [x] Test config value retrieval (success cases)
+    - [x] Test missing file/section/key scenarios
+  - [x] Run quality checks: pylint, pytest, mypy
+  - [x] Git commit preparation
 
 - [ ] **Step 2: Integration Validation and Documentation** - [Details](steps/step_2.md)
   - [ ] Add integration tests (`tests/utils/test_personal_config_integration.py`)

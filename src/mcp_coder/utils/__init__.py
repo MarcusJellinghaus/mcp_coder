@@ -25,6 +25,7 @@ from .git_operations import (
     stage_specific_files,
 )
 from .log_utils import log_function_call, setup_logging
+from .personal_config import get_config_file_path, get_config_value
 from .subprocess_runner import (
     CommandOptions,
     CommandResult,
@@ -52,6 +53,9 @@ __all__ = [
     # Logging utilities
     "log_function_call",
     "setup_logging",
+    # Personal configuration
+    "get_config_file_path",
+    "get_config_value",
     # Subprocess operations
     "CommandOptions",
     "CommandResult",
