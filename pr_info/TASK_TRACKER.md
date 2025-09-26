@@ -23,12 +23,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Implementation Steps
 
-- [ ] **Step 1: Add Minimal Tests for Parameter Mapping** ([step_1.md](./steps/step_1.md))
-  - [ ] Add test methods to `tests/cli/commands/test_prompt.py`
-  - [ ] Run pylint checks and fix any issues
-  - [ ] Run pytest checks and fix any issues  
-  - [ ] Run mypy checks and fix any issues
-  - [ ] Prepare git commit message
+- [x] **Step 1: Add Minimal Tests for Parameter Mapping** ([step_1.md](./steps/step_1.md))
+  - [x] Add test methods to `tests/cli/commands/test_prompt.py`
+  - [x] Run pylint checks and fix any issues
+  - [x] Run pytest checks and fix any issues  
+  - [x] Run mypy checks and fix any issues
+  - [x] Prepare git commit message
 
 - [ ] **Step 2: Add Tests for Save Conversation Functions** ([step_2.md](./steps/step_2.md))
   - [ ] Add test methods for save functions
