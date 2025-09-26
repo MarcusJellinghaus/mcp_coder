@@ -336,6 +336,138 @@ def push_changes(project_dir: Path) -> bool:
         return False
 
 
+def _run_mypy_check(project_dir: Path) -> Optional[str]:
+    """Run mypy check using mcp-code-checker API and return error output or None if clean."""
+    try:
+        # Import and use the mcp-code-checker API directly
+        # This is the correct approach as you pointed out
+        from mcp_code_checker.code_checker_mypy import run_mypy_check
+        
+        # Use the API with default settings
+        # Let the MCP tool decide on target directories and use strict mode
+        result = run_mypy_check(
+            project_dir=str(project_dir),
+            strict=True,
+            disable_error_codes=None,
+            target_directories=None,  # Let MCP tool choose defaults (src/, tests/)
+            follow_imports="normal",
+            cache_dir=None
+        )
+        
+        # Handle the result based on what the API actually returns
+        # The API might return a result object or None/string
+        if result is None:
+            return None  # No errors found
+        
+        # If result is a string, use it directly
+        if isinstance(result, str):
+            return result if result.strip() else None
+        
+        # If result is an object, try to get string representation
+        # This handles cases where the API returns a result object
+        result_str = str(result)
+        return result_str if result_str.strip() else None
+        
+    except ImportError as e:
+        # mcp-code-checker not available - this is a critical error
+        raise Exception(f"mcp-code-checker is required but not available: {e}")
+    except Exception as e:
+        raise Exception(f"Failed to run mypy check via mcp-code-checker: {e}")
+
+
+def check_and_fix_mypy(project_dir: Path, conversation_content: list[str]) -> bool:
+    """Run mypy check and attempt fixes if issues found. Returns True if clean."""
+    log_step("Running mypy type checking...")
+    
+    max_identical_attempts = 3
+    previous_outputs = []
+    
+    try:
+        # Initial mypy check using MCP tool
+        mypy_result = _run_mypy_check(project_dir)
+        
+        if mypy_result is None:
+            log_step("Mypy check passed - no type errors found")
+            return True
+        
+        log_step("Type errors found, attempting fixes...")
+        identical_count = 0
+        
+        # Retry loop with smart retry logic
+        while identical_count < max_identical_attempts:
+            # Check if current mypy output is identical to a previous one
+            if mypy_result in previous_outputs:
+                identical_count += 1
+                log_step(f"Identical mypy feedback detected (attempt {identical_count}/{max_identical_attempts})")
+                
+                if identical_count >= max_identical_attempts:
+                    log_step("Maximum identical attempts reached - stopping mypy fixes")
+                    break
+            else:
+                # New output, reset counter
+                identical_count = 0
+            
+            # Add current output to history
+            previous_outputs.append(mypy_result)
+            
+            # Get mypy fix prompt template
+            try:
+                mypy_prompt_template = get_prompt(PROMPTS_FILE_PATH, "Mypy Fix Prompt")
+                # Replace placeholder with actual mypy output
+                mypy_prompt = mypy_prompt_template.replace("[mypy_output]", mypy_result)
+            except Exception as e:
+                logger.error(f"Error loading mypy fix prompt: {e}")
+                return False
+            
+            # Call LLM for fixes
+            try:
+                fix_response = ask_llm(mypy_prompt, provider="claude", method="api", timeout=300)
+                
+                if not fix_response or not fix_response.strip():
+                    logger.error("LLM returned empty response for mypy fixes")
+                    return False
+                
+                # Append fix attempt to conversation content
+                fix_conversation = f"""\n\n## Mypy Fix Attempt:
+
+### Mypy Errors:
+{mypy_result}
+
+### LLM Fix Response:
+{fix_response}
+
+---
+Mypy fix generated on: {datetime.now().isoformat()}
+"""
+                conversation_content.append(fix_conversation)
+                
+                log_step("Applied mypy fixes from LLM")
+                
+            except Exception as e:
+                logger.error(f"Error getting mypy fixes from LLM on attempt {identical_count + 1}: {e}")
+                return False
+            
+            # Re-run mypy check to see if issues were resolved
+            try:
+                mypy_result = _run_mypy_check(project_dir)
+                
+                if mypy_result is None:
+                    log_step("Mypy check passed after fixes")
+                    return True
+                    
+            except Exception as e:
+                logger.error(f"Error re-running mypy check on attempt {identical_count + 1}: {e}")
+                return False
+        
+        # If we get here, we couldn't fix all issues
+        log_step("Could not resolve all mypy type errors")
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error during mypy check and fix: {e}")
+        return False
+
+
 def process_single_task(project_dir: Path) -> bool:
     """Process a single implementation task. Returns True if successful, False if failed."""
     # Get next incomplete task
@@ -374,13 +506,14 @@ Please implement this task step by step."""
         logger.error(f"Error calling LLM: {e}")
         return False
     
-    # Step 5: Save conversation
+    # Step 5: Initialize conversation content for tracking
     try:
         # Extract step number from task for conversation naming
         step_match = re.search(r'Step (\d+)', next_task)
         step_num = int(step_match.group(1)) if step_match else 1
         
-        conversation_content = f"""# Implementation Task: {next_task}
+        # Initialize conversation content list for mypy fixes
+        conversation_content = [f"""# Implementation Task: {next_task}
 
 ## Prompt Sent to LLM:
 {full_prompt}
@@ -389,24 +522,35 @@ Please implement this task step by step."""
 {response}
 
 ---
-Generated on: {datetime.now().isoformat()}
-"""
+Generated on: {datetime.now().isoformat()}"""]
         
-        save_conversation(project_dir, conversation_content, step_num)
+    except Exception as e:
+        logger.error(f"Error initializing conversation content: {e}")
+        return False
+    
+    # Step 6: Run mypy check and fixes
+    if not check_and_fix_mypy(project_dir, conversation_content):
+        logger.warning("Mypy check failed or found unresolved issues - continuing anyway")
+    
+    # Step 7: Save complete conversation (including any mypy fixes)
+    try:
+        # Combine all conversation content
+        full_conversation = '\n'.join(conversation_content)
+        save_conversation(project_dir, full_conversation, step_num)
     
     except Exception as e:
         logger.error(f"Error saving conversation: {e}")
         return False
     
-    # Step 6: Run formatters
+    # Step 8: Run formatters
     if not run_formatters(project_dir):
         return False
     
-    # Step 7: Commit changes
+    # Step 9: Commit changes
     if not commit_changes(project_dir):
         return False
     
-    # Step 8: Push changes to remote
+    # Step 10: Push changes to remote
     if not push_changes(project_dir):
         return False
     
