@@ -197,10 +197,10 @@ def git_move(source_path: Path, dest_path: Path, project_dir: Path) -> bool:
                 return False
 
             # Execute git mv command
-            logger.info("Executing git mv from %s to %s", source_git, dest_git)
+            logger.debug("Executing git mv from %s to %s", source_git, dest_git)
             repo.git.mv(source_git, dest_git)
 
-            logger.info(
+            logger.debug(
                 "Successfully moved file using git from %s to %s", source_git, dest_git
             )
             return True
@@ -480,7 +480,7 @@ def stage_all_changes(project_dir: Path) -> bool:
             # Use git add --all to stage all changes (additions, modifications, deletions)
             repo.git.add("--all")
 
-            logger.info(
+            logger.debug(
                 "Successfully staged all %d unstaged changes", len(all_unstaged_files)
             )
 
@@ -544,7 +544,7 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
             # Get short commit hash
             commit_hash = commit.hexsha[:GIT_SHORT_HASH_LENGTH]
 
-            logger.info(
+            logger.debug(
                 "Successfully created commit %s with message: %s",
                 commit_hash,
                 message.strip(),
@@ -964,7 +964,7 @@ def git_push(project_dir: Path) -> dict[str, Any]:
             # Execute git push origin <current_branch>
             repo.git.push("origin", current_branch)
 
-            logger.info("Successfully pushed branch '%s' to origin", current_branch)
+            logger.debug("Successfully pushed branch '%s' to origin", current_branch)
             return {"success": True, "error": None}
 
     except (InvalidGitRepositoryError, GitCommandError) as e:

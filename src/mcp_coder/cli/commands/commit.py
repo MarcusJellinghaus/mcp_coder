@@ -143,7 +143,7 @@ def generate_commit_message_with_llm(
             )
 
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
-        logger.info("Calling LLM for auto generated commit message...")
+        logger.debug("Calling LLM for auto generated commit message...")
         response = ask_llm(full_prompt, provider="claude", method="api", timeout=30)
 
         if not response or not response.strip():
@@ -184,7 +184,7 @@ def generate_commit_message_with_llm(
             logger.error(error_msg)
             return False, "", error_msg
 
-        logger.info("Successfully generated commit message: %s", first_line)
+        logger.debug("Successfully generated commit message: %s", first_line)
         return True, commit_message, None
 
     except Exception as e:
@@ -320,5 +320,5 @@ def get_commit_message_from_clipboard() -> Tuple[bool, str, Optional[str]]:
     else:
         formatted_message = summary
 
-    logger.info("Successfully validated clipboard commit message: %s", summary)
+    logger.debug("Successfully validated clipboard commit message: %s", summary)
     return True, formatted_message, None
