@@ -25,13 +25,13 @@ from .git_operations import (
     stage_specific_files,
 )
 from .log_utils import log_function_call, setup_logging
-from .user_config import get_config_file_path, get_config_value
 from .subprocess_runner import (
     CommandOptions,
     CommandResult,
     execute_command,
     execute_subprocess,
 )
+from .user_config import get_config_file_path, get_config_value
 
 __all__ = [
     # Clipboard operations

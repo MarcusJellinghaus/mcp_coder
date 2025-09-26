@@ -76,7 +76,7 @@ port = 5432
         # Test that multiple calls return the same path
         path1 = get_config_file_path()
         path2 = get_config_file_path()
-        
+
         assert path1 == path2
         assert path1.name == "config.toml"
         assert path1.parent.name == ".mcp_coder"
