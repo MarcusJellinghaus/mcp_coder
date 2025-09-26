@@ -337,42 +337,22 @@ def push_changes(project_dir: Path) -> bool:
 
 
 def _run_mypy_check(project_dir: Path) -> Optional[str]:
-    """Run mypy check using mcp-code-checker API and return error output or None if clean."""
+    """Run mypy check using our wrapper and return error output or None if clean."""
     try:
-        # Import and use the mcp-code-checker API directly
-        # This is the correct approach as you pointed out
-        from mcp_code_checker.code_checker_mypy import run_mypy_check
+        from mcp_coder.mcp_code_checker import run_mypy_check
         
-        # Use the API with default settings
-        # Let the MCP tool decide on target directories and use strict mode
-        result = run_mypy_check(
-            project_dir=str(project_dir),
-            strict=True,
-            disable_error_codes=None,
-            target_directories=None,  # Let MCP tool choose defaults (src/, tests/)
-            follow_imports="normal",
-            cache_dir=None
-        )
+        result = run_mypy_check(project_dir)
         
-        # Handle the result based on what the API actually returns
-        # The API might return a result object or None/string
-        if result is None:
+        if result.has_errors:
+            return result.output
+        else:
             return None  # No errors found
-        
-        # If result is a string, use it directly
-        if isinstance(result, str):
-            return result if result.strip() else None
-        
-        # If result is an object, try to get string representation
-        # This handles cases where the API returns a result object
-        result_str = str(result)
-        return result_str if result_str.strip() else None
-        
+            
     except ImportError as e:
-        # mcp-code-checker not available - this is a critical error
-        raise Exception(f"mcp-code-checker is required but not available: {e}")
+        # mcp_code_checker wrapper not available - this is a critical error
+        raise Exception(f"mcp_coder.mcp_code_checker is required but not available: {e}")
     except Exception as e:
-        raise Exception(f"Failed to run mypy check via mcp-code-checker: {e}")
+        raise Exception(f"Failed to run mypy check via mcp_coder wrapper: {e}")
 
 
 def check_and_fix_mypy(project_dir: Path, conversation_content: list[str]) -> bool:
