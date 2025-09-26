@@ -63,8 +63,9 @@ if github_token:
 - No breaking changes to existing code
 
 ## Testing Strategy
-- Unit tests for path resolution on different platforms
-- Tests for config file reading with various scenarios
+- Essential unit tests for core functionality
+- Basic path resolution testing (one platform test)
+- Essential config file reading scenarios
 - Mock file system operations for reliable testing
 
 ## Security Considerations
@@ -79,3 +80,4 @@ if github_token:
 - **No CLI config commands** - not needed initially
 - **No token encryption** - relies on OS file permissions
 - **No config migration** - simple, stable format
+- **Essential testing only** - focus on practical scenarios, not comprehensive edge cases

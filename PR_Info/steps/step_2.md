@@ -1,62 +1,63 @@
-# Step 2: Implement Personal Config Module (Core Functionality)
+# Step 2: Integration Validation and Documentation
 
 ## Objective
-Implement the minimal personal configuration module with platform-specific path resolution and generic config value reading functionality.
+Add integration tests to verify end-to-end functionality and update project documentation with usage examples.
 
 ## LLM Prompt
 ```
-Implement the personal configuration module as described in pr_info/steps/summary.md and step_1.md. 
+Create integration tests and documentation for the personal configuration system implemented in step 1.
 
-The implementation should:
-1. Detect platform-appropriate config directories
-2. Read TOML configuration files safely
-3. Provide generic config value access
-4. Handle missing files/sections/keys gracefully
+Tasks:
+1. Add integration tests that create real config files and test the full workflow
+2. Update README.md with config file format and usage examples
+3. Ensure the new functionality is properly documented for future developers
 
-Make all tests from step_1.md pass. Follow KISS principle - keep the implementation minimal and focused.
+Follow existing project patterns for integration tests and documentation.
 ```
 
 ## WHERE
-- **File**: `src/mcp_coder/utils/personal_config.py`
-- **Module**: New utility module under `mcp_coder.utils`
+- **Files**:
+  - `tests/utils/test_personal_config_integration.py` (integration tests)
+  - `README.md` (add Personal Configuration section)
 
 ## WHAT
-Functions to implement:
+Integration test functions:
 ```python
-def get_config_file_path() -> Path
-    """Get platform-specific personal config file path."""
-
-def get_config_value(section: str, key: str) -> Optional[str]
-    """Get configuration value from section.key, None if not found."""
+def test_real_config_file_workflow(tmp_path)
+def test_config_directory_creation()
+def test_cross_platform_functionality()
 ```
 
 ## HOW
 ### Integration Points
-- **Import**: `import tomllib`, `import platform`, `from pathlib import Path`
-- **Module structure**: Add to `src/mcp_coder/utils/__init__.py` if needed
-- **Dependencies**: Uses existing `tomllib` (Python 3.11+)
+- **Test fixtures**: Use `tmp_path` for real file operations
+- **Documentation**: Add "Personal Configuration" section to README.md
+- **Real file testing**: Create actual TOML files and test reading (no mocking)
 
-### Error Handling
-- Catch `FileNotFoundError` for missing config files
-- Catch `tomllib.TOMLDecodeError` for malformed TOML
-- Return `None` for all error cases (no exceptions propagated)
+### Documentation Content
+- Configuration file format specification
+- Setup instructions for users
+- Usage examples for developers
+- Security considerations
 
 ## ALGORITHM
-### Path Resolution Logic
+### Integration Test Flow
 ```
-1. Detect platform using platform.system()
-2. If Windows: return Path(os.environ['APPDATA']) / 'mcp-coder' / 'config.toml'
-3. If Unix/Mac: return Path.home() / '.config' / 'mcp-coder' / 'config.toml'  
-4. Fallback: return Path.cwd() / 'config.toml'
+1. Create temporary directory structure mimicking user config
+2. Write real TOML config file with test data
+3. Call actual personal_config functions (no mocking)
+4. Verify correct values are returned
+5. Test error cases with malformed files
+6. Clean up temporary files
 ```
 
-### Config Value Retrieval Logic
+### Documentation Structure
 ```
-1. Get config file path using get_config_file_path()
-2. Try to read file, return None if not found
-3. Parse TOML content, return None if malformed
-4. Navigate to config[section][key], return None if missing
-5. Return string value or None
+1. Add "Personal Configuration" section to README
+2. Document config file location by OS
+3. Show TOML format example
+4. Provide usage examples for developers
+5. List security best practices
 ```
 
 ## DATA
@@ -78,17 +79,16 @@ config_data: Dict[str, Dict[str, Any]] = {
 ```
 
 ## Implementation Requirements
-- Use `tomllib` for TOML parsing (read-only, Python 3.11+ standard)
-- Handle all exceptions gracefully (return None, no re-raising)
-- Support Windows (`%APPDATA%`) and Unix (`~/.config`) conventions
-- No logging or error messages (keep it silent)
-- No config file creation (user responsibility)
+- **Integration tests** run against real file system (not mocked)
+- **Documentation** is clear and actionable for end users
+- **Examples** show both success and failure cases
+- **Security notes** explain token handling best practices
 
 ## Acceptance Criteria
-- [ ] All tests from step_1.md pass
-- [ ] Platform-specific path resolution works correctly
-- [ ] Config values are read successfully from valid TOML files
-- [ ] Missing files/sections/keys return None without exceptions
-- [ ] Malformed TOML files handled gracefully
-- [ ] No external dependencies beyond Python standard library
-- [ ] Code follows project's existing style and patterns
+- [ ] Integration tests pass with real file operations
+- [ ] README.md updated with Personal Configuration section
+- [ ] Documentation clearly explains config file setup
+- [ ] Usage examples are accurate and helpful
+- [ ] Security considerations are documented
+- [ ] Cross-platform functionality verified
+- [ ] Documentation follows project's existing style

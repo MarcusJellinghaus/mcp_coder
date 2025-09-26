@@ -1,33 +1,36 @@
-# Step 1: Create Personal Config Tests (TDD Foundation)
+# Step 1: Core Implementation with Essential Tests
 
 ## Objective
-Implement comprehensive unit tests for personal configuration functionality before writing the actual implementation, following TDD methodology.
+Implement the personal configuration module with essential, focused tests following practical TDD approach.
 
 ## LLM Prompt
 ```
-Implement unit tests for a personal configuration system as described in pr_info/steps/summary.md. 
+Implement the personal configuration system as described in pr_info/steps/summary.md with essential testing.
 
-Create tests for:
-1. Platform-specific config file path resolution
-2. Reading config values from TOML files
-3. Handling missing files and keys gracefully
+Implement core functionality:
+1. Personal config module with platform-specific path resolution
+2. TOML config value reading with graceful error handling
+3. Essential unit tests covering practical scenarios
 
-Follow the test patterns established in the existing test suite. Use pytest fixtures and mocking where appropriate to ensure tests are isolated and deterministic.
+Follow TDD principles but focus on essential test coverage. Use pytest fixtures and mocking for reliable, isolated tests.
 ```
 
 ## WHERE
-- **File**: `tests/utils/test_personal_config.py`
-- **Module**: New test module in utils test package
+- **Files**: 
+  - `src/mcp_coder/utils/personal_config.py` (implementation)
+  - `tests/utils/test_personal_config.py` (essential tests)
 
 ## WHAT
-Test functions to implement:
+Core functions to implement:
 ```python
-def test_get_config_file_path_linux_mac()
-def test_get_config_file_path_windows() 
-def test_get_config_value_file_exists()
-def test_get_config_value_file_missing()
-def test_get_config_value_section_missing()
-def test_get_config_value_key_missing()
+# Implementation
+def get_config_file_path() -> Path
+def get_config_value(section: str, key: str) -> Optional[str]
+
+# Essential tests
+def test_get_config_file_path_platform()
+def test_get_config_value_success()
+def test_get_config_value_missing_cases()
 ```
 
 ## HOW
@@ -73,9 +76,9 @@ Test implementation pseudocode:
 - **Error cases**: None (no exceptions) for all missing resource scenarios
 
 ## Acceptance Criteria
-- [ ] All tests fail initially (no implementation exists)
-- [ ] Tests cover Windows and Unix path resolution
-- [ ] Tests verify TOML parsing and key lookup
-- [ ] Tests handle all error cases gracefully
-- [ ] Tests are isolated and use mocking for file system operations
-- [ ] Test coverage includes edge cases (empty files, malformed TOML)
+- [ ] Core implementation completed
+- [ ] Essential tests pass (path resolution, config reading, error handling)
+- [ ] Tests are isolated and use appropriate mocking
+- [ ] Implementation uses `tomllib` (Python 3.11+)
+- [ ] All functions handle missing resources gracefully (return None)
+- [ ] Code follows project patterns and style
