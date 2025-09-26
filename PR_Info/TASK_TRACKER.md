@@ -21,3 +21,43 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ## Tasks
 
+### Implementation Steps
+
+- [ ] **Step 1: Core Implementation with Essential Tests** - [Details](steps/step_1.md)
+  - [ ] Implement personal config module (`src/mcp_coder/utils/personal_config.py`)
+    - [ ] `get_config_file_path()` function with platform-specific path resolution
+    - [ ] `get_config_value()` function with TOML config reading and error handling
+  - [ ] Create essential unit tests (`tests/utils/test_personal_config.py`)
+    - [ ] Test platform-specific path resolution
+    - [ ] Test config value retrieval (success cases)
+    - [ ] Test missing file/section/key scenarios
+  - [ ] Run quality checks: pylint, pytest, mypy
+  - [ ] Git commit preparation
+
+- [ ] **Step 2: Integration Validation and Documentation** - [Details](steps/step_2.md)
+  - [ ] Add integration tests (`tests/utils/test_personal_config_integration.py`)
+    - [ ] Test real config file workflow with tmp_path
+    - [ ] Test config directory creation
+    - [ ] Test cross-platform functionality
+  - [ ] Update project documentation (`README.md`)
+    - [ ] Add "Personal Configuration" section
+    - [ ] Document config file format and location
+    - [ ] Provide usage examples for developers
+    - [ ] Include security considerations
+  - [ ] Run quality checks: pylint, pytest, mypy
+  - [ ] Git commit preparation
+
+### Pull Request
+
+- [ ] **PR Review and Validation**
+  - [ ] Run comprehensive code review
+  - [ ] Validate all implementation requirements met
+  - [ ] Ensure all tests pass across platforms
+  - [ ] Review documentation completeness
+
+- [ ] **PR Summary and Cleanup**
+  - [ ] Generate comprehensive feature summary
+  - [ ] Create PR description for external review
+  - [ ] Clean up PR_Info development artifacts
+  - [ ] Final commit preparation
+
