@@ -37,6 +37,91 @@ Automated software feature development with stringent quality controls using AI-
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
+## ⚙️ Personal Configuration
+
+MCP Coder supports personal configuration through TOML files located in platform-specific directories. This allows you to store tokens, settings, and other personal preferences securely.
+
+### Configuration File Location
+
+- **Windows**: `%USERPROFILE%\.mcp_coder\config.toml`
+- **macOS/Linux**: `~/.mcp_coder/config.toml`
+
+### Configuration Format
+
+Create a TOML file with sections for different types of configuration:
+
+```toml
+[tokens]
+github = "ghp_your_github_token_here"
+claude = "cl_your_claude_token_here"
+api_key = "your_api_key_here"
+
+[settings]
+default_branch = "main"
+timeout = 30
+debug = true
+
+[database]
+host = "localhost"
+port = 5432
+name = "mcp_coder_db"
+```
+
+### Usage in Code
+
+```python
+from mcp_coder.utils.personal_config import get_config_value, get_config_file_path
+
+# Get configuration file path
+config_path = get_config_file_path()
+print(f"Config file: {config_path}")
+
+# Read configuration values
+github_token = get_config_value("tokens", "github")
+default_branch = get_config_value("settings", "default_branch")
+db_port = get_config_value("database", "port")  # Returns "5432" as string
+
+# Handle missing values gracefully
+missing_value = get_config_value("section", "missing_key")  # Returns None
+if missing_value is None:
+    print("Configuration value not found")
+```
+
+### Security Considerations
+
+- **Never commit** the config file to version control
+- **Use environment variables** for CI/CD environments instead of config files
+- **Set appropriate file permissions** (readable only by the user)
+- **Rotate tokens regularly** and update the config file accordingly
+- **Use specific scopes** for tokens (e.g., GitHub personal access tokens with minimal required permissions)
+
+### Setup Instructions
+
+1. Create the configuration directory:
+   ```bash
+   # Windows (PowerShell)
+   New-Item -ItemType Directory -Path "$env:USERPROFILE\.mcp_coder" -Force
+   
+   # macOS/Linux
+   mkdir -p ~/.mcp_coder
+   ```
+
+2. Create and edit the config file:
+   ```bash
+   # Windows
+   notepad "%USERPROFILE%\.mcp_coder\config.toml"
+   
+   # macOS/Linux
+   nano ~/.mcp_coder/config.toml
+   ```
+
+3. Add your configuration following the TOML format shown above
+
+4. Set secure file permissions (Unix-like systems):
+   ```bash
+   chmod 600 ~/.mcp_coder/config.toml
+   ```
+
 ## 🚀 Quick Start
 
 ### Prerequisites
