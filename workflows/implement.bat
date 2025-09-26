@@ -8,7 +8,6 @@ python workflows/implement.py --project-dir . --log-level INFO
 
 if %ERRORLEVEL% neq 0 (
     echo Workflow failed with exit code %ERRORLEVEL%
-    pause
     exit /b %ERRORLEVEL%
 )
 

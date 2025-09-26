@@ -37,7 +37,7 @@ from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_operations import commit_all_changes, git_push, get_full_status, is_working_directory_clean
+from mcp_coder.utils.git_operations import commit_all_changes, git_push, get_full_status, is_working_directory_clean, get_current_branch_name, get_main_branch_name
 from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
@@ -76,6 +76,34 @@ def check_git_clean(project_dir: Path) -> bool:
     
     except ValueError as e:
         logger.error(str(e))
+        return False
+
+
+def check_main_branch(project_dir: Path) -> bool:
+    """Check if current branch is not the main branch."""
+    log_step("Checking current branch...")
+    
+    try:
+        current_branch = get_current_branch_name(project_dir)
+        main_branch = get_main_branch_name(project_dir)
+        
+        if current_branch is None:
+            logger.error("Could not determine current branch (possibly detached HEAD state)")
+            return False
+        
+        if main_branch is None:
+            logger.error("Could not determine main branch (neither 'main' nor 'master' branch found)")
+            return False
+        
+        if current_branch == main_branch:
+            logger.error(f"Current branch '{current_branch}' is the main branch. Please create and switch to a feature branch before running the workflow.")
+            return False
+        
+        log_step(f"Current branch '{current_branch}' is not the main branch '{main_branch}' - check passed")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Error checking current branch: {e}")
         return False
 
 
@@ -450,6 +478,9 @@ def main() -> None:
     
     # Step 1: Check git status and prerequisites
     if not check_git_clean(project_dir):
+        sys.exit(1)
+    
+    if not check_main_branch(project_dir):
         sys.exit(1)
     
     if not check_prerequisites(project_dir):
