@@ -750,38 +750,67 @@ def _save_conversation_markdown(
         prompt: Original user prompt
         file_path: Path where to save the markdown file
     """
-    # Extract data from response
-    response_text = response_data.get("text", "")
-    session_info = response_data.get("session_info", {})
-    result_info = response_data.get("result_info", {})
+    try:
+        # Create parent directories if needed
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    session_id = session_info.get("session_id", "unknown")
-    model = session_info.get("model", "unknown")
-    duration_ms = result_info.get("duration_ms", 0)
-    cost_usd = result_info.get("cost_usd", 0.0)
-    usage = result_info.get("usage", {})
+        # Extract data from response with defaults
+        response_text = response_data.get("text", "")
+        session_info = response_data.get("session_info", {})
+        result_info = response_data.get("result_info", {})
+        raw_messages = response_data.get("raw_messages", [])
 
-    # Create markdown content
-    markdown_content = f"""# Conversation
+        session_id = session_info.get("session_id", "unknown")
+        model = session_info.get("model", "unknown")
+        tools = session_info.get("tools", [])
+        duration_ms = result_info.get("duration_ms", 0)
+        cost_usd = result_info.get("cost_usd", 0.0)
+        usage = result_info.get("usage", {})
+        input_tokens = usage.get("input_tokens", 0)
+        output_tokens = usage.get("output_tokens", 0)
+
+        # Generate timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Extract tool interactions
+        tool_interactions = _extract_tool_interactions(raw_messages)
+
+        # Create structured markdown content
+        markdown_content = f"""# Conversation with Claude
+
+**Date:** {timestamp}
+**Session ID:** {session_id}
 
 ## User Prompt
 {prompt}
 
-## Claude Response
+## Claude's Response
 {response_text}
 
-## Session Information
-- **Session ID:** {session_id}
-- **Model:** {model}
-- **Duration:** {duration_ms}ms
+## Session Summary
+- **Duration:** {duration_ms / 1000.0:.2f}s
 - **Cost:** ${cost_usd:.4f}
-- **Input Tokens:** {usage.get('input_tokens', 0)}
-- **Output Tokens:** {usage.get('output_tokens', 0)}
+- **Tokens:** {input_tokens} input, {output_tokens} output
+- **Model:** {model}
 """
 
-    # Write to file
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(markdown_content)
+        # Add tools section if tools were available
+        if tools:
+            markdown_content += f"\n\n## Available Tools\n{', '.join(tools)}"
+
+        # Add tool interactions if any occurred
+        if tool_interactions:
+            markdown_content += "\n\n## Tool Interactions\n"
+            for interaction in tool_interactions:
+                markdown_content += f"{interaction}\n"
+
+        # Write to file
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(markdown_content)
+
+    except Exception as e:
+        # Best-effort error handling - log but don't raise
+        logger.warning("Failed to save conversation markdown to %s: %s", file_path, e)
 
 
 def _save_conversation_full_json(
@@ -794,22 +823,30 @@ def _save_conversation_full_json(
         prompt: Original user prompt
         file_path: Path where to save the JSON file
     """
-    # Create complete session data structure
-    session_data = {
-        "prompt": prompt,
-        "response_data": response_data,
-        "metadata": {
-            "timestamp": datetime.now().isoformat() + "Z",
-            "working_directory": os.getcwd(),
-            "model": response_data.get("session_info", {}).get(
-                "model", "claude-3-5-sonnet"
-            ),
-        },
-    }
+    try:
+        # Create parent directories if needed
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    # Write JSON file
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(session_data, f, indent=2, default=str)
+        # Create complete session data structure matching existing _store_response format
+        session_data = {
+            "prompt": prompt,
+            "response_data": response_data,
+            "metadata": {
+                "timestamp": datetime.now().isoformat() + "Z",
+                "working_directory": os.getcwd(),
+                "model": response_data.get("session_info", {}).get(
+                    "model", "claude-3-5-sonnet"
+                ),
+            },
+        }
+
+        # Write JSON file using existing _serialize_message_for_json for proper serialization
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(session_data, f, indent=2, default=_serialize_message_for_json)
+
+    except Exception as e:
+        # Best-effort error handling - log but don't raise
+        logger.warning("Failed to save conversation JSON to %s: %s", file_path, e)
 
 
 def _find_latest_response_file(
