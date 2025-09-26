@@ -8,8 +8,56 @@ on:
   workflow_dispatch:
 
 jobs:
+  check-forbidden-folders:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for forbidden folders in PR
+      run: |
+        echo "Checking for forbidden folders in pull request..."
+        
+        # Function to check for folder existence case-insensitively
+        check_forbidden_folder() {
+          local pattern="$1"
+          local description="$2"
+          
+          # Use find with case-insensitive matching
+          if find . -type d -ipath "*${pattern}*" -print -quit | grep -q .; then
+            echo "❌ ERROR: Found forbidden folder matching '${pattern}' (case-insensitive)"
+            echo "Description: ${description}"
+            find . -type d -ipath "*${pattern}*" | sed 's/^/  Found: /'
+            return 1
+          else
+            echo "✅ No forbidden folder found for pattern: ${pattern}"
+            return 0
+          fi
+        }
+        
+        # Check for forbidden folders
+        ERROR=0
+        
+        echo "\n--- Checking for pr_info/steps folder ---"
+        check_forbidden_folder "pr_info/steps" "Temporary development steps folder" || ERROR=1
+        
+        echo "\n--- Checking for pr_info/.conversations folder ---"
+        check_forbidden_folder "pr_info/.conversations" "Temporary conversation history folder" || ERROR=1
+        
+        if [ $ERROR -eq 1 ]; then
+          echo "\n❌ PULL REQUEST BLOCKED: Forbidden folders detected!"
+          echo "These folders should not be included in pull requests."
+          echo "Please remove them and update your .gitignore if necessary."
+          echo "\nNote: These folders are allowed in regular commits, just not in PRs."
+          exit 1
+        else
+          echo "\n✅ All checks passed! No forbidden folders found."
+        fi
+
   test:
     runs-on: ubuntu-latest
+    needs: [check-forbidden-folders]
+    if: always() && (github.event_name != 'pull_request' || needs.check-forbidden-folders.result == 'success')
     steps:
     - uses: actions/checkout@v4
     
