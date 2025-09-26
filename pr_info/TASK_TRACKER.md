@@ -26,7 +26,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Move mcp-code-checker from dev dependencies to main dependencies in pyproject.toml
   - [x] Add "Mypy Fix Prompt" section to src/mcp_coder/prompts/prompts.md
   - [x] Quality checks: Run pylint, pytest, mypy
-  - [ ] Git commit preparation and commit
+  - [x] Git commit preparation and commit
 
 ### Step 2: Complete Mypy Integration
 - [ ] Step 2: Complete Mypy Integration - [Details](steps/step_2.md)
