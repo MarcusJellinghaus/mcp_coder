@@ -342,25 +342,41 @@ def _extract_tool_interactions(raw_messages: List[Any]) -> List[str]:
     return tool_interactions
 
 
-def execute_prompt(args: argparse.Namespace) -> int:
-    """Execute prompt command to ask Claude a question.
+def prompt_claude(
+    prompt: str,
+    verbosity: str = "just-text",
+    timeout: int = 30,
+    store_response: bool = False,
+    continue_from: Optional[str] = None,
+    continue_latest: bool = False,
+    save_conversation_md: Optional[str] = None,
+    save_conversation_full_json: Optional[str] = None,
+) -> int:
+    """Core function to interact with Claude API with explicit parameters.
 
     Args:
-        args: Command line arguments with prompt attribute and optional verbosity
+        prompt: The prompt to send to Claude
+        verbosity: Output verbosity level ("just-text", "verbose", "raw")
+        timeout: API timeout in seconds
+        store_response: Whether to store response to .mcp-coder/responses/
+        continue_from: Path to previous session file to continue from
+        continue_latest: Whether to continue from latest session
+        save_conversation_md: Path to save conversation as markdown
+        save_conversation_full_json: Path to save conversation as full JSON
 
     Returns:
         Exit code (0 for success, 1 for error)
     """
-    logger.info("Executing prompt command")
+    logger.info("Executing prompt with Claude API")
 
     try:
         # Handle continuation from previous session if requested
-        enhanced_prompt = args.prompt
+        enhanced_prompt = prompt
         continue_file_path = None
 
-        if getattr(args, "continue_from", None):
-            continue_file_path = args.continue_from
-        elif getattr(args, "continue", False):
+        if continue_from:
+            continue_file_path = continue_from
+        elif continue_latest:
             continue_file_path = _find_latest_response_file()
             if continue_file_path is None:
                 print("No previous response files found, starting new conversation")
@@ -368,19 +384,29 @@ def execute_prompt(args: argparse.Namespace) -> int:
 
         if continue_file_path:
             previous_context = _load_previous_chat(continue_file_path)
-            enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
+            enhanced_prompt = _build_context_prompt(previous_context, prompt)
 
         # Call Claude API using detailed function with user-specified timeout
-        timeout = getattr(args, "timeout", 30)
         response_data = ask_claude_code_api_detailed_sync(enhanced_prompt, timeout)
 
         # Store response if requested
-        if getattr(args, "store_response", False):
-            stored_path = _store_response(response_data, args.prompt)
+        if store_response:
+            stored_path = _store_response(response_data, prompt)
             logger.info("Response stored to: %s", stored_path)
 
+        # Save conversation to markdown if requested
+        if save_conversation_md:
+            _save_conversation_markdown(response_data, prompt, save_conversation_md)
+            logger.info("Conversation saved to markdown: %s", save_conversation_md)
+
+        # Save conversation to full JSON if requested
+        if save_conversation_full_json:
+            _save_conversation_full_json(
+                response_data, prompt, save_conversation_full_json
+            )
+            logger.info("Conversation saved to JSON: %s", save_conversation_full_json)
+
         # Route to appropriate formatter based on verbosity level
-        verbosity = getattr(args, "verbosity", "just-text")
         if verbosity == "raw":
             formatted_output = _format_raw(response_data)
         elif verbosity == "verbose":
@@ -400,6 +426,30 @@ def execute_prompt(args: argparse.Namespace) -> int:
         logger.error("Prompt command failed: %s", str(e))
         print(f"Error: {str(e)}", file=sys.stderr)
         return 1
+
+
+def execute_prompt(args: argparse.Namespace) -> int:
+    """Execute prompt command to ask Claude a question.
+
+    Args:
+        args: Command line arguments with prompt attribute and optional verbosity
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    logger.info("Executing prompt command")
+
+    # Extract parameters from args and call prompt_claude
+    return prompt_claude(
+        prompt=args.prompt,
+        verbosity=getattr(args, "verbosity", "just-text"),
+        timeout=getattr(args, "timeout", 30),
+        store_response=getattr(args, "store_response", False),
+        continue_from=getattr(args, "continue_from", None),
+        continue_latest=getattr(args, "continue", False),
+        save_conversation_md=getattr(args, "save_conversation_md", None),
+        save_conversation_full_json=getattr(args, "save_conversation_full_json", None),
+    )
 
 
 def _format_just_text(response_data: Dict[str, Any]) -> str:

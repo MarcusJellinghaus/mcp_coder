@@ -1603,8 +1603,7 @@ class TestExecutePromptParameterMapping:
         # Verify return value is passed through
         assert result == 0
 
-    @patch("mcp_coder.cli.commands.prompt._save_conversation_markdown")
-    def test_save_conversation_markdown_basic(self, mock_save_markdown: Mock) -> None:
+    def test_save_conversation_markdown_basic(self) -> None:
         """Test basic markdown file creation and content structure."""
         # Test response data matching the expected function signature
         test_response_data = {
@@ -1649,8 +1648,7 @@ class TestExecutePromptParameterMapping:
             assert "claude-sonnet-4" in content  # Model info
             assert "#" in content  # Markdown headers
 
-    @patch("mcp_coder.cli.commands.prompt._save_conversation_full_json")
-    def test_save_conversation_full_json_basic(self, mock_save_json: Mock) -> None:
+    def test_save_conversation_full_json_basic(self) -> None:
         """Test basic JSON file creation and structure."""
         # Test response data matching the expected function signature
         test_response_data = {
