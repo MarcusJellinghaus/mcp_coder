@@ -37,9 +37,9 @@ Automated software feature development with stringent quality controls using AI-
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-## ⚙️ Personal Configuration
+## ⚙️ User Configuration
 
-MCP Coder supports personal configuration through TOML files located in platform-specific directories. This allows you to store tokens, settings, and other personal preferences securely.
+MCP Coder supports user configuration through TOML files located in user-specific directories. This allows you to store tokens, settings, and other user preferences securely.
 
 ### Configuration File Location
 
@@ -70,7 +70,7 @@ name = "mcp_coder_db"
 ### Usage in Code
 
 ```python
-from mcp_coder.utils.personal_config import get_config_value, get_config_file_path
+from mcp_coder.utils.user_config import get_config_value, get_config_file_path
 
 # Get configuration file path
 config_path = get_config_file_path()
@@ -97,7 +97,7 @@ if missing_value is None:
 
 ### Setup Instructions
 
-**Note**: The configuration directory (`~/.mcp_coder`) will not be created automatically. You must manually create it before using personal configuration features.
+**Note**: The configuration directory (`~/.mcp_coder`) will not be created automatically. You must manually create it before using user configuration features.
 
 1. Create the configuration directory:
    ```bash

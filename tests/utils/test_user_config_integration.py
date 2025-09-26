@@ -1,4 +1,4 @@
-"""Integration tests for personal_config module.
+"""Integration tests for user_config module.
 
 These tests use real file operations (no mocking) to verify end-to-end functionality.
 """
@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.utils.personal_config import get_config_file_path, get_config_value
+from mcp_coder.utils.user_config import get_config_file_path, get_config_value
 
 
 class TestRealConfigFileWorkflow:
@@ -36,7 +36,7 @@ port = 5432
 
         # Mock get_config_file_path to return our temporary file
         with patch(
-            "mcp_coder.utils.personal_config.get_config_file_path",
+            "mcp_coder.utils.user_config.get_config_file_path",
             return_value=config_file,
         ):
             # Test successful value retrieval
@@ -99,7 +99,7 @@ port = 5432
         ]
 
         with patch(
-            "mcp_coder.utils.personal_config.get_config_file_path",
+            "mcp_coder.utils.user_config.get_config_file_path",
             return_value=config_file,
         ):
             for malformed_content in malformed_configs:
@@ -114,7 +114,7 @@ port = 5432
         config_file = tmp_path / ".mcp_coder" / "config.toml"
 
         with patch(
-            "mcp_coder.utils.personal_config.get_config_file_path",
+            "mcp_coder.utils.user_config.get_config_file_path",
             return_value=config_file,
         ):
             # Test non-existent file
@@ -146,7 +146,7 @@ key = "value"
         config_file.write_text(config_content, encoding="utf-8")
 
         with patch(
-            "mcp_coder.utils.personal_config.get_config_file_path",
+            "mcp_coder.utils.user_config.get_config_file_path",
             return_value=config_file,
         ):
             # Simulate file permission error by patching open
@@ -170,7 +170,7 @@ project_name = "mcp_cöder"
         config_file.write_text(config_content, encoding="utf-8")
 
         with patch(
-            "mcp_coder.utils.personal_config.get_config_file_path",
+            "mcp_coder.utils.user_config.get_config_file_path",
             return_value=config_file,
         ):
             # Test Unicode value retrieval
@@ -201,7 +201,7 @@ nested_key = "nested_value"
         config_file.write_text(config_content, encoding="utf-8")
 
         with patch(
-            "mcp_coder.utils.personal_config.get_config_file_path",
+            "mcp_coder.utils.user_config.get_config_file_path",
             return_value=config_file,
         ):
             # Test simple values

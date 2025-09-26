@@ -1,11 +1,11 @@
-"""Tests for personal_config module."""
+"""Tests for user_config module."""
 
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from mcp_coder.utils.personal_config import get_config_file_path, get_config_value
+from mcp_coder.utils.user_config import get_config_file_path, get_config_value
 
 
 class TestGetConfigFilePath:
@@ -40,7 +40,7 @@ timeout = 30
 debug = true
 """
 
-    @patch("mcp_coder.utils.personal_config.get_config_file_path")
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_success_string(
         self, mock_get_path: MagicMock, sample_config_content: str
     ) -> None:
@@ -59,7 +59,7 @@ debug = true
             # Verify
             assert result == "ghp_test_token_123"
 
-    @patch("mcp_coder.utils.personal_config.get_config_file_path")
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_success_non_string(
         self, mock_get_path: MagicMock, sample_config_content: str
     ) -> None:
@@ -78,7 +78,7 @@ debug = true
             # Verify
             assert result == "30"
 
-    @patch("mcp_coder.utils.personal_config.get_config_file_path")
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_success_boolean(
         self, mock_get_path: MagicMock, sample_config_content: str
     ) -> None:
@@ -97,7 +97,7 @@ debug = true
             # Verify
             assert result == "True"
 
-    @patch("mcp_coder.utils.personal_config.get_config_file_path")
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_missing_file(self, mock_get_path: MagicMock) -> None:
         """Test that None is returned when config file doesn't exist."""
         # Setup
@@ -111,7 +111,7 @@ debug = true
         # Verify
         assert result is None
 
-    @patch("mcp_coder.utils.personal_config.get_config_file_path")
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_missing_section(
         self, mock_get_path: MagicMock, sample_config_content: str
     ) -> None:
@@ -130,7 +130,7 @@ debug = true
             # Verify
             assert result is None
 
-    @patch("mcp_coder.utils.personal_config.get_config_file_path")
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_missing_key(
         self, mock_get_path: MagicMock, sample_config_content: str
     ) -> None:
@@ -149,7 +149,7 @@ debug = true
             # Verify
             assert result is None
 
-    @patch("mcp_coder.utils.personal_config.get_config_file_path")
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_invalid_toml(self, mock_get_path: MagicMock) -> None:
         """Test that None is returned when TOML file is invalid."""
         # Setup
@@ -166,7 +166,7 @@ debug = true
             # Verify
             assert result is None
 
-    @patch("mcp_coder.utils.personal_config.get_config_file_path")
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_io_error(self, mock_get_path: MagicMock) -> None:
         """Test that None is returned when file cannot be read (IO error)."""
         # Setup
@@ -181,7 +181,7 @@ debug = true
             # Verify
             assert result is None
 
-    @patch("mcp_coder.utils.personal_config.get_config_file_path")
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_null_value(self, mock_get_path: MagicMock) -> None:
         """Test that None is returned when value is null in TOML."""
         # Setup

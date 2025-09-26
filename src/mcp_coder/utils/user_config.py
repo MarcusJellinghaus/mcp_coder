@@ -1,7 +1,7 @@
-"""Personal configuration utilities for MCP Coder.
+"""User configuration utilities for MCP Coder.
 
-This module provides functions to read personal configuration from TOML files
-located in platform-specific user configuration directories.
+This module provides functions to read user configuration from TOML files
+located in user-specific configuration directories.
 """
 
 import tomllib
@@ -13,7 +13,7 @@ from .log_utils import log_function_call
 
 @log_function_call
 def get_config_file_path() -> Path:
-    """Get the path to the personal configuration file.
+    """Get the path to the user configuration file.
 
     Returns:
         Path object pointing to ~/.mcp_coder/config.toml
@@ -23,7 +23,7 @@ def get_config_file_path() -> Path:
 
 @log_function_call
 def get_config_value(section: str, key: str) -> Optional[str]:
-    """Read a configuration value from the personal config file.
+    """Read a configuration value from the user config file.
 
     Args:
         section: The TOML section name

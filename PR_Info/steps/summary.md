@@ -1,7 +1,7 @@
-# Personal Configuration System - Implementation Summary
+# User Configuration System - Implementation Summary
 
 ## Overview
-Add a simple personal configuration system to store user credentials (like GitHub tokens) in a platform-appropriate config file using TOML format.
+Add a simple user configuration system to store user credentials (like GitHub tokens) in a platform-appropriate config file using TOML format.
 
 ## Architectural Changes
 
@@ -20,8 +20,8 @@ Add a simple personal configuration system to store user credentials (like GitHu
 
 ### New Files
 ```
-src/mcp_coder/utils/personal_config.py    # Main implementation
-tests/utils/test_personal_config.py       # Unit tests
+src/mcp_coder/utils/user_config.py    # Main implementation
+tests/utils/test_user_config.py       # Unit tests
 ```
 
 ### Configuration File Location
@@ -50,7 +50,7 @@ def get_config_value(section: str, key: str) -> Optional[str]
 
 ### Usage Example
 ```python
-from mcp_coder.utils.personal_config import get_config_value
+from mcp_coder.utils.user_config import get_config_value
 
 github_token = get_config_value("tokens", "github")
 if github_token:
