@@ -21,24 +21,4 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ## Tasks
 
-### Step 1: Update Dependencies and Add Mypy Prompt
-- [x] Step 1: Update Dependencies and Add Mypy Prompt - [Details](steps/step_1.md)
-  - [x] Move mcp-code-checker from dev dependencies to main dependencies in pyproject.toml
-  - [x] Add "Mypy Fix Prompt" section to src/mcp_coder/prompts/prompts.md
-  - [x] Quality checks: Run pylint, pytest, mypy
-  - [x] Git commit preparation and commit
-
-### Step 2: Complete Mypy Integration
-- [x] Step 2: Complete Mypy Integration - [Details](steps/step_2.md)
-  - [x] Implement check_and_fix_mypy() function in workflows/implement.py
-  - [x] Integrate mypy checking into process_single_task() workflow
-  - [x] Add smart retry logic (max 3 identical feedback attempts)
-  - [x] Quality checks: Run pylint, pytest, mypy
-  - [x] Git commit preparation and commit
-
-### Pull Request
-- [ ] Run detailed quality checks (pylint warnings, pytest runtime)
-- [ ] Generate and review PR summary using tools/pr_review.bat
-- [ ] Create comprehensive feature summary with tools/pr_summary.bat
-- [ ] Clean up PR_Info folder (remove steps/ directory)
-- [ ] Push changes and create pull request
+*Tasks will be added here during feature development*
