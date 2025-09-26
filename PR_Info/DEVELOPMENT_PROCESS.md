@@ -177,6 +177,11 @@ Only put those decisions that we discussed, no invented decisions
 
 ```
 
+Commit with
+```
+Updated project plan
+```
+
 Possibly review the project plan one more time (see above) or continue with the next step.
 
 

@@ -208,7 +208,7 @@ Some instructions here.
 """
         with pytest.raises(TaskTrackerSectionNotFoundError) as exc_info:
             _find_implementation_section(content)
-        assert "Implementation Steps section not found" in str(exc_info.value)
+        assert "Implementation Steps or Tasks section not found" in str(exc_info.value)
 
     def test_stop_at_pull_request(self) -> None:
         """Test that parsing stops at Pull Request section."""

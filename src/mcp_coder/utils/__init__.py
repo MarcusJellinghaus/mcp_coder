@@ -31,6 +31,7 @@ from .subprocess_runner import (
     execute_command,
     execute_subprocess,
 )
+from .user_config import get_config_file_path, get_config_value
 
 __all__ = [
     # Clipboard operations
@@ -52,6 +53,9 @@ __all__ = [
     # Logging utilities
     "log_function_call",
     "setup_logging",
+    # User configuration
+    "get_config_file_path",
+    "get_config_value",
     # Subprocess operations
     "CommandOptions",
     "CommandResult",

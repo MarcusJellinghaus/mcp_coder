@@ -37,7 +37,14 @@ from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_operations import commit_all_changes, git_push, get_full_status, is_working_directory_clean, get_current_branch_name, get_main_branch_name
+from mcp_coder.utils.git_operations import (
+    commit_all_changes,
+    get_current_branch_name,
+    get_full_status,
+    get_main_branch_name,
+    git_push,
+    is_working_directory_clean,
+)
 from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
@@ -130,8 +137,12 @@ def check_prerequisites(project_dir: Path) -> bool:
 def has_implementation_tasks(project_dir: Path) -> bool:
     """Check if TASK_TRACKER.md has any implementation tasks (complete or incomplete)."""
     try:
-        from mcp_coder.workflow_utils.task_tracker import _read_task_tracker, _find_implementation_section, _parse_task_lines
-        
+        from mcp_coder.workflow_utils.task_tracker import (
+            _find_implementation_section,
+            _parse_task_lines,
+            _read_task_tracker,
+        )
+
         # Use internal functions to check for ANY tasks (complete or incomplete)
         pr_info_dir = str(project_dir / PR_INFO_DIR)
         content = _read_task_tracker(pr_info_dir)
