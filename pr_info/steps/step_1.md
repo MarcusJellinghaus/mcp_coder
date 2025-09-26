@@ -1,92 +1,87 @@
-# Step 1: Add Core Tests for prompt_claude Function
+# Step 1: Add Minimal Tests for Parameter Mapping
 
 ## Goal
-Implement comprehensive tests for the new `prompt_claude` function before implementing the function itself, following Test-Driven Development principles.
+Add minimal tests to verify the CLI wrapper correctly maps parameters from argparse.Namespace to the new `prompt_claude` function.
 
 ## WHERE
 - **File**: `tests/cli/commands/test_prompt.py`
-- **Section**: Add new test class `TestPromptClaude` after existing test classes
+- **Section**: Add new test methods after existing `TestExecutePrompt` class
 
 ## WHAT
-Add test class and methods to verify:
+Add 2 test methods to verify parameter mapping:
 
-### Main Test Methods
+### Test Methods
 ```python
-def test_prompt_claude_basic_success(self) -> None
-def test_prompt_claude_with_custom_timeout(self) -> None  
-def test_prompt_claude_with_verbosity_levels(self) -> None
-def test_prompt_claude_error_handling(self) -> None
+def test_execute_prompt_calls_prompt_claude_with_correct_parameters(self) -> None
+def test_execute_prompt_parameter_mapping_with_defaults(self) -> None
 ```
 
 ## HOW
-- **Integration**: Add test class to existing test file
-- **Imports**: Use existing imports, add new import for `prompt_claude`
-- **Mocking**: Reuse existing mock patterns for `ask_claude_code_api_detailed_sync`
+- **Integration**: Add methods to existing test file  
+- **Mocking**: Mock `prompt_claude` function to verify calls
+- **Assertions**: Verify parameter mapping from argparse.Namespace to function arguments
 
 ## ALGORITHM
 ```
-1. Mock Claude API with predefined response
-2. Call prompt_claude with various parameter combinations
-3. Verify function returns correct exit codes (0/1)
-4. Assert Claude API called with expected parameters
-5. Validate output format matches verbosity level
+1. Create argparse.Namespace with test parameters
+2. Mock prompt_claude function to capture calls
+3. Call execute_prompt with test args
+4. Verify prompt_claude called with correctly mapped parameters
+5. Assert return value passed through correctly
 ```
 
 ## DATA
 
-### Test Input Parameters
+### Test Parameter Mapping
 ```python
-# Basic test
-prompt_claude("Hello Claude")
+# Test with full parameters
+args = argparse.Namespace(
+    prompt="Test prompt",
+    verbosity="verbose", 
+    timeout=45,
+    store_response=True,
+    continue_from="test.json",
+    save_conversation_md="test.md",
+    save_conversation_full_json="test_full.json"
+)
 
-# With custom parameters  
-prompt_claude("Test prompt", verbosity="verbose", timeout=60)
-
-# Error case
-prompt_claude("Test") # with API exception
-```
-
-### Expected Return Values
-- **Success cases**: `return 0`
-- **Error cases**: `return 1`
-- **API calls**: Verify `ask_claude_code_api_detailed_sync` called with correct parameters
-
-### Mock Response Structure
-```python
-mock_response = {
-    "text": "Test response text",
-    "session_info": {
-        "session_id": "test-session-id",
-        "model": "claude-sonnet-4", 
-        "tools": ["test_tool"]
-    },
-    "result_info": {
-        "duration_ms": 1500,
-        "cost_usd": 0.02,
-        "usage": {"input_tokens": 10, "output_tokens": 8}
-    },
-    "raw_messages": []
-}
+# Expected function call
+prompt_claude(
+    prompt="Test prompt",
+    verbosity="verbose",
+    timeout=45, 
+    store_response=True,
+    continue_from="test.json",
+    continue_latest=False,
+    save_conversation_md="test.md",
+    save_conversation_full_json="test_full.json"
+)
 ```
 
 ## Implementation Notes
-- Tests should fail initially (function doesn't exist yet)
-- Use `@patch` decorators for mocking Claude API
-- Follow existing test patterns in the file
-- Include edge cases: empty responses, API errors, invalid parameters
+- Keep tests minimal since existing `TestExecutePrompt` covers business logic
+- Focus only on parameter mapping verification
+- Mock `prompt_claude` to isolate wrapper testing
 
 ## LLM Prompt for Implementation
 
 ```
 Please implement Step 1 of the execute_prompt refactoring project (see pr_info/steps/summary.md).
 
-Add comprehensive tests for a new function called prompt_claude() to tests/cli/commands/test_prompt.py.
+Add 2 minimal test methods to tests/cli/commands/test_prompt.py to verify parameter mapping from execute_prompt to the new prompt_claude function.
 
-The function signature should be:
-```python
+Add these methods after the existing TestExecutePrompt class:
+
+1. test_execute_prompt_calls_prompt_claude_with_correct_parameters() - Test full parameter mapping
+2. test_execute_prompt_parameter_mapping_with_defaults() - Test default parameter handling
+
+Use @patch to mock prompt_claude and verify it's called with the correct parameters mapped from argparse.Namespace.
+
+The function signature to test against:
+```python  
 def prompt_claude(
     prompt: str,
-    verbosity: str = "just-text", 
+    verbosity: str = "just-text",
     timeout: int = 30,
     store_response: bool = False,
     continue_from: Optional[str] = None,
@@ -96,13 +91,5 @@ def prompt_claude(
 ) -> int
 ```
 
-Add a new test class TestPromptClaude with tests for:
-1. Basic successful execution with minimal parameters
-2. Custom timeout parameter handling
-3. Different verbosity levels (just-text, verbose, raw)
-4. Error handling when Claude API fails
-
-Follow the existing test patterns in the file, use the same mocking strategies, and ensure tests will fail initially since the function doesn't exist yet.
-
-The function should be imported from: mcp_coder.cli.commands.prompt import prompt_claude
+Keep tests minimal - existing TestExecutePrompt already covers business logic comprehensively.
 ```
