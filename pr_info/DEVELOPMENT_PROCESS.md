@@ -19,6 +19,21 @@ Structured development workflow for **Feature Implementation** consisting of mul
 
 ## Detailed Process Steps
 
+
+### 0. Issue discussion
+
+```
+Can we discuss a requirement / implementation idea and its feasability?
+Do not provide code yet!
+At the end of our discussion, I want to have an even better issue description
+```
+
+```
+Let's draft the issue text, with some very limited, concise implementation ideas.
+The implementation plan should be developed later. Focus on the issue.
+Please provide the issue text (with issue header!) as markdown, so that I can easily update the issue on GitHub.
+```
+
 ### 1. Feature Planning
 
 **Objective:** Break down feature into manageable implementation steps
