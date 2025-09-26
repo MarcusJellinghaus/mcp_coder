@@ -137,6 +137,11 @@ Please offer, whenever possible, simple options like
 - C
 ```
 
+If there are inconsistencies in the project plan (eg due to previous revisions with incomplete adjustments):
+```
+Please clean up the project plan. Ensure that it is consistent.
+```
+
 **typical questions and answers**:
 - reduce number of steps: actually, constant/more steps are better
 - number of test cases:
