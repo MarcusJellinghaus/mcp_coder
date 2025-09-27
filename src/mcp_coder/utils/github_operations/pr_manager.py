@@ -6,6 +6,11 @@ through the PyGithub library.
 
 from typing import Any, Dict, List, Optional
 
+from github import Github
+from github.GithubException import GithubException
+from github.PullRequest import PullRequest
+from github.Repository import Repository
+
 from mcp_coder.utils.log_utils import log_function_call
 
 
