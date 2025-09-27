@@ -230,7 +230,47 @@ class PullRequestManager:
         Returns:
             Dictionary containing updated pull request information or empty dict on failure
         """
-        return {}
+        try:
+            repo = self._parse_and_get_repo()
+
+            # Get the pull request using GitHub API
+            pr = repo.get_pull(pr_number)
+
+            # Close the pull request by editing it
+            pr.edit(state="closed")
+
+            # Get updated PR information after closing
+            updated_pr = repo.get_pull(pr_number)
+
+            # Return structured dictionary with updated PR information
+            return {
+                "number": updated_pr.number,
+                "title": updated_pr.title,
+                "body": updated_pr.body,
+                "state": updated_pr.state,
+                "head_branch": updated_pr.head.ref,
+                "base_branch": updated_pr.base.ref,
+                "url": updated_pr.html_url,
+                "created_at": (
+                    updated_pr.created_at.isoformat() if updated_pr.created_at else None
+                ),
+                "updated_at": (
+                    updated_pr.updated_at.isoformat() if updated_pr.updated_at else None
+                ),
+                "user": updated_pr.user.login if updated_pr.user else None,
+                "mergeable": updated_pr.mergeable,
+                "merged": updated_pr.merged,
+                "draft": updated_pr.draft,
+            }
+
+        except GithubException as e:
+            # Log the error and return empty dict on failure
+            print(f"GitHub API error closing pull request {pr_number}: {e}")
+            return {}
+        except Exception as e:
+            # Log unexpected errors and return empty dict
+            print(f"Unexpected error closing pull request {pr_number}: {e}")
+            return {}
 
     @log_function_call
     def merge_pull_request(self, pr_number: int) -> Dict[str, Any]:
