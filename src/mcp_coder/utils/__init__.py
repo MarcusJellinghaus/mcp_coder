@@ -24,6 +24,9 @@ from .git_operations import (
     stage_all_changes,
     stage_specific_files,
 )
+
+# GitHub operations
+from .github_operations import PullRequestManager, create_pr_manager
 from .log_utils import log_function_call, setup_logging
 from .subprocess_runner import (
     CommandOptions,
@@ -61,4 +64,7 @@ __all__ = [
     "CommandResult",
     "execute_command",
     "execute_subprocess",
+    # GitHub operations
+    "PullRequestManager",
+    "create_pr_manager",
 ]

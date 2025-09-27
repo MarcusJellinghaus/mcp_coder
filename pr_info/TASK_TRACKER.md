@@ -88,15 +88,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for step 5
 
 ### Step 6: Update Utils Module Exports and Documentation
-- [ ] Add PullRequestManager and create_pr_manager imports to src/mcp_coder/utils/__init__.py
-- [ ] Add both to __all__ list with "# GitHub operations" comment
-- [ ] Update tests/README.md with github_integration marker info
-- [ ] Verify PullRequestManager can be imported from mcp_coder.utils
-- [ ] Verify create_pr_manager can be imported from mcp_coder.utils
-- [ ] Run pylint checks and fix issues
-- [ ] Run pytest checks and fix issues
-- [ ] Run mypy checks and fix issues
-- [ ] Prepare git commit message for step 6
+- [x] Add PullRequestManager and create_pr_manager imports to src/mcp_coder/utils/__init__.py
+- [x] Add both to __all__ list with "# GitHub operations" comment
+- [x] Update tests/README.md with github_integration marker info
+- [x] Verify PullRequestManager can be imported from mcp_coder.utils
+- [x] Verify create_pr_manager can be imported from mcp_coder.utils
+- [x] Run pylint checks and fix issues
+- [x] Run pytest checks and fix issues
+- [x] Run mypy checks and fix issues
+- [x] Prepare git commit message for step 6
 
 ## Pull Request
 - [ ] Run comprehensive code quality review
