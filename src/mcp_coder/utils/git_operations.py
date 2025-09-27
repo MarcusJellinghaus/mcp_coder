@@ -853,25 +853,29 @@ def get_current_branch_name(project_dir: Path) -> Optional[str]:
         return None
 
 
-def get_main_branch_name(project_dir: Path) -> Optional[str]:
+def get_default_branch_name(project_dir: Path) -> Optional[str]:
     """
-    Get the name of the main branch (main or master).
+    Get the name of the default branch from git remote HEAD reference.
+
+    This checks what git considers the default branch by looking at
+    refs/remotes/origin/HEAD, which mirrors the remote's default branch.
+    Falls back to checking for "main" or "master" if remote HEAD is not set.
 
     Args:
         project_dir: Path to the project directory containing git repository
 
     Returns:
-        Main branch name as string ("main" or "master"), or None if:
+        Default branch name as string, or None if:
         - Directory is not a git repository
-        - Neither "main" nor "master" branch exists
+        - No default branch can be determined
         - Error occurs during branch detection
 
     Note:
-        Checks for "main" branch first (modern Git default), then falls back
-        to "master" branch (legacy Git default). Uses existing validation
-        and error handling patterns from other functions.
+        Uses git symbolic-ref to get the actual default branch, which is more
+        accurate than just checking for "main" or "master". Falls back to
+        legacy logic for compatibility.
     """
-    logger.debug("Getting main branch name for %s", project_dir)
+    logger.debug("Getting default branch name for %s", project_dir)
 
     if not is_git_repository(project_dir):
         logger.debug("Not a git repository: %s", project_dir)
@@ -879,25 +883,38 @@ def get_main_branch_name(project_dir: Path) -> Optional[str]:
 
     try:
         with _safe_repo_context(project_dir) as repo:
-            # Check for "main" branch first (modern Git default)
+            # Method 1: Check symbolic ref for origin/HEAD (most accurate)
+            try:
+                # This shows what the remote considers the default branch
+                result: str = repo.git.symbolic_ref("refs/remotes/origin/HEAD")
+                # Result looks like: "refs/remotes/origin/main"
+                if result.startswith("refs/remotes/origin/"):
+                    default_branch = result.replace("refs/remotes/origin/", "")
+                    logger.debug("Found default branch from symbolic-ref: %s", default_branch)
+                    return default_branch
+            except GitCommandError:
+                # origin/HEAD not set, fall back to heuristic
+                logger.debug("origin/HEAD not set, falling back to heuristic")
+                pass
+
+            # Method 2: Fallback to checking for "main" or "master" (legacy logic)
             if "main" in [head.name for head in repo.heads]:
-                logger.debug("Found main branch: main")
+                logger.debug("Found default branch (fallback): main")
                 return "main"
 
-            # Fall back to "master" branch (legacy Git default)
             if "master" in [head.name for head in repo.heads]:
-                logger.debug("Found main branch: master")
+                logger.debug("Found default branch (fallback): master")
                 return "master"
 
-            # Neither main nor master branch found
-            logger.debug("Neither main nor master branch found")
+            # No default branch found
+            logger.debug("No default branch found")
             return None
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
-        logger.debug("Git error getting main branch name: %s", e)
+        logger.debug("Git error getting default branch name: %s", e)
         return None
     except Exception as e:
-        logger.warning("Unexpected error getting main branch name: %s", e)
+        logger.warning("Unexpected error getting default branch name: %s", e)
         return None
 
 
@@ -919,14 +936,14 @@ def get_parent_branch_name(project_dir: Path) -> Optional[str]:
         - Error occurs during branch detection
 
     Note:
-        Delegates all validation and error handling to get_main_branch_name().
+        Delegates all validation and error handling to get_default_branch_name().
         Uses existing logging patterns from other functions.
     """
     logger.debug("Getting parent branch name for %s", project_dir)
 
-    # Use simple heuristic: call get_main_branch_name() internally
+    # Use simple heuristic: call get_default_branch_name() internally
     # This delegates all validation and error handling
-    main_branch = get_main_branch_name(project_dir)
+    main_branch = get_default_branch_name(project_dir)
 
     if main_branch:
         logger.debug("Parent branch identified as: %s", main_branch)

@@ -11,7 +11,7 @@ from mcp_coder.utils.git_operations import (
     get_current_branch_name,
     get_full_status,
     get_git_diff_for_commit,
-    get_main_branch_name,
+    get_default_branch_name,
     get_parent_branch_name,
     get_staged_changes,
     get_unstaged_changes,
@@ -1915,10 +1915,10 @@ class TestGitBranchOperations:
         # Should return None for detached HEAD (as per requirements)
         assert current_branch is None
 
-    def test_get_main_branch_name_main_branch(
+    def test_get_default_branch_name_main_branch(
         self, git_repo: tuple[Repo, Path]
     ) -> None:
-        """Test get_main_branch_name returns 'main' when main branch exists."""
+        """Test get_default_branch_name returns 'main' when main branch exists."""
         repo, project_dir = git_repo
 
         # Create a commit so branches are properly initialized
@@ -1931,14 +1931,14 @@ class TestGitBranchOperations:
         if current_branch == "master":
             repo.git.branch("-m", "main")
 
-        # Test that get_main_branch_name returns 'main'
-        main_branch = get_main_branch_name(project_dir)
-        assert main_branch == "main"
+        # Test that get_default_branch_name returns 'main'
+        default_branch = get_default_branch_name(project_dir)
+        assert default_branch == "main"
 
-    def test_get_main_branch_name_master_branch(
+    def test_get_default_branch_name_master_branch(
         self, git_repo: tuple[Repo, Path]
     ) -> None:
-        """Test get_main_branch_name returns 'master' when only master branch exists."""
+        """Test get_default_branch_name returns 'master' when only master branch exists."""
         repo, project_dir = git_repo
 
         # Create a commit so branches are properly initialized
@@ -1951,14 +1951,14 @@ class TestGitBranchOperations:
         if current_branch == "main":
             repo.git.branch("-m", "master")
 
-        # Test that get_main_branch_name returns 'master'
-        main_branch = get_main_branch_name(project_dir)
-        assert main_branch == "master"
+        # Test that get_default_branch_name returns 'master'
+        default_branch = get_default_branch_name(project_dir)
+        assert default_branch == "master"
 
-    def test_get_main_branch_name_invalid_repo(self, tmp_path: Path) -> None:
-        """Test get_main_branch_name returns None for invalid repository."""
+    def test_get_default_branch_name_invalid_repo(self, tmp_path: Path) -> None:
+        """Test get_default_branch_name returns None for invalid repository."""
         # Test with non-git directory
-        result = get_main_branch_name(tmp_path)
+        result = get_default_branch_name(tmp_path)
         assert result is None
 
     def test_get_parent_branch_name_returns_main(

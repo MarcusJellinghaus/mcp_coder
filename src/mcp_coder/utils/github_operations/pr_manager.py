@@ -415,19 +415,18 @@ class PullRequestManager:
             print(f"Error getting repository name: {e}")
             return ""
 
-    # TODO - use functionality of git_operations
     @property
     def default_branch(self) -> str:
-        """Get the default branch of the repository.
+        """Get the default branch of the repository using git operations.
 
         Returns:
             Default branch name or empty string on failure
         """
+        from mcp_coder.utils.git_operations import get_default_branch_name
+        
         try:
-            repo = self._parse_and_get_repo()
-            if repo is None:
-                return ""
-            return repo.default_branch
+            default_branch = get_default_branch_name(self.project_dir)
+            return default_branch or ""
         except Exception as e:
             print(f"Error getting default branch: {e}")
             return ""
