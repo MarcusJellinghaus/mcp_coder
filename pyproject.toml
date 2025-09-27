@@ -92,5 +92,10 @@ module = ["pytest.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = ["tests.*"]
+# Disable unreachable warnings for test files due to mypy false positives with assertions
+disable_error_code = ["unreachable"]
+
+[[tool.mypy.overrides]]
 module = ["mcp.server.fastmcp"]
 ignore_missing_imports = true
