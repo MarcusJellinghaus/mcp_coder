@@ -88,13 +88,29 @@ jobs:
         
     - name: Run unit tests (fast)
       id: unit-tests
-      run: pytest -m "not git_integration and not claude_integration"
+      run: pytest -m "not git_integration and not claude_integration and not formatter_integration and not github_integration" --junitxml=unit-tests.xml
       continue-on-error: true
         
     - name: Run integration tests
       id: integration-tests
-      run: pytest -m "git_integration or claude_integration"
+      run: pytest -m "git_integration or claude_integration or formatter_integration or github_integration" --junitxml=integration-tests.xml
       continue-on-error: true
+        
+    - name: Publish Unit Test Results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Unit Tests
+        path: unit-tests.xml
+        reporter: java-junit
+        
+    - name: Publish Integration Test Results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Integration Tests
+        path: integration-tests.xml
+        reporter: java-junit
         
     - name: Check type hints with mypy
       id: mypy
