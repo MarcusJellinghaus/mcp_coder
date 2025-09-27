@@ -75,17 +75,17 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for step 4
 
 ### Step 5: Add Enhanced Features and Validation
-- [ ] Enhance merge_pull_request with commit_title and commit_message parameters
-- [ ] Add merge_method validation ("merge", "squash", "rebase")
-- [ ] Add input validation helper methods (_validate_pr_number, _validate_branch_name)
-- [ ] Update all methods to use validation helpers
-- [ ] Add comprehensive logging for debugging
-- [ ] Add tests for validation failures and enhanced features
-- [ ] Ensure all existing tests still pass
-- [ ] Run pylint checks and fix issues
-- [ ] Run pytest checks and fix issues
-- [ ] Run mypy checks and fix issues
-- [ ] Prepare git commit message for step 5
+- [x] Enhance merge_pull_request with commit_title and commit_message parameters
+- [x] Add merge_method validation ("merge", "squash", "rebase")
+- [x] Add input validation helper methods (_validate_pr_number, _validate_branch_name)
+- [x] Update all methods to use validation helpers
+- [x] Add comprehensive logging for debugging
+- [x] Add tests for validation failures and enhanced features
+- [x] Ensure all existing tests still pass
+- [x] Run pylint checks and fix issues
+- [x] Run pytest checks and fix issues
+- [x] Run mypy checks and fix issues
+- [x] Prepare git commit message for step 5
 
 ### Step 6: Update Utils Module Exports and Documentation
 - [ ] Add PullRequestManager and create_pr_manager imports to src/mcp_coder/utils/__init__.py

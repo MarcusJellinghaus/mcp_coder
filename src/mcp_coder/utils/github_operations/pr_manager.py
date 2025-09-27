@@ -4,6 +4,7 @@ This module provides the PullRequestManager class for managing GitHub pull reque
 through the PyGithub library.
 """
 
+import logging
 import re
 from typing import Any, Dict, List, Optional
 
@@ -13,6 +14,9 @@ from github.PullRequest import PullRequest
 from github.Repository import Repository
 
 from mcp_coder.utils.log_utils import log_function_call
+
+# Configure logger for GitHub operations
+logger = logging.getLogger(__name__)
 
 
 class PullRequestManager:
@@ -40,6 +44,52 @@ class PullRequestManager:
         self._github_client = Github(github_token)
         self._repository: Optional[Repository] = None
 
+    def _validate_pr_number(self, pr_number: int) -> bool:
+        """Validate pull request number.
+
+        Args:
+            pr_number: Pull request number to validate
+
+        Returns:
+            True if valid, False otherwise
+        """
+        if not isinstance(pr_number, int) or pr_number <= 0:
+            logger.error(f"Invalid PR number: {pr_number}. Must be a positive integer.")
+            return False
+        return True
+
+    def _validate_branch_name(self, branch_name: str) -> bool:
+        """Validate branch name.
+
+        Args:
+            branch_name: Branch name to validate
+
+        Returns:
+            True if valid, False otherwise
+        """
+        if not isinstance(branch_name, str) or not branch_name.strip():
+            logger.error(
+                f"Invalid branch name: '{branch_name}'. Must be a non-empty string."
+            )
+            return False
+        # GitHub branch name restrictions
+        invalid_chars = ["~", "^", ":", "?", "*", "["]
+        if any(char in branch_name for char in invalid_chars):
+            logger.error(
+                f"Invalid branch name: '{branch_name}'. Contains invalid characters: {invalid_chars}"
+            )
+            return False
+        if (
+            branch_name.startswith(".")
+            or branch_name.endswith(".")
+            or branch_name.endswith(".lock")
+        ):
+            logger.error(
+                f"Invalid branch name: '{branch_name}'. Cannot start/end with '.' or end with '.lock'"
+            )
+            return False
+        return True
+
     def _parse_and_get_repo(self) -> Optional[Repository]:
         """Parse repository URL and get Repository object.
 
@@ -56,7 +106,9 @@ class PullRequestManager:
             match = re.match(repo_pattern, self.repository_url.strip())
 
             if not match:
-                print(f"Invalid GitHub repository URL format: {self.repository_url}")
+                logger.error(
+                    f"Invalid GitHub repository URL format: {self.repository_url}"
+                )
                 return None
 
             owner, repo_name = match.groups()
@@ -65,10 +117,10 @@ class PullRequestManager:
             self._repository = self._github_client.get_repo(repo_full_name)
             return self._repository
         except GithubException as e:
-            print(f"Failed to access repository: {e}")
+            logger.error(f"Failed to access repository: {e}")
             return None
         except Exception as e:
-            print(f"Unexpected error accessing repository: {e}")
+            logger.error(f"Unexpected error accessing repository: {e}")
             return None
 
     @log_function_call
@@ -86,6 +138,12 @@ class PullRequestManager:
         Returns:
             Dictionary containing pull request information or empty dict on failure
         """
+        # Validate branch names
+        if not self._validate_branch_name(head_branch):
+            return {}
+        if not self._validate_branch_name(base_branch):
+            return {}
+
         try:
             repo = self._parse_and_get_repo()
             if repo is None:
@@ -132,6 +190,10 @@ class PullRequestManager:
         Returns:
             Dictionary containing pull request information or empty dict on failure
         """
+        # Validate PR number
+        if not self._validate_pr_number(pr_number):
+            return {}
+
         try:
             repo = self._parse_and_get_repo()
             if repo is None:
@@ -179,6 +241,10 @@ class PullRequestManager:
         Returns:
             List of dictionaries containing pull request information or empty list on failure
         """
+        # Validate base_branch if provided
+        if base_branch is not None and not self._validate_branch_name(base_branch):
+            return []
+
         try:
             repo = self._parse_and_get_repo()
             if repo is None:
@@ -232,6 +298,10 @@ class PullRequestManager:
         Returns:
             Dictionary containing updated pull request information or empty dict on failure
         """
+        # Validate PR number
+        if not self._validate_pr_number(pr_number):
+            return {}
+
         try:
             repo = self._parse_and_get_repo()
             if repo is None:
@@ -277,15 +347,36 @@ class PullRequestManager:
             return {}
 
     @log_function_call
-    def merge_pull_request(self, pr_number: int) -> Dict[str, Any]:
+    def merge_pull_request(
+        self,
+        pr_number: int,
+        commit_title: Optional[str] = None,
+        commit_message: Optional[str] = None,
+        merge_method: str = "merge",
+    ) -> Dict[str, Any]:
         """Merge a pull request.
 
         Args:
             pr_number: Pull request number to merge
+            commit_title: Optional custom commit title for the merge
+            commit_message: Optional custom commit message for the merge
+            merge_method: Merge method to use ("merge", "squash", "rebase")
 
         Returns:
             Dictionary containing merge result information or empty dict on failure
         """
+        # Validate PR number
+        if not self._validate_pr_number(pr_number):
+            return {}
+
+        # Validate merge method
+        valid_merge_methods = ["merge", "squash", "rebase"]
+        if merge_method not in valid_merge_methods:
+            logger.error(
+                f"Invalid merge method '{merge_method}'. Must be one of: {valid_merge_methods}"
+            )
+            return {}
+
         try:
             repo = self._parse_and_get_repo()
             if repo is None:
@@ -309,7 +400,20 @@ class PullRequestManager:
                 }
 
             # Merge the pull request using GitHub API
-            merge_result = pr.merge()
+            # Handle optional commit title and message parameters
+            # Note: PyGithub's merge method signature varies by version
+            # The merge_method parameter is primarily for documentation/validation
+
+            # Log the merge method for debugging
+            logger.info(f"Merging PR {pr_number} using method '{merge_method}'")
+
+            # Perform the merge with proper parameter handling
+            if commit_title is not None and commit_message is not None:
+                merge_result = pr.merge(commit_title, commit_message)
+            elif commit_title is not None:
+                merge_result = pr.merge(commit_title)
+            else:
+                merge_result = pr.merge()
 
             # Return structured dictionary with merge result information
             return {

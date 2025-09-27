@@ -173,3 +173,91 @@ class TestPullRequestManagerIntegration:
 
         # With empty implementation, all should return empty lists
         # When implemented, we can add more specific assertions
+
+    def test_merge_pull_request_with_enhanced_parameters(
+        self, pr_manager: PullRequestManager
+    ) -> None:
+        """Test merging a pull request with enhanced parameters."""
+        test_branch = "test-branch-enhanced-merge"
+        pr_title = "Test PR for Enhanced Merge"
+        commit_title = "Custom merge commit title"
+        commit_message = "Custom merge commit message\n\nDetailed description"
+
+        created_pr = None
+        try:
+            # Create pull request
+            created_pr = pr_manager.create_pull_request(
+                title=pr_title,
+                head_branch=test_branch,
+                base_branch="main",
+                body="Test PR for enhanced merge functionality",
+            )
+
+            if created_pr and "number" in created_pr:
+                pr_number = created_pr["number"]
+
+                # Test merge with all enhanced parameters
+                merge_result = pr_manager.merge_pull_request(
+                    pr_number=pr_number,
+                    commit_title=commit_title,
+                    commit_message=commit_message,
+                    merge_method="squash",
+                )
+
+                # Verify merge result structure
+                assert isinstance(
+                    merge_result, dict
+                ), "Expected merge result to be dict"
+
+        finally:
+            # Cleanup
+            if created_pr and "number" in created_pr:
+                try:
+                    pr_manager.close_pull_request(created_pr["number"])
+                except Exception:
+                    pass
+
+    def test_validation_failures(self) -> None:
+        """Test validation failures for invalid inputs."""
+        # Test with invalid token (should raise ValueError)
+        try:
+            PullRequestManager("https://github.com/test/repo", "")
+            assert False, "Expected ValueError for empty token"
+        except ValueError:
+            pass  # Expected
+
+        # Create manager with dummy token for validation tests
+        manager = PullRequestManager("https://github.com/test/repo", "dummy-token")
+
+        # Test invalid PR numbers
+        assert manager._validate_pr_number(0) == False
+        assert manager._validate_pr_number(-1) == False
+        # Test with invalid type (this will cause type error but should be handled gracefully)
+        try:
+            result = manager._validate_pr_number("invalid")  # type: ignore
+            assert result == False
+        except (TypeError, AttributeError):
+            pass  # Expected for invalid type
+        assert manager._validate_pr_number(1) == True
+
+        # Test invalid branch names
+        assert manager._validate_branch_name("") == False
+        assert manager._validate_branch_name("   ") == False
+        assert manager._validate_branch_name("branch~name") == False
+        assert manager._validate_branch_name("branch^name") == False
+        assert manager._validate_branch_name("branch:name") == False
+        assert manager._validate_branch_name(".branch") == False
+        assert manager._validate_branch_name("branch.") == False
+        assert manager._validate_branch_name("branch.lock") == False
+        assert manager._validate_branch_name("valid-branch") == True
+        assert manager._validate_branch_name("feature/new-feature") == True
+
+        # Test methods with invalid inputs return empty dict/list
+        assert manager.get_pull_request(-1) == {}
+        assert manager.close_pull_request(0) == {}
+        assert manager.merge_pull_request(-1) == {}
+        assert manager.create_pull_request("title", "invalid~branch", "main") == {}
+        assert manager.list_pull_requests(base_branch="invalid~branch") == []
+
+        # Test invalid merge method
+        assert manager.merge_pull_request(1, merge_method="invalid") == {}
