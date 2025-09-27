@@ -19,6 +19,7 @@ from .github_operations import (
     create_pull_request,
     get_pull_request,
     close_pull_request,
+    list_pull_requests,
 )
 
 # Add to __all__ list
@@ -28,6 +29,7 @@ __all__ = [
     "create_pull_request", 
     "get_pull_request",
     "close_pull_request",
+    "list_pull_requests",
 ]
 ```
 
@@ -60,8 +62,8 @@ Update the module exports and documentation to complete the integration.
 
 Requirements:
 1. Add imports to src/mcp_coder/utils/__init__.py:
-   - Import create_pull_request, get_pull_request, close_pull_request from .github_operations
-   - Add these three functions to the __all__ list with a "# GitHub operations" comment
+   - Import create_pull_request, get_pull_request, close_pull_request, list_pull_requests from .github_operations
+   - Add these four functions to the __all__ list with a "# GitHub operations" comment
    - Follow the existing import and export patterns in the file
 
 2. Update tests/README.md:
@@ -70,7 +72,7 @@ Requirements:
    - Mention GitHub config requirement
 
 Keep changes minimal and follow existing patterns. The functions should now be importable as:
-from mcp_coder.utils import create_pull_request, get_pull_request, close_pull_request
+from mcp_coder.utils import create_pull_request, get_pull_request, close_pull_request, list_pull_requests
 ```
 
 ## Verification

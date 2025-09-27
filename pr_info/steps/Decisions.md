@@ -26,3 +26,28 @@
 **Decision:** Add cleanup logic to delete test branch after closing PR
 **Rationale:** Prevents test branch accumulation in repository
 **Choice:** Option A - Add cleanup logic to the test itself
+
+### 6. File Structure Change
+**Decision:** Use package structure `src/mcp_coder/utils/github_operations/` with `__init__.py` and `gh_pull_requests.py`
+**Rationale:** Sets up for future GitHub operations expansion while maintaining organization
+**Choice:** Option B - Package with `__init__.py` that exports functions + `gh_pull_requests.py` implementation
+
+### 7. Test Marker Documentation
+**Decision:** Update existing marker documentation pattern to include github_integration
+**Rationale:** Follows established documentation patterns in pyproject.toml
+**Choice:** Option B - Update existing marker documentation pattern
+
+### 8. Additional Function
+**Decision:** Add `list_pull_requests(state="open")` function
+**Rationale:** Provides useful listing functionality while maintaining simplicity
+**Choice:** Option A - Simple list function with state filter, returns list of PR summary dicts
+
+### 7. Test Marker Documentation
+**Decision:** Update existing marker documentation pattern to include github_integration
+**Rationale:** Maintain consistency with existing marker documentation approach
+**Choice:** Option B - Update existing marker documentation pattern
+
+### 8. Additional Function - list_pull_requests()
+**Decision:** Add `list_pull_requests(state="open")` function returning list of PR summary dicts
+**Rationale:** Provides useful listing functionality while keeping simple API consistent
+**Choice:** Option A - Simple list function with state filter

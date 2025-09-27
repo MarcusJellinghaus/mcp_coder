@@ -65,6 +65,7 @@ Requirements:
   2. GitHub API authentication errors  
   3. Invalid PR numbers
   4. Network/connection errors
+  5. Invalid state parameters for list_pull_requests
 
 Follow existing mocking patterns and ensure comprehensive error coverage. These unit tests should run fast without external dependencies.
 ```

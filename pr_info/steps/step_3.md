@@ -9,7 +9,7 @@ Create integration test that fails with current empty implementations, driving t
 ## WHAT
 - Single integration test class with roundtrip test
 - Conditional skipping when GitHub credentials unavailable
-- Test that creates → reads → closes a PR
+- Test that creates → reads → lists → closes a PR
 - Proper cleanup and error handling
 
 ## HOW
@@ -21,7 +21,8 @@ import pytest
 from mcp_coder.utils.github_operations import (
     create_pull_request,
     get_pull_request, 
-    close_pull_request
+    close_pull_request,
+    list_pull_requests,
 )
 from mcp_coder.utils.user_config import get_config_value
 
@@ -71,7 +72,8 @@ Requirements:
 The test should verify:
 1. create_pull_request returns dict with 'number' and 'url'
 2. get_pull_request returns dict with PR details
-3. close_pull_request returns dict with updated state
+3. list_pull_requests returns list with PR in results
+4. close_pull_request returns dict with updated state
 
 This failing test will drive our implementation in the next step.
 ```

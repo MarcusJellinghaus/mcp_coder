@@ -1,13 +1,15 @@
 # GitHub Pull Request Operations - Implementation Summary
 
 ## Overview
-Add minimal GitHub pull request functionality to MCP Coder following TDD and KISS principles. The implementation provides three core functions for automated PR workflows while maintaining simplicity and testability.
+Add minimal GitHub pull request functionality to MCP Coder following TDD and KISS principles. The implementation provides four core functions for automated PR workflows while maintaining simplicity and testability.
 
 ## Architectural Changes
 
 ### New Module
-- **Single file approach**: `src/mcp_coder/utils/github_operations.py`
-- **Three functions only**: create, read, close pull requests
+- **Package structure approach**: `src/mcp_coder/utils/github_operations/`
+  - `__init__.py` - Exports functions for clean import interface
+  - `gh_pull_requests.py` - Implementation of PR operations
+- **Four functions**: create, read, list, close pull requests
 - **Simple dict returns**: No custom classes or complex data structures
 
 ### Configuration Integration
@@ -24,7 +26,8 @@ Add minimal GitHub pull request functionality to MCP Coder following TDD and KIS
 ## Files Created/Modified
 
 ### New Files
-- `src/mcp_coder/utils/github_operations.py` - Core PR operations
+- `src/mcp_coder/utils/github_operations/__init__.py` - Function exports
+- `src/mcp_coder/utils/github_operations/gh_pull_requests.py` - Core PR operations
 - `tests/utils/test_github_operations.py` - Integration tests
 
 ### Modified Files
@@ -35,8 +38,8 @@ Add minimal GitHub pull request functionality to MCP Coder following TDD and KIS
 ## Design Principles Applied
 
 ### KISS (Keep It Simple, Stupid)
-- Single module instead of package structure
-- Three functions with clear, single responsibilities
+- Package structure for future expansion
+- Four functions with clear, single responsibilities
 - Simple dictionary returns for all operations
 - Minimal error handling with graceful degradation
 
@@ -60,6 +63,9 @@ def create_pull_request(title: str, body: str, head: str, base: str = "main") ->
 def get_pull_request(pr_number: int) -> dict:
     """Returns: {'number': int, 'title': str, 'state': str, 'url': str}"""
 
+def list_pull_requests(state: str = "open") -> list:
+    """Returns: [{'number': int, 'title': str, 'state': str}]"""
+
 def close_pull_request(pr_number: int) -> dict:
     """Returns: {'number': int, 'state': str}"""
 ```
@@ -73,7 +79,7 @@ test_repo_url = "https://github.com/username/test-repo"  # Repository for integr
 ```
 
 ## Implementation Benefits
-- **Minimal complexity**: Three functions, one file, simple returns
+- **Organized complexity**: Package structure for future expansion
 - **Easy testing**: Clear separation of concerns with conditional integration tests
-- **Future-proof**: Foundation for additional GitHub operations if needed
+- **Complete functionality**: Full PR lifecycle including listing
 - **CI/CD friendly**: Tests skip gracefully when credentials unavailable

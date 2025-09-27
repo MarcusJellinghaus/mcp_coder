@@ -7,7 +7,7 @@ Add github_integration test marker to project configuration for conditional test
 - File: `pyproject.toml`
 
 ## WHAT
-- Add github_integration marker to pytest configuration
+- Add github_integration marker to pytest configuration following existing documentation pattern
 
 ## HOW
 ### Test Markers Section
@@ -38,6 +38,7 @@ Add the github_integration test marker to pyproject.toml following the existing 
 
 Requirements:
 - Add github_integration marker to the pytest markers section
+- Follow existing marker documentation pattern and formatting
 - Follow existing formatting and style in the file
 - Ensure valid TOML syntax
 
