@@ -329,7 +329,12 @@ class PullRequestManager:
         Returns:
             Repository name or empty string on failure
         """
-        return ""
+        try:
+            repo = self._parse_and_get_repo()
+            return repo.full_name
+        except Exception as e:
+            print(f"Error getting repository name: {e}")
+            return ""
 
     @property
     def default_branch(self) -> str:
@@ -338,7 +343,12 @@ class PullRequestManager:
         Returns:
             Default branch name or empty string on failure
         """
-        return ""
+        try:
+            repo = self._parse_and_get_repo()
+            return repo.default_branch
+        except Exception as e:
+            print(f"Error getting default branch: {e}")
+            return ""
 
 
 def create_pr_manager(

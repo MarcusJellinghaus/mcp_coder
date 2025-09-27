@@ -67,7 +67,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Implement list_pull_requests with structured list return
 - [x] Implement close_pull_request with state updates
 - [x] Implement merge_pull_request with result details
-- [ ] Implement repository_name and default_branch properties
+- [x] Implement repository_name and default_branch properties
 - [ ] Add error handling returning empty dict/list on failures
 - [ ] Run pylint checks and fix issues
 - [ ] Run pytest checks and fix issues
