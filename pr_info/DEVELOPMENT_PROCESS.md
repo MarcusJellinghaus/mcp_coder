@@ -330,7 +330,26 @@ And tell me what needs to be done
 Please tell me whether this is feasible, how complicated it is, whether it could be simplified or whether it needs to broken down in several sub tasks.
 ```
 
-#### 2.2 Commit Preparation
+#### One shot tasks
+
+( still to be done)
+
+
+#### Working with Todos
+
+Put some todos in your code and work on them using 
+
+```commandline
+Please take a look
+[this file]
+
+There are many todos in there - please take the first one, can we work on just the first one
+Tell me what needs to be done, do not yet modify any code!
+```
+
+
+
+#### 2.4 Commit Preparation
 
 **Process:**
 - format
