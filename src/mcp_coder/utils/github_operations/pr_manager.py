@@ -36,6 +36,11 @@ class PullRequestManager:
         Raises:
             ValueError: If github_token is None or empty
         """
+
+        # TODO repuo url should also be optional, otherwise read it with functionality below from git dir
+
+        # TODO if github token is none, read it from user toml, see pr_info_summary for more details
+
         if not github_token:
             raise ValueError("GitHub token is required for authentication")
 
@@ -260,6 +265,7 @@ class PullRequestManager:
             # Convert to structured list of dictionaries
             pr_list = []
             for pr in prs:
+                # TODO - should we have a typed dict for that? / same  below?
                 pr_dict = {
                     "number": pr.number,
                     "title": pr.title,
@@ -346,6 +352,7 @@ class PullRequestManager:
             print(f"Unexpected error closing pull request {pr_number}: {e}")
             return {}
 
+    # not used so far, could be removed
     @log_function_call
     def merge_pull_request(
         self,
@@ -432,6 +439,7 @@ class PullRequestManager:
             print(f"Unexpected error merging pull request {pr_number}: {e}")
             return {}
 
+    # should this be taken from git_operations
     @property
     def repository_name(self) -> str:
         """Get the repository name in 'owner/repo' format.
@@ -448,6 +456,7 @@ class PullRequestManager:
             print(f"Error getting repository name: {e}")
             return ""
 
+    # TODO - use functionality of git_operations
     @property
     def default_branch(self) -> str:
         """Get the default branch of the repository.
@@ -464,17 +473,3 @@ class PullRequestManager:
             print(f"Error getting default branch: {e}")
             return ""
 
-
-def create_pr_manager(
-    repository_url: str, github_token: Optional[str] = None
-) -> PullRequestManager:
-    """Factory function to create a PullRequestManager instance.
-
-    Args:
-        repository_url: GitHub repository URL
-        github_token: GitHub personal access token for authentication
-
-    Returns:
-        PullRequestManager instance
-    """
-    return PullRequestManager(repository_url, github_token)
