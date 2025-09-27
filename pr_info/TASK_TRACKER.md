@@ -64,7 +64,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add token validation (raise ValueError if missing)
 - [x] Implement create_pull_request with actual GitHub API calls
 - [x] Implement get_pull_request with structured dict return
-- [ ] Implement list_pull_requests with structured list return
+- [x] Implement list_pull_requests with structured list return
 - [ ] Implement close_pull_request with state updates
 - [ ] Implement merge_pull_request with result details
 - [ ] Implement repository_name and default_branch properties

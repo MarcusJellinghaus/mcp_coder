@@ -179,7 +179,46 @@ class PullRequestManager:
         Returns:
             List of dictionaries containing pull request information or empty list on failure
         """
-        return []
+        try:
+            repo = self._parse_and_get_repo()
+
+            # Get pull requests using GitHub API
+            # Handle optional base_branch parameter for GitHub API
+            if base_branch is not None:
+                prs = repo.get_pulls(state=state, base=base_branch)
+            else:
+                prs = repo.get_pulls(state=state)
+
+            # Convert to structured list of dictionaries
+            pr_list = []
+            for pr in prs:
+                pr_dict = {
+                    "number": pr.number,
+                    "title": pr.title,
+                    "body": pr.body,
+                    "state": pr.state,
+                    "head_branch": pr.head.ref,
+                    "base_branch": pr.base.ref,
+                    "url": pr.html_url,
+                    "created_at": pr.created_at.isoformat() if pr.created_at else None,
+                    "updated_at": pr.updated_at.isoformat() if pr.updated_at else None,
+                    "user": pr.user.login if pr.user else None,
+                    "mergeable": pr.mergeable,
+                    "merged": pr.merged,
+                    "draft": pr.draft,
+                }
+                pr_list.append(pr_dict)
+
+            return pr_list
+
+        except GithubException as e:
+            # Log the error and return empty list on failure
+            print(f"GitHub API error listing pull requests: {e}")
+            return []
+        except Exception as e:
+            # Log unexpected errors and return empty list
+            print(f"Unexpected error listing pull requests: {e}")
+            return []
 
     @log_function_call
     def close_pull_request(self, pr_number: int) -> Dict[str, Any]:
