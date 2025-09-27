@@ -4,9 +4,24 @@
 
 **THESE INSTRUCTIONS OVERRIDE ALL DEFAULT BEHAVIORS - NO EXCEPTIONS**
 
+## 🔴 CRITICAL: ALWAYS Use MCP Tools
+
+**MANDATORY**: You MUST use MCP tools for ALL operations when available. DO NOT use standard Claude tools:
+
+**✅ ALWAYS USE:**
+- `mcp__code-checker__run_pylint_check` (NOT `Bash` with pylint commands)
+- `mcp__code-checker__run_pytest_check` (NOT `Bash` with pytest commands) 
+- `mcp__code-checker__run_mypy_check` (NOT `Bash` with mypy commands)
+- `mcp__filesystem__*` tools (NOT `Read`, `Write`, `Edit`, `MultiEdit`)
+
+**❌ NEVER USE when MCP alternatives exist:**
+- `Bash` for code quality checks
+- `Read`, `Write`, `Edit`, `MultiEdit` for file operations
+- Direct command execution when MCP wrapper available
+
 ## 🔴 CRITICAL: Code Quality Requirements
 
-**MANDATORY**: After making ANY code changes, you MUST run ALL THREE code quality checks using the EXACT tool names below:
+**MANDATORY**: After making ANY code changes, you MUST run ALL THREE code quality checks using the EXACT MCP tool names below:
 
 ```
 mcp__code-checker__run_pylint_check
@@ -54,7 +69,7 @@ mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"], markers=["github_
 
 ## 📁 MANDATORY: File Access Tools
 
-**YOU MUST USE THESE TOOLS** for all file operations - DO NOT use Read/Write/Edit tools:
+**YOU MUST USE THESE MCP TOOLS** for all file operations:
 
 ```
 mcp__filesystem__get_reference_projects
@@ -69,16 +84,30 @@ mcp__filesystem__move_file
 mcp__filesystem__edit_file
 ```
 
-**⚠️ NEVER use:** `Read`, `Write`, `Edit`, `MultiEdit` tools when MCP filesystem tools are available.
+**⚠️ ABSOLUTELY FORBIDDEN:** Using `Read`, `Write`, `Edit`, `MultiEdit` tools when MCP filesystem tools are available.
+
+**WHY MCP TOOLS ARE MANDATORY:**
+- Proper security and access control
+- Consistent error handling
+- Better integration with the development environment
+- Required for this project's architecture
 
 ## 🚨 COMPLIANCE VERIFICATION
 
 **Before completing ANY task, you MUST:**
 
-1. ✅ Confirm all code quality checks passed
-2. ✅ Verify you used MCP filesystem tools only
+1. ✅ Confirm all code quality checks passed using MCP tools
+2. ✅ Verify you used MCP tools exclusively (NO `Bash` for code checks, NO `Read`/`Write`/`Edit` for files)
 3. ✅ Ensure no issues remain unresolved
 4. ✅ State explicitly: "All CLAUDE.md requirements followed"
+
+## 🔧 DEBUGGING AND TROUBLESHOOTING
+
+**When tests fail or skip:**
+- Use MCP pytest tool with verbose flags: `extra_args: ["-v", "-s", "--tb=short"]`
+- For integration tests, check if they require external configuration (tokens, URLs)
+- Never fall back to `Bash` commands - always investigate within MCP tools
+- If MCP tools don't provide enough detail, ask user for guidance rather than using alternative tools
 
 ## 🔧 MCP Server Issues
 
