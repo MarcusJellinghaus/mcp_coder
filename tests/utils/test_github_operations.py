@@ -69,9 +69,7 @@ def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
         test_repo_url = get_config_value("github", "test_repo_url")
         print(f"Config fallback - URL found: {bool(test_repo_url)}")
 
-    print(
-        f"Final config - Token: {github_token[:20] + '...' if github_token else None}"
-    )
+    print(f"Final config - Token length: {len(github_token) if github_token else 0}")
     print(f"Final config - URL: {test_repo_url}")
 
     if not github_token:
