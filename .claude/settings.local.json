@@ -15,9 +15,7 @@
       "mcp__filesystem__append_file",
       "mcp__filesystem__delete_this_file",
       "mcp__filesystem__move_file",
-      "mcp__filesystem__edit_file",
-      "Read(//c/**)",
-      "Bash(python:*)"
+      "mcp__filesystem__edit_file"
     ]
   },
   "enabledMcpjsonServers": [
