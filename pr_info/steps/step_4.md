@@ -63,7 +63,7 @@ Replace the empty implementations in src/mcp_coder/utils/github_operations.py wi
 Requirements:
 - Add PyGithub imports (from github import Github, etc.)
 - Create helper functions _get_github_client() and _get_repository()
-- Use get_config_value("github", "token") and get_config_value("github", "repo_url_integration_tests")
+- Use get_config_value("github", "token") and get_config_value("github", "test_repo_url")
 - Implement the three main functions to return the exact dict structures expected by tests
 - Handle errors gracefully by returning empty dict {} 
 - Keep implementation minimal - just enough to pass the test

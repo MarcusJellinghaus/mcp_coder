@@ -14,7 +14,7 @@ Add minimal GitHub pull request functionality to MCP Coder following TDD and KIS
 - **Reuses existing pattern**: `get_config_value()` from `user_config.py`
 - **Two new config keys**:
   - `github.token` - Personal Access Token with repo scope
-  - `github.repo_url_integration_tests` - Test repository URL
+  - `github.test_repo_url` - Test repository URL
 
 ### Testing Strategy
 - **New test marker**: `github_integration` for conditional execution
@@ -69,7 +69,7 @@ def close_pull_request(pr_number: int) -> dict:
 ```toml
 [github]
 token = "ghp_your_personal_access_token"
-repo_url_integration_tests = "https://github.com/username/test-repo"
+test_repo_url = "https://github.com/username/test-repo"  # Repository for integration tests
 ```
 
 ## Implementation Benefits

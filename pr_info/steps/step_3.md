@@ -61,11 +61,12 @@ Create tests/utils/test_github_operations.py with a failing integration test tha
 Requirements:
 - Create TestGitHubOperationsIntegration class with @pytest.mark.github_integration
 - Implement test_create_read_close_pr_roundtrip method
-- Skip test gracefully if GitHub config missing (check token and repo_url_integration_tests)
+- Skip test gracefully if GitHub config missing (check token and test_repo_url)
 - Test should fail initially because functions return empty dicts
 - Use unique branch names with timestamp to avoid conflicts
 - Follow existing integration test patterns from the codebase
 - Include proper cleanup even if test fails
+- Delete test branch after closing PR to prevent accumulation
 
 The test should verify:
 1. create_pull_request returns dict with 'number' and 'url'
