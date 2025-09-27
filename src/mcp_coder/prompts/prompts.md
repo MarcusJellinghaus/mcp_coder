@@ -84,8 +84,8 @@ Read implementation steps in `pr_info/steps/` and update/create `pr_info/TASK_TR
 
 Each task should include:
 - Step implementation 
-- Quality checks: pylint, pytest, mypy
-- Git commit preparation
+- Quality checks: pylint, pytest, mypy - and work on all issues found
+- Preparation of a git commit message
 
 Add "Pull Request" section at end with PR review and summary tasks.
 

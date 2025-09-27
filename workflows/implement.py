@@ -242,16 +242,21 @@ def get_next_task(project_dir: Path) -> Optional[str]:
         return None
 
 
-def save_conversation(project_dir: Path, content: str, step_num: int) -> None:
-    """Save conversation content to pr_info/.conversations/step_N.md."""
-    logger.debug(f"Saving conversation for step {step_num}...")
+def save_conversation(project_dir: Path, content: str, step_num: int, conversation_type: str = "") -> None:
+    """Save conversation content to pr_info/.conversations/step_N[_type][_counter].md."""
+    logger.debug(f"Saving conversation for step {step_num} (type: {conversation_type or 'main'})...")
     
     # Create conversations directory if it doesn't exist
     conversations_dir = project_dir / PR_INFO_DIR / ".conversations"
     conversations_dir.mkdir(parents=True, exist_ok=True)
     
-    # Find next available filename for this step
-    base_name = f"step_{step_num}"
+    # Build base filename with optional type
+    if conversation_type:
+        base_name = f"step_{step_num}_{conversation_type}"
+    else:
+        base_name = f"step_{step_num}"
+    
+    # Find next available filename for this step and type
     counter = 1
     filename = f"{base_name}.md"
     
@@ -337,50 +342,30 @@ def push_changes(project_dir: Path) -> bool:
 
 
 def _run_mypy_check(project_dir: Path) -> Optional[str]:
-    """Run mypy check using mcp-code-checker API and return error output or None if clean."""
+    """Run mypy check using our wrapper and return error output or None if clean."""
+    from mcp_coder.mcp_code_checker import run_mypy_check
+    
     try:
-        # Import and use the mcp-code-checker API directly
-        # This is the correct approach as you pointed out
-        from mcp_code_checker.code_checker_mypy import run_mypy_check
+        result = run_mypy_check(project_dir)
         
-        # Use the API with default settings
-        # Let the MCP tool decide on target directories and use strict mode
-        result = run_mypy_check(
-            project_dir=str(project_dir),
-            strict=True,
-            disable_error_codes=None,
-            target_directories=None,  # Let MCP tool choose defaults (src/, tests/)
-            follow_imports="normal",
-            cache_dir=None
-        )
-        
-        # Handle the result based on what the API actually returns
-        # The API might return a result object or None/string
-        if result is None:
+        # Check if there are errors
+        if (result.errors_found or 0) > 0:
+            # Return raw output for error details
+            return result.raw_output or "Mypy found type errors"
+        else:
             return None  # No errors found
-        
-        # If result is a string, use it directly
-        if isinstance(result, str):
-            return result if result.strip() else None
-        
-        # If result is an object, try to get string representation
-        # This handles cases where the API returns a result object
-        result_str = str(result)
-        return result_str if result_str.strip() else None
-        
-    except ImportError as e:
-        # mcp-code-checker not available - this is a critical error
-        raise Exception(f"mcp-code-checker is required but not available: {e}")
+            
     except Exception as e:
-        raise Exception(f"Failed to run mypy check via mcp-code-checker: {e}")
+        raise Exception(f"Failed to run mypy check: {e}")
 
 
-def check_and_fix_mypy(project_dir: Path, conversation_content: list[str]) -> bool:
+def check_and_fix_mypy(project_dir: Path, step_num: int) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean."""
     log_step("Running mypy type checking...")
     
     max_identical_attempts = 3
     previous_outputs = []
+    mypy_attempt_counter = 0
     
     try:
         # Initial mypy check using MCP tool
@@ -409,6 +394,7 @@ def check_and_fix_mypy(project_dir: Path, conversation_content: list[str]) -> bo
             
             # Add current output to history
             previous_outputs.append(mypy_result)
+            mypy_attempt_counter += 1
             
             # Get mypy fix prompt template
             try:
@@ -427,24 +413,27 @@ def check_and_fix_mypy(project_dir: Path, conversation_content: list[str]) -> bo
                     logger.error("LLM returned empty response for mypy fixes")
                     return False
                 
-                # Append fix attempt to conversation content
-                fix_conversation = f"""\n\n## Mypy Fix Attempt:
+                # Save this mypy fix conversation immediately
+                mypy_conversation = f"""# Mypy Fix Attempt {mypy_attempt_counter}
 
-### Mypy Errors:
+## Mypy Errors:
 {mypy_result}
 
-### LLM Fix Response:
+## Prompt Sent to LLM:
+{mypy_prompt}
+
+## LLM Fix Response:
 {fix_response}
 
 ---
 Mypy fix generated on: {datetime.now().isoformat()}
 """
-                conversation_content.append(fix_conversation)
+                save_conversation(project_dir, mypy_conversation, step_num, "mypy")
                 
-                log_step("Applied mypy fixes from LLM")
+                log_step(f"Applied mypy fixes from LLM (attempt {mypy_attempt_counter})")
                 
             except Exception as e:
-                logger.error(f"Error getting mypy fixes from LLM on attempt {identical_count + 1}: {e}")
+                logger.error(f"Error getting mypy fixes from LLM on attempt {mypy_attempt_counter}: {e}")
                 return False
             
             # Re-run mypy check to see if issues were resolved
@@ -456,7 +445,7 @@ Mypy fix generated on: {datetime.now().isoformat()}
                     return True
                     
             except Exception as e:
-                logger.error(f"Error re-running mypy check on attempt {identical_count + 1}: {e}")
+                logger.error(f"Error re-running mypy check on attempt {mypy_attempt_counter}: {e}")
                 return False
         
         # If we get here, we couldn't fix all issues
@@ -506,14 +495,14 @@ Please implement this task step by step."""
         logger.error(f"Error calling LLM: {e}")
         return False
     
-    # Step 5: Initialize conversation content for tracking
+    # Step 5: Extract step number and save initial implementation conversation
     try:
         # Extract step number from task for conversation naming
         step_match = re.search(r'Step (\d+)', next_task)
         step_num = int(step_match.group(1)) if step_match else 1
         
-        # Initialize conversation content list for mypy fixes
-        conversation_content = [f"""# Implementation Task: {next_task}
+        # Save initial implementation conversation
+        initial_conversation = f"""# Implementation Task: {next_task}
 
 ## Prompt Sent to LLM:
 {full_prompt}
@@ -522,35 +511,27 @@ Please implement this task step by step."""
 {response}
 
 ---
-Generated on: {datetime.now().isoformat()}"""]
+Generated on: {datetime.now().isoformat()}"""
+        
+        save_conversation(project_dir, initial_conversation, step_num)
         
     except Exception as e:
-        logger.error(f"Error initializing conversation content: {e}")
+        logger.error(f"Error saving initial conversation: {e}")
         return False
     
-    # Step 6: Run mypy check and fixes
-    if not check_and_fix_mypy(project_dir, conversation_content):
+    # Step 6: Run mypy check and fixes (each fix will be saved separately)
+    if not check_and_fix_mypy(project_dir, step_num):
         logger.warning("Mypy check failed or found unresolved issues - continuing anyway")
     
-    # Step 7: Save complete conversation (including any mypy fixes)
-    try:
-        # Combine all conversation content
-        full_conversation = '\n'.join(conversation_content)
-        save_conversation(project_dir, full_conversation, step_num)
-    
-    except Exception as e:
-        logger.error(f"Error saving conversation: {e}")
-        return False
-    
-    # Step 8: Run formatters
+    # Step 7: Run formatters
     if not run_formatters(project_dir):
         return False
     
-    # Step 9: Commit changes
+    # Step 8: Commit changes
     if not commit_changes(project_dir):
         return False
     
-    # Step 10: Push changes to remote
+    # Step 9: Push changes to remote
     if not push_changes(project_dir):
         return False
     
