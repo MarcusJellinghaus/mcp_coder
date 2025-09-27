@@ -282,7 +282,45 @@ class PullRequestManager:
         Returns:
             Dictionary containing merge result information or empty dict on failure
         """
-        return {}
+        try:
+            repo = self._parse_and_get_repo()
+
+            # Get the pull request using GitHub API
+            pr = repo.get_pull(pr_number)
+
+            # Check if PR is mergeable
+            if not pr.mergeable:
+                print(f"Pull request {pr_number} is not mergeable")
+                return {}
+
+            if pr.merged:
+                print(f"Pull request {pr_number} is already merged")
+                return {
+                    "merged": True,
+                    "message": "Pull request was already merged",
+                    "sha": pr.merge_commit_sha,
+                    "number": pr_number,
+                }
+
+            # Merge the pull request using GitHub API
+            merge_result = pr.merge()
+
+            # Return structured dictionary with merge result information
+            return {
+                "merged": merge_result.merged,
+                "message": merge_result.message,
+                "sha": merge_result.sha,
+                "number": pr_number,
+            }
+
+        except GithubException as e:
+            # Log the error and return empty dict on failure
+            print(f"GitHub API error merging pull request {pr_number}: {e}")
+            return {}
+        except Exception as e:
+            # Log unexpected errors and return empty dict
+            print(f"Unexpected error merging pull request {pr_number}: {e}")
+            return {}
 
     @property
     def repository_name(self) -> str:
