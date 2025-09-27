@@ -96,20 +96,6 @@ jobs:
       run: pytest -m "git_integration or claude_integration or formatter_integration or github_integration" --junitxml=integration-tests.xml
       continue-on-error: true
         
-    - name: Upload Unit Test Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: unit-test-results
-        path: unit-tests.xml
-        
-    - name: Upload Integration Test Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: integration-test-results
-        path: integration-tests.xml
-        
     - name: Check type hints with mypy
       id: mypy
       run: mypy --strict src tests
