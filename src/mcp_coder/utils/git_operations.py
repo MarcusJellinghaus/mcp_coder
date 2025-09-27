@@ -858,8 +858,10 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
     Get the name of the default branch from git remote HEAD reference.
 
     This checks what git considers the default branch by looking at
-    refs/remotes/origin/HEAD, which mirrors the remote's default branch.
-    Falls back to checking for "main" or "master" if remote HEAD is not set.
+    refs/remotes/origin/HEAD, which is the authoritative source for
+    the remote's default branch setting. If origin/HEAD is not set up
+    (common in test environments), falls back to checking for common
+    default branch names.
 
     Args:
         project_dir: Path to the project directory containing git repository
@@ -867,13 +869,12 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
     Returns:
         Default branch name as string, or None if:
         - Directory is not a git repository
-        - No default branch can be determined
+        - No remote origin configured and no local default branches found
         - Error occurs during branch detection
 
     Note:
-        Uses git symbolic-ref to get the actual default branch, which is more
-        accurate than just checking for "main" or "master". Falls back to
-        legacy logic for compatibility.
+        Prefers git symbolic-ref as the authoritative source, but provides
+        minimal fallback for test environments where origin/HEAD isn't configured.
     """
     logger.debug("Getting default branch name for %s", project_dir)
 
@@ -883,7 +884,13 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
 
     try:
         with _safe_repo_context(project_dir) as repo:
-            # Method 1: Check symbolic ref for origin/HEAD (most accurate)
+            # Check if origin remote exists
+            if "origin" not in [remote.name for remote in repo.remotes]:
+                logger.debug("No origin remote found in %s", project_dir)
+                # No origin remote, check for local main/master branches
+                return _check_local_default_branches(repo)
+
+            # Check symbolic ref for origin/HEAD (authoritative source)
             try:
                 # This shows what the remote considers the default branch
                 result: str = repo.git.symbolic_ref("refs/remotes/origin/HEAD")
@@ -893,28 +900,51 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
                     logger.debug("Found default branch from symbolic-ref: %s", default_branch)
                     return default_branch
             except GitCommandError:
-                # origin/HEAD not set, fall back to heuristic
-                logger.debug("origin/HEAD not set, falling back to heuristic")
-                pass
+                # origin/HEAD not set, try minimal fallback
+                logger.debug("origin/HEAD not set, checking for common default branches")
+                return _check_local_default_branches(repo)
 
-            # Method 2: Fallback to checking for "main" or "master" (legacy logic)
-            if "main" in [head.name for head in repo.heads]:
-                logger.debug("Found default branch (fallback): main")
-                return "main"
-
-            if "master" in [head.name for head in repo.heads]:
-                logger.debug("Found default branch (fallback): master")
-                return "master"
-
-            # No default branch found
-            logger.debug("No default branch found")
-            return None
+            # If we reach here, the symbolic-ref command succeeded but didn't match expected format
+            logger.debug("Unexpected symbolic-ref format, checking fallback")
+            return _check_local_default_branches(repo)
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting default branch name: %s", e)
         return None
     except Exception as e:
         logger.warning("Unexpected error getting default branch name: %s", e)
+        return None
+
+
+def _check_local_default_branches(repo: Repo) -> Optional[str]:
+    """
+    Check for common default branch names in local repository.
+    
+    Args:
+        repo: GitPython repository object
+        
+    Returns:
+        First found default branch name ("main" or "master"), or None
+    """
+    # Check for common default branch names
+    default_candidates = ["main", "master"]
+    
+    try:
+        # Get list of all branch names
+        branch_names = [branch.name for branch in repo.branches]
+        logger.debug("Available local branches: %s", branch_names)
+        
+        # Check for default candidates in order of preference
+        for candidate in default_candidates:
+            if candidate in branch_names:
+                logger.debug("Found local default branch: %s", candidate)
+                return candidate
+                
+        logger.debug("No common default branches found in local repository")
+        return None
+        
+    except GitCommandError as e:
+        logger.debug("Git error checking local branches: %s", e)
         return None
 
 
