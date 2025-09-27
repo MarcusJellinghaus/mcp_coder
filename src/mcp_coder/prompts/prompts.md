@@ -86,10 +86,11 @@ Each task should include:
 - Step implementation 
 - Quality checks: pylint, pytest, mypy - and work on all issues found
 - Preparation of a git commit message
+- put one [ ] in for each step like `[ ] all tasks completed`
 
 Add "Pull Request" section at end with PR review and summary tasks.
 
-Follow existing format in TASK_TRACKER.md or standard checkbox format. Review `pr_info/DEVELOPMENT_PROCESS.md` for context.
+Follow existing format in TASK_TRACKER.md or standard checkbox format.
 ```
 
 ### Implementation step
@@ -104,7 +105,7 @@ Please implement!
 Please verify your implementation running the various checks of the MCP server and by solving potential issues (and repeat).
 Please do not invent extra complexity not mentioned in the project plan.
 Please let me know in case you encounter any issues or need a decision.
-Please provide a short concise commit message stating the step name in the title. Don not perform a commit!
+Please provide a short concise commit message stating the step name in the title. Do NOT perform a commit!
 
 Once you are done, please check again that task description on `pr_info/TASK_TRACKER.md` to ensure that everything is done.
 Once everything is done, please mark the task as done.

@@ -7,11 +7,12 @@
 pytest
 
 # Fast unit tests only
-pytest -m "not git_integration and not claude_integration"
+pytest -m "not git_integration and not claude_integration and not github_integration"
 
 # Run specific test types
 pytest -m git_integration      # File system operations
 pytest -m claude_integration   # Claude API (requires auth)
+pytest -m github_integration   # GitHub API (requires config)
 ```
 
 ## Test Markers
@@ -21,6 +22,7 @@ pytest -m claude_integration   # Claude API (requires auth)
 | *(none)* | Unit tests | < 10s | None |
 | `git_integration` | File system + git ops | < 60s | Git |
 | `claude_integration` | Claude CLI/API calls | Variable | Auth setup |
+| `github_integration` | GitHub API operations | < 30s | GitHub config |
 
 ## Marking Tests
 

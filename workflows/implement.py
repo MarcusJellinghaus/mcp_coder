@@ -40,8 +40,8 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import (
     commit_all_changes,
     get_current_branch_name,
+    get_default_branch_name,
     get_full_status,
-    get_main_branch_name,
     git_push,
     is_working_directory_clean,
 )
@@ -92,7 +92,7 @@ def check_main_branch(project_dir: Path) -> bool:
     
     try:
         current_branch = get_current_branch_name(project_dir)
-        main_branch = get_main_branch_name(project_dir)
+        main_branch = get_default_branch_name(project_dir)
         
         if current_branch is None:
             logger.error("Could not determine current branch (possibly detached HEAD state)")
