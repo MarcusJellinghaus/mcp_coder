@@ -43,31 +43,6 @@ class PullRequestManager:
     This class provides methods for creating, retrieving, listing, closing,
     and merging pull requests in a GitHub repository.
     
-    Example usage:
-        >>> from pathlib import Path
-        >>> from mcp_coder.utils.github_operations import PullRequestManager
-        >>>
-        >>> # Initialize for current project
-        >>> manager = PullRequestManager(Path(".")
-        >>>
-        >>> # Create a pull request
-        >>> pr = manager.create_pull_request(
-        ...     title="Add new feature",
-        ...     head_branch="feature/new-feature",
-        ...     base_branch="main",
-        ...     body="This PR adds a new feature"
-        ... )
-        >>> print(f"Created PR #{pr['number']}: {pr['url']}")
-        >>>
-        >>> # List open pull requests
-        >>> open_prs = manager.list_pull_requests(state="open")
-        >>> for pr in open_prs:
-        ...     print(f"PR #{pr['number']}: {pr['title']}")
-        >>>
-        >>> # Close a pull request
-        >>> closed_pr = manager.close_pull_request(pr['number'])
-        >>> print(f"PR #{closed_pr['number']} is now {closed_pr['state']}")
-    
     Configuration:
         Requires GitHub token in config file (~/.mcp_coder/config.toml):
         
@@ -234,18 +209,6 @@ class PullRequestManager:
             - mergeable: Whether PR can be merged (bool)
             - merged: Whether PR is already merged (bool)
             - draft: Whether PR is a draft (bool)
-            
-        Example:
-            >>> pr = manager.create_pull_request(
-            ...     title="Fix authentication bug",
-            ...     head_branch="bugfix/auth-issue",
-            ...     base_branch="develop",
-            ...     body="Resolves issue with token validation"
-            ... )
-            >>> if pr:
-            ...     print(f"Created PR #{pr['number']}: {pr['url']}")
-            ... else:
-            ...     print("Failed to create PR")
         """
         # Validate title
         if not isinstance(title, str) or not title.strip():
@@ -355,16 +318,6 @@ class PullRequestManager:
         Returns:
             List of PullRequestData containing pull request information or empty list on failure.
             Each item in the list has the same structure as create_pull_request() return value.
-            
-        Example:
-            >>> # Get all open PRs
-            >>> open_prs = manager.list_pull_requests(state="open")
-            >>> for pr in open_prs:
-            ...     print(f"PR #{pr['number']}: {pr['title']} ({pr['head_branch']} → {pr['base_branch']})")
-            >>>
-            >>> # Get PRs targeting specific branch
-            >>> main_prs = manager.list_pull_requests(state="all", base_branch="main")
-            >>> print(f"Found {len(main_prs)} PRs targeting main branch")
         """
         # Validate base_branch if provided
         if base_branch is not None and not self._validate_branch_name(base_branch):
@@ -477,11 +430,6 @@ class PullRequestManager:
 
         Returns:
             Repository name in format "owner/repo" or empty string on failure
-            
-        Example:
-            >>> manager = PullRequestManager(Path(".")
-            >>> print(f"Working with repository: {manager.repository_name}")
-            # Output: Working with repository: myuser/myrepo
         """
         from .github_utils import get_repo_full_name
         
@@ -498,11 +446,6 @@ class PullRequestManager:
 
         Returns:
             Default branch name (typically "main" or "master") or empty string on failure
-            
-        Example:
-            >>> manager = PullRequestManager(Path(".")
-            >>> print(f"Default branch: {manager.default_branch}")
-            # Output: Default branch: main
         """
         from mcp_coder.utils.git_operations import get_default_branch_name
         
