@@ -398,19 +398,24 @@ class PullRequestManager:
             print(f"Unexpected error closing pull request {pr_number}: {e}")
             return cast(PullRequestData, {})
 
-    # should this be taken from git_operations
     @property
     def repository_name(self) -> str:
-        """Get the repository name in 'owner/repo' format.
+        """Get the repository name in 'owner/repo' format using git operations.
 
         Returns:
             Repository name or empty string on failure
         """
         try:
-            repo = self._parse_and_get_repo()
-            if repo is None:
+            # Parse repository URL to extract owner/repo
+            # Support formats: https://github.com/owner/repo, git@github.com:owner/repo.git, owner/repo
+            repo_pattern = r"(?:https://github\.com/|git@github\.com:|^)([^/]+)/([^/\.]+)(?:\.git)?/?$"
+            match = re.match(repo_pattern, self.repository_url.strip())
+            
+            if not match:
                 return ""
-            return repo.full_name
+            
+            owner, repo_name = match.groups()
+            return f"{owner}/{repo_name}"
         except Exception as e:
             print(f"Error getting repository name: {e}")
             return ""
