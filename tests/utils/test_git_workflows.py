@@ -6,8 +6,12 @@ import pytest
 from git import Repo
 
 from mcp_coder.utils.git_operations import (
+    branch_exists,
+    checkout_branch,
     commit_all_changes,
     commit_staged_files,
+    create_branch,
+    fetch_remote,
     get_current_branch_name,
     get_default_branch_name,
     get_full_status,
@@ -17,6 +21,7 @@ from mcp_coder.utils.git_operations import (
     get_unstaged_changes,
     is_git_repository,
     is_working_directory_clean,
+    push_branch,
     stage_all_changes,
     stage_specific_files,
 )
@@ -2014,3 +2019,429 @@ class TestGitBranchOperations:
         # get_parent_branch_name should return None
         parent_branch = get_parent_branch_name(project_dir)
         assert parent_branch is None
+
+    def test_create_branch_success(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test create_branch successfully creates new branch."""
+        repo, project_dir = git_repo_with_files
+        
+        # Test creating new branch from current branch
+        result = create_branch("feature-test", project_dir)
+        assert result is True
+        
+        # Verify branch was created and is current
+        current_branch = get_current_branch_name(project_dir)
+        assert current_branch == "feature-test"
+        
+        # Verify branch exists in repo
+        branch_names = [branch.name for branch in repo.branches]
+        assert "feature-test" in branch_names
+
+    def test_create_branch_from_specific_branch(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test create_branch from specified base branch."""
+        repo, project_dir = git_repo_with_files
+        
+        # Ensure we know the current branch name
+        original_branch = repo.active_branch.name
+        
+        # Create branch from specific base
+        result = create_branch("feature-from-main", project_dir, from_branch=original_branch)
+        assert result is True
+        
+        # Verify branch was created and is current
+        current_branch = get_current_branch_name(project_dir)
+        assert current_branch == "feature-from-main"
+
+    def test_create_branch_already_exists(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test create_branch returns False when branch already exists."""
+        repo, project_dir = git_repo_with_files
+        
+        # Create branch first time - should succeed
+        result1 = create_branch("existing-branch", project_dir)
+        assert result1 is True
+        
+        # Go back to original branch
+        repo.git.checkout("main" if "main" in [h.name for h in repo.heads] else "master")
+        
+        # Try to create same branch again - should fail
+        result2 = create_branch("existing-branch", project_dir)
+        assert result2 is False
+
+    def test_create_branch_invalid_name(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test create_branch returns False for invalid branch names."""
+        repo, project_dir = git_repo_with_files
+        
+        # Test empty name
+        assert create_branch("", project_dir) is False
+        assert create_branch("   ", project_dir) is False
+        
+        # Test invalid characters
+        assert create_branch("branch~name", project_dir) is False
+        assert create_branch("branch^name", project_dir) is False
+        assert create_branch("branch:name", project_dir) is False
+        assert create_branch("branch?name", project_dir) is False
+        assert create_branch("branch*name", project_dir) is False
+        assert create_branch("branch[name", project_dir) is False
+
+    def test_create_branch_invalid_base_branch(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test create_branch returns False when base branch doesn't exist."""
+        repo, project_dir = git_repo_with_files
+        
+        # Try to create branch from non-existent base
+        result = create_branch("test-branch", project_dir, from_branch="nonexistent-branch")
+        assert result is False
+        
+        # Verify no branch was created
+        branch_names = [branch.name for branch in repo.branches]
+        assert "test-branch" not in branch_names
+
+    def test_create_branch_non_git_directory(self, tmp_path: Path) -> None:
+        """Test create_branch returns False for non-git directory."""
+        result = create_branch("test-branch", tmp_path)
+        assert result is False
+
+    def test_checkout_branch_success(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test checkout_branch successfully switches to existing branch."""
+        repo, project_dir = git_repo_with_files
+        
+        # Create a new branch
+        result = create_branch("feature-checkout", project_dir)
+        assert result is True
+        
+        # Go back to original branch
+        original_branch = "main" if "main" in [h.name for h in repo.heads] else "master"
+        repo.git.checkout(original_branch)
+        
+        # Verify we're on original branch
+        current = get_current_branch_name(project_dir)
+        assert current == original_branch
+        
+        # Test checkout to the feature branch
+        result = checkout_branch("feature-checkout", project_dir)
+        assert result is True
+        
+        # Verify we switched to the feature branch
+        current = get_current_branch_name(project_dir)
+        assert current == "feature-checkout"
+
+    def test_checkout_branch_already_on_branch(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test checkout_branch returns True when already on target branch."""
+        repo, project_dir = git_repo_with_files
+        
+        # Get current branch
+        current_branch = get_current_branch_name(project_dir)
+        assert current_branch is not None
+        
+        # Try to checkout the same branch
+        result = checkout_branch(current_branch, project_dir)
+        assert result is True
+        
+        # Verify we're still on the same branch
+        still_current = get_current_branch_name(project_dir)
+        assert still_current == current_branch
+
+    def test_checkout_branch_nonexistent_branch(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test checkout_branch returns False for non-existent branch."""
+        repo, project_dir = git_repo_with_files
+        
+        # Try to checkout non-existent branch
+        result = checkout_branch("nonexistent-branch", project_dir)
+        assert result is False
+        
+        # Verify we're still on original branch
+        current = get_current_branch_name(project_dir)
+        assert current is not None  # Should still be on a valid branch
+
+    def test_checkout_branch_invalid_name(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test checkout_branch returns False for invalid branch names."""
+        repo, project_dir = git_repo_with_files
+        
+        # Test empty name
+        assert checkout_branch("", project_dir) is False
+        assert checkout_branch("   ", project_dir) is False
+
+    def test_checkout_branch_non_git_directory(self, tmp_path: Path) -> None:
+        """Test checkout_branch returns False for non-git directory."""
+        result = checkout_branch("any-branch", tmp_path)
+        assert result is False
+
+    def test_checkout_branch_from_detached_head(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test checkout_branch works from detached HEAD state."""
+        repo, project_dir = git_repo_with_files
+        
+        # Create a feature branch first
+        result = create_branch("feature-detached", project_dir)
+        assert result is True
+        
+        # Get the current commit hash
+        commit_hash = repo.head.commit.hexsha[:7]
+        
+        # Detach HEAD by checking out the commit directly
+        repo.git.checkout(commit_hash)
+        
+        # Verify we're in detached HEAD state
+        current_branch = get_current_branch_name(project_dir)
+        assert current_branch is None  # Should be None for detached HEAD
+        
+        # Checkout to the feature branch from detached state
+        result = checkout_branch("feature-detached", project_dir)
+        assert result is True
+        
+        # Verify we're now on the feature branch
+        current_branch = get_current_branch_name(project_dir)
+        assert current_branch == "feature-detached"
+
+    def test_branch_exists_true(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test branch_exists returns True for existing branch."""
+        repo, project_dir = git_repo_with_files
+        
+        # Test current branch exists
+        current_branch = get_current_branch_name(project_dir)
+        assert current_branch is not None
+        assert branch_exists(current_branch, project_dir) is True
+        
+        # Create a new branch and test it exists
+        result = create_branch("test-exists", project_dir)
+        assert result is True
+        assert branch_exists("test-exists", project_dir) is True
+
+    def test_branch_exists_false(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test branch_exists returns False for non-existent branch."""
+        repo, project_dir = git_repo_with_files
+        
+        # Test non-existent branch
+        assert branch_exists("nonexistent-branch", project_dir) is False
+        assert branch_exists("another-missing-branch", project_dir) is False
+
+    def test_branch_exists_invalid_name(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test branch_exists returns False for invalid branch names."""
+        repo, project_dir = git_repo_with_files
+        
+        # Test empty names
+        assert branch_exists("", project_dir) is False
+        assert branch_exists("   ", project_dir) is False
+
+    def test_branch_exists_non_git_directory(self, tmp_path: Path) -> None:
+        """Test branch_exists returns False for non-git directory."""
+        assert branch_exists("any-branch", tmp_path) is False
+
+    def test_branch_exists_multiple_branches(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test branch_exists with multiple branches."""
+        repo, project_dir = git_repo_with_files
+        
+        # Create multiple branches
+        branches = ["feature-1", "feature-2", "bugfix-1", "release-1.0"]
+        
+        for branch_name in branches:
+            result = create_branch(branch_name, project_dir)
+            assert result is True
+        
+        # Test all created branches exist
+        for branch_name in branches:
+            assert branch_exists(branch_name, project_dir) is True
+        
+        # Test non-existent branches still return False
+        assert branch_exists("feature-3", project_dir) is False
+        assert branch_exists("release-2.0", project_dir) is False
+
+    def test_branch_exists_after_checkout(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test branch_exists works correctly after branch checkouts."""
+        repo, project_dir = git_repo_with_files
+        
+        # Create and checkout to new branch
+        result = create_branch("test-checkout-exists", project_dir)
+        assert result is True
+        
+        # Branch should exist regardless of current branch
+        assert branch_exists("test-checkout-exists", project_dir) is True
+        
+        # Go back to original branch
+        original_branch = "main" if "main" in [h.name for h in repo.heads] else "master"
+        checkout_result = checkout_branch(original_branch, project_dir)
+        assert checkout_result is True
+        
+        # Branch should still exist after checkout
+        assert branch_exists("test-checkout-exists", project_dir) is True
+        assert branch_exists(original_branch, project_dir) is True
+
+    def test_push_branch_success(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test push_branch successfully pushes branch to origin (mocked)."""
+        from unittest.mock import patch
+        
+        repo, project_dir = git_repo_with_files
+        
+        # Create a new branch with some content
+        result = create_branch("feature-push", project_dir)
+        assert result is True
+        
+        # Add a commit to the branch
+        test_file = project_dir / "push_test.py"
+        test_file.write_text("# Test push functionality")
+        commit_result = commit_all_changes("Add test file for push", project_dir)
+        assert commit_result["success"] is True
+        
+        # Mock the git push command to avoid network operations
+        with patch.object(repo.git, "push") as mock_push:
+            # Test successful push with upstream
+            result = push_branch("feature-push", project_dir, set_upstream=True)
+            assert result is True
+            mock_push.assert_called_once_with("--set-upstream", "origin", "feature-push")
+
+    def test_push_branch_without_upstream(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test push_branch without setting upstream tracking."""
+        from unittest.mock import patch
+        
+        repo, project_dir = git_repo_with_files
+        
+        # Create and commit to a new branch
+        result = create_branch("feature-no-upstream", project_dir)
+        assert result is True
+        
+        test_file = project_dir / "no_upstream.py"
+        test_file.write_text("# Test push without upstream")
+        commit_result = commit_all_changes("Add file for no-upstream test", project_dir)
+        assert commit_result["success"] is True
+        
+        # Mock the git push command
+        with patch.object(repo.git, "push") as mock_push:
+            # Test push without upstream
+            result = push_branch("feature-no-upstream", project_dir, set_upstream=False)
+            assert result is True
+            mock_push.assert_called_once_with("origin", "feature-no-upstream")
+
+    def test_push_branch_nonexistent_branch(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test push_branch returns False for non-existent branch."""
+        repo, project_dir = git_repo_with_files
+        
+        # Try to push non-existent branch
+        result = push_branch("nonexistent-branch", project_dir)
+        assert result is False
+
+    def test_push_branch_invalid_name(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test push_branch returns False for invalid branch names."""
+        repo, project_dir = git_repo_with_files
+        
+        # Test empty names
+        assert push_branch("", project_dir) is False
+        assert push_branch("   ", project_dir) is False
+
+    def test_push_branch_non_git_directory(self, tmp_path: Path) -> None:
+        """Test push_branch returns False for non-git directory."""
+        result = push_branch("any-branch", tmp_path)
+        assert result is False
+
+    def test_push_branch_no_origin_remote(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test push_branch returns False when no origin remote exists."""
+        repo, project_dir = git_repo_with_files
+        
+        # Create a branch
+        result = create_branch("test-no-origin", project_dir)
+        assert result is True
+        
+        # Remove origin remote if it exists
+        if "origin" in [remote.name for remote in repo.remotes]:
+            origin_remote = repo.remotes.origin
+            repo.delete_remote(origin_remote)
+        
+        # Try to push - should fail due to no origin
+        result = push_branch("test-no-origin", project_dir)
+        assert result is False
+
+    def test_push_branch_git_command_error(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test push_branch handles git command errors gracefully."""
+        from unittest.mock import patch
+        from git.exc import GitCommandError
+        
+        repo, project_dir = git_repo_with_files
+        
+        # Create a branch
+        result = create_branch("test-push-error", project_dir)
+        assert result is True
+        
+        # Mock git push to raise an error
+        with patch.object(repo.git, "push") as mock_push:
+            mock_push.side_effect = GitCommandError("push", 128, "fatal: remote error")
+            
+            # Push should return False on git command error
+            result = push_branch("test-push-error", project_dir)
+            assert result is False
+
+    def test_fetch_remote_success(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test fetch_remote successfully fetches from origin (mocked)."""
+        from unittest.mock import patch
+        
+        repo, project_dir = git_repo_with_files
+        
+        # Mock the git fetch command to avoid network operations
+        with patch.object(repo.git, "fetch") as mock_fetch:
+            # Test successful fetch from origin
+            result = fetch_remote(project_dir)
+            assert result is True
+            mock_fetch.assert_called_once_with("origin")
+
+    def test_fetch_remote_custom_remote(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test fetch_remote with custom remote name."""
+        from unittest.mock import patch
+        
+        repo, project_dir = git_repo_with_files
+        
+        # Add a custom remote (mocked)
+        with patch.object(repo, "remotes") as mock_remotes:
+            # Mock remotes to include 'upstream'
+            class MockRemote:
+                def __init__(self, name: str) -> None:
+                    self.name = name
+            
+            mock_remotes.__iter__ = lambda self: iter([MockRemote("origin"), MockRemote("upstream")])
+            
+            with patch.object(repo.git, "fetch") as mock_fetch:
+                # Test fetch from custom remote
+                result = fetch_remote(project_dir, remote="upstream")
+                assert result is True
+                mock_fetch.assert_called_once_with("upstream")
+
+    def test_fetch_remote_nonexistent_remote(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test fetch_remote returns False for non-existent remote."""
+        repo, project_dir = git_repo_with_files
+        
+        # Try to fetch from non-existent remote
+        result = fetch_remote(project_dir, remote="nonexistent")
+        assert result is False
+
+    def test_fetch_remote_invalid_name(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test fetch_remote returns False for invalid remote names."""
+        repo, project_dir = git_repo_with_files
+        
+        # Test empty names
+        assert fetch_remote(project_dir, remote="") is False
+        assert fetch_remote(project_dir, remote="   ") is False
+
+    def test_fetch_remote_non_git_directory(self, tmp_path: Path) -> None:
+        """Test fetch_remote returns False for non-git directory."""
+        result = fetch_remote(tmp_path)
+        assert result is False
+
+    def test_fetch_remote_git_command_error(self, git_repo_with_files: tuple[Repo, Path]) -> None:
+        """Test fetch_remote handles git command errors gracefully."""
+        from unittest.mock import patch
+        from git.exc import GitCommandError
+        
+        repo, project_dir = git_repo_with_files
+        
+        # Mock git fetch to raise an error
+        with patch.object(repo.git, "fetch") as mock_fetch:
+            mock_fetch.side_effect = GitCommandError("fetch", 128, "fatal: network error")
+            
+            # Fetch should return False on git command error
+            result = fetch_remote(project_dir)
+            assert result is False
+
+    def test_fetch_remote_no_remotes(self, git_repo: tuple[Repo, Path]) -> None:
+        """Test fetch_remote returns False when no remotes exist."""
+        repo, project_dir = git_repo
+        
+        # Create a repository with no remotes
+        # The git_repo fixture creates a local repo without remotes
+        
+        # Try to fetch - should fail due to no origin remote
+        result = fetch_remote(project_dir)
+        assert result is False
