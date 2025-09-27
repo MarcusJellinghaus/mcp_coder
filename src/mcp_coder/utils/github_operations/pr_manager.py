@@ -225,11 +225,11 @@ class PullRequestManager:
 
         except GithubException as e:
             # Log the error and return empty dict on failure
-            print(f"GitHub API error creating pull request: {e}")
+            logger.error(f"GitHub API error creating pull request: {e}")
             return cast(PullRequestData, {})
         except Exception as e:
             # Log unexpected errors and return empty dict
-            print(f"Unexpected error creating pull request: {e}")
+            logger.error(f"Unexpected error creating pull request: {e}")
             return cast(PullRequestData, {})
 
     @log_function_call
@@ -273,11 +273,11 @@ class PullRequestManager:
 
         except GithubException as e:
             # Log the error and return empty dict on failure
-            print(f"GitHub API error getting pull request {pr_number}: {e}")
+            logger.error(f"GitHub API error getting pull request {pr_number}: {e}")
             return cast(PullRequestData, {})
         except Exception as e:
             # Log unexpected errors and return empty dict
-            print(f"Unexpected error getting pull request {pr_number}: {e}")
+            logger.error(f"Unexpected error getting pull request {pr_number}: {e}")
             return cast(PullRequestData, {})
 
     @log_function_call
@@ -333,11 +333,11 @@ class PullRequestManager:
 
         except GithubException as e:
             # Log the error and return empty list on failure
-            print(f"GitHub API error listing pull requests: {e}")
+            logger.error(f"GitHub API error listing pull requests: {e}")
             return []
         except Exception as e:
             # Log unexpected errors and return empty list
-            print(f"Unexpected error listing pull requests: {e}")
+            logger.error(f"Unexpected error listing pull requests: {e}")
             return []
 
     @log_function_call
@@ -391,11 +391,11 @@ class PullRequestManager:
 
         except GithubException as e:
             # Log the error and return empty dict on failure
-            print(f"GitHub API error closing pull request {pr_number}: {e}")
+            logger.error(f"GitHub API error closing pull request {pr_number}: {e}")
             return cast(PullRequestData, {})
         except Exception as e:
             # Log unexpected errors and return empty dict
-            print(f"Unexpected error closing pull request {pr_number}: {e}")
+            logger.error(f"Unexpected error closing pull request {pr_number}: {e}")
             return cast(PullRequestData, {})
 
     @property
@@ -417,7 +417,7 @@ class PullRequestManager:
             owner, repo_name = match.groups()
             return f"{owner}/{repo_name}"
         except Exception as e:
-            print(f"Error getting repository name: {e}")
+            logger.debug(f"Error getting repository name: {e}")
             return ""
 
     @property
@@ -433,5 +433,5 @@ class PullRequestManager:
             default_branch = get_default_branch_name(self.project_dir)
             return default_branch or ""
         except Exception as e:
-            print(f"Error getting default branch: {e}")
+            logger.debug(f"Error getting default branch: {e}")
             return ""

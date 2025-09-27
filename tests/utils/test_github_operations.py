@@ -1,4 +1,18 @@
-"""Tests for GitHub operations module."""
+"""Tests for GitHub operations module.
+
+Integration tests require GitHub configuration:
+
+Environment Variables (recommended):
+    GITHUB_TOKEN: GitHub Personal Access Token with repo scope
+    GITHUB_TEST_REPO_URL: URL of test repository (e.g., https://github.com/user/test-repo)
+
+Config File Alternative (~/.mcp_coder/config.toml):
+    [github]
+    token = "ghp_your_token_here"
+    test_repo_url = "https://github.com/user/test-repo"
+
+Note: Tests will be skipped if configuration is missing.
+"""
 
 import os
 from pathlib import Path
@@ -16,6 +30,14 @@ def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
     """Create PullRequestManager instance for testing.
 
     Validates GitHub configuration and gracefully skips when missing.
+    
+    Configuration sources (in order of preference):
+    1. Environment variables: GITHUB_TOKEN, GITHUB_TEST_REPO_URL
+    2. MCP Coder config: github.token, github.test_repo_url
+    
+    Environment variables:
+        GITHUB_TOKEN: GitHub Personal Access Token with repo scope
+        GITHUB_TEST_REPO_URL: URL of test repository (e.g., https://github.com/user/test-repo)
 
     Returns:
         PullRequestManager: Configured instance for testing
@@ -23,16 +45,29 @@ def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
     Raises:
         pytest.skip: When GitHub token or test repository not configured
     """
+    from mcp_coder.utils.user_config import get_config_value
+    
     # Check for required GitHub configuration
+    # Priority 1: Environment variables
     github_token = os.getenv("GITHUB_TOKEN")
-    test_repo_url = os.getenv("GITHUB_TEST_REPO_URL", "https://github.com/test/repo")
+    test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
+    
+    # Priority 2: Config system fallback
+    if not github_token:
+        github_token = get_config_value("github", "token")
+    if not test_repo_url:
+        test_repo_url = get_config_value("github", "test_repo_url")
 
     if not github_token:
-        pytest.skip("GitHub token not configured (GITHUB_TOKEN environment variable)")
-
-    if test_repo_url == "https://github.com/test/repo":
         pytest.skip(
-            "Test repository URL not configured (GITHUB_TEST_REPO_URL environment variable)"
+            "GitHub token not configured. Set GITHUB_TOKEN environment variable "
+            "or add github.token to ~/.mcp_coder/config.toml"
+        )
+
+    if not test_repo_url:
+        pytest.skip(
+            "Test repository URL not configured. Set GITHUB_TEST_REPO_URL environment variable "
+            "or add github.test_repo_url to ~/.mcp_coder/config.toml"
         )
 
     # Setup test git repo with GitHub remote
