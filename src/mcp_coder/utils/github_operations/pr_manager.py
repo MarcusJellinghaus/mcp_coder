@@ -4,6 +4,7 @@ This module provides the PullRequestManager class for managing GitHub pull reque
 through the PyGithub library.
 """
 
+import re
 from typing import Any, Dict, List, Optional
 
 from github import Github
@@ -27,9 +28,52 @@ class PullRequestManager:
         Args:
             repository_url: GitHub repository URL (e.g., 'https://github.com/user/repo')
             github_token: GitHub personal access token for authentication
+
+        Raises:
+            ValueError: If github_token is None or empty
         """
+        if not github_token:
+            raise ValueError("GitHub token is required for authentication")
+
         self.repository_url = repository_url
         self.github_token = github_token
+        self._github_client = Github(github_token)
+        self._repository: Optional[Repository] = None
+
+    def _parse_and_get_repo(self) -> Repository:
+        """Parse repository URL and get Repository object.
+
+        Returns:
+            Repository: GitHub repository object
+
+        Raises:
+            ValueError: If repository URL format is invalid or repository cannot be accessed
+        """
+        if self._repository is not None:
+            return self._repository
+
+        # Parse repository URL to extract owner/repo
+        # Support formats: https://github.com/owner/repo, git@github.com:owner/repo.git, owner/repo
+        repo_pattern = (
+            r"(?:https://github\.com/|git@github\.com:|^)([^/]+)/([^/\.]+)(?:\.git)?/?$"
+        )
+        match = re.match(repo_pattern, self.repository_url.strip())
+
+        if not match:
+            raise ValueError(
+                f"Invalid GitHub repository URL format: {self.repository_url}"
+            )
+
+        owner, repo_name = match.groups()
+        repo_full_name = f"{owner}/{repo_name}"
+
+        try:
+            self._repository = self._github_client.get_repo(repo_full_name)
+            return self._repository
+        except GithubException as e:
+            raise ValueError(
+                f"Failed to access repository {repo_full_name}: {e}"
+            ) from e
 
     @log_function_call
     def create_pull_request(

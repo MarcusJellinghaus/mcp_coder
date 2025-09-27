@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 4: Implement PullRequestManager (Make Tests Pass)
 - [x] Add PyGithub imports to pr_manager.py
-- [ ] Enhance __init__ method with GitHub client initialization
-- [ ] Implement _parse_and_get_repo helper method
-- [ ] Add token validation (raise ValueError if missing)
+- [x] Enhance __init__ method with GitHub client initialization
+- [x] Implement _parse_and_get_repo helper method
+- [x] Add token validation (raise ValueError if missing)
 - [ ] Implement create_pull_request with actual GitHub API calls
 - [ ] Implement get_pull_request with structured dict return
 - [ ] Implement list_pull_requests with structured list return
