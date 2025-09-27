@@ -90,7 +90,39 @@ class PullRequestManager:
         Returns:
             Dictionary containing pull request information or empty dict on failure
         """
-        return {}
+        try:
+            repo = self._parse_and_get_repo()
+
+            # Create the pull request using GitHub API
+            pr = repo.create_pull(
+                title=title, body=body, head=head_branch, base=base_branch
+            )
+
+            # Return structured dictionary with PR information
+            return {
+                "number": pr.number,
+                "title": pr.title,
+                "body": pr.body,
+                "state": pr.state,
+                "head_branch": pr.head.ref,
+                "base_branch": pr.base.ref,
+                "url": pr.html_url,
+                "created_at": pr.created_at.isoformat() if pr.created_at else None,
+                "updated_at": pr.updated_at.isoformat() if pr.updated_at else None,
+                "user": pr.user.login if pr.user else None,
+                "mergeable": pr.mergeable,
+                "merged": pr.merged,
+                "draft": pr.draft,
+            }
+
+        except GithubException as e:
+            # Log the error and return empty dict on failure
+            print(f"GitHub API error creating pull request: {e}")
+            return {}
+        except Exception as e:
+            # Log unexpected errors and return empty dict
+            print(f"Unexpected error creating pull request: {e}")
+            return {}
 
     @log_function_call
     def get_pull_request(self, pr_number: int) -> Dict[str, Any]:
