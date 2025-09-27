@@ -5,7 +5,6 @@ through the PyGithub library.
 """
 
 import logging
-import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict, cast
 
@@ -15,6 +14,7 @@ from github.PullRequest import PullRequest
 from github.Repository import Repository
 
 from mcp_coder.utils.log_utils import log_function_call
+from .github_utils import parse_github_url
 
 # Configure logger for GitHub operations
 logger = logging.getLogger(__name__)
@@ -152,18 +152,15 @@ class PullRequestManager:
             return self._repository
 
         try:
-            # Parse repository URL to extract owner/repo
-            # Support formats: https://github.com/owner/repo, git@github.com:owner/repo.git, owner/repo
-            repo_pattern = r"(?:https://github\.com/|git@github\.com:|^)([^/]+)/([^/\.]+)(?:\.git)?/?$"
-            match = re.match(repo_pattern, self.repository_url.strip())
-
-            if not match:
+            # Parse repository URL using utility function
+            parsed = parse_github_url(self.repository_url)
+            if parsed is None:
                 logger.error(
                     f"Invalid GitHub repository URL format: {self.repository_url}"
                 )
                 return None
 
-            owner, repo_name = match.groups()
+            owner, repo_name = parsed
             repo_full_name = f"{owner}/{repo_name}"
 
             self._repository = self._github_client.get_repo(repo_full_name)
@@ -190,6 +187,11 @@ class PullRequestManager:
         Returns:
             PullRequestData containing pull request information or empty dict on failure
         """
+        # Validate title
+        if not isinstance(title, str) or not title.strip():
+            logger.error(f"Invalid PR title: '{title}'. Must be a non-empty string.")
+            return cast(PullRequestData, {})
+        
         # Validate branch names
         if not self._validate_branch_name(head_branch):
             return cast(PullRequestData, {})
@@ -405,17 +407,11 @@ class PullRequestManager:
         Returns:
             Repository name or empty string on failure
         """
+        from .github_utils import get_repo_full_name
+        
         try:
-            # Parse repository URL to extract owner/repo
-            # Support formats: https://github.com/owner/repo, git@github.com:owner/repo.git, owner/repo
-            repo_pattern = r"(?:https://github\.com/|git@github\.com:|^)([^/]+)/([^/\.]+)(?:\.git)?/?$"
-            match = re.match(repo_pattern, self.repository_url.strip())
-            
-            if not match:
-                return ""
-            
-            owner, repo_name = match.groups()
-            return f"{owner}/{repo_name}"
+            repo_name = get_repo_full_name(self.repository_url)
+            return repo_name or ""
         except Exception as e:
             logger.debug(f"Error getting repository name: {e}")
             return ""
