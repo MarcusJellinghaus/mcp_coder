@@ -1080,10 +1080,9 @@ def get_github_repository_url(project_dir: Path) -> Optional[str]:
         return None
 
 
-
-
-
-def create_branch(branch_name: str, project_dir: Path, from_branch: Optional[str] = None) -> bool:
+def create_branch(
+    branch_name: str, project_dir: Path, from_branch: Optional[str] = None
+) -> bool:
     """Create a new git branch.
 
     Args:
@@ -1108,7 +1107,9 @@ def create_branch(branch_name: str, project_dir: Path, from_branch: Optional[str
     # Basic branch name validation (GitHub-compatible)
     invalid_chars = ["~", "^", ":", "?", "*", "["]
     if any(char in branch_name for char in invalid_chars):
-        logger.error("Invalid branch name: '%s'. Contains invalid characters", branch_name)
+        logger.error(
+            "Invalid branch name: '%s'. Contains invalid characters", branch_name
+        )
         return False
 
     try:
@@ -1125,7 +1126,9 @@ def create_branch(branch_name: str, project_dir: Path, from_branch: Optional[str
                 try:
                     repo.git.checkout("-b", branch_name, from_branch)
                 except GitCommandError as e:
-                    logger.error("Failed to create branch from '%s': %s", from_branch, e)
+                    logger.error(
+                        "Failed to create branch from '%s': %s", from_branch, e
+                    )
                     return False
             else:
                 # Create from current branch
@@ -1228,12 +1231,12 @@ def branch_exists(branch_name: str, project_dir: Path) -> bool:
             # Get list of local branch names
             existing_branches = [branch.name for branch in repo.branches]
             exists = branch_name in existing_branches
-            
+
             if exists:
                 logger.debug("Branch '%s' exists locally", branch_name)
             else:
                 logger.debug("Branch '%s' does not exist locally", branch_name)
-            
+
             return exists
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
@@ -1283,14 +1286,17 @@ def push_branch(branch_name: str, project_dir: Path, set_upstream: bool = True) 
                 if set_upstream:
                     # Push with upstream tracking
                     repo.git.push("--set-upstream", "origin", branch_name)
-                    logger.debug("Successfully pushed branch '%s' with upstream tracking", branch_name)
+                    logger.debug(
+                        "Successfully pushed branch '%s' with upstream tracking",
+                        branch_name,
+                    )
                 else:
                     # Push without upstream tracking
                     repo.git.push("origin", branch_name)
                     logger.debug("Successfully pushed branch '%s'", branch_name)
-                
+
                 return True
-                
+
             except GitCommandError as e:
                 logger.error("Failed to push branch '%s': %s", branch_name, e)
                 return False
@@ -1336,7 +1342,7 @@ def fetch_remote(project_dir: Path, remote: str = "origin") -> bool:
                 repo.git.fetch(remote)
                 logger.debug("Successfully fetched from remote '%s'", remote)
                 return True
-                
+
             except GitCommandError as e:
                 logger.error("Failed to fetch from remote '%s': %s", remote, e)
                 return False
