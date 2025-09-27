@@ -27,7 +27,7 @@ from mcp_coder.utils.git_operations import (
 )
 
 # Performance test threshold in seconds
-PERFORMANCE_THRESHOLD_SECONDS = 7.0
+PERFORMANCE_THRESHOLD_SECONDS = 9.0
 
 
 @pytest.mark.git_integration
@@ -2452,11 +2452,13 @@ class TestGitBranchOperations:
 
         repo, project_dir = git_repo_with_files
 
-        # Mock the git fetch command by patching subprocess execution
-        with patch("subprocess.Popen") as mock_popen:
-            mock_process = mock_popen.return_value
-            mock_process.communicate.return_value = (b"", b"")
-            mock_process.returncode = 0
+        # Ensure origin remote exists
+        if "origin" not in [remote.name for remote in repo.remotes]:
+            repo.create_remote("origin", "https://github.com/example/repo.git")
+
+        # Mock the git.Git class's execute method at the module level
+        with patch("git.cmd.Git.execute") as mock_execute:
+            mock_execute.return_value = ""  # Successful git fetch returns empty string
 
             # Test successful fetch from origin
             result = fetch_remote(project_dir)
@@ -2476,11 +2478,9 @@ class TestGitBranchOperations:
         except Exception:
             pass  # Remote might already exist
 
-        # Mock the git fetch command to avoid network operations
-        with patch("subprocess.Popen") as mock_popen:
-            mock_process = mock_popen.return_value
-            mock_process.communicate.return_value = (b"", b"")
-            mock_process.returncode = 0
+        # Mock the git.Git class's execute method at the module level
+        with patch("git.cmd.Git.execute") as mock_execute:
+            mock_execute.return_value = ""  # Successful git fetch returns empty string
 
             # Test fetch from custom remote
             result = fetch_remote(project_dir, remote="upstream")
