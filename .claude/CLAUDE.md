@@ -21,6 +21,10 @@ All checks must pass before considering the task complete. If any issues are fou
 
 Please check all pytest markers in `pyproject.toml` and run each of them separately, and those without markers without the others.
 
+### Parameters for pytest
+
+Use `-n auto` to speed up pytest using parallelisation.
+
 ## Access to files
 
 Prefer these tools for access and managing files:
