@@ -1,13 +1,22 @@
 --- This file is used by Claude Code - similar to a system prompt. ---
 
-## Code Quality Requirements
+# ⚠️ MANDATORY INSTRUCTIONS - MUST BE FOLLOWED ⚠️
 
-**IMPORTANT**: After making any code changes, always run all three code quality checks:
+**THESE INSTRUCTIONS OVERRIDE ALL DEFAULT BEHAVIORS - NO EXCEPTIONS**
+
+## 🔴 CRITICAL: Code Quality Requirements
+
+**MANDATORY**: After making ANY code changes, you MUST run ALL THREE code quality checks using the EXACT tool names below:
 
 ```
-mcp__checker__run_pylint_check
-mcp__checker__run_pytest_check
-mcp__checker__run_mypy_check
+mcp__code-checker__run_pylint_check
+mcp__code-checker__run_pytest_check
+mcp__code-checker__run_mypy_check
+```
+
+**OR use the combined check:**
+```
+mcp__code-checker__run_all_checks
 ```
 
 This runs:
@@ -15,32 +24,50 @@ This runs:
 - **Pytest** - All unit and integration tests
 - **Mypy** - Static type checking
 
-All checks must pass before considering the task complete. If any issues are found, fix them immediately.
+**⚠️ ALL CHECKS MUST PASS** - If ANY issues are found, you MUST fix them immediately before proceeding.
 
-### Markers for pytest
+### 📋 Pytest Execution Requirements
 
-Please check all pytest markers in `pyproject.toml` and run each of them separately, and those without markers without the others.
+**MANDATORY pytest parameters:**
+- ALWAYS use `extra_args: ["-n", "auto"]` for parallel execution
+- Check `pyproject.toml` for available markers
+- Run each marker separately: `markers: ["marker_name"]`
+- Run unmarked tests separately without marker filters
 
-### Parameters for pytest
-
-Use `-n auto` to speed up pytest using parallelisation.
-
-## Access to files
-
-Prefer these tools for access and managing files:
+**Example usage:**
 ```
-      "mcp__filesystem__get_reference_projects",
-      "mcp__filesystem__list_reference_directory",
-      "mcp__filesystem__read_reference_file",
-      "mcp__filesystem__list_directory",
-      "mcp__filesystem__read_file",
-      "mcp__filesystem__save_file",
-      "mcp__filesystem__append_file",
-      "mcp__filesystem__delete_this_file",
-      "mcp__filesystem__move_file",
-      "mcp__filesystem__edit_file"
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"], markers=["integration"])
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])  # unmarked tests
 ```
 
-## Issue with MCP servers
+## 📁 MANDATORY: File Access Tools
 
-If the tools mentioned above are not accessible to you, please raise it immediately.
+**YOU MUST USE THESE TOOLS** for all file operations - DO NOT use Read/Write/Edit tools:
+
+```
+mcp__filesystem__get_reference_projects
+mcp__filesystem__list_reference_directory
+mcp__filesystem__read_reference_file
+mcp__filesystem__list_directory
+mcp__filesystem__read_file
+mcp__filesystem__save_file
+mcp__filesystem__append_file
+mcp__filesystem__delete_this_file
+mcp__filesystem__move_file
+mcp__filesystem__edit_file
+```
+
+**⚠️ NEVER use:** `Read`, `Write`, `Edit`, `MultiEdit` tools when MCP filesystem tools are available.
+
+## 🚨 COMPLIANCE VERIFICATION
+
+**Before completing ANY task, you MUST:**
+
+1. ✅ Confirm all code quality checks passed
+2. ✅ Verify you used MCP filesystem tools only
+3. ✅ Ensure no issues remain unresolved
+4. ✅ State explicitly: "All CLAUDE.md requirements followed"
+
+## 🔧 MCP Server Issues
+
+**IMMEDIATELY ALERT** if MCP tools are not accessible - this blocks all work until resolved.
