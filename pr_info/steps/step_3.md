@@ -1,97 +1,110 @@
-# Step 3: Implement prompt_claude Core Function
+# Step 3: Add Integration Tests for CLI Wrapper
 
-## Goal  
-Implement the core `prompt_claude` function by extracting business logic from `execute_prompt`, maintaining all existing functionality.
+## Goal
+Create tests for the refactored `execute_prompt` function to verify it correctly maps argparse.Namespace parameters to the new `prompt_claude` function calls.
 
 ## WHERE
-- **File**: `src/mcp_coder/cli/commands/prompt.py`
-- **Location**: Add new function before `execute_prompt`
+- **File**: `tests/cli/commands/test_prompt.py`
+- **Section**: Add new test class `TestExecutePromptWrapper` 
 
 ## WHAT
-Extract the business logic from `execute_prompt` into `prompt_claude` with explicit parameters:
+Add test class to verify CLI wrapper functionality:
 
-### Function Signature
+### Test Methods
 ```python
-def prompt_claude(
-    prompt: str,
-    verbosity: str = "just-text",
-    timeout: int = 30,
-    store_response: bool = False,
-    continue_from: Optional[str] = None,
-    continue_latest: bool = False,
-    save_conversation_md: Optional[str] = None,
-    save_conversation_full_json: Optional[str] = None
-) -> int:
+class TestExecutePromptWrapper:
+    def test_execute_prompt_calls_prompt_claude_correctly(self) -> None
+    def test_execute_prompt_with_default_args(self) -> None
+    def test_execute_prompt_with_save_parameters(self) -> None
+    def test_execute_prompt_parameter_mapping(self) -> None
 ```
 
 ## HOW
-- **Extract Logic**: Move existing logic from `execute_prompt` to `prompt_claude`
-- **Add Save Logic**: Add conditional calls to save functions
-- **Maintain Behavior**: Preserve exact same functionality and error handling
+- **Integration**: Add to existing test file after save function tests
+- **Mocking**: Mock `prompt_claude` function to verify it's called correctly
+- **Assertions**: Verify parameter mapping from argparse.Namespace to function arguments
 
 ## ALGORITHM
 ```
-1. Handle continuation logic (continue_from/continue_latest parameters)
-2. Call Claude API with enhanced prompt and timeout
-3. Store response if store_response=True (existing functionality)
-4. Save to markdown file if save_conversation_md provided
-5. Save to JSON file if save_conversation_full_json provided
-6. Format and print output based on verbosity level
-7. Return 0 for success, 1 for errors
+1. Create argparse.Namespace with various parameter combinations
+2. Mock prompt_claude function to capture calls
+3. Call execute_prompt with test args
+4. Verify prompt_claude called with correctly mapped parameters
+5. Assert return value passed through correctly
 ```
 
 ## DATA
 
-### Key Dependencies (Existing Functions)
+### Test Argparse.Namespace Examples
 ```python
-ask_claude_code_api_detailed_sync(enhanced_prompt, timeout)
-_store_response(response_data, prompt)  # if store_response
-_find_latest_response_file()  # if continue_latest
-_load_previous_chat(file_path)  # if continue_from
-_build_context_prompt(context, prompt)  # for continuation
-_format_just_text(response_data)  # for output
-_format_verbose(response_data)  # for output
-_format_raw(response_data)  # for output
+# Full parameters
+args = argparse.Namespace(
+    prompt="Test prompt",
+    verbosity="verbose",
+    timeout=45,
+    store_response=True,
+    continue_from="test.json",
+    save_conversation_md="test.md",
+    save_conversation_full_json="test_full.json"
+)
 
-# New functions (to be implemented in next step)
-_save_conversation_markdown(response_data, prompt, file_path)
-_save_conversation_full_json(response_data, prompt, file_path)
+# Minimal parameters
+args = argparse.Namespace(prompt="Simple test")
 ```
 
+### Expected Function Calls
+```python
+# Full parameter mapping
+prompt_claude(
+    prompt="Test prompt",
+    verbosity="verbose", 
+    timeout=45,
+    store_response=True,
+    continue_from="test.json",
+    continue_latest=False,  # from getattr(args, "continue", False)
+    save_conversation_md="test.md",
+    save_conversation_full_json="test_full.json"
+)
+
+# Default parameter mapping  
+prompt_claude(
+    prompt="Simple test",
+    verbosity="just-text",  # default
+    timeout=30,  # default
+    store_response=False,  # default
+    continue_from=None,  # default
+    continue_latest=False,  # default
+    save_conversation_md=None,  # default
+    save_conversation_full_json=None  # default
+)
+```
+
+### Return Value Verification
+- **Success**: `execute_prompt` returns `0` when `prompt_claude` returns `0`
+- **Error**: `execute_prompt` returns `1` when `prompt_claude` returns `1`
+
 ## Implementation Notes
-- Copy exact logic structure from current `execute_prompt`
-- Add conditional save operations based on new parameters
-- Maintain all existing error handling and logging
-- Preserve return codes: 0 for success, 1 for errors
+- Tests verify parameter mapping without testing core logic
+- Mock `prompt_claude` to isolate wrapper functionality
+- Test both explicit and default parameter values
+- Verify `getattr()` usage for optional parameters
 
 ## LLM Prompt for Implementation
 
 ```
 Please implement Step 3 of the execute_prompt refactoring project (see pr_info/steps/summary.md).
 
-Extract the business logic from execute_prompt into a new prompt_claude function in src/mcp_coder/cli/commands/prompt.py.
+Add tests for the CLI wrapper functionality to tests/cli/commands/test_prompt.py.
 
-Function signature:
-```python
-def prompt_claude(
-    prompt: str,
-    verbosity: str = "just-text", 
-    timeout: int = 30,
-    store_response: bool = False,
-    continue_from: Optional[str] = None,
-    continue_latest: bool = False,
-    save_conversation_md: Optional[str] = None,
-    save_conversation_full_json: Optional[str] = None
-) -> int:
-```
+Create a test class TestExecutePromptWrapper with methods to verify that execute_prompt() correctly maps argparse.Namespace parameters to prompt_claude() function calls.
 
-Copy the exact business logic from execute_prompt:
-1. Handle continuation logic (continue_from/continue_latest)
-2. Call ask_claude_code_api_detailed_sync
-3. Store response if store_response=True 
-4. Add conditional calls to _save_conversation_markdown and _save_conversation_full_json (these functions will be implemented in the next step)
-5. Format output based on verbosity and print
-6. Return 0 for success, 1 for errors
+Test scenarios:
+1. Full parameter mapping with all arguments provided
+2. Default parameter handling when minimal args provided  
+3. Correct handling of new save parameters (save_conversation_md, save_conversation_full_json)
+4. Return value pass-through from prompt_claude to execute_prompt
 
-Maintain all existing error handling, logging, and behavior exactly.
+Use @patch to mock prompt_claude and verify it's called with the correct parameters. Test both success and error return codes.
+
+The execute_prompt function should use getattr() for optional parameters with appropriate defaults.
 ```

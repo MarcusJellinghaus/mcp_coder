@@ -1,86 +1,98 @@
-# Step 6: Run Tests and Verify Implementation
+# Step 6: Refactor execute_prompt to CLI Wrapper
 
 ## Goal
-Execute the test suite to verify all implementations work correctly and fix any issues discovered.
+Convert the existing `execute_prompt` function into a lightweight CLI wrapper that maps argparse.Namespace parameters to the new `prompt_claude` function.
 
 ## WHERE
-- **Test Execution**: Run pytest on the modified test files
-- **Code Verification**: Check all implemented functions work as expected
+- **File**: `src/mcp_coder/cli/commands/prompt.py`
+- **Location**: Modify existing `execute_prompt` function
 
 ## WHAT
-Execute testing and validation:
+Transform `execute_prompt` into a simple wrapper:
 
-### Test Commands
-```bash
-# Run specific test file with verbose output
-pytest tests/cli/commands/test_prompt.py -v
-
-# Run just the new tests to verify they pass
-pytest tests/cli/commands/test_prompt.py::test_execute_prompt_calls_prompt_claude_with_correct_parameters -v
-pytest tests/cli/commands/test_prompt.py::test_execute_prompt_parameter_mapping_with_defaults -v
-pytest tests/cli/commands/test_prompt.py::test_save_conversation_markdown_basic -v
-pytest tests/cli/commands/test_prompt.py::test_save_conversation_full_json_basic -v
-
-# Run all existing tests to ensure no regressions
-pytest tests/cli/commands/test_prompt.py::TestExecutePrompt -v
+### New Function Implementation
+```python
+def execute_prompt(args: argparse.Namespace) -> int:
+    """Execute prompt command to ask Claude a question (CLI wrapper).
+    
+    This function handles the conversion from argparse.Namespace to explicit
+    parameters and calls the core prompt_claude function.
+    """
+    return prompt_claude(
+        prompt=args.prompt,
+        verbosity=getattr(args, "verbosity", "just-text"),
+        timeout=getattr(args, "timeout", 30),
+        store_response=getattr(args, "store_response", False),
+        continue_from=getattr(args, "continue_from", None),
+        continue_latest=getattr(args, "continue", False),
+        save_conversation_md=getattr(args, "save_conversation_md", None),
+        save_conversation_full_json=getattr(args, "save_conversation_full_json", None)
+    )
 ```
 
 ## HOW
-- **Sequential Testing**: Run new tests first, then existing tests
-- **Debugging**: Use pytest verbose output to identify any failures
-- **Fix and Iterate**: Address any issues discovered
+- **Replace Logic**: Remove all business logic from `execute_prompt`
+- **Parameter Mapping**: Use `getattr()` for optional CLI parameters
+- **Preserve Interface**: Maintain same function signature for CLI compatibility
 
 ## ALGORITHM
 ```
-1. Run new tests to verify refactoring components work
-2. Run existing tests to ensure no regressions
-3. Fix any implementation issues discovered
-4. Re-run tests until all pass
-5. Verify CLI integration still works
+1. Extract prompt from args.prompt (required parameter)
+2. Use getattr() to extract optional parameters with defaults
+3. Map continue flag to continue_latest parameter
+4. Call prompt_claude with all mapped parameters
+5. Return result code directly from prompt_claude
 ```
 
 ## DATA
 
-### Expected Results
-- **New Tests**: 4 new test methods should pass
-- **Existing Tests**: All 20+ existing tests should continue to pass  
-- **No Regressions**: CLI functionality should work unchanged
+### Parameter Mapping Table
+| CLI Argument | Function Parameter | Default Value | Extraction Method |
+|--------------|-------------------|---------------|-------------------|
+| `args.prompt` | `prompt` | N/A (required) | `args.prompt` |
+| `args.verbosity` | `verbosity` | `"just-text"` | `getattr(args, "verbosity", "just-text")` |
+| `args.timeout` | `timeout` | `30` | `getattr(args, "timeout", 30)` |
+| `args.store_response` | `store_response` | `False` | `getattr(args, "store_response", False)` |
+| `args.continue_from` | `continue_from` | `None` | `getattr(args, "continue_from", None)` |
+| `args.continue` | `continue_latest` | `False` | `getattr(args, "continue", False)` |
+| `args.save_conversation_md` | `save_conversation_md` | `None` | `getattr(args, "save_conversation_md", None)` |
+| `args.save_conversation_full_json` | `save_conversation_full_json` | `None` | `getattr(args, "save_conversation_full_json", None)` |
 
-### Common Issues to Check
-- **Import Errors**: Missing function implementations
-- **Function Signature Mismatches**: Parameter name/type errors
-- **File Operation Issues**: Directory creation or path handling
-- **Parameter Mapping**: Incorrect argparse.Namespace handling
+### Return Value
+- **Direct pass-through**: Return value from `prompt_claude()`
+- **No additional processing**: CLI wrapper adds no extra logic
 
 ## Implementation Notes
-- Fix any import errors by ensuring all functions are implemented
-- Address parameter mapping issues in the CLI wrapper
-- Verify file operations work correctly across different OS
-- Ensure backward compatibility with existing CLI usage
+- Remove all existing business logic from `execute_prompt`
+- Preserve the original function signature and docstring intent
+- Update docstring to reflect new role as CLI wrapper
+- Maintain backward compatibility with existing CLI usage
 
 ## LLM Prompt for Implementation
 
 ```
 Please implement Step 6 of the execute_prompt refactoring project (see pr_info/steps/summary.md).
 
-Run the test suite to verify the refactoring works correctly:
+Refactor the existing execute_prompt function in src/mcp_coder/cli/commands/prompt.py to become a simple CLI wrapper.
 
-1. Check that all functions can be imported successfully
-2. Run pytest on tests/cli/commands/test_prompt.py with verbose output
-3. Verify the 4 new test methods pass
-4. Verify all existing TestExecutePrompt tests continue to pass (no regressions)
-5. Fix any issues found
+Replace all the current business logic with a single call to prompt_claude(), mapping the argparse.Namespace parameters appropriately.
 
-Expected: 
-- 4 new test methods for parameter mapping and save functions
-- 20+ existing test methods should all still pass
-- No breaking changes to CLI functionality
+The refactored function should:
+1. Keep the same signature: execute_prompt(args: argparse.Namespace) -> int
+2. Extract parameters from args using getattr() with appropriate defaults
+3. Map args.continue to continue_latest parameter for prompt_claude
+4. Call prompt_claude with all mapped parameters
+5. Return the result directly from prompt_claude
 
-If tests fail, debug and fix:
-- Import errors (missing implementations)
-- Function signature mismatches
-- Parameter mapping issues
-- File operation problems
+Use these parameter mappings:
+- prompt=args.prompt
+- verbosity=getattr(args, "verbosity", "just-text")  
+- timeout=getattr(args, "timeout", 30)
+- store_response=getattr(args, "store_response", False)
+- continue_from=getattr(args, "continue_from", None)
+- continue_latest=getattr(args, "continue", False)
+- save_conversation_md=getattr(args, "save_conversation_md", None)
+- save_conversation_full_json=getattr(args, "save_conversation_full_json", None)
 
-Report on test results and any fixes needed.
+Update the docstring to reflect the function's new role as a CLI wrapper.
 ```

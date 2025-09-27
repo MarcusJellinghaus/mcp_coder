@@ -73,9 +73,10 @@ src/mcp_coder/cli/commands/prompt.py
 └── _save_conversation_full_json()    # NEW: Save complete JSON data
 
 tests/cli/commands/test_prompt.py
-├── TestExecutePrompt         # EXISTING: Comprehensive tests (20+ methods) - UNCHANGED
-├── test_prompt_claude_parameter_mapping()  # NEW: 1-2 methods for wrapper testing
-└── test_save_conversation_functions()      # NEW: 2 methods for save functionality
+├── TestPromptClaude          # NEW: Test class for core function
+├── TestSaveConversationMarkdown   # NEW: Test markdown save
+├── TestSaveConversationFullJson   # NEW: Test JSON save
+└── TestIntegrationSaveParameters  # NEW: Integration tests
 ```
 
 ### No New Files Created
@@ -87,7 +88,6 @@ All changes are contained within existing modules to maintain project structure.
 - Core function can be tested without creating argparse.Namespace objects
 - Clear function signatures enable precise unit testing
 - Easier mocking and parameter verification
-- **Existing comprehensive tests remain unchanged** - they will catch any regressions
 
 ### 2. **Programmatic Usage**
 ```python
@@ -139,18 +139,24 @@ Python is a programming language...
 ### Full JSON File Format
 ```json
 {
-  "prompt": "What is Python?",
-  "response_data": {
+  "conversation_metadata": {
+    "timestamp": "2025-01-01T12:00:00Z",
+    "working_directory": "/current/dir",
+    "format_version": "1.0"
+  },
+  "user_input": {
+    "prompt": "What is Python?",
+    "timestamp": "2025-01-01T12:00:00Z"
+  },
+  "claude_response": {
     "text": "Python is a programming language...",
     "session_info": {...},
     "result_info": {...},
     "raw_messages": [...]
-    // Complete response_data from ask_claude_code_api_detailed_sync stored as-is
   },
-  "metadata": {
-    "timestamp": "2025-01-01T12:00:00Z",
-    "working_directory": "/current/dir",
-    "model": "claude-sonnet-4"
+  "analysis": {
+    "tool_interactions": [...],
+    "performance_summary": {...}
   }
 }
 ```
