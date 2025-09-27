@@ -23,8 +23,8 @@ dependencies = [
     "structlog>=23.2.0",
     "python-json-logger>=3.3.0",
     "pyperclip>=1.8.2",
-    # "black>=23.0.0", part of mcp-code-checker
-    # "isort>=5.12.0", part of mcp-code-checker
+    "black>=23.0.0",
+    "isort>=5.12.0",
     "mcp-code-checker @ git+https://github.com/MarcusJellinghaus/mcp-code-checker.git",
     "PyGithub>=1.59.0"
 ]
