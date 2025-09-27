@@ -1,15 +1,18 @@
 """Tests for GitHub operations module."""
 
 import os
+from pathlib import Path
 from typing import Any, Dict
+from unittest.mock import patch
 
 import pytest
+import git
 
 from mcp_coder.utils.github_operations import PullRequestManager
 
 
 @pytest.fixture
-def pr_manager() -> PullRequestManager:
+def pr_manager(tmp_path: Path) -> PullRequestManager:
     """Create PullRequestManager instance for testing.
 
     Validates GitHub configuration and gracefully skips when missing.
@@ -32,7 +35,16 @@ def pr_manager() -> PullRequestManager:
             "Test repository URL not configured (GITHUB_TEST_REPO_URL environment variable)"
         )
 
-    return PullRequestManager(test_repo_url, github_token)
+    # Setup test git repo with GitHub remote
+    git_dir = tmp_path / "test_repo"
+    git_dir.mkdir()
+    repo = git.Repo.init(git_dir)
+    repo.create_remote("origin", test_repo_url)
+    
+    # Mock config to return token
+    with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+        mock_config.return_value = github_token
+        yield PullRequestManager(git_dir)
 
 
 @pytest.mark.github_integration
@@ -96,15 +108,21 @@ class TestPullRequestManagerIntegration:
                 except Exception:
                     pass  # Ignore cleanup failures
 
-    def test_direct_instantiation(self, pr_manager: PullRequestManager) -> None:
+    def test_direct_instantiation(self, tmp_path: Path) -> None:
         """Test direct PullRequestManager instantiation."""
+        # Setup git repo
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+        
         # Test that direct instantiation creates instance
-        direct_manager = PullRequestManager(
-            "https://github.com/test/repo", "test-token"
-        )
-        assert isinstance(direct_manager, PullRequestManager)
-        assert direct_manager.repository_url == "https://github.com/test/repo"
-        assert direct_manager.github_token == "test-token"
+        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+            mock_config.return_value = "test-token"
+            direct_manager = PullRequestManager(git_dir)
+            assert isinstance(direct_manager, PullRequestManager)
+            assert direct_manager.repository_url == "https://github.com/test/repo"
+            assert direct_manager.github_token == "test-token"
 
     def test_manager_properties(self, pr_manager: PullRequestManager) -> None:
         """Test PullRequestManager properties."""
@@ -217,17 +235,39 @@ class TestPullRequestManagerIntegration:
                 except Exception:
                     pass
 
-    def test_validation_failures(self) -> None:
+    def test_validation_failures(self, tmp_path: Path) -> None:
         """Test validation failures for invalid inputs."""
-        # Test with invalid token (should raise ValueError)
-        try:
-            PullRequestManager("https://github.com/test/repo", "")
-            assert False, "Expected ValueError for empty token"
-        except ValueError:
-            pass  # Expected
-
-        # Create manager with dummy token for validation tests
-        manager = PullRequestManager("https://github.com/test/repo", "dummy-token")
+        # Test with None project_dir
+        with pytest.raises(ValueError, match="project_dir is required"):
+            PullRequestManager(None)
+        
+        # Test with non-existent directory
+        nonexistent = tmp_path / "does_not_exist"
+        with pytest.raises(ValueError, match="Directory does not exist"):
+            PullRequestManager(nonexistent)
+        
+        # Test with file instead of directory
+        file_path = tmp_path / "test_file.txt"
+        file_path.write_text("test")
+        with pytest.raises(ValueError, match="Path is not a directory"):
+            PullRequestManager(file_path)
+        
+        # Test with non-git directory
+        regular_dir = tmp_path / "regular_dir"
+        regular_dir.mkdir()
+        with pytest.raises(ValueError, match="Directory is not a git repository"):
+            PullRequestManager(regular_dir)
+        
+        # Setup git repo for remaining tests
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+        
+        # Create manager with mocked token for validation tests
+        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = PullRequestManager(git_dir)
 
         # Test invalid PR numbers
         assert manager._validate_pr_number(0) == False

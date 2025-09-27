@@ -6,6 +6,7 @@ through the PyGithub library.
 
 import logging
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from github import Github
@@ -26,24 +27,53 @@ class PullRequestManager:
     and merging pull requests in a GitHub repository.
     """
 
-    def __init__(self, repository_url: str, github_token: Optional[str] = None) -> None:
+    def __init__(self, project_dir: Optional[Path] = None) -> None:
         """Initialize the PullRequestManager.
 
         Args:
-            repository_url: GitHub repository URL (e.g., 'https://github.com/user/repo')
-            github_token: GitHub personal access token for authentication
+            project_dir: Path to the project directory containing git repository
 
         Raises:
-            ValueError: If github_token is None or empty
+            ValueError: If project_dir is None, directory doesn't exist, is not a git repository,
+                       has no GitHub remote origin, or GitHub token is not configured
         """
+        from mcp_coder.utils.git_operations import get_github_repository_url, is_git_repository
+        from mcp_coder.utils.user_config import get_config_value
 
-        # TODO repuo url should also be optional, otherwise read it with functionality below from git dir
-
-        # TODO if github token is none, read it from user toml, see pr_info_summary for more details
-
+        # 1. Check if project_dir is provided
+        if project_dir is None:
+            raise ValueError("project_dir is required. Please specify the path to your git repository.")
+        
+        # 2. Check if directory exists
+        if not project_dir.exists():
+            raise ValueError(f"Directory does not exist: {project_dir}")
+        
+        # 3. Check if it's actually a directory (not a file)
+        if not project_dir.is_dir():
+            raise ValueError(f"Path is not a directory: {project_dir}")
+        
+        # 4. Check if it's a git repository
+        if not is_git_repository(project_dir):
+            raise ValueError(f"Directory is not a git repository: {project_dir}")
+        
+        # 5. Try to get GitHub repository URL
+        repository_url = get_github_repository_url(project_dir)
+        if repository_url is None:
+            raise ValueError(
+                f"Could not detect GitHub repository URL from git remote in: {project_dir}. "
+                "Make sure the repository has a GitHub remote origin configured."
+            )
+        
+        # 6. Check if GitHub token is available
+        github_token = get_config_value("github", "token")
         if not github_token:
-            raise ValueError("GitHub token is required for authentication")
-
+            raise ValueError(
+                "GitHub token not found in configuration. "
+                "Please add your GitHub token to ~/.mcp_coder/config.toml under [github] token = \"your_token\""
+            )
+        
+        # All validations passed - initialize
+        self.project_dir = project_dir
         self.repository_url = repository_url
         self.github_token = github_token
         self._github_client = Github(github_token)
