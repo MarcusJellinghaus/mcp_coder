@@ -472,4 +472,3 @@ class PullRequestManager:
         except Exception as e:
             print(f"Error getting default branch: {e}")
             return ""
-

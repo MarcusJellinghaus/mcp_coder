@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 import pytest
 
-from mcp_coder.utils.github_operations import PullRequestManager, create_pr_manager
+from mcp_coder.utils.github_operations import PullRequestManager
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def pr_manager() -> PullRequestManager:
             "Test repository URL not configured (GITHUB_TEST_REPO_URL environment variable)"
         )
 
-    return create_pr_manager(test_repo_url, github_token)
+    return PullRequestManager(test_repo_url, github_token)
 
 
 @pytest.mark.github_integration
@@ -96,15 +96,15 @@ class TestPullRequestManagerIntegration:
                 except Exception:
                     pass  # Ignore cleanup failures
 
-    def test_factory_function(self, pr_manager: PullRequestManager) -> None:
-        """Test the create_pr_manager factory function."""
-        # Test that factory creates instance
-        factory_manager = create_pr_manager(
+    def test_direct_instantiation(self, pr_manager: PullRequestManager) -> None:
+        """Test direct PullRequestManager instantiation."""
+        # Test that direct instantiation creates instance
+        direct_manager = PullRequestManager(
             "https://github.com/test/repo", "test-token"
         )
-        assert isinstance(factory_manager, PullRequestManager)
-        assert factory_manager.repository_url == "https://github.com/test/repo"
-        assert factory_manager.github_token == "test-token"
+        assert isinstance(direct_manager, PullRequestManager)
+        assert direct_manager.repository_url == "https://github.com/test/repo"
+        assert direct_manager.github_token == "test-token"
 
     def test_manager_properties(self, pr_manager: PullRequestManager) -> None:
         """Test PullRequestManager properties."""

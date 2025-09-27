@@ -26,7 +26,7 @@ from .git_operations import (
 )
 
 # GitHub operations
-from .github_operations import PullRequestManager, create_pr_manager
+from .github_operations import PullRequestManager
 from .log_utils import log_function_call, setup_logging
 from .subprocess_runner import (
     CommandOptions,
@@ -66,5 +66,4 @@ __all__ = [
     "execute_subprocess",
     # GitHub operations
     "PullRequestManager",
-    "create_pr_manager",
 ]
