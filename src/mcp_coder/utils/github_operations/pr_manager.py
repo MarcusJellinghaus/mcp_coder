@@ -7,7 +7,7 @@ through the PyGithub library.
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict, cast
 
 from github import Github
 from github.GithubException import GithubException
@@ -18,6 +18,23 @@ from mcp_coder.utils.log_utils import log_function_call
 
 # Configure logger for GitHub operations
 logger = logging.getLogger(__name__)
+
+
+class PullRequestData(TypedDict):
+    """TypedDict for pull request data structure."""
+    number: int
+    title: str
+    body: str
+    state: str
+    head_branch: str
+    base_branch: str
+    url: str
+    created_at: Optional[str]
+    updated_at: Optional[str]
+    user: Optional[str]
+    mergeable: Optional[bool]
+    merged: bool
+    draft: bool
 
 
 class PullRequestManager:
@@ -161,7 +178,7 @@ class PullRequestManager:
     @log_function_call
     def create_pull_request(
         self, title: str, head_branch: str, base_branch: str = "main", body: str = ""
-    ) -> Dict[str, Any]:
+    ) -> PullRequestData:
         """Create a new pull request.
 
         Args:
@@ -171,18 +188,18 @@ class PullRequestManager:
             body: Description/body of the pull request
 
         Returns:
-            Dictionary containing pull request information or empty dict on failure
+            PullRequestData containing pull request information or empty dict on failure
         """
         # Validate branch names
         if not self._validate_branch_name(head_branch):
-            return {}
+            return cast(PullRequestData, {})
         if not self._validate_branch_name(base_branch):
-            return {}
+            return cast(PullRequestData, {})
 
         try:
             repo = self._parse_and_get_repo()
             if repo is None:
-                return {}
+                return cast(PullRequestData, {})
 
             # Create the pull request using GitHub API
             pr = repo.create_pull(
@@ -209,30 +226,30 @@ class PullRequestManager:
         except GithubException as e:
             # Log the error and return empty dict on failure
             print(f"GitHub API error creating pull request: {e}")
-            return {}
+            return cast(PullRequestData, {})
         except Exception as e:
             # Log unexpected errors and return empty dict
             print(f"Unexpected error creating pull request: {e}")
-            return {}
+            return cast(PullRequestData, {})
 
     @log_function_call
-    def get_pull_request(self, pr_number: int) -> Dict[str, Any]:
+    def get_pull_request(self, pr_number: int) -> PullRequestData:
         """Get information about a specific pull request.
 
         Args:
             pr_number: Pull request number
 
         Returns:
-            Dictionary containing pull request information or empty dict on failure
+            PullRequestData containing pull request information or empty dict on failure
         """
         # Validate PR number
         if not self._validate_pr_number(pr_number):
-            return {}
+            return cast(PullRequestData, {})
 
         try:
             repo = self._parse_and_get_repo()
             if repo is None:
-                return {}
+                return cast(PullRequestData, {})
 
             # Get the pull request using GitHub API
             pr = repo.get_pull(pr_number)
@@ -257,16 +274,16 @@ class PullRequestManager:
         except GithubException as e:
             # Log the error and return empty dict on failure
             print(f"GitHub API error getting pull request {pr_number}: {e}")
-            return {}
+            return cast(PullRequestData, {})
         except Exception as e:
             # Log unexpected errors and return empty dict
             print(f"Unexpected error getting pull request {pr_number}: {e}")
-            return {}
+            return cast(PullRequestData, {})
 
     @log_function_call
     def list_pull_requests(
         self, state: str = "open", base_branch: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> List[PullRequestData]:
         """List pull requests in the repository.
 
         Args:
@@ -274,7 +291,7 @@ class PullRequestManager:
             base_branch: Filter by base branch (optional)
 
         Returns:
-            List of dictionaries containing pull request information or empty list on failure
+            List of PullRequestData containing pull request information or empty list on failure
         """
         # Validate base_branch if provided
         if base_branch is not None and not self._validate_branch_name(base_branch):
@@ -295,8 +312,7 @@ class PullRequestManager:
             # Convert to structured list of dictionaries
             pr_list = []
             for pr in prs:
-                # TODO - should we have a typed dict for that? / same  below?
-                pr_dict = {
+                pr_dict = cast(PullRequestData, {
                     "number": pr.number,
                     "title": pr.title,
                     "body": pr.body,
@@ -310,7 +326,7 @@ class PullRequestManager:
                     "mergeable": pr.mergeable,
                     "merged": pr.merged,
                     "draft": pr.draft,
-                }
+                })
                 pr_list.append(pr_dict)
 
             return pr_list
@@ -325,23 +341,23 @@ class PullRequestManager:
             return []
 
     @log_function_call
-    def close_pull_request(self, pr_number: int) -> Dict[str, Any]:
+    def close_pull_request(self, pr_number: int) -> PullRequestData:
         """Close a pull request.
 
         Args:
             pr_number: Pull request number to close
 
         Returns:
-            Dictionary containing updated pull request information or empty dict on failure
+            PullRequestData containing updated pull request information or empty dict on failure
         """
         # Validate PR number
         if not self._validate_pr_number(pr_number):
-            return {}
+            return cast(PullRequestData, {})
 
         try:
             repo = self._parse_and_get_repo()
             if repo is None:
-                return {}
+                return cast(PullRequestData, {})
 
             # Get the pull request using GitHub API
             pr = repo.get_pull(pr_number)
@@ -376,98 +392,11 @@ class PullRequestManager:
         except GithubException as e:
             # Log the error and return empty dict on failure
             print(f"GitHub API error closing pull request {pr_number}: {e}")
-            return {}
+            return cast(PullRequestData, {})
         except Exception as e:
             # Log unexpected errors and return empty dict
             print(f"Unexpected error closing pull request {pr_number}: {e}")
-            return {}
-
-    # not used so far, could be removed
-    @log_function_call
-    def merge_pull_request(
-        self,
-        pr_number: int,
-        commit_title: Optional[str] = None,
-        commit_message: Optional[str] = None,
-        merge_method: str = "merge",
-    ) -> Dict[str, Any]:
-        """Merge a pull request.
-
-        Args:
-            pr_number: Pull request number to merge
-            commit_title: Optional custom commit title for the merge
-            commit_message: Optional custom commit message for the merge
-            merge_method: Merge method to use ("merge", "squash", "rebase")
-
-        Returns:
-            Dictionary containing merge result information or empty dict on failure
-        """
-        # Validate PR number
-        if not self._validate_pr_number(pr_number):
-            return {}
-
-        # Validate merge method
-        valid_merge_methods = ["merge", "squash", "rebase"]
-        if merge_method not in valid_merge_methods:
-            logger.error(
-                f"Invalid merge method '{merge_method}'. Must be one of: {valid_merge_methods}"
-            )
-            return {}
-
-        try:
-            repo = self._parse_and_get_repo()
-            if repo is None:
-                return {}
-
-            # Get the pull request using GitHub API
-            pr = repo.get_pull(pr_number)
-
-            # Check if PR is mergeable
-            if not pr.mergeable:
-                print(f"Pull request {pr_number} is not mergeable")
-                return {}
-
-            if pr.merged:
-                print(f"Pull request {pr_number} is already merged")
-                return {
-                    "merged": True,
-                    "message": "Pull request was already merged",
-                    "sha": pr.merge_commit_sha,
-                    "number": pr_number,
-                }
-
-            # Merge the pull request using GitHub API
-            # Handle optional commit title and message parameters
-            # Note: PyGithub's merge method signature varies by version
-            # The merge_method parameter is primarily for documentation/validation
-
-            # Log the merge method for debugging
-            logger.info(f"Merging PR {pr_number} using method '{merge_method}'")
-
-            # Perform the merge with proper parameter handling
-            if commit_title is not None and commit_message is not None:
-                merge_result = pr.merge(commit_title, commit_message)
-            elif commit_title is not None:
-                merge_result = pr.merge(commit_title)
-            else:
-                merge_result = pr.merge()
-
-            # Return structured dictionary with merge result information
-            return {
-                "merged": merge_result.merged,
-                "message": merge_result.message,
-                "sha": merge_result.sha,
-                "number": pr_number,
-            }
-
-        except GithubException as e:
-            # Log the error and return empty dict on failure
-            print(f"GitHub API error merging pull request {pr_number}: {e}")
-            return {}
-        except Exception as e:
-            # Log unexpected errors and return empty dict
-            print(f"Unexpected error merging pull request {pr_number}: {e}")
-            return {}
+            return cast(PullRequestData, {})
 
     # should this be taken from git_operations
     @property

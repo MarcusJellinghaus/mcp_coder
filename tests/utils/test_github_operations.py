@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Generator, List
 from unittest.mock import patch
 
 import pytest
@@ -12,7 +12,7 @@ from mcp_coder.utils.github_operations import PullRequestManager
 
 
 @pytest.fixture
-def pr_manager(tmp_path: Path) -> PullRequestManager:
+def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
     """Create PullRequestManager instance for testing.
 
     Validates GitHub configuration and gracefully skips when missing.
@@ -55,7 +55,6 @@ class TestPullRequestManagerIntegration:
         """Test complete PR lifecycle: create, get, list, close.
 
         This test creates a PR, retrieves it, lists PRs, and closes it.
-        It should fail initially due to empty implementations.
         """
         test_branch = "test-branch-lifecycle"
         pr_title = "Test PR for Lifecycle"
@@ -71,7 +70,7 @@ class TestPullRequestManagerIntegration:
                 body=pr_body,
             )
 
-            # Verify PR was created (should fail with empty implementation)
+            # Verify PR was created
             assert created_pr, "Expected PR creation to return data"
             assert "number" in created_pr, "Expected PR number in response"
             assert "title" in created_pr, "Expected PR title in response"
@@ -126,52 +125,15 @@ class TestPullRequestManagerIntegration:
 
     def test_manager_properties(self, pr_manager: PullRequestManager) -> None:
         """Test PullRequestManager properties."""
-        # Test repository_name property (should fail with empty implementation)
+        # Test repository_name property
         repo_name = pr_manager.repository_name
         assert repo_name, "Expected repository name to be returned"
         assert "/" in repo_name, "Expected repository name in 'owner/repo' format"
 
-        # Test default_branch property (should fail with empty implementation)
+        # Test default_branch property
         default_branch = pr_manager.default_branch
         assert default_branch, "Expected default branch to be returned"
         assert isinstance(default_branch, str), "Expected default branch to be string"
-
-    def test_merge_pull_request(self, pr_manager: PullRequestManager) -> None:
-        """Test merging a pull request.
-
-        Note: This test creates and immediately merges a PR, which may not
-        be possible in all repositories due to branch protection rules.
-        """
-        test_branch = "test-branch-merge"
-        pr_title = "Test PR for Merge"
-
-        created_pr = None
-        try:
-            # Create pull request
-            created_pr = pr_manager.create_pull_request(
-                title=pr_title,
-                head_branch=test_branch,
-                base_branch="main",
-                body="Test PR for merge functionality",
-            )
-
-            assert created_pr, "Expected PR creation to return data"
-            pr_number = created_pr["number"]
-
-            # Attempt to merge (may fail due to branch protection or missing commits)
-            merge_result = pr_manager.merge_pull_request(pr_number)
-
-            # Note: This might fail in real repos due to branch protection
-            # But with empty implementation, it should return empty dict
-            assert isinstance(merge_result, dict), "Expected merge result to be dict"
-
-        finally:
-            # Cleanup
-            if created_pr and "number" in created_pr:
-                try:
-                    pr_manager.close_pull_request(created_pr["number"])
-                except Exception:
-                    pass
 
     def test_list_pull_requests_with_filters(
         self, pr_manager: PullRequestManager
@@ -189,51 +151,7 @@ class TestPullRequestManagerIntegration:
         all_prs = pr_manager.list_pull_requests(state="all")
         assert isinstance(all_prs, list), "Expected list for all PRs"
 
-        # With empty implementation, all should return empty lists
-        # When implemented, we can add more specific assertions
-
-    def test_merge_pull_request_with_enhanced_parameters(
-        self, pr_manager: PullRequestManager
-    ) -> None:
-        """Test merging a pull request with enhanced parameters."""
-        test_branch = "test-branch-enhanced-merge"
-        pr_title = "Test PR for Enhanced Merge"
-        commit_title = "Custom merge commit title"
-        commit_message = "Custom merge commit message\n\nDetailed description"
-
-        created_pr = None
-        try:
-            # Create pull request
-            created_pr = pr_manager.create_pull_request(
-                title=pr_title,
-                head_branch=test_branch,
-                base_branch="main",
-                body="Test PR for enhanced merge functionality",
-            )
-
-            if created_pr and "number" in created_pr:
-                pr_number = created_pr["number"]
-
-                # Test merge with all enhanced parameters
-                merge_result = pr_manager.merge_pull_request(
-                    pr_number=pr_number,
-                    commit_title=commit_title,
-                    commit_message=commit_message,
-                    merge_method="squash",
-                )
-
-                # Verify merge result structure
-                assert isinstance(
-                    merge_result, dict
-                ), "Expected merge result to be dict"
-
-        finally:
-            # Cleanup
-            if created_pr and "number" in created_pr:
-                try:
-                    pr_manager.close_pull_request(created_pr["number"])
-                except Exception:
-                    pass
+        # When fully implemented with real API calls, we can add more specific assertions
 
     def test_validation_failures(self, tmp_path: Path) -> None:
         """Test validation failures for invalid inputs."""
@@ -272,13 +190,8 @@ class TestPullRequestManagerIntegration:
         # Test invalid PR numbers
         assert manager._validate_pr_number(0) == False
         assert manager._validate_pr_number(-1) == False
-        # Test with invalid type (this will cause type error but should be handled gracefully)
-        try:
-            result = manager._validate_pr_number("invalid")  # type: ignore
-            assert result == False
-        except (TypeError, AttributeError):
-            pass  # Expected for invalid type
         assert manager._validate_pr_number(1) == True
+        # Note: Testing with wrong types (like strings) is skipped as it's a type error
 
         # Test invalid branch names
         assert manager._validate_branch_name("") == False
@@ -293,11 +206,16 @@ class TestPullRequestManagerIntegration:
         assert manager._validate_branch_name("feature/new-feature") == True
 
         # Test methods with invalid inputs return empty dict/list
-        assert manager.get_pull_request(-1) == {}
-        assert manager.close_pull_request(0) == {}
-        assert manager.merge_pull_request(-1) == {}
-        assert manager.create_pull_request("title", "invalid~branch", "main") == {}
-        assert manager.list_pull_requests(base_branch="invalid~branch") == []
-
-        # Test invalid merge method
-        assert manager.merge_pull_request(1, merge_method="invalid") == {}
+        # Note: These return cast TypedDict instances, so we check for empty/falsy values
+        invalid_pr_result = manager.get_pull_request(-1)
+        assert not invalid_pr_result
+        
+        invalid_close_result = manager.close_pull_request(0)
+        assert not invalid_close_result
+        
+        invalid_create_result = manager.create_pull_request("title", "invalid~branch", "main")
+        assert not invalid_create_result
+        
+        invalid_list_result = manager.list_pull_requests(base_branch="invalid~branch")
+        expected_empty_list: List[Dict[str, Any]] = []
+        assert invalid_list_result == expected_empty_list
