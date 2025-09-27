@@ -17,12 +17,17 @@ Note: Tests will be skipped if configuration is missing.
 import os
 from pathlib import Path
 from typing import Any, Dict, Generator, List
-from unittest.mock import patch
+from unittest.mock import Mock, patch, MagicMock
 
 import pytest
 import git
 
 from mcp_coder.utils.github_operations import PullRequestManager
+from mcp_coder.utils.github_operations.github_utils import (
+    parse_github_url,
+    format_github_https_url,
+    get_repo_full_name,
+)
 
 
 @pytest.fixture
@@ -80,6 +85,167 @@ def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
     with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
         mock_config.return_value = github_token
         yield PullRequestManager(git_dir)
+
+
+class TestGitHubUtils:
+    """Unit tests for GitHub utility functions."""
+
+    def test_parse_github_url_https(self) -> None:
+        """Test parsing HTTPS GitHub URLs."""
+        result = parse_github_url("https://github.com/user/repo")
+        assert result == ("user", "repo")
+
+    def test_parse_github_url_https_with_git(self) -> None:
+        """Test parsing HTTPS GitHub URLs with .git suffix."""
+        result = parse_github_url("https://github.com/user/repo.git")
+        assert result == ("user", "repo")
+
+    def test_parse_github_url_ssh(self) -> None:
+        """Test parsing SSH GitHub URLs."""
+        result = parse_github_url("git@github.com:user/repo.git")
+        assert result == ("user", "repo")
+
+    def test_parse_github_url_short_format(self) -> None:
+        """Test parsing short format owner/repo."""
+        result = parse_github_url("user/repo")
+        assert result == ("user", "repo")
+
+    def test_parse_github_url_invalid(self) -> None:
+        """Test parsing invalid URLs returns None."""
+        assert parse_github_url("invalid-url") is None
+        assert parse_github_url("https://gitlab.com/user/repo") is None
+        assert parse_github_url("") is None
+        assert parse_github_url("   ") is None
+
+    def test_parse_github_url_non_string(self) -> None:
+        """Test parsing non-string input returns None."""
+        assert parse_github_url(None) is None  # type: ignore
+        assert parse_github_url(123) is None  # type: ignore
+
+    def test_format_github_https_url(self) -> None:
+        """Test formatting GitHub HTTPS URL."""
+        result = format_github_https_url("user", "repo")
+        assert result == "https://github.com/user/repo"
+
+    def test_get_repo_full_name(self) -> None:
+        """Test getting repository full name from various URL formats."""
+        assert get_repo_full_name("https://github.com/user/repo") == "user/repo"
+        assert get_repo_full_name("git@github.com:user/repo.git") == "user/repo"
+        assert get_repo_full_name("user/repo") == "user/repo"
+        assert get_repo_full_name("invalid-url") is None
+
+
+class TestPullRequestManagerUnit:
+    """Unit tests for PullRequestManager with mocked dependencies."""
+
+    def test_title_validation_empty_string(self, tmp_path: Path) -> None:
+        """Test that empty title returns empty dict."""
+        # Setup git repo with mocked config
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+        
+        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = PullRequestManager(git_dir)
+            
+            # Test empty title
+            result = manager.create_pull_request("", "feature-branch", "main")
+            assert not result  # Should return empty dict
+            
+            # Test whitespace-only title
+            result = manager.create_pull_request("   ", "feature-branch", "main")
+            assert not result  # Should return empty dict
+
+    def test_branch_validation(self, tmp_path: Path) -> None:
+        """Test branch name validation."""
+        # Setup git repo with mocked config
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+        
+        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = PullRequestManager(git_dir)
+            
+            # Test invalid head branch
+            result = manager.create_pull_request("Valid Title", "invalid~branch", "main")
+            assert not result  # Should return empty dict
+            
+            # Test invalid base branch
+            result = manager.create_pull_request("Valid Title", "feature", "invalid^branch")
+            assert not result  # Should return empty dict
+
+    @patch('mcp_coder.utils.github_operations.pr_manager.Github')
+    def test_create_pull_request_success(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test successful pull request creation with mocked GitHub API."""
+        # Setup git repo
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+        
+        # Mock GitHub API responses
+        mock_pr = MagicMock()
+        mock_pr.number = 123
+        mock_pr.title = "Test PR"
+        mock_pr.body = "Test description"
+        mock_pr.state = "open"
+        mock_pr.head.ref = "feature-branch"
+        mock_pr.base.ref = "main"
+        mock_pr.html_url = "https://github.com/test/repo/pull/123"
+        mock_pr.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_pr.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_pr.user.login = "testuser"
+        mock_pr.mergeable = True
+        mock_pr.merged = False
+        mock_pr.draft = False
+        
+        mock_repo = MagicMock()
+        mock_repo.create_pull.return_value = mock_pr
+        
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+        
+        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = PullRequestManager(git_dir)
+            
+            result = manager.create_pull_request("Test PR", "feature-branch", "main", "Test description")
+            
+            # Verify the result
+            assert result["number"] == 123
+            assert result["title"] == "Test PR"
+            assert result["body"] == "Test description"
+            assert result["state"] == "open"
+            assert result["head_branch"] == "feature-branch"
+            assert result["base_branch"] == "main"
+            assert result["url"] == "https://github.com/test/repo/pull/123"
+            
+            # Verify GitHub API was called correctly
+            mock_repo.create_pull.assert_called_once_with(
+                title="Test PR",
+                body="Test description",
+                head="feature-branch",
+                base="main"
+            )
+
+    def test_repository_name_property(self, tmp_path: Path) -> None:
+        """Test repository_name property."""
+        # Setup git repo with mocked config
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/testuser/testrepo.git")
+        
+        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = PullRequestManager(git_dir)
+            
+            assert manager.repository_name == "testuser/testrepo"
 
 
 @pytest.mark.github_integration
