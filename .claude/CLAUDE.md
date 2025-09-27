@@ -14,11 +14,6 @@ mcp__code-checker__run_pytest_check
 mcp__code-checker__run_mypy_check
 ```
 
-**OR use the combined check:**
-```
-mcp__code-checker__run_all_checks
-```
-
 This runs:
 - **Pylint** - Code quality and style analysis
 - **Pytest** - All unit and integration tests
@@ -30,15 +25,32 @@ This runs:
 
 **MANDATORY pytest parameters:**
 - ALWAYS use `extra_args: ["-n", "auto"]` for parallel execution
-- Check `pyproject.toml` for available markers
-- Run each marker separately: `markers: ["marker_name"]`
-- Run unmarked tests separately without marker filters
 
-**Example usage:**
+**Available markers in pyproject.toml:**
+- `git_integration`: File system git operations (repos, commits)
+- `claude_integration`: Claude CLI/API tests (network, auth needed) 
+- `formatter_integration`: Code formatter integration (black, isort)
+- `github_integration`: GitHub API access (network, auth needed)
+
+**RECOMMENDED USAGE:**
+- **Fast unit tests (recommended)**: Use `-m` with `not` expressions to exclude slow integration tests
+- **All tests**: Run without markers to include everything (slow!)
+- **Specific integration tests**: Use specific `markers` parameter when testing integration functionality
+
+**Examples:**
+```python
+# RECOMMENDED: Fast unit tests (excludes all integration tests)
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_integration and not formatter_integration and not github_integration"])
+
+# All tests including slow integration tests (not recommended for regular development)
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])
+
+# Specific integration tests (only when needed)
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"], markers=["git_integration"])
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"], markers=["github_integration"])
 ```
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"], markers=["integration"])
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])  # unmarked tests
-```
+
+**Important:** Without the `-m "not ..."` exclusions, pytest runs ALL tests including slow integration tests that require external resources (git repos, network access, API tokens). For regular development, always use the exclusion pattern as shown in the first example above.
 
 ## 📁 MANDATORY: File Access Tools
 
