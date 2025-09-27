@@ -1,15 +1,15 @@
-# Step 2: Create GitHub Operations Module Structure
+# Step 2: Create PullRequestManager Module Structure
 
 ## Objective
-Create the github_operations.py module with function signatures and docstrings (TDD: empty implementations).
+Create the PullRequestManager class with method signatures and docstrings (TDD: empty implementations).
 
 ## WHERE
 - Files: 
   - `src/mcp_coder/utils/github_operations/__init__.py` (new file)
-  - `src/mcp_coder/utils/github_operations/gh_pull_requests.py` (new file)
+  - `src/mcp_coder/utils/github_operations/pr_manager.py` (new file)
 
 ## WHAT
-- Four core functions with proper signatures and docstrings
+- PullRequestManager class with core methods and properties
 - Package structure with proper exports
 - Import statements for required dependencies
 - Placeholder implementations that return empty dicts/lists
@@ -20,82 +20,108 @@ Create the github_operations.py module with function signatures and docstrings (
 ```python
 """GitHub operations for MCP Coder."""
 
-from .gh_pull_requests import (
-    create_pull_request,
-    get_pull_request,
-    close_pull_request,
-    list_pull_requests,
-)
+from .pr_manager import PullRequestManager, create_pr_manager
 
 __all__ = [
-    "create_pull_request",
-    "get_pull_request", 
-    "close_pull_request",
-    "list_pull_requests",
+    "PullRequestManager",
+    "create_pr_manager",
 ]
 ```
 
-**gh_pull_requests.py:**
+**pr_manager.py:**
 ```python
-"""GitHub pull request operations for MCP Coder."""
+"""GitHub pull request manager for MCP Coder."""
 
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from mcp_coder.utils.log_utils import log_function_call
 from mcp_coder.utils.user_config import get_config_value
 
-@log_function_call
-def create_pull_request(repo_url: str, title: str, body: str, head: str, base: str = "main") -> dict:
-    """Create a pull request."""
-    return {}
+class PullRequestManager:
+    """Manages GitHub pull request operations for a specific repository."""
+    
+    def __init__(self, repo_url: str, token: Optional[str] = None):
+        """Initialize the PullRequestManager."""
+        self.repo_url = repo_url
+        self._token = token or get_config_value("github.token")
+    
+    @log_function_call
+    def create_pull_request(self, title: str, body: str, head: str, base: str = "main") -> Dict[str, Any]:
+        """Create a pull request."""
+        return {}
 
-@log_function_call  
-def get_pull_request(repo_url: str, pr_number: int) -> dict:
-    """Get pull request details."""
-    return {}
+    @log_function_call  
+    def get_pull_request(self, pr_number: int) -> Dict[str, Any]:
+        """Get pull request details."""
+        return {}
 
-@log_function_call
-def close_pull_request(repo_url: str, pr_number: int) -> dict:
-    """Close a pull request.""" 
-    return {}
+    @log_function_call
+    def close_pull_request(self, pr_number: int) -> Dict[str, Any]:
+        """Close a pull request.""" 
+        return {}
 
-@log_function_call
-def list_pull_requests(repo_url: str, state: str = "open") -> list:
-    """List pull requests."""
-    return []
+    @log_function_call
+    def list_pull_requests(self, state: str = "open") -> List[Dict[str, Any]]:
+        """List pull requests."""
+        return []
+    
+    @log_function_call
+    def merge_pull_request(self, pr_number: int, merge_method: str = "merge") -> Dict[str, Any]:
+        """Merge a pull request."""
+        return {}
+    
+    @property
+    def repository_name(self) -> str:
+        """Get the repository name."""
+        return ""
+    
+    @property
+    def default_branch(self) -> str:
+        """Get the default branch name."""
+        return "main"
+
+def create_pr_manager(repo_url: str, token: Optional[str] = None) -> PullRequestManager:
+    """Create a PullRequestManager instance."""
+    return PullRequestManager(repo_url, token)
 ```
 
 ## ALGORITHM
 ```
 1. Create new package directory in src/mcp_coder/utils/
-2. Create __init__.py with exports
-3. Create gh_pull_requests.py with module docstring and imports
-4. Define four functions with @log_function_call decorator
-5. Add comprehensive docstrings with Args/Returns
-6. Return empty dict/list {} for TDD approach
+2. Create __init__.py with PullRequestManager exports
+3. Create pr_manager.py with class definition and imports
+4. Define PullRequestManager class with __init__ method
+5. Add five methods with @log_function_call decorator
+6. Add two property methods for repository info
+7. Add factory function for convenience
+8. Return empty dict/list {} for TDD approach
 ```
 
 ## DATA
-- **Input**: Function parameters (title, body, head, base, pr_number, state)
+- **Input**: Class initialization (repo_url, token) and method parameters
 - **Output**: Empty dictionaries/lists (placeholder for TDD)
 - **Expected final returns**:
-  - create_pull_request: `{'number': int, 'url': str}`
-  - get_pull_request: `{'number': int, 'title': str, 'state': str, 'url': str}`
+  - create_pull_request: `{'number': int, 'url': str, 'title': str}`
+  - get_pull_request: `{'number': int, 'title': str, 'state': str, 'url': str, ...}`
   - close_pull_request: `{'number': int, 'state': str}`
-  - list_pull_requests: `[{'number': int, 'title': str, 'state': str}]`
+  - list_pull_requests: `[{'number': int, 'title': str, 'state': str, ...}]`
+  - merge_pull_request: `{'merged': bool, 'sha': str, 'message': str}`
 
 ## LLM Prompt
 ```
-You are implementing Step 2 of the GitHub Pull Request Operations feature as described in pr_info/steps/summary.md.
+You are implementing Step 2 of the GitHub Pull Request Operations feature using the updated PullRequestManager approach.
 
-Create the GitHub operations package with four core functions following TDD approach - define signatures and docstrings but return empty dicts/lists.
+Create the GitHub operations package with PullRequestManager class following TDD approach - define class structure and method signatures but return empty dicts/lists.
 
 Requirements:
-- Create package structure: github_operations/__init__.py + github_operations/gh_pull_requests.py
-- Create four functions: create_pull_request, get_pull_request, close_pull_request, list_pull_requests
-- Use @log_function_call decorator on all functions (import from mcp_coder.utils.log_utils)
+- Create package structure: github_operations/__init__.py + github_operations/pr_manager.py
+- Create PullRequestManager class with __init__(repo_url, token=None)
+- Create five methods: create_pull_request, get_pull_request, close_pull_request, list_pull_requests, merge_pull_request
+- Add two properties: repository_name, default_branch
+- Use @log_function_call decorator on all methods (import from mcp_coder.utils.log_utils)
 - Import get_config_value from mcp_coder.utils.user_config
 - Add comprehensive docstrings following project patterns
-- Return empty dict {} or list [] from each function (TDD placeholder)
+- Return empty dict {} or list [] from each method (TDD placeholder)
+- Include factory function create_pr_manager for convenience
 - Proper package exports in __init__.py
 - Follow existing code style and type hints
 
@@ -105,10 +131,13 @@ This is the skeleton that will drive our test implementation in the next step.
 ## Verification
 - [ ] Package directory created at correct path
 - [ ] __init__.py created with proper exports
-- [ ] gh_pull_requests.py created with four functions
-- [ ] Four functions defined with correct signatures
-- [ ] @log_function_call decorator applied
+- [ ] pr_manager.py created with PullRequestManager class
+- [ ] Class defined with correct __init__ signature
+- [ ] Five methods defined with correct signatures
+- [ ] Two properties defined
+- [ ] @log_function_call decorator applied to methods
 - [ ] Comprehensive docstrings added
 - [ ] Type hints included
-- [ ] Functions return empty dicts/lists
+- [ ] Methods return empty dicts/lists
+- [ ] Factory function included
 - [ ] Required imports present

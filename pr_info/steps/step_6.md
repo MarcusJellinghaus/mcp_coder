@@ -1,81 +1,89 @@
-# Step 6: Add Unit Tests for Error Handling
+# Step 6: Update Utils Module Exports and Documentation
 
 ## Objective
-Add unit tests with mocking to verify error handling and edge cases (TDD completion).
+Export PullRequestManager from utils module and update documentation to complete the integration.
 
 ## WHERE
-- File: `tests/utils/test_github_operations.py` (modify existing)
+- File: `src/mcp_coder/utils/__init__.py` (modify existing)
+- File: `tests/README.md` (modify existing)
 
 ## WHAT
-- Add unit test class with mocked GitHub operations
-- Test configuration missing scenarios
-- Test GitHub API error handling
-- Test invalid input validation
+- Add PullRequestManager and create_pr_manager to utils module exports
+- Update test documentation with github_integration marker usage
+- Final integration verification and cleanup
 
 ## HOW
-### Unit Test Structure
+### Utils Module Export
 ```python
-from unittest.mock import MagicMock, patch
-import pytest
+# Add to imports section
+from .github_operations import (
+    PullRequestManager,
+    create_pr_manager,
+)
 
-class TestGitHubOperationsUnit:
-    """Unit tests with mocking for GitHub operations."""
-    
-    @patch('mcp_coder.utils.github_operations.get_config_value')
-    def test_missing_github_config_returns_empty_dict(self, mock_config):
-        """Test graceful handling when GitHub config missing."""
-        
-    @patch('mcp_coder.utils.github_operations._get_github_client')  
-    def test_github_api_error_returns_empty_dict(self, mock_client):
-        """Test error handling for GitHub API failures."""
+# Add to __all__ list
+__all__ = [
+    # ... existing exports ...
+    # GitHub operations
+    "PullRequestManager",
+    "create_pr_manager",
+]
+```
+
+### Documentation Update
+Add section to tests/README.md:
+```markdown
+| `github_integration` | GitHub API calls | Variable | GitHub config |
 ```
 
 ## ALGORITHM
 ```
-1. Add unit test class to existing test file
-2. Mock get_config_value to return None (missing config)
-3. Mock GitHub client to raise exceptions
-4. Test each function returns {} on errors
-5. Verify functions handle invalid inputs gracefully
-6. Test authentication and permission errors
+1. Open src/mcp_coder/utils/__init__.py
+2. Add import statement for PullRequestManager and create_pr_manager
+3. Add class and function names to __all__ list with comment
+4. Open tests/README.md
+5. Add github_integration row to markers table
+6. Verify imports work correctly
+7. Test final integration
 ```
 
 ## DATA
-- **Mock scenarios**: 
-  - Missing token/repo_url_integration_tests config
-  - GitHub API authentication errors
-  - Network/connection errors
-  - Invalid PR numbers
-- **Expected returns**: Empty dict {} for all error cases
+- **Imports**: PullRequestManager class and create_pr_manager function from github_operations module
+- **Exports**: Class and function names added to __all__ list
+- **Documentation**: Marker description and requirements for GitHub integration tests
 
 ## LLM Prompt
 ```
-You are implementing Step 6 of the GitHub Pull Request Operations feature as described in pr_info/steps/summary.md.
+You are implementing Step 6 of the GitHub Pull Request Operations feature using the updated PullRequestManager approach.
 
-Add unit tests to tests/utils/test_github_operations.py to verify error handling and edge cases.
+Update the module exports and documentation to complete the integration.
 
 Requirements:
-- Add TestGitHubOperationsUnit class (separate from integration tests)
-- Mock get_config_value to test missing configuration scenarios
-- Mock GitHub client to test API error handling
-- Test that all functions return {} on errors
-- Use patterns from existing unit tests (like test_user_config.py)
-- Test scenarios:
-  1. Missing GitHub token/repo config
-  2. GitHub API authentication errors  
-  3. Invalid PR numbers
-  4. Network/connection errors
-  5. Invalid state parameters for list_pull_requests
+1. Add imports to src/mcp_coder/utils/__init__.py:
+   - Import PullRequestManager and create_pr_manager from .github_operations
+   - Add these to the __all__ list with a "# GitHub operations" comment
+   - Follow the existing import and export patterns in the file
 
-Follow existing mocking patterns and ensure comprehensive error coverage. These unit tests should run fast without external dependencies.
+2. Update tests/README.md:
+   - Add github_integration marker to the test markers table
+   - Follow the existing table format and style
+   - Mention GitHub config requirement
+
+3. Final verification:
+   - Ensure PullRequestManager can be imported as: from mcp_coder.utils import PullRequestManager
+   - Verify create_pr_manager factory function is also importable
+   - Run all tests to ensure integration works correctly
+
+Keep changes minimal and follow existing patterns. Complete the feature integration.
 ```
 
 ## Verification
-- [ ] Unit test class added to existing file
-- [ ] Missing configuration tests implemented
-- [ ] GitHub API error mocking implemented
-- [ ] All error scenarios return empty dict
-- [ ] Tests run quickly without external calls
-- [ ] Mocking follows existing patterns
-- [ ] Edge cases covered (invalid inputs, etc.)
-- [ ] Unit tests pass consistently
+- [ ] PullRequestManager imported in utils/__init__.py
+- [ ] create_pr_manager imported in utils/__init__.py
+- [ ] Both added to __all__ list with GitHub operations comment
+- [ ] tests/README.md updated with github_integration marker info
+- [ ] PullRequestManager can be imported from mcp_coder.utils
+- [ ] create_pr_manager can be imported from mcp_coder.utils
+- [ ] Documentation follows existing format
+- [ ] All integration tests pass
+- [ ] Final feature integration complete

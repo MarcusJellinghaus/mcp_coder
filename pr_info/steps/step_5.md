@@ -1,85 +1,138 @@
-# Step 5: Export Functions and Update Documentation
+# Step 5: Add Enhanced Features and Validation
 
 ## Objective
-Export the new GitHub operations from utils module and update test documentation.
+Add enhanced features to PullRequestManager and improve validation and error handling.
 
 ## WHERE
-- File: `src/mcp_coder/utils/__init__.py` (modify existing)
-- File: `tests/README.md` (modify existing)
+- File: `src/mcp_coder/utils/github_operations/pr_manager.py` (modify existing)
+- File: `tests/utils/test_github_operations.py` (modify existing)
 
 ## WHAT
-- Add GitHub operations to utils module exports
-- Update test documentation with github_integration marker usage
+- Enhance merge_pull_request method with better parameters and validation
+- Add input validation for all methods
+- Improve error handling with specific exception types
+- Add logging for better debugging
+- Add additional tests for enhanced features
 
 ## HOW
-### Utils Module Export
+### Enhanced merge_pull_request Method
 ```python
-# Add to imports section
-from .github_operations import (
-    create_pull_request,
-    get_pull_request,
-    close_pull_request,
-    list_pull_requests,
-)
-
-# Add to __all__ list
-__all__ = [
-    # ... existing exports ...
-    # GitHub operations
-    "create_pull_request", 
-    "get_pull_request",
-    "close_pull_request",
-    "list_pull_requests",
-]
+@log_function_call
+def merge_pull_request(
+    self, 
+    pr_number: int, 
+    commit_title: Optional[str] = None,
+    commit_message: Optional[str] = None,
+    merge_method: str = "merge"
+) -> Dict[str, Any]:
+    """Merge a pull request with enhanced options.
+    
+    Args:
+        pr_number: Pull request number
+        commit_title: Optional custom commit title
+        commit_message: Optional custom commit message  
+        merge_method: "merge", "squash", or "rebase"
+        
+    Returns:
+        Dict with merge details: {'merged': bool, 'sha': str, 'message': str}
+        
+    Raises:
+        ValueError: If merge_method is invalid
+    """
+    if merge_method not in ["merge", "squash", "rebase"]:
+        raise ValueError(f"Invalid merge_method: {merge_method}")
+    
+    try:
+        pr = self._repo.get_pull(pr_number)
+        result = pr.merge(
+            commit_title=commit_title,
+            commit_message=commit_message,
+            merge_method=merge_method
+        )
+        return {
+            'merged': result.merged,
+            'sha': result.sha,
+            'message': result.message
+        }
+    except Exception as e:
+        logger.error(f"Failed to merge PR {pr_number}: {e}")
+        return {}
 ```
 
-### Documentation Update
-Add section to tests/README.md:
-```markdown
-| `github_integration` | GitHub API calls | Variable | GitHub config |
+### Input Validation
+```python
+def _validate_pr_number(self, pr_number: int) -> None:
+    """Validate PR number is positive integer."""
+    if not isinstance(pr_number, int) or pr_number <= 0:
+        raise ValueError(f"PR number must be positive integer, got: {pr_number}")
+
+def _validate_branch_name(self, branch: str) -> None:
+    """Validate branch name is non-empty string."""
+    if not isinstance(branch, str) or not branch.strip():
+        raise ValueError(f"Branch name must be non-empty string, got: {branch}")
 ```
 
 ## ALGORITHM
 ```
-1. Open src/mcp_coder/utils/__init__.py
-2. Add import statement for three GitHub functions
-3. Add function names to __all__ list with comment
-4. Open tests/README.md
-5. Add github_integration row to markers table
-6. Verify imports work correctly
+1. Enhance merge_pull_request method with additional parameters
+2. Add validation for merge_method parameter
+3. Add comprehensive error handling with specific exceptions
+4. Add input validation helper methods
+5. Update all methods to use validation helpers
+6. Add proper logging for debugging
+7. Add tests for validation and error cases
+8. Add tests for enhanced merge functionality
 ```
 
 ## DATA
-- **Imports**: Three function names from github_operations module
-- **Exports**: Function names added to __all__ list
-- **Documentation**: Marker description and requirements
+- **Enhanced merge method**: Additional parameters for commit_title, commit_message, merge_method
+- **Validation**: Input validation for PR numbers, branch names, merge methods
+- **Error handling**: Specific exception types with descriptive messages
+- **Logging**: Debug information for troubleshooting
 
 ## LLM Prompt
 ```
-You are implementing Step 5 of the GitHub Pull Request Operations feature as described in pr_info/steps/summary.md.
+You are implementing Step 5 of the GitHub Pull Request Operations feature using the updated PullRequestManager approach.
 
-Update the module exports and documentation to complete the integration.
+Add enhanced features and validation to the PullRequestManager class to make it more robust and production-ready.
 
 Requirements:
-1. Add imports to src/mcp_coder/utils/__init__.py:
-   - Import create_pull_request, get_pull_request, close_pull_request, list_pull_requests from .github_operations
-   - Add these four functions to the __all__ list with a "# GitHub operations" comment
-   - Follow the existing import and export patterns in the file
+1. Enhance merge_pull_request method:
+   - Add commit_title and commit_message optional parameters
+   - Add validation for merge_method ("merge", "squash", "rebase")
+   - Raise ValueError for invalid merge methods
+   - Add comprehensive error handling and logging
 
-2. Update tests/README.md:
-   - Add github_integration marker to the test markers table
-   - Follow the existing table format and style
-   - Mention GitHub config requirement
+2. Add input validation helper methods:
+   - _validate_pr_number: Check for positive integers
+   - _validate_branch_name: Check for non-empty strings
+   - _validate_state: Check for valid PR states
 
-Keep changes minimal and follow existing patterns. The functions should now be importable as:
-from mcp_coder.utils import create_pull_request, get_pull_request, close_pull_request, list_pull_requests
+3. Update existing methods to use validation:
+   - Add validation calls to all methods that take PR numbers or branch names
+   - Improve error messages with specific details
+
+4. Add comprehensive logging:
+   - Import logging and create logger
+   - Add debug/error logging for all operations
+   - Log validation failures and API errors
+
+5. Add tests for enhanced features:
+   - Test validation failures raise appropriate exceptions
+   - Test enhanced merge functionality
+   - Test error handling scenarios
+
+Keep the existing functionality working while adding these enhancements.
 ```
 
 ## Verification
-- [ ] Functions imported in utils/__init__.py
-- [ ] Functions added to __all__ list
-- [ ] GitHub operations comment added
-- [ ] tests/README.md updated with marker info
-- [ ] Functions can be imported from mcp_coder.utils
-- [ ] Documentation follows existing format
-- [ ] All integration tests pass
+- [ ] merge_pull_request enhanced with additional parameters
+- [ ] Merge method validation implemented
+- [ ] Input validation helper methods added
+- [ ] All methods updated to use validation
+- [ ] Comprehensive logging added
+- [ ] Tests added for validation failures
+- [ ] Tests added for enhanced merge functionality
+- [ ] Error handling scenarios tested
+- [ ] All existing tests still pass
+- [ ] New validation raises appropriate exceptions
