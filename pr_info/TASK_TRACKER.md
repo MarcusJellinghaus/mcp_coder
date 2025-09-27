@@ -44,13 +44,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy checks and fix any issues
   - [x] Prepare git commit message
 
-- [x] **Step 4: Implement Save Conversation Functions** ([step_4.md](./steps/step_4.md))
-  - [x] Implement _save_conversation_markdown function
-  - [x] Implement _save_conversation_full_json function
-  - [x] Run pylint checks and fix any issues
-  - [x] Run pytest checks and fix any issues
-  - [x] Run mypy checks and fix any issues
-  - [x] Prepare git commit message
+- [ ] **Step 4: Implement Save Conversation Functions** ([step_4.md](./steps/step_4.md))
+  - [ ] Implement _save_conversation_markdown function
+  - [ ] Implement _save_conversation_full_json function
+  - [ ] Run pylint checks and fix any issues
+  - [ ] Run pytest checks and fix any issues
+  - [ ] Run mypy checks and fix any issues
+  - [ ] Prepare git commit message
 
 - [ ] **Step 5: Refactor execute_prompt to CLI Wrapper** ([step_5.md](./steps/step_5.md))
   - [ ] Convert execute_prompt to lightweight CLI wrapper
