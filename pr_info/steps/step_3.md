@@ -31,7 +31,9 @@ class TestGitHubOperationsIntegration:
     """Integration tests requiring GitHub API access."""
     
     def test_create_read_close_pr_roundtrip(self):
-        """Test complete PR lifecycle: create → read → close."""
+        """Test complete PR lifecycle: create → read → list → close."""
+        # Get test repo URL from config
+        test_repo_url = get_config_value("github", "test_repo_url")
         # This will fail initially due to empty dict returns
 ```
 
@@ -68,6 +70,7 @@ Requirements:
 - Follow existing integration test patterns from the codebase
 - Include proper cleanup even if test fails
 - Delete test branch after closing PR to prevent accumulation
+- Pass test_repo_url from config to all function calls
 
 The test should verify:
 1. create_pull_request returns dict with 'number' and 'url'

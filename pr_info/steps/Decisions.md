@@ -42,6 +42,11 @@
 **Rationale:** Provides useful listing functionality while maintaining simplicity
 **Choice:** Option A - Simple list function with state filter, returns list of PR summary dicts
 
+### 9. Repository Parameter Design
+**Decision:** Add explicit `repo_url` parameter to all four functions for production use
+**Rationale:** Tests use configured test repo, production functions need repo as parameter for flexibility
+**Choice:** Option A - Add `repo_url` parameter to all four functions (create, get, list, close)
+
 ### 7. Test Marker Documentation
 **Decision:** Update existing marker documentation pattern to include github_integration
 **Rationale:** Maintain consistency with existing marker documentation approach

@@ -44,22 +44,22 @@ from mcp_coder.utils.log_utils import log_function_call
 from mcp_coder.utils.user_config import get_config_value
 
 @log_function_call
-def create_pull_request(title: str, body: str, head: str, base: str = "main") -> dict:
+def create_pull_request(repo_url: str, title: str, body: str, head: str, base: str = "main") -> dict:
     """Create a pull request."""
     return {}
 
 @log_function_call  
-def get_pull_request(pr_number: int) -> dict:
+def get_pull_request(repo_url: str, pr_number: int) -> dict:
     """Get pull request details."""
     return {}
 
 @log_function_call
-def close_pull_request(pr_number: int) -> dict:
+def close_pull_request(repo_url: str, pr_number: int) -> dict:
     """Close a pull request.""" 
     return {}
 
 @log_function_call
-def list_pull_requests(state: str = "open") -> list:
+def list_pull_requests(repo_url: str, state: str = "open") -> list:
     """List pull requests."""
     return []
 ```

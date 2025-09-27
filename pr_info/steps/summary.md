@@ -57,16 +57,16 @@ Add minimal GitHub pull request functionality to MCP Coder following TDD and KIS
 ## API Design
 
 ```python
-def create_pull_request(title: str, body: str, head: str, base: str = "main") -> dict:
+def create_pull_request(repo_url: str, title: str, body: str, head: str, base: str = "main") -> dict:
     """Returns: {'number': int, 'url': str}"""
 
-def get_pull_request(pr_number: int) -> dict:
+def get_pull_request(repo_url: str, pr_number: int) -> dict:
     """Returns: {'number': int, 'title': str, 'state': str, 'url': str}"""
 
-def list_pull_requests(state: str = "open") -> list:
+def list_pull_requests(repo_url: str, state: str = "open") -> list:
     """Returns: [{'number': int, 'title': str, 'state': str}]"""
 
-def close_pull_request(pr_number: int) -> dict:
+def close_pull_request(repo_url: str, pr_number: int) -> dict:
     """Returns: {'number': int, 'state': str}"""
 ```
 

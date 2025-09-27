@@ -29,31 +29,32 @@ def _get_repository() -> Optional[Repository]:
     """Get repository object from config."""
 
 @log_function_call
-def create_pull_request(title: str, body: str, head: str, base: str = "main") -> dict:
+def create_pull_request(repo_url: str, title: str, body: str, head: str, base: str = "main") -> dict:
     """Create a pull request and return number/url."""
 
 @log_function_call  
-def get_pull_request(pr_number: int) -> dict:
+def get_pull_request(repo_url: str, pr_number: int) -> dict:
     """Get PR details and return structured data."""
 
 @log_function_call
-def list_pull_requests(state: str = "open") -> list:
+def list_pull_requests(repo_url: str, state: str = "open") -> list:
     """List PRs and return filtered results."""
 
 @log_function_call
-def close_pull_request(pr_number: int) -> dict:
+def close_pull_request(repo_url: str, pr_number: int) -> dict:
     """Close PR and return updated state."""
 ```
 
 ## ALGORITHM
 ```
-1. Get GitHub token and repo URL from config
-2. Initialize GitHub client and repository objects
-3. For create: repo.create_pull() → extract number/url
-4. For get: repo.get_pull() → extract details to dict
-5. For list: repo.get_pulls(state=state) → extract list of PR summaries
-6. For close: pull.edit(state="closed") → return state
-7. Handle errors gracefully, return empty dict/list on failure
+1. Parse repo_url parameter to get repository information
+2. Get GitHub token from config
+3. Initialize GitHub client and repository objects from repo_url
+4. For create: repo.create_pull() → extract number/url
+5. For get: repo.get_pull() → extract details to dict
+6. For list: repo.get_pulls(state=state) → extract list of PR summaries
+7. For close: pull.edit(state="closed") → return state
+8. Handle errors gracefully, return empty dict/list on failure
 ```
 
 ## DATA
@@ -72,7 +73,8 @@ Replace the empty implementations in the GitHub operations package with actual P
 Requirements:
 - Add PyGithub imports (from github import Github, etc.)
 - Create helper functions _get_github_client() and _get_repository()
-- Use get_config_value("github", "token") and get_config_value("github", "test_repo_url")
+- Use get_config_value("github", "token") for authentication
+- Parse repo_url parameter to get repository (e.g., "https://github.com/user/repo")
 - Implement the four main functions to return the exact dict/list structures expected by tests
 - Handle errors gracefully by returning empty dict {} or list []
 - Keep implementation minimal - just enough to pass the test
