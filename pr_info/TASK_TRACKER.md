@@ -37,12 +37,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy checks and fix any issues
   - [x] Prepare git commit message
 
-- [x] **Step 3: Implement prompt_claude Core Function** ([step_3.md](./steps/step_3.md))
-  - [x] Extract business logic from execute_prompt to prompt_claude
-  - [x] Run pylint checks and fix any issues
-  - [x] Run pytest checks and fix any issues
-  - [x] Run mypy checks and fix any issues
-  - [x] Prepare git commit message
+- [ ] **Step 3: Implement prompt_claude Core Function** ([step_3.md](./steps/step_3.md))
+  - [ ] Extract business logic from execute_prompt to prompt_claude
+  - [ ] Run pylint checks and fix any issues
+  - [ ] Run pytest checks and fix any issues
+  - [ ] Run mypy checks and fix any issues
+  - [ ] Prepare git commit message
 
 - [ ] **Step 4: Implement Save Conversation Functions** ([step_4.md](./steps/step_4.md))
   - [ ] Implement _save_conversation_markdown function
