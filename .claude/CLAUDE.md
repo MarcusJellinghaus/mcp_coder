@@ -83,3 +83,19 @@ mcp__filesystem__edit_file
 ## 🔧 MCP Server Issues
 
 **IMMEDIATELY ALERT** if MCP tools are not accessible - this blocks all work until resolved.
+
+## 🔄 Git Operations
+
+**ALLOWED git operations via Bash tool:**
+
+```
+git status
+git diff
+git add
+git commit
+```
+
+**Git commit message format:**
+- Use standard commit message format without advertising footers
+- Focus on clear, descriptive commit messages
+- No required Claude Code attribution or links
