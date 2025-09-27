@@ -17,16 +17,16 @@ Note: Tests will be skipped if configuration is missing.
 import os
 from pathlib import Path
 from typing import Any, Dict, Generator, List
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
-import pytest
 import git
+import pytest
 
 from mcp_coder.utils.github_operations import PullRequestManager
 from mcp_coder.utils.github_operations.github_utils import (
-    parse_github_url,
     format_github_https_url,
     get_repo_full_name,
+    parse_github_url,
 )
 
 
@@ -35,11 +35,11 @@ def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
     """Create PullRequestManager instance for testing.
 
     Validates GitHub configuration and gracefully skips when missing.
-    
+
     Configuration sources (in order of preference):
     1. Environment variables: GITHUB_TOKEN, GITHUB_TEST_REPO_URL
     2. MCP Coder config: github.token, github.test_repo_url
-    
+
     Environment variables:
         GITHUB_TOKEN: GitHub Personal Access Token with repo scope
         GITHUB_TEST_REPO_URL: URL of test repository (e.g., https://github.com/user/test-repo)
@@ -51,12 +51,12 @@ def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
         pytest.skip: When GitHub token or test repository not configured
     """
     from mcp_coder.utils.user_config import get_config_value
-    
+
     # Check for required GitHub configuration
     # Priority 1: Environment variables
     github_token = os.getenv("GITHUB_TOKEN")
     test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
-    
+
     # Priority 2: Config system fallback
     if not github_token:
         github_token = get_config_value("github", "token")
@@ -80,9 +80,9 @@ def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
     git_dir.mkdir()
     repo = git.Repo.init(git_dir)
     repo.create_remote("origin", test_repo_url)
-    
+
     # Mock config to return token
-    with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+    with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
         mock_config.return_value = github_token
         yield PullRequestManager(git_dir)
 
@@ -145,15 +145,15 @@ class TestPullRequestManagerUnit:
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
-        
-        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
             mock_config.return_value = "dummy-token"
             manager = PullRequestManager(git_dir)
-            
+
             # Test empty title
             result = manager.create_pull_request("", "feature-branch", "main")
             assert not result  # Should return empty dict
-            
+
             # Test whitespace-only title
             result = manager.create_pull_request("   ", "feature-branch", "main")
             assert not result  # Should return empty dict
@@ -165,28 +165,34 @@ class TestPullRequestManagerUnit:
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
-        
-        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
             mock_config.return_value = "dummy-token"
             manager = PullRequestManager(git_dir)
-            
+
             # Test invalid head branch
-            result = manager.create_pull_request("Valid Title", "invalid~branch", "main")
-            assert not result  # Should return empty dict
-            
-            # Test invalid base branch
-            result = manager.create_pull_request("Valid Title", "feature", "invalid^branch")
+            result = manager.create_pull_request(
+                "Valid Title", "invalid~branch", "main"
+            )
             assert not result  # Should return empty dict
 
-    @patch('mcp_coder.utils.github_operations.pr_manager.Github')
-    def test_create_pull_request_success(self, mock_github: Mock, tmp_path: Path) -> None:
+            # Test invalid base branch
+            result = manager.create_pull_request(
+                "Valid Title", "feature", "invalid^branch"
+            )
+            assert not result  # Should return empty dict
+
+    @patch("mcp_coder.utils.github_operations.pr_manager.Github")
+    def test_create_pull_request_success(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
         """Test successful pull request creation with mocked GitHub API."""
         # Setup git repo
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
-        
+
         # Mock GitHub API responses
         mock_pr = MagicMock()
         mock_pr.number = 123
@@ -202,20 +208,22 @@ class TestPullRequestManagerUnit:
         mock_pr.mergeable = True
         mock_pr.merged = False
         mock_pr.draft = False
-        
+
         mock_repo = MagicMock()
         mock_repo.create_pull.return_value = mock_pr
-        
+
         mock_github_client = MagicMock()
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
-        
-        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
             mock_config.return_value = "dummy-token"
             manager = PullRequestManager(git_dir)
-            
-            result = manager.create_pull_request("Test PR", "feature-branch", "main", "Test description")
-            
+
+            result = manager.create_pull_request(
+                "Test PR", "feature-branch", "main", "Test description"
+            )
+
             # Verify the result
             assert result["number"] == 123
             assert result["title"] == "Test PR"
@@ -224,13 +232,13 @@ class TestPullRequestManagerUnit:
             assert result["head_branch"] == "feature-branch"
             assert result["base_branch"] == "main"
             assert result["url"] == "https://github.com/test/repo/pull/123"
-            
+
             # Verify GitHub API was called correctly
             mock_repo.create_pull.assert_called_once_with(
                 title="Test PR",
                 body="Test description",
                 head="feature-branch",
-                base="main"
+                base="main",
             )
 
     def test_repository_name_property(self, tmp_path: Path) -> None:
@@ -240,11 +248,11 @@ class TestPullRequestManagerUnit:
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/testuser/testrepo.git")
-        
-        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
             mock_config.return_value = "dummy-token"
             manager = PullRequestManager(git_dir)
-            
+
             assert manager.repository_name == "testuser/testrepo"
 
 
@@ -315,9 +323,9 @@ class TestPullRequestManagerIntegration:
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
-        
+
         # Test that direct instantiation creates instance
-        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
             mock_config.return_value = "test-token"
             direct_manager = PullRequestManager(git_dir)
             assert isinstance(direct_manager, PullRequestManager)
@@ -359,32 +367,32 @@ class TestPullRequestManagerIntegration:
         # Test with None project_dir
         with pytest.raises(ValueError, match="project_dir is required"):
             PullRequestManager(None)
-        
+
         # Test with non-existent directory
         nonexistent = tmp_path / "does_not_exist"
         with pytest.raises(ValueError, match="Directory does not exist"):
             PullRequestManager(nonexistent)
-        
+
         # Test with file instead of directory
         file_path = tmp_path / "test_file.txt"
         file_path.write_text("test")
         with pytest.raises(ValueError, match="Path is not a directory"):
             PullRequestManager(file_path)
-        
+
         # Test with non-git directory
         regular_dir = tmp_path / "regular_dir"
         regular_dir.mkdir()
         with pytest.raises(ValueError, match="Directory is not a git repository"):
             PullRequestManager(regular_dir)
-        
+
         # Setup git repo for remaining tests
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
-        
+
         # Create manager with mocked token for validation tests
-        with patch('mcp_coder.utils.user_config.get_config_value') as mock_config:
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
             mock_config.return_value = "dummy-token"
             manager = PullRequestManager(git_dir)
 
@@ -410,13 +418,15 @@ class TestPullRequestManagerIntegration:
         # Note: These return cast TypedDict instances, so we check for empty/falsy values
         invalid_pr_result = manager.get_pull_request(-1)
         assert not invalid_pr_result
-        
+
         invalid_close_result = manager.close_pull_request(0)
         assert not invalid_close_result
-        
-        invalid_create_result = manager.create_pull_request("title", "invalid~branch", "main")
+
+        invalid_create_result = manager.create_pull_request(
+            "title", "invalid~branch", "main"
+        )
         assert not invalid_create_result
-        
+
         invalid_list_result = manager.list_pull_requests(base_branch="invalid~branch")
         expected_empty_list: List[Dict[str, Any]] = []
         assert invalid_list_result == expected_empty_list

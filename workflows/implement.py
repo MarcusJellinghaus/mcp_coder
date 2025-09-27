@@ -40,8 +40,8 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import (
     commit_all_changes,
     get_current_branch_name,
-    get_full_status,
     get_default_branch_name,
+    get_full_status,
     git_push,
     is_working_directory_clean,
 )

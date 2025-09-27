@@ -14,6 +14,7 @@ from github.PullRequest import PullRequest
 from github.Repository import Repository
 
 from mcp_coder.utils.log_utils import log_function_call
+
 from .github_utils import parse_github_url
 
 # Configure logger for GitHub operations
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class PullRequestData(TypedDict):
     """TypedDict for pull request data structure."""
+
     number: int
     title: str
     body: str
@@ -42,13 +44,13 @@ class PullRequestManager:
 
     This class provides methods for creating, retrieving, listing, closing,
     and merging pull requests in a GitHub repository.
-    
+
     Configuration:
         Requires GitHub token in config file (~/.mcp_coder/config.toml):
-        
+
         [github]
         token = "ghp_your_personal_access_token_here"
-        
+
         Token needs 'repo' scope for private repositories, 'public_repo' for public.
     """
 
@@ -62,25 +64,30 @@ class PullRequestManager:
             ValueError: If project_dir is None, directory doesn't exist, is not a git repository,
                        has no GitHub remote origin, or GitHub token is not configured
         """
-        from mcp_coder.utils.git_operations import get_github_repository_url, is_git_repository
+        from mcp_coder.utils.git_operations import (
+            get_github_repository_url,
+            is_git_repository,
+        )
         from mcp_coder.utils.user_config import get_config_value
 
         # 1. Check if project_dir is provided
         if project_dir is None:
-            raise ValueError("project_dir is required. Please specify the path to your git repository.")
-        
+            raise ValueError(
+                "project_dir is required. Please specify the path to your git repository."
+            )
+
         # 2. Check if directory exists
         if not project_dir.exists():
             raise ValueError(f"Directory does not exist: {project_dir}")
-        
+
         # 3. Check if it's actually a directory (not a file)
         if not project_dir.is_dir():
             raise ValueError(f"Path is not a directory: {project_dir}")
-        
+
         # 4. Check if it's a git repository
         if not is_git_repository(project_dir):
             raise ValueError(f"Directory is not a git repository: {project_dir}")
-        
+
         # 5. Try to get GitHub repository URL
         repository_url = get_github_repository_url(project_dir)
         if repository_url is None:
@@ -88,15 +95,15 @@ class PullRequestManager:
                 f"Could not detect GitHub repository URL from git remote in: {project_dir}. "
                 "Make sure the repository has a GitHub remote origin configured."
             )
-        
+
         # 6. Check if GitHub token is available
         github_token = get_config_value("github", "token")
         if not github_token:
             raise ValueError(
                 "GitHub token not found in configuration. "
-                "Please add your GitHub token to ~/.mcp_coder/config.toml under [github] token = \"your_token\""
+                'Please add your GitHub token to ~/.mcp_coder/config.toml under [github] token = "your_token"'
             )
-        
+
         # All validations passed - initialize
         self.project_dir = project_dir
         self.repository_url = repository_url
@@ -194,7 +201,7 @@ class PullRequestManager:
 
         Returns:
             PullRequestData containing pull request information or empty dict on failure.
-            
+
             Success response includes:
             - number: PR number (int)
             - title: PR title (str)
@@ -214,7 +221,7 @@ class PullRequestManager:
         if not isinstance(title, str) or not title.strip():
             logger.error(f"Invalid PR title: '{title}'. Must be a non-empty string.")
             return cast(PullRequestData, {})
-        
+
         # Validate branch names
         if not self._validate_branch_name(head_branch):
             return cast(PullRequestData, {})
@@ -338,21 +345,28 @@ class PullRequestManager:
             # Convert to structured list of dictionaries
             pr_list = []
             for pr in prs:
-                pr_dict = cast(PullRequestData, {
-                    "number": pr.number,
-                    "title": pr.title,
-                    "body": pr.body,
-                    "state": pr.state,
-                    "head_branch": pr.head.ref,
-                    "base_branch": pr.base.ref,
-                    "url": pr.html_url,
-                    "created_at": pr.created_at.isoformat() if pr.created_at else None,
-                    "updated_at": pr.updated_at.isoformat() if pr.updated_at else None,
-                    "user": pr.user.login if pr.user else None,
-                    "mergeable": pr.mergeable,
-                    "merged": pr.merged,
-                    "draft": pr.draft,
-                })
+                pr_dict = cast(
+                    PullRequestData,
+                    {
+                        "number": pr.number,
+                        "title": pr.title,
+                        "body": pr.body,
+                        "state": pr.state,
+                        "head_branch": pr.head.ref,
+                        "base_branch": pr.base.ref,
+                        "url": pr.html_url,
+                        "created_at": (
+                            pr.created_at.isoformat() if pr.created_at else None
+                        ),
+                        "updated_at": (
+                            pr.updated_at.isoformat() if pr.updated_at else None
+                        ),
+                        "user": pr.user.login if pr.user else None,
+                        "mergeable": pr.mergeable,
+                        "merged": pr.merged,
+                        "draft": pr.draft,
+                    },
+                )
                 pr_list.append(pr_dict)
 
             return pr_list
@@ -432,7 +446,7 @@ class PullRequestManager:
             Repository name in format "owner/repo" or empty string on failure
         """
         from .github_utils import get_repo_full_name
-        
+
         try:
             repo_name = get_repo_full_name(self.repository_url)
             return repo_name or ""
@@ -448,7 +462,7 @@ class PullRequestManager:
             Default branch name (typically "main" or "master") or empty string on failure
         """
         from mcp_coder.utils.git_operations import get_default_branch_name
-        
+
         try:
             default_branch = get_default_branch_name(self.project_dir)
             return default_branch or ""

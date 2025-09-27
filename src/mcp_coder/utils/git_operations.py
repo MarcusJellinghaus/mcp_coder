@@ -897,11 +897,15 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
                 # Result looks like: "refs/remotes/origin/main"
                 if result.startswith("refs/remotes/origin/"):
                     default_branch = result.replace("refs/remotes/origin/", "")
-                    logger.debug("Found default branch from symbolic-ref: %s", default_branch)
+                    logger.debug(
+                        "Found default branch from symbolic-ref: %s", default_branch
+                    )
                     return default_branch
             except GitCommandError:
                 # origin/HEAD not set, try minimal fallback
-                logger.debug("origin/HEAD not set, checking for common default branches")
+                logger.debug(
+                    "origin/HEAD not set, checking for common default branches"
+                )
                 return _check_local_default_branches(repo)
 
             # If we reach here, the symbolic-ref command succeeded but didn't match expected format
@@ -919,30 +923,30 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
 def _check_local_default_branches(repo: Repo) -> Optional[str]:
     """
     Check for common default branch names in local repository.
-    
+
     Args:
         repo: GitPython repository object
-        
+
     Returns:
         First found default branch name ("main" or "master"), or None
     """
     # Check for common default branch names
     default_candidates = ["main", "master"]
-    
+
     try:
         # Get list of all branch names
         branch_names = [branch.name for branch in repo.branches]
         logger.debug("Available local branches: %s", branch_names)
-        
+
         # Check for default candidates in order of preference
         for candidate in default_candidates:
             if candidate in branch_names:
                 logger.debug("Found local default branch: %s", candidate)
                 return candidate
-                
+
         logger.debug("No common default branches found in local repository")
         return None
-        
+
     except GitCommandError as e:
         logger.debug("Git error checking local branches: %s", e)
         return None
@@ -1024,7 +1028,6 @@ def git_push(project_dir: Path) -> dict[str, Any]:
         return {"success": False, "error": error_msg}
 
 
-
 def get_github_repository_url(project_dir: Path) -> Optional[str]:
     """Get GitHub repository URL from git remote origin.
 
@@ -1095,7 +1098,9 @@ def _parse_github_url(git_url: str) -> Optional[str]:
     # SSH: git@github.com:owner/repo.git
     # HTTPS: https://github.com/owner/repo.git
     # HTTPS without .git: https://github.com/owner/repo
-    github_pattern = r"(?:https://github\.com/|git@github\.com:)([^/]+)/([^/\.]+)(?:\.git)?/?$"
+    github_pattern = (
+        r"(?:https://github\.com/|git@github\.com:)([^/]+)/([^/\.]+)(?:\.git)?/?$"
+    )
     match = re.match(github_pattern, git_url)
 
     if not match:
