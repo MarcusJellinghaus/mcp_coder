@@ -853,25 +853,30 @@ def get_current_branch_name(project_dir: Path) -> Optional[str]:
         return None
 
 
-def get_main_branch_name(project_dir: Path) -> Optional[str]:
+def get_default_branch_name(project_dir: Path) -> Optional[str]:
     """
-    Get the name of the main branch (main or master).
+    Get the name of the default branch from git remote HEAD reference.
+
+    This checks what git considers the default branch by looking at
+    refs/remotes/origin/HEAD, which is the authoritative source for
+    the remote's default branch setting. If origin/HEAD is not set up
+    (common in test environments), falls back to checking for common
+    default branch names.
 
     Args:
         project_dir: Path to the project directory containing git repository
 
     Returns:
-        Main branch name as string ("main" or "master"), or None if:
+        Default branch name as string, or None if:
         - Directory is not a git repository
-        - Neither "main" nor "master" branch exists
+        - No remote origin configured and no local default branches found
         - Error occurs during branch detection
 
     Note:
-        Checks for "main" branch first (modern Git default), then falls back
-        to "master" branch (legacy Git default). Uses existing validation
-        and error handling patterns from other functions.
+        Prefers git symbolic-ref as the authoritative source, but provides
+        minimal fallback for test environments where origin/HEAD isn't configured.
     """
-    logger.debug("Getting main branch name for %s", project_dir)
+    logger.debug("Getting default branch name for %s", project_dir)
 
     if not is_git_repository(project_dir):
         logger.debug("Not a git repository: %s", project_dir)
@@ -879,25 +884,71 @@ def get_main_branch_name(project_dir: Path) -> Optional[str]:
 
     try:
         with _safe_repo_context(project_dir) as repo:
-            # Check for "main" branch first (modern Git default)
-            if "main" in [head.name for head in repo.heads]:
-                logger.debug("Found main branch: main")
-                return "main"
+            # Check if origin remote exists
+            if "origin" not in [remote.name for remote in repo.remotes]:
+                logger.debug("No origin remote found in %s", project_dir)
+                # No origin remote, check for local main/master branches
+                return _check_local_default_branches(repo)
 
-            # Fall back to "master" branch (legacy Git default)
-            if "master" in [head.name for head in repo.heads]:
-                logger.debug("Found main branch: master")
-                return "master"
+            # Check symbolic ref for origin/HEAD (authoritative source)
+            try:
+                # This shows what the remote considers the default branch
+                result: str = repo.git.symbolic_ref("refs/remotes/origin/HEAD")
+                # Result looks like: "refs/remotes/origin/main"
+                if result.startswith("refs/remotes/origin/"):
+                    default_branch = result.replace("refs/remotes/origin/", "")
+                    logger.debug(
+                        "Found default branch from symbolic-ref: %s", default_branch
+                    )
+                    return default_branch
+            except GitCommandError:
+                # origin/HEAD not set, try minimal fallback
+                logger.debug(
+                    "origin/HEAD not set, checking for common default branches"
+                )
+                return _check_local_default_branches(repo)
 
-            # Neither main nor master branch found
-            logger.debug("Neither main nor master branch found")
-            return None
+            # If we reach here, the symbolic-ref command succeeded but didn't match expected format
+            logger.debug("Unexpected symbolic-ref format, checking fallback")
+            return _check_local_default_branches(repo)
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
-        logger.debug("Git error getting main branch name: %s", e)
+        logger.debug("Git error getting default branch name: %s", e)
         return None
     except Exception as e:
-        logger.warning("Unexpected error getting main branch name: %s", e)
+        logger.warning("Unexpected error getting default branch name: %s", e)
+        return None
+
+
+def _check_local_default_branches(repo: Repo) -> Optional[str]:
+    """
+    Check for common default branch names in local repository.
+
+    Args:
+        repo: GitPython repository object
+
+    Returns:
+        First found default branch name ("main" or "master"), or None
+    """
+    # Check for common default branch names
+    default_candidates = ["main", "master"]
+
+    try:
+        # Get list of all branch names
+        branch_names = [branch.name for branch in repo.branches]
+        logger.debug("Available local branches: %s", branch_names)
+
+        # Check for default candidates in order of preference
+        for candidate in default_candidates:
+            if candidate in branch_names:
+                logger.debug("Found local default branch: %s", candidate)
+                return candidate
+
+        logger.debug("No common default branches found in local repository")
+        return None
+
+    except GitCommandError as e:
+        logger.debug("Git error checking local branches: %s", e)
         return None
 
 
@@ -919,14 +970,14 @@ def get_parent_branch_name(project_dir: Path) -> Optional[str]:
         - Error occurs during branch detection
 
     Note:
-        Delegates all validation and error handling to get_main_branch_name().
+        Delegates all validation and error handling to get_default_branch_name().
         Uses existing logging patterns from other functions.
     """
     logger.debug("Getting parent branch name for %s", project_dir)
 
-    # Use simple heuristic: call get_main_branch_name() internally
+    # Use simple heuristic: call get_default_branch_name() internally
     # This delegates all validation and error handling
-    main_branch = get_main_branch_name(project_dir)
+    main_branch = get_default_branch_name(project_dir)
 
     if main_branch:
         logger.debug("Parent branch identified as: %s", main_branch)
@@ -975,3 +1026,360 @@ def git_push(project_dir: Path) -> dict[str, Any]:
         error_msg = f"Unexpected error during push: {e}"
         logger.error(error_msg)
         return {"success": False, "error": error_msg}
+
+
+def get_github_repository_url(project_dir: Path) -> Optional[str]:
+    """Get GitHub repository URL from git remote origin.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        GitHub repository URL in https format, or None if:
+        - Directory is not a git repository
+        - No remote origin configured
+        - Remote origin is not a GitHub URL
+        - Error occurs during URL detection
+
+    Note:
+        Converts various Git URL formats to standard GitHub HTTPS format:
+        - SSH: git@github.com:owner/repo.git → https://github.com/owner/repo
+        - HTTPS: https://github.com/owner/repo.git → https://github.com/owner/repo
+    """
+    logger.debug("Getting GitHub repository URL for %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return None
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Check if origin remote exists
+            if "origin" not in [remote.name for remote in repo.remotes]:
+                logger.debug("No origin remote found in %s", project_dir)
+                return None
+
+            # Get origin remote URL
+            origin_url = repo.remotes.origin.url
+            logger.debug("Found origin URL: %s", origin_url)
+
+            # Parse and convert to GitHub HTTPS format
+            github_url = _parse_github_url(origin_url)
+            if github_url:
+                logger.debug("Converted to GitHub URL: %s", github_url)
+            else:
+                logger.debug("Could not parse as GitHub URL: %s", origin_url)
+
+            return github_url
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.debug("Git error getting repository URL: %s", e)
+        return None
+    except Exception as e:
+        logger.warning("Unexpected error getting repository URL: %s", e)
+        return None
+
+
+def create_branch(
+    branch_name: str, project_dir: Path, from_branch: Optional[str] = None
+) -> bool:
+    """Create a new git branch.
+
+    Args:
+        branch_name: Name of the branch to create
+        project_dir: Path to the project directory containing git repository
+        from_branch: Base branch to create from (defaults to current branch)
+
+    Returns:
+        True if branch was created successfully, False otherwise
+    """
+    logger.debug("Creating branch '%s' in %s", branch_name, project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    # Validate branch name
+    if not branch_name or not branch_name.strip():
+        logger.error("Branch name cannot be empty")
+        return False
+
+    # Basic branch name validation (GitHub-compatible)
+    invalid_chars = ["~", "^", ":", "?", "*", "["]
+    if any(char in branch_name for char in invalid_chars):
+        logger.error(
+            "Invalid branch name: '%s'. Contains invalid characters", branch_name
+        )
+        return False
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Check if branch already exists
+            existing_branches = [branch.name for branch in repo.branches]
+            if branch_name in existing_branches:
+                logger.debug("Branch '%s' already exists", branch_name)
+                return False
+
+            # Create new branch
+            if from_branch:
+                # Create from specified base branch
+                try:
+                    repo.git.checkout("-b", branch_name, from_branch)
+                except GitCommandError as e:
+                    logger.error(
+                        "Failed to create branch from '%s': %s", from_branch, e
+                    )
+                    return False
+            else:
+                # Create from current branch
+                try:
+                    repo.git.checkout("-b", branch_name)
+                except GitCommandError as e:
+                    logger.error("Failed to create branch: %s", e)
+                    return False
+
+            logger.debug("Successfully created branch '%s'", branch_name)
+            return True
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error creating branch: %s", e)
+        return False
+    except Exception as e:
+        logger.error("Unexpected error creating branch: %s", e)
+        return False
+
+
+def checkout_branch(branch_name: str, project_dir: Path) -> bool:
+    """Checkout an existing git branch.
+
+    Args:
+        branch_name: Name of the branch to checkout
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        True if branch was checked out successfully, False otherwise
+    """
+    logger.debug("Checking out branch '%s' in %s", branch_name, project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    # Validate branch name
+    if not branch_name or not branch_name.strip():
+        logger.error("Branch name cannot be empty")
+        return False
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Check if branch exists locally
+            existing_branches = [branch.name for branch in repo.branches]
+            if branch_name not in existing_branches:
+                logger.error("Branch '%s' does not exist locally", branch_name)
+                return False
+
+            # Check if we're already on the target branch
+            try:
+                current_branch = repo.active_branch.name
+                if current_branch == branch_name:
+                    logger.debug("Already on branch '%s'", branch_name)
+                    return True
+            except TypeError:
+                # In detached HEAD state, continue with checkout
+                pass
+
+            # Checkout the branch
+            try:
+                repo.git.checkout(branch_name)
+                logger.debug("Successfully checked out branch '%s'", branch_name)
+                return True
+            except GitCommandError as e:
+                logger.error("Failed to checkout branch '%s': %s", branch_name, e)
+                return False
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error checking out branch: %s", e)
+        return False
+    except Exception as e:
+        logger.error("Unexpected error checking out branch: %s", e)
+        return False
+
+
+def branch_exists(branch_name: str, project_dir: Path) -> bool:
+    """Check if a git branch exists locally.
+
+    Args:
+        branch_name: Name of the branch to check
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        True if branch exists locally, False otherwise
+    """
+    logger.debug("Checking if branch '%s' exists in %s", branch_name, project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    # Validate branch name
+    if not branch_name or not branch_name.strip():
+        logger.debug("Branch name is empty")
+        return False
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Get list of local branch names
+            existing_branches = [branch.name for branch in repo.branches]
+            exists = branch_name in existing_branches
+
+            if exists:
+                logger.debug("Branch '%s' exists locally", branch_name)
+            else:
+                logger.debug("Branch '%s' does not exist locally", branch_name)
+
+            return exists
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.debug("Git error checking branch existence: %s", e)
+        return False
+    except Exception as e:
+        logger.warning("Unexpected error checking branch existence: %s", e)
+        return False
+
+
+def push_branch(branch_name: str, project_dir: Path, set_upstream: bool = True) -> bool:
+    """Push a git branch to origin remote.
+
+    Args:
+        branch_name: Name of the branch to push
+        project_dir: Path to the project directory containing git repository
+        set_upstream: Whether to set upstream tracking branch (default: True)
+
+    Returns:
+        True if branch was pushed successfully, False otherwise
+    """
+    logger.debug("Pushing branch '%s' to origin in %s", branch_name, project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    # Validate branch name
+    if not branch_name or not branch_name.strip():
+        logger.error("Branch name cannot be empty")
+        return False
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Check if branch exists locally
+            if not branch_exists(branch_name, project_dir):
+                logger.error("Branch '%s' does not exist locally", branch_name)
+                return False
+
+            # Check if origin remote exists
+            if "origin" not in [remote.name for remote in repo.remotes]:
+                logger.error("No origin remote found")
+                return False
+
+            # Push the branch
+            try:
+                if set_upstream:
+                    # Push with upstream tracking
+                    repo.git.push("--set-upstream", "origin", branch_name)
+                    logger.debug(
+                        "Successfully pushed branch '%s' with upstream tracking",
+                        branch_name,
+                    )
+                else:
+                    # Push without upstream tracking
+                    repo.git.push("origin", branch_name)
+                    logger.debug("Successfully pushed branch '%s'", branch_name)
+
+                return True
+
+            except GitCommandError as e:
+                logger.error("Failed to push branch '%s': %s", branch_name, e)
+                return False
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error pushing branch: %s", e)
+        return False
+    except Exception as e:
+        logger.error("Unexpected error pushing branch: %s", e)
+        return False
+
+
+def fetch_remote(project_dir: Path, remote: str = "origin") -> bool:
+    """Fetch latest changes from remote repository.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+        remote: Name of the remote to fetch from (default: "origin")
+
+    Returns:
+        True if fetch was successful, False otherwise
+    """
+    logger.debug("Fetching from remote '%s' in %s", remote, project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    # Validate remote name
+    if not remote or not remote.strip():
+        logger.error("Remote name cannot be empty")
+        return False
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Check if remote exists
+            if remote not in [r.name for r in repo.remotes]:
+                logger.error("Remote '%s' not found", remote)
+                return False
+
+            # Fetch from remote
+            try:
+                repo.git.fetch(remote)
+                logger.debug("Successfully fetched from remote '%s'", remote)
+                return True
+
+            except GitCommandError as e:
+                logger.error("Failed to fetch from remote '%s': %s", remote, e)
+                return False
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error fetching from remote: %s", e)
+        return False
+    except Exception as e:
+        logger.error("Unexpected error fetching from remote: %s", e)
+        return False
+
+
+def _parse_github_url(git_url: str) -> Optional[str]:
+    """Parse git URL and convert to GitHub HTTPS format.
+
+    Args:
+        git_url: Git remote URL in various formats
+
+    Returns:
+        GitHub HTTPS URL or None if not a valid GitHub URL
+    """
+    import re
+
+    # Remove trailing whitespace
+    git_url = git_url.strip()
+
+    # Pattern to match GitHub URLs in various formats
+    # SSH: git@github.com:owner/repo.git
+    # HTTPS: https://github.com/owner/repo.git
+    # HTTPS without .git: https://github.com/owner/repo
+    github_pattern = (
+        r"(?:https://github\.com/|git@github\.com:)([^/]+)/([^/\.]+)(?:\.git)?/?$"
+    )
+    match = re.match(github_pattern, git_url)
+
+    if not match:
+        return None
+
+    owner, repo_name = match.groups()
+    return f"https://github.com/{owner}/{repo_name}"

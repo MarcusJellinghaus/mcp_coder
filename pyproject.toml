@@ -26,6 +26,7 @@ dependencies = [
     "black>=23.0.0",
     "isort>=5.12.0",
     "mcp-code-checker @ git+https://github.com/MarcusJellinghaus/mcp-code-checker.git",
+    "PyGithub>=1.59.0"
 ]
 
 [project.optional-dependencies]
@@ -58,7 +59,8 @@ testpaths = ["tests"]
 markers = [
     "git_integration: tests with file system git operations (repos, commits)", 
     "claude_integration: tests requiring Claude CLI/API (network, auth needed)",
-    "formatter_integration: tests for code formatter integration (black, isort)"
+    "formatter_integration: tests for code formatter integration (black, isort)",
+    "github_integration: tests requiring GitHub API access (network, auth needed)"
 ]
 # run usually with -m "not git_integration and not claude_integration and not formatter_integration"  for the fast unit tests
 # use e.g. -m "git_integration or claude_integration or formatter_integration" to run a group of the slower tests
@@ -88,6 +90,11 @@ python_version = "3.11"
 [[tool.mypy.overrides]]
 module = ["pytest.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+# Disable unreachable warnings for test files due to mypy false positives with assertions
+disable_error_code = ["unreachable"]
 
 [[tool.mypy.overrides]]
 module = ["mcp.server.fastmcp"]

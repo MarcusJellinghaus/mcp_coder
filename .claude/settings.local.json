@@ -16,8 +16,8 @@
       "mcp__filesystem__delete_this_file",
       "mcp__filesystem__move_file",
       "mcp__filesystem__edit_file",
-      "Read(//c/**)",
-      "Bash(python:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   },
   "enabledMcpjsonServers": [

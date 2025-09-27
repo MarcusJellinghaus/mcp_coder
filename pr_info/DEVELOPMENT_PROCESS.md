@@ -156,6 +156,11 @@ If there are inconsistencies in the project plan (eg due to previous revisions w
 ```
 Please clean up the project plan. Ensure that it is consistent.
 ```
+```
+Please review the project plan for a new feature in folder PR_Info\steps.
+Please review for consistency.
+Please tell me all consistencies you found and how you want to fix them.
+```
 
 **typical questions and answers**:
 - reduce number of steps: actually, constant/more steps are better
@@ -325,7 +330,26 @@ And tell me what needs to be done
 Please tell me whether this is feasible, how complicated it is, whether it could be simplified or whether it needs to broken down in several sub tasks.
 ```
 
-#### 2.2 Commit Preparation
+#### One shot tasks
+
+( still to be done)
+
+
+#### Working with Todos
+
+Put some todos in your code and work on them using 
+
+```commandline
+Please take a look
+[this file]
+
+There are many todos in there - please take the first one, can we work on just the first one
+Tell me what needs to be done, do not yet modify any code!
+```
+
+
+
+#### 2.4 Commit Preparation
 
 **Process:**
 - format

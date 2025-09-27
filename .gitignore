@@ -30,3 +30,4 @@ venv/
 checks_output.txt
 bash.exe.stackdump
 /.mcp-coder/responses
+/.mcp-coder-tmp/
