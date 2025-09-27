@@ -40,40 +40,36 @@ class PullRequestManager:
         self._github_client = Github(github_token)
         self._repository: Optional[Repository] = None
 
-    def _parse_and_get_repo(self) -> Repository:
+    def _parse_and_get_repo(self) -> Optional[Repository]:
         """Parse repository URL and get Repository object.
 
         Returns:
-            Repository: GitHub repository object
-
-        Raises:
-            ValueError: If repository URL format is invalid or repository cannot be accessed
+            Repository object if successful, None if any error occurs
         """
         if self._repository is not None:
             return self._repository
 
-        # Parse repository URL to extract owner/repo
-        # Support formats: https://github.com/owner/repo, git@github.com:owner/repo.git, owner/repo
-        repo_pattern = (
-            r"(?:https://github\.com/|git@github\.com:|^)([^/]+)/([^/\.]+)(?:\.git)?/?$"
-        )
-        match = re.match(repo_pattern, self.repository_url.strip())
-
-        if not match:
-            raise ValueError(
-                f"Invalid GitHub repository URL format: {self.repository_url}"
-            )
-
-        owner, repo_name = match.groups()
-        repo_full_name = f"{owner}/{repo_name}"
-
         try:
+            # Parse repository URL to extract owner/repo
+            # Support formats: https://github.com/owner/repo, git@github.com:owner/repo.git, owner/repo
+            repo_pattern = r"(?:https://github\.com/|git@github\.com:|^)([^/]+)/([^/\.]+)(?:\.git)?/?$"
+            match = re.match(repo_pattern, self.repository_url.strip())
+
+            if not match:
+                print(f"Invalid GitHub repository URL format: {self.repository_url}")
+                return None
+
+            owner, repo_name = match.groups()
+            repo_full_name = f"{owner}/{repo_name}"
+
             self._repository = self._github_client.get_repo(repo_full_name)
             return self._repository
         except GithubException as e:
-            raise ValueError(
-                f"Failed to access repository {repo_full_name}: {e}"
-            ) from e
+            print(f"Failed to access repository: {e}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error accessing repository: {e}")
+            return None
 
     @log_function_call
     def create_pull_request(
@@ -92,6 +88,8 @@ class PullRequestManager:
         """
         try:
             repo = self._parse_and_get_repo()
+            if repo is None:
+                return {}
 
             # Create the pull request using GitHub API
             pr = repo.create_pull(
@@ -136,6 +134,8 @@ class PullRequestManager:
         """
         try:
             repo = self._parse_and_get_repo()
+            if repo is None:
+                return {}
 
             # Get the pull request using GitHub API
             pr = repo.get_pull(pr_number)
@@ -181,6 +181,8 @@ class PullRequestManager:
         """
         try:
             repo = self._parse_and_get_repo()
+            if repo is None:
+                return []
 
             # Get pull requests using GitHub API
             # Handle optional base_branch parameter for GitHub API
@@ -232,6 +234,8 @@ class PullRequestManager:
         """
         try:
             repo = self._parse_and_get_repo()
+            if repo is None:
+                return {}
 
             # Get the pull request using GitHub API
             pr = repo.get_pull(pr_number)
@@ -284,6 +288,8 @@ class PullRequestManager:
         """
         try:
             repo = self._parse_and_get_repo()
+            if repo is None:
+                return {}
 
             # Get the pull request using GitHub API
             pr = repo.get_pull(pr_number)
@@ -331,6 +337,8 @@ class PullRequestManager:
         """
         try:
             repo = self._parse_and_get_repo()
+            if repo is None:
+                return ""
             return repo.full_name
         except Exception as e:
             print(f"Error getting repository name: {e}")
@@ -345,6 +353,8 @@ class PullRequestManager:
         """
         try:
             repo = self._parse_and_get_repo()
+            if repo is None:
+                return ""
             return repo.default_branch
         except Exception as e:
             print(f"Error getting default branch: {e}")
