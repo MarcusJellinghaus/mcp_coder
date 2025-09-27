@@ -156,6 +156,11 @@ If there are inconsistencies in the project plan (eg due to previous revisions w
 ```
 Please clean up the project plan. Ensure that it is consistent.
 ```
+```
+Please review the project plan for a new feature in folder PR_Info\steps.
+Please review for consistency.
+Please tell me all consistencies you found and how you want to fix them.
+```
 
 **typical questions and answers**:
 - reduce number of steps: actually, constant/more steps are better
