@@ -38,11 +38,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2
 
 ### Step 3: Add PR Summary Prompt Template
-- [ ] Add PR Summary Generation prompt to src/mcp_coder/prompts/prompts.md
-- [ ] Run pylint check for Step 3 implementation
-- [ ] Run pytest check for Step 3 implementation
-- [ ] Run mypy check for Step 3 implementation
-- [ ] Prepare git commit message for Step 3
+- [x] Add PR Summary Generation prompt to src/mcp_coder/prompts/prompts.md
+- [x] Run pylint check for Step 3 implementation
+- [x] Run pytest check for Step 3 implementation
+- [x] Run mypy check for Step 3 implementation
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Implement Main Workflow Script with Tests
 - [ ] Extend tests/test_create_pr.py with main workflow tests
