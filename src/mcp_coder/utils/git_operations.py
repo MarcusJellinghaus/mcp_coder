@@ -888,12 +888,13 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
             if "origin" not in [remote.name for remote in repo.remotes]:
                 logger.debug("No origin remote found in %s", project_dir)
                 # No origin remote, check for local main/master branches
-                return _check_local_default_branches(repo)
+                result = _check_local_default_branches(repo)
+                return result
 
             # Check symbolic ref for origin/HEAD (authoritative source)
             try:
                 # This shows what the remote considers the default branch
-                result = repo.git.symbolic_ref("refs/remotes/origin/HEAD")
+                result = str(repo.git.symbolic_ref("refs/remotes/origin/HEAD"))
                 # Result looks like: "refs/remotes/origin/main"
                 if result.startswith("refs/remotes/origin/"):
                     default_branch = result.replace("refs/remotes/origin/", "")
@@ -906,11 +907,13 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
                 logger.debug(
                     "origin/HEAD not set, checking for common default branches"
                 )
-                return _check_local_default_branches(repo)
+                result = _check_local_default_branches(repo)
+                return result
 
             # If we reach here, the symbolic-ref command succeeded but didn't match expected format
             logger.debug("Unexpected symbolic-ref format, checking fallback")
-            return _check_local_default_branches(repo)
+            result = _check_local_default_branches(repo)
+            return result
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting default branch name: %s", e)
@@ -1078,7 +1081,7 @@ def get_branch_diff(
                 len(diff_output),
             )
 
-            return diff_output
+            return str(diff_output)
 
     except GitCommandError as e:
         logger.error("Git command error generating diff: %s", e)
