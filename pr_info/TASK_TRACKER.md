@@ -45,12 +45,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 3
 
 ### Step 4: Implement Main Workflow Script with Tests
-- [ ] Extend tests/test_create_pr.py with main workflow tests
-- [ ] Complete workflows/create_PR.py main function and helpers
-- [ ] Run pylint check for Step 4 implementation
-- [ ] Run pytest check for Step 4 implementation
-- [ ] Run mypy check for Step 4 implementation
-- [ ] Prepare git commit message for Step 4
+- [x] Extend tests/test_create_pr.py with main workflow tests
+- [x] Complete workflows/create_PR.py main function and helpers
+- [x] Run pylint check for Step 4 implementation
+- [x] Run pytest check for Step 4 implementation
+- [x] Run mypy check for Step 4 implementation
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Create Windows Batch Wrapper and Integration Tests
 - [ ] Create workflows/create_PR.bat wrapper

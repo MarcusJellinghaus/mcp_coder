@@ -8,7 +8,16 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 # Import the functions we'll implement
-from workflows.create_PR import delete_steps_directory, truncate_task_tracker
+from workflows.create_PR import (
+    check_prerequisites,
+    cleanup_repository,
+    create_pull_request,
+    delete_steps_directory,
+    generate_pr_summary,
+    main,
+    parse_pr_summary,
+    truncate_task_tracker,
+)
 
 
 class TestDeleteStepsDirectory:
@@ -312,3 +321,530 @@ Content with specific formatting.
 
             # Should log error
             mock_logger.error.assert_called()
+
+
+class TestParsePrSummary:
+    """Test parse_pr_summary function."""
+
+    def test_parse_simple_response(self) -> None:
+        """Test parsing simple LLM response with title and body."""
+        response = """feat: Add new user authentication system
+
+This PR implements a comprehensive authentication system with:
+- JWT token management
+- User registration and login
+- Password reset functionality
+
+Closes #123"""
+
+        title, body = parse_pr_summary(response)
+
+        assert title == "feat: Add new user authentication system"
+        assert "This PR implements a comprehensive authentication system" in body
+        assert (
+            "feat: Add new user authentication system" in body
+        )  # First line included in body
+        assert "Closes #123" in body
+
+    def test_parse_single_line_response(self) -> None:
+        """Test parsing single line response (title only)."""
+        response = "fix: Resolve database connection timeout issue"
+
+        title, body = parse_pr_summary(response)
+
+        assert title == "fix: Resolve database connection timeout issue"
+        assert (
+            body == "fix: Resolve database connection timeout issue"
+        )  # Fallback includes first line
+
+    def test_parse_empty_response(self) -> None:
+        """Test parsing empty response."""
+        response = ""
+
+        title, body = parse_pr_summary(response)
+
+        assert title == "Pull Request"
+        assert body == "Pull Request"
+
+    def test_parse_whitespace_only_response(self) -> None:
+        """Test parsing response with only whitespace."""
+        response = "   \n\n   \t   \n   "
+
+        title, body = parse_pr_summary(response)
+
+        assert title == "Pull Request"
+        assert body == "Pull Request"
+
+    def test_parse_multiline_with_empty_lines(self) -> None:
+        """Test parsing response with empty lines."""
+        response = """refactor: Improve code structure
+
+
+This refactoring includes:
+
+- Better separation of concerns
+- Improved error handling
+
+
+Tested with unit tests."""
+
+        title, body = parse_pr_summary(response)
+
+        assert title == "refactor: Improve code structure"
+        assert "refactor: Improve code structure" in body
+        assert "This refactoring includes" in body
+        assert "Tested with unit tests." in body
+
+
+class TestCheckPrerequisites:
+    """Test check_prerequisites function."""
+
+    @patch("workflows.create_PR.is_working_directory_clean")
+    @patch("workflows.create_PR.get_incomplete_tasks")
+    @patch("workflows.create_PR.get_current_branch_name")
+    @patch("workflows.create_PR.get_parent_branch_name")
+    def test_prerequisites_all_pass(
+        self,
+        mock_parent_branch: MagicMock,
+        mock_current_branch: MagicMock,
+        mock_incomplete_tasks: MagicMock,
+        mock_clean: MagicMock,
+    ) -> None:
+        """Test prerequisites check when all conditions are met."""
+        mock_clean.return_value = True
+        mock_incomplete_tasks.return_value = []
+        mock_current_branch.return_value = "feature-branch"
+        mock_parent_branch.return_value = "main"
+
+        result = check_prerequisites(Path("/test/project"))
+
+        assert result is True
+        mock_clean.assert_called_once()
+        mock_incomplete_tasks.assert_called_once()
+        mock_current_branch.assert_called_once()
+        mock_parent_branch.assert_called_once()
+
+    @patch("workflows.create_PR.is_working_directory_clean")
+    def test_prerequisites_dirty_working_directory(self, mock_clean: MagicMock) -> None:
+        """Test prerequisites check fails when working directory is dirty."""
+        mock_clean.return_value = False
+
+        result = check_prerequisites(Path("/test/project"))
+
+        assert result is False
+        mock_clean.assert_called_once()
+
+    @patch("workflows.create_PR.is_working_directory_clean")
+    @patch("workflows.create_PR.get_incomplete_tasks")
+    def test_prerequisites_incomplete_tasks(
+        self, mock_incomplete_tasks: MagicMock, mock_clean: MagicMock
+    ) -> None:
+        """Test prerequisites check fails when incomplete tasks exist."""
+        mock_clean.return_value = True
+        mock_incomplete_tasks.return_value = ["Incomplete task 1", "Incomplete task 2"]
+
+        result = check_prerequisites(Path("/test/project"))
+
+        assert result is False
+        mock_clean.assert_called_once()
+        mock_incomplete_tasks.assert_called_once()
+
+    @patch("workflows.create_PR.is_working_directory_clean")
+    @patch("workflows.create_PR.get_incomplete_tasks")
+    @patch("workflows.create_PR.get_current_branch_name")
+    @patch("workflows.create_PR.get_parent_branch_name")
+    def test_prerequisites_same_branch(
+        self,
+        mock_parent_branch: MagicMock,
+        mock_current_branch: MagicMock,
+        mock_incomplete_tasks: MagicMock,
+        mock_clean: MagicMock,
+    ) -> None:
+        """Test prerequisites check fails when current branch is parent branch."""
+        mock_clean.return_value = True
+        mock_incomplete_tasks.return_value = []
+        mock_current_branch.return_value = "main"
+        mock_parent_branch.return_value = "main"
+
+        result = check_prerequisites(Path("/test/project"))
+
+        assert result is False
+
+    @patch("workflows.create_PR.is_working_directory_clean")
+    @patch("workflows.create_PR.get_incomplete_tasks")
+    @patch("workflows.create_PR.get_current_branch_name")
+    def test_prerequisites_no_current_branch(
+        self,
+        mock_current_branch: MagicMock,
+        mock_incomplete_tasks: MagicMock,
+        mock_clean: MagicMock,
+    ) -> None:
+        """Test prerequisites check fails when current branch is unknown."""
+        mock_clean.return_value = True
+        mock_incomplete_tasks.return_value = []
+        mock_current_branch.return_value = None
+
+        result = check_prerequisites(Path("/test/project"))
+
+        assert result is False
+
+
+class TestGeneratePrSummary:
+    """Test generate_pr_summary function."""
+
+    @patch("workflows.create_PR.get_branch_diff")
+    @patch("workflows.create_PR.get_prompt")
+    @patch("workflows.create_PR.ask_llm")
+    def test_generate_pr_summary_success(
+        self,
+        mock_ask_llm: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_get_diff: MagicMock,
+    ) -> None:
+        """Test successful PR summary generation."""
+        mock_get_diff.return_value = "diff content here"
+        mock_get_prompt.return_value = "PR Summary prompt template"
+        mock_ask_llm.return_value = "feat: Add authentication\n\nDetailed description"
+
+        title, body = generate_pr_summary(Path("/test/project"))
+
+        assert title == "feat: Add authentication"
+        assert "Detailed description" in body
+        mock_get_diff.assert_called_once_with(
+            Path("/test/project"), exclude_paths=["pr_info/steps/"]
+        )
+        mock_get_prompt.assert_called_once()
+        mock_ask_llm.assert_called_once()
+
+    @patch("workflows.create_PR.get_branch_diff")
+    def test_generate_pr_summary_no_diff(self, mock_get_diff: MagicMock) -> None:
+        """Test PR summary generation when no diff available."""
+        mock_get_diff.return_value = ""
+
+        title, body = generate_pr_summary(Path("/test/project"))
+
+        assert title == "Pull Request"
+        assert body == "Pull Request"
+
+    @patch("workflows.create_PR.get_branch_diff")
+    @patch("workflows.create_PR.get_prompt")
+    @patch("workflows.create_PR.ask_llm")
+    def test_generate_pr_summary_llm_failure(
+        self,
+        mock_ask_llm: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_get_diff: MagicMock,
+    ) -> None:
+        """Test PR summary generation when LLM call fails."""
+        mock_get_diff.return_value = "diff content"
+        mock_get_prompt.return_value = "prompt template"
+        mock_ask_llm.return_value = None  # LLM failure
+
+        title, body = generate_pr_summary(Path("/test/project"))
+
+        assert title == "Pull Request"
+        assert body == "Pull Request"
+
+
+class TestCleanupRepository:
+    """Test cleanup_repository function."""
+
+    @patch("workflows.create_PR.delete_steps_directory")
+    @patch("workflows.create_PR.truncate_task_tracker")
+    def test_cleanup_repository_success(
+        self, mock_truncate: MagicMock, mock_delete: MagicMock
+    ) -> None:
+        """Test successful repository cleanup."""
+        mock_delete.return_value = True
+        mock_truncate.return_value = True
+
+        result = cleanup_repository(Path("/test/project"))
+
+        assert result is True
+        mock_delete.assert_called_once_with(Path("/test/project"))
+        mock_truncate.assert_called_once_with(Path("/test/project"))
+
+    @patch("workflows.create_PR.delete_steps_directory")
+    @patch("workflows.create_PR.truncate_task_tracker")
+    def test_cleanup_repository_delete_fails(
+        self, mock_truncate: MagicMock, mock_delete: MagicMock
+    ) -> None:
+        """Test repository cleanup when delete_steps_directory fails."""
+        mock_delete.return_value = False
+        mock_truncate.return_value = True
+
+        result = cleanup_repository(Path("/test/project"))
+
+        assert result is False
+        mock_delete.assert_called_once_with(Path("/test/project"))
+        # Should still call truncate even if delete fails
+        mock_truncate.assert_called_once_with(Path("/test/project"))
+
+    @patch("workflows.create_PR.delete_steps_directory")
+    @patch("workflows.create_PR.truncate_task_tracker")
+    def test_cleanup_repository_truncate_fails(
+        self, mock_truncate: MagicMock, mock_delete: MagicMock
+    ) -> None:
+        """Test repository cleanup when truncate_task_tracker fails."""
+        mock_delete.return_value = True
+        mock_truncate.return_value = False
+
+        result = cleanup_repository(Path("/test/project"))
+
+        assert result is False
+        mock_delete.assert_called_once_with(Path("/test/project"))
+        mock_truncate.assert_called_once_with(Path("/test/project"))
+
+    @patch("workflows.create_PR.delete_steps_directory")
+    @patch("workflows.create_PR.truncate_task_tracker")
+    def test_cleanup_repository_both_fail(
+        self, mock_truncate: MagicMock, mock_delete: MagicMock
+    ) -> None:
+        """Test repository cleanup when both operations fail."""
+        mock_delete.return_value = False
+        mock_truncate.return_value = False
+
+        result = cleanup_repository(Path("/test/project"))
+
+        assert result is False
+        mock_delete.assert_called_once_with(Path("/test/project"))
+        mock_truncate.assert_called_once_with(Path("/test/project"))
+
+
+class TestCreatePullRequest:
+    """Test create_pull_request function."""
+
+    @patch("workflows.create_PR.PullRequestManager")
+    @patch("workflows.create_PR.get_current_branch_name")
+    @patch("workflows.create_PR.get_parent_branch_name")
+    def test_create_pull_request_success(
+        self,
+        mock_parent_branch: MagicMock,
+        mock_current_branch: MagicMock,
+        mock_pr_manager: MagicMock,
+    ) -> None:
+        """Test successful pull request creation."""
+        mock_current_branch.return_value = "feature-branch"
+        mock_parent_branch.return_value = "main"
+
+        mock_manager_instance = MagicMock()
+        mock_manager_instance.create_pull_request.return_value = {
+            "number": 123,
+            "url": "https://github.com/owner/repo/pull/123",
+        }
+        mock_pr_manager.return_value = mock_manager_instance
+
+        result = create_pull_request(
+            Path("/test/project"), "Test PR Title", "Test PR Body"
+        )
+
+        assert result is True
+        mock_pr_manager.assert_called_once_with(Path("/test/project"))
+        mock_manager_instance.create_pull_request.assert_called_once_with(
+            title="Test PR Title",
+            head_branch="feature-branch",
+            base_branch="main",
+            body="Test PR Body",
+        )
+
+    @patch("workflows.create_PR.get_current_branch_name")
+    def test_create_pull_request_no_current_branch(
+        self, mock_current_branch: MagicMock
+    ) -> None:
+        """Test pull request creation when current branch is unknown."""
+        mock_current_branch.return_value = None
+
+        result = create_pull_request(
+            Path("/test/project"), "Test PR Title", "Test PR Body"
+        )
+
+        assert result is False
+
+    @patch("workflows.create_PR.PullRequestManager")
+    @patch("workflows.create_PR.get_current_branch_name")
+    @patch("workflows.create_PR.get_parent_branch_name")
+    def test_create_pull_request_manager_failure(
+        self,
+        mock_parent_branch: MagicMock,
+        mock_current_branch: MagicMock,
+        mock_pr_manager: MagicMock,
+    ) -> None:
+        """Test pull request creation when PullRequestManager fails."""
+        mock_current_branch.return_value = "feature-branch"
+        mock_parent_branch.return_value = "main"
+
+        mock_manager_instance = MagicMock()
+        mock_manager_instance.create_pull_request.return_value = (
+            {}
+        )  # Empty dict indicates failure
+        mock_pr_manager.return_value = mock_manager_instance
+
+        result = create_pull_request(
+            Path("/test/project"), "Test PR Title", "Test PR Body"
+        )
+
+        assert result is False
+
+    @patch("workflows.create_PR.PullRequestManager")
+    @patch("workflows.create_PR.get_current_branch_name")
+    @patch("workflows.create_PR.get_parent_branch_name")
+    def test_create_pull_request_exception(
+        self,
+        mock_parent_branch: MagicMock,
+        mock_current_branch: MagicMock,
+        mock_pr_manager: MagicMock,
+    ) -> None:
+        """Test pull request creation when exception occurs."""
+        mock_current_branch.return_value = "feature-branch"
+        mock_parent_branch.return_value = "main"
+
+        mock_pr_manager.side_effect = Exception("GitHub API error")
+
+        result = create_pull_request(
+            Path("/test/project"), "Test PR Title", "Test PR Body"
+        )
+
+        assert result is False
+
+
+class TestMainWorkflow:
+    """Test main workflow function."""
+
+    @patch("workflows.create_PR.setup_logging")
+    @patch("workflows.create_PR.resolve_project_dir")
+    @patch("workflows.create_PR.check_prerequisites")
+    @patch("workflows.create_PR.generate_pr_summary")
+    @patch("workflows.create_PR.create_pull_request")
+    @patch("workflows.create_PR.cleanup_repository")
+    @patch("workflows.create_PR.commit_all_changes")
+    @patch("workflows.create_PR.git_push")
+    @patch("workflows.create_PR.parse_arguments")
+    def test_main_workflow_success(
+        self,
+        mock_parse_args: MagicMock,
+        mock_git_push: MagicMock,
+        mock_commit: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_generate_summary: MagicMock,
+        mock_check_prereqs: MagicMock,
+        mock_resolve_dir: MagicMock,
+        mock_setup_logging: MagicMock,
+    ) -> None:
+        """Test successful complete workflow execution."""
+        # Setup mocks
+        mock_args = MagicMock()
+        mock_args.log_level = "INFO"
+        mock_parse_args.return_value = mock_args
+
+        mock_resolve_dir.return_value = Path("/test/project")
+        mock_check_prereqs.return_value = True
+        mock_generate_summary.return_value = ("Test PR Title", "Test PR Body")
+        mock_create_pr.return_value = True
+        mock_cleanup.return_value = True
+        mock_commit.return_value = {"success": True, "commit_hash": "abc1234"}
+        mock_git_push.return_value = {"success": True}
+
+        # Should exit with code 0
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            mock_exit.assert_called_once_with(0)
+
+    @patch("workflows.create_PR.setup_logging")
+    @patch("workflows.create_PR.resolve_project_dir")
+    @patch("workflows.create_PR.check_prerequisites")
+    @patch("workflows.create_PR.parse_arguments")
+    def test_main_workflow_prerequisites_fail(
+        self,
+        mock_parse_args: MagicMock,
+        mock_check_prereqs: MagicMock,
+        mock_resolve_dir: MagicMock,
+        mock_setup_logging: MagicMock,
+    ) -> None:
+        """Test workflow exits when prerequisites check fails."""
+        mock_args = MagicMock()
+        mock_args.log_level = "INFO"
+        mock_parse_args.return_value = mock_args
+
+        mock_resolve_dir.return_value = Path("/test/project")
+        mock_check_prereqs.return_value = False
+
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            mock_exit.assert_called_once_with(1)
+
+    @patch("workflows.create_PR.setup_logging")
+    @patch("workflows.create_PR.resolve_project_dir")
+    @patch("workflows.create_PR.check_prerequisites")
+    @patch("workflows.create_PR.generate_pr_summary")
+    @patch("workflows.create_PR.create_pull_request")
+    @patch("workflows.create_PR.parse_arguments")
+    def test_main_workflow_pr_creation_fails(
+        self,
+        mock_parse_args: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_generate_summary: MagicMock,
+        mock_check_prereqs: MagicMock,
+        mock_resolve_dir: MagicMock,
+        mock_setup_logging: MagicMock,
+    ) -> None:
+        """Test workflow exits when PR creation fails."""
+        mock_args = MagicMock()
+        mock_args.log_level = "INFO"
+        mock_parse_args.return_value = mock_args
+
+        mock_resolve_dir.return_value = Path("/test/project")
+        mock_check_prereqs.return_value = True
+        mock_generate_summary.return_value = ("Test PR Title", "Test PR Body")
+        mock_create_pr.return_value = False  # PR creation fails
+
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            mock_exit.assert_called_once_with(1)
+
+    @patch("workflows.create_PR.setup_logging")
+    @patch("workflows.create_PR.resolve_project_dir")
+    @patch("workflows.create_PR.check_prerequisites")
+    @patch("workflows.create_PR.generate_pr_summary")
+    @patch("workflows.create_PR.create_pull_request")
+    @patch("workflows.create_PR.cleanup_repository")
+    @patch("workflows.create_PR.commit_all_changes")
+    @patch("workflows.create_PR.git_push")
+    @patch("workflows.create_PR.parse_arguments")
+    @patch("workflows.create_PR.logger")
+    def test_main_workflow_cleanup_fails(
+        self,
+        mock_logger: MagicMock,
+        mock_parse_args: MagicMock,
+        mock_git_push: MagicMock,
+        mock_commit: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_generate_summary: MagicMock,
+        mock_check_prereqs: MagicMock,
+        mock_resolve_dir: MagicMock,
+        mock_setup_logging: MagicMock,
+    ) -> None:
+        """Test workflow continues when cleanup fails but logs warning."""
+        mock_args = MagicMock()
+        mock_args.log_level = "INFO"
+        mock_parse_args.return_value = mock_args
+
+        mock_resolve_dir.return_value = Path("/test/project")
+        mock_check_prereqs.return_value = True
+        mock_generate_summary.return_value = ("Test PR Title", "Test PR Body")
+        mock_create_pr.return_value = True
+        mock_cleanup.return_value = False  # Cleanup fails
+        mock_commit.return_value = {"success": True, "commit_hash": "abc1234"}
+        mock_git_push.return_value = {"success": True}
+
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            # Should still exit successfully even if cleanup fails
+            mock_exit.assert_called_once_with(0)
+            # Should log warning about cleanup failure
+            mock_logger.warning.assert_called()
