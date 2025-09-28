@@ -34,7 +34,7 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool
 1. Parse arguments and setup logging (reuse implement.py)
 2. Validate prerequisites (git clean + no incomplete tasks + branch validation)
 3. Generate PR summary using LLM + git diff (excluding planning files)
-4. Create GitHub pull request
+4. Create GitHub pull request (before cleanup for safety)
 5. Clean up repository state (only after successful PR creation)
 6. Log success and exit
 
@@ -46,10 +46,10 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool
 4. Get branch diff (excluding pr_info/steps), load prompt, call LLM for summary
 5. Parse LLM response into title and body
 6. Display progress: "Step 2/4: Creating pull request..."
-7. Create PR via PullRequestManager
+7. Create PR via PullRequestManager (basic error handling)
 8. Display progress: "Step 3/4: Cleaning up repository..."
 9. Delete steps directory, truncate task tracker
-10. Commit cleanup changes and push
+10. Commit cleanup changes with message "Clean up pr_info/steps planning files" and push
 11. Display progress: "Step 4/4: Complete!"
 12. Log success message and exit
 ```
@@ -82,8 +82,9 @@ Complete the `workflows/create_PR.py` script by implementing the main workflow o
 4. **KISS Principle**: Keep workflow simple and linear:
    - No loops or complex state management
    - Clear step-by-step progression with progress indicators
-   - Fail fast on any error
+   - Fail fast on prerequisite errors
    - PR creation before cleanup for safety
+   - Log cleanup failures but don't rollback PR (PR is the main goal)
 
 ### Expected Output
 - Complete working script (~100 lines)

@@ -71,7 +71,7 @@ pr_info/
 
 ### Function Signatures
 ```python
-def get_branch_diff(project_dir: Path, base_branch: str = "main") -> str
+def get_branch_diff(project_dir: Path, base_branch: Optional[str] = None, exclude_paths: Optional[list[str]] = None) -> str
 def delete_steps_directory(project_dir: Path) -> bool  
 def truncate_task_tracker(project_dir: Path) -> bool
 def parse_pr_summary(llm_response: str) -> tuple[str, str]
@@ -83,6 +83,8 @@ def main() -> None
 - Fail fast on prerequisites (dirty git, incomplete tasks)
 - Boolean returns for cleanup operations with clear logging
 - Graceful handling of LLM/GitHub API failures
+- Log cleanup failures but don't rollback PR (PR is main goal)
+- Cleanup commit message: "Clean up pr_info/steps planning files"
 
 ### Testing Strategy
 - **Unit Tests**: Each new utility function with mocks

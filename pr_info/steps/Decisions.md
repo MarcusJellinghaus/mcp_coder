@@ -42,6 +42,58 @@ This document logs all decisions made during the project plan review discussion.
 **Decision**: Add exclusion logic to the `get_branch_diff()` function (Option B)  
 **Rationale**: Keeps filtering centralized and reusable within the utility function.
 
+## Plan Review Decisions (Post-Implementation Planning)
+
+### Decision 9: Step Structure Complexity
+**Question**: Should we merge Steps 2-3 to reduce from 5 to 4 steps?  
+**Decision**: Keep 5 steps as planned (Option A)  
+**Rationale**: Maintains current granular testing approach and clear separation of concerns.
+
+### Decision 10: Path Exclusion Parameter Design
+**Question**: Should `get_branch_diff()` have flexible `exclude_paths` or hardcode `pr_info/steps/*`?  
+**Decision**: Keep flexible `exclude_paths` parameter (Option A)  
+**Rationale**: Provides configurability without significant complexity increase.
+
+### Decision 11: Error Recovery for Partial Success
+**Question**: What happens if PR creation succeeds but cleanup fails?  
+**Decision**: Log cleanup failures but don't rollback PR (Option A)  
+**Rationale**: PR creation is the main goal; cleanup is housekeeping.
+
+### Decision 12: Branch Naming Validation
+**Question**: Should script validate current branch follows naming conventions?  
+**Decision**: No branch naming validation (Option A)  
+**Rationale**: Accept any branch name for maximum flexibility.
+
+### Decision 13: GitHub PR Templates Integration
+**Question**: Should script check for and integrate existing GitHub PR templates?  
+**Decision**: Ignore PR templates - use only LLM-generated content (Option A)  
+**Rationale**: Keep implementation simple and focused on automated generation.
+
+### Decision 14: Cleanup Commit Message
+**Question**: What should the commit message be for cleanup operations?  
+**Decision**: "Clean up pr_info/steps planning files" (Option A + folder mention)  
+**Rationale**: Clear, descriptive, and includes specific folder reference.
+
+### Decision 15: Edge Case Handling for Parent Branch Detection
+**Question**: How to handle edge cases in `get_parent_branch_name()` function?  
+**Decision**: Trust existing function with graceful error handling (Option A)  
+**Rationale**: Keep it simple; existing function likely handles common cases well.
+
+### Decision 16: Dry-Run Mode
+**Question**: Should script include `--dry-run` flag to preview actions?  
+**Decision**: No dry-run mode (Option A)  
+**Rationale**: KISS principle - maintain simplicity and direct execution.
+
+### Decision 17: GitHub API Error Handling
+**Question**: How detailed should GitHub API error handling be?  
+**Decision**: Basic error handling using existing PullRequestManager patterns (Option A)  
+**Rationale**: Reuse existing infrastructure and maintain consistency.
+
+### Decision 18: User Confirmation Prompts
+**Question**: Should script prompt user for confirmation before creating PR?  
+**Decision**: No confirmation prompt - fully automated execution (Option A)  
+**Rationale**: Maintain automation goal; prerequisite checks provide adequate safety.
+
 ## Implementation Changes Required
 
 Based on these decisions, the following changes are needed:
@@ -52,4 +104,5 @@ Based on these decisions, the following changes are needed:
    - Add progress indicators for user feedback
    - Include branch validation in prerequisites
    - Use path exclusions when generating diff for PR summary
+   - Use commit message "Clean up pr_info/steps planning files"
 3. **All Steps**: Maintain 5-step structure with comprehensive testing approach
