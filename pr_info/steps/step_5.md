@@ -65,6 +65,7 @@ Create Windows batch wrapper and comprehensive integration tests to validate the
    - Test with sample arguments
 2. **Integration Tests**: Create `tests/test_create_pr_integration.py`:
    - Use real git repository setup (pytest fixtures)
+   - Utilize test data from `tests/workflow_utils/test_data/create_pr/` directory
    - Mock external services (GitHub API, LLM calls)
    - Test complete workflow end-to-end
    - Test all error scenarios and edge cases

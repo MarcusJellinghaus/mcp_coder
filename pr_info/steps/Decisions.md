@@ -94,6 +94,11 @@ This document logs all decisions made during the project plan review discussion.
 **Decision**: No confirmation prompt - fully automated execution (Option A)  
 **Rationale**: Maintain automation goal; prerequisite checks provide adequate safety.
 
+### Decision 19: LLM Response Parsing Fallback
+**Question**: Should there be fallback handling for malformed LLM responses in `parse_pr_summary()`?  
+**Decision**: Use first line as title, include first line in body as well (KISS approach)  
+**Rationale**: Simple fallback that ensures no content is lost; maintains functionality even with unexpected LLM response formats.
+
 ## Implementation Changes Required
 
 Based on these decisions, the following changes are needed:

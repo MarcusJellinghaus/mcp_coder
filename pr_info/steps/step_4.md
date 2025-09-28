@@ -15,6 +15,7 @@ def main() -> None
 ### Helper Functions
 ```python
 def parse_pr_summary(llm_response: str) -> tuple[str, str]  # title, body
+# KISS fallback: first line as title, include first line in body too
 def check_prerequisites(project_dir: Path) -> bool
 def generate_pr_summary(project_dir: Path) -> tuple[str, str]
 def cleanup_repository(project_dir: Path) -> bool

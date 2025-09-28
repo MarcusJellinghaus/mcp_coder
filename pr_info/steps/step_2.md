@@ -55,18 +55,19 @@ Create utility functions for repository cleanup operations in a new `workflows/c
 
 ### Requirements
 1. **TDD Approach**: Write tests first in `tests/test_create_pr.py`
-2. **Follow Existing Patterns**: Study `workflows/implement.py` for:
+2. **Test Data Organization**: Create `tests/workflow_utils/test_data/create_pr/` directory for test fixtures (following existing task tracker test data pattern)
+3. **Follow Existing Patterns**: Study `workflows/implement.py` for:
    - Function organization and structure
    - Error handling with boolean returns
    - Logging patterns and messages
    - Constants and helper function style
-3. **Test Coverage**: Include tests for:
+4. **Test Coverage**: Include tests for:
    - Successful directory deletion
    - Missing directories (should not fail)
    - Task tracker truncation
    - Missing task tracker file handling
    - File permission errors
-4. **Safety**: Use temporary directories in tests
+5. **Safety**: Use temporary directories in tests
 
 ### Expected Output
 - New test file with mock-based tests
