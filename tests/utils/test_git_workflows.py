@@ -12,6 +12,7 @@ from mcp_coder.utils.git_operations import (
     commit_staged_files,
     create_branch,
     fetch_remote,
+    get_branch_diff,
     get_current_branch_name,
     get_default_branch_name,
     get_full_status,
@@ -2223,20 +2224,20 @@ class TestGitBranchOperations:
         # Test current branch exists
         current_branch = get_current_branch_name(project_dir)
         assert current_branch is not None
-        assert branch_exists(current_branch, project_dir) is True
+        assert branch_exists(project_dir, current_branch) is True
 
         # Create a new branch and test it exists
         result = create_branch("test-exists", project_dir)
         assert result is True
-        assert branch_exists("test-exists", project_dir) is True
+        assert branch_exists(project_dir, "test-exists") is True
 
     def test_branch_exists_false(self, git_repo_with_files: tuple[Repo, Path]) -> None:
         """Test branch_exists returns False for non-existent branch."""
         repo, project_dir = git_repo_with_files
 
         # Test non-existent branch
-        assert branch_exists("nonexistent-branch", project_dir) is False
-        assert branch_exists("another-missing-branch", project_dir) is False
+        assert branch_exists(project_dir, "nonexistent-branch") is False
+        assert branch_exists(project_dir, "another-missing-branch") is False
 
     def test_branch_exists_invalid_name(
         self, git_repo_with_files: tuple[Repo, Path]
@@ -2245,12 +2246,12 @@ class TestGitBranchOperations:
         repo, project_dir = git_repo_with_files
 
         # Test empty names
-        assert branch_exists("", project_dir) is False
-        assert branch_exists("   ", project_dir) is False
+        assert branch_exists(project_dir, "") is False
+        assert branch_exists(project_dir, "   ") is False
 
     def test_branch_exists_non_git_directory(self, tmp_path: Path) -> None:
         """Test branch_exists returns False for non-git directory."""
-        assert branch_exists("any-branch", tmp_path) is False
+        assert branch_exists(tmp_path, "any-branch") is False
 
     def test_branch_exists_multiple_branches(
         self, git_repo_with_files: tuple[Repo, Path]
@@ -2267,11 +2268,11 @@ class TestGitBranchOperations:
 
         # Test all created branches exist
         for branch_name in branches:
-            assert branch_exists(branch_name, project_dir) is True
+            assert branch_exists(project_dir, branch_name) is True
 
         # Test non-existent branches still return False
-        assert branch_exists("feature-3", project_dir) is False
-        assert branch_exists("release-2.0", project_dir) is False
+        assert branch_exists(project_dir, "feature-3") is False
+        assert branch_exists(project_dir, "release-2.0") is False
 
     def test_branch_exists_after_checkout(
         self, git_repo_with_files: tuple[Repo, Path]
@@ -2284,7 +2285,7 @@ class TestGitBranchOperations:
         assert result is True
 
         # Branch should exist regardless of current branch
-        assert branch_exists("test-checkout-exists", project_dir) is True
+        assert branch_exists(project_dir, "test-checkout-exists") is True
 
         # Go back to original branch
         original_branch = "main" if "main" in [h.name for h in repo.heads] else "master"
@@ -2292,8 +2293,8 @@ class TestGitBranchOperations:
         assert checkout_result is True
 
         # Branch should still exist after checkout
-        assert branch_exists("test-checkout-exists", project_dir) is True
-        assert branch_exists(original_branch, project_dir) is True
+        assert branch_exists(project_dir, "test-checkout-exists") is True
+        assert branch_exists(project_dir, original_branch) is True
 
     def test_push_branch_success(self, git_repo_with_files: tuple[Repo, Path]) -> None:
         """Test push_branch successfully pushes branch to origin (mocked)."""
@@ -2541,3 +2542,161 @@ class TestGitBranchOperations:
         # Try to fetch - should fail due to no origin remote
         result = fetch_remote(project_dir)
         assert result is False
+
+
+@pytest.mark.git_integration
+class TestGetBranchDiff:
+    """Test get_branch_diff function for generating branch differences."""
+
+    def test_get_branch_diff_valid_diff(
+        self, git_repo_with_files: tuple[Repo, Path]
+    ) -> None:
+        """Test get_branch_diff returns valid diff between branches."""
+        repo, project_dir = git_repo_with_files
+
+        # Get the default branch name
+        from mcp_coder.utils.git_operations import get_default_branch_name
+
+        default_branch = get_default_branch_name(project_dir)
+
+        # Create a feature branch
+        feature_branch = "feature/test-diff"
+        repo.create_head(feature_branch)
+        repo.heads[feature_branch].checkout()
+
+        # Make changes in feature branch
+        test_file = project_dir / "test_file.py"
+        test_file.write_text("def new_function():\n    return 'hello'\n")
+        repo.index.add([str(test_file)])
+        repo.index.commit("Add new function")
+
+        # Get diff between feature branch and default branch
+        diff = get_branch_diff(project_dir, base_branch=default_branch)
+
+        # Verify diff contains expected content
+        assert diff != ""
+        assert "def new_function():" in diff
+        assert "return 'hello'" in diff
+        assert "test_file.py" in diff
+
+    def test_get_branch_diff_auto_detect_base(
+        self, git_repo_with_files: tuple[Repo, Path]
+    ) -> None:
+        """Test get_branch_diff auto-detects base branch when not specified."""
+        repo, project_dir = git_repo_with_files
+
+        # Create a feature branch from main
+        feature_branch = "feature/auto-detect"
+        repo.create_head(feature_branch)
+        repo.heads[feature_branch].checkout()
+
+        # Make changes
+        readme = project_dir / "README.md"
+        readme.write_text("# Updated README\n\nNew content here.\n")
+        repo.index.add([str(readme)])
+        repo.index.commit("Update README")
+
+        # Get diff without specifying base branch
+        diff = get_branch_diff(project_dir)
+
+        # Should auto-detect main/master as base
+        assert diff != ""
+        assert "Updated README" in diff
+        assert "New content here" in diff
+
+    def test_get_branch_diff_path_exclusion(
+        self, git_repo_with_files: tuple[Repo, Path]
+    ) -> None:
+        """Test get_branch_diff excludes specified paths from diff."""
+        repo, project_dir = git_repo_with_files
+
+        # Get the default branch name
+        from mcp_coder.utils.git_operations import get_default_branch_name
+
+        default_branch = get_default_branch_name(project_dir)
+
+        # Create feature branch
+        feature_branch = "feature/exclusions"
+        repo.create_head(feature_branch)
+        repo.heads[feature_branch].checkout()
+
+        # Create changes in multiple files
+        included_file = project_dir / "included.py"
+        included_file.write_text("# This should be in diff\n")
+
+        excluded_dir = project_dir / "pr_info"
+        excluded_dir.mkdir(exist_ok=True)
+        excluded_file = excluded_dir / "excluded.md"
+        excluded_file.write_text("# This should be excluded\n")
+
+        repo.index.add([str(included_file), str(excluded_file)])
+        repo.index.commit("Add files for exclusion test")
+
+        # Get diff with path exclusion
+        diff = get_branch_diff(
+            project_dir, base_branch=default_branch, exclude_paths=["pr_info/"]
+        )
+
+        # Verify exclusion worked
+        assert "This should be in diff" in diff
+        assert "This should be excluded" not in diff
+        assert "included.py" in diff
+        assert "excluded.md" not in diff
+
+    def test_get_branch_diff_invalid_repository(self, tmp_path: Path) -> None:
+        """Test get_branch_diff returns empty string for invalid repository."""
+        # Try to get diff from non-git directory
+        diff = get_branch_diff(tmp_path)
+
+        # Should return empty string on error
+        assert diff == ""
+
+    def test_get_branch_diff_missing_base_branch(
+        self, git_repo_with_files: tuple[Repo, Path]
+    ) -> None:
+        """Test get_branch_diff handles missing base branch gracefully."""
+        repo, project_dir = git_repo_with_files
+
+        # Try to get diff with non-existent base branch
+        diff = get_branch_diff(project_dir, base_branch="nonexistent-branch")
+
+        # Should return empty string when base branch doesn't exist
+        assert diff == ""
+
+    def test_get_branch_diff_no_changes(
+        self, git_repo_with_files: tuple[Repo, Path]
+    ) -> None:
+        """Test get_branch_diff returns empty string when no changes between branches."""
+        repo, project_dir = git_repo_with_files
+
+        # Create a branch without any changes
+        feature_branch = "feature/no-changes"
+        repo.create_head(feature_branch)
+        repo.heads[feature_branch].checkout()
+
+        # Get diff - should be empty since no changes
+        diff = get_branch_diff(project_dir, base_branch="main")
+
+        # Should return empty string when no differences
+        assert diff == ""
+
+    def test_get_branch_diff_on_base_branch(
+        self, git_repo_with_files: tuple[Repo, Path]
+    ) -> None:
+        """Test get_branch_diff when current branch is the base branch."""
+        repo, project_dir = git_repo_with_files
+
+        # Get the default branch name (could be main or master)
+        from mcp_coder.utils.git_operations import get_default_branch_name
+
+        default_branch = get_default_branch_name(project_dir)
+        assert default_branch is not None, "Default branch should exist"
+
+        # Ensure we're on the default branch
+        repo.heads[default_branch].checkout()
+
+        # Try to get diff while on default branch
+        diff = get_branch_diff(project_dir, base_branch=default_branch)
+
+        # Should return empty string when on base branch
+        assert diff == ""

@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Add Git Branch Diff Function with Tests
-- [ ] Write tests in tests/utils/test_git_workflows.py
+- [x] Write tests in tests/utils/test_git_workflows.py
 - [ ] Add get_branch_diff() function to src/mcp_coder/utils/git_operations.py
 - [ ] Run pylint check for Step 1 implementation
 - [ ] Run pytest check for Step 1 implementation  

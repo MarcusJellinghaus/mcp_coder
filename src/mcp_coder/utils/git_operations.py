@@ -893,7 +893,7 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
             # Check symbolic ref for origin/HEAD (authoritative source)
             try:
                 # This shows what the remote considers the default branch
-                result: str = repo.git.symbolic_ref("refs/remotes/origin/HEAD")
+                result = repo.git.symbolic_ref("refs/remotes/origin/HEAD")
                 # Result looks like: "refs/remotes/origin/main"
                 if result.startswith("refs/remotes/origin/"):
                     default_branch = result.replace("refs/remotes/origin/", "")
@@ -985,6 +985,107 @@ def get_parent_branch_name(project_dir: Path) -> Optional[str]:
         logger.debug("No main branch found, cannot determine parent branch")
 
     return main_branch
+
+
+def get_branch_diff(
+    project_dir: Path,
+    base_branch: Optional[str] = None,
+    exclude_paths: Optional[list[str]] = None,
+) -> str:
+    """Generate git diff between current branch and base branch.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+        base_branch: Base branch to compare against (auto-detected if None)
+        exclude_paths: List of paths to exclude from diff (e.g., ['pr_info/', '*.log'])
+
+    Returns:
+        Git diff string between base branch and current HEAD, or empty string on error
+
+    Note:
+        - Uses three-dot notation (base...HEAD) to show changes on current branch
+        - Auto-detects base branch using get_parent_branch_name() if not provided
+        - Returns empty string for any error conditions (invalid repo, missing branch, etc.)
+        - Uses unified diff format with 5 lines of context
+    """
+    logger.debug(
+        "Getting branch diff for %s (base: %s, excludes: %s)",
+        project_dir,
+        base_branch,
+        exclude_paths,
+    )
+
+    # Validate repository
+    if not is_git_repository(project_dir):
+        logger.error("Directory %s is not a git repository", project_dir)
+        return ""
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Auto-detect base branch if not provided
+            if base_branch is None:
+                base_branch = get_parent_branch_name(project_dir)
+                if base_branch is None:
+                    logger.error("Could not determine base branch for diff")
+                    return ""
+                logger.debug("Auto-detected base branch: %s", base_branch)
+
+            # Get current branch for validation
+            current_branch = get_current_branch_name(project_dir)
+            if current_branch is None:
+                logger.error("Could not determine current branch")
+                return ""
+
+            # Check if current branch is the base branch
+            if current_branch == base_branch:
+                logger.debug("Current branch is the base branch, no diff to show")
+                return ""
+
+            # Verify base branch exists
+            if not branch_exists(project_dir, base_branch):
+                logger.error("Base branch '%s' does not exist", base_branch)
+                return ""
+
+            # Build git diff command
+            if exclude_paths:
+                # When using exclusions, we need to construct the command differently
+                # git diff base...HEAD -- . ':!excluded_path'
+                diff_args = [
+                    f"{base_branch}...HEAD",
+                    "--unified=5",
+                    "--no-prefix",
+                    "--",
+                    ".",
+                ]
+                for path in exclude_paths:
+                    # Use pathspec magic to exclude paths
+                    diff_args.append(f":!{path}")
+            else:
+                # Simple diff without exclusions
+                diff_args = [
+                    f"{base_branch}...HEAD",
+                    "--unified=5",
+                    "--no-prefix",
+                ]
+
+            # Execute git diff
+            diff_output = repo.git.diff(*diff_args)
+
+            logger.debug(
+                "Generated diff between %s and %s (%d bytes)",
+                base_branch,
+                current_branch,
+                len(diff_output),
+            )
+
+            return diff_output
+
+    except GitCommandError as e:
+        logger.error("Git command error generating diff: %s", e)
+        return ""
+    except Exception as e:
+        logger.error("Unexpected error generating diff: %s", e)
+        return ""
 
 
 def git_push(project_dir: Path) -> dict[str, Any]:
@@ -1205,12 +1306,12 @@ def checkout_branch(branch_name: str, project_dir: Path) -> bool:
         return False
 
 
-def branch_exists(branch_name: str, project_dir: Path) -> bool:
+def branch_exists(project_dir: Path, branch_name: str) -> bool:
     """Check if a git branch exists locally.
 
     Args:
-        branch_name: Name of the branch to check
         project_dir: Path to the project directory containing git repository
+        branch_name: Name of the branch to check
 
     Returns:
         True if branch exists locally, False otherwise
@@ -1272,7 +1373,7 @@ def push_branch(branch_name: str, project_dir: Path, set_upstream: bool = True) 
     try:
         with _safe_repo_context(project_dir) as repo:
             # Check if branch exists locally
-            if not branch_exists(branch_name, project_dir):
+            if not branch_exists(project_dir, branch_name):
                 logger.error("Branch '%s' does not exist locally", branch_name)
                 return False
 

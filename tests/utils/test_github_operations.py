@@ -386,7 +386,7 @@ class TestPullRequestManagerIntegration:
                 branch_exists_remotely = False
 
             # Check if the test branch already exists locally
-            branch_exists_locally = branch_exists(test_branch, pr_manager.project_dir)
+            branch_exists_locally = branch_exists(pr_manager.project_dir, test_branch)
             print(f"Branch {test_branch} exists locally: {branch_exists_locally}")
 
             if branch_exists_remotely:
