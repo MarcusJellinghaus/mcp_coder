@@ -35,7 +35,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check for Step 2 implementation
 - [x] Run pytest check for Step 2 implementation
 - [x] Run mypy check for Step 2 implementation
-- [ ] Prepare git commit message for Step 2
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Add PR Summary Prompt Template
 - [ ] Add PR Summary Generation prompt to src/mcp_coder/prompts/prompts.md
