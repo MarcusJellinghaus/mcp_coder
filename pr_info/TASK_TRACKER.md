@@ -31,10 +31,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 2: Add Repository Cleanup Functions with Tests
 - [x] Create tests/test_create_pr.py with tests for cleanup functions
-- [ ] Add utility functions to workflows/create_PR.py
-- [ ] Run pylint check for Step 2 implementation
-- [ ] Run pytest check for Step 2 implementation
-- [ ] Run mypy check for Step 2 implementation
+- [x] Add utility functions to workflows/create_PR.py
+- [x] Run pylint check for Step 2 implementation
+- [x] Run pytest check for Step 2 implementation
+- [x] Run mypy check for Step 2 implementation
 - [ ] Prepare git commit message for Step 2
 
 ### Step 3: Add PR Summary Prompt Template
