@@ -24,8 +24,8 @@ from mcp_coder.utils.git_operations import (
     git_push,
     is_working_directory_clean,
 )
-from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
+from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 # Constants
