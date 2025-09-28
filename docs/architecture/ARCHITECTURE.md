@@ -137,6 +137,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **CLI implementation**: `llm_providers/claude/claude_code_cli.py` - Subprocess execution  
 - **API implementation**: `llm_providers/claude/claude_code_api.py` - SDK integration
 - **Executable finder**: `llm_providers/claude/claude_executable_finder.py` - Installation detection
+- **CLI verification**: `llm_providers/claude/claude_cli_verification.py` - Installation validation
 
 ### Automation & Operations (`src/mcp_coder/utils/`)
 - **Git operations**: `utils/git_operations.py` - Repository automation
