@@ -9,7 +9,7 @@ Add function to generate git diff between current branch and main/master branch.
 
 ### Main Function Signature
 ```python
-def get_branch_diff(project_dir: Path, base_branch: Optional[str] = None) -> str
+def get_branch_diff(project_dir: Path, base_branch: Optional[str] = None, exclude_paths: Optional[list[str]] = None) -> str
 ```
 
 ## HOW
@@ -22,17 +22,19 @@ def get_branch_diff(project_dir: Path, base_branch: Optional[str] = None) -> str
 
 ### Function Behavior
 - Generate diff from base branch to current HEAD
-- Auto-detect base branch if not provided (main/master)
+- Auto-detect base branch using existing `get_parent_branch_name()` function
+- Exclude specified paths from diff (for filtering planning files)
 - Return empty string on error (consistent with existing functions)
 - Use same error logging patterns as other git functions
 
 ## ALGORITHM (Pseudocode)
 ```
 1. Validate project_dir is git repository
-2. Determine base_branch (provided or auto-detect main/master)  
+2. Determine base_branch (provided or use get_parent_branch_name())
 3. Get current branch name for validation
-4. Execute: git diff base_branch...HEAD --unified=5 --no-prefix
-5. Return diff string or empty on error
+4. Validate current branch has commits different from base branch
+5. Execute: git diff base_branch...HEAD --unified=5 --no-prefix with exclusions
+6. Return diff string or empty on error
 ```
 
 ## LLM Prompt
@@ -55,6 +57,8 @@ Add a `get_branch_diff()` function to `src/mcp_coder/utils/git_operations.py` th
    - Invalid repository
    - Missing base branch
    - Empty diff scenarios
+   - Path exclusion functionality
+   - Branch validation (no commits different from base)
 4. **Integration**: Ensure function works with existing git operation utilities
 
 ### Expected Output

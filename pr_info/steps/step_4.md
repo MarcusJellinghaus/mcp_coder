@@ -32,22 +32,26 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool
 
 ### Workflow Steps
 1. Parse arguments and setup logging (reuse implement.py)
-2. Validate prerequisites (git clean + no incomplete tasks)
-3. Generate PR summary using LLM + git diff
-4. Clean up repository state
-5. Create GitHub pull request
+2. Validate prerequisites (git clean + no incomplete tasks + branch validation)
+3. Generate PR summary using LLM + git diff (excluding planning files)
+4. Create GitHub pull request
+5. Clean up repository state (only after successful PR creation)
 6. Log success and exit
 
 ## ALGORITHM (Pseudocode)
 ```
 1. Setup CLI, logging, project validation (copy from implement.py)
-2. Check git clean AND no incomplete tasks (exit if fail)
-3. Get branch diff, load prompt, call LLM for summary
-4. Parse LLM response into title and body
-5. Delete steps directory, truncate task tracker
-6. Commit cleanup changes and push
+2. Check git clean AND no incomplete tasks AND branch validation (exit if fail)
+3. Display progress: "Step 1/4: Generating PR summary..."
+4. Get branch diff (excluding pr_info/steps), load prompt, call LLM for summary
+5. Parse LLM response into title and body
+6. Display progress: "Step 2/4: Creating pull request..."
 7. Create PR via PullRequestManager
-8. Log success message and exit
+8. Display progress: "Step 3/4: Cleaning up repository..."
+9. Delete steps directory, truncate task tracker
+10. Commit cleanup changes and push
+11. Display progress: "Step 4/4: Complete!"
+12. Log success message and exit
 ```
 
 ## LLM Prompt
@@ -65,9 +69,10 @@ Complete the `workflows/create_PR.py` script by implementing the main workflow o
    - Copy import structure and constants
    - Replace only the workflow loop with linear PR creation steps
 2. **Integration**: Use functions from previous steps:
-   - `get_branch_diff()` from git_operations
+   - `get_branch_diff()` from git_operations (with pr_info/steps exclusion)
    - `delete_steps_directory()` and `truncate_task_tracker()` 
    - `get_incomplete_tasks()` for prerequisite check
+   - `get_parent_branch_name()` for base branch detection
    - `PullRequestManager` for PR creation
 3. **Test Coverage**: Extend tests in `tests/test_create_pr.py`:
    - Mock all external dependencies (git, GitHub API, file operations)
@@ -76,8 +81,9 @@ Complete the `workflows/create_PR.py` script by implementing the main workflow o
    - Test error scenarios and exits
 4. **KISS Principle**: Keep workflow simple and linear:
    - No loops or complex state management
-   - Clear step-by-step progression
+   - Clear step-by-step progression with progress indicators
    - Fail fast on any error
+   - PR creation before cleanup for safety
 
 ### Expected Output
 - Complete working script (~100 lines)
