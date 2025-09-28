@@ -30,7 +30,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 1
 
 ### Step 2: Add Repository Cleanup Functions with Tests
-- [ ] Create tests/test_create_pr.py with tests for cleanup functions
+- [x] Create tests/test_create_pr.py with tests for cleanup functions
 - [ ] Add utility functions to workflows/create_PR.py
 - [ ] Run pylint check for Step 2 implementation
 - [ ] Run pytest check for Step 2 implementation
