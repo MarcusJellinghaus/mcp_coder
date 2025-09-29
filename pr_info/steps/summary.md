@@ -13,12 +13,12 @@ Add GitHub Issues management capabilities to mcp_coder, following the same patte
 ## Architectural Changes
 
 ### New Components
-- **IssueManager class**: Main API class in `src/mcp_coder/utils/github_operations/issue_manager.py`
+- **IssueManager class**: Main API class in `src/mcp_coder/utils/github_operations/issue_manager.py` inheriting from BaseGitHubManager
 - **Data structures**: TypedDict classes for IssueData, CommentData, LabelData
 - **Integration tests**: Test suite with `github_integration` marker
 
 ### Design Principles
-- **Mirror PR Manager**: Same error handling, validation, logging patterns as `pr_manager.py`
+- **Inherit from BaseGitHubManager**: Reuse GitHub client setup, repository access, and validation patterns
 - **Structured data**: TypedDict return types for consistent API
 - **Configuration reuse**: Leverage existing GitHub token configuration
 - **Comprehensive validation**: Input validation with detailed error messages
@@ -40,7 +40,7 @@ src/mcp_coder/utils/github_operations/__init__.py        # Export IssueManager c
 
 ## Implementation Steps
 1. **Data Structures**: Define TypedDict classes for structured returns
-2. **Class Structure**: IssueManager class skeleton with validation
+2. **Class Structure**: IssueManager class inheriting from BaseGitHubManager with additional validation
 3. **Basic Issue Reading**: Get single issue and list issues with filtering
 4. **Issue Creation & Lifecycle**: Create, close, reopen issues with integration test
 5. **Repository Labels & Add Labels**: Get available labels and add labels to issues

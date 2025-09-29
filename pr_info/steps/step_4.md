@@ -30,7 +30,7 @@ def reopen_issue(self, issue_number: int) -> IssueData: ...
 ## ALGORITHM
 ```
 1. Validate inputs (title, body, issue_number, labels)
-2. Get repository using _parse_and_get_repo()
+2. Get repository using inherited _get_repository()
 3. Call GitHub API methods (create_issue, edit for close/reopen)
 4. Convert GitHub objects to IssueData dictionary format
 5. Return structured data or empty dict on non-auth errors

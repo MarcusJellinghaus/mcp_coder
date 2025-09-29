@@ -27,7 +27,7 @@ def set_labels(self, issue_number: int, *labels: str) -> IssueData: ...
 ## ALGORITHM
 ```
 1. Validate issue_number and labels input
-2. Get repository and issue using existing methods
+2. Get repository using inherited _get_repository() method
 3. Call GitHub API label methods (remove_from_labels, set_labels)
 4. Convert updated issue to IssueData dictionary
 5. Return structured data or empty dict on non-auth errors

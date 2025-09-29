@@ -26,7 +26,7 @@ def get_comments(self, issue_number: int) -> List[CommentData]: ...
 ## ALGORITHM
 ```
 1. Validate issue_number and body content
-2. Get repository and issue using existing methods
+2. Get repository using inherited _get_repository() method
 3. Call GitHub API comment methods (create_comment, get_comments)
 4. Convert GitHub comment objects to CommentData dictionaries
 5. Return structured data or empty dict/list on non-auth errors

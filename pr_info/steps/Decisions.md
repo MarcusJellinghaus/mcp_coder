@@ -58,3 +58,54 @@
 - **Decision**: Keep integration tests in same file, enhance across steps
 - **Rationale**: Single evolving test is simpler than multiple test files or shared test utilities
 - **Result**: One comprehensive integration test file that grows in Steps 4, 6, 8, 10
+
+
+## New Decisions from Project Plan Review Discussion
+
+### Integration Testing Approach
+- **Decision**: Single evolving integration test (Option A)
+- **Discussion**: User confirmed preference for single test creating only one GitHub issue across all test phases
+- **Rationale**: Meets constraint of creating only one test issue, simpler and more robust
+- **Result**: Keep existing plan for single integration test that grows in Steps 4, 6, 8, 10
+
+### Label Operations Structure
+- **Decision**: Keep separate methods for label operations (Option A)  
+- **Discussion**: User chose separate methods over consolidated approach
+- **Rationale**: Explicit API is worth the small amount of extra code
+- **Result**: Maintain add_labels, remove_labels, set_labels as distinct methods
+
+### Authentication and Test Repository
+- **Decision**: Use existing github_test_setup fixture and user config system
+- **Discussion**: User confirmed dedicated test repo and token exist, accessible via user config
+- **Rationale**: Existing system works well for PullRequestManager and LabelsManager tests
+- **Result**: Follow same authentication patterns as existing GitHub operations tests
+
+### Rate Limiting Strategy
+- **Decision**: No special rate limiting handling (Option A)
+- **Discussion**: User confirmed existing tests work fine without special handling
+- **Rationale**: Current approach with existing PR/Labels tests is sufficient
+- **Result**: Use same simple approach as existing integration tests
+
+### BaseGitHubManager Usage
+- **Decision**: Inherit from BaseGitHubManager instead of copying code
+- **Discussion**: User corrected the approach - "Do not copy BaseGitHubManager, USE it"
+- **Rationale**: Inheritance provides code reuse, automatic updates, consistency with existing managers
+- **Result**: IssueManager inherits from BaseGitHubManager, significantly simplifying Steps 2-3
+
+### GitHub Enterprise Support
+- **Decision**: Plan for configurable base URL but implement later
+- **Discussion**: User preferred Option B (basic GitHub Enterprise support) but then said "Let's go back... Don't worry about this now"
+- **Rationale**: Focus on current implementation, enhance GitHub Enterprise support later
+- **Result**: Use existing BaseGitHubManager as-is, GitHub Enterprise support as future enhancement
+
+### Issue Summary Method
+- **Decision**: Skip get_issue_summary method for now (Option B)
+- **Discussion**: User chose to focus on core functionality first
+- **Rationale**: Keep current plan focused, add summary method later if needed
+- **Result**: No additional summary method in current implementation
+
+### Step Organization
+- **Decision**: Keep current step organization (Option A)
+- **Discussion**: User confirmed current organization is fine despite Step 3 being lighter
+- **Rationale**: Good to have some lighter steps for variety and feedback points
+- **Result**: Maintain existing 10-step structure without rebalancing

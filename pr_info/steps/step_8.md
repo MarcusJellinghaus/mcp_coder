@@ -27,7 +27,7 @@ def delete_comment(self, comment_id: int) -> bool: ...
 ## ALGORITHM
 ```
 1. Validate comment_id and body content (for edit)
-2. Get repository using _parse_and_get_repo()
+2. Get repository using inherited _get_repository()
 3. Call GitHub API comment methods (edit_comment, delete_comment)
 4. Convert GitHub comment objects to CommentData dictionaries (for edit)
 5. Return structured data, boolean, or empty dict/False on non-auth errors

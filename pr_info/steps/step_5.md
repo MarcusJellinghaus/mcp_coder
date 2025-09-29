@@ -26,7 +26,7 @@ def add_labels(self, issue_number: int, *labels: str) -> IssueData: ...
 ## ALGORITHM
 ```
 1. For get_available_labels: Get repository labels and convert to LabelData
-2. For add_labels: Validate issue_number and labels, add to issue
+2. For add_labels: Validate issue_number and labels, get repository using inherited _get_repository(), add to issue
 3. Call GitHub API methods (get_labels, add_to_labels)
 4. Convert GitHub objects to structured dictionary formats
 5. Return structured data or empty dict/list on non-auth errors
