@@ -322,7 +322,7 @@ class TestAskClaudeCodeApi:
 # Any import errors will occur at module load time if the dependency is missing
 
 
-@pytest.mark.claude_integration
+@pytest.mark.claude_api_integration
 class TestClaudeCodeApiIntegration:
     """Integration tests for the Claude Code API implementation."""
 

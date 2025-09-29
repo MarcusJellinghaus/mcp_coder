@@ -25,13 +25,13 @@ logger = logging.getLogger(__name__)
 
 def _parse_llm_method(llm_method: str) -> tuple[str, str]:
     """Parse llm_method parameter into provider and method.
-    
+
     Args:
         llm_method: Either 'claude_code_cli' or 'claude_code_api'
-        
+
     Returns:
         Tuple of (provider, method)
-        
+
     Raises:
         ValueError: If llm_method is not supported
     """
@@ -40,7 +40,9 @@ def _parse_llm_method(llm_method: str) -> tuple[str, str]:
     elif llm_method == "claude_code_api":
         return "claude", "api"
     else:
-        raise ValueError(f"Unsupported llm_method: {llm_method}. Supported: 'claude_code_cli', 'claude_code_api'")
+        raise ValueError(
+            f"Unsupported llm_method: {llm_method}. Supported: 'claude_code_cli', 'claude_code_api'"
+        )
 
 
 def execute_commit_auto(args: argparse.Namespace) -> int:
@@ -56,7 +58,9 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         return 1
 
     # 2. Stage changes and generate commit message
-    success, commit_message, error = generate_commit_message_with_llm(project_dir, args.llm_method)
+    success, commit_message, error = generate_commit_message_with_llm(
+        project_dir, args.llm_method
+    )
     if not success:
         print(f"Error: {error}", file=sys.stderr)
         return 2

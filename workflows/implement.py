@@ -36,7 +36,9 @@ from typing import Optional
 from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
-from mcp_coder.llm_providers.claude.claude_code_api import ask_claude_code_api_detailed_sync
+from mcp_coder.llm_providers.claude.claude_code_api import (
+    ask_claude_code_api_detailed_sync,
+)
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import (
     commit_all_changes,
