@@ -70,7 +70,7 @@ def labels_manager(tmp_path: Path) -> Generator[LabelsManager, None, None]:
 ### Test Data
 ```python
 test_label_name = f"test-label-{timestamp}"
-test_color = "FF5500"  # Orange
+test_color = "FF5500"  # Orange (both "FF5500" and "#FF5500" work)
 test_description = f"Test label created at {timestamp}"
 ```
 

@@ -49,9 +49,10 @@ def delete_label(self, name: str) -> bool
 ### create_label() Logic
 ```
 1. Validate: name and color using validation methods
-2. Get: Repository object via _parse_and_get_repo()
-3. Create: Label using repo.create_label(name, color, description)
-4. Return: LabelData dict with created label info (empty dict on error)
+2. Normalize: Strip '#' from color if present
+3. Get: Repository object via _parse_and_get_repo()
+4. Create: Label using repo.create_label(name, normalized_color, description)
+5. Return: LabelData dict with created label info (empty dict on error)
 ```
 
 ### delete_label() Logic

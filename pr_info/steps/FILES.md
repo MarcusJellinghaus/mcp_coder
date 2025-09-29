@@ -6,6 +6,7 @@
 pr_info/steps/
 ├── README.md                    # Overview of implementation steps
 ├── summary.md                   # Architectural changes and overview
+├── decisions.md                 # Implementation decisions log
 ├── step_1.md                    # Unit tests for validation (TDD)
 ├── step_2.md                    # LabelsManager implementation
 ├── step_3.md                    # Integration tests (TDD)
@@ -69,7 +70,7 @@ def labels_manager(tmp_path: Path):
 
 ## Implementation Statistics
 
-- **Files created**: 7 (6 documentation + 1 source)
+- **Files created**: 8 (7 documentation + 1 source)
 - **Files modified**: 2-3 (exports, tests, optional docs)
 - **Lines of code**: ~300-400 total
   - labels_manager.py: ~200 lines

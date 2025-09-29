@@ -56,8 +56,8 @@ from mcp_coder.utils.github_operations.labels_manager import LabelData
 ### Test Inputs
 - Valid label name: `"bug"`, `"feature-request"`
 - Invalid label names: `""`, `"   "`, names with `#` or `@`
-- Valid colors: `"FF0000"`, `"00FF00"` (6-char hex without #)
-- Invalid colors: `"#FF0000"`, `"red"`, `"12345"`, `"GGGGGG"`
+- Valid colors: `"FF0000"`, `"#FF0000"`, `"00ff00"`, `"#00FF00"` (6-char hex with or without #)
+- Invalid colors: `"red"`, `"12345"`, `"GGGGGG"`, `"#12345"`
 
 ### Expected Outputs
 - Validation failures: `ValueError` with descriptive message
@@ -77,7 +77,7 @@ Tasks:
 3. Follow existing test patterns for git repo setup and token mocking
 4. Test validation rules:
    - Label names: non-empty strings without special chars (#, @, /)
-   - Colors: 6-character hex strings (no # prefix)
+   - Colors: 6-character hex strings (accepts both "FF0000" and "#FF0000" formats)
 5. Use pytest.raises for ValueError assertions
 
 Run: pytest tests/utils/test_github_operations.py::TestLabelsManagerUnit -v

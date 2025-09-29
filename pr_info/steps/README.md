@@ -5,6 +5,7 @@ This directory contains the step-by-step implementation plan for adding GitHub L
 ## Files in this Directory
 
 - `summary.md` - Overview, architectural changes, and file manifest
+- `decisions.md` - Implementation decisions made during plan review
 - `step_1.md` - Unit tests for LabelsManager validation (TDD red phase)
 - `step_2.md` - Implement LabelsManager class initialization (TDD green phase)
 - `step_3.md` - Integration tests for label operations (TDD red phase)

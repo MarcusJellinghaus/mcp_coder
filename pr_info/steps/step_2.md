@@ -75,9 +75,10 @@ from .github_utils import parse_github_url
 
 ### Color Validation
 ```
-1. Check: color is string with exactly 6 characters
-2. Check: all characters are hex digits (0-9, A-F, a-f)
-3. Return: True if valid, False otherwise (log error)
+1. Strip: leading '#' character if present
+2. Check: remaining string has exactly 6 characters
+3. Check: all characters are hex digits (0-9, A-F, a-f)
+4. Return: True if valid, False otherwise (log error)
 ```
 
 ## DATA
@@ -108,7 +109,7 @@ Tasks:
 1. Create labels_manager.py with LabelData TypedDict and LabelsManager class
 2. Implement __init__ following same pattern as PullRequestManager
 3. Implement _validate_label_name (no special chars: # @ /)
-4. Implement _validate_color (6-char hex string, no # prefix)
+4. Implement _validate_color (6-char hex string, accepts both "FF0000" and "#FF0000" formats - normalize by stripping # prefix)
 5. Implement _parse_and_get_repo (same pattern as PullRequestManager)
 6. Update __init__.py to export LabelsManager and LabelData
 
@@ -126,6 +127,7 @@ Expected: All tests PASS (green phase)
 
 - Copy initialization pattern from PullRequestManager exactly
 - Label name validation: simple string check, no special chars
-- Color validation: exactly 6 hex characters (accept upper/lower case)
+- Color validation: exactly 6 hex characters (accept upper/lower case, with or without # prefix)
+- Strip # prefix before validation and before sending to GitHub API
 - No CRUD methods yet - just setup and validation
 - Update `__init__.py` to export new classes

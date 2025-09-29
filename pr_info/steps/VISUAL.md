@@ -20,6 +20,7 @@ mcp_coder/
     ├── FILES.md                    Complete file manifest
     ├── README.md                   Steps overview
     ├── summary.md                  Architecture & design
+    ├── decisions.md                Implementation decisions log
     ├── step_1.md                   Unit tests (TDD red)
     ├── step_2.md                   Initialization (TDD green)
     ├── step_3.md                   Integration tests (TDD red)
