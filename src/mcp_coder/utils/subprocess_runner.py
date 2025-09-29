@@ -100,6 +100,36 @@ def get_python_isolation_env() -> dict[str, str]:
     return env
 
 
+def get_utf8_env() -> dict[str, str]:
+    """Get environment variables for UTF-8 encoding support on all subprocess types."""
+    env = os.environ.copy()
+
+    # Set UTF-8 encoding for all subprocess types
+    env.update(
+        {
+            "PYTHONIOENCODING": "utf-8",
+            "PYTHONUTF8": "1",
+        }
+    )
+
+    # On Windows, also set legacy encoding variables
+    if os.name == "nt":
+        env.update(
+            {
+                "PYTHONLEGACYWINDOWSFSENCODING": "utf-8",
+            }
+        )
+    else:
+        # On Unix systems, set locale for UTF-8
+        env.update(
+            {
+                "LC_ALL": "C.UTF-8",
+            }
+        )
+
+    return env
+
+
 def _run_subprocess(
     command: list[str], options: CommandOptions, use_stdio_isolation: bool = False
 ) -> subprocess.CompletedProcess[str]:
@@ -116,10 +146,14 @@ def _run_subprocess(
     """
     # Track start time for timeout logging
     subprocess_start_time = time.time()
-    # Prepare environment
-    env = options.env or os.environ.copy()
+    # Prepare environment with UTF-8 encoding support
     if is_python_command(command):
         env = get_python_isolation_env()
+        if options.env:
+            env.update(options.env)
+    else:
+        # For non-Python commands, use UTF-8 environment
+        env = get_utf8_env()
         if options.env:
             env.update(options.env)
 
@@ -158,6 +192,8 @@ def _run_subprocess(
                         ),
                         cwd=options.cwd,
                         text=options.text,
+                        encoding="utf-8" if options.text else None,
+                        errors="replace",  # Replace invalid characters instead of crashing
                         env=env,
                         shell=options.shell,
                         start_new_session=start_new_session,
@@ -329,6 +365,8 @@ def _run_subprocess(
                     ),
                     cwd=options.cwd,
                     text=options.text,
+                    encoding="utf-8" if options.text else None,
+                    errors="replace",  # Replace invalid characters instead of crashing
                     env=env,
                     shell=options.shell,
                     start_new_session=start_new_session,
@@ -420,6 +458,8 @@ def _run_subprocess(
                     capture_output=False,
                     cwd=options.cwd,
                     text=options.text,
+                    encoding="utf-8" if options.text else None,
+                    errors="replace",  # Replace invalid characters instead of crashing
                     timeout=options.timeout_seconds,
                     env=env,
                     shell=options.shell,
