@@ -153,6 +153,13 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **Formatter integration**: `formatters/` - Black, isort automation (tests: `formatters/test_*.py` 🏷️ formatter_integration)
 - **Configuration reading**: `formatters/config_reader.py` - Tool settings (tests: `formatters/test_config_reader.py` 🏷️ formatter_integration)
 
+### Workflow Automation (`workflows/`)
+- **Implementation workflow**: `workflows/implement.py` - End-to-end task automation (tests: ❌ missing)
+  - Orchestrates task processing from TASK_TRACKER.md through completion
+  - Integrates LLM calls, mypy fixes, formatting, git operations
+  - **Future CLI**: Candidate for `mcp-coder implement` command
+- **Workflow launcher**: `workflows/implement.bat` - Windows batch wrapper
+
 ---
 
 ## 6. Runtime View
