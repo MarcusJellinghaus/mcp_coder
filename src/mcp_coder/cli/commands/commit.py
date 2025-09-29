@@ -19,6 +19,7 @@ from ...utils.git_operations import (
     is_git_repository,
     stage_all_changes,
 )
+from ..llm_helpers import parse_llm_method
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,9 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         return 1
 
     # 2. Stage changes and generate commit message
-    success, commit_message, error = generate_commit_message_with_llm(project_dir)
+    success, commit_message, error = generate_commit_message_with_llm(
+        project_dir, args.llm_method
+    )
     if not success:
         print(f"Error: {error}", file=sys.stderr)
         return 2
@@ -75,7 +78,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 
 
 def generate_commit_message_with_llm(
-    project_dir: Path,
+    project_dir: Path, llm_method: str = "claude_code_api"
 ) -> Tuple[bool, str, Optional[str]]:
     """Generate commit message using LLM. Returns (success, message, error)."""
     logger.debug("Generating commit message with LLM for %s", project_dir)
@@ -144,7 +147,8 @@ def generate_commit_message_with_llm(
 
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
         logger.debug("Calling LLM for auto generated commit message...")
-        response = ask_llm(full_prompt, provider="claude", method="api", timeout=30)
+        provider, method = parse_llm_method(llm_method)
+        response = ask_llm(full_prompt, provider=provider, method=method, timeout=30)
 
         if not response or not response.strip():
             error_msg = "LLM returned empty or null response. The AI service may be unavailable or overloaded. Try again in a moment."

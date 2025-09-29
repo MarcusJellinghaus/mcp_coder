@@ -5,7 +5,6 @@ workflows. It supports multiple LLM providers and implementation methods.
 
 Main Interfaces:
     ask_llm: High-level interface supporting multiple LLM providers and methods
-    ask_claude: Legacy interface for Claude Code CLI (backward compatible)
     ask_claude_code: Claude-specific interface with CLI and API method routing
 
 Example:
@@ -13,13 +12,12 @@ Example:
     >>> response = ask_llm("Explain recursion", provider="claude", method="api")
     >>> print(response)
 
-    >>> from mcp_coder import ask_claude  # Legacy interface
-    >>> response = ask_claude("Review this code")
+    >>> from mcp_coder import ask_claude_code
+    >>> response = ask_claude_code("Review this code", method="cli")
     >>> print(response)
 """
 
 from .llm_interface import ask_llm
-from .llm_providers.claude.claude_client import ask_claude
 from .llm_providers.claude.claude_code_interface import ask_claude_code
 from .llm_providers.claude.claude_executable_finder import (
     find_claude_executable,
@@ -49,7 +47,6 @@ __version__ = "0.1.0"
 
 __all__ = [
     # Core LLM interfaces
-    "ask_claude",
     "ask_claude_code",
     "ask_llm",
     # Claude executable utilities
