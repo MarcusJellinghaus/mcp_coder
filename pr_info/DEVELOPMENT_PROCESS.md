@@ -398,6 +398,43 @@ Run certain checks in an automated way and deal with possibly highlighted issues
 
 **Tools:**
 
+
+**Discussion prompt**
+```
+Can we go through all open suggested changes and questions step by step?
+You explain, ask and I answer until we discussed all topics?
+Please offer, whenever possible, simple options like 
+- A
+- B
+- C
+
+We will use the discussion later to add more tasks to the implementation plan files under pr_info\steps
+```
+
+**Create further implementation tasks**
+```
+## Request to append new implementation tasks to Python Project Implementation Plan
+Please expand the the **implementation plan** stored under `pr_info/steps`
+Update the `PR_Info\steps\Decisions.md` with the decisions we took.
+Please create additional self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
+Please update the **summary** (`pr_info/steps/summary.md`).  
+
+### Requirements for the new implementation steps:
+- Follow **Test-Driven Development** where applicable. 
+  Each step should have its own test implementation followed by related functionality implementation.  
+- Each step must include a **clear LLM prompt** that references the summary and that specific step
+- Apply **KISS principle** - minimize complexity, maximize maintainability
+- Keep code changes minimal and follow best practices
+
+### Each Step Must Specify:
+- **WHERE**: File paths and module structure
+- **WHAT**: Main functions with signatures
+- **HOW**: Integration points (decorators, imports, etc.)
+- **ALGORITHM**: 5-6 line pseudocode for core logic (if any)
+- **DATA**: Return values and data structures
+```
+
+
 #### 3.3 Create Summary
 
 **Process:**

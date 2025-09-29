@@ -91,6 +91,7 @@ REM Generate git diff and create enhanced review prompt
     echo - Tests for `__main__` functions should be removed ^(not needed^)
     echo - Unnecessary debug code or print statements
     echo - Code that could break existing functionality
+    echo - Compliance with existing architecture principals, see `docs/architecture/ARCHITECTURE.md`
     echo.
     echo ### Output Format:
     echo 1. **Summary** - What changed ^(1-2 sentences^)
