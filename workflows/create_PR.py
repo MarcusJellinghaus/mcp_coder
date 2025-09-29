@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
+from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import (
@@ -28,8 +29,7 @@ from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
-# Constants
-PROMPTS_FILE_PATH = "mcp_coder/prompts/prompts.md"
+# Note: PROMPTS_FILE_PATH imported from constants
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -252,7 +252,7 @@ def check_prerequisites(project_dir: Path) -> bool:
 def _load_prompt_or_exit(header: str) -> str:
     """Load prompt template or exit with clear error message."""
     try:
-        return get_prompt(PROMPTS_FILE_PATH, header)
+        return get_prompt(str(PROMPTS_FILE_PATH), header)
     except (FileNotFoundError, ValueError) as e:
         logger.error(f"Critical error: Cannot load prompt '{header}': {e}")
         logger.error(f"Expected prompt file: {PROMPTS_FILE_PATH}")

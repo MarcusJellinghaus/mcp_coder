@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
+from ...constants import PROMPTS_FILE_PATH
 from ...llm_interface import ask_llm
 from ...prompt_manager import get_prompt
 from ...utils.clipboard import (
@@ -116,7 +117,7 @@ def generate_commit_message_with_llm(
     logger.debug("Loading commit message generation prompt")
     try:
         base_prompt = get_prompt(
-            "mcp_coder/prompts/prompts.md", "Git Commit Message Generation"
+            str(PROMPTS_FILE_PATH), "Git Commit Message Generation"
         )
         logger.debug(
             "Commit prompt loaded successfully, %d characters", len(base_prompt)

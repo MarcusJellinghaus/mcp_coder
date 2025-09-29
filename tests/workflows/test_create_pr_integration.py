@@ -16,14 +16,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Import git fixtures from utils
-from tests.utils.conftest import git_repo, git_repo_with_files
-
 from mcp_coder.utils.git_operations import (
     commit_all_changes,
     get_current_branch_name,
     is_working_directory_clean,
 )
+
+# Import git fixtures from utils
+from tests.utils.conftest import git_repo, git_repo_with_files
 
 
 class TestCreatePRBatchWrapper:
@@ -129,32 +129,36 @@ class TestCreatePRWorkflowIntegration:
         self._setup_complete_project(project_dir, repo)
 
         # Import workflow functions
-        from workflows.create_PR import check_prerequisites
         from mcp_coder.utils.git_operations import (
             get_current_branch_name,
             get_parent_branch_name,
             is_working_directory_clean,
         )
         from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
+        from workflows.create_PR import check_prerequisites
 
         # Test each prerequisite individually
         is_clean = is_working_directory_clean(project_dir)
         current_branch = get_current_branch_name(project_dir)
         parent_branch = get_parent_branch_name(project_dir)
-        
+
         # Test task tracker
         try:
             incomplete_tasks = get_incomplete_tasks(str(project_dir / "pr_info"))
         except Exception as e:
             pytest.fail(f"Task tracker check failed: {e}")
-        
+
         # Individual assertions for better error messages
         assert is_clean, f"Working directory not clean"
         assert current_branch is not None, f"Could not get current branch name"
-        assert parent_branch is not None, f"Could not get parent branch name: {parent_branch}"
-        assert current_branch != parent_branch, f"Current branch '{current_branch}' equals parent branch '{parent_branch}'"
+        assert (
+            parent_branch is not None
+        ), f"Could not get parent branch name: {parent_branch}"
+        assert (
+            current_branch != parent_branch
+        ), f"Current branch '{current_branch}' equals parent branch '{parent_branch}'"
         assert len(incomplete_tasks) == 0, f"Found incomplete tasks: {incomplete_tasks}"
-        
+
         # Should pass prerequisites now
         assert check_prerequisites(project_dir)
 
@@ -302,19 +306,19 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
             ]
         )
         repo.index.commit("Initial project structure")
-        
+
         # Rename the default branch to 'main' if it's 'master'
-        if repo.active_branch.name == 'master':
+        if repo.active_branch.name == "master":
             # Create main branch from master and switch to it
-            main_branch = repo.create_head('main')
+            main_branch = repo.create_head("main")
             main_branch.checkout()
             # Delete master branch
-            repo.delete_head('master')
-        
+            repo.delete_head("master")
+
         # Create a feature branch so we're not on the parent branch
         feature_branch = repo.create_head("feature-test-branch")
         feature_branch.checkout()
-        
+
         # Commit any additional changes if they exist (e.g., from branch operations)
         if repo.is_dirty() or repo.untracked_files:
             repo.index.add(repo.untracked_files if repo.untracked_files else [])

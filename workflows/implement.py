@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
+from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
@@ -51,7 +52,7 @@ from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 # Constants
 PR_INFO_DIR = "pr_info"
 CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
-PROMPTS_FILE_PATH = "mcp_coder/prompts/prompts.md"
+# Note: PROMPTS_FILE_PATH imported from constants
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -176,7 +177,7 @@ def prepare_task_tracker(project_dir: Path) -> bool:
     
     try:
         # Get the Task Tracker Update Prompt
-        prompt_template = get_prompt(PROMPTS_FILE_PATH, "Task Tracker Update Prompt")
+        prompt_template = get_prompt(str(PROMPTS_FILE_PATH), "Task Tracker Update Prompt")
         
         # Call LLM with the prompt
         response = ask_llm(prompt_template, provider="claude", method="api", timeout=300)
@@ -398,7 +399,7 @@ def check_and_fix_mypy(project_dir: Path, step_num: int) -> bool:
             
             # Get mypy fix prompt template
             try:
-                mypy_prompt_template = get_prompt(PROMPTS_FILE_PATH, "Mypy Fix Prompt")
+                mypy_prompt_template = get_prompt(str(PROMPTS_FILE_PATH), "Mypy Fix Prompt")
                 # Replace placeholder with actual mypy output
                 mypy_prompt = mypy_prompt_template.replace("[mypy_output]", mypy_result)
             except Exception as e:
@@ -468,7 +469,7 @@ def process_single_task(project_dir: Path) -> bool:
     # Step 3: Get implementation prompt template
     logger.debug("Loading implementation prompt template...")
     try:
-        prompt_template = get_prompt(PROMPTS_FILE_PATH, "Implementation Prompt Template using task tracker")
+        prompt_template = get_prompt(str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker")
     except Exception as e:
         logger.error(f"Error loading prompt template: {e}")
         return False
