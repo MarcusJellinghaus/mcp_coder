@@ -3,7 +3,7 @@
 ## Document Metadata
 
 **Framework**: Arc42 Template  
-**Version**: 1.2  
+**Version**: 1.3  
 **Last Updated**: 2025-09-29  
 **Status**: Complete (Sections 1-8)  
 **Maintainer**: Marcus Jellinghaus  
@@ -134,6 +134,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)
 - **Command implementations**: `cli/commands/` - Individual CLI commands (tests: `cli/commands/test_*.py`, `test_prompt_sdk_utilities.py` 🏷️ claude_cli_integration)
 - **Help system**: `cli/commands/help.py` - Documentation and usage (tests: `cli/commands/test_help.py`)
+- **LLM parameter utilities**: `cli/llm_helpers.py` - LLM method parsing and validation (tests: ❌ missing)
 
 ### LLM Integration (`src/mcp_coder/llm_providers/`)
 - **Claude interface**: `llm_providers/claude/claude_code_interface.py` - Method routing (tests: ❌ missing)
@@ -149,6 +150,9 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
   - `utils/github_operations/pr_manager.py` - Pull request management via PyGithub API (tests: ❌ missing)
 - **User configuration**: `utils/user_config.py` - TOML settings management (tests: `utils/test_user_config*.py`)
 - **Task tracking**: `workflow_utils/task_tracker.py` - Progress management (tests: `workflow_utils/test_task_tracker.py`)
+- **Clipboard operations**: `utils/clipboard.py` - Commit message clipboard utilities (tests: `utils/test_clipboard.py`)
+- **Data file utilities**: `utils/data_files.py` - Package data file location (tests: `utils/test_data_files.py`)
+- **Subprocess execution**: `utils/subprocess_runner.py` - MCP STDIO isolation support (tests: ❌ missing)
 
 ### Code Quality & Formatting (`src/mcp_coder/formatters/`)
 - **Formatter integration**: `formatters/` - Black, isort automation (tests: `formatters/test_*.py` 🏷️ formatter_integration)
