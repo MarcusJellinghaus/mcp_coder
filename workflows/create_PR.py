@@ -497,9 +497,9 @@ def main() -> None:
     log_step("Step 3/5: Pushing commits...")
     push_result = git_push(project_dir)
     if not push_result["success"]:
-        logger.error(f"Failed to push commits: {push_result['error']}")
-        sys.exit(1)
-    log_step("Commits pushed successfully")
+        logger.warning(f"Failed to push commits: {push_result['error']}")
+    else:
+        log_step("Commits pushed successfully")
     
     # Step 4: Create pull request
     log_step("Step 4/5: Creating pull request...")
