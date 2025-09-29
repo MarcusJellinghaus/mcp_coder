@@ -65,7 +65,7 @@ pytest tests/utils/test_github_operations.py::TestLabelsManagerIntegration -v -m
 
 # Step 4: All tests pass
 pytest tests/utils/test_github_operations.py -k "LabelsManager" -v
-# Expected: 6 PASSED (5 unit + 1 integration)
+# Expected: 8 PASSED (5 unit + 3 integration)
 ```
 
 ## 📦 What Gets Created

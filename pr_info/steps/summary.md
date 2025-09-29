@@ -55,6 +55,7 @@ docs/architecture/ARCHITECTURE.md                   (update building blocks)
 class LabelsManager:
     def __init__(self, project_dir: Optional[Path] = None) -> None
     def get_labels(self) -> List[LabelData]
+    def get_label(self, name: str) -> LabelData
     def create_label(self, name: str, color: str, description: str = "") -> LabelData
     def update_label(self, name: str, new_name: str = "", color: str = "", description: str = "") -> LabelData
     def delete_label(self, name: str) -> bool

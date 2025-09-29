@@ -52,6 +52,9 @@ LabelsManager
     ├── get_labels()
     │   └─> List[LabelData]
     │
+    ├── get_label(name)
+    │   └─> LabelData
+    │
     ├── create_label(name, color, description)
     │   └─> LabelData
     │
@@ -74,6 +77,13 @@ User Code
    │      ├─> Get Repository
    │      ├─> Fetch labels from GitHub API
    │      └─> Return List[LabelData]
+   │
+   ├─> get_label(name)
+   │      │
+   │      ├─> Validate name
+   │      ├─> Get Repository
+   │      ├─> Fetch specific label from GitHub API
+   │      └─> Return LabelData (or {} if not found)
    │
    ├─> create_label(name, color, desc)
    │      │
@@ -103,11 +113,22 @@ Unit Tests (Mock GitHub API)
 
 Integration Tests (Real GitHub API)
 └── TestLabelsManagerIntegration
-    └── test_labels_lifecycle()
-        ├─> Create label with timestamp
-        ├─> Verify creation
-        ├─> List and find label
-        ├─> Delete label
+    ├── test_labels_lifecycle()
+    │   ├─> Create label with timestamp
+    │   ├─> Verify creation
+    │   ├─> List and find label
+    │   ├─> Delete label
+    │   └─> Cleanup in finally
+    ├── test_get_label_by_name()
+    │   ├─> Create label
+    │   ├─> Get label by name
+    │   ├─> Verify data matches
+    │   ├─> Test nonexistent label returns {}
+    │   └─> Cleanup in finally
+    └── test_create_label_idempotency()
+        ├─> Create label
+        ├─> Create again with same name
+        ├─> Verify returns existing label
         └─> Cleanup in finally
 ```
 
@@ -186,7 +207,7 @@ Phase 3: Documentation (Optional)
 ## Success Criteria
 
 ✅ All unit tests pass (5 tests)
-✅ All integration tests pass (1 test)
+✅ All integration tests pass (3 tests)
 ✅ Code follows existing patterns
 ✅ No new dependencies added
 ✅ Proper error handling (no exceptions to caller)

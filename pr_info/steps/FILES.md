@@ -45,7 +45,7 @@ class TestLabelsManagerUnit:
 
 @pytest.mark.github_integration
 class TestLabelsManagerIntegration:
-    # 1 integration test for full lifecycle
+    # 3 integration tests (lifecycle, get_label, idempotency)
     
 @pytest.fixture
 def labels_manager(tmp_path: Path):
@@ -64,6 +64,7 @@ def labels_manager(tmp_path: Path):
 #   - _validate_color()
 #   - _parse_and_get_repo()
 #   - get_labels()
+#   - get_label(name)
 #   - create_label()
 #   - update_label()
 #   - delete_label()
@@ -73,11 +74,11 @@ def labels_manager(tmp_path: Path):
 
 - **Files created**: 8 (7 documentation + 1 source)
 - **Files modified**: 2-3 (exports, tests, optional docs)
-- **Lines of code**: ~300-400 total
-  - labels_manager.py: ~200 lines
-  - tests: ~150 lines
+- **Lines of code**: ~350-450 total
+  - labels_manager.py: ~220 lines
+  - tests: ~180 lines
   - exports: 2 lines
-- **Test coverage**: Unit tests + Integration tests
+- **Test coverage**: 5 unit tests + 3 integration tests = 8 total
 - **Dependencies**: None (reuse existing PyGithub)
 
 ## Verification

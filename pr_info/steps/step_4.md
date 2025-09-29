@@ -21,6 +21,9 @@ Add methods to existing LabelsManager class.
 def get_labels(self) -> List[LabelData]
 
 @log_function_call
+def get_label(self, name: str) -> LabelData
+
+@log_function_call
 def create_label(self, name: str, color: str, description: str = "") -> LabelData
 
 @log_function_call
@@ -47,6 +50,15 @@ def delete_label(self, name: str) -> bool
 2. Fetch: All labels using repo.get_labels()
 3. Convert: Each label to LabelData dict
 4. Return: List of LabelData dicts (empty list on error)
+```
+
+### get_label() Logic
+```
+1. Validate: name using _validate_label_name()
+2. Get: Repository object via _parse_and_get_repo()
+3. Fetch: Specific label using repo.get_label(name)
+4. Convert: Label to LabelData dict
+5. Return: LabelData dict (empty dict {} on error or if not found)
 ```
 
 ### create_label() Logic
@@ -94,6 +106,7 @@ def delete_label(self, name: str) -> bool
 
 ### Return Values
 - `get_labels()`: `List[LabelData]` (empty list `[]` on error)
+- `get_label(name)`: `LabelData` (empty dict `{}` on error or not found)
 - `create_label()`: `LabelData` (empty dict `{}` on error)
 - `update_label()`: `LabelData` (empty dict `{}` on error)
 - `delete_label()`: `bool` (False on error)
@@ -124,18 +137,20 @@ Context: Read pr_info/steps/summary.md for overview.
 Reference: src/mcp_coder/utils/github_operations/pr_manager.py -> PullRequestManager CRUD methods
 
 Tasks:
-1. Open labels_manager.py and add four methods to LabelsManager class
+1. Open labels_manager.py and add five methods to LabelsManager class
 2. Implement get_labels() following pattern from pr_manager.list_pull_requests()
-3. Implement create_label() with validation and idempotent behavior
-4. Implement update_label() with optional parameters (new_name, color, description)
-5. Implement delete_label() with validation
-6. Use @log_function_call decorator on all methods
-7. Handle GithubException gracefully (log and return empty/False)
+3. Implement get_label(name) to retrieve a single label by name
+4. Implement create_label() with validation and idempotent behavior
+5. Implement update_label() with optional parameters (new_name, color, description)
+6. Implement delete_label() with validation
+7. Use @log_function_call decorator on all methods
+8. Handle GithubException gracefully (log and return empty/False)
 
 Implementation notes:
-- PyGithub API: repo.get_labels(), repo.create_label(), label.edit(), label.delete()
+- PyGithub API: repo.get_labels(), repo.get_label(name), repo.create_label(), label.edit(), label.delete()
 - Normalize color by stripping '#' prefix before validation and API calls
 - Validate inputs before API calls (name and normalized color)
+- **get_label()**: Returns empty dict {} if label not found (no exception)
 - **Idempotent create**: If label exists (422 status), get and return existing label with debug log
 - **Partial updates**: update_label() only changes provided fields (non-empty strings)
 - Return structured data: LabelData dict or bool
@@ -147,6 +162,7 @@ Run tests:
 2. pytest tests/utils/test_github_operations.py::TestLabelsManagerIntegration -v -m github_integration
 
 Expected: All tests PASS (green phase)
+Total test count: 5 unit tests + 3 integration tests = 8 tests
 ```
 
 ## Notes
