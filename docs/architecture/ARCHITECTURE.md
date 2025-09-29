@@ -3,8 +3,8 @@
 ## Document Metadata
 
 **Framework**: Arc42 Template  
-**Version**: 1.0  
-**Last Updated**: 2025-01-15  
+**Version**: 1.1  
+**Last Updated**: 2025-09-29  
 **Status**: Complete (Sections 1-8)  
 **Maintainer**: Marcus Jellinghaus  
 **Review Frequency**: Quarterly or on major changes  
@@ -45,6 +45,8 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
   - `mcp-file-server`: File operations and management
   - `mcp-config`: Configuration management helper
   - `mcp-shared-utils`: Common components (future)
+- **Python Library Dependencies**:
+  - `PyGithub>=1.59.0`: GitHub API integration for PR management and issue workflows
 
 ### Organizational Constraints
 - **Single Developer Project**: Individual development and maintenance
@@ -142,6 +144,8 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 ### Automation & Operations (`src/mcp_coder/utils/`)
 - **Git operations**: `utils/git_operations.py` - Repository automation
 - **GitHub integration**: `utils/github_operations/` - API interactions
+  - `utils/github_operations/github_utils.py` - GitHub URL parsing and validation
+  - `utils/github_operations/pr_manager.py` - Pull request management via PyGithub API
 - **User configuration**: `utils/user_config.py` - TOML settings management
 - **Task tracking**: `workflow_utils/task_tracker.py` - Progress management
 
