@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
 """Claude Code CLI implementation for programmatic interaction."""
 
+import logging
 import subprocess
+import tempfile
+from pathlib import Path
 
-from ...utils.subprocess_runner import execute_command
+from ...utils.subprocess_runner import (
+    CommandOptions,
+    execute_command,
+    execute_subprocess,
+)
 from .claude_executable_finder import find_claude_executable
+
+logger = logging.getLogger(__name__)
 
 
 def _find_claude_executable() -> str:
@@ -31,6 +40,8 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     """
     Ask Claude a question via Claude Code CLI and return the response.
 
+    Uses stdin input for long prompts to avoid Windows command line length limits.
+
     Args:
         question: The question to ask Claude
         timeout: Timeout in seconds for the command (default: 30)
@@ -54,15 +65,27 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     # Find the Claude executable
     claude_cmd = _find_claude_executable()
 
-    # Use Claude Code CLI to ask the question
-    result = execute_command(
-        [claude_cmd, "--print", question],
-        timeout_seconds=timeout,
-    )
+    # Windows command line limit is ~8191 characters
+    # Use stdin for long prompts to avoid this limitation
+    command_line_length = len(claude_cmd) + len("--print ") + len(question)
+
+    if command_line_length > 7000:  # Conservative threshold
+        logger.info(
+            f"Using stdin for long prompt ({len(question)} chars) to avoid CLI limit"
+        )
+        # Use stdin input method: echo "prompt" | claude -p ""
+        options = CommandOptions(timeout_seconds=timeout, input_data=question)
+        result = execute_subprocess([claude_cmd, "-p", ""], options)
+    else:
+        # Use direct command line argument for shorter prompts
+        result = execute_command(
+            [claude_cmd, "--print", question],
+            timeout_seconds=timeout,
+        )
 
     if result.timed_out:
         raise subprocess.TimeoutExpired(
-            [claude_cmd, "--print", question],
+            result.command or [claude_cmd],
             timeout,
             f"Claude Code command timed out after {timeout} seconds",
         )
@@ -70,7 +93,7 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     if result.return_code != 0:
         raise subprocess.CalledProcessError(
             result.return_code,
-            [claude_cmd, "--print", question],
+            result.command or [claude_cmd],
             output=result.stdout,
             stderr=f"Claude Code command failed: {result.stderr}",
         )

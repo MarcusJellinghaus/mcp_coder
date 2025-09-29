@@ -86,7 +86,7 @@ Each task should include:
 - Step implementation 
 - Quality checks: pylint, pytest, mypy - and work on all issues found
 - Preparation of a git commit message
-- put one [ ] in for each step like `[ ] all tasks completed`
+- put one [ ] for each task like `[ ] all tasks completed`
 
 Add "Pull Request" section at end with PR review and summary tasks.
 
@@ -136,4 +136,46 @@ Mypy output:
 [mypy_output]
 
 Expected output: Code changes that resolve all type errors while maintaining functionality.
+```
+
+### Pull Request Summary
+
+This prompt is used to generate pull request titles and descriptions from git diff output.
+
+#### PR Summary Generation
+```
+Generate a PR title and body from the git diff. Follow this EXACT format:
+
+TITLE: [conventional_prefix]: [brief description]
+BODY:
+## Summary
+[What this PR does and why]
+
+## Changes
+- [Change 1]
+- [Change 2]
+- [Change 3]
+
+REQUIREMENTS:
+- Title must start with: feat:, fix:, docs:, refactor:, test:, or chore:
+- Title must be under 60 characters
+- Use ## for markdown headings in body
+- List specific changes as bullet points
+- Be concise but informative
+
+EXAMPLE OUTPUT:
+TITLE: feat: add PR workflow automation
+BODY:
+\#\# Summary
+Implements automated PR creation with LLM-generated summaries.
+
+\#\# Changes
+- Add create_PR.py workflow script
+- Implement PR summary generation prompt
+- Add error handling for prompt loading
+
+Git diff to analyze:
+[git_diff_content]
+
+OUTPUT THE TITLE AND BODY EXACTLY AS SHOWN ABOVE - NO OTHER TEXT!
 ```
