@@ -285,7 +285,7 @@ class TestVerifyClaudeInstallation:
         assert "Version check failed" in error_str
 
 
-@pytest.mark.claude_integration
+@pytest.mark.claude_cli_integration
 class TestIntegration:
     """Integration tests for the claude_executable_finder module."""
 

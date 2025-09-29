@@ -184,7 +184,7 @@ class TestSDKMessageDetection:
         custom_obj = CustomObject()
         assert _is_sdk_message(custom_obj) is False
 
-    @pytest.mark.claude_integration
+    @pytest.mark.claude_api_integration
     def test_real_sdk_objects_if_available(self) -> None:
         """Test with real SDK objects when SDK is available."""
         try:

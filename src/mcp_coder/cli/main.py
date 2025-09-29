@@ -99,6 +99,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         default=60,
         help="Timeout in seconds for the Claude API request (default: 60)",
     )
+    prompt_parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_api",
+        help="LLM method to use (default: claude_code_api)",
+    )
 
     # Commit commands - Step 5
     commit_parser = subparsers.add_parser("commit", help="Git commit operations")
@@ -114,6 +120,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         "--preview",
         action="store_true",
         help="Show generated message and ask for confirmation before committing",
+    )
+    auto_parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_api",
+        help="LLM method to use (default: claude_code_api)",
     )
 
     # commit clipboard command - Step 6
