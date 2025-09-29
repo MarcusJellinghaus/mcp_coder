@@ -22,12 +22,13 @@ from unittest.mock import MagicMock, Mock, patch
 import git
 import pytest
 
-from mcp_coder.utils.github_operations import PullRequestManager
+from mcp_coder.utils.github_operations import LabelsManager, PullRequestManager
 from mcp_coder.utils.github_operations.github_utils import (
     format_github_https_url,
     get_repo_full_name,
     parse_github_url,
 )
+from mcp_coder.utils.github_operations.labels_manager import LabelData
 from mcp_coder.utils.github_operations.pr_manager import PullRequestData
 
 
@@ -656,3 +657,90 @@ class TestPullRequestManagerIntegration:
         invalid_list_result = manager.list_pull_requests(base_branch="invalid~branch")
         expected_empty_list: List[Dict[str, Any]] = []
         assert invalid_list_result == expected_empty_list
+
+
+class TestLabelsManagerUnit:
+    """Unit tests for LabelsManager with mocked dependencies."""
+
+    def test_initialization_requires_project_dir(self) -> None:
+        """Test that None project_dir raises ValueError."""
+        with pytest.raises(ValueError, match="project_dir is required"):
+            LabelsManager(None)
+
+    def test_initialization_requires_git_repository(self, tmp_path: Path) -> None:
+        """Test that non-git directory raises ValueError."""
+        # Create regular directory (not a git repo)
+        regular_dir = tmp_path / "regular_dir"
+        regular_dir.mkdir()
+
+        with pytest.raises(ValueError, match="Directory is not a git repository"):
+            LabelsManager(regular_dir)
+
+    def test_initialization_requires_github_token(self, tmp_path: Path) -> None:
+        """Test that missing GitHub token raises ValueError."""
+        # Setup git repo
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock config to return None (no token)
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = None
+            with pytest.raises(ValueError, match="GitHub token not found"):
+                LabelsManager(git_dir)
+
+    def test_label_name_validation(self, tmp_path: Path) -> None:
+        """Test label name validation rules."""
+        # Setup git repo with mocked config
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = LabelsManager(git_dir)
+
+            # Valid names - should pass validation
+            assert manager._validate_label_name("bug") == True
+            assert manager._validate_label_name("feature-request") == True
+            assert manager._validate_label_name("high priority") == True
+            assert manager._validate_label_name("bug :bug:") == True
+            assert manager._validate_label_name("type/enhancement") == True
+
+            # Invalid names - should fail validation
+            assert manager._validate_label_name("") == False
+            assert manager._validate_label_name("   ") == False
+            assert manager._validate_label_name("  leading") == False
+            assert manager._validate_label_name("trailing  ") == False
+
+    def test_color_validation_and_normalization(self, tmp_path: Path) -> None:
+        """Test color validation and normalization."""
+        # Setup git repo with mocked config
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = LabelsManager(git_dir)
+
+            # Valid colors - should pass validation
+            assert manager._validate_color("FF0000") == True
+            assert manager._validate_color("#FF0000") == True
+            assert manager._validate_color("00ff00") == True
+            assert manager._validate_color("#00FF00") == True
+
+            # Invalid colors - should fail validation
+            assert manager._validate_color("red") == False
+            assert manager._validate_color("12345") == False
+            assert manager._validate_color("GGGGGG") == False
+            assert manager._validate_color("#12345") == False
+
+            # Test normalization (removing '#' prefix)
+            assert manager._normalize_color("#FF0000") == "FF0000"
+            assert manager._normalize_color("FF0000") == "FF0000"
+            assert manager._normalize_color("#00ff00") == "00ff00"
+            assert manager._normalize_color("00FF00") == "00FF00"
