@@ -2,16 +2,31 @@
 
 ## Status Labels
 
+### Waiting for User (Human Action Required)
 - `status:created` - Fresh issue, may need refinement
-- `status:awaiting-planning` - Issue is refined and ready for implementation planning
-- `status:planning` - Implementation plan being drafted (auto/in-progress)
+  - **Color:** `#10b981` (Emerald)
 - `status:plan-review` - First implementation plan available for review/discussion
-- `status:plan-ready` - Implementation plan approved, ready to code
-- `status:implementing` - Code being written (auto/in-progress)
+  - **Color:** `#3b82f6` (Blue)
 - `status:code-review` - Implementation complete, needs code review
-- `status:ready-pr` - Approved for pull request creation
-- `status:pr-creating` - Bot is creating the pull request (auto/in-progress)
+  - **Color:** `#f59e0b` (Amber)
 - `status:pr-created` - Pull request created, awaiting approval/merge
+  - **Color:** `#8b5cf6` (Violet)
+
+### Bot Needs Pickup (Bot Should Start Working)
+- `status:awaiting-planning` - Issue is refined and ready for implementation planning
+  - **Color:** `#6ee7b7` (Light Emerald)
+- `status:plan-ready` - Implementation plan approved, ready to code
+  - **Color:** `#93c5fd` (Light Blue)
+- `status:ready-pr` - Approved for pull request creation
+  - **Color:** `#fbbf24` (Light Amber)
+
+### Bot Busy (Bot Is Actively Working)
+- `status:planning` - Implementation plan being drafted (auto/in-progress)
+  - **Color:** `#a7f3d0` (Lightest Emerald)
+- `status:implementing` - Code being written (auto/in-progress)
+  - **Color:** `#bfdbfe` (Lightest Blue)
+- `status:pr-creating` - Bot is creating the pull request (auto/in-progress)
+  - **Color:** `#fed7aa` (Lightest Amber)
 
 **Final State:** Issue closed after PR approval/merge
 
