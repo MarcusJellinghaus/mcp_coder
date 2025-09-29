@@ -476,10 +476,12 @@ class TestWorkflowMainFunction:
     @patch("workflows.create_PR.setup_logging")
     @patch("workflows.create_PR.check_prerequisites")
     @patch("workflows.create_PR.generate_pr_summary")
+    @patch("workflows.create_PR.git_push")
     @patch("workflows.create_PR.create_pull_request")
     def test_main_workflow_pr_creation_failure(
         self,
         mock_create_pr: MagicMock,
+        mock_git_push: MagicMock,
         mock_generate_summary: MagicMock,
         mock_check_prereqs: MagicMock,
         mock_setup_logging: MagicMock,
@@ -495,6 +497,7 @@ class TestWorkflowMainFunction:
         mock_resolve_dir.return_value = Path("/test/project")
         mock_check_prereqs.return_value = True
         mock_generate_summary.return_value = ("Test PR", "Test body")
+        mock_git_push.return_value = {"success": True}  # Push succeeds
         mock_create_pr.return_value = False  # PR creation fails
 
         from workflows.create_PR import main

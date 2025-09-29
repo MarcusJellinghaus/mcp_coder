@@ -80,12 +80,14 @@ class TestMainWorkflow:
     @patch("workflows.create_PR.resolve_project_dir")
     @patch("workflows.create_PR.check_prerequisites")
     @patch("workflows.create_PR.generate_pr_summary")
+    @patch("workflows.create_PR.git_push")
     @patch("workflows.create_PR.create_pull_request")
     @patch("workflows.create_PR.parse_arguments")
     def test_main_workflow_pr_creation_fails(
         self,
         mock_parse_args: MagicMock,
         mock_create_pr: MagicMock,
+        mock_git_push: MagicMock,
         mock_generate_summary: MagicMock,
         mock_check_prereqs: MagicMock,
         mock_resolve_dir: MagicMock,
@@ -99,6 +101,7 @@ class TestMainWorkflow:
         mock_resolve_dir.return_value = Path("/test/project")
         mock_check_prereqs.return_value = True
         mock_generate_summary.return_value = ("Test PR Title", "Test PR Body")
+        mock_git_push.return_value = {"success": True}  # Push succeeds
         mock_create_pr.return_value = False  # PR creation fails
 
         with patch("sys.exit", side_effect=SystemExit) as mock_exit:
