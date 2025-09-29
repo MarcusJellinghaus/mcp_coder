@@ -1,8 +1,10 @@
 """Labels management for GitHub repositories.
 
-This module provides functionality for managing GitHub repository labels.
+This module provides functionality for managing GitHub repository labels,
+including creating, reading, updating, and deleting labels via the GitHub API.
 """
 
+import logging
 import re
 from pathlib import Path
 from typing import Optional, TypedDict
@@ -12,6 +14,9 @@ from github import Github
 from github.Repository import Repository
 
 from mcp_coder.utils import user_config
+from mcp_coder.utils.log_utils import log_function_call
+
+logger = logging.getLogger(__name__)
 
 
 class LabelData(TypedDict):
@@ -150,13 +155,13 @@ class LabelsManager:
                     break
 
             if not remote_url:
-                print("No 'origin' remote found in git repository")
+                logger.warning("No 'origin' remote found in git repository")
                 return None
 
             # Parse the GitHub URL
             parsed = parse_github_url(remote_url)
             if parsed is None:
-                print(f"Could not parse GitHub URL: {remote_url}")
+                logger.warning("Could not parse GitHub URL: %s", remote_url)
                 return None
 
             owner, repo_name = parsed
@@ -167,12 +172,13 @@ class LabelsManager:
             return self._repository
 
         except GithubException as e:
-            print(f"Failed to access repository: {e}")
+            logger.error("Failed to access repository: %s", e)
             return None
         except Exception as e:
-            print(f"Unexpected error accessing repository: {e}")
+            logger.error("Unexpected error accessing repository: %s", e)
             return None
 
+    @log_function_call
     def create_label(self, name: str, color: str, description: str = "") -> LabelData:
         """Create a new label in the repository.
 
@@ -217,12 +223,13 @@ class LabelsManager:
             }
 
         except GithubException as e:
-            print(f"GitHub API error creating label: {e}")
+            logger.error("GitHub API error creating label: %s", e)
             return cast(LabelData, {})
         except Exception as e:
-            print(f"Unexpected error creating label: {e}")
+            logger.error("Unexpected error creating label: %s", e)
             return cast(LabelData, {})
 
+    @log_function_call
     def get_label(self, name: str) -> LabelData:
         """Get a specific label by name.
 
@@ -259,12 +266,13 @@ class LabelsManager:
 
         except GithubException as e:
             # Label not found or other GitHub API error
-            print(f"GitHub API error getting label '{name}': {e}")
+            logger.error("GitHub API error getting label '%s': %s", name, e)
             return cast(LabelData, {})
         except Exception as e:
-            print(f"Unexpected error getting label '{name}': {e}")
+            logger.error("Unexpected error getting label '%s': %s", name, e)
             return cast(LabelData, {})
 
+    @log_function_call
     def get_labels(self) -> list[LabelData]:
         """Get all labels in the repository.
 
@@ -296,12 +304,13 @@ class LabelsManager:
             return label_list
 
         except GithubException as e:
-            print(f"GitHub API error listing labels: {e}")
+            logger.error("GitHub API error listing labels: %s", e)
             return []
         except Exception as e:
-            print(f"Unexpected error listing labels: {e}")
+            logger.error("Unexpected error listing labels: %s", e)
             return []
 
+    @log_function_call
     def update_label(
         self,
         name: str,
@@ -369,12 +378,13 @@ class LabelsManager:
             }
 
         except GithubException as e:
-            print(f"GitHub API error updating label '{name}': {e}")
+            logger.error("GitHub API error updating label '%s': %s", name, e)
             return cast(LabelData, {})
         except Exception as e:
-            print(f"Unexpected error updating label '{name}': {e}")
+            logger.error("Unexpected error updating label '%s': %s", name, e)
             return cast(LabelData, {})
 
+    @log_function_call
     def delete_label(self, name: str) -> bool:
         """Delete a label from the repository.
 
@@ -405,8 +415,8 @@ class LabelsManager:
             return True
 
         except GithubException as e:
-            print(f"GitHub API error deleting label '{name}': {e}")
+            logger.error("GitHub API error deleting label '%s': %s", name, e)
             return False
         except Exception as e:
-            print(f"Unexpected error deleting label '{name}': {e}")
+            logger.error("Unexpected error deleting label '%s': %s", name, e)
             return False
