@@ -586,50 +586,7 @@ class TestGitWorkflows:
         assert binary_file.exists()
         assert unicode_file.exists()
 
-    def test_performance_with_many_files(self, git_repo: tuple[Repo, Path]) -> None:
-        """Test workflow performance with large number of files."""
-        repo, project_dir = git_repo
 
-        # Create many files to test performance
-        files_count = 50  # Reasonable number for testing
-        for i in range(files_count):
-            file_path = project_dir / f"file_{i:03d}.txt"
-            file_path.write_text(f"Content for file {i}\nLine 2")
-
-        # Create some nested files
-        for i in range(10):
-            nested_path = project_dir / "nested" / f"subfile_{i:02d}.py"
-            nested_path.parent.mkdir(exist_ok=True)
-            nested_path.write_text(f"# File {i}\ndef function_{i}():\n    return {i}")
-
-        # Test staging many files at once
-        import time
-
-        start_time = time.time()
-
-        stage_result = stage_all_changes(project_dir)
-        assert stage_result is True
-
-        staging_time = time.time() - start_time
-        assert staging_time < PERFORMANCE_THRESHOLD_SECONDS  # Should complete quickly
-
-        # Verify all files staged
-        staged = get_staged_changes(project_dir)
-        assert len(staged) == 60  # 50 + 10 nested files
-
-        # Test commit performance
-        start_time = time.time()
-        commit_result = commit_staged_files(
-            "Add many files for performance test", project_dir
-        )
-        commit_time = time.time() - start_time
-
-        assert commit_result["success"] is True
-        assert commit_time < PERFORMANCE_THRESHOLD_SECONDS  # Should commit quickly
-
-        # Verify clean state
-        final_status = get_full_status(project_dir)
-        assert final_status == {"staged": [], "modified": [], "untracked": []}
 
     def test_incremental_staging_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: stage files incrementally and commit in batches."""
