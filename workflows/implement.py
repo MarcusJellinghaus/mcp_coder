@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
+from mcp_coder.cli.llm_helpers import parse_llm_method
 from mcp_coder.formatters import format_code
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.llm_providers.claude.claude_code_api import (
@@ -58,26 +59,6 @@ PROMPTS_FILE_PATH = "mcp_coder/prompts/prompts.md"
 
 # Setup logger
 logger = logging.getLogger(__name__)
-
-
-def _parse_llm_method(llm_method: str) -> tuple[str, str]:
-    """Parse llm_method parameter into provider and method.
-    
-    Args:
-        llm_method: Either 'claude_code_cli' or 'claude_code_api'
-        
-    Returns:
-        Tuple of (provider, method)
-        
-    Raises:
-        ValueError: If llm_method is not supported
-    """
-    if llm_method == "claude_code_cli":
-        return "claude", "cli"
-    elif llm_method == "claude_code_api":
-        return "claude", "api"
-    else:
-        raise ValueError(f"Unsupported llm_method: {llm_method}. Supported: 'claude_code_cli', 'claude_code_api'")
 
 
 def log_step(message: str) -> None:
@@ -202,7 +183,7 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
         prompt_template = get_prompt(PROMPTS_FILE_PATH, "Task Tracker Update Prompt")
         
         # Call LLM with the prompt
-        provider, method = _parse_llm_method(llm_method)
+        provider, method = parse_llm_method(llm_method)
         response = ask_llm(prompt_template, provider=provider, method=method, timeout=300)
         
         if not response or not response.strip():
@@ -307,7 +288,7 @@ def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: 
         Tuple of (response_text, comprehensive_data_dict)
         For CLI method, comprehensive_data will be empty dict
     """
-    provider, method = _parse_llm_method(llm_method)
+    provider, method = parse_llm_method(llm_method)
     
     if method == "api":
         # Use detailed API call to get comprehensive data
