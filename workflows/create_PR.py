@@ -490,17 +490,25 @@ def main() -> None:
         sys.exit(1)
     
     # Step 2: Generate PR summary
-    log_step("Step 2/4: Generating PR summary...")
+    log_step("Step 2/5: Generating PR summary...")
     title, body = generate_pr_summary(project_dir, args.llm_method)
     
-    # Step 3: Create pull request
-    log_step("Step 3/4: Creating pull request...")
+    # Step 3: Push any existing commits
+    log_step("Step 3/5: Pushing commits...")
+    push_result = git_push(project_dir)
+    if not push_result["success"]:
+        logger.error(f"Failed to push commits: {push_result['error']}")
+        sys.exit(1)
+    log_step("Commits pushed successfully")
+    
+    # Step 4: Create pull request
+    log_step("Step 4/5: Creating pull request...")
     if not create_pull_request(project_dir, title, body):
         logger.error("Failed to create pull request")
         sys.exit(1)
     
-    # Step 4: Clean up repository
-    log_step("Step 4/4: Cleaning up repository...")
+    # Step 5: Clean up repository
+    log_step("Step 5/5: Cleaning up repository...")
     cleanup_success = cleanup_repository(project_dir)
     
     if cleanup_success:
