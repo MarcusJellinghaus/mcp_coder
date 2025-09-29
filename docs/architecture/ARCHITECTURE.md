@@ -125,33 +125,33 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 ## 5. Building Block View
 
 ### Core System (`src/mcp_coder/`)
-- **Main interface**: `llm_interface.py` - Multi-provider LLM abstraction
-- **Prompt management**: `prompt_manager.py` - Template and validation system
-- **Code quality**: `mcp_code_checker.py` - Quality check integration
+- **Main interface**: `llm_interface.py` - Multi-provider LLM abstraction (tests: `test_llm_interface.py`)
+- **Prompt management**: `prompt_manager.py` - Template and validation system (tests: `test_prompt_manager.py`)
+- **Code quality**: `mcp_code_checker.py` - Quality check integration (tests: `test_mcp_code_checker_integration.py`)
 
 ### CLI System (`src/mcp_coder/cli/`)
-- **CLI entry point**: `cli/main.py` - Command routing and parsing
-- **Command implementations**: `cli/commands/` - Individual CLI commands
-- **Help system**: `cli/commands/help.py` - Documentation and usage
+- **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)
+- **Command implementations**: `cli/commands/` - Individual CLI commands (tests: `cli/commands/test_*.py`, `test_prompt_sdk_utilities.py` 🏷️ claude_integration)
+- **Help system**: `cli/commands/help.py` - Documentation and usage (tests: `cli/commands/test_help.py`)
 
 ### LLM Integration (`src/mcp_coder/llm_providers/`)
-- **Claude interface**: `llm_providers/claude/claude_code_interface.py` - Method routing
-- **CLI implementation**: `llm_providers/claude/claude_code_cli.py` - Subprocess execution  
-- **API implementation**: `llm_providers/claude/claude_code_api.py` - SDK integration
-- **Executable finder**: `llm_providers/claude/claude_executable_finder.py` - Installation detection
-- **CLI verification**: `llm_providers/claude/claude_cli_verification.py` - Installation validation
+- **Claude interface**: `llm_providers/claude/claude_code_interface.py` - Method routing (tests: ❌ missing)
+- **CLI implementation**: `llm_providers/claude/claude_code_cli.py` - Subprocess execution (tests: `claude/test_claude_code_cli.py`)
+- **API implementation**: `llm_providers/claude/claude_code_api.py` - SDK integration (tests: `claude/test_claude_code_api*.py` 🏷️ claude_integration)
+- **Executable finder**: `llm_providers/claude/claude_executable_finder.py` - Installation detection (tests: `claude/test_claude_executable_finder.py` 🏷️ claude_integration)
+- **CLI verification**: `llm_providers/claude/claude_cli_verification.py` - Installation validation (tests: `claude/test_claude_cli_verification.py`)
 
 ### Automation & Operations (`src/mcp_coder/utils/`)
-- **Git operations**: `utils/git_operations.py` - Repository automation
-- **GitHub integration**: `utils/github_operations/` - API interactions
-  - `utils/github_operations/github_utils.py` - GitHub URL parsing and validation
-  - `utils/github_operations/pr_manager.py` - Pull request management via PyGithub API
-- **User configuration**: `utils/user_config.py` - TOML settings management
-- **Task tracking**: `workflow_utils/task_tracker.py` - Progress management
+- **Git operations**: `utils/git_operations.py` - Repository automation (tests: `utils/test_git_*.py` 🏷️ git_integration)
+- **GitHub integration**: `utils/github_operations/` - API interactions (tests: `utils/test_github_operations.py` 🏷️ github_integration)
+  - `utils/github_operations/github_utils.py` - GitHub URL parsing and validation (tests: ❌ missing)
+  - `utils/github_operations/pr_manager.py` - Pull request management via PyGithub API (tests: ❌ missing)
+- **User configuration**: `utils/user_config.py` - TOML settings management (tests: `utils/test_user_config*.py`)
+- **Task tracking**: `workflow_utils/task_tracker.py` - Progress management (tests: `workflow_utils/test_task_tracker.py`)
 
 ### Code Quality & Formatting (`src/mcp_coder/formatters/`)
-- **Formatter integration**: `formatters/` - Black, isort automation
-- **Configuration reading**: `formatters/config_reader.py` - Tool settings
+- **Formatter integration**: `formatters/` - Black, isort automation (tests: `formatters/test_*.py` 🏷️ formatter_integration)
+- **Configuration reading**: `formatters/config_reader.py` - Tool settings (tests: `formatters/test_config_reader.py` 🏷️ formatter_integration)
 
 ---
 
@@ -199,17 +199,19 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 ## 8. Cross-cutting Concepts
 
 ### Testing Strategy & Markers
+**Legend**: 🏷️ = pytest integration marker, ❌ = missing test coverage
+
 - **Test categories**: Defined in `pyproject.toml` with specific markers
-  - `git_integration`: File system git operations (repos, commits)
+  - `git_integration`: File system git operations (repos, commits) in `utils/test_git_*.py`
     - **When to use**: Testing git workflow automation, repository operations
     - **Requirements**: Local git environment, test repositories
-  - `claude_integration`: Claude CLI/API tests (network, auth needed)
+  - `claude_integration`: Claude CLI/API tests (network, auth needed) in `llm_providers/claude/` + `cli/commands/`
     - **When to use**: Testing Claude Code CLI integration, API functionality
     - **Requirements**: Claude Code CLI installed, authentication configured
-  - `formatter_integration`: Code formatter integration (black, isort)
+  - `formatter_integration`: Code formatter integration (black, isort) in `formatters/test_*.py`
     - **When to use**: Testing code formatting automation, tool integration
     - **Requirements**: Formatter tools installed
-  - `github_integration`: GitHub API access (network, auth needed)
+  - `github_integration`: GitHub API access (network, auth needed) in `utils/test_github_operations.py`
     - **When to use**: Testing GitHub operations, PR management, issue workflows
     - **Requirements**: GitHub API tokens, network access
 - **Fast development**: Use exclusion pattern to skip slow integration tests
