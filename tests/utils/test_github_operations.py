@@ -308,7 +308,7 @@ class TestPullRequestManagerUnit:
             )
             assert not result  # Should return empty dict
 
-    @patch("mcp_coder.utils.github_operations.pr_manager.Github")
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
     def test_create_pull_request_success(
         self, mock_github: Mock, tmp_path: Path
     ) -> None:

@@ -60,12 +60,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 6
 
 ### Step 7: Refactor Managers to Use BaseGitHubManager
-[ ] Update LabelsManager to inherit from BaseGitHubManager
-[ ] Update PullRequestManager to inherit from BaseGitHubManager
-[ ] Remove duplicated initialization code from both classes
-[ ] Ensure all existing tests pass without modification
-[ ] Run quality checks: pylint, pytest, mypy - fix all issues found
-[ ] Prepare git commit message for Step 7
+[x] Update LabelsManager to inherit from BaseGitHubManager
+[x] Update PullRequestManager to inherit from BaseGitHubManager
+[x] Remove duplicated initialization code from both classes
+[x] Ensure all existing tests pass without modification
+[x] Run quality checks: pylint, pytest, mypy - fix all issues found
+[x] Prepare git commit message for Step 7
 
 ### Step 8: Create Shared GitHub Test Fixture
 [ ] Create GitHubTestSetup TypedDict and shared github_test_setup fixture

@@ -9,12 +9,9 @@ import re
 from pathlib import Path
 from typing import Optional, TypedDict
 
-import git
-from github import Github
-from github.Repository import Repository
-
-from mcp_coder.utils import user_config
 from mcp_coder.utils.log_utils import log_function_call
+
+from .base_manager import BaseGitHubManager
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +25,7 @@ class LabelData(TypedDict):
     url: str
 
 
-class LabelsManager:
+class LabelsManager(BaseGitHubManager):
     """Manager for GitHub repository labels.
 
     Provides methods for creating, reading, updating, and deleting GitHub labels.
@@ -44,35 +41,7 @@ class LabelsManager:
             ValueError: If project_dir is None, not a directory, not a git repository,
                        or GitHub token is not found
         """
-        # Validate project_dir
-        if project_dir is None:
-            raise ValueError("project_dir is required")
-
-        if not project_dir.exists():
-            raise ValueError(f"Directory does not exist: {project_dir}")
-
-        if not project_dir.is_dir():
-            raise ValueError(f"Path is not a directory: {project_dir}")
-
-        # Check if it's a git repository
-        try:
-            repo = git.Repo(project_dir)
-        except git.InvalidGitRepositoryError:
-            raise ValueError(f"Directory is not a git repository: {project_dir}")
-
-        # Get GitHub token
-        github_token = user_config.get_config_value("github", "token")
-        if not github_token:
-            raise ValueError(
-                "GitHub token not found. Configure it in ~/.mcp_coder/config.toml "
-                "or set GITHUB_TOKEN environment variable"
-            )
-
-        self.project_dir = project_dir
-        self.github_token = github_token
-        self._repo = repo
-        self._github_client = Github(github_token)
-        self._repository: Optional[Repository] = None
+        super().__init__(project_dir)
 
     def _validate_label_name(self, name: str) -> bool:
         """Validate label name.
@@ -132,51 +101,6 @@ class LabelsManager:
         if color.startswith("#"):
             return color[1:]
         return color
-
-    def _get_repository(self) -> Optional[Repository]:
-        """Get the GitHub repository object.
-
-        Returns:
-            Repository object if successful, None otherwise
-        """
-        from github.GithubException import GithubException
-
-        from .github_utils import parse_github_url
-
-        if self._repository is not None:
-            return self._repository
-
-        try:
-            # Get the remote URL from git repository
-            remote_url = None
-            for remote in self._repo.remotes:
-                if remote.name == "origin":
-                    remote_url = remote.url
-                    break
-
-            if not remote_url:
-                logger.warning("No 'origin' remote found in git repository")
-                return None
-
-            # Parse the GitHub URL
-            parsed = parse_github_url(remote_url)
-            if parsed is None:
-                logger.warning("Could not parse GitHub URL: %s", remote_url)
-                return None
-
-            owner, repo_name = parsed
-            repo_full_name = f"{owner}/{repo_name}"
-
-            # Get repository from GitHub API
-            self._repository = self._github_client.get_repo(repo_full_name)
-            return self._repository
-
-        except GithubException as e:
-            logger.error("Failed to access repository: %s", e)
-            return None
-        except Exception as e:
-            logger.error("Unexpected error accessing repository: %s", e)
-            return None
 
     @log_function_call
     def create_label(self, name: str, color: str, description: str = "") -> LabelData:

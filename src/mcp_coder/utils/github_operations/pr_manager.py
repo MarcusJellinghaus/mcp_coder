@@ -8,13 +8,13 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict, cast
 
-from github import Github
 from github.GithubException import GithubException
 from github.PullRequest import PullRequest
 from github.Repository import Repository
 
 from mcp_coder.utils.log_utils import log_function_call
 
+from .base_manager import BaseGitHubManager
 from .github_utils import parse_github_url
 
 # Configure logger for GitHub operations
@@ -39,7 +39,7 @@ class PullRequestData(TypedDict):
     draft: bool
 
 
-class PullRequestManager:
+class PullRequestManager(BaseGitHubManager):
     """Manages GitHub pull request operations using the GitHub API.
 
     This class provides methods for creating, retrieving, listing, closing,
@@ -64,52 +64,18 @@ class PullRequestManager:
             ValueError: If project_dir is None, directory doesn't exist, is not a git repository,
                        has no GitHub remote origin, or GitHub token is not configured
         """
-        from mcp_coder.utils.git_operations import (
-            get_github_repository_url,
-            is_git_repository,
-        )
-        from mcp_coder.utils.user_config import get_config_value
+        super().__init__(project_dir)
 
-        # 1. Check if project_dir is provided
-        if project_dir is None:
+        # Store repository URL for compatibility with existing code
+        # At this point, project_dir is guaranteed to be valid (checked by super().__init__)
+        from mcp_coder.utils.git_operations import get_github_repository_url
+
+        self.repository_url = get_github_repository_url(self.project_dir)
+        if self.repository_url is None:
             raise ValueError(
-                "project_dir is required. Please specify the path to your git repository."
-            )
-
-        # 2. Check if directory exists
-        if not project_dir.exists():
-            raise ValueError(f"Directory does not exist: {project_dir}")
-
-        # 3. Check if it's actually a directory (not a file)
-        if not project_dir.is_dir():
-            raise ValueError(f"Path is not a directory: {project_dir}")
-
-        # 4. Check if it's a git repository
-        if not is_git_repository(project_dir):
-            raise ValueError(f"Directory is not a git repository: {project_dir}")
-
-        # 5. Try to get GitHub repository URL
-        repository_url = get_github_repository_url(project_dir)
-        if repository_url is None:
-            raise ValueError(
-                f"Could not detect GitHub repository URL from git remote in: {project_dir}. "
+                f"Could not detect GitHub repository URL from git remote in: {self.project_dir}. "
                 "Make sure the repository has a GitHub remote origin configured."
             )
-
-        # 6. Check if GitHub token is available
-        github_token = get_config_value("github", "token")
-        if not github_token:
-            raise ValueError(
-                "GitHub token not found in configuration. "
-                'Please add your GitHub token to ~/.mcp_coder/config.toml under [github] token = "your_token"'
-            )
-
-        # All validations passed - initialize
-        self.project_dir = project_dir
-        self.repository_url = repository_url
-        self.github_token = github_token
-        self._github_client = Github(github_token)
-        self._repository: Optional[Repository] = None
 
     def _validate_pr_number(self, pr_number: int) -> bool:
         """Validate pull request number.
@@ -157,36 +123,6 @@ class PullRequestManager:
             return False
         return True
 
-    def _parse_and_get_repo(self) -> Optional[Repository]:
-        """Parse repository URL and get Repository object.
-
-        Returns:
-            Repository object if successful, None if any error occurs
-        """
-        if self._repository is not None:
-            return self._repository
-
-        try:
-            # Parse repository URL using utility function
-            parsed = parse_github_url(self.repository_url)
-            if parsed is None:
-                logger.error(
-                    f"Invalid GitHub repository URL format: {self.repository_url}"
-                )
-                return None
-
-            owner, repo_name = parsed
-            repo_full_name = f"{owner}/{repo_name}"
-
-            self._repository = self._github_client.get_repo(repo_full_name)
-            return self._repository
-        except GithubException as e:
-            logger.error(f"Failed to access repository: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Unexpected error accessing repository: {e}")
-            return None
-
     @log_function_call
     def create_pull_request(
         self, title: str, head_branch: str, base_branch: str = "main", body: str = ""
@@ -229,7 +165,7 @@ class PullRequestManager:
             return cast(PullRequestData, {})
 
         try:
-            repo = self._parse_and_get_repo()
+            repo = self._get_repository()
             if repo is None:
                 return cast(PullRequestData, {})
 
@@ -279,7 +215,7 @@ class PullRequestManager:
             return cast(PullRequestData, {})
 
         try:
-            repo = self._parse_and_get_repo()
+            repo = self._get_repository()
             if repo is None:
                 return cast(PullRequestData, {})
 
@@ -331,7 +267,7 @@ class PullRequestManager:
             return []
 
         try:
-            repo = self._parse_and_get_repo()
+            repo = self._get_repository()
             if repo is None:
                 return []
 
@@ -395,7 +331,7 @@ class PullRequestManager:
             return cast(PullRequestData, {})
 
         try:
-            repo = self._parse_and_get_repo()
+            repo = self._get_repository()
             if repo is None:
                 return cast(PullRequestData, {})
 
@@ -448,6 +384,9 @@ class PullRequestManager:
         from .github_utils import get_repo_full_name
 
         try:
+            # repository_url is set in __init__ and guaranteed to be non-None
+            if self.repository_url is None:
+                return ""
             repo_name = get_repo_full_name(self.repository_url)
             return repo_name or ""
         except Exception as e:
