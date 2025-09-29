@@ -586,8 +586,6 @@ class TestGitWorkflows:
         assert binary_file.exists()
         assert unicode_file.exists()
 
-
-
     def test_incremental_staging_workflow(self, git_repo: tuple[Repo, Path]) -> None:
         """Test workflow: stage files incrementally and commit in batches."""
         repo, project_dir = git_repo
