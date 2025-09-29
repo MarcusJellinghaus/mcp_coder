@@ -27,6 +27,7 @@ import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
+from ...llm_interface import ask_llm
 from ...llm_providers.claude.claude_code_api import (
     AssistantMessage,
     ResultMessage,
@@ -37,6 +38,26 @@ from ...llm_providers.claude.claude_code_api import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_llm_method(llm_method: str) -> tuple[str, str]:
+    """Parse llm_method parameter into provider and method.
+    
+    Args:
+        llm_method: Either 'claude_code_cli' or 'claude_code_api'
+        
+    Returns:
+        Tuple of (provider, method)
+        
+    Raises:
+        ValueError: If llm_method is not supported
+    """
+    if llm_method == "claude_code_cli":
+        return "claude", "cli"
+    elif llm_method == "claude_code_api":
+        return "claude", "api"
+    else:
+        raise ValueError(f"Unsupported llm_method: {llm_method}. Supported: 'claude_code_cli', 'claude_code_api'")
 
 
 # Utility functions for SDK message object handling
@@ -370,24 +391,46 @@ def execute_prompt(args: argparse.Namespace) -> int:
             previous_context = _load_previous_chat(continue_file_path)
             enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
 
-        # Call Claude API using detailed function with user-specified timeout
+        # Get user-specified timeout and llm_method
         timeout = getattr(args, "timeout", 30)
-        response_data = ask_claude_code_api_detailed_sync(enhanced_prompt, timeout)
-
-        # Store response if requested
-        if getattr(args, "store_response", False):
-            stored_path = _store_response(response_data, args.prompt)
-            logger.info("Response stored to: %s", stored_path)
-
-        # Route to appropriate formatter based on verbosity level
+        llm_method = getattr(args, "llm_method", "claude_code_api")
         verbosity = getattr(args, "verbosity", "just-text")
-        if verbosity == "raw":
-            formatted_output = _format_raw(response_data)
-        elif verbosity == "verbose":
-            formatted_output = _format_verbose(response_data)
+        
+        # Route to appropriate method based on verbosity level
+        if verbosity == "just-text":
+            # Use unified ask_llm interface for simple text output
+            provider, method = _parse_llm_method(llm_method)
+            response = ask_llm(enhanced_prompt, provider=provider, method=method, timeout=timeout)
+            
+            # Simple text output with tool summary
+            formatted_output = response.strip()
+            
+            # Store simple response if requested
+            if getattr(args, "store_response", False):
+                # Create minimal response data for storage
+                response_data = {
+                    "text": response,
+                    "session_info": {"model": "claude", "tools": []},
+                    "result_info": {"duration_ms": 0, "cost_usd": 0.0}
+                }
+                stored_path = _store_response(response_data, args.prompt)
+                logger.info("Response stored to: %s", stored_path)
         else:
-            # Default to just-text format
-            formatted_output = _format_just_text(response_data)
+            # Use detailed API for verbose/raw modes that need metadata
+            response_data = ask_claude_code_api_detailed_sync(enhanced_prompt, timeout)
+            
+            # Store response if requested
+            if getattr(args, "store_response", False):
+                stored_path = _store_response(response_data, args.prompt)
+                logger.info("Response stored to: %s", stored_path)
+            
+            # Format based on verbosity level
+            if verbosity == "raw":
+                formatted_output = _format_raw(response_data)
+            elif verbosity == "verbose":
+                formatted_output = _format_verbose(response_data)
+            else:
+                formatted_output = _format_just_text(response_data)
 
         # Print formatted output to stdout
         print(formatted_output)
