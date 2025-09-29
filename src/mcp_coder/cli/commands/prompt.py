@@ -27,7 +27,6 @@ import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from ..llm_helpers import parse_llm_method
 from ...llm_interface import ask_llm
 from ...llm_providers.claude.claude_code_api import (
     AssistantMessage,
@@ -37,6 +36,7 @@ from ...llm_providers.claude.claude_code_api import (
     UserMessage,
     ask_claude_code_api_detailed_sync,
 )
+from ..llm_helpers import parse_llm_method
 
 logger = logging.getLogger(__name__)
 

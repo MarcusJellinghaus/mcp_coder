@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
-from ..llm_helpers import parse_llm_method
 from ...llm_interface import ask_llm
 from ...prompt_manager import get_prompt
 from ...utils.clipboard import (
@@ -20,6 +19,7 @@ from ...utils.git_operations import (
     is_git_repository,
     stage_all_changes,
 )
+from ..llm_helpers import parse_llm_method
 
 logger = logging.getLogger(__name__)
 
