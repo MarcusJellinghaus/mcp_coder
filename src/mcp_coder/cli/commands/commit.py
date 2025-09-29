@@ -23,6 +23,26 @@ from ...utils.git_operations import (
 logger = logging.getLogger(__name__)
 
 
+def _parse_llm_method(llm_method: str) -> tuple[str, str]:
+    """Parse llm_method parameter into provider and method.
+    
+    Args:
+        llm_method: Either 'claude_code_cli' or 'claude_code_api'
+        
+    Returns:
+        Tuple of (provider, method)
+        
+    Raises:
+        ValueError: If llm_method is not supported
+    """
+    if llm_method == "claude_code_cli":
+        return "claude", "cli"
+    elif llm_method == "claude_code_api":
+        return "claude", "api"
+    else:
+        raise ValueError(f"Unsupported llm_method: {llm_method}. Supported: 'claude_code_cli', 'claude_code_api'")
+
+
 def execute_commit_auto(args: argparse.Namespace) -> int:
     """Execute commit auto command with optional preview. Returns exit code."""
     logger.info("Starting commit auto with preview=%s", args.preview)
@@ -36,7 +56,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         return 1
 
     # 2. Stage changes and generate commit message
-    success, commit_message, error = generate_commit_message_with_llm(project_dir)
+    success, commit_message, error = generate_commit_message_with_llm(project_dir, args.llm_method)
     if not success:
         print(f"Error: {error}", file=sys.stderr)
         return 2
@@ -75,7 +95,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 
 
 def generate_commit_message_with_llm(
-    project_dir: Path,
+    project_dir: Path, llm_method: str = "claude_code_api"
 ) -> Tuple[bool, str, Optional[str]]:
     """Generate commit message using LLM. Returns (success, message, error)."""
     logger.debug("Generating commit message with LLM for %s", project_dir)
@@ -144,7 +164,8 @@ def generate_commit_message_with_llm(
 
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
         logger.debug("Calling LLM for auto generated commit message...")
-        response = ask_llm(full_prompt, provider="claude", method="api", timeout=30)
+        provider, method = _parse_llm_method(llm_method)
+        response = ask_llm(full_prompt, provider=provider, method=method, timeout=30)
 
         if not response or not response.strip():
             error_msg = "LLM returned empty or null response. The AI service may be unavailable or overloaded. Try again in a moment."

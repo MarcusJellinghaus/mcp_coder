@@ -57,6 +57,26 @@ PROMPTS_FILE_PATH = "mcp_coder/prompts/prompts.md"
 logger = logging.getLogger(__name__)
 
 
+def _parse_llm_method(llm_method: str) -> tuple[str, str]:
+    """Parse llm_method parameter into provider and method.
+    
+    Args:
+        llm_method: Either 'claude_code_cli' or 'claude_code_api'
+        
+    Returns:
+        Tuple of (provider, method)
+        
+    Raises:
+        ValueError: If llm_method is not supported
+    """
+    if llm_method == "claude_code_cli":
+        return "claude", "cli"
+    elif llm_method == "claude_code_api":
+        return "claude", "api"
+    else:
+        raise ValueError(f"Unsupported llm_method: {llm_method}. Supported: 'claude_code_cli', 'claude_code_api'")
+
+
 def log_step(message: str) -> None:
     """Log step with structured logging instead of print."""
     logger.info(message)
@@ -157,7 +177,7 @@ def has_implementation_tasks(project_dir: Path) -> bool:
         return False
 
 
-def prepare_task_tracker(project_dir: Path) -> bool:
+def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
     """Prepare task tracker by populating it if it has no implementation steps."""
     log_step("Checking if task tracker needs preparation...")
     
@@ -179,7 +199,8 @@ def prepare_task_tracker(project_dir: Path) -> bool:
         prompt_template = get_prompt(PROMPTS_FILE_PATH, "Task Tracker Update Prompt")
         
         # Call LLM with the prompt
-        response = ask_llm(prompt_template, provider="claude", method="api", timeout=300)
+        provider, method = _parse_llm_method(llm_method)
+        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300)
         
         if not response or not response.strip():
             logger.error("LLM returned empty response for task tracker update")
@@ -359,7 +380,7 @@ def _run_mypy_check(project_dir: Path) -> Optional[str]:
         raise Exception(f"Failed to run mypy check: {e}")
 
 
-def check_and_fix_mypy(project_dir: Path, step_num: int) -> bool:
+def check_and_fix_mypy(project_dir: Path, step_num: int, llm_method: str) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean."""
     log_step("Running mypy type checking...")
     
@@ -407,7 +428,8 @@ def check_and_fix_mypy(project_dir: Path, step_num: int) -> bool:
             
             # Call LLM for fixes
             try:
-                fix_response = ask_llm(mypy_prompt, provider="claude", method="api", timeout=300)
+                provider, method = _parse_llm_method(llm_method)
+                fix_response = ask_llm(mypy_prompt, provider=provider, method=method, timeout=300)
                 
                 if not fix_response or not fix_response.strip():
                     logger.error("LLM returned empty response for mypy fixes")
@@ -457,7 +479,7 @@ Mypy fix generated on: {datetime.now().isoformat()}
         return False
 
 
-def process_single_task(project_dir: Path) -> bool:
+def process_single_task(project_dir: Path, llm_method: str) -> bool:
     """Process a single implementation task. Returns True if successful, False if failed."""
     # Get next incomplete task
     next_task = get_next_task(project_dir)
@@ -483,7 +505,8 @@ Current task from TASK_TRACKER.md: {next_task}
 
 Please implement this task step by step."""
         
-        response = ask_llm(full_prompt, provider="claude", method="api", timeout=600)
+        provider, method = _parse_llm_method(llm_method)
+        response = ask_llm(full_prompt, provider=provider, method=method, timeout=600)
         
         if not response or not response.strip():
             logger.error("LLM returned empty response")
@@ -520,7 +543,7 @@ Generated on: {datetime.now().isoformat()}"""
         return False
     
     # Step 6: Run mypy check and fixes (each fix will be saved separately)
-    if not check_and_fix_mypy(project_dir, step_num):
+    if not check_and_fix_mypy(project_dir, step_num, llm_method):
         logger.warning("Mypy check failed or found unresolved issues - continuing anyway")
     
     # Step 7: Run formatters
@@ -554,6 +577,12 @@ def parse_arguments() -> argparse.Namespace:
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default="INFO",
         help="Set the logging level (default: INFO)"
+    )
+    parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_api",
+        help="LLM method to use (default: claude_code_api)"
     )
     return parser.parse_args()
 
@@ -623,13 +652,13 @@ def main() -> None:
         sys.exit(1)
     
     # Step 2: Prepare task tracker if needed
-    if not prepare_task_tracker(project_dir):
+    if not prepare_task_tracker(project_dir, args.llm_method):
         sys.exit(1)
     
     # Step 3: Process all incomplete tasks in a loop
     completed_tasks = 0
     while True:
-        success = process_single_task(project_dir)
+        success = process_single_task(project_dir, args.llm_method)
         if not success:
             # No more tasks or error occurred
             break

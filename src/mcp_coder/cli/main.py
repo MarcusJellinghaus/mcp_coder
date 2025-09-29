@@ -115,6 +115,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         action="store_true",
         help="Show generated message and ask for confirmation before committing",
     )
+    auto_parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_api",
+        help="LLM method to use (default: claude_code_api)",
+    )
 
     # commit clipboard command - Step 6
     clipboard_parser = commit_subparsers.add_parser(
