@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Issue Workflow Matrix</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+        
+        .workflow-matrix {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .column {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        .column-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .column-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .column-subtitle {
+            font-size: 0.9rem;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .bot-busy .column-title { color: #6c757d; }
+        .waiting-user .column-title { color: #2563eb; }
+        .bot-pickup .column-title { color: #6c757d; }
+        
+        .label-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--label-color);
+            transition: transform 0.2s ease;
+        }
+        
+        .label-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        /* Muted styles for bot busy/pickup */
+        .bot-busy .label-card,
+        .bot-pickup .label-card {
+            background: #f8f9fa;
+            opacity: 0.8;
+        }
+        
+        /* Attention-grabbing styles for waiting-user */
+        .waiting-user .label-card {
+            background: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+        }
+        
+        .waiting-user .label-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.25);
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background: var(--label-color);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .label-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .label-description {
+            color: #4a5568;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .bot-busy .status-badge { background: #e9ecef; color: #495057; }
+        .waiting-user .status-badge { background: #dbeafe; color: #1e40af; }
+        .bot-pickup .status-badge { background: #e9ecef; color: #495057; }
+        
+        /* Waiting for User - Progressive colors (low to high priority) */
+        .status-created { --label-color: #10b981; }        /* Emerald - lowest priority */
+        .status-plan-review { --label-color: #3b82f6; }   /* Blue - medium */
+        .status-code-review { --label-color: #f59e0b; }   /* Amber - high */
+        .status-pr-created { --label-color: #8b5cf6; }    /* Violet - highest priority */
+        
+        /* Bot Busy - Light versions of waiting-user colors */
+        .status-planning { --label-color: #a7f3d0; }       /* Light emerald (relates to plan-review) */
+        .status-implementing { --label-color: #bfdbfe; }   /* Light blue (relates to code-review) */
+        .status-pr-creating { --label-color: #fed7aa; }    /* Light amber (relates to pr-created) */
+        
+        /* Bot Pickup - Light versions of waiting-user colors */
+        .status-awaiting-planning { --label-color: #6ee7b7; }  /* Medium emerald (relates to created) */
+        .status-plan-ready { --label-color: #93c5fd; }         /* Medium blue (relates to implementing) */
+        .status-ready-pr { --label-color: #fbbf24; }           /* Medium amber (relates to pr-creating) */
+        
+        .color-reference {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .color-item {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .color-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 12px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .color-info {
+            flex: 1;
+        }
+        
+        .color-name {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.9rem;
+        }
+        
+        .color-hex {
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GitHub Issue Workflow Matrix</h1>
+        <p class="subtitle">Status Labels Organized by Bot State</p>
+        
+        <div class="workflow-matrix">
+            <!-- Waiting for User Column -->
+            <div class="column waiting-user">
+                <div class="column-header">
+                    <div class="column-title">👤 Waiting for User</div>
+                    <div class="column-subtitle">Human action required</div>
+                </div>
+                
+                <div class="label-card status-created">
+                    <div class="step-number">1</div>
+                    <div class="label-name">status:created</div>
+                    <div class="label-description">Fresh issue, may need refinement</div>
+                    <div class="status-badge">Ready</div>
+                </div>
+                
+                <div class="label-card status-plan-review">
+                    <div class="step-number">4</div>
+                    <div class="label-name">status:plan-review</div>
+                    <div class="label-description">Implementation plan available for review</div>
+                    <div class="status-badge">Ready</div>
+                </div>
+                
+                <div class="label-card status-code-review">
+                    <div class="step-number">7</div>
+                    <div class="label-name">status:code-review</div>
+                    <div class="label-description">Implementation complete, needs review</div>
+                    <div class="status-badge">Ready</div>
+                </div>
+                
+                <div class="label-card status-pr-created">
+                    <div class="step-number">10</div>
+                    <div class="label-name">status:pr-created</div>
+                    <div class="label-description">Pull request created, ready to merge</div>
+                    <div class="status-badge">Ready</div>
+                </div>
+            </div>
+            
+            <!-- Bot Needs Pickup Column -->
+            <div class="column bot-pickup">
+                <div class="column-header">
+                    <div class="column-title">⏳ Bot Needs Pickup</div>
+                    <div class="column-subtitle">Waiting for bot to start</div>
+                </div>
+                
+                <div class="label-card status-awaiting-planning">
+                    <div class="step-number">2</div>
+                    <div class="label-name">status:awaiting-planning</div>
+                    <div class="label-description">Issue refined, ready for planning</div>
+                    <div class="status-badge">Waiting</div>
+                </div>
+                
+                <div class="label-card status-plan-ready">
+                    <div class="step-number">5</div>
+                    <div class="label-name">status:plan-ready</div>
+                    <div class="label-description">Plan approved, ready to implement</div>
+                    <div class="status-badge">Waiting</div>
+                </div>
+                
+                <div class="label-card status-ready-pr">
+                    <div class="step-number">8</div>
+                    <div class="label-name">status:ready-pr</div>
+                    <div class="label-description">Code approved, ready for PR creation</div>
+                    <div class="status-badge">Waiting</div>
+                </div>
+            </div>
+            
+            <!-- Bot Busy Column -->
+            <div class="column bot-busy">
+                <div class="column-header">
+                    <div class="column-title">⚡ Bot Busy</div>
+                    <div class="column-subtitle">Bot is actively working</div>
+                </div>
+                
+                <div class="label-card status-planning">
+                    <div class="step-number">3</div>
+                    <div class="label-name">status:planning</div>
+                    <div class="label-description">Implementation plan being drafted</div>
+                    <div class="status-badge">Working</div>
+                </div>
+                
+                <div class="label-card status-implementing">
+                    <div class="step-number">6</div>
+                    <div class="label-name">status:implementing</div>
+                    <div class="label-description">Code being written</div>
+                    <div class="status-badge">Working</div>
+                </div>
+                
+                <div class="label-card status-pr-creating">
+                    <div class="step-number">9</div>
+                    <div class="label-name">status:pr-creating</div>
+                    <div class="label-description">Pull request being created</div>
+                    <div class="status-badge">Working</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="color-reference">
+            <h3 style="text-align: center; margin-bottom: 20px; color: #2d3748;">Color Reference</h3>
+            <div class="color-grid">
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #10b981;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Created</div>
+                        <div class="color-hex">#10b981</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #6ee7b7;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Awaiting Planning</div>
+                        <div class="color-hex">#6ee7b7</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #a7f3d0;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Planning</div>
+                        <div class="color-hex">#a7f3d0</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #3b82f6;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Plan Review</div>
+                        <div class="color-hex">#3b82f6</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #93c5fd;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Plan Ready</div>
+                        <div class="color-hex">#93c5fd</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #bfdbfe;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Implementing</div>
+                        <div class="color-hex">#bfdbfe</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #f59e0b;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Code Review</div>
+                        <div class="color-hex">#f59e0b</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #fbbf24;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Ready PR</div>
+                        <div class="color-hex">#fbbf24</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #fed7aa;"></div>
+                    <div class="color-info">
+                        <div class="color-name">PR Creating</div>
+                        <div class="color-hex">#fed7aa</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #8b5cf6;"></div>
+                    <div class="color-info">
+                        <div class="color-name">PR Created</div>
+                        <div class="color-hex">#8b5cf6</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
