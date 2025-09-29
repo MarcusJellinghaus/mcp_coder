@@ -33,6 +33,80 @@ from mcp_coder.utils.github_operations.pr_manager import PullRequestData
 
 
 @pytest.fixture
+def labels_manager(tmp_path: Path) -> Generator[LabelsManager, None, None]:
+    """Create LabelsManager instance for testing.
+
+    Validates GitHub configuration and gracefully skips when missing.
+
+    Configuration sources (in order of preference):
+    1. Environment variables: GITHUB_TOKEN, GITHUB_TEST_REPO_URL
+    2. MCP Coder config: github.token, github.test_repo_url
+
+    Environment variables:
+        GITHUB_TOKEN: GitHub Personal Access Token with repo scope
+        GITHUB_TEST_REPO_URL: URL of test repository (e.g., https://github.com/user/test-repo)
+
+    Returns:
+        LabelsManager: Configured instance for testing
+
+    Raises:
+        pytest.skip: When GitHub token or test repository not configured
+    """
+    from mcp_coder.utils.user_config import get_config_value
+
+    # Check for required GitHub configuration
+    # Priority 1: Environment variables
+    github_token = os.getenv("GITHUB_TOKEN")
+    test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
+
+    # Priority 2: Config system fallback
+    if not github_token:
+        github_token = get_config_value("github", "token")
+    if not test_repo_url:
+        test_repo_url = get_config_value("github", "test_repo_url")
+
+    if not github_token:
+        pytest.skip(
+            "GitHub token not configured. Set GITHUB_TOKEN environment variable "
+            "or add github.token to ~/.mcp_coder/config.toml"
+        )
+
+    if not test_repo_url:
+        pytest.skip(
+            "Test repository URL not configured. Set GITHUB_TEST_REPO_URL environment variable "
+            "or add github.test_repo_url to ~/.mcp_coder/config.toml"
+        )
+
+    # Clone the actual test repository
+    git_dir = tmp_path / "test_repo"
+
+    try:
+        repo = git.Repo.clone_from(test_repo_url, git_dir)
+        # Fetch all branches to make sure we have the latest
+        repo.git.fetch("origin")
+        # Ensure we're on main branch
+        try:
+            repo.git.checkout("main")
+        except:
+            # Try master if main doesn't exist
+            try:
+                repo.git.checkout("master")
+            except:
+                pass  # Use current branch
+    except Exception as e:
+        pytest.skip(f"Could not clone test repository {test_repo_url}: {e}")
+
+    # Mock config to return token
+    with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+        mock_config.return_value = github_token
+        try:
+            manager = LabelsManager(git_dir)
+            yield manager
+        except Exception as e:
+            pytest.skip(f"Failed to create LabelsManager: {e}")
+
+
+@pytest.fixture
 def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
     """Create PullRequestManager instance for testing.
 
@@ -744,3 +818,85 @@ class TestLabelsManagerUnit:
             assert manager._normalize_color("FF0000") == "FF0000"
             assert manager._normalize_color("#00ff00") == "00ff00"
             assert manager._normalize_color("00FF00") == "00FF00"
+
+
+@pytest.mark.github_integration
+class TestLabelsManagerIntegration:
+    """Integration tests for LabelsManager with GitHub API."""
+
+    def test_labels_manager_lifecycle(self, labels_manager: LabelsManager) -> None:
+        """Test complete label lifecycle: create, get, list, update, delete.
+
+        This test creates a label, retrieves it, lists labels, updates it, and deletes it.
+        """
+        # Create unique label name with timestamp
+        import datetime
+
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        label_name = f"test-label-{timestamp}"
+        label_color = "FF0000"
+        label_description = "Test label for CRUD operations"
+
+        created_label = None
+        try:
+            # Create label
+            created_label = labels_manager.create_label(
+                name=label_name, color=label_color, description=label_description
+            )
+
+            # Verify label was created
+            assert created_label, "Expected label creation to return data"
+            assert "name" in created_label, "Expected label name in response"
+            assert created_label["name"] == label_name, f"Expected name '{label_name}'"
+            assert (
+                created_label["color"] == label_color
+            ), f"Expected color '{label_color}'"
+            assert (
+                created_label["description"] == label_description
+            ), f"Expected description '{label_description}'"
+
+            # Get specific label
+            retrieved_label = labels_manager.get_label(label_name)
+            assert retrieved_label, "Expected to retrieve label data"
+            assert retrieved_label["name"] == label_name, "Expected same label name"
+            assert retrieved_label["color"] == label_color, "Expected same label color"
+
+            # List labels
+            labels_list = labels_manager.get_labels()
+            assert isinstance(labels_list, list), "Expected list of labels"
+            assert len(labels_list) > 0, "Expected at least one label"
+
+            # Verify our label is in the list
+            our_label = next(
+                (lbl for lbl in labels_list if lbl["name"] == label_name), None
+            )
+            assert our_label is not None, "Expected our label to be in the list"
+
+            # Update label
+            updated_color = "00FF00"
+            updated_description = "Updated test label description"
+            updated_label = labels_manager.update_label(
+                name=label_name, color=updated_color, description=updated_description
+            )
+            assert updated_label, "Expected update operation to return data"
+            assert updated_label["name"] == label_name, "Expected same label name"
+            assert updated_label["color"] == updated_color, "Expected updated color"
+            assert (
+                updated_label["description"] == updated_description
+            ), "Expected updated description"
+
+            # Delete label
+            delete_result = labels_manager.delete_label(label_name)
+            assert delete_result, "Expected delete operation to succeed"
+
+            # Verify label was deleted - get_label should return empty dict
+            deleted_label = labels_manager.get_label(label_name)
+            assert not deleted_label, "Expected label to be deleted"
+
+        finally:
+            # Cleanup: ensure label is deleted even if test fails
+            if created_label and "name" in created_label:
+                try:
+                    labels_manager.delete_label(created_label["name"])
+                except Exception:
+                    pass  # Ignore cleanup failures
