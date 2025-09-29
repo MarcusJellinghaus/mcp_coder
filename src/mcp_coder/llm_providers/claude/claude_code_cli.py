@@ -6,7 +6,11 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from ...utils.subprocess_runner import execute_command, CommandOptions, execute_subprocess
+from ...utils.subprocess_runner import (
+    CommandOptions,
+    execute_command,
+    execute_subprocess,
+)
 from .claude_executable_finder import find_claude_executable
 
 logger = logging.getLogger(__name__)
@@ -35,7 +39,7 @@ def _find_claude_executable() -> str:
 def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     """
     Ask Claude a question via Claude Code CLI and return the response.
-    
+
     Uses stdin input for long prompts to avoid Windows command line length limits.
 
     Args:
@@ -64,14 +68,13 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     # Windows command line limit is ~8191 characters
     # Use stdin for long prompts to avoid this limitation
     command_line_length = len(claude_cmd) + len("--print ") + len(question)
-    
+
     if command_line_length > 7000:  # Conservative threshold
-        logger.info(f"Using stdin for long prompt ({len(question)} chars) to avoid CLI limit")
-        # Use stdin input method: echo "prompt" | claude -p ""
-        options = CommandOptions(
-            timeout_seconds=timeout,
-            input_data=question
+        logger.info(
+            f"Using stdin for long prompt ({len(question)} chars) to avoid CLI limit"
         )
+        # Use stdin input method: echo "prompt" | claude -p ""
+        options = CommandOptions(timeout_seconds=timeout, input_data=question)
         result = execute_subprocess([claude_cmd, "-p", ""], options)
     else:
         # Use direct command line argument for shorter prompts

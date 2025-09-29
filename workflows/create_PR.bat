@@ -14,6 +14,14 @@ REM   create_PR.bat --project-dir "C:\my\project" --log-level DEBUG
 REM
 REM This wrapper sets up the Python environment and executes the PR workflow.
 
+REM Set console to UTF-8 codepage to handle Unicode characters
+chcp 65001 >nul 2>&1
+
+REM Set Python to use UTF-8 encoding for all I/O operations
+set PYTHONIOENCODING=utf-8
+set PYTHONLEGACYWINDOWSFSENCODING=utf-8
+set PYTHONUTF8=1
+
 REM Set PYTHONPATH to include src directory
 set PYTHONPATH=%~dp0..\src;%PYTHONPATH%
 
