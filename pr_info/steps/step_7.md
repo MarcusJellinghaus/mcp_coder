@@ -1,69 +1,74 @@
-# Step 7: Unit Tests with Mocking
+# Step 7: Add/Get Comments Operations
 
 ## Objective
-Create comprehensive unit tests for IssueManager using mocks, following the same testing patterns as existing codebase.
+Implement add and get comments operations: add_comment, get_comments, with unit tests.
 
 ## WHERE
-- **File**: `tests/utils/test_issue_manager.py` (new file)
+- **File**: `src/mcp_coder/utils/github_operations/issue_manager.py`
+- **Methods**: Add to existing IssueManager class
 
 ## WHAT
-Unit test class with mocked GitHub API:
+Add and get comments operations:
 ```python
-class TestIssueManager:
-    def test_init_validation(self): ...
-    def test_get_issue(self): ...  
-    def test_get_issues(self): ...
-    def test_create_issue(self): ...
-    def test_close_issue(self): ...
-    def test_add_labels(self): ...
-    def test_add_comment(self): ...
-    # ... more test methods
+@log_function_call
+def add_comment(self, issue_number: int, body: str) -> CommentData: ...
+
+@log_function_call
+def get_comments(self, issue_number: int) -> List[CommentData]: ...
 ```
 
 ## HOW
-- Follow existing test patterns from `test_github_operations.py` and PR manager tests
-- Use pytest fixtures for common setup
-- Mock GitHub API calls using unittest.mock
-- Test both success and error scenarios
-- Use same assertion patterns as existing tests
+- Use @log_function_call decorator consistently
+- Follow hybrid error handling (raise for auth/permission errors, empty dict/list for others)
+- Convert GitHub IssueComment objects to CommentData dictionaries
+- Validate input parameters thoroughly
 
 ## ALGORITHM
 ```
-1. Create test fixtures for IssueManager setup (mock project_dir, config)
-2. Mock GitHub API responses for each operation
-3. Test successful operations with expected return data
-4. Test error scenarios (invalid inputs, API failures)  
-5. Verify logging calls and validation behavior
+1. Validate issue_number and body content
+2. Get repository and issue using existing methods
+3. Call GitHub API comment methods (create_comment, get_comments)
+4. Convert GitHub comment objects to CommentData dictionaries
+5. Return structured data or empty dict/list on non-auth errors
 ```
 
 ## DATA
 ```python
-# Test fixtures and mocks needed
-@pytest.fixture
-def mock_issue_manager(): ...
+# add_comment returns
+CommentData or {} on error
 
-@pytest.fixture  
-def mock_github_issue(): ...
+# get_comments returns
+List[CommentData] or [] on error  
 
-# Test data structures
-sample_issue_data = IssueData(...)
-sample_comment_data = CommentData(...)
+# CommentData structure
+{
+    "id": int,
+    "body": str,
+    "user": Optional[str],
+    "created_at": Optional[str], 
+    "updated_at": Optional[str],
+    "url": str
+}
 ```
 
 ## LLM Prompt
 ```
-Based on the GitHub Issues API Implementation Summary, implement Step 7: Unit Tests with Mocking.
+Based on the GitHub Issues API Implementation Summary, implement Step 7: Add/Get Comments Operations.
 
-Create comprehensive unit tests in tests/utils/test_issue_manager.py following the existing testing patterns in the codebase.
+Add two methods to the existing IssueManager class: add_comment, get_comments.
 
 Requirements:
-- Follow the same test structure and patterns as existing GitHub operation tests
-- Mock all GitHub API calls using unittest.mock
-- Test both success and failure scenarios for each method
-- Use pytest fixtures for common setup
-- Include validation testing for all input parameters
-- Test error handling and logging behavior
-- Use same assertion patterns as existing tests
+- Follow the same patterns as existing methods (error handling, validation, logging)
+- Use @log_function_call decorator on all methods
+- Convert GitHub IssueComment objects to CommentData dictionaries
+- Include comprehensive input validation for body content
+- Use hybrid error handling: raise exceptions for auth/permission errors, return empty dict/list for other errors
 
-Focus on thorough unit testing with mocked dependencies for fast test execution.
+After implementation, add unit tests to tests/utils/test_issue_manager.py:
+- Test both methods with mocked GitHub API calls
+- Use KISS approach: essential coverage only
+- Test success scenarios and basic error handling
+- Test input validation for comment body
+
+Focus only on these 2 comment operations and their unit tests.
 ```

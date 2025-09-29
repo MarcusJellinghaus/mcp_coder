@@ -1,60 +1,69 @@
-# Step 8: Integration Tests
+# Step 8: Edit/Delete Comments Operations
 
 ## Objective
-Create integration tests that use real GitHub API calls, marked with `github_integration` pytest marker for optional execution.
+Implement edit and delete comments operations: edit_comment, delete_comment, with unit tests and final integration test enhancement.
 
 ## WHERE
-- **File**: `tests/utils/test_issue_manager_integration.py` (new file)
+- **File**: `src/mcp_coder/utils/github_operations/issue_manager.py`
+- **Methods**: Add to existing IssueManager class
+- **Integration Test**: Final enhancement to existing test in `tests/utils/test_issue_manager_integration.py`
 
 ## WHAT
-Integration test class with real API calls:
+Edit and delete comments operations:
 ```python
-@pytest.mark.github_integration
-class TestIssueManagerIntegration:
-    def test_real_github_issue_operations(self): ...
-    def test_real_label_management(self): ...
-    def test_real_comment_operations(self): ...
-    def test_full_issue_lifecycle(self): ...
+@log_function_call  
+def edit_comment(self, comment_id: int, body: str) -> CommentData: ...
+
+@log_function_call
+def delete_comment(self, comment_id: int) -> bool: ...
 ```
 
 ## HOW
-- Use `@pytest.mark.github_integration` marker (same as existing integration tests)
-- Follow patterns from existing GitHub integration tests
-- Use real GitHub repository for testing (same as PR manager tests)
-- Include setup/teardown for test data cleanup
-- Test against actual GitHub API with authentication
+- Use @log_function_call decorator consistently
+- Follow hybrid error handling (raise for auth/permission errors, empty dict/False for others)
+- Use _validate_comment_id for comment_id validation
+- Return boolean for delete_comment (success/failure)
 
 ## ALGORITHM
 ```
-1. Set up test repository and authentication (same as PR integration tests)
-2. Test basic issue operations (create, get, close) against real API
-3. Test label management with real repository labels
-4. Test comment operations with real issue comments
-5. Clean up test data after each test
+1. Validate comment_id and body content (for edit)
+2. Get repository using _parse_and_get_repo()
+3. Call GitHub API comment methods (edit_comment, delete_comment)
+4. Convert GitHub comment objects to CommentData dictionaries (for edit)
+5. Return structured data, boolean, or empty dict/False on non-auth errors
 ```
 
 ## DATA
 ```python
-# Integration test configuration
-@pytest.mark.github_integration
-class TestIssueManagerIntegration:
-    # Uses real GitHub API - requires authentication
-    # Marked for optional execution in CI/CD
+# edit_comment returns
+CommentData or {} on error
+
+# delete_comment returns
+bool (True on success, False on error)
 ```
 
 ## LLM Prompt
 ```
-Based on the GitHub Issues API Implementation Summary, implement Step 8: Integration Tests.
+Based on the GitHub Issues API Implementation Summary, implement Step 8: Edit/Delete Comments Operations.
 
-Create integration tests in tests/utils/test_issue_manager_integration.py using real GitHub API calls.
+Add two methods to the existing IssueManager class: edit_comment, delete_comment.
 
 Requirements:
-- Use @pytest.mark.github_integration marker on all test methods
-- Follow the same patterns as existing GitHub integration tests in the codebase
-- Test against real GitHub API with proper authentication
-- Include proper setup/teardown for test data management
-- Test full issue lifecycle scenarios (create → comment → label → close)
-- Use same test repository setup as existing PR integration tests
+- Follow the same patterns as existing methods (error handling, validation, logging)
+- Use @log_function_call decorator on all methods
+- Use _validate_comment_id for comment_id validation
+- Return boolean for delete_comment (True/False), CommentData for edit_comment
+- Use hybrid error handling: raise exceptions for auth/permission errors, return empty dict/False for other errors
 
-These tests should validate the actual GitHub API integration works correctly.
+After implementation, add unit tests to tests/utils/test_issue_manager.py:
+- Test both methods with mocked GitHub API calls
+- Use KISS approach: essential coverage only
+- Test success scenarios and basic error handling
+
+Then enhance the existing integration test in tests/utils/test_issue_manager_integration.py:
+- Complete the integration test flow: create_issue → add_labels → remove_labels → add_comment → edit_comment → delete_comment → close_issue
+- Test the full issue lifecycle with real GitHub API
+- Ensure integration test fails clearly with exceptions on permission issues
+
+This completes the IssueManager implementation with full issue lifecycle testing.
 ```

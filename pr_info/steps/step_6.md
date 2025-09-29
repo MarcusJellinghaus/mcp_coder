@@ -1,47 +1,66 @@
-# Step 6: Integration and Module Export
+# Step 6: Remove & Set Labels Operations
 
 ## Objective
-Export IssueManager class from the github_operations module to make it available for import alongside PullRequestManager.
+Implement remove and set labels operations: remove_labels, set_labels, with unit tests and enhanced integration test.
 
 ## WHERE
-- **File**: `src/mcp_coder/utils/github_operations/__init__.py`
+- **File**: `src/mcp_coder/utils/github_operations/issue_manager.py`
+- **Methods**: Add to existing IssueManager class
+- **Integration Test**: Enhance existing test in `tests/utils/test_issue_manager_integration.py`
 
 ## WHAT
-Add IssueManager to module exports:
+Remove and set labels operations:
 ```python
-from .issue_manager import IssueManager
+@log_function_call
+def remove_labels(self, issue_number: int, *labels: str) -> IssueData: ...
+
+@log_function_call
+def set_labels(self, issue_number: int, *labels: str) -> IssueData: ...
 ```
 
 ## HOW
-- Follow the exact same pattern as PullRequestManager export
-- Add to existing __init__.py file
-- Maintain alphabetical ordering in imports
+- Use @log_function_call decorator consistently
+- Follow hybrid error handling (raise for auth/permission errors, empty dict for others)
+- Use *args pattern for variable label arguments
+- Return updated IssueData after label operations
 
 ## ALGORITHM
 ```
-1. Open existing __init__.py file
-2. Add import for IssueManager from .issue_manager
-3. Add IssueManager to __all__ list (if present)
-4. Maintain consistent formatting with existing imports
+1. Validate issue_number and labels input
+2. Get repository and issue using existing methods
+3. Call GitHub API label methods (remove_from_labels, set_labels)
+4. Convert updated issue to IssueData dictionary
+5. Return structured data or empty dict on non-auth errors
 ```
 
 ## DATA
 ```python
-# Module exports after change
-from mcp_coder.utils.github_operations import PullRequestManager, IssueManager
+# remove_labels, set_labels return
+IssueData or {} on error
 ```
 
 ## LLM Prompt
 ```
-Based on the GitHub Issues API Implementation Summary, implement Step 6: Integration and Module Export.
+Based on the GitHub Issues API Implementation Summary, implement Step 6: Remove & Set Labels Operations.
 
-Update src/mcp_coder/utils/github_operations/__init__.py to export the new IssueManager class.
+Add two methods to the existing IssueManager class: remove_labels, set_labels.
 
 Requirements:
-- Add import for IssueManager following the same pattern as PullRequestManager
-- Maintain consistent code style and formatting
-- Keep imports in alphabetical order
-- Add to __all__ list if one exists
+- Follow the same patterns as existing methods (error handling, validation, logging)
+- Use @log_function_call decorator on all methods
+- Use *args pattern for label arguments
+- Return updated IssueData after operations (get fresh issue data)
+- Use hybrid error handling: raise exceptions for auth/permission errors, return empty dict for other errors
 
-This should be a simple 1-2 line addition to make IssueManager importable.
+After implementation, add unit tests to tests/utils/test_issue_manager.py:
+- Test both methods with mocked GitHub API calls
+- Use KISS approach: essential coverage only
+- Test *args pattern for both methods
+
+Then enhance the existing integration test in tests/utils/test_issue_manager_integration.py:
+- Extend the existing test flow to: create_issue → add_labels → remove_labels → set_labels → close_issue
+- Test with real GitHub API using configured test repository
+- Ensure integration test fails clearly with exceptions on permission issues
+
+Focus on these 2 operations, their unit tests, and enhancing the integration test.
 ```

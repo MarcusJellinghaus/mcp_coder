@@ -22,7 +22,7 @@ Add GitHub Issues management capabilities to mcp_coder, following the same patte
 - **Structured data**: TypedDict return types for consistent API
 - **Configuration reuse**: Leverage existing GitHub token configuration
 - **Comprehensive validation**: Input validation with detailed error messages
-- **Graceful failures**: Return empty dict/list on errors, never raise exceptions
+- **Hybrid error handling**: Raise exceptions for auth/permission errors, return empty dict/list for other errors
 
 ## Files Created or Modified
 
@@ -40,10 +40,15 @@ src/mcp_coder/utils/github_operations/__init__.py        # Export IssueManager c
 
 ## Implementation Steps
 1. **Data Structures**: Define TypedDict classes for structured returns
-2. **Core Issue Operations**: Get, create, close, reopen issues
-3. **Label Management**: Add, remove, set labels on issues  
-4. **Comment Management**: Full CRUD operations for issue comments
-5. **Integration**: Export IssueManager and create comprehensive tests
+2. **Class Structure**: IssueManager class skeleton with validation
+3. **Basic Issue Reading**: Get single issue and list issues with filtering
+4. **Issue Creation & Lifecycle**: Create, close, reopen issues with integration test
+5. **Repository Labels & Add Labels**: Get available labels and add labels to issues
+6. **Remove & Set Labels**: Complete label management with enhanced integration test
+7. **Add/Get Comments**: Comment creation and retrieval operations
+8. **Edit/Delete Comments**: Complete comment management with final integration test
+9. **Integration**: Export IssueManager class
+10. **Comprehensive Testing**: Additional integration test scenarios
 
 ## API Overview
 ```python

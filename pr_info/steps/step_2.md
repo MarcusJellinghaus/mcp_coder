@@ -54,6 +54,7 @@ Requirements:
 - Add validation methods for issue_number and comment_id following pr_number pattern
 - Copy the repository_name and default_branch properties exactly
 - Use same imports and exception handling patterns
+- Use hybrid error handling: raise exceptions for auth/permission errors, return empty dict/list for other errors
 
 Do not implement any issue operations yet - just the class structure and validation.
 ```
