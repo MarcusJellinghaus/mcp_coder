@@ -14,9 +14,8 @@ Config File Alternative (~/.mcp_coder/config.toml):
 Note: Tests will be skipped if configuration is missing.
 """
 
-import os
 from pathlib import Path
-from typing import Any, Dict, Generator, List
+from typing import TYPE_CHECKING, Any, Dict, Generator, List
 from unittest.mock import MagicMock, Mock, patch
 
 import git
@@ -31,20 +30,20 @@ from mcp_coder.utils.github_operations.github_utils import (
 from mcp_coder.utils.github_operations.labels_manager import LabelData
 from mcp_coder.utils.github_operations.pr_manager import PullRequestData
 
+if TYPE_CHECKING:
+    from tests.conftest import GitHubTestSetup
+
 
 @pytest.fixture
-def labels_manager(tmp_path: Path) -> Generator[LabelsManager, None, None]:
+def labels_manager(
+    github_test_setup: "GitHubTestSetup",
+) -> Generator[LabelsManager, None, None]:
     """Create LabelsManager instance for testing.
 
-    Validates GitHub configuration and gracefully skips when missing.
+    Uses shared github_test_setup fixture for configuration and repository setup.
 
-    Configuration sources (in order of preference):
-    1. Environment variables: GITHUB_TOKEN, GITHUB_TEST_REPO_URL
-    2. MCP Coder config: github.token, github.test_repo_url
-
-    Environment variables:
-        GITHUB_TOKEN: GitHub Personal Access Token with repo scope
-        GITHUB_TEST_REPO_URL: URL of test repository (e.g., https://github.com/user/test-repo)
+    Args:
+        github_test_setup: Shared GitHub test configuration fixture
 
     Returns:
         LabelsManager: Configured instance for testing
@@ -52,73 +51,25 @@ def labels_manager(tmp_path: Path) -> Generator[LabelsManager, None, None]:
     Raises:
         pytest.skip: When GitHub token or test repository not configured
     """
-    from mcp_coder.utils.user_config import get_config_value
-
-    # Check for required GitHub configuration
-    # Priority 1: Environment variables
-    github_token = os.getenv("GITHUB_TOKEN")
-    test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
-
-    # Priority 2: Config system fallback
-    if not github_token:
-        github_token = get_config_value("github", "token")
-    if not test_repo_url:
-        test_repo_url = get_config_value("github", "test_repo_url")
-
-    if not github_token:
-        pytest.skip(
-            "GitHub token not configured. Set GITHUB_TOKEN environment variable "
-            "or add github.token to ~/.mcp_coder/config.toml"
-        )
-
-    if not test_repo_url:
-        pytest.skip(
-            "Test repository URL not configured. Set GITHUB_TEST_REPO_URL environment variable "
-            "or add github.test_repo_url to ~/.mcp_coder/config.toml"
-        )
-
-    # Clone the actual test repository
-    git_dir = tmp_path / "test_repo"
+    from tests.conftest import create_github_manager
 
     try:
-        repo = git.Repo.clone_from(test_repo_url, git_dir)
-        # Fetch all branches to make sure we have the latest
-        repo.git.fetch("origin")
-        # Ensure we're on main branch
-        try:
-            repo.git.checkout("main")
-        except:
-            # Try master if main doesn't exist
-            try:
-                repo.git.checkout("master")
-            except:
-                pass  # Use current branch
+        manager = create_github_manager(LabelsManager, github_test_setup)
+        yield manager
     except Exception as e:
-        pytest.skip(f"Could not clone test repository {test_repo_url}: {e}")
-
-    # Mock config to return token
-    with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-        mock_config.return_value = github_token
-        try:
-            manager = LabelsManager(git_dir)
-            yield manager
-        except Exception as e:
-            pytest.skip(f"Failed to create LabelsManager: {e}")
+        pytest.skip(f"Failed to create LabelsManager: {e}")
 
 
 @pytest.fixture
-def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
+def pr_manager(
+    github_test_setup: "GitHubTestSetup",
+) -> Generator[PullRequestManager, None, None]:
     """Create PullRequestManager instance for testing.
 
-    Validates GitHub configuration and gracefully skips when missing.
+    Uses shared github_test_setup fixture for configuration and repository setup.
 
-    Configuration sources (in order of preference):
-    1. Environment variables: GITHUB_TOKEN, GITHUB_TEST_REPO_URL
-    2. MCP Coder config: github.token, github.test_repo_url
-
-    Environment variables:
-        GITHUB_TOKEN: GitHub Personal Access Token with repo scope
-        GITHUB_TEST_REPO_URL: URL of test repository (e.g., https://github.com/user/test-repo)
+    Args:
+        github_test_setup: Shared GitHub test configuration fixture
 
     Returns:
         PullRequestManager: Configured instance for testing
@@ -126,91 +77,13 @@ def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
     Raises:
         pytest.skip: When GitHub token or test repository not configured
     """
-    from mcp_coder.utils.user_config import get_config_value
-
-    print("\n=== FIXTURE DEBUG START ===")
-
-    # Check for required GitHub configuration
-    # Priority 1: Environment variables
-    github_token = os.getenv("GITHUB_TOKEN")
-    test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
-    print(f"Environment vars - Token: {bool(github_token)}, URL: {bool(test_repo_url)}")
-
-    # Priority 2: Config system fallback
-    if not github_token:
-        github_token = get_config_value("github", "token")
-        print(f"Config fallback - Token found: {bool(github_token)}")
-    if not test_repo_url:
-        test_repo_url = get_config_value("github", "test_repo_url")
-        print(f"Config fallback - URL found: {bool(test_repo_url)}")
-
-    print(f"Final config - Token length: {len(github_token) if github_token else 0}")
-    print(f"Final config - URL: {test_repo_url}")
-
-    if not github_token:
-        print("[ERROR] SKIPPING: No GitHub token")
-        pytest.skip(
-            "GitHub token not configured. Set GITHUB_TOKEN environment variable "
-            "or add github.token to ~/.mcp_coder/config.toml"
-        )
-
-    if not test_repo_url:
-        print("[ERROR] SKIPPING: No test repo URL")
-        pytest.skip(
-            "Test repository URL not configured. Set GITHUB_TEST_REPO_URL environment variable "
-            "or add github.test_repo_url to ~/.mcp_coder/config.toml"
-        )
-
-    print("[OK] Configuration validated, cloning real test repo...")
-
-    # Clone the actual test repository
-    git_dir = tmp_path / "test_repo"
-    print(f"Cloning {test_repo_url} to {git_dir}")
+    from tests.conftest import create_github_manager
 
     try:
-        repo = git.Repo.clone_from(test_repo_url, git_dir)
-        print("[OK] Real test repository cloned")
-
-        # Fetch all branches to make sure we have the latest
-        repo.git.fetch("origin")
-        print("[OK] Fetched latest from origin")
-
-        # Ensure we're on main branch
-        try:
-            repo.git.checkout("main")
-            print("[OK] Checked out main branch")
-        except:
-            # Try master if main doesn't exist
-            try:
-                repo.git.checkout("master")
-                print("[OK] Checked out master branch")
-            except:
-                print("[WARN] Could not checkout main/master, using current branch")
-
-        # Pull latest changes
-        try:
-            repo.git.pull("origin", repo.active_branch.name)
-            print("[OK] Pulled latest changes")
-        except Exception as e:
-            print(f"[WARN] Pull failed (non-critical): {e}")
-
+        manager = create_github_manager(PullRequestManager, github_test_setup)
+        yield manager
     except Exception as e:
-        print(f"[ERROR] Failed to clone repository: {e}")
-        pytest.skip(f"Could not clone test repository {test_repo_url}: {e}")
-
-    print("Creating PullRequestManager...")
-    # Mock config to return token
-    with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-        mock_config.return_value = github_token
-        try:
-            manager = PullRequestManager(git_dir)
-            print("[OK] PullRequestManager created successfully")
-            print("=== FIXTURE DEBUG END ===\n")
-            yield manager
-        except Exception as e:
-            print(f"[ERROR] PullRequestManager creation failed: {e}")
-            print("=== FIXTURE DEBUG END ===\n")
-            raise
+        pytest.skip(f"Failed to create PullRequestManager: {e}")
 
 
 class TestGitHubUtils:
