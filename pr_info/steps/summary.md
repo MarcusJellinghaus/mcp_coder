@@ -11,7 +11,7 @@ Add a minimal labels manager to the existing GitHub operations module for basic 
 
 ### Design Decisions
 1. **Reuse existing patterns**: Mirror PullRequestManager structure for consistency
-2. **Minimal scope**: Only essential CRUD operations (get, create, delete)
+2. **Minimal scope**: Essential CRUD operations (get, create, update, delete)
 3. **Same validation**: Reuse project_dir/token validation from PullRequestManager
 4. **Graceful failures**: Return empty dict/list on errors (no exceptions to caller)
 5. **Permissive validation**: Label names follow GitHub's permissive rules (allow spaces, hyphens, underscores, emojis, etc.). Only check non-empty and no leading/trailing whitespace
@@ -56,6 +56,7 @@ class LabelsManager:
     def __init__(self, project_dir: Optional[Path] = None) -> None
     def get_labels(self) -> List[LabelData]
     def create_label(self, name: str, color: str, description: str = "") -> LabelData
+    def update_label(self, name: str, new_name: str = "", color: str = "", description: str = "") -> LabelData
     def delete_label(self, name: str) -> bool
 
 class LabelData(TypedDict):

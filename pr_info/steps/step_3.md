@@ -60,10 +60,12 @@ def labels_manager(tmp_path: Path) -> Generator[LabelsManager, None, None]:
 1. Setup: Generate unique label name with timestamp
 2. Create: Call create_label with test data
 3. Assert: Verify label data returned correctly
-4. List: Call get_labels and find our label
-5. Delete: Call delete_label with label name
-6. Assert: Verify deletion successful (returns True)
-7. Cleanup: Ensure label deleted in finally block
+4. Update: Call update_label to change color/description
+5. Assert: Verify updated label data returned correctly
+6. List: Call get_labels and find our label with updated data
+7. Delete: Call delete_label with label name
+8. Assert: Verify deletion successful (returns True)
+9. Cleanup: Ensure label deleted in finally block
 ```
 
 ### Idempotency Test Logic
@@ -83,6 +85,8 @@ def labels_manager(tmp_path: Path) -> Generator[LabelsManager, None, None]:
 test_label_name = f"test-label-{timestamp}"
 test_color = "FF5500"  # Orange (both "FF5500" and "#FF5500" work)
 test_description = f"Test label created at {timestamp}"
+updated_color = "00AA00"  # Green
+updated_description = "Updated description"
 ```
 
 ### Expected Returns

@@ -65,6 +65,7 @@ def labels_manager(tmp_path: Path):
 #   - _parse_and_get_repo()
 #   - get_labels()
 #   - create_label()
+#   - update_label()
 #   - delete_label()
 ```
 

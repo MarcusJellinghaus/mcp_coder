@@ -27,7 +27,7 @@ Simple 4-step TDD implementation to add labels management to existing GitHub ope
 
 ### Step 4: CRUD Implementation (Green Phase)
 **File**: `pr_info/steps/step_4.md`
-- Implement `get_labels()`, `create_label()`, `delete_label()`
+- Implement `get_labels()`, `create_label()`, `update_label()`, `delete_label()`
 - Add `@log_function_call` decorators
 - **Expected**: ALL tests PASS ✅
 
