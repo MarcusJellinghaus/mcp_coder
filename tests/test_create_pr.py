@@ -540,10 +540,31 @@ class TestGeneratePrSummary:
         mock_get_prompt.return_value = "prompt template"
         mock_ask_llm.return_value = None  # LLM failure
 
-        title, body = generate_pr_summary(Path("/test/project"))
+        # Should exit with code 1 on LLM failure
+        with pytest.raises(SystemExit) as exc_info:
+            generate_pr_summary(Path("/test/project"))
+        
+        assert exc_info.value.code == 1
 
-        assert title == "Pull Request"
-        assert body == "Pull Request"
+    @patch("workflows.create_PR.get_branch_diff")
+    @patch("workflows.create_PR.get_prompt")
+    @patch("workflows.create_PR.ask_llm")
+    def test_generate_pr_summary_llm_exception(
+        self,
+        mock_ask_llm: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_get_diff: MagicMock,
+    ) -> None:
+        """Test PR summary generation when LLM call raises exception."""
+        mock_get_diff.return_value = "diff content"
+        mock_get_prompt.return_value = "prompt template"
+        mock_ask_llm.side_effect = Exception("LLM API error")
+
+        # Should exit with code 1 on LLM exception
+        with pytest.raises(SystemExit) as exc_info:
+            generate_pr_summary(Path("/test/project"))
+        
+        assert exc_info.value.code == 1
 
 
 class TestCleanupRepository:

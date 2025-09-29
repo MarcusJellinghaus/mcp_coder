@@ -292,18 +292,21 @@ def generate_pr_summary(project_dir: Path) -> Tuple[str, str]:
     logger.info("Calling LLM for PR summary...")
     try:
         llm_response = ask_llm(full_prompt, provider="claude", method="api", timeout=300)
+        
         if not llm_response or not llm_response.strip():
-            logger.warning("LLM returned empty response, using fallback")
-            return "Pull Request", "Pull Request"
+            logger.error("LLM returned empty response - cannot generate meaningful PR summary")
+            logger.error("This indicates a configuration issue with the LLM provider.")
+            sys.exit(1)
         
         title, body = parse_pr_summary(llm_response)
         logger.info("PR summary generated successfully")
         return title, body
         
     except Exception as e:
-        logger.error(f"Failed to get LLM response: {e}")
-        logger.warning("Using fallback PR summary due to LLM error")
-        return "Pull Request", "Pull Request"
+        logger.error(f"Critical error: LLM API failed: {e}")
+        logger.error("Cannot generate PR summary without working LLM connection.")
+        logger.error("Please fix LLM configuration before creating PR.")
+        sys.exit(1)
 
 
 def cleanup_repository(project_dir: Path) -> bool:
@@ -414,6 +417,7 @@ def parse_arguments() -> argparse.Namespace:
         default="INFO",
         help="Set the logging level (default: INFO)"
     )
+
     return parser.parse_args()
 
 
