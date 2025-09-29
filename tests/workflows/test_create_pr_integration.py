@@ -16,6 +16,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+# Import git fixtures from utils
+from tests.utils.conftest import git_repo, git_repo_with_files
+
 from mcp_coder.utils.git_operations import (
     commit_all_changes,
     get_current_branch_name,
@@ -127,7 +130,31 @@ class TestCreatePRWorkflowIntegration:
 
         # Import workflow functions
         from workflows.create_PR import check_prerequisites
+        from mcp_coder.utils.git_operations import (
+            get_current_branch_name,
+            get_parent_branch_name,
+            is_working_directory_clean,
+        )
+        from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
+        # Test each prerequisite individually
+        is_clean = is_working_directory_clean(project_dir)
+        current_branch = get_current_branch_name(project_dir)
+        parent_branch = get_parent_branch_name(project_dir)
+        
+        # Test task tracker
+        try:
+            incomplete_tasks = get_incomplete_tasks(str(project_dir / "pr_info"))
+        except Exception as e:
+            pytest.fail(f"Task tracker check failed: {e}")
+        
+        # Individual assertions for better error messages
+        assert is_clean, f"Working directory not clean"
+        assert current_branch is not None, f"Could not get current branch name"
+        assert parent_branch is not None, f"Could not get parent branch name: {parent_branch}"
+        assert current_branch != parent_branch, f"Current branch '{current_branch}' equals parent branch '{parent_branch}'"
+        assert len(incomplete_tasks) == 0, f"Found incomplete tasks: {incomplete_tasks}"
+        
         # Should pass prerequisites now
         assert check_prerequisites(project_dir)
 
@@ -210,7 +237,8 @@ class TestCreatePRWorkflowIntegration:
         assert is_working_directory_clean(project_dir)
 
         current_branch = get_current_branch_name(project_dir)
-        assert current_branch == "master" or current_branch == "main"
+        # After _setup_complete_project, we should be on the feature branch
+        assert current_branch == "feature-test-branch"
 
         # Test commit functionality
         test_file = project_dir / "test_commit.txt"
@@ -246,7 +274,7 @@ class TestCreatePRWorkflowIntegration:
         pr_info_dir = project_dir / "pr_info"
         pr_info_dir.mkdir()
 
-        # Create TASK_TRACKER.md with all tasks completed
+        # Create TASK_TRACKER.md with all tasks completed in proper format
         tracker_content = """# Task Status Tracker
 
 ## Instructions for LLM
@@ -266,7 +294,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
         (pr_info_dir / "TASK_TRACKER.md").write_text(tracker_content)
 
         # Commit initial structure
-        repo.index.add_items(
+        repo.index.add(
             [
                 str(f.relative_to(project_dir))
                 for f in project_dir.rglob("*")
@@ -274,6 +302,24 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
             ]
         )
         repo.index.commit("Initial project structure")
+        
+        # Rename the default branch to 'main' if it's 'master'
+        if repo.active_branch.name == 'master':
+            # Create main branch from master and switch to it
+            main_branch = repo.create_head('main')
+            main_branch.checkout()
+            # Delete master branch
+            repo.delete_head('master')
+        
+        # Create a feature branch so we're not on the parent branch
+        feature_branch = repo.create_head("feature-test-branch")
+        feature_branch.checkout()
+        
+        # Commit any additional changes if they exist (e.g., from branch operations)
+        if repo.is_dirty() or repo.untracked_files:
+            repo.index.add(repo.untracked_files if repo.untracked_files else [])
+            if repo.is_dirty():
+                repo.index.commit("Setup feature branch")
 
     def _setup_project_with_steps(self, project_dir: Path) -> None:
         """Setup project with pr_info/steps directory for cleanup testing."""
