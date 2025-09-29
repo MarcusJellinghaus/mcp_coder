@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
+from mcp_coder.cli.llm_helpers import parse_llm_method
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm_interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
@@ -262,7 +263,7 @@ def _load_prompt_or_exit(header: str) -> str:
         sys.exit(1)
 
 
-def generate_pr_summary(project_dir: Path) -> Tuple[str, str]:
+def generate_pr_summary(project_dir: Path, llm_method: str = "claude_code_api") -> Tuple[str, str]:
     """
     Generate PR title and body using LLM and git diff.
     
@@ -289,9 +290,10 @@ def generate_pr_summary(project_dir: Path) -> Tuple[str, str]:
     # Generate summary
     full_prompt = prompt_template.replace("[git_diff_content]", diff_content)
     
-    logger.info("Calling LLM for PR summary...")
+    logger.info(f"Calling LLM for PR summary using method: {llm_method}...")
     try:
-        llm_response = ask_llm(full_prompt, provider="claude", method="api", timeout=300)
+        provider, method = parse_llm_method(llm_method)
+        llm_response = ask_llm(full_prompt, provider=provider, method=method, timeout=300)
         
         if not llm_response or not llm_response.strip():
             logger.error("LLM returned empty response - cannot generate meaningful PR summary")
@@ -417,6 +419,12 @@ def parse_arguments() -> argparse.Namespace:
         default="INFO",
         help="Set the logging level (default: INFO)"
     )
+    parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_api",
+        help="LLM method to use (default: claude_code_api)"
+    )
 
     return parser.parse_args()
 
@@ -483,7 +491,7 @@ def main() -> None:
     
     # Step 2: Generate PR summary
     log_step("Step 2/4: Generating PR summary...")
-    title, body = generate_pr_summary(project_dir)
+    title, body = generate_pr_summary(project_dir, args.llm_method)
     
     # Step 3: Create pull request
     log_step("Step 3/4: Creating pull request...")

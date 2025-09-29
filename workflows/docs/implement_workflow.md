@@ -5,9 +5,27 @@ Continuous automation script that processes ALL incomplete implementation tasks 
 
 ## Usage
 ```bash
+# Use default claude_code_api method
 python workflows/implement.py
 workflows/implement.bat
+
+# Use claude_code_cli method instead
+python workflows/implement.py --llm-method claude_code_cli
+workflows/implement.bat --llm-method claude_code_cli
+
+# Other options
+python workflows/implement.py --project-dir /path/to/project --log-level DEBUG --llm-method claude_code_api
 ```
+
+## Parameters
+- `--project-dir PATH`: Project directory path (default: current directory)
+- `--log-level LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) (default: INFO)
+- `--llm-method METHOD`: LLM method to use (claude_code_cli, claude_code_api) (default: claude_code_api)
+
+## LLM Methods
+- **claude_code_api** (default): Faster, requires API credentials
+- **claude_code_cli**: Fallback option, requires CLI setup
+- Use CLI method if API fails or for debugging
 
 ## Prerequisites
 - Clean working directory (no uncommitted changes)
@@ -42,4 +60,6 @@ For each incomplete task:
 - "Working directory not clean" → Commit/stash changes
 - "Current branch is main" → Switch to feature branch  
 - "No implementation tasks" → Create `pr_info/steps/` or populate `TASK_TRACKER.md`
-- "LLM timeout" → Check Claude API credentials/network
+- "LLM API failed" → Try `--llm-method claude_code_cli` or check API credentials
+- "Empty LLM response" → Verify Claude Code authentication and network connectivity
+- "LLM timeout" → Check Claude API credentials/network or try CLI method
