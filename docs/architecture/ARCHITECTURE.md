@@ -3,7 +3,7 @@
 ## Document Metadata
 
 **Framework**: Arc42 Template  
-**Version**: 1.1  
+**Version**: 1.2  
 **Last Updated**: 2025-09-29  
 **Status**: Complete (Sections 1-8)  
 **Maintainer**: Marcus Jellinghaus  
@@ -128,17 +128,18 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **Main interface**: `llm_interface.py` - Multi-provider LLM abstraction (tests: `test_llm_interface.py`)
 - **Prompt management**: `prompt_manager.py` - Template and validation system (tests: `test_prompt_manager.py`)
 - **Code quality**: `mcp_code_checker.py` - Quality check integration (tests: `test_mcp_code_checker_integration.py`)
+- **Constants**: `constants.py` - Project-wide constants and paths (tests: ❌ missing)
 
 ### CLI System (`src/mcp_coder/cli/`)
 - **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)
-- **Command implementations**: `cli/commands/` - Individual CLI commands (tests: `cli/commands/test_*.py`, `test_prompt_sdk_utilities.py` 🏷️ claude_integration)
+- **Command implementations**: `cli/commands/` - Individual CLI commands (tests: `cli/commands/test_*.py`, `test_prompt_sdk_utilities.py` 🏷️ claude_cli_integration)
 - **Help system**: `cli/commands/help.py` - Documentation and usage (tests: `cli/commands/test_help.py`)
 
 ### LLM Integration (`src/mcp_coder/llm_providers/`)
 - **Claude interface**: `llm_providers/claude/claude_code_interface.py` - Method routing (tests: ❌ missing)
 - **CLI implementation**: `llm_providers/claude/claude_code_cli.py` - Subprocess execution (tests: `claude/test_claude_code_cli.py`)
-- **API implementation**: `llm_providers/claude/claude_code_api.py` - SDK integration (tests: `claude/test_claude_code_api*.py` 🏷️ claude_integration)
-- **Executable finder**: `llm_providers/claude/claude_executable_finder.py` - Installation detection (tests: `claude/test_claude_executable_finder.py` 🏷️ claude_integration)
+- **API implementation**: `llm_providers/claude/claude_code_api.py` - SDK integration (tests: `claude/test_claude_code_api*.py` 🏷️ claude_api_integration)
+- **Executable finder**: `llm_providers/claude/claude_executable_finder.py` - Installation detection (tests: `claude/test_claude_executable_finder.py` 🏷️ claude_cli_integration)
 - **CLI verification**: `llm_providers/claude/claude_cli_verification.py` - Installation validation (tests: `claude/test_claude_cli_verification.py`)
 
 ### Automation & Operations (`src/mcp_coder/utils/`)
@@ -212,9 +213,12 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
   - `git_integration`: File system git operations (repos, commits) in `utils/test_git_*.py`
     - **When to use**: Testing git workflow automation, repository operations
     - **Requirements**: Local git environment, test repositories
-  - `claude_integration`: Claude CLI/API tests (network, auth needed) in `llm_providers/claude/` + `cli/commands/`
-    - **When to use**: Testing Claude Code CLI integration, API functionality
+  - `claude_cli_integration`: Claude CLI tests (network, auth needed) in `llm_providers/claude/` + `cli/commands/`
+    - **When to use**: Testing Claude Code CLI integration, executable detection
     - **Requirements**: Claude Code CLI installed, authentication configured
+  - `claude_api_integration`: Claude API tests (network, auth needed) in `llm_providers/claude/`
+    - **When to use**: Testing Claude Code API integration, SDK functionality
+    - **Requirements**: Claude Code API access, authentication configured
   - `formatter_integration`: Code formatter integration (black, isort) in `formatters/test_*.py`
     - **When to use**: Testing code formatting automation, tool integration
     - **Requirements**: Formatter tools installed
@@ -223,7 +227,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
     - **Requirements**: GitHub API tokens, network access
 - **Fast development**: Use exclusion pattern to skip slow integration tests
 - **Parallel execution**: Always use `extra_args: ["-n", "auto"]`
-- **Recommended**: `"-m", "not git_integration and not claude_integration and not formatter_integration and not github_integration"`
+- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"`
 - **Integration testing**: Use specific markers when developing integration features
 - **CI/CD**: Run all tests including integration tests in automated pipelines
 
