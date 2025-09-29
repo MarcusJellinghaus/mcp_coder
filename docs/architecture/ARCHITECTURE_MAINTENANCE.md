@@ -199,12 +199,13 @@ mcp-coder prompt "Update docs/architecture/ARCHITECTURE.md based on analysis:
    - Testing strategy reflects pyproject.toml
    - File paths accurate for LLM navigation
 
-5. PROVIDE CONCISE SUMMARY:
-   - List what was updated (sections, files, components)
-   - Note any major changes or additions
-   - Confirm documentation is now current
+5. BE SELECTIVE AND PRECISE:
+   - Only update sections with actual changes
+   - Do not add content just to show activity
+   - If no changes needed, state "No updates required"
+   - Focus on accuracy over completeness
 
-Provide updated ARCHITECTURE.md content with summary." --continue
+Provide only the updated ARCHITECTURE.md sections that actually changed." --continue
 ```
 
 ### 4.3 Decision Documentation
@@ -223,9 +224,9 @@ mcp-coder prompt "Document any significant architectural decisions made:
    - Include context for design choices
    - Document why alternatives were rejected
 
-3. UPDATE CHANGE LOG:
-   - Add entries to ARCHITECTURE_MAINTENANCE.md
-   - Update change history section
+3. DOCUMENT IN ARCHITECTURE.MD:
+   - Add rationale to relevant sections if significant decisions were made
+   - Update architecture document only, not maintenance document
 
 Provide decision documentation for docs/architecture/ARCHITECTURE.md" --continue
 ```
@@ -254,12 +255,12 @@ mcp-coder prompt "Perform final validation of architecture documentation:
    - Is testing strategy actionable?
    - Are configuration patterns documented?
 
-4. UPDATE MAINTENANCE TRACKING:
-   - Mark current task as completed
-   - Update task tracker in ARCHITECTURE_MAINTENANCE.md
-   - Create new tasks if gaps identified
+4. FINAL VALIDATION:
+   - Confirm all documentation is current and LLM-navigable
+   - Verify file paths are accurate
+   - Ensure component descriptions match reality
 
-Confirm all documentation is current and LLM-navigable." --continue
+State completion status: "Architecture documentation validated" or list remaining issues." --continue
 ```
 
 ---
