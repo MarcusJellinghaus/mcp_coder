@@ -19,11 +19,14 @@ from mcp_coder.workflow_utils.task_tracker import (
 )
 
 
-def create_test_tracker_content(tasks: list[tuple[str, bool]]) -> str:
+def create_test_tracker_content(
+    tasks: list[tuple[str, bool]], use_dashes: bool = True
+) -> str:
     """Helper to generate test markdown content.
 
     Args:
         tasks: List of (task_name, is_complete) tuples
+        use_dashes: If True, use '- [ ]' format; if False, use '[ ]' format
 
     Returns:
         Formatted markdown content with tasks
@@ -40,7 +43,10 @@ This tracks Feature Implementation tasks.
 """
     for task_name, is_complete in tasks:
         checkbox = "[x]" if is_complete else "[ ]"
-        content += f"- {checkbox} {task_name}\n"
+        if use_dashes:
+            content += f"- {checkbox} {task_name}\n"
+        else:
+            content += f"{checkbox} {task_name}\n"
 
     return content
 
@@ -313,6 +319,74 @@ class TestParseTaskLines:
         assert tasks[2].name == "Task with uppercase X"
         assert tasks[2].is_complete is True
 
+    def test_parse_tasks_without_dashes(self) -> None:
+        """Test parsing tasks that start with [ ] instead of - [ ]."""
+        section_content = """[ ] Task without dash - incomplete
+[x] Task without dash - complete
+[X] Task without dash - complete uppercase
+[] Invalid task without dash
+[y] Invalid marker without dash
+"""
+        tasks = _parse_task_lines(section_content)
+
+        assert len(tasks) == 3  # Only valid checkboxes should be parsed
+
+        assert tasks[0].name == "Task without dash - incomplete"
+        assert tasks[0].is_complete is False
+        assert tasks[0].line_number == 1
+        assert tasks[0].indentation_level == 0
+
+        assert tasks[1].name == "Task without dash - complete"
+        assert tasks[1].is_complete is True
+        assert tasks[1].line_number == 2
+        assert tasks[1].indentation_level == 0
+
+        assert tasks[2].name == "Task without dash - complete uppercase"
+        assert tasks[2].is_complete is True
+        assert tasks[2].line_number == 3
+        assert tasks[2].indentation_level == 0
+
+    def test_parse_mixed_dash_no_dash_formats(self) -> None:
+        """Test parsing files with both - [ ] and [ ] formats mixed together."""
+        section_content = """- [ ] Traditional task with dash
+[ ] Modern task without dash
+  - [x] Indented traditional task
+  [x] Indented modern task
+- [X] Complete traditional task
+[X] Complete modern task
+"""
+        tasks = _parse_task_lines(section_content)
+
+        assert len(tasks) == 6  # All should be parsed
+
+        # Check traditional format tasks
+        assert tasks[0].name == "Traditional task with dash"
+        assert tasks[0].is_complete is False
+        assert tasks[0].indentation_level == 0
+
+        # Check modern format tasks
+        assert tasks[1].name == "Modern task without dash"
+        assert tasks[1].is_complete is False
+        assert tasks[1].indentation_level == 0
+
+        # Check indented tasks (both formats)
+        assert tasks[2].name == "Indented traditional task"
+        assert tasks[2].is_complete is True
+        assert tasks[2].indentation_level == 1
+
+        assert tasks[3].name == "Indented modern task"
+        assert tasks[3].is_complete is True
+        assert tasks[3].indentation_level == 1
+
+        # Check complete tasks (both formats)
+        assert tasks[4].name == "Complete traditional task"
+        assert tasks[4].is_complete is True
+        assert tasks[4].indentation_level == 0
+
+        assert tasks[5].name == "Complete modern task"
+        assert tasks[5].is_complete is True
+        assert tasks[5].indentation_level == 0
+
     def test_parse_clean_task_names(self) -> None:
         """Test that task names are cleaned of markdown formatting."""
         section_content = """- [ ] **Step 1: Bold task** - [link](file.md)
@@ -388,6 +462,31 @@ class TestParseTaskLines:
         assert "- [ ] Task 2" in content
         assert "- [x]" not in content
 
+    def test_content_without_dashes(self) -> None:
+        """Test generating content using [ ] format without dashes."""
+        tasks = [("Task without dash", False), ("Complete task", True)]
+
+        content = create_test_tracker_content(tasks, use_dashes=False)
+
+        assert "[ ] Task without dash" in content
+        assert "[x] Complete task" in content
+        # Should not contain dash format
+        assert "- [ ]" not in content
+        assert "- [x]" not in content
+
+    def test_content_mixed_formats_helper(self) -> None:
+        """Test that helper function can generate both formats."""
+        tasks = [("Test task", False)]
+
+        # Test with dashes (default)
+        content_with_dashes = create_test_tracker_content(tasks, use_dashes=True)
+        assert "- [ ] Test task" in content_with_dashes
+
+        # Test without dashes
+        content_without_dashes = create_test_tracker_content(tasks, use_dashes=False)
+        assert "[ ] Test task" in content_without_dashes
+        assert "- [ ]" not in content_without_dashes
+
 
 class TestGetIncompleteTasks:
     """Test get_incomplete_tasks function."""
@@ -415,6 +514,67 @@ class TestGetIncompleteTasks:
 
             # Should return only incomplete tasks
             expected = ["Setup Data Models", "Add Tests", "Unit tests"]
+            assert result == expected
+
+    def test_get_incomplete_tasks_without_dashes(self) -> None:
+        """Test getting incomplete tasks from tracker file using [ ] format without dashes."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file using format without dashes (like current TASK_TRACKER.md)
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+[ ] Implement unit tests for validation
+[x] Setup project structure
+[ ] Create main classes
+  [ ] Add helper methods
+  [x] Implement core logic
+[x] Add documentation
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test function
+            result = get_incomplete_tasks(temp_dir)
+
+            # Should return only incomplete tasks from [ ] format
+            expected = [
+                "Implement unit tests for validation",
+                "Create main classes",
+                "Add helper methods",
+            ]
+            assert result == expected
+
+    def test_get_incomplete_tasks_mixed_formats(self) -> None:
+        """Test getting incomplete tasks from tracker file with mixed dash and no-dash formats."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file with both formats mixed
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [ ] Traditional dash format task
+[ ] Modern no-dash format task
+- [x] Complete traditional task
+[x] Complete modern task
+  - [ ] Indented traditional subtask
+  [ ] Indented modern subtask
+  - [x] Complete indented traditional
+  [x] Complete indented modern
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test function
+            result = get_incomplete_tasks(temp_dir)
+
+            # Should return incomplete tasks from both formats
+            expected = [
+                "Traditional dash format task",
+                "Modern no-dash format task",
+                "Indented traditional subtask",
+                "Indented modern subtask",
+            ]
             assert result == expected
 
     def test_get_incomplete_tasks_empty_file(self) -> None:
@@ -549,6 +709,60 @@ class TestIsTaskDone:
             # Test with exact task name
             assert is_task_done("Implement Parser", temp_dir) is True
             assert is_task_done("Unit tests", temp_dir) is True
+
+    def test_is_task_done_without_dashes(self) -> None:
+        """Test checking completion status in files using [ ] format without dashes."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file using format without dashes
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+[ ] Setup Data Models
+[x] Implement Parser
+[ ] Add Tests
+  [x] Unit tests
+  [ ] Integration tests
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test with tasks in no-dash format
+            assert is_task_done("Implement Parser", temp_dir) is True
+            assert is_task_done("Unit tests", temp_dir) is True
+            assert is_task_done("Setup Data Models", temp_dir) is False
+            assert is_task_done("Add Tests", temp_dir) is False
+            assert is_task_done("Integration tests", temp_dir) is False
+
+    def test_is_task_done_mixed_formats(self) -> None:
+        """Test checking completion status in files with mixed dash and no-dash formats."""
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file with both formats
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Implementation Steps
+
+- [ ] Traditional incomplete task
+[ ] Modern incomplete task
+- [x] Traditional complete task
+[x] Modern complete task
+  - [ ] Traditional subtask incomplete
+  [ ] Modern subtask incomplete
+  - [x] Traditional subtask complete
+  [x] Modern subtask complete
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test completion status for both formats
+            assert is_task_done("Traditional incomplete task", temp_dir) is False
+            assert is_task_done("Modern incomplete task", temp_dir) is False
+            assert is_task_done("Traditional complete task", temp_dir) is True
+            assert is_task_done("Modern complete task", temp_dir) is True
+            assert is_task_done("Traditional subtask incomplete", temp_dir) is False
+            assert is_task_done("Modern subtask incomplete", temp_dir) is False
+            assert is_task_done("Traditional subtask complete", temp_dir) is True
+            assert is_task_done("Modern subtask complete", temp_dir) is True
 
     def test_is_task_done_incomplete_task(self) -> None:
         """Test checking completion status of incomplete task."""
