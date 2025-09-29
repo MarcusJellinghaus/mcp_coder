@@ -5,9 +5,16 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Generator
+from typing import Generator, Type, TypeVar
+from unittest.mock import patch
 
+import git
 import pytest
+
+try:
+    from typing import TypedDict
+except ImportError:
+    from typing_extensions import TypedDict
 
 
 @pytest.fixture(autouse=True)
@@ -150,3 +157,121 @@ def session_temp_dir() -> Generator[Path, None, None]:
     """
     with tempfile.TemporaryDirectory(prefix="pytest_session_") as temp_dir:
         yield Path(temp_dir)
+
+
+class GitHubTestSetup(TypedDict):
+    """Configuration data for GitHub integration tests.
+
+    Attributes:
+        github_token: GitHub Personal Access Token with repo scope
+        test_repo_url: URL of test repository (e.g., https://github.com/user/test-repo)
+        project_dir: Path to cloned test repository
+    """
+
+    github_token: str
+    test_repo_url: str
+    project_dir: Path
+
+
+@pytest.fixture
+def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
+    """Provide shared GitHub test configuration and repository setup.
+
+    Validates GitHub configuration and gracefully skips when missing.
+
+    Configuration sources (in order of preference):
+    1. Environment variables: GITHUB_TOKEN, GITHUB_TEST_REPO_URL
+    2. MCP Coder config: github.token, github.test_repo_url
+
+    Environment variables:
+        GITHUB_TOKEN: GitHub Personal Access Token with repo scope
+        GITHUB_TEST_REPO_URL: URL of test repository (e.g., https://github.com/user/test-repo)
+
+    Yields:
+        GitHubTestSetup: Configuration dict with token, URL, and cloned repo path
+
+    Raises:
+        pytest.skip: When GitHub token or test repository not configured
+    """
+    from mcp_coder.utils.user_config import get_config_value
+
+    # Check for required GitHub configuration
+    # Priority 1: Environment variables
+    github_token = os.getenv("GITHUB_TOKEN")
+    test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
+
+    # Priority 2: Config system fallback
+    if not github_token:
+        github_token = get_config_value("github", "token")
+    if not test_repo_url:
+        test_repo_url = get_config_value("github", "test_repo_url")
+
+    if not github_token:
+        pytest.skip(
+            "GitHub token not configured. Set GITHUB_TOKEN environment variable "
+            "or add github.token to ~/.mcp_coder/config.toml"
+        )
+
+    if not test_repo_url:
+        pytest.skip(
+            "Test repository URL not configured. Set GITHUB_TEST_REPO_URL environment variable "
+            "or add github.test_repo_url to ~/.mcp_coder/config.toml"
+        )
+
+    # Clone the actual test repository
+    git_dir = tmp_path / "test_repo"
+
+    try:
+        repo = git.Repo.clone_from(test_repo_url, git_dir)
+        # Fetch all branches to make sure we have the latest
+        repo.git.fetch("origin")
+        # Ensure we're on main branch
+        try:
+            repo.git.checkout("main")
+        except:
+            # Try master if main doesn't exist
+            try:
+                repo.git.checkout("master")
+            except:
+                pass  # Use current branch
+    except Exception as e:
+        pytest.skip(f"Could not clone test repository {test_repo_url}: {e}")
+
+    setup: GitHubTestSetup = {
+        "github_token": github_token,
+        "test_repo_url": test_repo_url,
+        "project_dir": git_dir,
+    }
+    yield setup
+
+
+T = TypeVar("T")
+
+
+def create_github_manager(manager_class: Type[T], github_setup: GitHubTestSetup) -> T:
+    """Create a GitHub manager instance with mocked token configuration.
+
+    This helper function eliminates duplicated fixture logic by providing
+    a consistent way to instantiate GitHub managers with proper token mocking.
+
+    Args:
+        manager_class: The manager class to instantiate (e.g., LabelsManager, PullRequestManager)
+        github_setup: GitHub test configuration from github_test_setup fixture
+
+    Returns:
+        Instance of the specified manager class
+
+    Raises:
+        Exception: If manager instantiation fails
+
+    Example:
+        >>> def labels_manager(github_test_setup: GitHubTestSetup) -> LabelsManager:
+        ...     return create_github_manager(LabelsManager, github_test_setup)
+    """
+    patcher = patch("mcp_coder.utils.user_config.get_config_value")
+    mock_config = patcher.start()
+    mock_config.return_value = github_setup["github_token"]
+    try:
+        return manager_class(github_setup["project_dir"])  # type: ignore[call-arg]
+    finally:
+        patcher.stop()

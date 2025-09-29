@@ -14,36 +14,62 @@ Config File Alternative (~/.mcp_coder/config.toml):
 Note: Tests will be skipped if configuration is missing.
 """
 
-import os
 from pathlib import Path
-from typing import Any, Dict, Generator, List
+from typing import TYPE_CHECKING, Any, Dict, Generator, List
 from unittest.mock import MagicMock, Mock, patch
 
 import git
 import pytest
 
-from mcp_coder.utils.github_operations import PullRequestManager
+from mcp_coder.utils.github_operations import LabelsManager, PullRequestManager
 from mcp_coder.utils.github_operations.github_utils import (
     format_github_https_url,
     get_repo_full_name,
     parse_github_url,
 )
+from mcp_coder.utils.github_operations.labels_manager import LabelData
 from mcp_coder.utils.github_operations.pr_manager import PullRequestData
+
+if TYPE_CHECKING:
+    from tests.conftest import GitHubTestSetup
 
 
 @pytest.fixture
-def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
+def labels_manager(
+    github_test_setup: "GitHubTestSetup",
+) -> Generator[LabelsManager, None, None]:
+    """Create LabelsManager instance for testing.
+
+    Uses shared github_test_setup fixture for configuration and repository setup.
+
+    Args:
+        github_test_setup: Shared GitHub test configuration fixture
+
+    Returns:
+        LabelsManager: Configured instance for testing
+
+    Raises:
+        pytest.skip: When GitHub token or test repository not configured
+    """
+    from tests.conftest import create_github_manager
+
+    try:
+        manager = create_github_manager(LabelsManager, github_test_setup)
+        yield manager
+    except Exception as e:
+        pytest.skip(f"Failed to create LabelsManager: {e}")
+
+
+@pytest.fixture
+def pr_manager(
+    github_test_setup: "GitHubTestSetup",
+) -> Generator[PullRequestManager, None, None]:
     """Create PullRequestManager instance for testing.
 
-    Validates GitHub configuration and gracefully skips when missing.
+    Uses shared github_test_setup fixture for configuration and repository setup.
 
-    Configuration sources (in order of preference):
-    1. Environment variables: GITHUB_TOKEN, GITHUB_TEST_REPO_URL
-    2. MCP Coder config: github.token, github.test_repo_url
-
-    Environment variables:
-        GITHUB_TOKEN: GitHub Personal Access Token with repo scope
-        GITHUB_TEST_REPO_URL: URL of test repository (e.g., https://github.com/user/test-repo)
+    Args:
+        github_test_setup: Shared GitHub test configuration fixture
 
     Returns:
         PullRequestManager: Configured instance for testing
@@ -51,91 +77,13 @@ def pr_manager(tmp_path: Path) -> Generator[PullRequestManager, None, None]:
     Raises:
         pytest.skip: When GitHub token or test repository not configured
     """
-    from mcp_coder.utils.user_config import get_config_value
-
-    print("\n=== FIXTURE DEBUG START ===")
-
-    # Check for required GitHub configuration
-    # Priority 1: Environment variables
-    github_token = os.getenv("GITHUB_TOKEN")
-    test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
-    print(f"Environment vars - Token: {bool(github_token)}, URL: {bool(test_repo_url)}")
-
-    # Priority 2: Config system fallback
-    if not github_token:
-        github_token = get_config_value("github", "token")
-        print(f"Config fallback - Token found: {bool(github_token)}")
-    if not test_repo_url:
-        test_repo_url = get_config_value("github", "test_repo_url")
-        print(f"Config fallback - URL found: {bool(test_repo_url)}")
-
-    print(f"Final config - Token length: {len(github_token) if github_token else 0}")
-    print(f"Final config - URL: {test_repo_url}")
-
-    if not github_token:
-        print("[ERROR] SKIPPING: No GitHub token")
-        pytest.skip(
-            "GitHub token not configured. Set GITHUB_TOKEN environment variable "
-            "or add github.token to ~/.mcp_coder/config.toml"
-        )
-
-    if not test_repo_url:
-        print("[ERROR] SKIPPING: No test repo URL")
-        pytest.skip(
-            "Test repository URL not configured. Set GITHUB_TEST_REPO_URL environment variable "
-            "or add github.test_repo_url to ~/.mcp_coder/config.toml"
-        )
-
-    print("[OK] Configuration validated, cloning real test repo...")
-
-    # Clone the actual test repository
-    git_dir = tmp_path / "test_repo"
-    print(f"Cloning {test_repo_url} to {git_dir}")
+    from tests.conftest import create_github_manager
 
     try:
-        repo = git.Repo.clone_from(test_repo_url, git_dir)
-        print("[OK] Real test repository cloned")
-
-        # Fetch all branches to make sure we have the latest
-        repo.git.fetch("origin")
-        print("[OK] Fetched latest from origin")
-
-        # Ensure we're on main branch
-        try:
-            repo.git.checkout("main")
-            print("[OK] Checked out main branch")
-        except:
-            # Try master if main doesn't exist
-            try:
-                repo.git.checkout("master")
-                print("[OK] Checked out master branch")
-            except:
-                print("[WARN] Could not checkout main/master, using current branch")
-
-        # Pull latest changes
-        try:
-            repo.git.pull("origin", repo.active_branch.name)
-            print("[OK] Pulled latest changes")
-        except Exception as e:
-            print(f"[WARN] Pull failed (non-critical): {e}")
-
+        manager = create_github_manager(PullRequestManager, github_test_setup)
+        yield manager
     except Exception as e:
-        print(f"[ERROR] Failed to clone repository: {e}")
-        pytest.skip(f"Could not clone test repository {test_repo_url}: {e}")
-
-    print("Creating PullRequestManager...")
-    # Mock config to return token
-    with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-        mock_config.return_value = github_token
-        try:
-            manager = PullRequestManager(git_dir)
-            print("[OK] PullRequestManager created successfully")
-            print("=== FIXTURE DEBUG END ===\n")
-            yield manager
-        except Exception as e:
-            print(f"[ERROR] PullRequestManager creation failed: {e}")
-            print("=== FIXTURE DEBUG END ===\n")
-            raise
+        pytest.skip(f"Failed to create PullRequestManager: {e}")
 
 
 class TestGitHubUtils:
@@ -233,7 +181,7 @@ class TestPullRequestManagerUnit:
             )
             assert not result  # Should return empty dict
 
-    @patch("mcp_coder.utils.github_operations.pr_manager.Github")
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
     def test_create_pull_request_success(
         self, mock_github: Mock, tmp_path: Path
     ) -> None:
@@ -656,3 +604,172 @@ class TestPullRequestManagerIntegration:
         invalid_list_result = manager.list_pull_requests(base_branch="invalid~branch")
         expected_empty_list: List[Dict[str, Any]] = []
         assert invalid_list_result == expected_empty_list
+
+
+class TestLabelsManagerUnit:
+    """Unit tests for LabelsManager with mocked dependencies."""
+
+    def test_initialization_requires_project_dir(self) -> None:
+        """Test that None project_dir raises ValueError."""
+        with pytest.raises(ValueError, match="project_dir is required"):
+            LabelsManager(None)
+
+    def test_initialization_requires_git_repository(self, tmp_path: Path) -> None:
+        """Test that non-git directory raises ValueError."""
+        # Create regular directory (not a git repo)
+        regular_dir = tmp_path / "regular_dir"
+        regular_dir.mkdir()
+
+        with pytest.raises(ValueError, match="Directory is not a git repository"):
+            LabelsManager(regular_dir)
+
+    def test_initialization_requires_github_token(self, tmp_path: Path) -> None:
+        """Test that missing GitHub token raises ValueError."""
+        # Setup git repo
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock config to return None (no token)
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = None
+            with pytest.raises(ValueError, match="GitHub token not found"):
+                LabelsManager(git_dir)
+
+    def test_label_name_validation(self, tmp_path: Path) -> None:
+        """Test label name validation rules."""
+        # Setup git repo with mocked config
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = LabelsManager(git_dir)
+
+            # Valid names - should pass validation
+            assert manager._validate_label_name("bug") == True
+            assert manager._validate_label_name("feature-request") == True
+            assert manager._validate_label_name("high priority") == True
+            assert manager._validate_label_name("bug :bug:") == True
+            assert manager._validate_label_name("type/enhancement") == True
+
+            # Invalid names - should fail validation
+            assert manager._validate_label_name("") == False
+            assert manager._validate_label_name("   ") == False
+            assert manager._validate_label_name("  leading") == False
+            assert manager._validate_label_name("trailing  ") == False
+
+    def test_color_validation_and_normalization(self, tmp_path: Path) -> None:
+        """Test color validation and normalization."""
+        # Setup git repo with mocked config
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = LabelsManager(git_dir)
+
+            # Valid colors - should pass validation
+            assert manager._validate_color("FF0000") == True
+            assert manager._validate_color("#FF0000") == True
+            assert manager._validate_color("00ff00") == True
+            assert manager._validate_color("#00FF00") == True
+
+            # Invalid colors - should fail validation
+            assert manager._validate_color("red") == False
+            assert manager._validate_color("12345") == False
+            assert manager._validate_color("GGGGGG") == False
+            assert manager._validate_color("#12345") == False
+
+            # Test normalization (removing '#' prefix)
+            assert manager._normalize_color("#FF0000") == "FF0000"
+            assert manager._normalize_color("FF0000") == "FF0000"
+            assert manager._normalize_color("#00ff00") == "00ff00"
+            assert manager._normalize_color("00FF00") == "00FF00"
+
+
+@pytest.mark.github_integration
+class TestLabelsManagerIntegration:
+    """Integration tests for LabelsManager with GitHub API."""
+
+    def test_labels_manager_lifecycle(self, labels_manager: LabelsManager) -> None:
+        """Test complete label lifecycle: create, get, list, update, delete.
+
+        This test creates a label, retrieves it, lists labels, updates it, and deletes it.
+        """
+        # Create unique label name with timestamp
+        import datetime
+
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        label_name = f"test-label-{timestamp}"
+        label_color = "FF0000"
+        label_description = "Test label for CRUD operations"
+
+        created_label = None
+        try:
+            # Create label
+            created_label = labels_manager.create_label(
+                name=label_name, color=label_color, description=label_description
+            )
+
+            # Verify label was created
+            assert created_label, "Expected label creation to return data"
+            assert "name" in created_label, "Expected label name in response"
+            assert created_label["name"] == label_name, f"Expected name '{label_name}'"
+            assert (
+                created_label["color"] == label_color
+            ), f"Expected color '{label_color}'"
+            assert (
+                created_label["description"] == label_description
+            ), f"Expected description '{label_description}'"
+
+            # Get specific label
+            retrieved_label = labels_manager.get_label(label_name)
+            assert retrieved_label, "Expected to retrieve label data"
+            assert retrieved_label["name"] == label_name, "Expected same label name"
+            assert retrieved_label["color"] == label_color, "Expected same label color"
+
+            # List labels
+            labels_list = labels_manager.get_labels()
+            assert isinstance(labels_list, list), "Expected list of labels"
+            assert len(labels_list) > 0, "Expected at least one label"
+
+            # Verify our label is in the list
+            our_label = next(
+                (lbl for lbl in labels_list if lbl["name"] == label_name), None
+            )
+            assert our_label is not None, "Expected our label to be in the list"
+
+            # Update label
+            updated_color = "00FF00"
+            updated_description = "Updated test label description"
+            updated_label = labels_manager.update_label(
+                name=label_name, color=updated_color, description=updated_description
+            )
+            assert updated_label, "Expected update operation to return data"
+            assert updated_label["name"] == label_name, "Expected same label name"
+            assert updated_label["color"] == updated_color, "Expected updated color"
+            assert (
+                updated_label["description"] == updated_description
+            ), "Expected updated description"
+
+            # Delete label
+            delete_result = labels_manager.delete_label(label_name)
+            assert delete_result, "Expected delete operation to succeed"
+
+            # Verify label was deleted - get_label should return empty dict
+            deleted_label = labels_manager.get_label(label_name)
+            assert not deleted_label, "Expected label to be deleted"
+
+        finally:
+            # Cleanup: ensure label is deleted even if test fails
+            if created_label and "name" in created_label:
+                try:
+                    labels_manager.delete_label(created_label["name"])
+                except Exception:
+                    pass  # Ignore cleanup failures
