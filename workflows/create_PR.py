@@ -29,7 +29,7 @@ from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 # Constants
-PROMPTS_FILE_PATH = "src/mcp_coder/prompts/prompts.md"
+PROMPTS_FILE_PATH = "mcp_coder/prompts/prompts.md"
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -218,6 +218,19 @@ def check_prerequisites(project_dir: Path) -> bool:
     return True
 
 
+def _load_prompt_or_exit(header: str) -> str:
+    """Load prompt template or exit with clear error message."""
+    try:
+        return get_prompt(PROMPTS_FILE_PATH, header)
+    except (FileNotFoundError, ValueError) as e:
+        logger.error(f"Critical error: Cannot load prompt '{header}': {e}")
+        logger.error(f"Expected prompt file: {PROMPTS_FILE_PATH}")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Unexpected error loading prompt '{header}': {e}")
+        sys.exit(1)
+
+
 def generate_pr_summary(project_dir: Path) -> Tuple[str, str]:
     """
     Generate PR title and body using LLM and git diff.
@@ -230,37 +243,35 @@ def generate_pr_summary(project_dir: Path) -> Tuple[str, str]:
     """
     logger.info("Generating PR summary...")
     
+    # Get branch diff
+    logger.info("Getting branch diff...")
+    diff_content = get_branch_diff(project_dir, exclude_paths=["pr_info/steps/"])
+    
+    if not diff_content or not diff_content.strip():
+        logger.warning("No diff content found, using fallback PR summary")
+        return "Pull Request", "Pull Request"
+    
+    # Load prompt template (exits on failure)
+    logger.info("Loading PR summary prompt template...")
+    prompt_template = _load_prompt_or_exit("PR Summary Generation")
+    
+    # Generate summary
+    full_prompt = prompt_template.replace("[git_diff_content]", diff_content)
+    
+    logger.info("Calling LLM for PR summary...")
     try:
-        # Get branch diff excluding planning files
-        logger.info("Getting branch diff...")
-        diff_content = get_branch_diff(project_dir, exclude_paths=["pr_info/steps/"])
-        
-        if not diff_content or not diff_content.strip():
-            logger.warning("No diff content found, using fallback PR summary")
-            return "Pull Request", "Pull Request"
-        
-        # Get PR summary prompt template
-        logger.info("Loading PR summary prompt template...")
-        prompt_template = get_prompt(PROMPTS_FILE_PATH, "PR Summary Generation")
-        
-        # Replace placeholder with actual diff
-        full_prompt = prompt_template.replace("[git_diff_content]", diff_content)
-        
-        # Call LLM for summary
-        logger.info("Calling LLM for PR summary...")
         llm_response = ask_llm(full_prompt, provider="claude", method="api", timeout=300)
-        
         if not llm_response or not llm_response.strip():
             logger.warning("LLM returned empty response, using fallback")
             return "Pull Request", "Pull Request"
         
-        # Parse the response
         title, body = parse_pr_summary(llm_response)
         logger.info("PR summary generated successfully")
         return title, body
         
     except Exception as e:
-        logger.error(f"Error generating PR summary: {e}")
+        logger.error(f"Failed to get LLM response: {e}")
+        logger.warning("Using fallback PR summary due to LLM error")
         return "Pull Request", "Pull Request"
 
 
