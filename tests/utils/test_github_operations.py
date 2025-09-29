@@ -307,6 +307,113 @@ class TestPullRequestManagerUnit:
             assert manager.repository_name == "testuser/testrepo"
 
 
+class TestLabelsManagerUnit:
+    """Unit tests for LabelsManager with mocked dependencies."""
+
+    def test_initialization_requires_project_dir(self) -> None:
+        """Test that LabelsManager requires a valid project directory."""
+        from mcp_coder.utils.github_operations import LabelsManager
+        
+        # Test with None project_dir
+        with pytest.raises(ValueError, match="project_dir is required"):
+            LabelsManager(None)
+
+    def test_initialization_requires_git_repository(self, tmp_path: Path) -> None:
+        """Test that LabelsManager requires a git repository."""
+        from mcp_coder.utils.github_operations import LabelsManager
+        
+        # Test with non-existent directory
+        nonexistent = tmp_path / "does_not_exist"
+        with pytest.raises(ValueError, match="Directory does not exist"):
+            LabelsManager(nonexistent)
+        
+        # Test with file instead of directory
+        file_path = tmp_path / "test_file.txt"
+        file_path.write_text("test")
+        with pytest.raises(ValueError, match="Path is not a directory"):
+            LabelsManager(file_path)
+        
+        # Test with non-git directory
+        regular_dir = tmp_path / "regular_dir"
+        regular_dir.mkdir()
+        with pytest.raises(ValueError, match="Directory is not a git repository"):
+            LabelsManager(regular_dir)
+
+    def test_initialization_requires_github_token(self, tmp_path: Path) -> None:
+        """Test that LabelsManager requires a GitHub token."""
+        from mcp_coder.utils.github_operations import LabelsManager
+        
+        # Setup git repo
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+        
+        # Test without token
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = None
+            with pytest.raises(ValueError, match="GitHub token is required"):
+                LabelsManager(git_dir)
+
+    def test_label_name_validation(self, tmp_path: Path) -> None:
+        """Test label name validation logic."""
+        from mcp_coder.utils.github_operations import LabelsManager
+        from mcp_coder.utils.github_operations.labels_manager import LabelData
+        
+        # Setup git repo with mocked config
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+        
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = LabelsManager(git_dir)
+            
+            # Test valid label names
+            assert manager._validate_label_name("bug") == True
+            assert manager._validate_label_name("feature-request") == True
+            assert manager._validate_label_name("high priority") == True
+            assert manager._validate_label_name("bug :bug:") == True
+            assert manager._validate_label_name("type/enhancement") == True
+            
+            # Test invalid label names (empty or whitespace)
+            assert manager._validate_label_name("") == False
+            assert manager._validate_label_name("   ") == False
+            assert manager._validate_label_name("  leading") == False
+            assert manager._validate_label_name("trailing  ") == False
+
+    def test_color_validation_and_normalization(self, tmp_path: Path) -> None:
+        """Test color validation and normalization logic."""
+        from mcp_coder.utils.github_operations import LabelsManager
+        
+        # Setup git repo with mocked config
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+        
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = LabelsManager(git_dir)
+            
+            # Test valid colors with normalization
+            assert manager._normalize_color("FF0000") == "FF0000"
+            assert manager._normalize_color("#FF0000") == "FF0000"
+            assert manager._normalize_color("00ff00") == "00FF00"
+            assert manager._normalize_color("#00FF00") == "00FF00"
+            
+            # Test invalid colors
+            with pytest.raises(ValueError, match="Invalid color format"):
+                manager._normalize_color("red")
+            with pytest.raises(ValueError, match="Invalid color format"):
+                manager._normalize_color("12345")
+            with pytest.raises(ValueError, match="Invalid color format"):
+                manager._normalize_color("GGGGGG")
+            with pytest.raises(ValueError, match="Invalid color format"):
+                manager._normalize_color("#12345")
+
+
 @pytest.mark.github_integration
 class TestPullRequestManagerIntegration:
     """Integration tests for PullRequestManager with GitHub API."""
