@@ -10,12 +10,13 @@ from pathlib import Path
 from typing import Tuple
 
 # Compiled regex patterns for better performance
-CHECKBOX_PATTERN = re.compile(r"^-\s*\[([\s]|[xX])\]")
+# Updated to handle both "- [ ]" and "[ ]" formats
+CHECKBOX_PATTERN = re.compile(r"^(-\s*)?\[([\s]|[xX])\]")
 BOLD_PATTERN = re.compile(r"\*\*([^*]+)\*\*")
 ITALIC_PATTERN = re.compile(r"\*([^*]+)\*")
 LINK_REFERENCE_PATTERN = re.compile(r"\s*-\s*\[[^\]]+\]\([^\)]+\)\s*$")
 MARKDOWN_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\([^\)]+\)")
-CHECKBOX_REMOVE_PATTERN = re.compile(r"^\s*-\s*\[[\s\w]\]\s*")
+CHECKBOX_REMOVE_PATTERN = re.compile(r"^\s*(-\s*)?\[[\s\w]\]\s*")
 WHITESPACE_PATTERN = re.compile(r"\s+")
 
 
@@ -139,12 +140,14 @@ def _is_task_line(line: str) -> Tuple[bool, bool]:
     """
     stripped = line.strip()
 
-    # Match task lines: "- [ ]" or "- [x]" or "- [X]" only
+    # Match task lines: "- [ ]" or "- [x]" or "[ ]" or "[x]" or "[X]"
     match = CHECKBOX_PATTERN.match(stripped)
     if not match:
         return False, False
 
-    checkbox_content = match.group(1).strip().lower()
+    checkbox_content = (
+        match.group(2).strip().lower()
+    )  # Changed from group(1) to group(2)
     is_complete = checkbox_content == "x"
 
     return True, is_complete
@@ -197,7 +200,7 @@ def _parse_task_lines(section_content: str) -> list[TaskInfo]:
         is_task, is_complete = _is_task_line(line)
 
         if is_task:
-            # Calculate indentation level (count spaces before '-')
+            # Calculate indentation level (count spaces before checkbox)
             leading_spaces = len(line) - len(line.lstrip())
             # Assume 2 spaces per indentation level
             indentation_level = leading_spaces // 2
