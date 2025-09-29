@@ -8,12 +8,12 @@ REM
 REM Usage: create_PR.bat [--project-dir PATH] [--log-level LEVEL] [--llm-method METHOD]
 REM   --project-dir PATH   Project directory path (default: current directory)
 REM   --log-level LEVEL    Set logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: INFO)
-REM   --llm-method METHOD  LLM method: claude_code_cli, claude_code_api (default: claude_code_api)
+REM   --llm-method METHOD  LLM method: claude_code_cli, claude_code_api (default: claude_code_cli)
 REM
 REM Examples:
-REM   create_PR.bat                                    # Use current directory, INFO logging, API method
-REM   create_PR.bat --log-level DEBUG                  # Use current directory, DEBUG logging, API method
-REM   create_PR.bat --llm-method claude_code_cli       # Use CLI method instead of API
+REM   create_PR.bat                                    # Use current directory, INFO logging, CLI method
+REM   create_PR.bat --log-level DEBUG                  # Use current directory, DEBUG logging, CLI method
+REM   create_PR.bat --llm-method claude_code_api       # Use API method instead of CLI
 REM   create_PR.bat --project-dir C:\my\project        # Specify project directory
 REM
 
