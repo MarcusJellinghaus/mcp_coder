@@ -52,8 +52,9 @@ def delete_label(self, name: str) -> bool
 2. Normalize: Strip '#' from color if present (color.lstrip('#'))
 3. Validate: normalized color using _validate_color()
 4. Get: Repository object via _parse_and_get_repo()
-5. Create: Label using repo.create_label(name, normalized_color, description)
-6. Return: LabelData dict with created label info (empty dict on error)
+5. Try Create: Label using repo.create_label(name, normalized_color, description)
+6. If Exists: Catch GithubException (422 status), get existing label, log debug message
+7. Return: LabelData dict with created/existing label info (empty dict on error)
 ```
 
 ### delete_label() Logic
@@ -85,8 +86,13 @@ def delete_label(self, name: str) -> bool
 ### Error Handling
 ```python
 try:
-    # GitHub API operation
+    # Try to create label
+    label = repo.create_label(name, color, description)
 except GithubException as e:
+    if e.status == 422:  # Label already exists
+        logger.debug(f"Label '{name}' already exists, returning existing label")
+        # Get and return existing label
+        return self._get_existing_label(name)
     logger.error(f"GitHub API error: {e}")
     return {}  # or [] or False
 except Exception as e:
@@ -114,6 +120,7 @@ Implementation notes:
 - PyGithub API: repo.get_labels(), repo.create_label(), repo.get_label(name).delete()
 - Normalize color by stripping '#' prefix before validation and API calls
 - Validate inputs before API calls (name and normalized color)
+- **Idempotent create**: If label exists (422 status), get and return existing label with debug log
 - Return structured data: LabelData dict or bool
 - Log errors but don't raise exceptions to caller
 - Follow exact same error handling pattern as PullRequestManager
@@ -129,6 +136,8 @@ Expected: All tests PASS (green phase)
 
 - Keep methods simple - single responsibility
 - Reuse validation methods from Step 2
+- **Idempotent create_label()**: Returns existing label if already exists (422 status code)
+- Use logger.debug() for "label already exists" case, logger.error() for real errors
 - Follow PullRequestManager error handling exactly
 - Always log errors before returning empty/False
 - Cast return types to match TypedDict (use `cast()` if needed)

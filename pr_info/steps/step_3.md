@@ -22,6 +22,7 @@ class TestLabelsManagerIntegration:
     """Integration tests for LabelsManager with GitHub API."""
     
     def test_labels_lifecycle(self, labels_manager: LabelsManager) -> None
+    def test_create_label_idempotency(self, labels_manager: LabelsManager) -> None
 ```
 
 ### Fixture
@@ -65,6 +66,16 @@ def labels_manager(tmp_path: Path) -> Generator[LabelsManager, None, None]:
 7. Cleanup: Ensure label deleted in finally block
 ```
 
+### Idempotency Test Logic
+```
+1. Setup: Generate unique label name with timestamp
+2. Create: Call create_label with test data (first time)
+3. Assert: Verify label created successfully
+4. Create Again: Call create_label with same name (should succeed, not fail)
+5. Assert: Verify same label returned, no error raised
+6. Cleanup: Delete label in finally block
+```
+
 ## DATA
 
 ### Test Data
@@ -91,15 +102,18 @@ Tasks:
 1. Add labels_manager fixture following pr_manager pattern
 2. Add TestLabelsManagerIntegration class with @pytest.mark.github_integration
 3. Implement test_labels_lifecycle method as specified in pr_info/steps/step_3.md
-4. Use timestamp in label names to avoid conflicts: f"test-label-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-5. Ensure cleanup in finally block (delete test label)
+4. Implement test_create_label_idempotency to verify create succeeds when label exists
+5. Use timestamp in label names to avoid conflicts: f"test-label-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+6. Ensure cleanup in finally block (delete test label)
 
 Test structure:
-- Create label with unique name, color FF5500, description
+- **Lifecycle test**: Create label with unique name, color FF5500, description
 - Verify created label data structure
 - List all labels and find our test label
 - Delete the test label
 - Verify deletion returns True
+- **Idempotency test**: Create label, then create again with same name
+- Verify second create returns existing label without error
 - Cleanup in finally block
 
 Run: pytest tests/utils/test_github_operations.py::TestLabelsManagerIntegration -v -m github_integration

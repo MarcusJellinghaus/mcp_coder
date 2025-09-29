@@ -16,6 +16,7 @@ Add a minimal labels manager to the existing GitHub operations module for basic 
 4. **Graceful failures**: Return empty dict/list on errors (no exceptions to caller)
 5. **Permissive validation**: Label names follow GitHub's permissive rules (allow spaces, hyphens, underscores, emojis, etc.). Only check non-empty and no leading/trailing whitespace
 6. **Flexible color format**: Accept hex colors with or without `#` prefix (e.g., both `"FF0000"` and `"#FF0000"`), normalize internally by stripping `#` before GitHub API calls
+7. **Idempotent create**: `create_label()` succeeds if label already exists - returns existing label with debug message, no error raised
 
 ### No Changes To
 - Configuration system (reuse existing `~/.mcp_coder/config.toml`)
