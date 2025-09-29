@@ -73,7 +73,7 @@ Based on three prompts, an initial plan can be generated.
 ##### Initial Analysis Prompt:
 ```
 ## Discuss implementation steps
-Please take a look at the existing solution
+Please take a look at the existing solution, its files and its architecture documentation.
 Do you understand the task below?
 What are the implementation steps?
 Do not yet modify any code!
