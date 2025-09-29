@@ -118,7 +118,11 @@ def parse_pr_summary(llm_response: str) -> Tuple[str, str]:
     """
     Parse LLM response into PR title and body.
     
-    Uses KISS fallback: first line as title, include first line in body too.
+    Expected format:
+    TITLE: feat: some title
+    BODY:
+    ## Summary
+    ...
     
     Args:
         llm_response: Raw response from LLM
@@ -130,21 +134,48 @@ def parse_pr_summary(llm_response: str) -> Tuple[str, str]:
         logger.warning("Empty LLM response, using fallback PR title/body")
         return "Pull Request", "Pull Request"
     
-    lines = llm_response.strip().split("\n")
+    content = llm_response.strip()
     
-    # Extract title from first non-empty line
-    title = ""
-    for line in lines:
-        if line.strip():
-            title = line.strip()
+    # Look for TITLE: and BODY: markers
+    title_match = None
+    body_content = None
+    
+    # Extract title after "TITLE:"
+    for line in content.split("\n"):
+        if line.strip().startswith("TITLE:"):
+            title_match = line.strip()[6:].strip()  # Remove "TITLE:" prefix
             break
     
-    if not title:
-        logger.warning("No title found in LLM response, using fallback")
-        return "Pull Request", "Pull Request"
+    # Extract body after "BODY:"
+    body_start = content.find("BODY:")
+    if body_start != -1:
+        body_content = content[body_start + 5:].strip()  # Remove "BODY:" prefix
     
-    # Body includes the entire response (including title as first line)
-    body = llm_response.strip()
+    # Fallback parsing if structured format not found
+    if not title_match:
+        logger.warning("No TITLE: found, attempting fallback parsing")
+        lines = content.split("\n")
+        # Try to find a line that looks like a title (starts with conventional prefix)
+        for line in lines:
+            line_stripped = line.strip()
+            if any(line_stripped.startswith(prefix) for prefix in ["feat:", "fix:", "docs:", "refactor:", "test:", "chore:"]):
+                title_match = line_stripped
+                break
+        
+        # If still no title found, use first non-empty line
+        if not title_match:
+            for line in lines:
+                if line.strip():
+                    title_match = line.strip()
+                    break
+    
+    if not body_content:
+        logger.warning("No BODY: found, using full response as body")
+        body_content = content
+    
+    # Final fallbacks
+    title = title_match or "Pull Request"
+    body = body_content or "Pull Request"
     
     logger.info(f"Parsed PR title: {title}")
     return title, body

@@ -144,75 +144,38 @@ This prompt is used to generate pull request titles and descriptions from git di
 
 #### PR Summary Generation
 ```
-Analyze the provided git diff to generate a concise pull request title and structured body.
+Generate a PR title and body from the git diff. Follow this EXACT format:
 
-INPUT:
-- Git diff output showing all changes between branches
-- May include file additions, modifications, deletions
-- Could contain binary files or generated files
+TITLE: [conventional_prefix]: [brief description]
+BODY:
+## Summary
+[What this PR does and why]
+
+## Changes
+- [Change 1]
+- [Change 2]
+- [Change 3]
 
 REQUIREMENTS:
-1. **Title** (first line):
-   - Maximum 60 characters
-   - Use conventional prefix: feat:, fix:, docs:, refactor:, test:, chore:
-   - Summarize the main purpose of changes
-   - Be specific yet concise
-
-2. **Body** (remaining content):
-   - Start with a Summary section (using markdown heading)
-   - Include a Changes section with bullet points
-   - Add a Testing section if test files are modified
-   - Use GitHub-flavored markdown format
-   - Be informative but concise
-
-ANALYSIS STEPS:
-1. Identify primary change type from file modifications
-2. Detect main functionality or area affected
-3. Group related changes together
-4. Identify test coverage changes
-5. Note any breaking changes or important updates
-
-OUTPUT FORMAT:
-Provide exactly this structure (no additional text):
-
-feat: concise description under 60 chars
-
-[Summary Section]
-Brief description of what this PR accomplishes and why.
-
-[Changes Section]
-- Bullet point describing specific change
-- Another change description
-- Group related changes together
-
-[Testing Section]
-- Description of test coverage (if applicable)
-- Any manual testing needed
-
-Note: Replace [Section] markers with proper markdown headings in actual output.
-
-EDGE CASES:
-- Empty diff: Return "chore: no changes detected" with minimal body
-- Binary files only: Mention binary file updates without details
-- Large diffs: Focus on high-level changes, group by functionality
-- Generated files: Mention but don't detail generated file changes
+- Title must start with: feat:, fix:, docs:, refactor:, test:, or chore:
+- Title must be under 60 characters
+- Use ## for markdown headings in body
+- List specific changes as bullet points
+- Be concise but informative
 
 EXAMPLE OUTPUT:
-feat: add pull request summary generation
+TITLE: feat: add PR workflow automation
+BODY:
+\#\# Summary
+Implements automated PR creation with LLM-generated summaries.
 
-[Summary heading here]
-Adds functionality to automatically generate PR titles and descriptions from git diffs.
+\#\# Changes
+- Add create_PR.py workflow script
+- Implement PR summary generation prompt
+- Add error handling for prompt loading
 
-[Changes heading here]
-- Add PR summary prompt template to prompts.md
-- Implement template with structured output format
-- Include edge case handling for various diff types
+Git diff to analyze:
+[git_diff_content]
 
-[Testing heading here]
-- Manual testing with various git diff inputs
-- Verify output format consistency
-
-Note: In actual output, use proper markdown headings (##) for sections.
-
-Expected output: A properly formatted PR title and body ready for GitHub pull request creation.
+OUTPUT THE TITLE AND BODY EXACTLY AS SHOWN ABOVE - NO OTHER TEXT!
 ```
