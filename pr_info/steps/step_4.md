@@ -48,11 +48,12 @@ def delete_label(self, name: str) -> bool
 
 ### create_label() Logic
 ```
-1. Validate: name and color using validation methods
-2. Normalize: Strip '#' from color if present
-3. Get: Repository object via _parse_and_get_repo()
-4. Create: Label using repo.create_label(name, normalized_color, description)
-5. Return: LabelData dict with created label info (empty dict on error)
+1. Validate: name using _validate_label_name()
+2. Normalize: Strip '#' from color if present (color.lstrip('#'))
+3. Validate: normalized color using _validate_color()
+4. Get: Repository object via _parse_and_get_repo()
+5. Create: Label using repo.create_label(name, normalized_color, description)
+6. Return: LabelData dict with created label info (empty dict on error)
 ```
 
 ### delete_label() Logic
@@ -111,7 +112,8 @@ Tasks:
 
 Implementation notes:
 - PyGithub API: repo.get_labels(), repo.create_label(), repo.get_label(name).delete()
-- Validate inputs before API calls
+- Normalize color by stripping '#' prefix before validation and API calls
+- Validate inputs before API calls (name and normalized color)
 - Return structured data: LabelData dict or bool
 - Log errors but don't raise exceptions to caller
 - Follow exact same error handling pattern as PullRequestManager

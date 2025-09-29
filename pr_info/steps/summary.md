@@ -14,7 +14,8 @@ Add a minimal labels manager to the existing GitHub operations module for basic 
 2. **Minimal scope**: Only essential CRUD operations (get, create, delete)
 3. **Same validation**: Reuse project_dir/token validation from PullRequestManager
 4. **Graceful failures**: Return empty dict/list on errors (no exceptions to caller)
-5. **Flexible color format**: Accept hex colors with or without `#` prefix (e.g., both `"FF0000"` and `"#FF0000"`), normalize internally by stripping `#` before GitHub API calls
+5. **Permissive validation**: Label names follow GitHub's permissive rules (allow spaces, hyphens, underscores, emojis, etc.). Only check non-empty and no leading/trailing whitespace
+6. **Flexible color format**: Accept hex colors with or without `#` prefix (e.g., both `"FF0000"` and `"#FF0000"`), normalize internally by stripping `#` before GitHub API calls
 
 ### No Changes To
 - Configuration system (reuse existing `~/.mcp_coder/config.toml`)
@@ -58,7 +59,7 @@ class LabelsManager:
 
 class LabelData(TypedDict):
     name: str
-    color: str       # 6-char hex without '#' (accepts input with or without '#')
+    color: str       # 6-char hex (accepts input with or without '#', stored without '#')
     description: str
     url: str
 ```

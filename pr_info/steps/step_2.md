@@ -68,17 +68,19 @@ from .github_utils import parse_github_url
 
 ### Label Name Validation
 ```
-1. Check: name is string and not empty/whitespace
-2. Check: name does not contain special chars: # @ /
+1. Check: name is string and not empty/whitespace only
+2. Check: name has no leading/trailing whitespace
 3. Return: True if valid, False otherwise (log error)
+Note: Allows spaces, hyphens, underscores, emojis, special chars (GitHub is permissive)
 ```
 
 ### Color Validation
 ```
-1. Strip: leading '#' character if present
+1. Strip: leading '#' character if present for user convenience
 2. Check: remaining string has exactly 6 characters
 3. Check: all characters are hex digits (0-9, A-F, a-f)
 4. Return: True if valid, False otherwise (log error)
+Note: Accepts both "FF0000" and "#FF0000", normalizes to "FF0000"
 ```
 
 ## DATA
@@ -108,7 +110,7 @@ Reference: src/mcp_coder/utils/github_operations/pr_manager.py -> PullRequestMan
 Tasks:
 1. Create labels_manager.py with LabelData TypedDict and LabelsManager class
 2. Implement __init__ following same pattern as PullRequestManager
-3. Implement _validate_label_name (no special chars: # @ /)
+3. Implement _validate_label_name (non-empty, no leading/trailing whitespace - allows spaces, special chars, emojis)
 4. Implement _validate_color (6-char hex string, accepts both "FF0000" and "#FF0000" formats - normalize by stripping # prefix)
 5. Implement _parse_and_get_repo (same pattern as PullRequestManager)
 6. Update __init__.py to export LabelsManager and LabelData
@@ -126,8 +128,8 @@ Expected: All tests PASS (green phase)
 ## Notes
 
 - Copy initialization pattern from PullRequestManager exactly
-- Label name validation: simple string check, no special chars
+- Label name validation: non-empty, no leading/trailing whitespace (allows spaces, hyphens, underscores, emojis, special chars)
 - Color validation: exactly 6 hex characters (accept upper/lower case, with or without # prefix)
-- Strip # prefix before validation and before sending to GitHub API
+- Strip # prefix during validation and when sending to GitHub API
 - No CRUD methods yet - just setup and validation
 - Update `__init__.py` to export new classes

@@ -24,7 +24,7 @@ class TestLabelsManagerUnit:
     def test_initialization_requires_git_repository(self) -> None
     def test_initialization_requires_github_token(self) -> None
     def test_label_name_validation(self, tmp_path: Path) -> None
-    def test_color_validation(self, tmp_path: Path) -> None
+    def test_color_validation_and_normalization(self, tmp_path: Path) -> None
 ```
 
 ## HOW
@@ -54,8 +54,8 @@ from mcp_coder.utils.github_operations.labels_manager import LabelData
 ## DATA
 
 ### Test Inputs
-- Valid label name: `"bug"`, `"feature-request"`
-- Invalid label names: `""`, `"   "`, names with `#` or `@`
+- Valid label names: `"bug"`, `"feature-request"`, `"high priority"`, `"bug :bug:"`, `"type/enhancement"`
+- Invalid label names: `""`, `"   "`, `"  leading"`, `"trailing  "`
 - Valid colors: `"FF0000"`, `"#FF0000"`, `"00ff00"`, `"#00FF00"` (6-char hex with or without #)
 - Invalid colors: `"red"`, `"12345"`, `"GGGGGG"`, `"#12345"`
 
@@ -76,8 +76,8 @@ Tasks:
 2. Implement 5 test methods as specified in pr_info/steps/step_1.md
 3. Follow existing test patterns for git repo setup and token mocking
 4. Test validation rules:
-   - Label names: non-empty strings without special chars (#, @, /)
-   - Colors: 6-character hex strings (accepts both "FF0000" and "#FF0000" formats)
+   - Label names: non-empty strings, no leading/trailing whitespace (allows spaces, hyphens, underscores, emojis, special chars)
+   - Colors: 6-character hex strings (accepts both "FF0000" and "#FF0000" formats, normalizes by removing #)
 5. Use pytest.raises for ValueError assertions
 
 Run: pytest tests/utils/test_github_operations.py::TestLabelsManagerUnit -v
