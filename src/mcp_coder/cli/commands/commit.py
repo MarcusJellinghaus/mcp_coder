@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 
 from ...constants import PROMPTS_FILE_PATH
 from ...llm_interface import ask_llm
+from ...llm_providers.claude.claude_code_api import ClaudeAPIError
 from ...prompt_manager import get_prompt
 from ...utils.clipboard import (
     get_clipboard_text,
@@ -158,6 +159,11 @@ def generate_commit_message_with_llm(
 
         logger.debug("LLM response received successfully, %d characters", len(response))
 
+    except ClaudeAPIError as e:
+        # Clean error message from ClaudeAPIError - no stack trace needed
+        error_msg = str(e)
+        logger.error("Claude API error: %s", error_msg)
+        return False, "", error_msg
     except Exception as e:
         error_msg = f"LLM communication failed: {str(e)}. Check your internet connection and API credentials. If the error persists, the AI service may be temporarily unavailable."
         logger.error("LLM request failed: %s", e, exc_info=True)

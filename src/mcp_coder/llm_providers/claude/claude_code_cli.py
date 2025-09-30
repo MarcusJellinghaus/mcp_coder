@@ -70,7 +70,7 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     command_line_length = len(claude_cmd) + len("--print ") + len(question)
 
     if command_line_length > 7000:  # Conservative threshold
-        logger.info(
+        logger.debug(
             f"Using stdin for long prompt ({len(question)} chars) to avoid CLI limit"
         )
         # Use stdin input method: echo "prompt" | claude -p ""

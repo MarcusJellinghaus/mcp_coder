@@ -25,6 +25,13 @@ from .claude_executable_finder import (
     verify_claude_installation,
 )
 
+
+class ClaudeAPIError(Exception):
+    """Custom exception for Claude API errors with user-friendly messages."""
+
+    pass
+
+
 # Create logger for this module
 logger = logging.getLogger(__name__)
 
@@ -44,6 +51,7 @@ __all__ = [
     "_create_claude_client",
     "_extract_real_error_message",
     "_verify_claude_before_use",
+    "ClaudeAPIError",
 ]
 
 
@@ -404,81 +412,24 @@ def ask_claude_code_api(question: str, timeout: int = 30) -> str:
         real_error = _extract_real_error_message(e)
         logger.error("Claude API request failed: %s (original: %s)", real_error, str(e))
 
-        # Build comprehensive error message
-        error_parts = [f"Claude Code SDK request failed: {real_error}"]
-
-        # Add specific guidance based on error type
-        if "WinError 206" in str(e) or "filename or extension is too long" in str(e):
-            error_parts.extend(
-                [
-                    "",
-                    "SOLUTION: Windows path length limit exceeded.",
-                    "Try one of these solutions:",
-                    "1. Move your project to a shorter path (e.g., C:\\dev\\project)",
-                    "2. Enable long path support: Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem' -Name 'LongPathsEnabled' -Value 1",
-                    "3. Use PowerShell as Administrator and run the command above, then restart your terminal",
-                ]
-            )
-        elif (
+        # Determine error type and create appropriate user-friendly message
+        if (
             "CLINotFoundError" in str(e)
             or "Claude Code not found" in str(e)
             or isinstance(e, CLINotFoundError)
         ):
-            # Try to find Claude and provide specific guidance
-            claude_path = find_claude_executable(return_none_if_not_found=True)
-            if claude_path:
-                username = os.environ.get(
-                    "USERNAME", os.environ.get("USER", "<username>")
-                )
-                error_parts.extend(
-                    [
-                        "",
-                        f"Claude CLI found at: {claude_path}",
-                        "SOLUTION: Add Claude to your PATH:",
-                        f"  PowerShell: $env:PATH = 'C:\\Users\\{username}\\.local\\bin;' + $env:PATH",
-                        f"  CMD: set PATH=C:\\Users\\{username}\\.local\\bin;%PATH%",
-                        "  Or restart your terminal after installing Claude globally.",
-                    ]
-                )
-            else:
-                error_parts.extend(
-                    [
-                        "",
-                        "SOLUTION: Install Claude CLI:",
-                        "1. npm install -g @anthropic-ai/claude-code",
-                        "2. Restart your terminal",
-                        "3. Verify installation: claude --version",
-                    ]
-                )
-        elif "FileNotFoundError" in str(e) or isinstance(e, FileNotFoundError):
-            error_parts.extend(
-                [
-                    "",
-                    "SOLUTION: File or executable not found.",
-                    "1. Verify Claude CLI is installed: claude --version",
-                    "2. Check if Claude is in PATH: where claude (Windows) or which claude (Unix)",
-                    "3. Reinstall if needed: npm install -g @anthropic-ai/claude-code",
-                ]
+            # This error is misleading - claude.exe exists but can't be executed
+            error_msg = (
+                "Claude API Error: Unable to execute Claude CLI.\n"
+                "Possible causes:\n"
+                "  - PATH environment variable issues\n"
+                "  - Authentication/login problems\n"
+                "  - API rate limiting (overusage)\n\n"
             )
-        elif "PermissionError" in str(e) or isinstance(e, PermissionError):
-            error_parts.extend(
-                [
-                    "",
-                    "SOLUTION: Permission denied.",
-                    "1. Run terminal as Administrator (Windows) or use sudo (Unix)",
-                    "2. Check file/directory permissions",
-                    "3. Ensure Claude CLI has execute permissions",
-                ]
-            )
+        else:
+            error_msg = f"Claude API Error: {real_error}"
 
-        combined_error_msg = "\n".join(error_parts)
-
-        raise subprocess.CalledProcessError(
-            1,  # Generic error code
-            ["claude-code-sdk", "query"],
-            output="",
-            stderr=combined_error_msg,
-        ) from e
+        raise ClaudeAPIError(error_msg) from e
 
 
 async def ask_claude_code_api_detailed(

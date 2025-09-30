@@ -13,6 +13,32 @@ pytest -m "not git_integration and not claude_integration and not github_integra
 pytest -m git_integration      # File system operations
 pytest -m claude_integration   # Claude API (requires auth)
 pytest -m github_integration   # GitHub API (requires config)
+
+# Run specific subdirectories
+pytest tests/utils/github_operations/    # All GitHub operations tests
+pytest tests/utils/                      # All utils tests
+```
+
+## Test Structure
+
+Tests mirror the source code structure:
+
+```
+tests/
+├── cli/                    # CLI command tests
+├── formatters/            # Code formatter tests
+├── llm_providers/         # LLM provider tests
+│   └── claude/           # Claude-specific tests
+├── utils/                 # Utility tests
+│   ├── github_operations/ # GitHub API tests
+│   │   ├── test_github_utils.py
+│   │   ├── test_issue_manager.py
+│   │   └── test_issue_manager_integration.py
+│   ├── test_clipboard.py
+│   ├── test_data_files.py
+│   └── test_git_*.py
+├── workflows/             # Workflow tests
+└── workflow_utils/        # Workflow utility tests
 ```
 
 ## Test Markers
@@ -37,6 +63,10 @@ def test_git_workflow(git_repo):
 
 @pytest.mark.claude_integration
 def test_claude_api():
+    pass
+
+@pytest.mark.github_integration
+def test_github_operations(issue_manager):
     pass
 ```
 

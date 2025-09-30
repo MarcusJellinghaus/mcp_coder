@@ -11,7 +11,7 @@ from typing import Optional, TypedDict
 
 from mcp_coder.utils.log_utils import log_function_call
 
-from .base_manager import BaseGitHubManager
+from .base_manager import BaseGitHubManager, _handle_github_errors
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +102,7 @@ class LabelsManager(BaseGitHubManager):
             return color[1:]
         return color
 
+    @_handle_github_errors(default_return={})
     @log_function_call
     def create_label(self, name: str, color: str, description: str = "") -> LabelData:
         """Create a new label in the repository.
@@ -116,8 +117,6 @@ class LabelsManager(BaseGitHubManager):
         """
         from typing import cast
 
-        from github import GithubException
-
         # Validate label name
         if not self._validate_label_name(name):
             return cast(LabelData, {})
@@ -127,32 +126,25 @@ class LabelsManager(BaseGitHubManager):
             return cast(LabelData, {})
         normalized_color = self._normalize_color(color)
 
-        try:
-            # Get repository object
-            repo = self._get_repository()
-            if repo is None:
-                return cast(LabelData, {})
-
-            # Create the label using GitHub API
-            label = repo.create_label(
-                name=name, color=normalized_color, description=description
-            )
-
-            # Return structured dictionary with label information
-            return {
-                "name": label.name,
-                "color": label.color,
-                "description": label.description or "",
-                "url": label.url,
-            }
-
-        except GithubException as e:
-            logger.error("GitHub API error creating label: %s", e)
-            return cast(LabelData, {})
-        except Exception as e:
-            logger.error("Unexpected error creating label: %s", e)
+        # Get repository object
+        repo = self._get_repository()
+        if repo is None:
             return cast(LabelData, {})
 
+        # Create the label using GitHub API
+        label = repo.create_label(
+            name=name, color=normalized_color, description=description
+        )
+
+        # Return structured dictionary with label information
+        return {
+            "name": label.name,
+            "color": label.color,
+            "description": label.description or "",
+            "url": label.url,
+        }
+
+    @_handle_github_errors(default_return={})
     @log_function_call
     def get_label(self, name: str) -> LabelData:
         """Get a specific label by name.
@@ -165,37 +157,27 @@ class LabelsManager(BaseGitHubManager):
         """
         from typing import cast
 
-        from github import GithubException
-
         # Validate label name
         if not self._validate_label_name(name):
             return cast(LabelData, {})
 
-        try:
-            # Get repository object
-            repo = self._get_repository()
-            if repo is None:
-                return cast(LabelData, {})
-
-            # Get the label using GitHub API
-            label = repo.get_label(name)
-
-            # Return structured dictionary with label information
-            return {
-                "name": label.name,
-                "color": label.color,
-                "description": label.description or "",
-                "url": label.url,
-            }
-
-        except GithubException as e:
-            # Label not found or other GitHub API error
-            logger.error("GitHub API error getting label '%s': %s", name, e)
-            return cast(LabelData, {})
-        except Exception as e:
-            logger.error("Unexpected error getting label '%s': %s", name, e)
+        # Get repository object
+        repo = self._get_repository()
+        if repo is None:
             return cast(LabelData, {})
 
+        # Get the label using GitHub API
+        label = repo.get_label(name)
+
+        # Return structured dictionary with label information
+        return {
+            "name": label.name,
+            "color": label.color,
+            "description": label.description or "",
+            "url": label.url,
+        }
+
+    @_handle_github_errors(default_return=[])
     @log_function_call
     def get_labels(self) -> list[LabelData]:
         """Get all labels in the repository.
@@ -203,37 +185,28 @@ class LabelsManager(BaseGitHubManager):
         Returns:
             List of LabelData for all labels, or empty list on failure
         """
-        from github import GithubException
-
-        try:
-            # Get repository object
-            repo = self._get_repository()
-            if repo is None:
-                return []
-
-            # Get all labels using GitHub API
-            labels = repo.get_labels()
-
-            # Convert to structured list of dictionaries
-            label_list = []
-            for label in labels:
-                label_dict: LabelData = {
-                    "name": label.name,
-                    "color": label.color,
-                    "description": label.description or "",
-                    "url": label.url,
-                }
-                label_list.append(label_dict)
-
-            return label_list
-
-        except GithubException as e:
-            logger.error("GitHub API error listing labels: %s", e)
-            return []
-        except Exception as e:
-            logger.error("Unexpected error listing labels: %s", e)
+        # Get repository object
+        repo = self._get_repository()
+        if repo is None:
             return []
 
+        # Get all labels using GitHub API
+        labels = repo.get_labels()
+
+        # Convert to structured list of dictionaries
+        label_list = []
+        for label in labels:
+            label_dict: LabelData = {
+                "name": label.name,
+                "color": label.color,
+                "description": label.description or "",
+                "url": label.url,
+            }
+            label_list.append(label_dict)
+
+        return label_list
+
+    @_handle_github_errors(default_return={})
     @log_function_call
     def update_label(
         self,
@@ -255,8 +228,6 @@ class LabelsManager(BaseGitHubManager):
         """
         from typing import cast
 
-        from github import GithubException
-
         # Validate current label name
         if not self._validate_label_name(name):
             return cast(LabelData, {})
@@ -272,42 +243,33 @@ class LabelsManager(BaseGitHubManager):
                 return cast(LabelData, {})
             normalized_color = self._normalize_color(color)
 
-        try:
-            # Get repository object
-            repo = self._get_repository()
-            if repo is None:
-                return cast(LabelData, {})
-
-            # Get the label using GitHub API
-            label = repo.get_label(name)
-
-            # Update the label with new values
-            label.edit(
-                name=new_name if new_name is not None else label.name,
-                color=normalized_color if normalized_color is not None else label.color,
-                description=(
-                    description if description is not None else label.description
-                ),
-            )
-
-            # Get updated label information
-            updated_label = repo.get_label(new_name if new_name is not None else name)
-
-            # Return structured dictionary with updated label information
-            return {
-                "name": updated_label.name,
-                "color": updated_label.color,
-                "description": updated_label.description or "",
-                "url": updated_label.url,
-            }
-
-        except GithubException as e:
-            logger.error("GitHub API error updating label '%s': %s", name, e)
-            return cast(LabelData, {})
-        except Exception as e:
-            logger.error("Unexpected error updating label '%s': %s", name, e)
+        # Get repository object
+        repo = self._get_repository()
+        if repo is None:
             return cast(LabelData, {})
 
+        # Get the label using GitHub API
+        label = repo.get_label(name)
+
+        # Update the label with new values
+        label.edit(
+            name=new_name if new_name is not None else label.name,
+            color=normalized_color if normalized_color is not None else label.color,
+            description=(description if description is not None else label.description),
+        )
+
+        # Get updated label information
+        updated_label = repo.get_label(new_name if new_name is not None else name)
+
+        # Return structured dictionary with updated label information
+        return {
+            "name": updated_label.name,
+            "color": updated_label.color,
+            "description": updated_label.description or "",
+            "url": updated_label.url,
+        }
+
+    @_handle_github_errors(default_return=False)
     @log_function_call
     def delete_label(self, name: str) -> bool:
         """Delete a label from the repository.
@@ -318,29 +280,19 @@ class LabelsManager(BaseGitHubManager):
         Returns:
             True if deletion was successful, False otherwise
         """
-        from github import GithubException
-
         # Validate label name
         if not self._validate_label_name(name):
             return False
 
-        try:
-            # Get repository object
-            repo = self._get_repository()
-            if repo is None:
-                return False
-
-            # Get the label using GitHub API
-            label = repo.get_label(name)
-
-            # Delete the label
-            label.delete()
-
-            return True
-
-        except GithubException as e:
-            logger.error("GitHub API error deleting label '%s': %s", name, e)
+        # Get repository object
+        repo = self._get_repository()
+        if repo is None:
             return False
-        except Exception as e:
-            logger.error("Unexpected error deleting label '%s': %s", name, e)
-            return False
+
+        # Get the label using GitHub API
+        label = repo.get_label(name)
+
+        # Delete the label
+        label.delete()
+
+        return True

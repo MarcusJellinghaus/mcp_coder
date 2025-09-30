@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm_providers.claude.claude_code_api import (
+    ClaudeAPIError,
     _extract_real_error_message,
     _retry_with_backoff,
     _verify_claude_before_use,
@@ -228,77 +229,66 @@ class TestAskClaudeCodeApiErrorHandling:
         inner_error = OSError("[WinError 206] The filename or extension is too long")
         mock_retry.side_effect = inner_error
 
-        with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
 
-        error_msg = exc_info.value.stderr
+        error_msg = str(exc_info.value)
         assert "Windows path length limit exceeded" in error_msg
-        assert "Move your project to a shorter path" in error_msg
-        assert "Enable long path support" in error_msg
+        assert "current working directory path is very long" in error_msg
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.find_claude_executable")
-    def test_cli_not_found_error_with_path_found(
-        self, mock_find: MagicMock, mock_retry: MagicMock
-    ) -> None:
+    def test_cli_not_found_error_with_path_found(self, mock_retry: MagicMock) -> None:
         """Test CLINotFoundError handling when Claude path can be found."""
         from claude_code_sdk._errors import CLINotFoundError
 
         mock_retry.side_effect = CLINotFoundError("Claude Code not found")
-        mock_find.return_value = "C:\\Users\\test\\.local\\bin\\claude.exe"
 
-        with patch.dict("os.environ", {"USERNAME": "testuser"}):
-            with pytest.raises(subprocess.CalledProcessError) as exc_info:
-                ask_claude_code_api("test question")
+        with pytest.raises(ClaudeAPIError) as exc_info:
+            ask_claude_code_api("test question")
 
-        error_msg = exc_info.value.stderr
-        assert "Claude CLI found at:" in error_msg
-        assert "Add Claude to your PATH" in error_msg
-        assert "testuser" in error_msg  # Dynamic username
+        error_msg = str(exc_info.value)
+        assert "Unable to execute Claude CLI" in error_msg
+        assert "Authentication/login problems" in error_msg
+        assert "API rate limiting" in error_msg
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.find_claude_executable")
     def test_cli_not_found_error_without_path_found(
-        self, mock_find: MagicMock, mock_retry: MagicMock
+        self, mock_retry: MagicMock
     ) -> None:
         """Test CLINotFoundError handling when Claude path cannot be found."""
         from claude_code_sdk._errors import CLINotFoundError
 
         mock_retry.side_effect = CLINotFoundError("Claude Code not found")
-        mock_find.return_value = None
 
-        with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
 
-        error_msg = exc_info.value.stderr
-        assert "Install Claude CLI" in error_msg
-        assert "npm install -g @anthropic-ai/claude-code" in error_msg
+        error_msg = str(exc_info.value)
+        assert "Unable to execute Claude CLI" in error_msg
+        assert "Authentication/login problems" in error_msg
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
     def test_file_not_found_error_handling(self, mock_retry: MagicMock) -> None:
         """Test FileNotFoundError handling."""
         mock_retry.side_effect = FileNotFoundError("No such file or directory")
 
-        with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
 
-        error_msg = exc_info.value.stderr
-        assert (
-            "File/executable not found" in error_msg
-        )  # Fixed: matches actual implementation
-        assert "Verify Claude CLI is installed" in error_msg
+        error_msg = str(exc_info.value)
+        assert "File/executable not found" in error_msg
+        assert "No such file or directory" in error_msg
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
     def test_permission_error_handling(self, mock_retry: MagicMock) -> None:
         """Test PermissionError handling."""
         mock_retry.side_effect = PermissionError("Permission denied")
 
-        with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
 
-        error_msg = exc_info.value.stderr
+        error_msg = str(exc_info.value)
         assert "Permission denied" in error_msg
-        assert "Run terminal as Administrator" in error_msg
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
     def test_timeout_error_passthrough(self, mock_retry: MagicMock) -> None:

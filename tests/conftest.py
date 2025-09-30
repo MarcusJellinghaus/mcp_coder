@@ -193,7 +193,7 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
     Raises:
         pytest.skip: When GitHub token or test repository not configured
     """
-    from mcp_coder.utils.user_config import get_config_value
+    from mcp_coder.utils.user_config import get_config_file_path, get_config_value
 
     # Check for required GitHub configuration
     # Priority 1: Environment variables
@@ -201,22 +201,54 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
     test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
 
     # Priority 2: Config system fallback
+    config_file_path = get_config_file_path()
+
     if not github_token:
         github_token = get_config_value("github", "token")
+
     if not test_repo_url:
         test_repo_url = get_config_value("github", "test_repo_url")
 
+    # Summary of what was found
+    token_source = (
+        "env" if os.getenv("GITHUB_TOKEN") else "config" if github_token else "none"
+    )
+    repo_source = (
+        "env"
+        if os.getenv("GITHUB_TEST_REPO_URL")
+        else "config" if test_repo_url else "none"
+    )
+    print(f"\nGitHub Integration: token={token_source}, repo={repo_source}")
+
     if not github_token:
-        pytest.skip(
-            "GitHub token not configured. Set GITHUB_TOKEN environment variable "
-            "or add github.token to ~/.mcp_coder/config.toml"
+        skip_msg = (
+            "GitHub token not configured.\n"
+            f"  Environment variable GITHUB_TOKEN: Not found\n"
+            f"  Config file location: {config_file_path}\n"
+            f"  Config file exists: {config_file_path.exists() if config_file_path else False}\n"
+            f"  Config file github.token: Not found\n\n"
+            "To fix, either:\n"
+            "  1. Set environment variable: set GITHUB_TOKEN=ghp_your_token_here\n"
+            f"  2. Add to config file {config_file_path}:\n"
+            "     [github]\n"
+            '     token = "ghp_your_token_here"'
         )
+        pytest.skip(skip_msg)
 
     if not test_repo_url:
-        pytest.skip(
-            "Test repository URL not configured. Set GITHUB_TEST_REPO_URL environment variable "
-            "or add github.test_repo_url to ~/.mcp_coder/config.toml"
+        skip_msg = (
+            "Test repository URL not configured.\n"
+            f"  Environment variable GITHUB_TEST_REPO_URL: Not found\n"
+            f"  Config file location: {config_file_path}\n"
+            f"  Config file exists: {config_file_path.exists() if config_file_path else False}\n"
+            f"  Config file github.test_repo_url: Not found\n\n"
+            "To fix, either:\n"
+            "  1. Set environment variable: set GITHUB_TEST_REPO_URL=https://github.com/user/test-repo\n"
+            f"  2. Add to config file {config_file_path}:\n"
+            "     [github]\n"
+            '     test_repo_url = "https://github.com/user/test-repo"'
         )
+        pytest.skip(skip_msg)
 
     # Clone the actual test repository
     git_dir = tmp_path / "test_repo"
@@ -249,10 +281,11 @@ T = TypeVar("T")
 
 
 def create_github_manager(manager_class: Type[T], github_setup: GitHubTestSetup) -> T:
-    """Create a GitHub manager instance with mocked token configuration.
+    """Create a GitHub manager instance using real configuration.
 
-    This helper function eliminates duplicated fixture logic by providing
-    a consistent way to instantiate GitHub managers with proper token mocking.
+    This helper function provides a consistent way to instantiate GitHub managers
+    for integration tests. The managers will use the real configuration system
+    to read the GitHub token from the cloned repository's config or environment.
 
     Args:
         manager_class: The manager class to instantiate (e.g., LabelsManager, PullRequestManager)
@@ -268,10 +301,6 @@ def create_github_manager(manager_class: Type[T], github_setup: GitHubTestSetup)
         >>> def labels_manager(github_test_setup: GitHubTestSetup) -> LabelsManager:
         ...     return create_github_manager(LabelsManager, github_test_setup)
     """
-    patcher = patch("mcp_coder.utils.user_config.get_config_value")
-    mock_config = patcher.start()
-    mock_config.return_value = github_setup["github_token"]
-    try:
-        return manager_class(github_setup["project_dir"])  # type: ignore[call-arg]
-    finally:
-        patcher.stop()
+    # No mocking - let the manager use real config system
+    # The BaseGitHubManager will read from environment variables or config file
+    return manager_class(github_setup["project_dir"])  # type: ignore[call-arg]
