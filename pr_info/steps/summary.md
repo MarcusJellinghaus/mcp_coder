@@ -45,5 +45,7 @@ None (pure addition)
   - Partial match, all exist unchanged
 - **Orchestrator Tests** (3 tests): `apply_labels()` with mocked LabelsManager
   - Success flow, dry-run mode, API error fails fast
-- **CLI Tests** (4+ tests): Argument parsing and validation
+- **CLI Tests** (4 tests): Argument parsing and validation
+- **Main Function Tests** (2 tests): Success and error scenarios
+- **Total: 17+ tests**
 - **No Integration Tests**: Unit test coverage is sufficient

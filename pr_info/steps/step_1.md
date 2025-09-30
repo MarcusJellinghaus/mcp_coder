@@ -8,7 +8,7 @@ Reference `summary.md` for overview. This step establishes the foundation: label
 
 ## WHERE
 - Create: `tests/workflows/test_define_labels.py`
-- Create: `workflows/define_labels.py` (skeleton)
+- Create: `workflows/define_labels.py`
 
 ## WHAT
 
@@ -35,6 +35,7 @@ def test_workflow_labels_constant():
     assert len(WORKFLOW_LABELS) == 10
     assert all(len(label) == 3 for label in WORKFLOW_LABELS)
     assert all(label[0].startswith("status-") for label in WORKFLOW_LABELS)
+    assert all(len(label[1]) == 6 for label in WORKFLOW_LABELS)  # Color validation
 ```
 
 ## HOW
@@ -49,7 +50,7 @@ def test_workflow_labels_constant():
 3. Names follow pattern: status-NN:state-name
 4. Colors are 6-char hex without '#'
 5. Descriptions from workflow document
-6. Validate color format at module load (6-char hex)
+6. Add validation at module load: verify all colors are 6-char hex format
 ```
 
 ## DATA

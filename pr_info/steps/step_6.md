@@ -29,9 +29,13 @@ Verification:
 ```
 
 ## DATA
-- **Test markers**: `@pytest.mark.integration`
-- **Environment**: Requires `GITHUB_TOKEN`
-- **Verification**: Check label names, colors, descriptions match spec
+- **Expected test count**: 17+ tests total
+  - 8 for calculate_label_changes (pure function)
+  - 3 for apply_labels (orchestrator)
+  - 4 for CLI argument parsing
+  - 2 for main function
+- **No integration tests**: Unit test coverage is sufficient
+- **Verification**: All tests pass, script imports without errors
 
 ## LLM Prompt
 ```

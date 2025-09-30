@@ -46,9 +46,10 @@ main:
 ```
 
 ## DATA
-- **Returns**: `None`
+- **main() returns**: `None`
 - **Exit codes**: 0 (success), 1 (failure)
-- **Logs**: Summary statistics from apply_labels() results
+- **Logs at start**: Project directory, repository name, dry-run mode status
+- **Logs at end**: Summary statistics from apply_labels() results
 
 ## LLM Prompt
 ```

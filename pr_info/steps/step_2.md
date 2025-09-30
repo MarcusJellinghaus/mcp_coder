@@ -72,7 +72,7 @@ def test_apply_labels_api_error_fails_fast(mock_labels_manager, tmp_path)
 ### calculate_label_changes (pure function):
 ```
 1. Initialize result dict with empty lists for 'created', 'updated', 'deleted', 'unchanged'
-2. Build existing_map keyed by label name
+2. Build existing_map keyed by label name (dict[str, tuple[str, str]])
 3. For each target label:
    - If not in existing_map: add to 'created'
    - If in existing_map with same color/description: add to 'unchanged'
@@ -97,8 +97,10 @@ def test_apply_labels_api_error_fails_fast(mock_labels_manager, tmp_path)
 ```
 
 ## DATA
-- **Input**: `project_dir: Path`
-- **Output**: `dict[str, list[str]]`
+- **calculate_label_changes input**: `existing_labels: list[tuple[str, str, str]]`, `target_labels: list[tuple[str, str, str]]`
+- **calculate_label_changes output**: `dict[str, list[str]]`
+- **apply_labels input**: `project_dir: Path`, `dry_run: bool`
+- **apply_labels output**: `dict[str, list[str]]`
   ```python
   {
       "created": ["status-01:created", ...],

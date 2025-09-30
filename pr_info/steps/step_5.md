@@ -43,7 +43,10 @@ REM Handle exit codes
 ```
 
 ## DATA
-- **Input**: Command-line args (forwarded to Python script)
+- **Input**: Command-line arguments (forwarded to Python script)
+  - `--project-dir <path>` (optional)
+  - `--log-level <level>` (optional)
+  - `--dry-run` (optional flag)
 - **Output**: Exit code (0 success, non-zero failure)
 
 ## LLM Prompt

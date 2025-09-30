@@ -53,9 +53,10 @@ resolve_project_dir:
 ```
 
 ## DATA
-- **parse_arguments() output**: `argparse.Namespace` with `project_dir: Optional[str]`, `log_level: str`, `dry_run: bool`
+- **parse_arguments() returns**: `argparse.Namespace`
+  - Fields: `project_dir: Optional[str]`, `log_level: str`, `dry_run: bool`
 - **resolve_project_dir() input**: `project_dir_arg: Optional[str]`
-- **resolve_project_dir() output**: `Path` (validated)
+- **resolve_project_dir() returns**: `Path` (validated)
 
 ## LLM Prompt
 ```
