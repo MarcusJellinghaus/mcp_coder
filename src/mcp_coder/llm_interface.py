@@ -4,7 +4,11 @@ from .llm_providers.claude.claude_code_interface import ask_claude_code
 
 
 def ask_llm(
-    question: str, provider: str = "claude", method: str = "cli", timeout: int = 30, cwd: str | None = None
+    question: str,
+    provider: str = "claude",
+    method: str = "cli",
+    timeout: int = 30,
+    cwd: str | None = None,
 ) -> str:
     """
     Ask a question to an LLM provider using the specified method.

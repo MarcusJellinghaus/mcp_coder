@@ -4,7 +4,9 @@ from .claude_code_api import ask_claude_code_api
 from .claude_code_cli import ask_claude_code_cli
 
 
-def ask_claude_code(question: str, method: str = "cli", timeout: int = 30, cwd: str | None = None) -> str:
+def ask_claude_code(
+    question: str, method: str = "cli", timeout: int = 30, cwd: str | None = None
+) -> str:
     """
     Ask Claude a question using the specified implementation method.
 

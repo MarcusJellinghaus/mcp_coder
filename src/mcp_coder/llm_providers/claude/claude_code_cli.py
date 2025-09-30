@@ -36,7 +36,9 @@ def _find_claude_executable() -> str:
     return result
 
 
-def ask_claude_code_cli(question: str, timeout: int = 30, cwd: str | None = None) -> str:
+def ask_claude_code_cli(
+    question: str, timeout: int = 30, cwd: str | None = None
+) -> str:
     """
     Ask Claude a question via Claude Code CLI and return the response.
 
