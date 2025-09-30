@@ -187,6 +187,144 @@ class TestIssueManagerIntegration:
                 except Exception:
                     pass  # Ignore cleanup failures
 
+    def test_multiple_issues_filtering(self, issue_manager: IssueManager) -> None:
+        """Test filtering multiple issues by state and labels.
+
+        This test creates multiple issues with different labels and states,
+        then verifies that filtering works correctly.
+        """
+        # Create unique issue titles with timestamp
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        issue1_title = f"Test Issue 1 - Bug - {timestamp}"
+        issue2_title = f"Test Issue 2 - Feature - {timestamp}"
+        issue3_title = f"Test Issue 3 - Bug - {timestamp}"
+
+        created_issues = []
+        try:
+            # Step 1: Create three issues with different labels
+            issue1 = issue_manager.create_issue(
+                title=issue1_title,
+                body="First test issue with bug label",
+                labels=["bug", "test"],
+            )
+            assert issue1 and issue1["number"] > 0, "Failed to create issue 1"
+            created_issues.append(issue1)
+            print(f"\n✓ Created issue #{issue1['number']}: {issue1_title}")
+
+            issue2 = issue_manager.create_issue(
+                title=issue2_title,
+                body="Second test issue with enhancement label",
+                labels=["enhancement", "test"],
+            )
+            assert issue2 and issue2["number"] > 0, "Failed to create issue 2"
+            created_issues.append(issue2)
+            print(f"✓ Created issue #{issue2['number']}: {issue2_title}")
+
+            issue3 = issue_manager.create_issue(
+                title=issue3_title,
+                body="Third test issue with bug label",
+                labels=["bug", "test"],
+            )
+            assert issue3 and issue3["number"] > 0, "Failed to create issue 3"
+            created_issues.append(issue3)
+            print(f"✓ Created issue #{issue3['number']}: {issue3_title}")
+
+            # Step 2: Close one of the bug issues
+            closed_issue = issue_manager.close_issue(issue1["number"])
+            assert closed_issue and closed_issue["state"] == "closed"
+            print(f"✓ Closed issue #{issue1['number']}")
+
+            # Step 3: Get repository to access issue filtering
+            # Note: We need to use the internal _get_repository method
+            # since there's no public get_issues method yet in IssueManager
+            repo = issue_manager._get_repository()
+            assert repo is not None, "Failed to get repository"
+
+            # Step 4: Filter open issues with 'bug' label
+            open_bug_issues = [
+                issue
+                for issue in repo.get_issues(state="open", labels=["bug"])
+                if issue.number in [i["number"] for i in created_issues]
+            ]
+            # Should have 1 open bug issue (issue3)
+            assert (
+                len(open_bug_issues) >= 1
+            ), f"Expected at least 1 open bug issue, found {len(open_bug_issues)}"
+            open_bug_numbers = [issue.number for issue in open_bug_issues]
+            assert (
+                issue3["number"] in open_bug_numbers
+            ), f"Expected issue #{issue3['number']} in open bugs"
+            print(
+                f"✓ Found {len(open_bug_issues)} open issue(s) with 'bug' label (including #{issue3['number']})"
+            )
+
+            # Step 5: Filter closed issues with 'bug' label
+            closed_bug_issues = [
+                issue
+                for issue in repo.get_issues(state="closed", labels=["bug"])
+                if issue.number in [i["number"] for i in created_issues]
+            ]
+            # Should have 1 closed bug issue (issue1)
+            assert (
+                len(closed_bug_issues) >= 1
+            ), f"Expected at least 1 closed bug issue, found {len(closed_bug_issues)}"
+            closed_bug_numbers = [issue.number for issue in closed_bug_issues]
+            assert (
+                issue1["number"] in closed_bug_numbers
+            ), f"Expected issue #{issue1['number']} in closed bugs"
+            print(
+                f"✓ Found {len(closed_bug_issues)} closed issue(s) with 'bug' label (including #{issue1['number']})"
+            )
+
+            # Step 6: Filter all open issues with 'test' label
+            open_test_issues = [
+                issue
+                for issue in repo.get_issues(state="open", labels=["test"])
+                if issue.number in [i["number"] for i in created_issues]
+            ]
+            # Should have 2 open issues with 'test' label (issue2 and issue3)
+            assert (
+                len(open_test_issues) >= 2
+            ), f"Expected at least 2 open test issues, found {len(open_test_issues)}"
+            open_test_numbers = [issue.number for issue in open_test_issues]
+            assert (
+                issue2["number"] in open_test_numbers
+            ), f"Expected issue #{issue2['number']} in open test issues"
+            assert (
+                issue3["number"] in open_test_numbers
+            ), f"Expected issue #{issue3['number']} in open test issues"
+            print(
+                f"✓ Found {len(open_test_issues)} open issue(s) with 'test' label (including #{issue2['number']} and #{issue3['number']})"
+            )
+
+            # Step 7: Filter open issues with 'enhancement' label
+            open_enhancement_issues = [
+                issue
+                for issue in repo.get_issues(state="open", labels=["enhancement"])
+                if issue.number in [i["number"] for i in created_issues]
+            ]
+            # Should have 1 open enhancement issue (issue2)
+            assert (
+                len(open_enhancement_issues) >= 1
+            ), f"Expected at least 1 open enhancement issue, found {len(open_enhancement_issues)}"
+            enhancement_numbers = [issue.number for issue in open_enhancement_issues]
+            assert (
+                issue2["number"] in enhancement_numbers
+            ), f"Expected issue #{issue2['number']} in open enhancements"
+            print(
+                f"✓ Found {len(open_enhancement_issues)} open issue(s) with 'enhancement' label (including #{issue2['number']})"
+            )
+
+        finally:
+            # Cleanup: ensure all issues are closed
+            for issue in created_issues:
+                if issue and "number" in issue:
+                    try:
+                        issue_manager.close_issue(issue["number"])
+                        print(f"✓ Cleanup: Closed issue #{issue['number']}")
+                    except Exception:
+                        pass  # Ignore cleanup failures
+
     def test_comment_operations(self, issue_manager: IssueManager) -> None:
         """Test comment operations: add → get → edit → delete.
 
