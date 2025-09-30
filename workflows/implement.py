@@ -580,6 +580,8 @@ def process_single_task(project_dir: Path, llm_method: str) -> bool:
     # Step 4: Call LLM with prompt and capture comprehensive data
     log_step("Calling LLM for implementation...")
     try:
+        timeout = 900 # 600 might not be eno
+
         # Create the full prompt by combining template with task context
         full_prompt = f"""{prompt_template}
 
@@ -587,7 +589,7 @@ Current task from TASK_TRACKER.md: {next_task}
 
 Please implement this task step by step."""
         
-        response, comprehensive_data = _call_llm_with_comprehensive_capture(full_prompt, llm_method, timeout=600)
+        response, comprehensive_data = _call_llm_with_comprehensive_capture(full_prompt, llm_method, timeout=timeout)
         
         if not response or not response.strip():
             logger.error("LLM returned empty response")
