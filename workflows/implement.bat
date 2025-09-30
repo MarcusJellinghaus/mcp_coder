@@ -11,8 +11,7 @@ set PYTHONIOENCODING=utf-8
 set PYTHONLEGACYWINDOWSFSENCODING=utf-8
 set PYTHONUTF8=1
 
-echo Starting implement workflow...
-python workflows/implement.py --project-dir . --log-level INFO --llm-method claude_code_cli
+python workflows/implement.py --project-dir . %*
 
 if %ERRORLEVEL% neq 0 (
     echo Workflow failed with exit code %ERRORLEVEL%

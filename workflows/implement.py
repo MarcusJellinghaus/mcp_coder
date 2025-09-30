@@ -719,10 +719,12 @@ def main() -> None:
     """Main workflow orchestration function - processes all implementation tasks in sequence."""
     # Parse command line arguments
     args = parse_arguments()
-    project_dir = resolve_project_dir(args.project_dir)
     
-    # Setup logging early
+    # Setup logging BEFORE any other operations that might use logger
     setup_logging(args.log_level)
+    
+    # Now resolve project directory (which may use logger)
+    project_dir = resolve_project_dir(args.project_dir)
     
     log_step("Starting implement workflow...")
     
