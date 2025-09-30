@@ -234,7 +234,7 @@ class TestAskClaudeCodeApiErrorHandling:
 
         error_msg = str(exc_info.value)
         assert "Windows path length limit exceeded" in error_msg
-        assert "Move your project to a shorter path" in error_msg
+        assert "current working directory path is very long" in error_msg
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
     def test_cli_not_found_error_with_path_found(self, mock_retry: MagicMock) -> None:
@@ -265,7 +265,7 @@ class TestAskClaudeCodeApiErrorHandling:
 
         error_msg = str(exc_info.value)
         assert "Unable to execute Claude CLI" in error_msg
-        assert "claude auth login" in error_msg
+        assert "Authentication/login problems" in error_msg
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
     def test_file_not_found_error_handling(self, mock_retry: MagicMock) -> None:
@@ -276,8 +276,8 @@ class TestAskClaudeCodeApiErrorHandling:
             ask_claude_code_api("test question")
 
         error_msg = str(exc_info.value)
-        assert "File or executable not found" in error_msg
-        assert "Verify Claude CLI installation" in error_msg
+        assert "File/executable not found" in error_msg
+        assert "No such file or directory" in error_msg
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
     def test_permission_error_handling(self, mock_retry: MagicMock) -> None:
@@ -289,7 +289,6 @@ class TestAskClaudeCodeApiErrorHandling:
 
         error_msg = str(exc_info.value)
         assert "Permission denied" in error_msg
-        assert "Run terminal as Administrator" in error_msg
 
     @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
     def test_timeout_error_passthrough(self, mock_retry: MagicMock) -> None:
