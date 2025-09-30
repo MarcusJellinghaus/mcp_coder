@@ -325,6 +325,162 @@ class TestIssueManagerIntegration:
                     except Exception:
                         pass  # Ignore cleanup failures
 
+    def test_label_edge_cases(self, issue_manager: IssueManager) -> None:
+        """Test label operations edge cases: duplicates, non-existent labels, empty labels.
+
+        This test verifies that label operations handle edge cases correctly:
+        - Adding duplicate labels (should be idempotent)
+        - Removing non-existent labels (should not error)
+        - Adding non-existent labels (should create them if repo allows, or succeed)
+        - Setting empty labels (should remove all labels)
+        - Operations on issues with no labels
+        """
+        # Create unique issue title with timestamp
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        issue_title = f"Test Label Edge Cases - {timestamp}"
+        issue_body = (
+            f"This is a test issue for label edge case testing.\n\n"
+            f"Generated at: {datetime.datetime.now().isoformat()}"
+        )
+
+        created_issue = None
+        try:
+            # Step 1: Create issue with initial label
+            created_issue = issue_manager.create_issue(
+                title=issue_title, body=issue_body, labels=["test"]
+            )
+
+            # Verify issue was created
+            assert created_issue, "Expected issue creation to return data"
+            assert "number" in created_issue, "Expected issue number in response"
+            assert created_issue["number"] > 0, "Expected valid issue number"
+
+            issue_number = created_issue["number"]
+            print(f"\n✓ Created issue #{issue_number}: {issue_title}")
+            print(f"  Initial labels: {created_issue['labels']}")
+
+            # Step 2: Add duplicate label (should be idempotent)
+            duplicate_result = issue_manager.add_labels(issue_number, "test")
+            assert duplicate_result, "Expected add_labels to return data"
+            assert duplicate_result["number"] == issue_number
+            # Should still have only one 'test' label
+            test_count = duplicate_result["labels"].count("test")
+            assert test_count == 1, f"Expected 1 'test' label, found {test_count}"
+            print(
+                f"✓ Adding duplicate label 'test' is idempotent: {duplicate_result['labels']}"
+            )
+
+            # Step 3: Add multiple labels including duplicate
+            multi_add_result = issue_manager.add_labels(
+                issue_number, "bug", "test", "enhancement"
+            )
+            assert multi_add_result, "Expected add_labels to return data"
+            # Should have bug, test, and enhancement (test not duplicated)
+            assert "bug" in multi_add_result["labels"], "Expected 'bug' label"
+            assert "test" in multi_add_result["labels"], "Expected 'test' label"
+            assert (
+                "enhancement" in multi_add_result["labels"]
+            ), "Expected 'enhancement' label"
+            test_count = multi_add_result["labels"].count("test")
+            assert test_count == 1, f"Expected 1 'test' label, found {test_count}"
+            print(
+                f"✓ Adding multiple labels with duplicate: {multi_add_result['labels']}"
+            )
+
+            # Step 4: Remove non-existent label (should not error)
+            remove_nonexistent = issue_manager.remove_labels(
+                issue_number, "nonexistent-label-xyz"
+            )
+            assert (
+                remove_nonexistent
+            ), "Expected remove_labels to return data even for non-existent label"
+            assert remove_nonexistent["number"] == issue_number
+            # Existing labels should be unchanged
+            assert (
+                "bug" in remove_nonexistent["labels"]
+            ), "Expected 'bug' label to remain"
+            assert (
+                "test" in remove_nonexistent["labels"]
+            ), "Expected 'test' label to remain"
+            assert (
+                "enhancement" in remove_nonexistent["labels"]
+            ), "Expected 'enhancement' label to remain"
+            print(
+                f"✓ Removing non-existent label does not error: {remove_nonexistent['labels']}"
+            )
+
+            # Step 5: Remove multiple labels including non-existent
+            remove_mixed = issue_manager.remove_labels(
+                issue_number, "bug", "nonexistent-another", "enhancement"
+            )
+            assert remove_mixed, "Expected remove_labels to return data"
+            # Should have only 'test' label remaining
+            assert "test" in remove_mixed["labels"], "Expected 'test' label to remain"
+            assert "bug" not in remove_mixed["labels"], "Expected 'bug' label removed"
+            assert (
+                "enhancement" not in remove_mixed["labels"]
+            ), "Expected 'enhancement' label removed"
+            print(
+                f"✓ Removing mixed existing/non-existent labels: {remove_mixed['labels']}"
+            )
+
+            # Step 6: Set empty labels (remove all labels)
+            empty_labels = issue_manager.set_labels(issue_number)
+            assert empty_labels, "Expected set_labels to return data"
+            assert empty_labels["number"] == issue_number
+            assert (
+                len(empty_labels["labels"]) == 0
+            ), f"Expected no labels, found {empty_labels['labels']}"
+            print(
+                f"✓ Setting empty labels removes all labels: {empty_labels['labels']}"
+            )
+
+            # Step 7: Add label to issue with no labels
+            add_to_empty = issue_manager.add_labels(issue_number, "documentation")
+            assert add_to_empty, "Expected add_labels to return data"
+            assert (
+                "documentation" in add_to_empty["labels"]
+            ), "Expected 'documentation' label"
+            assert len(add_to_empty["labels"]) == 1, "Expected exactly 1 label"
+            print(f"✓ Adding label to issue with no labels: {add_to_empty['labels']}")
+
+            # Step 8: Set single label (replace empty with one label)
+            set_single = issue_manager.set_labels(issue_number, "good first issue")
+            assert set_single, "Expected set_labels to return data"
+            assert (
+                "good first issue" in set_single["labels"]
+            ), "Expected 'good first issue' label"
+            assert (
+                "documentation" not in set_single["labels"]
+            ), "Expected 'documentation' label removed"
+            assert len(set_single["labels"]) == 1, "Expected exactly 1 label"
+            print(f"✓ Setting single label replaces existing: {set_single['labels']}")
+
+            # Step 9: Test adding uncommon but valid label (with spaces and special chars)
+            # Note: GitHub automatically creates labels if they don't exist (if user has permission)
+            add_special = issue_manager.add_labels(issue_number, "needs: review")
+            assert add_special, "Expected add_labels to return data"
+            # The label may or may not be created depending on repo permissions
+            # Just verify the operation doesn't crash
+            print(f"✓ Adding label with special characters: {add_special['labels']}")
+
+            # Step 10: Close issue for cleanup
+            final_close = issue_manager.close_issue(issue_number)
+            assert final_close, "Expected final close to succeed"
+            assert final_close["state"] == "closed", "Expected issue to be closed"
+            print(f"✓ Final cleanup: Closed issue #{issue_number}")
+
+        finally:
+            # Cleanup: ensure issue is closed even if test fails
+            if created_issue and "number" in created_issue:
+                try:
+                    issue_manager.close_issue(created_issue["number"])
+                    print(
+                        f"✓ Cleanup: Ensured issue #{created_issue['number']} is closed"
+                    )
+                except Exception:
+                    pass  # Ignore cleanup failures
+
     def test_comment_operations(self, issue_manager: IssueManager) -> None:
         """Test comment operations: add → get → edit → delete.
 
