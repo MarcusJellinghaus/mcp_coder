@@ -67,3 +67,70 @@ def _validate_workflow_labels() -> None:
 
 # Perform validation at module load
 _validate_workflow_labels()
+
+
+def calculate_label_changes(
+    existing_labels: list[tuple[str, str, str]],
+    target_labels: list[tuple[str, str, str]]
+) -> dict[str, list[str]]:
+    """Pure function to calculate label changes without side effects.
+    
+    Compares existing GitHub labels against target labels to determine
+    which labels need to be created, updated, deleted, or are unchanged.
+    Only status-* labels are considered for deletion.
+    
+    Args:
+        existing_labels: List of (name, color, description) tuples from GitHub
+        target_labels: List of (name, color, description) tuples to apply
+    
+    Returns:
+        Dict with keys: 'created', 'updated', 'deleted', 'unchanged'
+        Each value is a list of label names
+        
+    Example:
+        >>> existing = [("status-01:created", "10b981", "Fresh issue")]
+        >>> target = [("status-01:created", "NEWCOL", "Updated desc")]
+        >>> result = calculate_label_changes(existing, target)
+        >>> result['updated']
+        ['status-01:created']
+    """
+    # Initialize result dict with empty lists
+    result: dict[str, list[str]] = {
+        'created': [],
+        'updated': [],
+        'deleted': [],
+        'unchanged': []
+    }
+    
+    # Build existing_map keyed by label name for O(1) lookup
+    # Map format: {label_name: (color, description)}
+    existing_map: dict[str, tuple[str, str]] = {
+        name: (color, description)
+        for name, color, description in existing_labels
+    }
+    
+    # Build target_names set for O(1) lookup during deletion check
+    target_names = {name for name, _, _ in target_labels}
+    
+    # Process target labels: determine create, update, or unchanged
+    for name, color, description in target_labels:
+        if name not in existing_map:
+            # Label doesn't exist - needs to be created
+            result['created'].append(name)
+        else:
+            # Label exists - check if update needed
+            existing_color, existing_description = existing_map[name]
+            if existing_color == color and existing_description == description:
+                # No changes needed - identical
+                result['unchanged'].append(name)
+            else:
+                # Color or description differs - needs update
+                result['updated'].append(name)
+    
+    # Process existing labels: find status-* labels to delete
+    # Only delete labels starting with 'status-' that are not in target
+    for name in existing_map:
+        if name.startswith('status-') and name not in target_names:
+            result['deleted'].append(name)
+    
+    return result

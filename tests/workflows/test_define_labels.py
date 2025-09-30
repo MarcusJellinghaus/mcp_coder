@@ -15,6 +15,7 @@ from workflows.define_labels import (
     WORKFLOW_LABELS,
     _validate_color_format,
     _validate_workflow_labels,
+    calculate_label_changes,
 )
 
 
@@ -307,3 +308,206 @@ class TestWorkflowLabelsContent:
                 len(color) == 6
             ), f"Label '{name}' color should be exactly 6 characters"
             assert color.isalnum(), f"Label '{name}' color should be alphanumeric"
+
+
+class TestCalculateLabelChanges:
+    """Test the calculate_label_changes pure function."""
+
+    def test_calculate_label_changes_empty_repo(self) -> None:
+        """Test calculate_label_changes with empty repository (no existing labels)."""
+        existing_labels: list[tuple[str, str, str]] = []
+        target_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+            ("status-02:awaiting-planning", "6ee7b7", "Ready for planning"),
+        ]
+
+        result = calculate_label_changes(existing_labels, target_labels)
+
+        # All target labels should be created
+        assert result["created"] == [
+            "status-01:created",
+            "status-02:awaiting-planning",
+        ]
+        assert result["updated"] == []
+        assert result["deleted"] == []
+        assert result["unchanged"] == []
+
+    def test_calculate_label_changes_creates_new_labels(self) -> None:
+        """Test that new labels are identified for creation."""
+        existing_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+        ]
+        target_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+            ("status-02:awaiting-planning", "6ee7b7", "Ready for planning"),
+            ("status-03:planning", "a7f3d0", "Planning in progress"),
+        ]
+
+        result = calculate_label_changes(existing_labels, target_labels)
+
+        # Two new labels should be created
+        assert result["created"] == [
+            "status-02:awaiting-planning",
+            "status-03:planning",
+        ]
+        # First label unchanged
+        assert result["unchanged"] == ["status-01:created"]
+        assert result["updated"] == []
+        assert result["deleted"] == []
+
+    def test_calculate_label_changes_updates_existing_labels(self) -> None:
+        """Test that labels needing updates are identified correctly."""
+        existing_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+            ("status-02:awaiting-planning", "OLDCOL", "Old description"),
+            ("status-03:planning", "a7f3d0", "Planning in progress"),
+        ]
+        target_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),  # unchanged
+            (
+                "status-02:awaiting-planning",
+                "6ee7b7",
+                "Ready for planning",
+            ),  # color changed
+            (
+                "status-03:planning",
+                "a7f3d0",
+                "Updated description",
+            ),  # description changed
+        ]
+
+        result = calculate_label_changes(existing_labels, target_labels)
+
+        # Two labels need updates
+        assert result["updated"] == [
+            "status-02:awaiting-planning",
+            "status-03:planning",
+        ]
+        assert result["unchanged"] == ["status-01:created"]
+        assert result["created"] == []
+        assert result["deleted"] == []
+
+    def test_calculate_label_changes_deletes_obsolete_status_labels(self) -> None:
+        """Test that obsolete status-* labels are identified for deletion."""
+        existing_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+            ("status-99:obsolete", "AABBCC", "Old label to remove"),
+            ("status-98:deprecated", "DDEEFF", "Another old label"),
+        ]
+        target_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+        ]
+
+        result = calculate_label_changes(existing_labels, target_labels)
+
+        # Two obsolete status labels should be deleted
+        assert set(result["deleted"]) == {"status-99:obsolete", "status-98:deprecated"}
+        assert result["unchanged"] == ["status-01:created"]
+        assert result["created"] == []
+        assert result["updated"] == []
+
+    def test_calculate_label_changes_skips_unchanged_labels(self) -> None:
+        """Test that unchanged labels are correctly identified."""
+        existing_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+            ("status-02:awaiting-planning", "6ee7b7", "Ready for planning"),
+            ("status-03:planning", "a7f3d0", "Planning in progress"),
+        ]
+        target_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+            ("status-02:awaiting-planning", "6ee7b7", "Ready for planning"),
+            ("status-03:planning", "a7f3d0", "Planning in progress"),
+        ]
+
+        result = calculate_label_changes(existing_labels, target_labels)
+
+        # All labels unchanged
+        assert result["unchanged"] == [
+            "status-01:created",
+            "status-02:awaiting-planning",
+            "status-03:planning",
+        ]
+        assert result["created"] == []
+        assert result["updated"] == []
+        assert result["deleted"] == []
+
+    def test_calculate_label_changes_preserves_non_status_labels(self) -> None:
+        """Test that non-status-* labels are preserved (not deleted)."""
+        existing_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+            ("bug", "FF0000", "Bug report"),
+            ("enhancement", "00FF00", "Feature request"),
+            ("documentation", "0000FF", "Documentation update"),
+        ]
+        target_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+        ]
+
+        result = calculate_label_changes(existing_labels, target_labels)
+
+        # Non-status labels should NOT be deleted
+        assert result["deleted"] == []
+        assert result["unchanged"] == ["status-01:created"]
+        assert result["created"] == []
+        assert result["updated"] == []
+
+    def test_calculate_label_changes_partial_match(self) -> None:
+        """Test with partial match: 5 of 10 labels exist, some need updates."""
+        existing_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+            (
+                "status-02:awaiting-planning",
+                "OLDCOL",
+                "Old description",
+            ),  # needs update
+            ("status-03:planning", "a7f3d0", "Planning in progress"),
+            ("status-04:plan-review", "3b82f6", "Plan ready for review"),
+            ("status-05:plan-ready", "93c5fd", "Plan approved"),
+            ("status-99:obsolete", "ABCDEF", "To be deleted"),  # obsolete
+        ]
+        target_labels = [
+            ("status-01:created", "10b981", "Fresh issue"),
+            ("status-02:awaiting-planning", "6ee7b7", "Updated description"),
+            ("status-03:planning", "a7f3d0", "Planning in progress"),
+            ("status-04:plan-review", "3b82f6", "Plan ready for review"),
+            ("status-05:plan-ready", "93c5fd", "Plan approved"),
+            ("status-06:implementing", "bfdbfe", "Code being written"),  # new
+            ("status-07:code-review", "f59e0b", "Needs code review"),  # new
+            ("status-08:ready-pr", "fbbf24", "Ready for PR"),  # new
+            ("status-09:pr-creating", "fed7aa", "Creating PR"),  # new
+            ("status-10:pr-created", "8b5cf6", "PR created"),  # new
+        ]
+
+        result = calculate_label_changes(existing_labels, target_labels)
+
+        # Verify correct categorization
+        assert result["created"] == [
+            "status-06:implementing",
+            "status-07:code-review",
+            "status-08:ready-pr",
+            "status-09:pr-creating",
+            "status-10:pr-created",
+        ]
+        assert result["updated"] == ["status-02:awaiting-planning"]
+        assert result["deleted"] == ["status-99:obsolete"]
+        assert result["unchanged"] == [
+            "status-01:created",
+            "status-03:planning",
+            "status-04:plan-review",
+            "status-05:plan-ready",
+        ]
+
+    def test_calculate_label_changes_all_exist_unchanged(self) -> None:
+        """Test when all 10 workflow labels already exist with correct values."""
+        # Use actual WORKFLOW_LABELS as both existing and target
+        existing_labels = list(WORKFLOW_LABELS)
+        target_labels = list(WORKFLOW_LABELS)
+
+        result = calculate_label_changes(existing_labels, target_labels)
+
+        # All should be unchanged
+        expected_names = [label[0] for label in WORKFLOW_LABELS]
+        assert result["unchanged"] == expected_names
+        assert result["created"] == []
+        assert result["updated"] == []
+        assert result["deleted"] == []

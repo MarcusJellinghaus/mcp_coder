@@ -29,8 +29,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 1
 
 ### Step 2: Implement apply_labels Core Function with Tests
-[ ] Implement calculate_label_changes() as pure function (no logging, side-effect-free)
-[ ] Write 8 unit tests for calculate_label_changes() covering:
+[x] Implement calculate_label_changes() as pure function (no logging, side-effect-free)
+[x] Write 8 unit tests for calculate_label_changes() covering:
   - Empty repo, create, update, delete, unchanged, preserve non-status
   - Partial match (5 of 10), all exist unchanged
 [ ] Implement apply_labels() orchestrator with dry_run support
