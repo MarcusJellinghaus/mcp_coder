@@ -47,8 +47,12 @@ COMMANDS:
                            --continue             Continue from the most recent stored session
                                                   (automatically finds latest response file)
                            --timeout SECONDS      Timeout for Claude API request in seconds (default: 60)
+                           --llm-method METHOD    LLM method to use:
+                                                  • claude_code_api (default): Direct API access
+                                                  • claude_code_cli: Use Claude Code CLI
     commit auto             Auto-generate commit message using LLM
     commit auto --preview   Show generated message and ask for confirmation
+    commit auto --llm-method METHOD   LLM method (claude_code_api or claude_code_cli)
     commit clipboard        Use commit message from clipboard
 
 {examples}
