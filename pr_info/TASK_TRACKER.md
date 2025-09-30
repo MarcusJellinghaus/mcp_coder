@@ -58,11 +58,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 6
 
 ### Step 7: Add/Get Comments Operations
-[ ] Implement add_comment and get_comments methods
-[ ] Add unit tests for both methods
-[ ] Run quality checks: pylint, pytest, mypy
-[ ] Fix all issues found by quality checks
-[ ] Prepare git commit message for Step 7
+[x] Implement add_comment and get_comments methods
+[x] Add unit tests for both methods
+[x] Run quality checks: pylint, pytest, mypy
+[x] Fix all issues found by quality checks
+[x] Prepare git commit message for Step 7
 
 ### Step 8: Edit/Delete Comments Operations
 [ ] Implement edit_comment and delete_comment methods
