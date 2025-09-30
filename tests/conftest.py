@@ -195,40 +195,30 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
     """
     from mcp_coder.utils.user_config import get_config_file_path, get_config_value
 
-    print("\n=== GitHub Integration Test Configuration ===")
-
     # Check for required GitHub configuration
     # Priority 1: Environment variables
     github_token = os.getenv("GITHUB_TOKEN")
     test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
 
-    print(
-        f"Environment variable GITHUB_TOKEN: {'Found' if github_token else 'Not found'}"
-    )
-    print(
-        f"Environment variable GITHUB_TEST_REPO_URL: {'Found' if test_repo_url else 'Not found'}"
-    )
-
     # Priority 2: Config system fallback
     config_file_path = get_config_file_path()
-    print(f"\nConfig file location: {config_file_path}")
-    print(
-        f"Config file exists: {config_file_path.exists() if config_file_path else False}"
-    )
 
     if not github_token:
         github_token = get_config_value("github", "token")
-        print(f"Config file github.token: {'Found' if github_token else 'Not found'}")
-    else:
-        print("Config file github.token: Skipped (using environment variable)")
 
     if not test_repo_url:
         test_repo_url = get_config_value("github", "test_repo_url")
-        print(
-            f"Config file github.test_repo_url: {'Found' if test_repo_url else 'Not found'}"
-        )
-    else:
-        print("Config file github.test_repo_url: Skipped (using environment variable)")
+
+    # Summary of what was found
+    token_source = (
+        "env" if os.getenv("GITHUB_TOKEN") else "config" if github_token else "none"
+    )
+    repo_source = (
+        "env"
+        if os.getenv("GITHUB_TEST_REPO_URL")
+        else "config" if test_repo_url else "none"
+    )
+    print(f"\nGitHub Integration: token={token_source}, repo={repo_source}")
 
     if not github_token:
         skip_msg = (
@@ -259,10 +249,6 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
             '     test_repo_url = "https://github.com/user/test-repo"'
         )
         pytest.skip(skip_msg)
-
-    print(f"\n[OK] Configuration complete: Using token and repo URL")
-    print(f"  Test repository: {test_repo_url}")
-    print("=" * 50)
 
     # Clone the actual test repository
     git_dir = tmp_path / "test_repo"
