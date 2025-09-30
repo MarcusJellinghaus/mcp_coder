@@ -91,7 +91,9 @@ class TestAskClaudeCode:
 
         result = ask_claude_code("Test question", method="cli", timeout=30)
 
-        mock_ask_claude_code_cli.assert_called_once_with("Test question", timeout=30, cwd=None)
+        mock_ask_claude_code_cli.assert_called_once_with(
+            "Test question", timeout=30, cwd=None
+        )
         assert result == "CLI response"
 
     @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
@@ -103,7 +105,9 @@ class TestAskClaudeCode:
 
         result = ask_claude_code("Test question")
 
-        mock_ask_claude_code_cli.assert_called_once_with("Test question", timeout=30, cwd=None)
+        mock_ask_claude_code_cli.assert_called_once_with(
+            "Test question", timeout=30, cwd=None
+        )
         assert result == "Default CLI response"
 
     @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_api")
@@ -142,7 +146,9 @@ class TestAskClaudeCode:
 
         result = ask_claude_code("Test question", timeout=45)
 
-        mock_ask_claude_code_cli.assert_called_once_with("Test question", timeout=45, cwd=None)
+        mock_ask_claude_code_cli.assert_called_once_with(
+            "Test question", timeout=45, cwd=None
+        )
         assert result == "Custom timeout response"
 
 

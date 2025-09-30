@@ -68,8 +68,10 @@ def ask_claude_code_cli(
 
     # Find the Claude executable
     claude_cmd = _find_claude_executable()
-    
-    logger.debug(f"Claude Code CLI: executable={claude_cmd}, timeout={timeout}s, cwd={cwd}")
+
+    logger.debug(
+        f"Claude Code CLI: executable={claude_cmd}, timeout={timeout}s, cwd={cwd}"
+    )
 
     # Windows command line limit is ~8191 characters
     # Use stdin for long prompts to avoid this limitation
@@ -92,8 +94,10 @@ def ask_claude_code_cli(
             cwd=cwd,
         )
 
-    logger.debug(f"Claude CLI result: return_code={result.return_code}, timed_out={result.timed_out}, stdout_length={len(result.stdout)}, stderr_length={len(result.stderr)}")
-    
+    logger.debug(
+        f"Claude CLI result: return_code={result.return_code}, timed_out={result.timed_out}, stdout_length={len(result.stdout)}, stderr_length={len(result.stderr)}"
+    )
+
     if result.timed_out:
         logger.error(f"Claude Code CLI timed out after {timeout} seconds")
         raise subprocess.TimeoutExpired(
@@ -111,7 +115,7 @@ def ask_claude_code_cli(
             output=result.stdout,
             stderr=f"Claude Code command failed: {result.stderr}",
         )
-    
+
     logger.debug(f"Claude CLI success: response length={len(result.stdout.strip())}")
     logger.debug(f"Response preview: {result.stdout.strip()[:200]}...")
 
