@@ -186,7 +186,14 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
         
         # Call LLM with the prompt
         provider, method = parse_llm_method(llm_method)
+        logger.debug(f"Calling LLM for task tracker update: provider={provider}, method={method}, prompt_length={len(prompt_template)}")
+        logger.debug(f"Prompt preview (first 200 chars): {prompt_template[:200]}...")
+        
         response = ask_llm(prompt_template, provider=provider, method=method, timeout=300)
+        
+        logger.debug(f"LLM response received: length={len(response) if response else 0}")
+        if response:
+            logger.debug(f"Response preview (first 200 chars): {response[:200]}...")
         
         if not response or not response.strip():
             logger.error("LLM returned empty response for task tracker update")
@@ -292,6 +299,9 @@ def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: 
     """
     provider, method = parse_llm_method(llm_method)
     
+    logger.debug(f"Calling LLM: provider={provider}, method={method}, timeout={timeout}s, prompt_length={len(prompt)}")
+    logger.debug(f"Prompt preview (first 200 chars): {prompt[:200]}...")
+    
     if method == "api":
         # Use detailed API call to get comprehensive data
         try:
@@ -304,16 +314,31 @@ def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: 
                     if content_block.get("type") == "text":
                         response_text += content_block.get("text", "")
             
+            # Log response details
+            logger.debug(f"LLM API response received: length={len(response_text)}, content_blocks={len(detailed_response.get('response', {}).get('content', []))}")
+            logger.debug(f"Response preview (first 200 chars): {response_text[:200]}...")
+            
+            # Log usage and cost if available
+            if "usage" in detailed_response:
+                usage = detailed_response["usage"]
+                logger.debug(f"Token usage - input: {usage.get('input_tokens', 'N/A')}, output: {usage.get('output_tokens', 'N/A')}")
+            if "cost" in detailed_response:
+                logger.debug(f"Cost: ${detailed_response['cost']:.4f}")
+            
             return response_text, detailed_response
             
         except Exception as e:
             logger.warning(f"Failed to get detailed API response, falling back to simple call: {e}")
             # Fall back to simple call
             response_text = ask_llm(prompt, provider=provider, method=method, timeout=timeout)
+            logger.debug(f"LLM fallback response received: length={len(response_text)}")
+            logger.debug(f"Response preview (first 200 chars): {response_text[:200]}...")
             return response_text, {}
     else:
         # CLI method - no comprehensive data available
         response_text = ask_llm(prompt, provider=provider, method=method, timeout=timeout)
+        logger.debug(f"LLM CLI response received: length={len(response_text)}")
+        logger.debug(f"Response preview (first 200 chars): {response_text[:200]}...")
         return response_text, {}
 
 
