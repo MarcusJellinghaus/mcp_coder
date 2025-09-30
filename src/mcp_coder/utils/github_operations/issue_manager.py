@@ -12,7 +12,7 @@ from github.GithubException import GithubException
 
 from mcp_coder.utils.log_utils import log_function_call
 
-from .base_manager import BaseGitHubManager
+from .base_manager import BaseGitHubManager, _handle_github_errors
 
 # Configure logger for GitHub operations
 logger = logging.getLogger(__name__)
@@ -121,6 +121,20 @@ class IssueManager(BaseGitHubManager):
         return True
 
     @log_function_call
+    @_handle_github_errors(
+        default_return=IssueData(
+            number=0,
+            title="",
+            body="",
+            state="",
+            labels=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="",
+            locked=False,
+        )
+    )
     def create_issue(
         self, title: str, body: str = "", labels: Optional[List[str]] = None
     ) -> IssueData:
@@ -225,22 +239,18 @@ class IssueManager(BaseGitHubManager):
                 url="",
                 locked=False,
             )
-        except Exception as e:
-            logger.error(f"Unexpected error creating issue: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
 
     @log_function_call
+    @_handle_github_errors(
+        default_return=CommentData(
+            id=0,
+            body="",
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="",
+        )
+    )
     def add_comment(self, issue_number: int, body: str) -> CommentData:
         """Add a comment to an issue.
 
@@ -334,20 +344,9 @@ class IssueManager(BaseGitHubManager):
                 updated_at=None,
                 url="",
             )
-        except Exception as e:
-            logger.error(
-                f"Unexpected error adding comment to issue {issue_number}: {e}"
-            )
-            return CommentData(
-                id=0,
-                body="",
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-            )
 
     @log_function_call
+    @_handle_github_errors(default_return=[])
     def get_comments(self, issue_number: int) -> List[CommentData]:
         """Get all comments on an issue.
 
@@ -414,13 +413,18 @@ class IssueManager(BaseGitHubManager):
             # Log and return empty list for other errors
             logger.error(f"Failed to get comments from issue {issue_number}: {e}")
             return []
-        except Exception as e:
-            logger.error(
-                f"Unexpected error getting comments from issue {issue_number}: {e}"
-            )
-            return []
 
     @log_function_call
+    @_handle_github_errors(
+        default_return=CommentData(
+            id=0,
+            body="",
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="",
+        )
+    )
     def edit_comment(
         self, issue_number: int, comment_id: int, body: str
     ) -> CommentData:
@@ -536,20 +540,9 @@ class IssueManager(BaseGitHubManager):
                 updated_at=None,
                 url="",
             )
-        except Exception as e:
-            logger.error(
-                f"Unexpected error editing comment {comment_id} on issue {issue_number}: {e}"
-            )
-            return CommentData(
-                id=0,
-                body="",
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-            )
 
     @log_function_call
+    @_handle_github_errors(default_return=False)
     def delete_comment(self, issue_number: int, comment_id: int) -> bool:
         """Delete a comment from an issue.
 
@@ -603,13 +596,22 @@ class IssueManager(BaseGitHubManager):
                 f"Failed to delete comment {comment_id} from issue {issue_number}: {e}"
             )
             return False
-        except Exception as e:
-            logger.error(
-                f"Unexpected error deleting comment {comment_id} from issue {issue_number}: {e}"
-            )
-            return False
 
     @log_function_call
+    @_handle_github_errors(
+        default_return=IssueData(
+            number=0,
+            title="",
+            body="",
+            state="",
+            labels=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="",
+            locked=False,
+        )
+    )
     def close_issue(self, issue_number: int) -> IssueData:
         """Close an issue.
 
@@ -707,22 +709,22 @@ class IssueManager(BaseGitHubManager):
                 url="",
                 locked=False,
             )
-        except Exception as e:
-            logger.error(f"Unexpected error closing issue {issue_number}: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
 
     @log_function_call
+    @_handle_github_errors(
+        default_return=IssueData(
+            number=0,
+            title="",
+            body="",
+            state="",
+            labels=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="",
+            locked=False,
+        )
+    )
     def reopen_issue(self, issue_number: int) -> IssueData:
         """Reopen a closed issue.
 
@@ -820,22 +822,9 @@ class IssueManager(BaseGitHubManager):
                 url="",
                 locked=False,
             )
-        except Exception as e:
-            logger.error(f"Unexpected error reopening issue {issue_number}: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
 
     @log_function_call
+    @_handle_github_errors(default_return=[])
     def get_available_labels(self) -> List[LabelData]:
         """Get all available labels in the repository.
 
@@ -881,11 +870,22 @@ class IssueManager(BaseGitHubManager):
             # Log and return empty list for other errors
             logger.error(f"Failed to get repository labels: {e}")
             return []
-        except Exception as e:
-            logger.error(f"Unexpected error getting repository labels: {e}")
-            return []
 
     @log_function_call
+    @_handle_github_errors(
+        default_return=IssueData(
+            number=0,
+            title="",
+            body="",
+            state="",
+            labels=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="",
+            locked=False,
+        )
+    )
     def add_labels(self, issue_number: int, *labels: str) -> IssueData:
         """Add labels to an issue.
 
@@ -1002,22 +1002,22 @@ class IssueManager(BaseGitHubManager):
                 url="",
                 locked=False,
             )
-        except Exception as e:
-            logger.error(f"Unexpected error adding labels to issue {issue_number}: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
 
     @log_function_call
+    @_handle_github_errors(
+        default_return=IssueData(
+            number=0,
+            title="",
+            body="",
+            state="",
+            labels=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="",
+            locked=False,
+        )
+    )
     def remove_labels(self, issue_number: int, *labels: str) -> IssueData:
         """Remove labels from an issue.
 
@@ -1135,24 +1135,22 @@ class IssueManager(BaseGitHubManager):
                 url="",
                 locked=False,
             )
-        except Exception as e:
-            logger.error(
-                f"Unexpected error removing labels from issue {issue_number}: {e}"
-            )
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
 
     @log_function_call
+    @_handle_github_errors(
+        default_return=IssueData(
+            number=0,
+            title="",
+            body="",
+            state="",
+            labels=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="",
+            locked=False,
+        )
+    )
     def set_labels(self, issue_number: int, *labels: str) -> IssueData:
         """Set labels on an issue, replacing all existing labels.
 
@@ -1244,22 +1242,6 @@ class IssueManager(BaseGitHubManager):
                 raise
             # Log and return empty dict for other errors
             logger.error(f"Failed to set labels on issue {issue_number}: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
-        except Exception as e:
-            logger.error(
-                f"Unexpected error setting labels on issue {issue_number}: {e}"
-            )
             return IssueData(
                 number=0,
                 title="",

@@ -100,12 +100,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 11
 
 ### Step 12: Apply Decorator to IssueManager Methods
-[ ] Apply decorator to all 10 IssueManager methods
-[ ] Remove bare Exception catch blocks
-[ ] Run unit tests to verify behavior unchanged
-[ ] Run quality checks: pylint, pytest, mypy
-[ ] Fix all issues found by quality checks
-[ ] Prepare git commit message for Step 12
+[x] Apply decorator to all 10 IssueManager methods
+[x] Remove bare Exception catch blocks
+[x] Run unit tests to verify behavior unchanged
+[x] Run quality checks: pylint, pytest, mypy
+[x] Fix all issues found by quality checks
+[x] Prepare git commit message for Step 12
 
 ### Step 13: Apply Decorator to PullRequestManager Methods
 [ ] Apply decorator to all 4 PullRequestManager methods
