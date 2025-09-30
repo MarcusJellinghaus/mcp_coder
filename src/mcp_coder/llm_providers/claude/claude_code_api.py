@@ -32,7 +32,6 @@ class ClaudeAPIError(Exception):
     pass
 
 
-
 # Create logger for this module
 logger = logging.getLogger(__name__)
 

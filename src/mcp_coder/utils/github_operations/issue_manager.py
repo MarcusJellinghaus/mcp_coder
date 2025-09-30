@@ -465,3 +465,185 @@ class IssueManager(BaseGitHubManager):
                 url="",
                 locked=False,
             )
+
+    @log_function_call
+    def get_available_labels(self) -> List[LabelData]:
+        """Get all available labels in the repository.
+
+        Returns:
+            List of LabelData dictionaries with label information, or empty list on error
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> labels = manager.get_available_labels()
+            >>> for label in labels:
+            ...     print(f"{label['name']}: {label['color']}")
+        """
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return []
+
+        try:
+            # Get all labels from repository
+            github_labels = repo.get_labels()
+
+            # Convert to LabelData list
+            labels: List[LabelData] = []
+            for label in github_labels:
+                labels.append(
+                    LabelData(
+                        name=label.name,
+                        color=label.color,
+                        description=label.description if label.description else None,
+                    )
+                )
+
+            return labels
+
+        except GithubException as e:
+            # Raise for auth/permission errors
+            if e.status in (401, 403):
+                logger.error(f"Authentication/permission error getting labels: {e}")
+                raise
+            # Log and return empty list for other errors
+            logger.error(f"Failed to get repository labels: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error getting repository labels: {e}")
+            return []
+
+    @log_function_call
+    def add_labels(self, issue_number: int, *labels: str) -> IssueData:
+        """Add labels to an issue.
+
+        Args:
+            issue_number: Issue number to add labels to
+            *labels: Variable number of label names to add
+
+        Returns:
+            IssueData with updated issue information, or empty dict on error
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> updated_issue = manager.add_labels(123, "bug", "high-priority")
+            >>> print(f"Labels: {updated_issue['labels']}")
+        """
+        # Validate issue number
+        if not self._validate_issue_number(issue_number):
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        # Validate labels
+        if not labels:
+            logger.error("No labels provided")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        try:
+            # Get issue and add labels
+            github_issue = repo.get_issue(issue_number)
+            github_issue.add_to_labels(*labels)
+
+            # Get fresh issue data after adding labels
+            github_issue = repo.get_issue(issue_number)
+
+            # Convert to IssueData
+            return IssueData(
+                number=github_issue.number,
+                title=github_issue.title,
+                body=github_issue.body or "",
+                state=github_issue.state,
+                labels=[label.name for label in github_issue.labels],
+                user=github_issue.user.login if github_issue.user else None,
+                created_at=(
+                    github_issue.created_at.isoformat()
+                    if github_issue.created_at
+                    else None
+                ),
+                updated_at=(
+                    github_issue.updated_at.isoformat()
+                    if github_issue.updated_at
+                    else None
+                ),
+                url=github_issue.html_url,
+                locked=github_issue.locked,
+            )
+
+        except GithubException as e:
+            # Raise for auth/permission errors
+            if e.status in (401, 403):
+                logger.error(
+                    f"Authentication/permission error adding labels to issue: {e}"
+                )
+                raise
+            # Log and return empty dict for other errors
+            logger.error(f"Failed to add labels to issue {issue_number}: {e}")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error adding labels to issue {issue_number}: {e}")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )

@@ -43,11 +43,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 4
 
 ### Step 5: Repository Labels & Add Labels Operations
-[ ] Implement get_available_labels and add_labels methods
-[ ] Add unit tests for both methods
-[ ] Run quality checks: pylint, pytest, mypy
-[ ] Fix all issues found by quality checks
-[ ] Prepare git commit message for Step 5
+[x] Implement get_available_labels and add_labels methods
+[x] Add unit tests for both methods
+[x] Run quality checks: pylint, pytest, mypy
+[x] Fix all issues found by quality checks
+[x] Prepare git commit message for Step 5
 
 ### Step 6: Remove & Set Labels Operations
 [ ] Implement remove_labels and set_labels methods
