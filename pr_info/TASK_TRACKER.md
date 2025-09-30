@@ -21,6 +21,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ## Tasks
 
+### Phase 1: Core Issue Management Implementation
+
 ### Step 1: Data Structures and Type Definitions
 [x] Implement TypedDict classes (IssueData, CommentData, LabelData) in issue_manager.py
 [x] Run quality checks: pylint, pytest, mypy
@@ -85,6 +87,57 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Run quality checks: pylint, pytest, mypy
 [x] Fix all issues found by quality checks
 [x] Prepare git commit message for Step 10
+
+---
+
+### Phase 2: Error Handling Refactoring
+
+### Step 11: Create Error Handling Decorator
+[ ] Create _handle_github_errors decorator in BaseGitHubManager
+[ ] Add unit tests for decorator (auth errors, other errors, exception propagation)
+[ ] Run quality checks: pylint, pytest, mypy
+[ ] Fix all issues found by quality checks
+[ ] Prepare git commit message for Step 11
+
+### Step 12: Apply Decorator to IssueManager Methods
+[ ] Apply decorator to all 10 IssueManager methods
+[ ] Remove bare Exception catch blocks
+[ ] Run unit tests to verify behavior unchanged
+[ ] Run quality checks: pylint, pytest, mypy
+[ ] Fix all issues found by quality checks
+[ ] Prepare git commit message for Step 12
+
+### Step 13: Apply Decorator to PullRequestManager Methods
+[ ] Apply decorator to all 4 PullRequestManager methods
+[ ] Remove debug logging lines (e.status, e.data)
+[ ] Remove bare Exception catch blocks
+[ ] Run unit tests to verify behavior unchanged
+[ ] Run quality checks: pylint, pytest, mypy
+[ ] Fix all issues found by quality checks
+[ ] Prepare git commit message for Step 13
+
+### Step 14: Apply Decorator to LabelsManager Methods
+[ ] Apply decorator to all 5 LabelsManager methods
+[ ] Remove bare Exception catch blocks
+[ ] Run unit tests to verify behavior unchanged
+[ ] Run quality checks: pylint, pytest, mypy
+[ ] Fix all issues found by quality checks
+[ ] Prepare git commit message for Step 14
+
+### Step 15: Update Tests for New Error Handling
+[ ] Update test_claude_code_api_error_handling.py expectations
+[ ] Remove tests for bare Exception handling if any exist
+[ ] Run full test suite to identify failures
+[ ] Fix test expectations (not implementation)
+[ ] Verify all tests pass
+[ ] Prepare git commit message for Step 15
+
+---
+
+## Additional Cleanup Tasks
+[ ] Fix comment typo in workflows/implement.py:583
+[ ] Delete test_pr_debug.log file
+[ ] Reduce conftest.py verbosity (tests/conftest.py:194-259)
 
 ---
 

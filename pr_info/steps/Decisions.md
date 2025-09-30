@@ -109,3 +109,26 @@
 - **Discussion**: User confirmed current organization is fine despite Step 3 being lighter
 - **Rationale**: Good to have some lighter steps for variety and feedback points
 - **Result**: Maintain existing 10-step structure without rebalancing
+
+
+## Code Review Refactoring Decisions (Post-Implementation)
+
+### Error Handling Refactoring
+- **Decision**: Remove bare `Exception` catches, create `_handle_github_errors` decorator
+- **Discussion**: During code review, identified duplication in error handling across 19 methods (10 in IssueManager, 4 in PullRequestManager, 5 in LabelsManager)
+- **Rationale**: 
+  - Bare `Exception` catches mask programming errors and make debugging harder
+  - Only `GithubException` needs special handling (auth errors 401/403 raise, others return empty)
+  - Decorator pattern provides consistency across all GitHub managers
+- **Result**: 
+  - Create `_handle_github_errors` decorator in `base_manager.py`
+  - Apply to all 19 methods across 3 manager classes
+  - Keep 401/403 auth errors raising exceptions (fail fast)
+  - Return empty dict/list/False for other `GithubException` errors
+  - Let other exceptions bubble up (programming errors should fail visibly)
+
+### Debug Logging Cleanup
+- **Decision**: Remove temporary debug logging added during troubleshooting
+- **Location**: `pr_manager.py:195-197` (error status and data logging)
+- **Rationale**: Excessive logging in normal error conditions
+- **Result**: Keep single error log line per GitHub API exception
