@@ -14,7 +14,7 @@ from github.Repository import Repository
 
 from mcp_coder.utils.log_utils import log_function_call
 
-from .base_manager import BaseGitHubManager
+from .base_manager import BaseGitHubManager, _handle_github_errors
 from .github_utils import parse_github_url
 
 # Configure logger for GitHub operations
@@ -124,6 +124,7 @@ class PullRequestManager(BaseGitHubManager):
         return True
 
     @log_function_call
+    @_handle_github_errors(lambda: cast(PullRequestData, {}))
     def create_pull_request(
         self, title: str, head_branch: str, base_branch: str = "main", body: str = ""
     ) -> PullRequestData:
@@ -194,15 +195,10 @@ class PullRequestManager(BaseGitHubManager):
         except GithubException as e:
             # Log the error and return empty dict on failure
             logger.error(f"GitHub API error creating pull request: {e}")
-            logger.error(f"GitHub API error status: {e.status}")
-            logger.error(f"GitHub API error data: {e.data}")
-            return cast(PullRequestData, {})
-        except Exception as e:
-            # Log unexpected errors and return empty dict
-            logger.error(f"Unexpected error creating pull request: {e}")
             return cast(PullRequestData, {})
 
     @log_function_call
+    @_handle_github_errors(lambda: cast(PullRequestData, {}))
     def get_pull_request(self, pr_number: int) -> PullRequestData:
         """Get information about a specific pull request.
 
@@ -245,12 +241,9 @@ class PullRequestManager(BaseGitHubManager):
             # Log the error and return empty dict on failure
             logger.error(f"GitHub API error getting pull request {pr_number}: {e}")
             return cast(PullRequestData, {})
-        except Exception as e:
-            # Log unexpected errors and return empty dict
-            logger.error(f"Unexpected error getting pull request {pr_number}: {e}")
-            return cast(PullRequestData, {})
 
     @log_function_call
+    @_handle_github_errors(lambda: [])
     def list_pull_requests(
         self, state: str = "open", base_branch: Optional[str] = None
     ) -> List[PullRequestData]:
@@ -313,12 +306,9 @@ class PullRequestManager(BaseGitHubManager):
             # Log the error and return empty list on failure
             logger.error(f"GitHub API error listing pull requests: {e}")
             return []
-        except Exception as e:
-            # Log unexpected errors and return empty list
-            logger.error(f"Unexpected error listing pull requests: {e}")
-            return []
 
     @log_function_call
+    @_handle_github_errors(lambda: cast(PullRequestData, {}))
     def close_pull_request(self, pr_number: int) -> PullRequestData:
         """Close a pull request.
 
@@ -370,10 +360,6 @@ class PullRequestManager(BaseGitHubManager):
         except GithubException as e:
             # Log the error and return empty dict on failure
             logger.error(f"GitHub API error closing pull request {pr_number}: {e}")
-            return cast(PullRequestData, {})
-        except Exception as e:
-            # Log unexpected errors and return empty dict
-            logger.error(f"Unexpected error closing pull request {pr_number}: {e}")
             return cast(PullRequestData, {})
 
     @property

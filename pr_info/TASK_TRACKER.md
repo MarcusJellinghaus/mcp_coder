@@ -108,13 +108,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 12
 
 ### Step 13: Apply Decorator to PullRequestManager Methods
-[ ] Apply decorator to all 4 PullRequestManager methods
-[ ] Remove debug logging lines (e.status, e.data)
-[ ] Remove bare Exception catch blocks
-[ ] Run unit tests to verify behavior unchanged
-[ ] Run quality checks: pylint, pytest, mypy
-[ ] Fix all issues found by quality checks
-[ ] Prepare git commit message for Step 13
+[x] Apply decorator to all 4 PullRequestManager methods
+[x] Remove debug logging lines (e.status, e.data)
+[x] Remove bare Exception catch blocks
+[x] Run unit tests to verify behavior unchanged
+[x] Run quality checks: pylint, pytest, mypy
+[x] Fix all issues found by quality checks
+[x] Prepare git commit message for Step 13
 
 ### Step 14: Apply Decorator to LabelsManager Methods
 [ ] Apply decorator to all 5 LabelsManager methods
