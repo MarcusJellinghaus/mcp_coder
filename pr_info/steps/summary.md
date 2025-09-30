@@ -40,9 +40,9 @@ None (pure addition)
 5. Follow `create_PR.py` structure for consistency
 
 ## Test Strategy
-- **Pure Function Tests** (9 tests): `calculate_label_changes()` logic without mocking
+- **Pure Function Tests** (8 tests): `calculate_label_changes()` logic without mocking
   - Empty repo, create, update, delete, unchanged, preserve non-status
-  - Partial match, all exist unchanged, color validation
+  - Partial match, all exist unchanged
 - **Orchestrator Tests** (3 tests): `apply_labels()` with mocked LabelsManager
   - Success flow, dry-run mode, API error fails fast
 - **CLI Tests** (4+ tests): Argument parsing and validation

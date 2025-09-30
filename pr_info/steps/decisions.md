@@ -66,4 +66,8 @@
 
 ### 14. Constants Validation (Topic 11, continued)
 **Decision**: No validation of hardcoded WORKFLOW_LABELS constants
-**Rationale**: Trust hardcoded values, runtime color validation handles user modifications
+**Rationale**: Trust hardcoded values, no runtime validation needed as values come from script, not user input
+
+### 15. Non-Status Label Preservation (Topic 8)
+**Decision**: Only `status-*` labels are managed; all other labels (e.g., `bug`, `enhancement`) are never touched
+**Rationale**: Clear separation of concerns - script only manages workflow status labels

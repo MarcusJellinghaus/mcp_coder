@@ -40,14 +40,9 @@ main:
 1. Parse command-line arguments (including dry_run flag)
 2. Resolve and validate project_dir
 3. Setup logging with specified level
-4. Log start message
+4. Log: project directory, repository name, dry-run mode status
 5. Call apply_labels(project_dir, dry_run=args.dry_run)
-6. Log summary with detailed per-action info:
-   - "Created: status-01:created"
-   - "Updated: status-05:plan-ready"
-   - "Deleted: status-99:old"
-   - "Unchanged: status-02:awaiting-planning"
-7. Exit 0 on success, 1 on failure (fail fast on any error)
+6. Exit 0 on success, 1 on failure (fail fast on any error)
 ```
 
 ## DATA
@@ -66,11 +61,7 @@ Tasks:
 2. Implement main() function following workflows/create_PR.py pattern
 3. Call parse_arguments(), resolve_project_dir(), setup_logging(), apply_labels()
 4. Pass dry_run flag to apply_labels(): apply_labels(project_dir, dry_run=args.dry_run)
-5. Log detailed per-action summary at INFO level:
-   - For each created label: "Created: <label-name>"
-   - For each updated label: "Updated: <label-name>"
-   - For each deleted label: "Deleted: <label-name>"
-   - For each unchanged label: "Unchanged: <label-name>"
+5. At start, log: project directory, repository name, dry-run mode status
 6. Add if __name__ == "__main__": main()
 7. Add 2 tests for main() covering success and error scenarios
 8. Run pytest to verify

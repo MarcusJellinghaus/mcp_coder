@@ -52,7 +52,7 @@ def test_calculate_label_changes_skips_unchanged_labels()
 def test_calculate_label_changes_preserves_non_status_labels()
 def test_calculate_label_changes_partial_match()
 def test_calculate_label_changes_all_exist_unchanged()
-def test_calculate_label_changes_validates_colors()  # Color format validation
+
 
 # Integration tests (with mocked LabelsManager)
 def test_apply_labels_success_flow(mock_labels_manager, tmp_path)
@@ -71,8 +71,7 @@ def test_apply_labels_api_error_fails_fast(mock_labels_manager, tmp_path)
 
 ### calculate_label_changes (pure function):
 ```
-1. Validate color format for target_labels (6-char hex)
-2. Build existing_map keyed by label name
+1. Build existing_map keyed by label name
 3. For each target label:
    - If not in existing_map: add to 'created'
    - If in existing_map with same color/description: add to 'unchanged'
@@ -115,10 +114,10 @@ Reference: pr_info/steps/summary.md, pr_info/steps/step_1.md, pr_info/steps/deci
 Implement Step 2: apply_labels() function with comprehensive tests.
 
 Tasks:
-1. Implement calculate_label_changes() as pure function with color validation
-2. Write 9 unit tests for calculate_label_changes() covering:
+1. Implement calculate_label_changes() as pure function
+2. Write 8 unit tests for calculate_label_changes() covering:
    - Empty repo, create, update, delete, unchanged, preserve non-status
-   - Partial match (5 of 10), all exist unchanged, color validation
+   - Partial match (5 of 10), all exist unchanged
 3. Implement apply_labels() orchestrator with dry_run support
 4. Add pytest fixtures to mock LabelsManager
 5. Write 3 integration tests for apply_labels():
