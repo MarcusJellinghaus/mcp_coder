@@ -206,14 +206,10 @@ class IssueManager(BaseGitHubManager):
             labels=[label.name for label in github_issue.labels],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
-                github_issue.created_at.isoformat()
-                if github_issue.created_at
-                else None
+                github_issue.created_at.isoformat() if github_issue.created_at else None
             ),
             updated_at=(
-                github_issue.updated_at.isoformat()
-                if github_issue.updated_at
-                else None
+                github_issue.updated_at.isoformat() if github_issue.updated_at else None
             ),
             url=github_issue.html_url,
             locked=github_issue.locked,
@@ -347,14 +343,10 @@ class IssueManager(BaseGitHubManager):
                     body=comment.body or "",
                     user=comment.user.login if comment.user else None,
                     created_at=(
-                        comment.created_at.isoformat()
-                        if comment.created_at
-                        else None
+                        comment.created_at.isoformat() if comment.created_at else None
                     ),
                     updated_at=(
-                        comment.updated_at.isoformat()
-                        if comment.updated_at
-                        else None
+                        comment.updated_at.isoformat() if comment.updated_at else None
                     ),
                     url=comment.html_url,
                 )
@@ -593,14 +585,10 @@ class IssueManager(BaseGitHubManager):
             labels=[label.name for label in github_issue.labels],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
-                github_issue.created_at.isoformat()
-                if github_issue.created_at
-                else None
+                github_issue.created_at.isoformat() if github_issue.created_at else None
             ),
             updated_at=(
-                github_issue.updated_at.isoformat()
-                if github_issue.updated_at
-                else None
+                github_issue.updated_at.isoformat() if github_issue.updated_at else None
             ),
             url=github_issue.html_url,
             locked=github_issue.locked,
@@ -685,14 +673,10 @@ class IssueManager(BaseGitHubManager):
             labels=[label.name for label in github_issue.labels],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
-                github_issue.created_at.isoformat()
-                if github_issue.created_at
-                else None
+                github_issue.created_at.isoformat() if github_issue.created_at else None
             ),
             updated_at=(
-                github_issue.updated_at.isoformat()
-                if github_issue.updated_at
-                else None
+                github_issue.updated_at.isoformat() if github_issue.updated_at else None
             ),
             url=github_issue.html_url,
             locked=github_issue.locked,
@@ -832,14 +816,10 @@ class IssueManager(BaseGitHubManager):
             labels=[label.name for label in github_issue.labels],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
-                github_issue.created_at.isoformat()
-                if github_issue.created_at
-                else None
+                github_issue.created_at.isoformat() if github_issue.created_at else None
             ),
             updated_at=(
-                github_issue.updated_at.isoformat()
-                if github_issue.updated_at
-                else None
+                github_issue.updated_at.isoformat() if github_issue.updated_at else None
             ),
             url=github_issue.html_url,
             locked=github_issue.locked,
@@ -942,14 +922,10 @@ class IssueManager(BaseGitHubManager):
             labels=[label.name for label in github_issue.labels],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
-                github_issue.created_at.isoformat()
-                if github_issue.created_at
-                else None
+                github_issue.created_at.isoformat() if github_issue.created_at else None
             ),
             updated_at=(
-                github_issue.updated_at.isoformat()
-                if github_issue.updated_at
-                else None
+                github_issue.updated_at.isoformat() if github_issue.updated_at else None
             ),
             url=github_issue.html_url,
             locked=github_issue.locked,
@@ -1038,14 +1014,10 @@ class IssueManager(BaseGitHubManager):
             labels=[label.name for label in github_issue.labels],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
-                github_issue.created_at.isoformat()
-                if github_issue.created_at
-                else None
+                github_issue.created_at.isoformat() if github_issue.created_at else None
             ),
             updated_at=(
-                github_issue.updated_at.isoformat()
-                if github_issue.updated_at
-                else None
+                github_issue.updated_at.isoformat() if github_issue.updated_at else None
             ),
             url=github_issue.html_url,
             locked=github_issue.locked,
