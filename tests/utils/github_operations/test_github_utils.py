@@ -419,6 +419,9 @@ class TestPullRequestManagerIntegration:
                 print(f"[ERROR] GitHub API access failed: {e}")
                 pytest.skip(f"GitHub API access failed: {e}")
 
+            # Verify branch has commits (optional verification)
+            print(f"Current active branch: {repo.active_branch.name}")
+
             # Create pull request with debug logging
             print(f"Creating PR: {pr_title} from {test_branch} to main")
             try:
@@ -435,6 +438,8 @@ class TestPullRequestManagerIntegration:
                     print(f"PR URL: {created_pr['url']}")
             except Exception as e:
                 print(f"[ERROR] Exception during PR creation: {e}")
+                import traceback
+                print(f"[ERROR] Traceback: {traceback.format_exc()}")
                 from typing import cast
 
                 created_pr = cast(PullRequestData, {})

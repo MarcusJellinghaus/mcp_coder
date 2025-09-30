@@ -252,7 +252,7 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
         )
         pytest.skip(skip_msg)
     
-    print(f"\n✓ Configuration complete: Using token and repo URL")
+    print(f"\n[OK] Configuration complete: Using token and repo URL")
     print(f"  Test repository: {test_repo_url}")
     print("="*50)
 

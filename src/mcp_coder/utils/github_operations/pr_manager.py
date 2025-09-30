@@ -194,6 +194,8 @@ class PullRequestManager(BaseGitHubManager):
         except GithubException as e:
             # Log the error and return empty dict on failure
             logger.error(f"GitHub API error creating pull request: {e}")
+            logger.error(f"GitHub API error status: {e.status}")
+            logger.error(f"GitHub API error data: {e.data}")
             return cast(PullRequestData, {})
         except Exception as e:
             # Log unexpected errors and return empty dict
