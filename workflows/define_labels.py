@@ -39,9 +39,7 @@ def _validate_color_format(color: str) -> bool:
     Returns:
         True if valid 6-character hex code, False otherwise
     """
-    if not isinstance(color, str):
-        return False
-    return bool(re.match(r'^[0-9A-Fa-f]{6}$', color))
+    return isinstance(color, str) and bool(re.match(r'^[0-9A-Fa-f]{6}$', color))
 
 
 # Validate all colors at module load time
