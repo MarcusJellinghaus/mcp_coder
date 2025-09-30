@@ -647,3 +647,259 @@ class IssueManager(BaseGitHubManager):
                 url="",
                 locked=False,
             )
+
+    @log_function_call
+    def remove_labels(self, issue_number: int, *labels: str) -> IssueData:
+        """Remove labels from an issue.
+
+        Args:
+            issue_number: Issue number to remove labels from
+            *labels: Variable number of label names to remove
+
+        Returns:
+            IssueData with updated issue information, or empty dict on error
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> updated_issue = manager.remove_labels(123, "bug", "high-priority")
+            >>> print(f"Labels: {updated_issue['labels']}")
+        """
+        # Validate issue number
+        if not self._validate_issue_number(issue_number):
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        # Validate labels
+        if not labels:
+            logger.error("No labels provided")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        try:
+            # Get issue and remove labels
+            github_issue = repo.get_issue(issue_number)
+            for label in labels:
+                github_issue.remove_from_labels(label)
+
+            # Get fresh issue data after removing labels
+            github_issue = repo.get_issue(issue_number)
+
+            # Convert to IssueData
+            return IssueData(
+                number=github_issue.number,
+                title=github_issue.title,
+                body=github_issue.body or "",
+                state=github_issue.state,
+                labels=[label.name for label in github_issue.labels],
+                user=github_issue.user.login if github_issue.user else None,
+                created_at=(
+                    github_issue.created_at.isoformat()
+                    if github_issue.created_at
+                    else None
+                ),
+                updated_at=(
+                    github_issue.updated_at.isoformat()
+                    if github_issue.updated_at
+                    else None
+                ),
+                url=github_issue.html_url,
+                locked=github_issue.locked,
+            )
+
+        except GithubException as e:
+            # Raise for auth/permission errors
+            if e.status in (401, 403):
+                logger.error(
+                    f"Authentication/permission error removing labels from issue: {e}"
+                )
+                raise
+            # Log and return empty dict for other errors
+            logger.error(f"Failed to remove labels from issue {issue_number}: {e}")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+        except Exception as e:
+            logger.error(
+                f"Unexpected error removing labels from issue {issue_number}: {e}"
+            )
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+    @log_function_call
+    def set_labels(self, issue_number: int, *labels: str) -> IssueData:
+        """Set labels on an issue, replacing all existing labels.
+
+        Args:
+            issue_number: Issue number to set labels on
+            *labels: Variable number of label names to set (can be empty to remove all)
+
+        Returns:
+            IssueData with updated issue information, or empty dict on error
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> updated_issue = manager.set_labels(123, "bug", "high-priority")
+            >>> print(f"Labels: {updated_issue['labels']}")
+            >>> # Remove all labels
+            >>> updated_issue = manager.set_labels(123)
+            >>> print(f"Labels: {updated_issue['labels']}")  # Empty list
+        """
+        # Validate issue number
+        if not self._validate_issue_number(issue_number):
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        try:
+            # Get issue and set labels (replaces all existing labels)
+            github_issue = repo.get_issue(issue_number)
+            github_issue.set_labels(*labels)
+
+            # Get fresh issue data after setting labels
+            github_issue = repo.get_issue(issue_number)
+
+            # Convert to IssueData
+            return IssueData(
+                number=github_issue.number,
+                title=github_issue.title,
+                body=github_issue.body or "",
+                state=github_issue.state,
+                labels=[label.name for label in github_issue.labels],
+                user=github_issue.user.login if github_issue.user else None,
+                created_at=(
+                    github_issue.created_at.isoformat()
+                    if github_issue.created_at
+                    else None
+                ),
+                updated_at=(
+                    github_issue.updated_at.isoformat()
+                    if github_issue.updated_at
+                    else None
+                ),
+                url=github_issue.html_url,
+                locked=github_issue.locked,
+            )
+
+        except GithubException as e:
+            # Raise for auth/permission errors
+            if e.status in (401, 403):
+                logger.error(
+                    f"Authentication/permission error setting labels on issue: {e}"
+                )
+                raise
+            # Log and return empty dict for other errors
+            logger.error(f"Failed to set labels on issue {issue_number}: {e}")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+        except Exception as e:
+            logger.error(
+                f"Unexpected error setting labels on issue {issue_number}: {e}"
+            )
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )

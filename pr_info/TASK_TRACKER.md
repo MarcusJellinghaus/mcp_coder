@@ -50,12 +50,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 5
 
 ### Step 6: Remove & Set Labels Operations
-[ ] Implement remove_labels and set_labels methods
-[ ] Add unit tests for both methods
-[ ] Enhance integration test (add labels → remove labels → set labels)
-[ ] Run quality checks: pylint, pytest, mypy
-[ ] Fix all issues found by quality checks
-[ ] Prepare git commit message for Step 6
+[x] Implement remove_labels and set_labels methods
+[x] Add unit tests for both methods
+[x] Enhance integration test (add labels → remove labels → set labels)
+[x] Run quality checks: pylint, pytest, mypy
+[x] Fix all issues found by quality checks
+[x] Prepare git commit message for Step 6
 
 ### Step 7: Add/Get Comments Operations
 [ ] Implement add_comment and get_comments methods

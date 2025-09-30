@@ -111,7 +111,66 @@ class TestIssueManagerIntegration:
             assert reopened_issue["state"] == "open", "Expected issue to be open"
             print(f"✓ Reopened issue #{issue_number}")
 
-            # Step 4: Close issue again for cleanup
+            # Step 4: Test label operations
+            # Add labels
+            labeled_issue = issue_manager.add_labels(issue_number, "bug", "enhancement")
+            assert labeled_issue, "Expected add_labels to return data"
+            assert labeled_issue["number"] == issue_number, "Expected same issue number"
+            assert "bug" in labeled_issue["labels"], "Expected 'bug' label"
+            assert (
+                "enhancement" in labeled_issue["labels"]
+            ), "Expected 'enhancement' label"
+            assert "test" in labeled_issue["labels"], "Expected 'test' label to remain"
+            print(f"✓ Added labels to issue #{issue_number}: {labeled_issue['labels']}")
+
+            # Remove labels
+            removed_label_issue = issue_manager.remove_labels(issue_number, "bug")
+            assert removed_label_issue, "Expected remove_labels to return data"
+            assert (
+                removed_label_issue["number"] == issue_number
+            ), "Expected same issue number"
+            assert (
+                "bug" not in removed_label_issue["labels"]
+            ), "Expected 'bug' label removed"
+            assert (
+                "enhancement" in removed_label_issue["labels"]
+            ), "Expected 'enhancement' label to remain"
+            assert (
+                "test" in removed_label_issue["labels"]
+            ), "Expected 'test' label to remain"
+            print(
+                f"✓ Removed label from issue #{issue_number}: {removed_label_issue['labels']}"
+            )
+
+            # Set labels (replace all existing labels)
+            set_label_issue = issue_manager.set_labels(
+                issue_number, "documentation", "good first issue"
+            )
+            assert set_label_issue, "Expected set_labels to return data"
+            assert (
+                set_label_issue["number"] == issue_number
+            ), "Expected same issue number"
+            assert (
+                "documentation" in set_label_issue["labels"]
+            ), "Expected 'documentation' label"
+            assert (
+                "good first issue" in set_label_issue["labels"]
+            ), "Expected 'good first issue' label"
+            assert (
+                "bug" not in set_label_issue["labels"]
+            ), "Expected 'bug' label removed"
+            assert (
+                "enhancement" not in set_label_issue["labels"]
+            ), "Expected 'enhancement' label removed"
+            assert (
+                "test" not in set_label_issue["labels"]
+            ), "Expected 'test' label removed"
+            assert (
+                len(set_label_issue["labels"]) == 2
+            ), "Expected exactly 2 labels after set_labels"
+            print(f"✓ Set labels on issue #{issue_number}: {set_label_issue['labels']}")
+
+            # Step 5: Close issue again for cleanup
             final_close = issue_manager.close_issue(issue_number)
             assert final_close, "Expected final close to succeed"
             assert final_close["state"] == "closed", "Expected issue to be closed"

@@ -608,3 +608,328 @@ class TestIssueManagerUnit:
 
             with pytest.raises(GithubException):
                 manager.add_labels(123, "bug")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_remove_labels_success(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test successful removal of labels from an issue."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock label object (remaining label)
+        mock_label = MagicMock()
+        mock_label.name = "documentation"
+
+        # Mock GitHub API responses
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "Test description"
+        mock_issue.state = "open"
+        mock_issue.labels = [mock_label]  # Only one label remaining after removal
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-01T01:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.remove_labels(123, "bug", "high-priority")
+
+            assert result["number"] == 123
+            assert result["labels"] == ["documentation"]
+
+            # Verify remove_from_labels was called for each label
+            assert mock_issue.remove_from_labels.call_count == 2
+            mock_issue.remove_from_labels.assert_any_call("bug")
+            mock_issue.remove_from_labels.assert_any_call("high-priority")
+            # Verify we fetched fresh data after removing labels
+            assert mock_repo.get_issue.call_count == 2
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_remove_labels_single_label(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test removing a single label from an issue."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "Test description"
+        mock_issue.state = "open"
+        mock_issue.labels = []  # All labels removed
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.remove_labels(123, "bug")
+
+            assert result["number"] == 123
+            assert result["labels"] == []
+
+            mock_issue.remove_from_labels.assert_called_once_with("bug")
+
+    def test_remove_labels_invalid_issue_number(self, tmp_path: Path) -> None:
+        """Test removing labels with invalid issue number."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.remove_labels(0, "bug")
+            assert not result or result["number"] == 0
+
+            result = manager.remove_labels(-1, "bug")
+            assert not result or result["number"] == 0
+
+    def test_remove_labels_no_labels_provided(self, tmp_path: Path) -> None:
+        """Test removing labels without providing any labels."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.remove_labels(123)
+            assert not result or result["number"] == 0
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_remove_labels_auth_error_raises(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test that auth errors are raised for remove_labels."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_issue = MagicMock()
+        mock_issue.remove_from_labels.side_effect = GithubException(
+            403, {"message": "Forbidden"}, None
+        )
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            with pytest.raises(GithubException):
+                manager.remove_labels(123, "bug")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_set_labels_success(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test successful setting of labels on an issue."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock label objects
+        mock_label1 = MagicMock()
+        mock_label1.name = "bug"
+        mock_label2 = MagicMock()
+        mock_label2.name = "high-priority"
+
+        # Mock GitHub API responses
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "Test description"
+        mock_issue.state = "open"
+        mock_issue.labels = [mock_label1, mock_label2]
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-01T01:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.set_labels(123, "bug", "high-priority")
+
+            assert result["number"] == 123
+            assert result["labels"] == ["bug", "high-priority"]
+
+            # Verify set_labels was called with variadic args
+            mock_issue.set_labels.assert_called_once_with("bug", "high-priority")
+            # Verify we fetched fresh data after setting labels
+            assert mock_repo.get_issue.call_count == 2
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_set_labels_empty_to_clear_all(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test setting empty labels to clear all labels."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "Test description"
+        mock_issue.state = "open"
+        mock_issue.labels = []  # All labels removed
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.set_labels(123)
+
+            assert result["number"] == 123
+            assert result["labels"] == []
+
+            # Verify set_labels was called with no args (clears all labels)
+            mock_issue.set_labels.assert_called_once_with()
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_set_labels_single_label(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test setting a single label on an issue."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock label object
+        mock_label = MagicMock()
+        mock_label.name = "bug"
+
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "Test description"
+        mock_issue.state = "open"
+        mock_issue.labels = [mock_label]
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.set_labels(123, "bug")
+
+            assert result["number"] == 123
+            assert result["labels"] == ["bug"]
+
+            mock_issue.set_labels.assert_called_once_with("bug")
+
+    def test_set_labels_invalid_issue_number(self, tmp_path: Path) -> None:
+        """Test setting labels with invalid issue number."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.set_labels(0, "bug")
+            assert not result or result["number"] == 0
+
+            result = manager.set_labels(-1, "bug")
+            assert not result or result["number"] == 0
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_set_labels_auth_error_raises(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test that auth errors are raised for set_labels."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_issue = MagicMock()
+        mock_issue.set_labels.side_effect = GithubException(
+            401, {"message": "Unauthorized"}, None
+        )
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            with pytest.raises(GithubException):
+                manager.set_labels(123, "bug")
