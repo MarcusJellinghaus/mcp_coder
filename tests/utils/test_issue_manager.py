@@ -1169,3 +1169,232 @@ class TestIssueManagerUnit:
 
             with pytest.raises(GithubException):
                 manager.get_comments(123)
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_edit_comment_success(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test successful comment editing."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock GitHub API responses
+        mock_comment = MagicMock()
+        mock_comment.id = 456789
+        mock_comment.body = "Updated comment text"
+        mock_comment.user.login = "testuser"
+        mock_comment.html_url = (
+            "https://github.com/test/repo/issues/123#issuecomment-456789"
+        )
+        mock_comment.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_comment.updated_at.isoformat.return_value = "2023-01-01T01:00:00Z"
+
+        mock_issue = MagicMock()
+        mock_issue.get_comment.return_value = mock_comment
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.edit_comment(123, 456789, "Updated comment text")
+
+            assert result["id"] == 456789
+            assert result["body"] == "Updated comment text"
+            assert result["user"] == "testuser"
+            assert (
+                result["url"]
+                == "https://github.com/test/repo/issues/123#issuecomment-456789"
+            )
+
+            # Verify edit was called
+            mock_comment.edit.assert_called_once_with("Updated comment text")
+            # Verify we fetched fresh data after editing
+            assert mock_issue.get_comment.call_count == 2
+
+    def test_edit_comment_empty_body(self, tmp_path: Path) -> None:
+        """Test that empty comment body returns empty dict."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.edit_comment(123, 456789, "")
+            assert not result or result["id"] == 0
+
+            result = manager.edit_comment(123, 456789, "   ")
+            assert not result or result["id"] == 0
+
+    def test_edit_comment_invalid_issue_number(self, tmp_path: Path) -> None:
+        """Test editing comment with invalid issue number."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.edit_comment(0, 456789, "Updated text")
+            assert not result or result["id"] == 0
+
+            result = manager.edit_comment(-1, 456789, "Updated text")
+            assert not result or result["id"] == 0
+
+    def test_edit_comment_invalid_comment_id(self, tmp_path: Path) -> None:
+        """Test editing comment with invalid comment ID."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.edit_comment(123, 0, "Updated text")
+            assert not result or result["id"] == 0
+
+            result = manager.edit_comment(123, -1, "Updated text")
+            assert not result or result["id"] == 0
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_edit_comment_auth_error_raises(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test that auth errors are raised for edit_comment."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_comment = MagicMock()
+        mock_comment.edit.side_effect = GithubException(
+            403, {"message": "Forbidden"}, None
+        )
+
+        mock_issue = MagicMock()
+        mock_issue.get_comment.return_value = mock_comment
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            with pytest.raises(GithubException):
+                manager.edit_comment(123, 456789, "Updated text")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_delete_comment_success(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test successful comment deletion."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock GitHub API responses
+        mock_comment = MagicMock()
+
+        mock_issue = MagicMock()
+        mock_issue.get_comment.return_value = mock_comment
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.delete_comment(123, 456789)
+
+            assert result is True
+
+            # Verify delete was called
+            mock_comment.delete.assert_called_once()
+
+    def test_delete_comment_invalid_issue_number(self, tmp_path: Path) -> None:
+        """Test deleting comment with invalid issue number."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.delete_comment(0, 456789)
+            assert result is False
+
+            result = manager.delete_comment(-1, 456789)
+            assert result is False
+
+    def test_delete_comment_invalid_comment_id(self, tmp_path: Path) -> None:
+        """Test deleting comment with invalid comment ID."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.delete_comment(123, 0)
+            assert result is False
+
+            result = manager.delete_comment(123, -1)
+            assert result is False
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_delete_comment_auth_error_raises(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test that auth errors are raised for delete_comment."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_comment = MagicMock()
+        mock_comment.delete.side_effect = GithubException(
+            401, {"message": "Unauthorized"}, None
+        )
+
+        mock_issue = MagicMock()
+        mock_issue.get_comment.return_value = mock_comment
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            with pytest.raises(GithubException):
+                manager.delete_comment(123, 456789)

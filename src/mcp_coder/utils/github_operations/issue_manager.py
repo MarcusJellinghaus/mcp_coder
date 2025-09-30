@@ -421,6 +421,195 @@ class IssueManager(BaseGitHubManager):
             return []
 
     @log_function_call
+    def edit_comment(
+        self, issue_number: int, comment_id: int, body: str
+    ) -> CommentData:
+        """Edit an existing comment on an issue.
+
+        Args:
+            issue_number: Issue number containing the comment
+            comment_id: Comment ID to edit
+            body: New comment text (required, cannot be empty)
+
+        Returns:
+            CommentData with updated comment information, or empty dict on error
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> comment = manager.edit_comment(123, 456789, "Updated comment text")
+            >>> print(f"Updated comment {comment['id']}")
+        """
+        # Validate issue number
+        if not self._validate_issue_number(issue_number):
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+
+        # Validate comment ID
+        if not self._validate_comment_id(comment_id):
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+
+        # Validate body
+        if not body or not body.strip():
+            logger.error("Comment body cannot be empty")
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+
+        try:
+            # Get issue to verify it exists
+            github_issue = repo.get_issue(issue_number)
+
+            # Get the comment directly from repository
+            github_comment = github_issue.get_comment(comment_id)
+
+            # Edit the comment
+            github_comment.edit(body.strip())
+
+            # Get fresh comment data after editing
+            github_comment = github_issue.get_comment(comment_id)
+
+            # Convert to CommentData
+            return CommentData(
+                id=github_comment.id,
+                body=github_comment.body or "",
+                user=github_comment.user.login if github_comment.user else None,
+                created_at=(
+                    github_comment.created_at.isoformat()
+                    if github_comment.created_at
+                    else None
+                ),
+                updated_at=(
+                    github_comment.updated_at.isoformat()
+                    if github_comment.updated_at
+                    else None
+                ),
+                url=github_comment.html_url,
+            )
+
+        except GithubException as e:
+            # Raise for auth/permission errors
+            if e.status in (401, 403):
+                logger.error(f"Authentication/permission error editing comment: {e}")
+                raise
+            # Log and return empty dict for other errors
+            logger.error(
+                f"Failed to edit comment {comment_id} on issue {issue_number}: {e}"
+            )
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+        except Exception as e:
+            logger.error(
+                f"Unexpected error editing comment {comment_id} on issue {issue_number}: {e}"
+            )
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+
+    @log_function_call
+    def delete_comment(self, issue_number: int, comment_id: int) -> bool:
+        """Delete a comment from an issue.
+
+        Args:
+            issue_number: Issue number containing the comment
+            comment_id: Comment ID to delete
+
+        Returns:
+            True if deletion was successful, False otherwise
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> success = manager.delete_comment(123, 456789)
+            >>> print(f"Deletion {'successful' if success else 'failed'}")
+        """
+        # Validate issue number
+        if not self._validate_issue_number(issue_number):
+            return False
+
+        # Validate comment ID
+        if not self._validate_comment_id(comment_id):
+            return False
+
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return False
+
+        try:
+            # Get issue to verify it exists
+            github_issue = repo.get_issue(issue_number)
+
+            # Get the comment directly from repository
+            github_comment = github_issue.get_comment(comment_id)
+
+            # Delete the comment
+            github_comment.delete()
+
+            return True
+
+        except GithubException as e:
+            # Raise for auth/permission errors
+            if e.status in (401, 403):
+                logger.error(f"Authentication/permission error deleting comment: {e}")
+                raise
+            # Log and return False for other errors
+            logger.error(
+                f"Failed to delete comment {comment_id} from issue {issue_number}: {e}"
+            )
+            return False
+        except Exception as e:
+            logger.error(
+                f"Unexpected error deleting comment {comment_id} from issue {issue_number}: {e}"
+            )
+            return False
+
+    @log_function_call
     def close_issue(self, issue_number: int) -> IssueData:
         """Close an issue.
 

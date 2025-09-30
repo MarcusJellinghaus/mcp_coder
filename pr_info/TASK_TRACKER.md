@@ -65,12 +65,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 7
 
 ### Step 8: Edit/Delete Comments Operations
-[ ] Implement edit_comment and delete_comment methods
-[ ] Add unit tests for both methods
-[ ] Complete integration test (add comment → edit comment → delete comment)
-[ ] Run quality checks: pylint, pytest, mypy
-[ ] Fix all issues found by quality checks
-[ ] Prepare git commit message for Step 8
+[x] Implement edit_comment and delete_comment methods
+[x] Add unit tests for both methods
+[x] Complete integration test (add comment → edit comment → delete comment)
+[x] Run quality checks: pylint, pytest, mypy
+[x] Fix all issues found by quality checks
+[x] Prepare git commit message for Step 8
 
 ### Step 9: Integration and Module Export
 [ ] Update __init__.py to export IssueManager
