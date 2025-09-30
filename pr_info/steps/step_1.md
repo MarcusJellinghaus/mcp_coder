@@ -49,6 +49,7 @@ def test_workflow_labels_constant():
 3. Names follow pattern: status-NN:state-name
 4. Colors are 6-char hex without '#'
 5. Descriptions from workflow document
+6. Validate color format at module load (6-char hex)
 ```
 
 ## DATA
@@ -66,7 +67,8 @@ Tasks:
 2. Create workflows/define_labels.py with WORKFLOW_LABELS constant containing all 10 status labels from pr_info/github_Issue_Coder_Workflow.md
 3. Extract exact names, colors, and descriptions from the workflow document
 4. Ensure colors are 6-char hex WITHOUT '#' prefix
-5. Run pytest to verify constant structure
+5. Add color validation at module load - validate all colors are 6-char hex format
+6. Run pytest to verify constant structure
 
 Follow existing test patterns from tests/workflows/.
 ```

@@ -71,3 +71,43 @@
 ### 15. Non-Status Label Preservation (Topic 8)
 **Decision**: Only `status-*` labels are managed; all other labels (e.g., `bug`, `enhancement`) are never touched
 **Rationale**: Clear separation of concerns - script only manages workflow status labels
+
+### 16. Color Validation Location (Review Topic 1)
+**Decision**: Validate WORKFLOW_LABELS color format at module load
+**Rationale**: Colors from hardcoded constants - catch errors immediately when script imports
+
+### 17. Logging in Pure Function (Review Topic 2)
+**Decision**: Only `apply_labels()` logs, `calculate_label_changes()` stays side-effect-free
+**Rationale**: Maintain pure function principles - no side effects in business logic
+
+### 18. Error Handling Flow (Review Topic 3)
+**Decision**: Stop immediately on first API error (true fail-fast)
+**Rationale**: Clean, predictable behavior - no partial state, matches Decision #6
+
+### 19. Test Data Location (Review Topic 4)
+**Decision**: Pytest fixtures in `test_define_labels.py` file
+**Rationale**: Balance reusability and locality for mock data
+
+### 20. Documentation Strategy (Review Topic 5)
+**Decision**: Code comments and docstrings sufficient - no additional documentation step
+**Rationale**: Keep plan focused, standard code documentation adequate
+
+### 21. Test Count Specification (Review Topic 6)
+**Decision**: 17+ total tests (8 pure function, 3 orchestrator, 4 CLI, 2 main)
+**Rationale**: Accurate count for verification
+
+### 22. Algorithm Numbering (Review Topic 7)
+**Decision**: Add missing line: "Initialize result dict" as line 1 in calculate_label_changes
+**Rationale**: Complete algorithm specification
+
+### 23. Main Function Test Coverage (Review Topic 8)
+**Decision**: 2 tests sufficient for main() (success, error)
+**Rationale**: Underlying functions thoroughly tested separately
+
+### 24. CLI Test Enumeration (Review Topic 9)
+**Decision**: Keep concise - no explicit test enumeration in Step 3
+**Rationale**: Consistency preference, tests obvious from context
+
+### 25. Batch File Documentation (Review Topic 10)
+**Decision**: No Windows-specific note needed
+**Rationale**: .bat extension self-explanatory

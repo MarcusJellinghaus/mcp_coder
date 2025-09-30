@@ -23,7 +23,7 @@ No new code - verification only.
 ```
 Verification:
 1. Run pytest tests/workflows/test_define_labels.py -v
-2. All unit tests should pass (12+ tests)
+2. All unit tests should pass (17+ tests total: 8 for calculate_label_changes, 3 for apply_labels, 4 for CLI, 2 for main)
 3. Verify script imports without errors
 4. Optional: Manual test with --dry-run flag
 ```
@@ -41,7 +41,7 @@ Step 6: Final verification (no integration tests).
 
 Tasks:
 1. Run all unit tests: pytest tests/workflows/test_define_labels.py -v
-2. Verify 12+ tests pass (9 for calculate_label_changes, 3 for apply_labels, 4+ for CLI)
+2. Verify 17+ tests pass (8 for calculate_label_changes, 3 for apply_labels, 4 for CLI, 2 for main)
 3. Test script imports: python -c "from workflows.define_labels import main"
 4. Manual smoke test (optional): python workflows/define_labels.py --dry-run --log-level DEBUG
 5. Verify batch file works: workflows\define_labels.bat --help

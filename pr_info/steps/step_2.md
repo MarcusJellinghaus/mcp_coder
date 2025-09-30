@@ -71,7 +71,8 @@ def test_apply_labels_api_error_fails_fast(mock_labels_manager, tmp_path)
 
 ### calculate_label_changes (pure function):
 ```
-1. Build existing_map keyed by label name
+1. Initialize result dict with empty lists for 'created', 'updated', 'deleted', 'unchanged'
+2. Build existing_map keyed by label name
 3. For each target label:
    - If not in existing_map: add to 'created'
    - If in existing_map with same color/description: add to 'unchanged'
@@ -87,11 +88,11 @@ def test_apply_labels_api_error_fails_fast(mock_labels_manager, tmp_path)
 2. Get existing labels via get_labels()
 3. Call calculate_label_changes(existing, WORKFLOW_LABELS)
 4. If dry_run: log preview and return results
-5. For each 'created': call create_label(), log action
-6. For each 'updated': call update_label(), log action
-7. For each 'deleted': call delete_label(), log action
-8. For 'unchanged': skip API calls (idempotent)
-9. On any API error: fail fast with exit(1)
+5. For each 'created': call create_label(), log action (INFO level)
+6. For each 'updated': call update_label(), log action (INFO level)
+7. For each 'deleted': call delete_label(), log action (INFO level)
+8. For 'unchanged': skip API calls (idempotent), no logging
+9. On any API error: stop immediately, fail fast with exit(1)
 10. Return results dict
 ```
 
@@ -114,18 +115,19 @@ Reference: pr_info/steps/summary.md, pr_info/steps/step_1.md, pr_info/steps/deci
 Implement Step 2: apply_labels() function with comprehensive tests.
 
 Tasks:
-1. Implement calculate_label_changes() as pure function
+1. Implement calculate_label_changes() as pure function (NO logging, side-effect-free)
 2. Write 8 unit tests for calculate_label_changes() covering:
    - Empty repo, create, update, delete, unchanged, preserve non-status
    - Partial match (5 of 10), all exist unchanged
 3. Implement apply_labels() orchestrator with dry_run support
-4. Add pytest fixtures to mock LabelsManager
+4. Add pytest fixtures in test file to mock LabelsManager (Option B from decisions)
 5. Write 3 integration tests for apply_labels():
    - Success flow, dry-run mode, API error fails fast
-6. Use logger.info() to log each action: "Created: status-01:created"
+6. Only apply_labels() logs (INFO level): "Created: status-01:created"
 7. Skip API calls for unchanged labels (idempotency)
 8. Strictly delete obsolete status-* labels
-9. Run pytest to verify all tests pass
+9. On API error: stop immediately (first error)
+10. Run pytest to verify all tests pass
 
-Follow separation of concerns: pure function for logic, orchestrator for side effects.
+Follow separation of concerns: pure function for logic (no logging), orchestrator for side effects (logging, API calls).
 ```
