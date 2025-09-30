@@ -14,8 +14,26 @@ Reference `summary.md` and step_1.md. This step implements the main logic with c
 
 ### In `workflows/define_labels.py`:
 ```python
-def apply_labels(project_dir: Path) -> dict[str, list[str]]:
+def calculate_label_changes(
+    existing_labels: list[tuple[str, str, str]],
+    target_labels: list[tuple[str, str, str]]
+) -> dict[str, list[str]]:
+    """Pure function to calculate label changes without side effects.
+    
+    Args:
+        existing_labels: List of (name, color, description) tuples from GitHub
+        target_labels: List of (name, color, description) tuples to apply
+    
+    Returns:
+        Dict with keys: 'created', 'updated', 'deleted', 'unchanged'
+    """
+
+def apply_labels(project_dir: Path, dry_run: bool = False) -> dict[str, list[str]]:
     """Apply workflow labels to repository.
+    
+    Args:
+        project_dir: Path to project directory
+        dry_run: If True, only preview changes without applying
     
     Returns:
         Dict with keys: 'created', 'updated', 'deleted', 'unchanged'
@@ -25,11 +43,21 @@ def apply_labels(project_dir: Path) -> dict[str, list[str]]:
 
 ### In `tests/workflows/test_define_labels.py`:
 ```python
-def test_apply_labels_creates_new_labels(mock_labels_manager, tmp_path)
-def test_apply_labels_updates_existing_labels(mock_labels_manager, tmp_path)
-def test_apply_labels_deletes_obsolete_status_labels(mock_labels_manager, tmp_path)
-def test_apply_labels_skips_unchanged_labels(mock_labels_manager, tmp_path)
-def test_apply_labels_preserves_non_status_labels(mock_labels_manager, tmp_path)
+# Pure function tests (no mocking needed)
+def test_calculate_label_changes_empty_repo()
+def test_calculate_label_changes_creates_new_labels()
+def test_calculate_label_changes_updates_existing_labels()
+def test_calculate_label_changes_deletes_obsolete_status_labels()
+def test_calculate_label_changes_skips_unchanged_labels()
+def test_calculate_label_changes_preserves_non_status_labels()
+def test_calculate_label_changes_partial_match()
+def test_calculate_label_changes_all_exist_unchanged()
+def test_calculate_label_changes_validates_colors()  # Color format validation
+
+# Integration tests (with mocked LabelsManager)
+def test_apply_labels_success_flow(mock_labels_manager, tmp_path)
+def test_apply_labels_dry_run_mode(mock_labels_manager, tmp_path)
+def test_apply_labels_api_error_fails_fast(mock_labels_manager, tmp_path)
 ```
 
 ## HOW
@@ -40,16 +68,32 @@ def test_apply_labels_preserves_non_status_labels(mock_labels_manager, tmp_path)
 - Mock `get_labels()`, `create_label()`, `update_label()`, `delete_label()`
 
 ## ALGORITHM
+
+### calculate_label_changes (pure function):
 ```
-1. Initialize LabelsManager(project_dir)
-2. Get all existing labels via get_labels()
-3. For each WORKFLOW_LABELS entry:
-   - If exists and matches: track as 'unchanged'
-   - If exists but differs: update_label(), track as 'updated'
-   - If not exists: create_label(), track as 'created'
+1. Validate color format for target_labels (6-char hex)
+2. Build existing_map keyed by label name
+3. For each target label:
+   - If not in existing_map: add to 'created'
+   - If in existing_map with same color/description: add to 'unchanged'
+   - If in existing_map with different color/description: add to 'updated'
 4. For each existing label starting with 'status-':
-   - If not in WORKFLOW_LABELS: delete_label(), track as 'deleted'
-5. Return categorized results dict
+   - If not in target labels: add to 'deleted'
+5. Return dict with all four categories
+```
+
+### apply_labels (orchestrator):
+```
+1. Initialize LabelsManager(project_dir)  # Validates token, repo connection
+2. Get existing labels via get_labels()
+3. Call calculate_label_changes(existing, WORKFLOW_LABELS)
+4. If dry_run: log preview and return results
+5. For each 'created': call create_label(), log action
+6. For each 'updated': call update_label(), log action
+7. For each 'deleted': call delete_label(), log action
+8. For 'unchanged': skip API calls (idempotent)
+9. On any API error: fail fast with exit(1)
+10. Return results dict
 ```
 
 ## DATA
@@ -66,17 +110,23 @@ def test_apply_labels_preserves_non_status_labels(mock_labels_manager, tmp_path)
 
 ## LLM Prompt
 ```
-Reference: pr_info/steps/summary.md, pr_info/steps/step_1.md
+Reference: pr_info/steps/summary.md, pr_info/steps/step_1.md, pr_info/steps/decisions.md
 
-Implement Step 2: apply_labels() function with tests.
+Implement Step 2: apply_labels() function with comprehensive tests.
 
 Tasks:
-1. Add pytest fixtures in tests/workflows/test_define_labels.py to mock LabelsManager
-2. Write 5 tests covering create/update/delete/unchanged/preserve scenarios
-3. Implement apply_labels() in workflows/define_labels.py
-4. Use logger.info() to report each operation (create/update/delete)
-5. Ensure obsolete status-* labels are deleted but other labels are preserved
-6. Run pytest to verify all tests pass
+1. Implement calculate_label_changes() as pure function with color validation
+2. Write 9 unit tests for calculate_label_changes() covering:
+   - Empty repo, create, update, delete, unchanged, preserve non-status
+   - Partial match (5 of 10), all exist unchanged, color validation
+3. Implement apply_labels() orchestrator with dry_run support
+4. Add pytest fixtures to mock LabelsManager
+5. Write 3 integration tests for apply_labels():
+   - Success flow, dry-run mode, API error fails fast
+6. Use logger.info() to log each action: "Created: status-01:created"
+7. Skip API calls for unchanged labels (idempotency)
+8. Strictly delete obsolete status-* labels
+9. Run pytest to verify all tests pass
 
-Follow mocking patterns from tests/utils/github_operations/.
+Follow separation of concerns: pure function for logic, orchestrator for side effects.
 ```

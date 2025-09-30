@@ -1,10 +1,10 @@
-# Step 6: Integration Testing and Documentation
+# Step 6: Final Verification
 
 ## Objective
-Add integration test and verify complete workflow.
+Verify complete workflow implementation.
 
 ## Context
-Reference `summary.md`. Final validation step.
+Reference `summary.md`. Final validation - unit tests only, no integration tests.
 
 ## WHERE
 - Modify: `tests/workflows/test_define_labels.py`
@@ -12,28 +12,20 @@ Reference `summary.md`. Final validation step.
 
 ## WHAT
 
-### In `tests/workflows/test_define_labels.py`:
-```python
-def test_define_labels_integration(tmp_path):
-    """Integration test verifying full workflow with real LabelsManager."""
-    # This test can be marked @pytest.mark.integration
-    # and skipped in CI if GitHub token not available
-```
+No new code - verification only.
 
 ## HOW
-- Use `pytest.mark.integration` decorator
-- Test requires GitHub token in environment
-- Verify script can be imported and executed
-- Check all 10 labels are correctly defined
+- Run full test suite
+- Verify script can be imported
+- Manual smoke test if desired
 
 ## ALGORITHM
 ```
-Integration test:
-1. Check if GitHub token available
-2. Skip test if not (pytest.skip)
-3. Run define_labels script on real repository
-4. Verify results dict contains expected counts
-5. Query GitHub API to confirm labels exist
+Verification:
+1. Run pytest tests/workflows/test_define_labels.py -v
+2. All unit tests should pass (12+ tests)
+3. Verify script imports without errors
+4. Optional: Manual test with --dry-run flag
 ```
 
 ## DATA
@@ -43,18 +35,16 @@ Integration test:
 
 ## LLM Prompt
 ```
-Reference: pr_info/steps/summary.md, pr_info/steps/step_1-5.md
+Reference: pr_info/steps/summary.md, pr_info/steps/step_1-5.md, pr_info/steps/decisions.md
 
-Implement Step 6: Integration test and final verification.
+Step 6: Final verification (no integration tests).
 
 Tasks:
-1. Add test_define_labels_integration() in tests/workflows/test_define_labels.py
-2. Mark with @pytest.mark.integration
-3. Skip if GITHUB_TOKEN not available
-4. Test full workflow execution
-5. Run all tests: pytest tests/workflows/test_define_labels.py -v
-6. Run integration test manually if GitHub access available
-7. Verify script works: python workflows/define_labels.py --project-dir . --log-level DEBUG
+1. Run all unit tests: pytest tests/workflows/test_define_labels.py -v
+2. Verify 12+ tests pass (9 for calculate_label_changes, 3 for apply_labels, 4+ for CLI)
+3. Test script imports: python -c "from workflows.define_labels import main"
+4. Manual smoke test (optional): python workflows/define_labels.py --dry-run --log-level DEBUG
+5. Verify batch file works: workflows\define_labels.bat --help
 
-Final validation complete.
+No integration tests required - comprehensive unit test coverage is sufficient.
 ```

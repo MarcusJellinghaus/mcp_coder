@@ -8,9 +8,13 @@ None. Uses existing `LabelsManager` infrastructure. Pure workflow automation scr
 
 ## Design Decisions
 - **KISS**: Single-purpose script, no configuration files
-- **Idempotent**: Safe to run multiple times
-- **Cleanup**: Removes obsolete `status-*` labels
-- **Reporting**: Logs all changes (created/updated/deleted)
+- **Separation of Concerns**: Pure `calculate_label_changes()` for logic + `apply_labels()` orchestrator
+- **Idempotent**: Safe to run multiple times, skips API calls for unchanged labels
+- **Dry-Run Mode**: Preview changes with `--dry-run` flag
+- **Strict Cleanup**: Removes ALL obsolete `status-*` labels not in spec
+- **Fail Fast**: Exit immediately on any API error
+- **Detailed Logging**: Log each action at INFO level ("Created: status-01:created")
+- **Color Validation**: Validate 6-char hex format before API calls
 
 ## Files to Create/Modify
 
@@ -36,7 +40,10 @@ None (pure addition)
 5. Follow `create_PR.py` structure for consistency
 
 ## Test Strategy
-- Mock `LabelsManager` methods
-- Verify correct create/update/delete calls
-- Test edge cases (no labels, all exist, partial match)
-- Integration test with actual GitHub (optional)
+- **Pure Function Tests** (9 tests): `calculate_label_changes()` logic without mocking
+  - Empty repo, create, update, delete, unchanged, preserve non-status
+  - Partial match, all exist unchanged, color validation
+- **Orchestrator Tests** (3 tests): `apply_labels()` with mocked LabelsManager
+  - Success flow, dry-run mode, API error fails fast
+- **CLI Tests** (4+ tests): Argument parsing and validation
+- **No Integration Tests**: Unit test coverage is sufficient
