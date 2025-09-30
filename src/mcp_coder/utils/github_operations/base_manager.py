@@ -4,9 +4,10 @@ This module provides the BaseGitHubManager class that contains shared
 functionality for all GitHub manager classes.
 """
 
+import functools
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional, TypeVar, cast
 
 import git
 from github import Github
@@ -19,6 +20,56 @@ from mcp_coder.utils.log_utils import log_function_call
 from .github_utils import parse_github_url
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+
+def _handle_github_errors(
+    default_return: Any,
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """Decorator to handle GitHub API errors consistently.
+
+    This decorator handles GithubException and general Exception errors:
+    - Authentication/permission errors (401, 403): Re-raised to caller
+    - Other GithubException errors: Logged and return default_return
+    - Other exceptions: Logged and return default_return
+
+    Args:
+        default_return: Value to return when handling non-auth errors
+
+    Returns:
+        Decorator function that wraps the original function with error handling
+
+    Example:
+        @_handle_github_errors(default_return={})
+        def create_issue(self, title: str) -> IssueData:
+            # Implementation that may raise GithubException
+            pass
+    """
+
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> T:
+            try:
+                return func(*args, **kwargs)
+            except GithubException as e:
+                # Re-raise authentication/permission errors
+                if e.status in (401, 403):
+                    logger.error(
+                        f"Authentication/permission error in {func.__name__}: {e}"
+                    )
+                    raise
+                # Log and return default for other GitHub errors
+                logger.error(f"GitHub API error in {func.__name__}: {e}")
+                return cast(T, default_return)
+            except Exception as e:
+                # Log and return default for unexpected errors
+                logger.error(f"Unexpected error in {func.__name__}: {e}")
+                return cast(T, default_return)
+
+        return wrapper
+
+    return decorator
 
 
 class BaseGitHubManager:
