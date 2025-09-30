@@ -52,7 +52,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Copy resolve_project_dir() from workflows/create_PR.py
 [x] Add 4 tests for argument parsing and validation
 [x] Run quality checks: pylint, pytest, mypy - fix all issues
-[ ] Prepare git commit message for Step 3
+[x] Prepare git commit message for Step 3
 
 ### Step 4: Implement main() Function and Script Entry Point
 [ ] Add shebang and module docstring to workflows/define_labels.py
