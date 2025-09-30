@@ -117,12 +117,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 13
 
 ### Step 14: Apply Decorator to LabelsManager Methods
-[ ] Apply decorator to all 5 LabelsManager methods
-[ ] Remove bare Exception catch blocks
-[ ] Run unit tests to verify behavior unchanged
-[ ] Run quality checks: pylint, pytest, mypy
-[ ] Fix all issues found by quality checks
-[ ] Prepare git commit message for Step 14
+[x] Apply decorator to all 5 LabelsManager methods
+[x] Remove bare Exception catch blocks
+[x] Run unit tests to verify behavior unchanged
+[x] Run quality checks: pylint, pytest, mypy
+[x] Fix all issues found by quality checks
+[x] Prepare git commit message for Step 14
 
 ### Step 15: Update Tests for New Error Handling
 [ ] Update test_claude_code_api_error_handling.py expectations
