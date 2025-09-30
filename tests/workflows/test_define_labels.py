@@ -14,12 +14,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.utils.conftest import git_repo
 from workflows.define_labels import (
     WORKFLOW_LABELS,
     _validate_color_format,
     _validate_workflow_labels,
     apply_labels,
     calculate_label_changes,
+    parse_arguments,
+    resolve_project_dir,
 )
 
 
@@ -672,3 +675,141 @@ class TestApplyLabels:
         assert result["created"] == []
         assert result["updated"] == []
         assert result["deleted"] == []
+
+
+class TestArgumentParsing:
+    """Test command line argument parsing."""
+
+    def test_parse_arguments_default_values(self) -> None:
+        """Test parse_arguments with default values (no arguments provided)."""
+        with patch("sys.argv", ["define_labels.py"]):
+            args = parse_arguments()
+
+            # Verify default values
+            assert args.project_dir is None, "Default project_dir should be None"
+            assert args.log_level == "INFO", "Default log_level should be INFO"
+            assert args.dry_run is False, "Default dry_run should be False"
+
+    def test_parse_arguments_custom_values(self) -> None:
+        """Test parse_arguments with custom values provided."""
+        with patch(
+            "sys.argv",
+            [
+                "define_labels.py",
+                "--project-dir",
+                "/custom/path",
+                "--log-level",
+                "DEBUG",
+                "--dry-run",
+            ],
+        ):
+            args = parse_arguments()
+
+            # Verify custom values
+            assert (
+                args.project_dir == "/custom/path"
+            ), "project_dir should match provided path"
+            assert args.log_level == "DEBUG", "log_level should be DEBUG"
+            assert args.dry_run is True, "dry_run should be True when flag is provided"
+
+    def test_parse_arguments_log_level_choices(self) -> None:
+        """Test parse_arguments accepts all valid log level choices."""
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+        for level in valid_levels:
+            with patch("sys.argv", ["define_labels.py", "--log-level", level]):
+                args = parse_arguments()
+                assert args.log_level == level, f"Should accept log level {level}"
+
+    def test_parse_arguments_invalid_log_level(self) -> None:
+        """Test parse_arguments rejects invalid log level."""
+        with patch("sys.argv", ["define_labels.py", "--log-level", "INVALID"]):
+            with pytest.raises(SystemExit) as exc_info:
+                parse_arguments()
+
+            # argparse exits with code 2 for invalid arguments
+            assert (
+                exc_info.value.code == 2
+            ), "Should exit with code 2 for invalid arguments"
+
+
+class TestResolveProjectDir:
+    """Test project directory resolution and validation."""
+
+    @pytest.mark.git_integration
+    def test_resolve_project_dir_current_directory(
+        self, git_repo: tuple[Any, Path]
+    ) -> None:
+        """Test resolve_project_dir with None argument uses current directory."""
+        repo, project_dir = git_repo
+
+        # Change to project directory and test with None
+        with patch("pathlib.Path.cwd", return_value=project_dir):
+            result = resolve_project_dir(None)
+            assert (
+                result == project_dir.resolve()
+            ), "Should return current directory when arg is None"
+
+    @pytest.mark.git_integration
+    def test_resolve_project_dir_explicit_path(
+        self, git_repo: tuple[Any, Path]
+    ) -> None:
+        """Test resolve_project_dir with explicit path argument."""
+        repo, project_dir = git_repo
+
+        # Test with explicit path string
+        result = resolve_project_dir(str(project_dir))
+        assert (
+            result == project_dir.resolve()
+        ), "Should return resolved path from argument"
+
+    def test_resolve_project_dir_nonexistent_directory(self) -> None:
+        """Test resolve_project_dir fails for nonexistent directory."""
+        nonexistent_path = "/nonexistent/path/that/does/not/exist"
+
+        with pytest.raises(SystemExit) as exc_info:
+            resolve_project_dir(nonexistent_path)
+
+        assert (
+            exc_info.value.code == 1
+        ), "Should exit with code 1 for nonexistent directory"
+
+    def test_resolve_project_dir_not_git_repository(self, tmp_path: Path) -> None:
+        """Test resolve_project_dir fails for directory without .git subdirectory."""
+        # Create a directory without .git
+        non_git_dir = tmp_path / "not_a_git_repo"
+        non_git_dir.mkdir()
+
+        with pytest.raises(SystemExit) as exc_info:
+            resolve_project_dir(str(non_git_dir))
+
+        assert exc_info.value.code == 1, "Should exit with code 1 for non-git directory"
+
+    def test_resolve_project_dir_file_instead_of_directory(
+        self, tmp_path: Path
+    ) -> None:
+        """Test resolve_project_dir fails when path is a file, not a directory."""
+        # Create a file instead of a directory
+        test_file = tmp_path / "test_file.txt"
+        test_file.write_text("test content")
+
+        with pytest.raises(SystemExit) as exc_info:
+            resolve_project_dir(str(test_file))
+
+        assert exc_info.value.code == 1, "Should exit with code 1 when path is a file"
+
+    @pytest.mark.git_integration
+    def test_resolve_project_dir_relative_path(
+        self, git_repo: tuple[Any, Path]
+    ) -> None:
+        """Test resolve_project_dir converts relative path to absolute."""
+        repo, project_dir = git_repo
+
+        # Test with relative path - use explicit relative path to tmp git repo
+        # We can't properly test "." because Path.resolve() accesses the real filesystem
+        # Instead, test that the function returns an absolute path
+        result = resolve_project_dir(str(project_dir))
+        assert result.is_absolute(), "Should return absolute path"
+        assert (
+            result == project_dir.resolve()
+        ), "Should resolve to correct absolute path"

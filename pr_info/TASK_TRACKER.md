@@ -50,8 +50,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Keep --project-dir and --log-level arguments
 [x] Add --dry-run flag (action='store_true', default=False)
 [x] Copy resolve_project_dir() from workflows/create_PR.py
-[ ] Add 4 tests for argument parsing and validation
-[ ] Run quality checks: pylint, pytest, mypy - fix all issues
+[x] Add 4 tests for argument parsing and validation
+[x] Run quality checks: pylint, pytest, mypy - fix all issues
 [ ] Prepare git commit message for Step 3
 
 ### Step 4: Implement main() Function and Script Entry Point
