@@ -47,6 +47,7 @@ from mcp_coder.utils.git_operations import (
     get_current_branch_name,
     get_default_branch_name,
     get_full_status,
+    get_github_repository_url,
     git_push,
     is_working_directory_clean,
 )
@@ -723,6 +724,14 @@ def main() -> None:
     setup_logging(args.log_level)
     
     log_step("Starting implement workflow...")
+    
+    # Get repository name and current branch for context logging
+    repo_url = get_github_repository_url(project_dir)
+    repo_name = repo_url.split('/')[-1] if repo_url else str(project_dir.name)
+    current_branch = get_current_branch_name(project_dir) or "unknown"
+    
+    # Log workflow context at the beginning
+    log_step(f"Workflow Context - Repository: {repo_name}, Branch: {current_branch}, LLM Method: {args.llm_method}, Log Level: {args.log_level}")
     log_step(f"Using project directory: {project_dir}")
     
     # Step 1: Check git status and prerequisites
