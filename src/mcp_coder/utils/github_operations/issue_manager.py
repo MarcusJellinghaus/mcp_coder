@@ -192,53 +192,32 @@ class IssueManager(BaseGitHubManager):
                 locked=False,
             )
 
-        try:
-            # Create issue
-            github_issue = repo.create_issue(
-                title=title.strip(), body=body, labels=labels or []
-            )
+        # Create issue
+        github_issue = repo.create_issue(
+            title=title.strip(), body=body, labels=labels or []
+        )
 
-            # Convert to IssueData
-            return IssueData(
-                number=github_issue.number,
-                title=github_issue.title,
-                body=github_issue.body or "",
-                state=github_issue.state,
-                labels=[label.name for label in github_issue.labels],
-                user=github_issue.user.login if github_issue.user else None,
-                created_at=(
-                    github_issue.created_at.isoformat()
-                    if github_issue.created_at
-                    else None
-                ),
-                updated_at=(
-                    github_issue.updated_at.isoformat()
-                    if github_issue.updated_at
-                    else None
-                ),
-                url=github_issue.html_url,
-                locked=github_issue.locked,
-            )
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(f"Authentication/permission error creating issue: {e}")
-                raise
-            # Log and return empty dict for other errors
-            logger.error(f"Failed to create issue: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        # Convert to IssueData
+        return IssueData(
+            number=github_issue.number,
+            title=github_issue.title,
+            body=github_issue.body or "",
+            state=github_issue.state,
+            labels=[label.name for label in github_issue.labels],
+            user=github_issue.user.login if github_issue.user else None,
+            created_at=(
+                github_issue.created_at.isoformat()
+                if github_issue.created_at
+                else None
+            ),
+            updated_at=(
+                github_issue.updated_at.isoformat()
+                if github_issue.updated_at
+                else None
+            ),
+            url=github_issue.html_url,
+            locked=github_issue.locked,
+        )
 
     @log_function_call
     @_handle_github_errors(
@@ -304,46 +283,27 @@ class IssueManager(BaseGitHubManager):
                 url="",
             )
 
-        try:
-            # Get issue and create comment
-            github_issue = repo.get_issue(issue_number)
-            github_comment = github_issue.create_comment(body.strip())
+        # Get issue and create comment
+        github_issue = repo.get_issue(issue_number)
+        github_comment = github_issue.create_comment(body.strip())
 
-            # Convert to CommentData
-            return CommentData(
-                id=github_comment.id,
-                body=github_comment.body or "",
-                user=github_comment.user.login if github_comment.user else None,
-                created_at=(
-                    github_comment.created_at.isoformat()
-                    if github_comment.created_at
-                    else None
-                ),
-                updated_at=(
-                    github_comment.updated_at.isoformat()
-                    if github_comment.updated_at
-                    else None
-                ),
-                url=github_comment.html_url,
-            )
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(
-                    f"Authentication/permission error adding comment to issue: {e}"
-                )
-                raise
-            # Log and return empty dict for other errors
-            logger.error(f"Failed to add comment to issue {issue_number}: {e}")
-            return CommentData(
-                id=0,
-                body="",
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-            )
+        # Convert to CommentData
+        return CommentData(
+            id=github_comment.id,
+            body=github_comment.body or "",
+            user=github_comment.user.login if github_comment.user else None,
+            created_at=(
+                github_comment.created_at.isoformat()
+                if github_comment.created_at
+                else None
+            ),
+            updated_at=(
+                github_comment.updated_at.isoformat()
+                if github_comment.updated_at
+                else None
+            ),
+            url=github_comment.html_url,
+        )
 
     @log_function_call
     @_handle_github_errors(default_return=[])
@@ -374,45 +334,33 @@ class IssueManager(BaseGitHubManager):
             logger.error("Failed to get repository")
             return []
 
-        try:
-            # Get issue and comments
-            github_issue = repo.get_issue(issue_number)
-            github_comments = github_issue.get_comments()
+        # Get issue and comments
+        github_issue = repo.get_issue(issue_number)
+        github_comments = github_issue.get_comments()
 
-            # Convert to CommentData list
-            comments: List[CommentData] = []
-            for comment in github_comments:
-                comments.append(
-                    CommentData(
-                        id=comment.id,
-                        body=comment.body or "",
-                        user=comment.user.login if comment.user else None,
-                        created_at=(
-                            comment.created_at.isoformat()
-                            if comment.created_at
-                            else None
-                        ),
-                        updated_at=(
-                            comment.updated_at.isoformat()
-                            if comment.updated_at
-                            else None
-                        ),
-                        url=comment.html_url,
-                    )
+        # Convert to CommentData list
+        comments: List[CommentData] = []
+        for comment in github_comments:
+            comments.append(
+                CommentData(
+                    id=comment.id,
+                    body=comment.body or "",
+                    user=comment.user.login if comment.user else None,
+                    created_at=(
+                        comment.created_at.isoformat()
+                        if comment.created_at
+                        else None
+                    ),
+                    updated_at=(
+                        comment.updated_at.isoformat()
+                        if comment.updated_at
+                        else None
+                    ),
+                    url=comment.html_url,
                 )
+            )
 
-            return comments
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(
-                    f"Authentication/permission error getting comments from issue: {e}"
-                )
-                raise
-            # Log and return empty list for other errors
-            logger.error(f"Failed to get comments from issue {issue_number}: {e}")
-            return []
+        return comments
 
     @log_function_call
     @_handle_github_errors(
@@ -492,54 +440,35 @@ class IssueManager(BaseGitHubManager):
                 url="",
             )
 
-        try:
-            # Get issue to verify it exists
-            github_issue = repo.get_issue(issue_number)
+        # Get issue to verify it exists
+        github_issue = repo.get_issue(issue_number)
 
-            # Get the comment directly from repository
-            github_comment = github_issue.get_comment(comment_id)
+        # Get the comment directly from repository
+        github_comment = github_issue.get_comment(comment_id)
 
-            # Edit the comment
-            github_comment.edit(body.strip())
+        # Edit the comment
+        github_comment.edit(body.strip())
 
-            # Get fresh comment data after editing
-            github_comment = github_issue.get_comment(comment_id)
+        # Get fresh comment data after editing
+        github_comment = github_issue.get_comment(comment_id)
 
-            # Convert to CommentData
-            return CommentData(
-                id=github_comment.id,
-                body=github_comment.body or "",
-                user=github_comment.user.login if github_comment.user else None,
-                created_at=(
-                    github_comment.created_at.isoformat()
-                    if github_comment.created_at
-                    else None
-                ),
-                updated_at=(
-                    github_comment.updated_at.isoformat()
-                    if github_comment.updated_at
-                    else None
-                ),
-                url=github_comment.html_url,
-            )
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(f"Authentication/permission error editing comment: {e}")
-                raise
-            # Log and return empty dict for other errors
-            logger.error(
-                f"Failed to edit comment {comment_id} on issue {issue_number}: {e}"
-            )
-            return CommentData(
-                id=0,
-                body="",
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-            )
+        # Convert to CommentData
+        return CommentData(
+            id=github_comment.id,
+            body=github_comment.body or "",
+            user=github_comment.user.login if github_comment.user else None,
+            created_at=(
+                github_comment.created_at.isoformat()
+                if github_comment.created_at
+                else None
+            ),
+            updated_at=(
+                github_comment.updated_at.isoformat()
+                if github_comment.updated_at
+                else None
+            ),
+            url=github_comment.html_url,
+        )
 
     @log_function_call
     @_handle_github_errors(default_return=False)
@@ -574,28 +503,16 @@ class IssueManager(BaseGitHubManager):
             logger.error("Failed to get repository")
             return False
 
-        try:
-            # Get issue to verify it exists
-            github_issue = repo.get_issue(issue_number)
+        # Get issue to verify it exists
+        github_issue = repo.get_issue(issue_number)
 
-            # Get the comment directly from repository
-            github_comment = github_issue.get_comment(comment_id)
+        # Get the comment directly from repository
+        github_comment = github_issue.get_comment(comment_id)
 
-            # Delete the comment
-            github_comment.delete()
+        # Delete the comment
+        github_comment.delete()
 
-            return True
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(f"Authentication/permission error deleting comment: {e}")
-                raise
-            # Log and return False for other errors
-            logger.error(
-                f"Failed to delete comment {comment_id} from issue {issue_number}: {e}"
-            )
-            return False
+        return True
 
     @log_function_call
     @_handle_github_errors(
@@ -660,55 +577,34 @@ class IssueManager(BaseGitHubManager):
                 locked=False,
             )
 
-        try:
-            # Get and close issue
-            github_issue = repo.get_issue(issue_number)
-            github_issue.edit(state="closed")
+        # Get and close issue
+        github_issue = repo.get_issue(issue_number)
+        github_issue.edit(state="closed")
 
-            # Get fresh issue data after closing
-            github_issue = repo.get_issue(issue_number)
+        # Get fresh issue data after closing
+        github_issue = repo.get_issue(issue_number)
 
-            # Convert to IssueData
-            return IssueData(
-                number=github_issue.number,
-                title=github_issue.title,
-                body=github_issue.body or "",
-                state=github_issue.state,
-                labels=[label.name for label in github_issue.labels],
-                user=github_issue.user.login if github_issue.user else None,
-                created_at=(
-                    github_issue.created_at.isoformat()
-                    if github_issue.created_at
-                    else None
-                ),
-                updated_at=(
-                    github_issue.updated_at.isoformat()
-                    if github_issue.updated_at
-                    else None
-                ),
-                url=github_issue.html_url,
-                locked=github_issue.locked,
-            )
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(f"Authentication/permission error closing issue: {e}")
-                raise
-            # Log and return empty dict for other errors
-            logger.error(f"Failed to close issue {issue_number}: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        # Convert to IssueData
+        return IssueData(
+            number=github_issue.number,
+            title=github_issue.title,
+            body=github_issue.body or "",
+            state=github_issue.state,
+            labels=[label.name for label in github_issue.labels],
+            user=github_issue.user.login if github_issue.user else None,
+            created_at=(
+                github_issue.created_at.isoformat()
+                if github_issue.created_at
+                else None
+            ),
+            updated_at=(
+                github_issue.updated_at.isoformat()
+                if github_issue.updated_at
+                else None
+            ),
+            url=github_issue.html_url,
+            locked=github_issue.locked,
+        )
 
     @log_function_call
     @_handle_github_errors(
@@ -773,55 +669,34 @@ class IssueManager(BaseGitHubManager):
                 locked=False,
             )
 
-        try:
-            # Get and reopen issue
-            github_issue = repo.get_issue(issue_number)
-            github_issue.edit(state="open")
+        # Get and reopen issue
+        github_issue = repo.get_issue(issue_number)
+        github_issue.edit(state="open")
 
-            # Get fresh issue data after reopening
-            github_issue = repo.get_issue(issue_number)
+        # Get fresh issue data after reopening
+        github_issue = repo.get_issue(issue_number)
 
-            # Convert to IssueData
-            return IssueData(
-                number=github_issue.number,
-                title=github_issue.title,
-                body=github_issue.body or "",
-                state=github_issue.state,
-                labels=[label.name for label in github_issue.labels],
-                user=github_issue.user.login if github_issue.user else None,
-                created_at=(
-                    github_issue.created_at.isoformat()
-                    if github_issue.created_at
-                    else None
-                ),
-                updated_at=(
-                    github_issue.updated_at.isoformat()
-                    if github_issue.updated_at
-                    else None
-                ),
-                url=github_issue.html_url,
-                locked=github_issue.locked,
-            )
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(f"Authentication/permission error reopening issue: {e}")
-                raise
-            # Log and return empty dict for other errors
-            logger.error(f"Failed to reopen issue {issue_number}: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        # Convert to IssueData
+        return IssueData(
+            number=github_issue.number,
+            title=github_issue.title,
+            body=github_issue.body or "",
+            state=github_issue.state,
+            labels=[label.name for label in github_issue.labels],
+            user=github_issue.user.login if github_issue.user else None,
+            created_at=(
+                github_issue.created_at.isoformat()
+                if github_issue.created_at
+                else None
+            ),
+            updated_at=(
+                github_issue.updated_at.isoformat()
+                if github_issue.updated_at
+                else None
+            ),
+            url=github_issue.html_url,
+            locked=github_issue.locked,
+        )
 
     @log_function_call
     @_handle_github_errors(default_return=[])
@@ -845,31 +720,21 @@ class IssueManager(BaseGitHubManager):
             logger.error("Failed to get repository")
             return []
 
-        try:
-            # Get all labels from repository
-            github_labels = repo.get_labels()
+        # Get all labels from repository
+        github_labels = repo.get_labels()
 
-            # Convert to LabelData list
-            labels: List[LabelData] = []
-            for label in github_labels:
-                labels.append(
-                    LabelData(
-                        name=label.name,
-                        color=label.color,
-                        description=label.description if label.description else None,
-                    )
+        # Convert to LabelData list
+        labels: List[LabelData] = []
+        for label in github_labels:
+            labels.append(
+                LabelData(
+                    name=label.name,
+                    color=label.color,
+                    description=label.description if label.description else None,
                 )
+            )
 
-            return labels
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(f"Authentication/permission error getting labels: {e}")
-                raise
-            # Log and return empty list for other errors
-            logger.error(f"Failed to get repository labels: {e}")
-            return []
+        return labels
 
     @log_function_call
     @_handle_github_errors(
@@ -951,57 +816,34 @@ class IssueManager(BaseGitHubManager):
                 locked=False,
             )
 
-        try:
-            # Get issue and add labels
-            github_issue = repo.get_issue(issue_number)
-            github_issue.add_to_labels(*labels)
+        # Get issue and add labels
+        github_issue = repo.get_issue(issue_number)
+        github_issue.add_to_labels(*labels)
 
-            # Get fresh issue data after adding labels
-            github_issue = repo.get_issue(issue_number)
+        # Get fresh issue data after adding labels
+        github_issue = repo.get_issue(issue_number)
 
-            # Convert to IssueData
-            return IssueData(
-                number=github_issue.number,
-                title=github_issue.title,
-                body=github_issue.body or "",
-                state=github_issue.state,
-                labels=[label.name for label in github_issue.labels],
-                user=github_issue.user.login if github_issue.user else None,
-                created_at=(
-                    github_issue.created_at.isoformat()
-                    if github_issue.created_at
-                    else None
-                ),
-                updated_at=(
-                    github_issue.updated_at.isoformat()
-                    if github_issue.updated_at
-                    else None
-                ),
-                url=github_issue.html_url,
-                locked=github_issue.locked,
-            )
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(
-                    f"Authentication/permission error adding labels to issue: {e}"
-                )
-                raise
-            # Log and return empty dict for other errors
-            logger.error(f"Failed to add labels to issue {issue_number}: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        # Convert to IssueData
+        return IssueData(
+            number=github_issue.number,
+            title=github_issue.title,
+            body=github_issue.body or "",
+            state=github_issue.state,
+            labels=[label.name for label in github_issue.labels],
+            user=github_issue.user.login if github_issue.user else None,
+            created_at=(
+                github_issue.created_at.isoformat()
+                if github_issue.created_at
+                else None
+            ),
+            updated_at=(
+                github_issue.updated_at.isoformat()
+                if github_issue.updated_at
+                else None
+            ),
+            url=github_issue.html_url,
+            locked=github_issue.locked,
+        )
 
     @log_function_call
     @_handle_github_errors(
@@ -1083,58 +925,35 @@ class IssueManager(BaseGitHubManager):
                 locked=False,
             )
 
-        try:
-            # Get issue and remove labels
-            github_issue = repo.get_issue(issue_number)
-            for label in labels:
-                github_issue.remove_from_labels(label)
+        # Get issue and remove labels
+        github_issue = repo.get_issue(issue_number)
+        for label in labels:
+            github_issue.remove_from_labels(label)
 
-            # Get fresh issue data after removing labels
-            github_issue = repo.get_issue(issue_number)
+        # Get fresh issue data after removing labels
+        github_issue = repo.get_issue(issue_number)
 
-            # Convert to IssueData
-            return IssueData(
-                number=github_issue.number,
-                title=github_issue.title,
-                body=github_issue.body or "",
-                state=github_issue.state,
-                labels=[label.name for label in github_issue.labels],
-                user=github_issue.user.login if github_issue.user else None,
-                created_at=(
-                    github_issue.created_at.isoformat()
-                    if github_issue.created_at
-                    else None
-                ),
-                updated_at=(
-                    github_issue.updated_at.isoformat()
-                    if github_issue.updated_at
-                    else None
-                ),
-                url=github_issue.html_url,
-                locked=github_issue.locked,
-            )
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(
-                    f"Authentication/permission error removing labels from issue: {e}"
-                )
-                raise
-            # Log and return empty dict for other errors
-            logger.error(f"Failed to remove labels from issue {issue_number}: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        # Convert to IssueData
+        return IssueData(
+            number=github_issue.number,
+            title=github_issue.title,
+            body=github_issue.body or "",
+            state=github_issue.state,
+            labels=[label.name for label in github_issue.labels],
+            user=github_issue.user.login if github_issue.user else None,
+            created_at=(
+                github_issue.created_at.isoformat()
+                if github_issue.created_at
+                else None
+            ),
+            updated_at=(
+                github_issue.updated_at.isoformat()
+                if github_issue.updated_at
+                else None
+            ),
+            url=github_issue.html_url,
+            locked=github_issue.locked,
+        )
 
     @log_function_call
     @_handle_github_errors(
@@ -1203,54 +1022,31 @@ class IssueManager(BaseGitHubManager):
                 locked=False,
             )
 
-        try:
-            # Get issue and set labels (replaces all existing labels)
-            github_issue = repo.get_issue(issue_number)
-            github_issue.set_labels(*labels)
+        # Get issue and set labels (replaces all existing labels)
+        github_issue = repo.get_issue(issue_number)
+        github_issue.set_labels(*labels)
 
-            # Get fresh issue data after setting labels
-            github_issue = repo.get_issue(issue_number)
+        # Get fresh issue data after setting labels
+        github_issue = repo.get_issue(issue_number)
 
-            # Convert to IssueData
-            return IssueData(
-                number=github_issue.number,
-                title=github_issue.title,
-                body=github_issue.body or "",
-                state=github_issue.state,
-                labels=[label.name for label in github_issue.labels],
-                user=github_issue.user.login if github_issue.user else None,
-                created_at=(
-                    github_issue.created_at.isoformat()
-                    if github_issue.created_at
-                    else None
-                ),
-                updated_at=(
-                    github_issue.updated_at.isoformat()
-                    if github_issue.updated_at
-                    else None
-                ),
-                url=github_issue.html_url,
-                locked=github_issue.locked,
-            )
-
-        except GithubException as e:
-            # Raise for auth/permission errors
-            if e.status in (401, 403):
-                logger.error(
-                    f"Authentication/permission error setting labels on issue: {e}"
-                )
-                raise
-            # Log and return empty dict for other errors
-            logger.error(f"Failed to set labels on issue {issue_number}: {e}")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        # Convert to IssueData
+        return IssueData(
+            number=github_issue.number,
+            title=github_issue.title,
+            body=github_issue.body or "",
+            state=github_issue.state,
+            labels=[label.name for label in github_issue.labels],
+            user=github_issue.user.login if github_issue.user else None,
+            created_at=(
+                github_issue.created_at.isoformat()
+                if github_issue.created_at
+                else None
+            ),
+            updated_at=(
+                github_issue.updated_at.isoformat()
+                if github_issue.updated_at
+                else None
+            ),
+            url=github_issue.html_url,
+            locked=github_issue.locked,
+        )
