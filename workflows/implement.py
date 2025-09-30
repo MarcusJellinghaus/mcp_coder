@@ -580,7 +580,7 @@ def process_single_task(project_dir: Path, llm_method: str) -> bool:
     # Step 4: Call LLM with prompt and capture comprehensive data
     log_step("Calling LLM for implementation...")
     try:
-        timeout = 900 # 600 might not be eno
+        timeout = 900 # 600 might not be enough
 
         # Create the full prompt by combining template with task context
         full_prompt = f"""{prompt_template}

@@ -16,10 +16,6 @@
       "mcp__filesystem__delete_this_file",
       "mcp__filesystem__move_file",
       "mcp__filesystem__edit_file",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(python -m pytest tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle -v -s -m github_integration)",
-      "Bash(python -m pytest tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle -v -s -m github_integration --tb=short)"
     ]
   },
   "enabledMcpjsonServers": [
