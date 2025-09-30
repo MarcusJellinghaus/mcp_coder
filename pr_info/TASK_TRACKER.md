@@ -35,12 +35,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 2
 
 ### Step 4: Issue Creation & Lifecycle Operations
-[ ] Implement create_issue, close_issue, reopen_issue methods
-[ ] Add unit tests for the three methods
-[ ] Create initial integration test (create → get → close → reopen)
-[ ] Run quality checks: pylint, pytest, mypy
-[ ] Fix all issues found by quality checks
-[ ] Prepare git commit message for Step 4
+[x] Implement create_issue, close_issue, reopen_issue methods
+[x] Add unit tests for the three methods
+[x] Create initial integration test (create → get → close → reopen)
+[x] Run quality checks: pylint, pytest, mypy
+[x] Fix all issues found by quality checks
+[x] Prepare git commit message for Step 4
 
 ### Step 5: Repository Labels & Add Labels Operations
 [ ] Implement get_available_labels and add_labels methods
