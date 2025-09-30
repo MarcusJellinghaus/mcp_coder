@@ -36,6 +36,12 @@ from .utils.git_operations import (
     git_push,
     is_git_repository,
 )
+from .utils.github_operations import (
+    CommentData,
+    IssueData,
+    IssueManager,
+    LabelData,
+)
 from .utils.subprocess_runner import (
     CommandOptions,
     CommandResult,
@@ -64,6 +70,11 @@ __all__ = [
     "get_full_status",
     "git_push",
     "is_git_repository",
+    # GitHub operations - Public API
+    "IssueManager",
+    "IssueData",
+    "CommentData",
+    "LabelData",
     # Prompt management
     "get_prompt",
     "validate_prompt_markdown",
