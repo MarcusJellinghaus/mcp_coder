@@ -6,10 +6,12 @@ This module provides functionality to define and apply workflow status labels
 to a GitHub repository, ensuring consistent label definitions across projects.
 """
 
+import argparse
 import logging
 import re
 import sys
 from pathlib import Path
+from typing import Optional
 
 from mcp_coder.utils.github_operations.labels_manager import LabelsManager
 
@@ -237,3 +239,71 @@ def apply_labels(project_dir: Path, dry_run: bool = False) -> dict[str, list[str
     # No logging for unchanged labels to reduce noise
     
     return changes
+
+
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments including project directory and log level."""
+    parser = argparse.ArgumentParser(
+        description="Define workflow status labels for GitHub repository."
+    )
+    parser.add_argument(
+        "--project-dir",
+        metavar="PATH",
+        help="Project directory path (default: current directory)"
+    )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="Set the logging level (default: INFO)"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Preview changes without applying them"
+    )
+
+    return parser.parse_args()
+
+
+def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
+    """Convert project directory argument to absolute Path, with validation."""
+    # Use current directory if no argument provided
+    if project_dir_arg is None:
+        project_path = Path.cwd()
+    else:
+        project_path = Path(project_dir_arg)
+    
+    # Resolve to absolute path
+    try:
+        project_path = project_path.resolve()
+    except (OSError, ValueError) as e:
+        logger.error(f"Invalid project directory path: {e}")
+        sys.exit(1)
+    
+    # Validate directory exists
+    if not project_path.exists():
+        logger.error(f"Project directory does not exist: {project_path}")
+        sys.exit(1)
+    
+    # Validate it's a directory
+    if not project_path.is_dir():
+        logger.error(f"Project path is not a directory: {project_path}")
+        sys.exit(1)
+    
+    # Validate directory is accessible
+    try:
+        # Test read access by listing directory
+        list(project_path.iterdir())
+    except PermissionError:
+        logger.error(f"No read access to project directory: {project_path}")
+        sys.exit(1)
+    
+    # Validate directory contains .git subdirectory
+    git_dir = project_path / ".git"
+    if not git_dir.exists():
+        logger.error(f"Project directory is not a git repository: {project_path}")
+        sys.exit(1)
+    
+    return project_path

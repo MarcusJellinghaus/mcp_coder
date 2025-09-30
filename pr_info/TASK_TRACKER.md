@@ -45,11 +45,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 2
 
 ### Step 3: Implement CLI Argument Parsing and Logging Setup
-[ ] Copy parse_arguments() from workflows/create_PR.py to workflows/define_labels.py
-[ ] Remove --llm-method argument (not needed)
-[ ] Keep --project-dir and --log-level arguments
-[ ] Add --dry-run flag (action='store_true', default=False)
-[ ] Copy resolve_project_dir() from workflows/create_PR.py
+[x] Copy parse_arguments() from workflows/create_PR.py to workflows/define_labels.py
+[x] Remove --llm-method argument (not needed)
+[x] Keep --project-dir and --log-level arguments
+[x] Add --dry-run flag (action='store_true', default=False)
+[x] Copy resolve_project_dir() from workflows/create_PR.py
 [ ] Add 4 tests for argument parsing and validation
 [ ] Run quality checks: pylint, pytest, mypy - fix all issues
 [ ] Prepare git commit message for Step 3
