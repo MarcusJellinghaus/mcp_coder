@@ -4,7 +4,7 @@ from .claude_code_api import ask_claude_code_api
 from .claude_code_cli import ask_claude_code_cli
 
 
-def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> str:
+def ask_claude_code(question: str, method: str = "cli", timeout: int = 30, cwd: str | None = None) -> str:
     """
     Ask Claude a question using the specified implementation method.
 
@@ -15,6 +15,8 @@ def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> st
         question: The question to ask Claude
         method: The implementation method to use ("cli" or "api")
         timeout: Timeout in seconds for the request (default: 30)
+        cwd: Working directory for the command (only used for CLI method)
+             This is important for Claude to find .claude/settings.local.json
 
     Returns:
         Claude's response as a string
@@ -44,7 +46,7 @@ def ask_claude_code(question: str, method: str = "cli", timeout: int = 30) -> st
         raise ValueError("Timeout must be a positive number")
 
     if method == "cli":
-        return ask_claude_code_cli(question, timeout=timeout)
+        return ask_claude_code_cli(question, timeout=timeout, cwd=cwd)
     elif method == "api":
         return ask_claude_code_api(question, timeout=timeout)
     else:

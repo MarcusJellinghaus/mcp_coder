@@ -189,7 +189,7 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
         logger.debug(f"Calling LLM for task tracker update: provider={provider}, method={method}, prompt_length={len(prompt_template)}")
         logger.debug(f"Prompt preview (first 200 chars): {prompt_template[:200]}...")
         
-        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300)
+        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300, cwd=str(project_dir))
         
         logger.debug(f"LLM response received: length={len(response) if response else 0}")
         if response:

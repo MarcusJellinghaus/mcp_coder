@@ -36,7 +36,7 @@ def _find_claude_executable() -> str:
     return result
 
 
-def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
+def ask_claude_code_cli(question: str, timeout: int = 30, cwd: str | None = None) -> str:
     """
     Ask Claude a question via Claude Code CLI and return the response.
 
@@ -45,6 +45,8 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     Args:
         question: The question to ask Claude
         timeout: Timeout in seconds for the command (default: 30)
+        cwd: Working directory for the command (default: None, uses current directory)
+             This is important for Claude to find .claude/settings.local.json
 
     Returns:
         Claude's response as a string
@@ -74,13 +76,14 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
             f"Using stdin for long prompt ({len(question)} chars) to avoid CLI limit"
         )
         # Use stdin input method: echo "prompt" | claude -p ""
-        options = CommandOptions(timeout_seconds=timeout, input_data=question)
+        options = CommandOptions(timeout_seconds=timeout, input_data=question, cwd=cwd)
         result = execute_subprocess([claude_cmd, "-p", ""], options)
     else:
         # Use direct command line argument for shorter prompts
         result = execute_command(
             [claude_cmd, "--print", question],
             timeout_seconds=timeout,
+            cwd=cwd,
         )
 
     if result.timed_out:
