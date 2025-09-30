@@ -68,6 +68,8 @@ def ask_claude_code_cli(
 
     # Find the Claude executable
     claude_cmd = _find_claude_executable()
+    
+    logger.debug(f"Claude Code CLI: executable={claude_cmd}, timeout={timeout}s, cwd={cwd}")
 
     # Windows command line limit is ~8191 characters
     # Use stdin for long prompts to avoid this limitation
@@ -79,16 +81,21 @@ def ask_claude_code_cli(
         )
         # Use stdin input method: echo "prompt" | claude -p ""
         options = CommandOptions(timeout_seconds=timeout, input_data=question, cwd=cwd)
+        logger.debug(f"Executing: {claude_cmd} -p '' (with stdin input, cwd={cwd})")
         result = execute_subprocess([claude_cmd, "-p", ""], options)
     else:
         # Use direct command line argument for shorter prompts
+        logger.debug(f"Executing: {claude_cmd} --print <question> (cwd={cwd})")
         result = execute_command(
             [claude_cmd, "--print", question],
             timeout_seconds=timeout,
             cwd=cwd,
         )
 
+    logger.debug(f"Claude CLI result: return_code={result.return_code}, timed_out={result.timed_out}, stdout_length={len(result.stdout)}, stderr_length={len(result.stderr)}")
+    
     if result.timed_out:
+        logger.error(f"Claude Code CLI timed out after {timeout} seconds")
         raise subprocess.TimeoutExpired(
             result.command or [claude_cmd],
             timeout,
@@ -96,11 +103,16 @@ def ask_claude_code_cli(
         )
 
     if result.return_code != 0:
+        logger.error(f"Claude Code CLI failed with return code {result.return_code}")
+        logger.error(f"stderr: {result.stderr[:500]}...")  # First 500 chars
         raise subprocess.CalledProcessError(
             result.return_code,
             result.command or [claude_cmd],
             output=result.stdout,
             stderr=f"Claude Code command failed: {result.stderr}",
         )
+    
+    logger.debug(f"Claude CLI success: response length={len(result.stdout.strip())}")
+    logger.debug(f"Response preview: {result.stdout.strip()[:200]}...")
 
     return result.stdout.strip()
