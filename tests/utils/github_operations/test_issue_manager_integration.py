@@ -122,7 +122,9 @@ class TestIssueManagerIntegration:
             # Test duplicate label (idempotent)
             print("\n2.2: Testing duplicate label (should be idempotent)...")
             dup = issue_manager.add_labels(issue_number, "bug")
-            assert dup["labels"].count("bug") == 1, "Duplicate label should not be added"
+            assert (
+                dup["labels"].count("bug") == 1
+            ), "Duplicate label should not be added"
             print(f"✓ Duplicate handling works: {dup['labels']}")
 
             # Remove labels
@@ -136,11 +138,17 @@ class TestIssueManagerIntegration:
             print("\n2.4: Removing non-existent label (should not error)...")
             try:
                 # This should either succeed gracefully or return empty dict
-                result = issue_manager.remove_labels(issue_number, "nonexistent-xyz-123")
+                result = issue_manager.remove_labels(
+                    issue_number, "nonexistent-xyz-123"
+                )
                 # If it returns data, verify the issue wasn't affected
                 if result and result.get("number") == issue_number:
-                    assert "enhancement" in result["labels"], "Existing labels should remain"
-                    print(f"✓ Gracefully handled non-existent label: {result['labels']}")
+                    assert (
+                        "enhancement" in result["labels"]
+                    ), "Existing labels should remain"
+                    print(
+                        f"✓ Gracefully handled non-existent label: {result['labels']}"
+                    )
                 else:
                     # Empty dict means error was caught
                     print("✓ Non-existent label returned empty result (error caught)")
@@ -320,7 +328,9 @@ class TestIssueManagerIntegration:
             if created_issue and "number" in created_issue:
                 try:
                     issue_manager.close_issue(created_issue["number"])
-                    print(f"\n✓ Cleanup: Ensured issue #{created_issue['number']} is closed")
+                    print(
+                        f"\n✓ Cleanup: Ensured issue #{created_issue['number']} is closed"
+                    )
                 except Exception:
                     pass  # Ignore cleanup failures
 

@@ -193,32 +193,40 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
     Raises:
         pytest.skip: When GitHub token or test repository not configured
     """
-    from mcp_coder.utils.user_config import get_config_value, get_config_file_path
+    from mcp_coder.utils.user_config import get_config_file_path, get_config_value
 
     print("\n=== GitHub Integration Test Configuration ===")
-    
+
     # Check for required GitHub configuration
     # Priority 1: Environment variables
     github_token = os.getenv("GITHUB_TOKEN")
     test_repo_url = os.getenv("GITHUB_TEST_REPO_URL")
-    
-    print(f"Environment variable GITHUB_TOKEN: {'Found' if github_token else 'Not found'}")
-    print(f"Environment variable GITHUB_TEST_REPO_URL: {'Found' if test_repo_url else 'Not found'}")
+
+    print(
+        f"Environment variable GITHUB_TOKEN: {'Found' if github_token else 'Not found'}"
+    )
+    print(
+        f"Environment variable GITHUB_TEST_REPO_URL: {'Found' if test_repo_url else 'Not found'}"
+    )
 
     # Priority 2: Config system fallback
     config_file_path = get_config_file_path()
     print(f"\nConfig file location: {config_file_path}")
-    print(f"Config file exists: {config_file_path.exists() if config_file_path else False}")
-    
+    print(
+        f"Config file exists: {config_file_path.exists() if config_file_path else False}"
+    )
+
     if not github_token:
         github_token = get_config_value("github", "token")
         print(f"Config file github.token: {'Found' if github_token else 'Not found'}")
     else:
         print("Config file github.token: Skipped (using environment variable)")
-        
+
     if not test_repo_url:
         test_repo_url = get_config_value("github", "test_repo_url")
-        print(f"Config file github.test_repo_url: {'Found' if test_repo_url else 'Not found'}")
+        print(
+            f"Config file github.test_repo_url: {'Found' if test_repo_url else 'Not found'}"
+        )
     else:
         print("Config file github.test_repo_url: Skipped (using environment variable)")
 
@@ -233,7 +241,7 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
             "  1. Set environment variable: set GITHUB_TOKEN=ghp_your_token_here\n"
             f"  2. Add to config file {config_file_path}:\n"
             "     [github]\n"
-            "     token = \"ghp_your_token_here\""
+            '     token = "ghp_your_token_here"'
         )
         pytest.skip(skip_msg)
 
@@ -248,13 +256,13 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
             "  1. Set environment variable: set GITHUB_TEST_REPO_URL=https://github.com/user/test-repo\n"
             f"  2. Add to config file {config_file_path}:\n"
             "     [github]\n"
-            "     test_repo_url = \"https://github.com/user/test-repo\""
+            '     test_repo_url = "https://github.com/user/test-repo"'
         )
         pytest.skip(skip_msg)
-    
+
     print(f"\n[OK] Configuration complete: Using token and repo URL")
     print(f"  Test repository: {test_repo_url}")
-    print("="*50)
+    print("=" * 50)
 
     # Clone the actual test repository
     git_dir = tmp_path / "test_repo"

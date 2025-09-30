@@ -439,6 +439,7 @@ class TestPullRequestManagerIntegration:
             except Exception as e:
                 print(f"[ERROR] Exception during PR creation: {e}")
                 import traceback
+
                 print(f"[ERROR] Traceback: {traceback.format_exc()}")
                 from typing import cast
 
