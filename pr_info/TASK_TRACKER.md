@@ -125,12 +125,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Prepare git commit message for Step 14
 
 ### Step 15: Update Tests for New Error Handling
-[ ] Update test_claude_code_api_error_handling.py expectations
-[ ] Remove tests for bare Exception handling if any exist
-[ ] Run full test suite to identify failures
-[ ] Fix test expectations (not implementation)
-[ ] Verify all tests pass
-[ ] Prepare git commit message for Step 15
+[x] Update test_claude_code_api_error_handling.py expectations
+[x] Remove tests for bare Exception handling if any exist
+[x] Run full test suite to identify failures
+[x] Fix test expectations (not implementation)
+[x] Verify all tests pass
+[x] Prepare git commit message for Step 15
 
 ---
 
