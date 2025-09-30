@@ -33,16 +33,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Write 8 unit tests for calculate_label_changes() covering:
   - Empty repo, create, update, delete, unchanged, preserve non-status
   - Partial match (5 of 10), all exist unchanged
-[ ] Implement apply_labels() orchestrator with dry_run support
-[ ] Add pytest fixtures to mock LabelsManager (Option B from decisions)
-[ ] Write 3 integration tests for apply_labels():
+[x] Implement apply_labels() orchestrator with dry_run support
+[x] Add pytest fixtures to mock LabelsManager (Option B from decisions)
+[x] Write 3 integration tests for apply_labels():
   - Success flow, dry-run mode, API error fails fast
-[ ] Add INFO level logging in apply_labels() only
-[ ] Ensure skip API calls for unchanged labels (idempotency)
-[ ] Implement strict deletion of obsolete status-* labels
-[ ] Ensure fail-fast on API errors (exit on first error)
-[ ] Run quality checks: pylint, pytest, mypy - fix all issues
-[ ] Prepare git commit message for Step 2
+[x] Add INFO level logging in apply_labels() only
+[x] Ensure skip API calls for unchanged labels (idempotency)
+[x] Implement strict deletion of obsolete status-* labels
+[x] Ensure fail-fast on API errors (exit on first error)
+[x] Run quality checks: pylint, pytest, mypy - fix all issues
+[x] Prepare git commit message for Step 2
 
 ### Step 3: Implement CLI Argument Parsing and Logging Setup
 [ ] Copy parse_arguments() from workflows/create_PR.py to workflows/define_labels.py

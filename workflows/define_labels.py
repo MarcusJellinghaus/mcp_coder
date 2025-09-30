@@ -8,6 +8,10 @@ to a GitHub repository, ensuring consistent label definitions across projects.
 
 import logging
 import re
+import sys
+from pathlib import Path
+
+from mcp_coder.utils.github_operations.labels_manager import LabelsManager
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -134,3 +138,102 @@ def calculate_label_changes(
             result['deleted'].append(name)
     
     return result
+
+
+def apply_labels(project_dir: Path, dry_run: bool = False) -> dict[str, list[str]]:
+    """Apply workflow labels to repository.
+    
+    Orchestrator function that:
+    1. Fetches existing labels from GitHub
+    2. Calculates required changes
+    3. Applies changes via LabelsManager API calls (unless dry_run=True)
+    4. Logs all actions at INFO level
+    5. Fails fast on any API error
+    
+    Args:
+        project_dir: Path to project directory (must be git repo)
+        dry_run: If True, only preview changes without applying
+    
+    Returns:
+        Dict with keys: 'created', 'updated', 'deleted', 'unchanged'
+        Each value is a list of label names
+        
+    Raises:
+        SystemExit: On API errors (exit code 1)
+        ValueError: On invalid project_dir or missing GitHub token
+    """
+    try:
+        # Initialize LabelsManager (validates token and repo connection)
+        labels_manager = LabelsManager(project_dir)
+    except (ValueError, Exception) as e:
+        logger.error(f"Failed to initialize LabelsManager: {e}")
+        sys.exit(1)
+    
+    # Fetch existing labels from GitHub
+    try:
+        existing_labels_data = labels_manager.get_labels()
+    except Exception as e:
+        logger.error(f"Failed to fetch existing labels: {e}")
+        sys.exit(1)
+    
+    # Convert LabelData list to tuple format for calculate_label_changes
+    existing_labels = [
+        (label['name'], label['color'], label['description'])
+        for label in existing_labels_data
+    ]
+    
+    # Calculate required changes
+    changes = calculate_label_changes(existing_labels, WORKFLOW_LABELS)
+    
+    # Preview mode - log and return without applying
+    if dry_run:
+        logger.info("DRY RUN MODE - Preview of changes:")
+        if changes['created']:
+            logger.info(f"  Would create {len(changes['created'])} labels: {', '.join(changes['created'])}")
+        if changes['updated']:
+            logger.info(f"  Would update {len(changes['updated'])} labels: {', '.join(changes['updated'])}")
+        if changes['deleted']:
+            logger.info(f"  Would delete {len(changes['deleted'])} labels: {', '.join(changes['deleted'])}")
+        if changes['unchanged']:
+            logger.info(f"  {len(changes['unchanged'])} labels unchanged")
+        return changes
+    
+    # Build lookup map for target label details
+    target_map = {
+        name: (color, description)
+        for name, color, description in WORKFLOW_LABELS
+    }
+    
+    # Apply changes - CREATE new labels
+    for label_name in changes['created']:
+        color, description = target_map[label_name]
+        try:
+            labels_manager.create_label(label_name, color, description)
+            logger.info(f"Created: {label_name}")
+        except Exception as e:
+            logger.error(f"Failed to create label '{label_name}': {e}")
+            sys.exit(1)
+    
+    # Apply changes - UPDATE existing labels
+    for label_name in changes['updated']:
+        color, description = target_map[label_name]
+        try:
+            labels_manager.update_label(label_name, color=color, description=description)
+            logger.info(f"Updated: {label_name}")
+        except Exception as e:
+            logger.error(f"Failed to update label '{label_name}': {e}")
+            sys.exit(1)
+    
+    # Apply changes - DELETE obsolete status-* labels
+    for label_name in changes['deleted']:
+        try:
+            labels_manager.delete_label(label_name)
+            logger.info(f"Deleted: {label_name}")
+        except Exception as e:
+            logger.error(f"Failed to delete label '{label_name}': {e}")
+            sys.exit(1)
+    
+    # Unchanged labels - skip API calls (idempotent)
+    # No logging for unchanged labels to reduce noise
+    
+    return changes
