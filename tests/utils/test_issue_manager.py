@@ -933,3 +933,239 @@ class TestIssueManagerUnit:
 
             with pytest.raises(GithubException):
                 manager.set_labels(123, "bug")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_add_comment_success(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test successful comment addition."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock GitHub API responses
+        mock_comment = MagicMock()
+        mock_comment.id = 456789
+        mock_comment.body = "This is a test comment"
+        mock_comment.user.login = "testuser"
+        mock_comment.html_url = (
+            "https://github.com/test/repo/issues/123#issuecomment-456789"
+        )
+        mock_comment.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_comment.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+
+        mock_issue = MagicMock()
+        mock_issue.create_comment.return_value = mock_comment
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.add_comment(123, "This is a test comment")
+
+            assert result["id"] == 456789
+            assert result["body"] == "This is a test comment"
+            assert result["user"] == "testuser"
+            assert (
+                result["url"]
+                == "https://github.com/test/repo/issues/123#issuecomment-456789"
+            )
+
+            mock_issue.create_comment.assert_called_once_with("This is a test comment")
+
+    def test_add_comment_empty_body(self, tmp_path: Path) -> None:
+        """Test that empty comment body returns empty dict."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.add_comment(123, "")
+            assert not result or result["id"] == 0
+
+            result = manager.add_comment(123, "   ")
+            assert not result or result["id"] == 0
+
+    def test_add_comment_invalid_issue_number(self, tmp_path: Path) -> None:
+        """Test adding comment with invalid issue number."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.add_comment(0, "Test comment")
+            assert not result or result["id"] == 0
+
+            result = manager.add_comment(-1, "Test comment")
+            assert not result or result["id"] == 0
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_add_comment_auth_error_raises(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test that auth errors are raised for add_comment."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_issue = MagicMock()
+        mock_issue.create_comment.side_effect = GithubException(
+            403, {"message": "Forbidden"}, None
+        )
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            with pytest.raises(GithubException):
+                manager.add_comment(123, "Test comment")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_get_comments_success(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test successful retrieval of comments."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock comment objects
+        mock_comment1 = MagicMock()
+        mock_comment1.id = 111
+        mock_comment1.body = "First comment"
+        mock_comment1.user.login = "user1"
+        mock_comment1.html_url = (
+            "https://github.com/test/repo/issues/123#issuecomment-111"
+        )
+        mock_comment1.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_comment1.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+
+        mock_comment2 = MagicMock()
+        mock_comment2.id = 222
+        mock_comment2.body = "Second comment"
+        mock_comment2.user.login = "user2"
+        mock_comment2.html_url = (
+            "https://github.com/test/repo/issues/123#issuecomment-222"
+        )
+        mock_comment2.created_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+        mock_comment2.updated_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+
+        mock_issue = MagicMock()
+        mock_issue.get_comments.return_value = [mock_comment1, mock_comment2]
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.get_comments(123)
+
+            assert len(result) == 2
+            assert result[0]["id"] == 111
+            assert result[0]["body"] == "First comment"
+            assert result[0]["user"] == "user1"
+            assert result[1]["id"] == 222
+            assert result[1]["body"] == "Second comment"
+            assert result[1]["user"] == "user2"
+
+            mock_issue.get_comments.assert_called_once()
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_get_comments_empty_list(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test getting comments from issue with no comments."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_issue = MagicMock()
+        mock_issue.get_comments.return_value = []
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.get_comments(123)
+
+            assert result == []
+            mock_issue.get_comments.assert_called_once()
+
+    def test_get_comments_invalid_issue_number(self, tmp_path: Path) -> None:
+        """Test getting comments with invalid issue number."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.get_comments(0)
+            assert result == []
+
+            result = manager.get_comments(-1)
+            assert result == []
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_get_comments_auth_error_raises(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test that auth errors are raised for get_comments."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_issue = MagicMock()
+        mock_issue.get_comments.side_effect = GithubException(
+            401, {"message": "Unauthorized"}, None
+        )
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            with pytest.raises(GithubException):
+                manager.get_comments(123)

@@ -241,6 +241,186 @@ class IssueManager(BaseGitHubManager):
             )
 
     @log_function_call
+    def add_comment(self, issue_number: int, body: str) -> CommentData:
+        """Add a comment to an issue.
+
+        Args:
+            issue_number: Issue number to add comment to
+            body: Comment text (required, cannot be empty)
+
+        Returns:
+            CommentData with created comment information, or empty dict on error
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> comment = manager.add_comment(123, "This is a test comment")
+            >>> print(f"Created comment {comment['id']}")
+        """
+        # Validate issue number
+        if not self._validate_issue_number(issue_number):
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+
+        # Validate body
+        if not body or not body.strip():
+            logger.error("Comment body cannot be empty")
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+
+        try:
+            # Get issue and create comment
+            github_issue = repo.get_issue(issue_number)
+            github_comment = github_issue.create_comment(body.strip())
+
+            # Convert to CommentData
+            return CommentData(
+                id=github_comment.id,
+                body=github_comment.body or "",
+                user=github_comment.user.login if github_comment.user else None,
+                created_at=(
+                    github_comment.created_at.isoformat()
+                    if github_comment.created_at
+                    else None
+                ),
+                updated_at=(
+                    github_comment.updated_at.isoformat()
+                    if github_comment.updated_at
+                    else None
+                ),
+                url=github_comment.html_url,
+            )
+
+        except GithubException as e:
+            # Raise for auth/permission errors
+            if e.status in (401, 403):
+                logger.error(
+                    f"Authentication/permission error adding comment to issue: {e}"
+                )
+                raise
+            # Log and return empty dict for other errors
+            logger.error(f"Failed to add comment to issue {issue_number}: {e}")
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+        except Exception as e:
+            logger.error(
+                f"Unexpected error adding comment to issue {issue_number}: {e}"
+            )
+            return CommentData(
+                id=0,
+                body="",
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+            )
+
+    @log_function_call
+    def get_comments(self, issue_number: int) -> List[CommentData]:
+        """Get all comments on an issue.
+
+        Args:
+            issue_number: Issue number to get comments from
+
+        Returns:
+            List of CommentData dictionaries with comment information, or empty list on error
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> comments = manager.get_comments(123)
+            >>> for comment in comments:
+            ...     print(f"{comment['user']}: {comment['body']}")
+        """
+        # Validate issue number
+        if not self._validate_issue_number(issue_number):
+            return []
+
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return []
+
+        try:
+            # Get issue and comments
+            github_issue = repo.get_issue(issue_number)
+            github_comments = github_issue.get_comments()
+
+            # Convert to CommentData list
+            comments: List[CommentData] = []
+            for comment in github_comments:
+                comments.append(
+                    CommentData(
+                        id=comment.id,
+                        body=comment.body or "",
+                        user=comment.user.login if comment.user else None,
+                        created_at=(
+                            comment.created_at.isoformat()
+                            if comment.created_at
+                            else None
+                        ),
+                        updated_at=(
+                            comment.updated_at.isoformat()
+                            if comment.updated_at
+                            else None
+                        ),
+                        url=comment.html_url,
+                    )
+                )
+
+            return comments
+
+        except GithubException as e:
+            # Raise for auth/permission errors
+            if e.status in (401, 403):
+                logger.error(
+                    f"Authentication/permission error getting comments from issue: {e}"
+                )
+                raise
+            # Log and return empty list for other errors
+            logger.error(f"Failed to get comments from issue {issue_number}: {e}")
+            return []
+        except Exception as e:
+            logger.error(
+                f"Unexpected error getting comments from issue {issue_number}: {e}"
+            )
+            return []
+
+    @log_function_call
     def close_issue(self, issue_number: int) -> IssueData:
         """Close an issue.
 
