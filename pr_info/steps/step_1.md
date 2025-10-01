@@ -20,7 +20,7 @@ class LLMResponseDict(TypedDict):
     version: str           # Serializer version (e.g., "1.0")
     timestamp: str         # ISO format timestamp
     text: str              # The response text
-    session_id: str        # Session ID for continuation
+    session_id: str | None # Session ID for continuation (None if unavailable)
     method: str            # "cli" or "api"
     provider: str          # "claude"
     raw_response: dict     # Complete unmodified CLI JSON or API response
@@ -86,7 +86,8 @@ class LLMResponseDict(TypedDict):
         version: Serialization format version (e.g., "1.0")
         timestamp: ISO format timestamp when response was created
         text: The actual text response from the LLM
-        session_id: Unique session identifier for conversation continuity
+        session_id: Unique session identifier for conversation continuity.
+                   None if session ID is not available or not provided by LLM.
         method: LLM communication method ("cli" or "api")
         provider: LLM provider name (e.g., "claude")
         raw_response: Complete unmodified response data from CLI JSON or API
@@ -112,7 +113,7 @@ class LLMResponseDict(TypedDict):
     version: str
     timestamp: str
     text: str
-    session_id: str
+    session_id: str | None
     method: str
     provider: str
     raw_response: dict
@@ -190,7 +191,9 @@ def test_llm_response_dict_field_types():
     assert hints["version"] == str
     assert hints["timestamp"] == str
     assert hints["text"] == str
-    assert hints["session_id"] == str
+    # session_id is str | None (Optional[str])
+    import typing
+    assert hints["session_id"] == str | None or hints["session_id"] == typing.Union[str, None]
     assert hints["method"] == str
     assert hints["provider"] == str
     assert hints["raw_response"] == dict

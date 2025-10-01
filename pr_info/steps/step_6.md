@@ -240,6 +240,7 @@ I am implementing Step 6 of the LLM Session Management implementation plan.
 Please review:
 - pr_info/steps/summary.md for architectural context
 - pr_info/steps/step_5.md for the interface routing layer
+- pr_info/steps/decisions.md for architecture decisions
 
 For Step 6, I need to modify src/mcp_coder/llm_interface.py:
 

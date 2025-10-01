@@ -359,6 +359,7 @@ Please review:
 - pr_info/steps/summary.md for architectural context
 - pr_info/steps/step_1.md for LLMResponseDict definition
 - pr_info/steps/step_3-4.md for provider implementations
+- pr_info/steps/decisions.md for architecture decisions
 
 For Step 7, I need to modify src/mcp_coder/llm_interface.py:
 

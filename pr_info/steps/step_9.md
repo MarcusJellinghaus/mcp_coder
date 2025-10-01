@@ -542,6 +542,7 @@ I am implementing Step 9 (final step) of the LLM Session Management implementati
 
 Please review:
 - pr_info/steps/summary.md for complete architectural context
+- pr_info/steps/decisions.md for architecture decisions
 - All previous steps (1-8) for implementation details
 
 For Step 9, I need to create tests/integration/test_llm_sessions.py:

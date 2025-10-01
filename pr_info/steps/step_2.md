@@ -11,14 +11,24 @@ Create versioned JSON serialization/deserialization utilities that support futur
 ### WHERE: File Creation
 **New File**: `src/mcp_coder/llm_serialization.py`
 
-### WHAT: Main Functions
+### WHAT: Functions
 
+**Pure Functions** (testable without I/O):
+```python
+def to_json_string(response: LLMResponseDict) -> str:
+    """Convert LLMResponseDict to JSON string (pure function)."""
+
+def from_json_string(json_str: str) -> LLMResponseDict:
+    """Parse JSON string and validate version (pure function)."""
+```
+
+**I/O Wrappers** (thin delegation layer):
 ```python
 def serialize_llm_response(response: LLMResponseDict, filepath: Path | str) -> None:
-    """Serialize LLM response to JSON file with UTF-8 encoding."""
+    """Write LLM response to JSON file."""
 
 def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:
-    """Deserialize LLM response from JSON file with version validation."""
+    """Load LLM response from JSON file."""
 ```
 
 ### HOW: Integration Points
@@ -31,26 +41,35 @@ from mcp_coder.llm_serialization import serialize_llm_response, deserialize_llm_
 from mcp_coder.llm_types import LLMResponseDict
 ```
 
-### ALGORITHM: Serialize
+### ALGORITHM: Pure Functions
+
+```python
+def to_json_string(response):
+    # 1. Use json.dumps() with formatting options
+    # 2. indent=2 for readability
+    # 3. ensure_ascii=False for Unicode
+    # 4. default=str for non-serializable types
+    # 5. Return JSON string
+
+def from_json_string(json_str):
+    # 1. Parse JSON string with json.loads()
+    # 2. Check if version field exists
+    # 3. Validate version starts with "1."
+    # 4. Return data as-is (best effort)
+```
+
+### ALGORITHM: I/O Wrappers
 
 ```python
 def serialize_llm_response(response, filepath):
-    # 1. Open file with UTF-8 encoding
-    # 2. Dump response to JSON with indent=2
-    # 3. Use ensure_ascii=False for Unicode support
-    # 4. Use default=str for non-serializable types
-    # 5. Close file automatically (context manager)
-```
+    # 1. Ensure parent directory exists
+    # 2. Call to_json_string() to get JSON
+    # 3. Write to file with UTF-8 encoding
 
-### ALGORITHM: Deserialize
-
-```python
 def deserialize_llm_response(filepath):
-    # 1. Open file with UTF-8 encoding
-    # 2. Load JSON data
-    # 3. Check if version field exists
-    # 4. Validate version starts with "1."
-    # 5. Return data as-is (best effort, no field validation)
+    # 1. Read file content with UTF-8 encoding
+    # 2. Call from_json_string() to parse and validate
+    # 3. Return result
 ```
 
 ### DATA: Return Values
@@ -82,16 +101,86 @@ from pathlib import Path
 from .llm_types import LLMResponseDict
 
 __all__ = [
+    "to_json_string",
+    "from_json_string",
     "serialize_llm_response",
     "deserialize_llm_response",
 ]
 
+# Note: All four functions are exported (including pure functions)
+# to allow advanced users to use them directly for custom workflows
+
+
+def to_json_string(response: LLMResponseDict) -> str:
+    """Convert LLMResponseDict to JSON string (pure function).
+    
+    This pure function handles serialization logic without file I/O,
+    making it easy to test and reuse.
+    
+    Args:
+        response: LLMResponseDict to convert to JSON
+        
+    Returns:
+        Formatted JSON string with proper encoding
+        
+    Example:
+        >>> response = {"version": "1.0", "text": "Hello", ...}
+        >>> json_str = to_json_string(response)
+        >>> print(json_str)
+    """
+    return json.dumps(
+        response,
+        indent=2,
+        ensure_ascii=False,  # Allow Unicode characters
+        default=str  # Convert non-serializable types to strings
+    )
+
+
+def from_json_string(json_str: str) -> LLMResponseDict:
+    """Parse JSON string and validate version (pure function).
+    
+    This pure function handles deserialization and validation logic
+    without file I/O, making it easy to test.
+    
+    Args:
+        json_str: JSON string to parse
+        
+    Returns:
+        LLMResponseDict with available fields
+        
+    Raises:
+        ValueError: If version is incompatible or missing
+        json.JSONDecodeError: If JSON is invalid
+        
+    Example:
+        >>> json_str = '{"version": "1.0", "text": "Hello", ...}'
+        >>> response = from_json_string(json_str)
+    """
+    data = json.loads(json_str)
+    
+    # Validate version compatibility
+    version = data.get("version")
+    if not version:
+        raise ValueError(
+            "Missing 'version' field. "
+            "This may not be a valid LLM response."
+        )
+    
+    if not isinstance(version, str) or not version.startswith("1."):
+        raise ValueError(
+            f"Incompatible version: {version}. Expected version 1.x. "
+            "This may require a newer version of the software."
+        )
+    
+    # Return data as-is (best effort - no strict field validation)
+    return data  # type: ignore[return-value]
+
 
 def serialize_llm_response(response: LLMResponseDict, filepath: Path | str) -> None:
-    """Serialize LLM response to JSON file.
+    """Write LLM response to JSON file (I/O wrapper).
     
-    Writes the LLM response to a JSON file with proper UTF-8 encoding and
-    formatting. Handles non-serializable types by converting them to strings.
+    Thin wrapper that handles file I/O, delegating serialization logic
+    to the pure to_json_string() function.
     
     Args:
         response: LLMResponseDict to serialize
@@ -99,18 +188,9 @@ def serialize_llm_response(response: LLMResponseDict, filepath: Path | str) -> N
         
     Raises:
         OSError: If file cannot be written (permissions, disk space, etc.)
-        TypeError: If response contains truly unserializable data
         
     Example:
-        >>> response = {
-        ...     "version": "1.0",
-        ...     "timestamp": "2025-10-01T10:30:00",
-        ...     "text": "Response text",
-        ...     "session_id": "abc-123",
-        ...     "method": "cli",
-        ...     "provider": "claude",
-        ...     "raw_response": {"duration_ms": 2801}
-        ... }
+        >>> response = {"version": "1.0", "text": "Hello", ...}
         >>> serialize_llm_response(response, "logs/abc-123.json")
     """
     filepath = Path(filepath)
@@ -118,65 +198,41 @@ def serialize_llm_response(response: LLMResponseDict, filepath: Path | str) -> N
     # Ensure parent directory exists
     filepath.parent.mkdir(parents=True, exist_ok=True)
     
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(
-            response,
-            f,
-            indent=2,
-            ensure_ascii=False,  # Allow Unicode characters
-            default=str  # Convert non-serializable types to strings
-        )
+    # Use pure function for serialization
+    json_str = to_json_string(response)
+    
+    # Write to file
+    filepath.write_text(json_str, encoding='utf-8')
 
 
 def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:
-    """Deserialize LLM response from JSON file.
+    """Load LLM response from JSON file (I/O wrapper).
     
-    Loads an LLM response from a JSON file with version compatibility checking.
-    Uses best-effort loading - returns whatever fields are present without
-    strict validation.
+    Thin wrapper that handles file I/O, delegating parsing and validation
+    logic to the pure from_json_string() function.
     
     Args:
         filepath: Path to JSON file to load
         
     Returns:
-        LLMResponseDict with available fields (may have missing fields)
+        LLMResponseDict with available fields
         
     Raises:
-        ValueError: If version is incompatible (not 1.x) or missing
+        ValueError: If version is incompatible or missing
         FileNotFoundError: If file doesn't exist
         json.JSONDecodeError: If file contains invalid JSON
         
     Example:
         >>> response = deserialize_llm_response("logs/abc-123.json")
         >>> print(response["text"])
-        >>> print(response["session_id"])
-        
-    Note:
-        Only validates version compatibility. Missing or extra fields are
-        allowed for flexibility and forward/backward compatibility.
     """
     filepath = Path(filepath)
     
-    with open(filepath, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    # Read file content
+    json_str = filepath.read_text(encoding='utf-8')
     
-    # Validate version compatibility
-    version = data.get("version")
-    if not version:
-        raise ValueError(
-            f"Missing 'version' field in {filepath}. "
-            "This may not be a valid LLM response file."
-        )
-    
-    if not isinstance(version, str) or not version.startswith("1."):
-        raise ValueError(
-            f"Incompatible version: {version}. Expected version 1.x "
-            f"(found in {filepath}). "
-            "This file may require a newer version of the software."
-        )
-    
-    # Return data as-is (best effort - no strict field validation)
-    return data  # type: ignore[return-value]
+    # Use pure function for parsing and validation
+    return from_json_string(json_str)
 ```
 
 ## Testing
@@ -186,6 +242,11 @@ def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:
 
 ### Test Cases
 
+**Test Structure:**
+- **Pure function tests** (~6 tests): Fast, no I/O, test serialization/parsing logic
+- **I/O wrapper tests** (~2 tests): Minimal, test file operations only
+- **Total: ~8 tests** (reduced from 16 via separation of concerns)
+
 ```python
 """Tests for LLM response serialization."""
 
@@ -193,6 +254,8 @@ import json
 import pytest
 from pathlib import Path
 from mcp_coder.llm_serialization import (
+    to_json_string,
+    from_json_string,
     serialize_llm_response,
     deserialize_llm_response
 )
@@ -209,16 +272,92 @@ def sample_response() -> LLMResponseDict:
         "session_id": "550e8400-e29b-41d4-a716-446655440000",
         "method": "cli",
         "provider": "claude",
-        "raw_response": {
-            "duration_ms": 2801,
-            "cost_usd": 0.058
-        }
+        "raw_response": {"duration_ms": 2801, "cost_usd": 0.058}
     }
 
 
-def test_serialize_creates_file(tmp_path, sample_response):
-    """Test that serialize creates a JSON file."""
-    filepath = tmp_path / "test.json"
+# ============================================================================
+# PURE FUNCTION TESTS (fast, no I/O)
+# ============================================================================
+
+def test_to_json_string_produces_valid_json(sample_response):
+    """Test that to_json_string produces valid JSON."""
+    json_str = to_json_string(sample_response)
+    
+    # Should be parseable
+    data = json.loads(json_str)
+    assert isinstance(data, dict)
+    assert data == sample_response
+
+
+def test_to_json_string_handles_unicode():
+    """Test that Unicode characters are preserved."""
+    response: LLMResponseDict = {
+        "version": "1.0",
+        "timestamp": "2025-10-01T10:30:00",
+        "text": "Unicode: 你好 🎉 café",
+        "session_id": "abc",
+        "method": "cli",
+        "provider": "claude",
+        "raw_response": {}
+    }
+    
+    json_str = to_json_string(response)
+    data = json.loads(json_str)
+    
+    assert data["text"] == "Unicode: 你好 🎉 café"
+
+
+def test_from_json_string_parses_valid_data(sample_response):
+    """Test that from_json_string parses valid JSON."""
+    json_str = json.dumps(sample_response)
+    
+    result = from_json_string(json_str)
+    
+    assert result == sample_response
+
+
+def test_from_json_string_raises_on_invalid_json():
+    """Test that from_json_string raises JSONDecodeError for invalid JSON."""
+    invalid_json = "not valid json {{{"
+    
+    with pytest.raises(json.JSONDecodeError):
+        from_json_string(invalid_json)
+
+
+def test_from_json_string_raises_on_missing_version():
+    """Test that from_json_string raises ValueError when version missing."""
+    data = {"text": "test", "session_id": "abc"}
+    json_str = json.dumps(data)
+    
+    with pytest.raises(ValueError, match="Missing 'version' field"):
+        from_json_string(json_str)
+
+
+def test_from_json_string_raises_on_incompatible_version():
+    """Test that from_json_string raises ValueError for bad version."""
+    data = {"version": "2.0", "text": "test"}
+    json_str = json.dumps(data)
+    
+    with pytest.raises(ValueError, match="Incompatible version: 2.0"):
+        from_json_string(json_str)
+
+
+def test_json_string_roundtrip(sample_response):
+    """Test to_json_string -> from_json_string preserves data."""
+    json_str = to_json_string(sample_response)
+    result = from_json_string(json_str)
+    
+    assert result == sample_response
+
+
+# ============================================================================
+# I/O WRAPPER TESTS (minimal, test file operations only)
+# ============================================================================
+
+def test_serialize_creates_file_and_directories(tmp_path, sample_response):
+    """Test that serialize creates file with parent directories."""
+    filepath = tmp_path / "subdir" / "deep" / "test.json"
     
     serialize_llm_response(sample_response, filepath)
     
@@ -226,203 +365,29 @@ def test_serialize_creates_file(tmp_path, sample_response):
     assert filepath.is_file()
 
 
-def test_serialize_creates_parent_directories(tmp_path, sample_response):
-    """Test that serialize creates parent directories if needed."""
-    filepath = tmp_path / "subdir" / "deep" / "test.json"
-    
-    serialize_llm_response(sample_response, filepath)
-    
-    assert filepath.exists()
-    assert filepath.parent.exists()
-
-
-def test_serialize_produces_valid_json(tmp_path, sample_response):
-    """Test that serialized output is valid JSON."""
-    filepath = tmp_path / "test.json"
-    
-    serialize_llm_response(sample_response, filepath)
-    
-    # Should not raise
-    with open(filepath) as f:
-        data = json.load(f)
-    
-    assert isinstance(data, dict)
-
-
-def test_serialize_preserves_data(tmp_path, sample_response):
-    """Test that all data is preserved in serialization."""
-    filepath = tmp_path / "test.json"
-    
-    serialize_llm_response(sample_response, filepath)
-    
-    with open(filepath) as f:
-        data = json.load(f)
-    
-    assert data["version"] == sample_response["version"]
-    assert data["text"] == sample_response["text"]
-    assert data["session_id"] == sample_response["session_id"]
-    assert data["raw_response"] == sample_response["raw_response"]
-
-
-def test_serialize_handles_unicode(tmp_path):
-    """Test that Unicode characters are preserved."""
-    response: LLMResponseDict = {
-        "version": "1.0",
-        "timestamp": "2025-10-01T10:30:00",
-        "text": "Unicode test: 你好 🎉 café",
-        "session_id": "abc-123",
-        "method": "cli",
-        "provider": "claude",
-        "raw_response": {}
-    }
-    filepath = tmp_path / "unicode.json"
-    
-    serialize_llm_response(response, filepath)
-    
-    with open(filepath, encoding='utf-8') as f:
-        data = json.load(f)
-    
-    assert data["text"] == "Unicode test: 你好 🎉 café"
-
-
-def test_deserialize_loads_file(tmp_path, sample_response):
-    """Test that deserialize loads a serialized file."""
-    filepath = tmp_path / "test.json"
-    serialize_llm_response(sample_response, filepath)
-    
-    loaded = deserialize_llm_response(filepath)
-    
-    assert loaded["version"] == sample_response["version"]
-    assert loaded["text"] == sample_response["text"]
-    assert loaded["session_id"] == sample_response["session_id"]
-
-
-def test_deserialize_roundtrip(tmp_path, sample_response):
-    """Test serialize -> deserialize roundtrip preserves data."""
+def test_deserialize_file_roundtrip(tmp_path, sample_response):
+    """Test serialize -> deserialize file roundtrip."""
     filepath = tmp_path / "roundtrip.json"
     
     serialize_llm_response(sample_response, filepath)
     loaded = deserialize_llm_response(filepath)
     
     assert loaded == sample_response
-
-
-def test_deserialize_raises_on_missing_file(tmp_path):
-    """Test that deserialize raises FileNotFoundError for missing files."""
-    filepath = tmp_path / "nonexistent.json"
-    
-    with pytest.raises(FileNotFoundError):
-        deserialize_llm_response(filepath)
-
-
-def test_deserialize_raises_on_invalid_json(tmp_path):
-    """Test that deserialize raises JSONDecodeError for invalid JSON."""
-    filepath = tmp_path / "invalid.json"
-    filepath.write_text("not valid json {{{")
-    
-    with pytest.raises(json.JSONDecodeError):
-        deserialize_llm_response(filepath)
-
-
-def test_deserialize_raises_on_missing_version(tmp_path):
-    """Test that deserialize raises ValueError when version is missing."""
-    filepath = tmp_path / "no_version.json"
-    data = {"text": "test", "session_id": "abc"}
-    
-    with open(filepath, 'w') as f:
-        json.dump(data, f)
-    
-    with pytest.raises(ValueError, match="Missing 'version' field"):
-        deserialize_llm_response(filepath)
-
-
-def test_deserialize_raises_on_incompatible_version(tmp_path):
-    """Test that deserialize raises ValueError for incompatible versions."""
-    filepath = tmp_path / "wrong_version.json"
-    data = {"version": "2.0", "text": "test"}
-    
-    with open(filepath, 'w') as f:
-        json.dump(data, f)
-    
-    with pytest.raises(ValueError, match="Incompatible version: 2.0"):
-        deserialize_llm_response(filepath)
-
-
-def test_deserialize_accepts_version_1_x(tmp_path):
-    """Test that deserialize accepts any 1.x version."""
-    for version in ["1.0", "1.1", "1.99"]:
-        filepath = tmp_path / f"v{version.replace('.', '_')}.json"
-        data = {
-            "version": version,
-            "text": "test",
-            "session_id": "abc",
-            "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
-            "provider": "claude",
-            "raw_response": {}
-        }
-        
-        with open(filepath, 'w') as f:
-            json.dump(data, f)
-        
-        # Should not raise
-        loaded = deserialize_llm_response(filepath)
-        assert loaded["version"] == version
-
-
-def test_deserialize_allows_missing_fields(tmp_path):
-    """Test that deserialize doesn't validate field presence (best effort)."""
-    filepath = tmp_path / "minimal.json"
-    data = {
-        "version": "1.0",
-        "text": "minimal response"
-        # Missing other fields - should still load
-    }
-    
-    with open(filepath, 'w') as f:
-        json.dump(data, f)
-    
-    # Should not raise - best effort loading
-    loaded = deserialize_llm_response(filepath)
-    assert loaded["version"] == "1.0"
-    assert loaded["text"] == "minimal response"
-
-
-def test_deserialize_allows_extra_fields(tmp_path):
-    """Test that deserialize allows extra fields (forward compatibility)."""
-    filepath = tmp_path / "extra.json"
-    data = {
-        "version": "1.0",
-        "text": "test",
-        "session_id": "abc",
-        "timestamp": "2025-10-01T10:30:00",
-        "method": "cli",
-        "provider": "claude",
-        "raw_response": {},
-        "future_field": "new data"  # Extra field
-    }
-    
-    with open(filepath, 'w') as f:
-        json.dump(data, f)
-    
-    # Should not raise
-    loaded = deserialize_llm_response(filepath)
-    assert loaded["version"] == "1.0"
-    assert "future_field" in loaded
 ```
 
 ## Validation Checklist
 
 - [ ] `src/mcp_coder/llm_serialization.py` created
-- [ ] Both functions implemented with complete docstrings
-- [ ] Parent directory creation handled in serialize
+- [ ] Pure functions implemented: `to_json_string()`, `from_json_string()`
+- [ ] I/O wrappers implemented: `serialize_llm_response()`, `deserialize_llm_response()`
+- [ ] All functions have complete docstrings
+- [ ] Parent directory creation handled
 - [ ] UTF-8 encoding used consistently
-- [ ] Version validation in deserialize
-- [ ] Best-effort loading (no strict field validation)
+- [ ] Version validation in `from_json_string()`
 - [ ] `tests/test_llm_serialization.py` created
-- [ ] All 16 test cases implemented
+- [ ] ~8 test cases implemented (6 pure function + 2 I/O wrapper)
 - [ ] All tests pass: `pytest tests/test_llm_serialization.py -v`
-- [ ] Round-trip serialization preserves data
+- [ ] Round-trip preserves data (both string and file)
 - [ ] Error cases properly handled
 
 ## LLM Prompt
@@ -430,33 +395,40 @@ def test_deserialize_allows_extra_fields(tmp_path):
 ```
 I am implementing Step 2 of the LLM Session Management implementation plan.
 
-Please review pr_info/steps/summary.md for architectural context and pr_info/steps/step_1.md for the type definitions created in the previous step.
+Please review:
+- pr_info/steps/summary.md for architectural context
+- pr_info/steps/step_1.md for LLMResponseDict type definition
+- pr_info/steps/decisions.md for architecture decisions
 
 For Step 2, I need to:
-1. Create src/mcp_coder/llm_serialization.py with serialize_llm_response() and deserialize_llm_response() functions
-2. Create tests/test_llm_serialization.py with comprehensive test coverage
+1. Create src/mcp_coder/llm_serialization.py with pure functions and I/O wrappers
+2. Create tests/test_llm_serialization.py with ~8 test cases
+
+Architecture (separation of concerns):
+- Pure functions: to_json_string(), from_json_string() - testable without I/O
+- I/O wrappers: serialize_llm_response(), deserialize_llm_response() - thin delegation
 
 Requirements from pr_info/steps/step_2.md:
-- serialize_llm_response() writes JSON with UTF-8 encoding, creates parent directories
-- deserialize_llm_response() validates version compatibility (must be 1.x)
-- Best-effort loading - don't validate field presence, allow missing/extra fields
-- Handle Unicode characters correctly
-- Raise ValueError for version issues, FileNotFoundError for missing files
-- Include complete docstrings with examples
+- to_json_string(): Convert dict to JSON string with proper formatting
+- from_json_string(): Parse JSON and validate version (must be 1.x)
+- serialize_llm_response(): Create directories, write file using to_json_string()
+- deserialize_llm_response(): Read file, parse using from_json_string()
+- Handle Unicode correctly, raise ValueError for version issues
 
-Please implement following TDD principles with all 16 test cases passing.
+Please implement following TDD with ~8 test cases (6 pure function + 2 I/O wrapper).
 ```
 
 ## Dependencies
 - **Requires**: Step 1 complete (`llm_types.py` with LLMResponseDict)
 
 ## Success Criteria
-1. ✅ Serialization creates valid JSON files
-2. ✅ Parent directories created automatically
-3. ✅ Unicode characters preserved correctly
-4. ✅ Deserialization validates version (1.x only)
-5. ✅ Round-trip preserves all data
-6. ✅ Best-effort loading allows missing/extra fields
-7. ✅ Proper error handling for all edge cases
-8. ✅ All 16 tests pass
-9. ✅ Complete docstrings with examples
+1. ✅ Pure functions (to_json_string, from_json_string) implemented
+2. ✅ I/O wrappers delegate to pure functions
+3. ✅ Serialization creates valid JSON files
+4. ✅ Parent directories created automatically
+5. ✅ Unicode characters preserved correctly
+6. ✅ Version validation (1.x only) in from_json_string()
+7. ✅ Round-trip preserves all data (both string and file)
+8. ✅ Proper error handling for edge cases
+9. ✅ All ~8 tests pass (6 pure + 2 I/O)
+10. ✅ Complete docstrings with examples

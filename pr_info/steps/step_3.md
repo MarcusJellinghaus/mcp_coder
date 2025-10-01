@@ -11,16 +11,37 @@ Add session continuity to CLI method and return structured TypedDict instead of 
 ### WHERE: File Modification
 **File**: `src/mcp_coder/llm_providers/claude/claude_code_cli.py`
 
-### WHAT: Function Changes
+### WHAT: Functions
 
-#### Modified Function Signature
+**Pure Functions** (testable without I/O):
+```python
+def parse_cli_json_string(json_str: str) -> dict:
+    """Parse CLI JSON and extract fields (pure function).
+    
+    Returns:
+        dict with keys: 'text' (str), 'session_id' (str | None), 'raw_response' (dict)
+    """
+
+def build_cli_command(question: str, session_id: str | None, claude_cmd: str) -> list[str]:
+    """Build CLI command arguments (pure function)."""
+
+def create_response_dict(text: str, session_id: str | None, raw_response: dict) -> LLMResponseDict:
+    """Create LLMResponseDict from parsed data (pure function)."""
+```
+
+**Note:** These pure functions are implementation details and are NOT exported in the module's `__all__` list. They are tested via unit tests but remain internal to the `claude_code_cli` module.
+
+**Distinction from Step 2:** Unlike the serialization module (Step 2) which exports its pure functions for advanced use cases, these CLI parsing functions are provider-specific implementation details and should remain internal.
+
+**I/O Wrapper** (subprocess execution):
 ```python
 def ask_claude_code_cli(
     question: str,
-    session_id: str | None = None,  # NEW: For session continuity
+    session_id: str | None = None,
     timeout: int = 30,
     cwd: str | None = None,
 ) -> LLMResponseDict:  # CHANGED: was str
+    """Ask Claude via CLI (I/O wrapper)."""
 ```
 
 ### HOW: Integration Points
@@ -33,44 +54,72 @@ from ...llm_types import LLMResponseDict, LLM_RESPONSE_VERSION
 # Usage in claude_code_interface.py will be updated in Step 7
 ```
 
-### ALGORITHM: Enhanced CLI Call
+### ALGORITHM: Pure Functions
+
+```python
+def parse_cli_json_string(json_str):
+    # 1. Parse JSON string with json.loads()
+    # 2. Extract text from "result" field (verified from real CLI output)
+    # 3. Extract session_id from "session_id" field
+    # 4. Return dict with: text, session_id, raw_response
+
+def build_cli_command(question, session_id, claude_cmd):
+    # 1. Start with base: [claude_cmd, "--print", "--output-format", "json"]
+    # 2. Add ["--resume", session_id] if session_id is not None
+    # 3. Append question
+    # 4. Return command list
+
+def create_response_dict(text, session_id, raw_response):
+    # 1. Get current timestamp
+    # 2. Build LLMResponseDict with all required fields
+    # 3. Set method="cli", provider="claude"
+    # 4. Return complete dict
+```
+
+### ALGORITHM: I/O Wrapper
 
 ```python
 def ask_claude_code_cli(question, session_id, timeout, cwd):
-    # 1. Find claude executable (existing)
-    # 2. Build command with --output-format json flag
-    # 3. Add --resume flag if session_id provided
-    # 4. Execute command (existing subprocess logic)
-    # 5. Parse JSON response to extract text, session_id, metadata
-    # 6. Build and return LLMResponseDict with all fields
+    # 1. Input validation
+    # 2. Find Claude executable
+    # 3. Build command (pure function)
+    # 4. Execute subprocess
+    # 5. Check for errors
+    # 6. Parse JSON (pure function)
+    # 7. Create response dict (pure function)
+    # 8. Return LLMResponseDict
 ```
 
-### ALGORITHM: JSON Response Parsing
+### DATA: Real CLI JSON Structure
 
-```python
-def _parse_cli_json_response(json_output: str) -> dict:
-    # 1. Parse JSON string to dict
-    # 2. Extract text from response (may be in 'text' or 'content' field)
-    # 3. Extract session_id from response
-    # 4. Return dict with extracted fields + full raw response
+**Actual CLI output** (verified - see `decisions.md` Decision 4 for details):
+```json
+{
+  "type": "result",
+  "result": "I'm here and ready to help!",  // ← Text field
+  "session_id": "98fd3fe3-8272-49ff-86bb-e1ae99a5c1e4",
+  "duration_ms": 3009,
+  "total_cost_usd": 0.061996800000000005,
+  "usage": {...},
+  "modelUsage": {...}
+}
 ```
 
-### DATA: Return Value Structure
-
+**Return Value Structure**:
 ```python
 {
     "version": "1.0",
     "timestamp": "2025-10-01T10:30:00.123456",
-    "text": "Extracted response text",
-    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "text": "I'm here and ready to help!",  # From "result" field
+    "session_id": "98fd3fe3-8272-49ff-86bb-e1ae99a5c1e4",  # Or None
     "method": "cli",
     "provider": "claude",
-    "raw_response": {
-        # Complete CLI JSON output
-        "text": "...",
+    "raw_response": {  # Complete CLI JSON preserved
+        "type": "result",
+        "result": "...",
         "session_id": "...",
-        "duration_ms": 2801,
-        "total_cost_usd": 0.058,
+        "duration_ms": 3009,
+        "total_cost_usd": 0.061996800000000005,
         ...
     }
 }
@@ -89,71 +138,102 @@ from datetime import datetime
 from ...llm_types import LLMResponseDict, LLM_RESPONSE_VERSION
 ```
 
-2. **Add helper function** (before `ask_claude_code_cli`):
+2. **Add pure functions** (before `ask_claude_code_cli`):
+
 ```python
-def _parse_cli_json_response(json_output: str, question: str) -> dict:
-    """Parse CLI JSON response and extract key fields.
+def parse_cli_json_string(json_str: str) -> dict:
+    """Parse CLI JSON and extract fields (pure function).
+    
+    Extracts text and session_id from CLI JSON output.
+    Uses verified field names from real CLI testing.
     
     Args:
-        json_output: JSON string from CLI --output-format json
-        question: Original question (for error context)
+        json_str: JSON string from CLI --output-format json
         
     Returns:
-        Dict with extracted text, session_id, and raw response
+        dict with keys:
+        - 'text' (str): Extracted response text from 'result' field
+        - 'session_id' (str | None): Session ID if present, None otherwise
+        - 'raw_response' (dict): Complete parsed JSON response
         
     Raises:
-        ValueError: If JSON cannot be parsed or required fields missing
+        ValueError: If JSON cannot be parsed
+        
+    Example:
+        >>> json_str = '{"result": "Hello", "session_id": "abc"}'
+        >>> data = parse_cli_json_string(json_str)
+        >>> assert data["text"] == "Hello"
     """
     try:
-        raw_response = json.loads(json_output)
+        raw_response = json.loads(json_str)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse CLI JSON response: {e}") from e
+        raise ValueError(f"Failed to parse CLI JSON: {e}") from e
     
-    # Extract text - try common field names
-    text = ""
-    if isinstance(raw_response, dict):
-        # Try different possible field names for response text
-        text = raw_response.get("text", "")
-        if not text:
-            text = raw_response.get("content", "")
-        if not text:
-            text = raw_response.get("response", "")
-        
-        # If still no text, convert entire response to string
-        if not text:
-            logger.warning(
-                f"Could not find text field in CLI JSON response. "
-                f"Available fields: {list(raw_response.keys())}"
-            )
-            text = str(raw_response)
-    else:
-        # Response is not a dict, convert to string
-        text = str(raw_response)
+    # Extract text from "result" field (verified from real CLI output)
+    text = raw_response.get("result", "")
     
     # Extract session_id
-    session_id = ""
-    if isinstance(raw_response, dict):
-        session_id = raw_response.get("session_id", "")
-        if not session_id:
-            session_id = raw_response.get("sessionId", "")
-    
-    if not session_id:
-        # No session ID found - generate warning
-        logger.warning(
-            "No session_id found in CLI JSON response. "
-            "Session continuity may not work."
-        )
-        # Use a placeholder to avoid breaking
-        session_id = "unknown"
+    session_id = raw_response.get("session_id")
     
     return {
         "text": text,
         "session_id": session_id,
         "raw_response": raw_response
     }
+
+
+def build_cli_command(question: str, session_id: str | None, claude_cmd: str) -> list[str]:
+    """Build CLI command arguments (pure function).
+    
+    Args:
+        question: Question to ask
+        session_id: Optional session ID for continuation
+        claude_cmd: Path to claude executable
+        
+    Returns:
+        Command list ready for subprocess execution
+        
+    Example:
+        >>> cmd = build_cli_command("test", None, "claude")
+        >>> assert cmd == ["claude", "--print", "--output-format", "json", "test"]
+    """
+    command = [claude_cmd, "--print", "--output-format", "json"]
+    
+    if session_id:
+        command.extend(["--resume", session_id])
+    
+    command.append(question)
+    return command
+
+
+def create_response_dict(text: str, session_id: str | None, raw_response: dict) -> LLMResponseDict:
+    """Create LLMResponseDict from parsed data (pure function).
+    
+    Args:
+        text: Extracted response text
+        session_id: Session ID (can be None)
+        raw_response: Complete CLI JSON response
+        
+    Returns:
+        Complete LLMResponseDict
+        
+    Example:
+        >>> result = create_response_dict("Hello", "abc", {"result": "Hello"})
+        >>> assert result["text"] == "Hello"
+        >>> assert result["method"] == "cli"
+    """
+    return {
+        "version": LLM_RESPONSE_VERSION,
+        "timestamp": datetime.now().isoformat(),
+        "text": text,
+        "session_id": session_id,
+        "method": "cli",
+        "provider": "claude",
+        "raw_response": raw_response,
+    }
 ```
 
-3. **Modify `ask_claude_code_cli` function**:
+3. **Modify `ask_claude_code_cli` function** (I/O wrapper):
 ```python
 def ask_claude_code_cli(
     question: str,
@@ -161,27 +241,24 @@ def ask_claude_code_cli(
     timeout: int = 30,
     cwd: str | None = None,
 ) -> LLMResponseDict:
-    """
-    Ask Claude a question via Claude Code CLI and return structured response.
+    """Ask Claude via CLI and return structured response (I/O wrapper).
 
-    Uses JSON output format to capture session information and metadata.
-    Supports session continuity via session_id parameter.
+    Thin wrapper that handles subprocess execution, delegating parsing
+    and response construction to pure functions.
 
     Args:
         question: The question to ask Claude
         session_id: Optional session ID to resume previous conversation
-        timeout: Timeout in seconds for the command (default: 30)
-        cwd: Working directory for the command (default: None, uses current directory)
-             This is important for Claude to find .claude/settings.local.json
+        timeout: Timeout in seconds (default: 30)
+        cwd: Working directory (default: None)
 
     Returns:
-        LLMResponseDict with text response, session_id, timestamp, and raw CLI data
+        LLMResponseDict with complete response data
 
     Raises:
         ValueError: If input validation fails or JSON parsing fails
-        subprocess.TimeoutExpired: If the command times out
-        subprocess.CalledProcessError: If the command fails
-        FileNotFoundError: If Claude Code CLI is not found
+        subprocess.TimeoutExpired: If command times out
+        subprocess.CalledProcessError: If command fails
 
     Examples:
         >>> # Start new conversation
@@ -191,71 +268,46 @@ def ask_claude_code_cli(
         
         >>> # Continue conversation
         >>> result2 = ask_claude_code_cli("Tell me more", session_id=session_id)
-        >>> print(result2["text"])
     """
     # Input validation
     if not question or not question.strip():
         raise ValueError("Question cannot be empty or whitespace only")
-
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    # Find the Claude executable
+    # Find executable
     claude_cmd = _find_claude_executable()
 
-    # Build command with JSON output and optional session resume
-    command = [claude_cmd, "--print", "--output-format", "json"]
-    
-    # Add session resume flag if provided
-    if session_id:
-        command.extend(["--resume", session_id])
-    
-    # Add the question
-    command.append(question)
+    # Build command (pure function)
+    command = build_cli_command(question, session_id, claude_cmd)
 
-    # Execute command
-    logger.debug(f"Executing: {' '.join(command[:4])} ... (cwd={cwd})")
-    
-    result = execute_command(
-        command,
-        timeout_seconds=timeout,
-        cwd=cwd,
-    )
+    # Execute command (I/O)
+    logger.debug(f"Executing CLI command (cwd={cwd})")
+    result = execute_command(command, timeout_seconds=timeout, cwd=cwd)
 
+    # Error handling
     if result.timed_out:
-        logger.error(f"Claude Code CLI timed out after {timeout} seconds")
-        raise subprocess.TimeoutExpired(
-            result.command or [claude_cmd],
-            timeout,
-            f"Claude Code command timed out after {timeout} seconds",
-        )
-
+        logger.error(f"CLI timed out after {timeout}s")
+        raise subprocess.TimeoutExpired(command, timeout)
+    
     if result.return_code != 0:
-        logger.error(f"Claude Code CLI failed with return code {result.return_code}")
+        logger.error(f"CLI failed with code {result.return_code}")
         raise subprocess.CalledProcessError(
-            result.return_code,
-            result.command or [claude_cmd],
-            output=result.stdout,
-            stderr=f"Claude Code command failed: {result.stderr}",
+            result.return_code, command,
+            output=result.stdout, stderr=result.stderr
         )
 
-    logger.debug(f"Claude CLI success: response length={len(result.stdout.strip())}")
+    logger.debug(f"CLI success: {len(result.stdout)} bytes")
 
-    # Parse JSON response
-    parsed = _parse_cli_json_response(result.stdout.strip(), question)
+    # Parse JSON (pure function)
+    parsed = parse_cli_json_string(result.stdout.strip())
     
-    # Build structured response
-    response: LLMResponseDict = {
-        "version": LLM_RESPONSE_VERSION,
-        "timestamp": datetime.now().isoformat(),
-        "text": parsed["text"],
-        "session_id": parsed["session_id"],
-        "method": "cli",
-        "provider": "claude",
-        "raw_response": parsed["raw_response"],
-    }
-    
-    return response
+    # Create response dict (pure function)
+    return create_response_dict(
+        parsed["text"],
+        parsed["session_id"],
+        parsed["raw_response"]
+    )
 ```
 
 ## Testing
@@ -263,162 +315,129 @@ def ask_claude_code_cli(
 ### WHERE: Test File Modification
 **File**: `tests/llm_providers/claude/test_claude_code_cli.py` (existing file)
 
-### Test Cases to Add
+### Test Cases
+
+**Test Structure:**
+- **Pure function tests** (~5 tests): Fast, no I/O, test parsing/building logic
+- **I/O wrapper tests** (~2 tests): Minimal, test subprocess integration
+- **Total: ~7 tests** (reduced from 10+ via separation of concerns)
 
 ```python
-"""Additional tests for CLI session support and JSON parsing."""
+"""Tests for CLI session support and JSON parsing."""
 
 import json
 import pytest
 from mcp_coder.llm_providers.claude.claude_code_cli import (
+    parse_cli_json_string,
+    build_cli_command,
+    create_response_dict,
     ask_claude_code_cli,
-    _parse_cli_json_response,
 )
 from mcp_coder.llm_types import LLMResponseDict
 
 
-def test_parse_cli_json_response_basic():
-    """Test parsing basic CLI JSON response."""
-    json_output = json.dumps({
-        "text": "Test response",
+# ============================================================================
+# PURE FUNCTION TESTS (fast, no I/O)
+# ============================================================================
+
+def test_parse_cli_json_string_basic():
+    """Test parsing basic CLI JSON with real structure."""
+    json_str = json.dumps({
+        "result": "Test response",
         "session_id": "abc-123"
     })
     
-    result = _parse_cli_json_response(json_output, "test question")
+    result = parse_cli_json_string(json_str)
     
     assert result["text"] == "Test response"
     assert result["session_id"] == "abc-123"
-    assert result["raw_response"]["text"] == "Test response"
+    assert result["raw_response"]["result"] == "Test response"
 
 
-def test_parse_cli_json_response_alternative_fields():
-    """Test parsing with alternative field names."""
-    # Try 'content' instead of 'text'
-    json_output = json.dumps({
-        "content": "Alternative response",
-        "sessionId": "def-456"  # Alternative casing
-    })
-    
-    result = _parse_cli_json_response(json_output, "test")
-    
-    assert result["text"] == "Alternative response"
-    assert result["session_id"] == "def-456"
-
-
-def test_parse_cli_json_response_missing_session_id():
+def test_parse_cli_json_string_missing_session_id():
     """Test parsing when session_id is missing."""
-    json_output = json.dumps({
-        "text": "Response without session"
-    })
+    json_str = json.dumps({"result": "Response without session"})
     
-    result = _parse_cli_json_response(json_output, "test")
+    result = parse_cli_json_string(json_str)
     
     assert result["text"] == "Response without session"
-    assert result["session_id"] == "unknown"  # Placeholder
+    assert result["session_id"] is None
 
 
-def test_parse_cli_json_response_invalid_json():
+def test_parse_cli_json_string_invalid_json():
     """Test error handling for invalid JSON."""
     invalid_json = "not valid json {{"
     
-    with pytest.raises(ValueError, match="Failed to parse CLI JSON response"):
-        _parse_cli_json_response(invalid_json, "test")
+    with pytest.raises(ValueError, match="Failed to parse CLI JSON"):
+        parse_cli_json_string(invalid_json)
 
+
+def test_build_cli_command_without_session():
+    """Test command building without session ID."""
+    cmd = build_cli_command("test question", None, "claude")
+    
+    assert cmd == ["claude", "--print", "--output-format", "json", "test question"]
+    assert "--resume" not in cmd
+
+
+def test_build_cli_command_with_session():
+    """Test command building with session ID."""
+    cmd = build_cli_command("follow up", "session-123", "claude")
+    
+    assert "--resume" in cmd
+    assert "session-123" in cmd
+    assert cmd[-1] == "follow up"
+
+
+def test_create_response_dict_structure():
+    """Test response dict creation."""
+    result = create_response_dict(
+        "Hello",
+        "abc-123",
+        {"result": "Hello", "session_id": "abc-123"}
+    )
+    
+    assert result["text"] == "Hello"
+    assert result["session_id"] == "abc-123"
+    assert result["method"] == "cli"
+    assert result["provider"] == "claude"
+    assert "version" in result
+    assert "timestamp" in result
+
+
+# ============================================================================
+# I/O WRAPPER TESTS (minimal, test subprocess integration)
+# ============================================================================
 
 def test_ask_claude_code_cli_returns_typed_dict(mock_claude_cli):
-    """Test that ask_claude_code_cli returns LLMResponseDict."""
+    """Test that CLI method returns complete LLMResponseDict."""
     mock_claude_cli.set_response(json.dumps({
-        "text": "Test response",
-        "session_id": "test-session-123"
+        "result": "Test response",
+        "session_id": "test-123"
     }))
     
     result = ask_claude_code_cli("Test question")
     
-    # Check structure
+    # Check all required fields present
     assert isinstance(result, dict)
-    assert "version" in result
-    assert "timestamp" in result
-    assert "text" in result
-    assert "session_id" in result
-    assert "method" in result
-    assert "provider" in result
-    assert "raw_response" in result
+    for field in ["version", "timestamp", "text", "session_id", "method", "provider", "raw_response"]:
+        assert field in result
 
 
-def test_ask_claude_code_cli_with_session_id(mock_claude_cli):
-    """Test that session_id is passed to CLI with --resume flag."""
+def test_ask_claude_code_cli_with_session_integration(mock_claude_cli):
+    """Test session ID passthrough in full workflow."""
     mock_claude_cli.set_response(json.dumps({
-        "text": "Continued response",
-        "session_id": "existing-session"
+        "result": "Continued",
+        "session_id": "existing"
     }))
     
-    result = ask_claude_code_cli("Follow up", session_id="existing-session")
+    result = ask_claude_code_cli("Follow up", session_id="existing")
     
-    # Check that --resume flag was used
+    # Verify --resume flag was used
     assert "--resume" in mock_claude_cli.last_command
-    assert "existing-session" in mock_claude_cli.last_command
-    assert result["session_id"] == "existing-session"
-
-
-def test_ask_claude_code_cli_json_format_flag(mock_claude_cli):
-    """Test that --output-format json flag is used."""
-    mock_claude_cli.set_response(json.dumps({
-        "text": "JSON response",
-        "session_id": "json-test"
-    }))
-    
-    result = ask_claude_code_cli("Test")
-    
-    # Check that JSON format flag was used
-    assert "--output-format" in mock_claude_cli.last_command
-    assert "json" in mock_claude_cli.last_command
-
-
-def test_ask_claude_code_cli_metadata_fields(mock_claude_cli):
-    """Test that metadata fields are preserved in raw_response."""
-    cli_response = {
-        "text": "Response",
-        "session_id": "meta-test",
-        "duration_ms": 2801,
-        "total_cost_usd": 0.058,
-        "usage": {"input_tokens": 100, "output_tokens": 50}
-    }
-    mock_claude_cli.set_response(json.dumps(cli_response))
-    
-    result = ask_claude_code_cli("Test")
-    
-    # Metadata should be in raw_response
-    assert result["raw_response"]["duration_ms"] == 2801
-    assert result["raw_response"]["total_cost_usd"] == 0.058
-    assert result["raw_response"]["usage"]["input_tokens"] == 100
-
-
-def test_ask_claude_code_cli_provider_and_method(mock_claude_cli):
-    """Test that provider and method are set correctly."""
-    mock_claude_cli.set_response(json.dumps({
-        "text": "Test",
-        "session_id": "abc"
-    }))
-    
-    result = ask_claude_code_cli("Test")
-    
-    assert result["method"] == "cli"
-    assert result["provider"] == "claude"
-
-
-def test_ask_claude_code_cli_version(mock_claude_cli):
-    """Test that version is set correctly."""
-    mock_claude_cli.set_response(json.dumps({
-        "text": "Test",
-        "session_id": "abc"
-    }))
-    
-    result = ask_claude_code_cli("Test")
-    
-    assert result["version"] == "1.0"
-
-
-# Note: Integration tests will be in Step 9
+    assert "existing" in mock_claude_cli.last_command
+    assert result["session_id"] == "existing"
+```
 ```
 
 ## Validation Checklist

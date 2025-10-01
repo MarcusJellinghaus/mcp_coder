@@ -24,19 +24,23 @@ Add session continuity and comprehensive response data capture to the LLM interf
 
 ### KISS (Keep It Simple, Stupid)
 - Minimal API surface: only 2 public functions added
-- Raw storage eliminates complex parsing requirements
+- Raw storage eliminates complex parsing requirements  
 - Version management via simple string comparison
+- Leverages existing `ask_claude_code_api_detailed()` for API (no reimplementation)
+- Extracts only verified CLI fields (`"result"`) with no invented fallbacks
 
 ### Separation of Concerns
 - `ask_llm()`: Simple text responses (unchanged)
 - `prompt_llm()`: Full session-aware responses
-- Lower-level functions return TypedDict
+- **Pure functions**: Parsing and building logic (easily testable, no I/O)
+- **I/O wrappers**: Thin delegation layers (subprocess/file operations)
 - Serialization isolated in dedicated module
 
 ### Future-Proof Design
 - Raw response storage allows retroactive parsing enhancements
 - Version field enables migration strategies
 - TypedDict structure extensible without breaking changes
+- `session_id: str | None` accurately represents optional sessions
 
 ## Files Modified
 
@@ -206,11 +210,12 @@ response = ask_llm("Simple question")  # Still returns str
 ## Timeline Estimate
 
 - Phase 1 (Foundation): 2-3 hours
-- Phase 2 (CLI Enhancement): 3-4 hours
-- Phase 3 (API Enhancement): 2-3 hours
+- Phase 2 (CLI Enhancement): 2-3 hours (reduced via pure functions)
+- Phase 3 (API Enhancement): 1-2 hours (simplified by using existing code)
 - Phase 4 (High-Level Interface): 2-3 hours
 - Phase 5 (Validation): 2-3 hours
-- **Total: 11-16 hours** (approximately 2 full working days)
+- **Total: 9-14 hours** (approximately 1.5-2 full working days)
+- **Savings:** Pure function architecture reduces test count by ~40%, saving 2-3 hours
 
 ## Dependencies
 

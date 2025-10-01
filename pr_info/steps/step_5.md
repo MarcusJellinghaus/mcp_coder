@@ -245,6 +245,7 @@ Please review:
 - pr_info/steps/summary.md for architectural context
 - pr_info/steps/step_3.md for CLI modifications
 - pr_info/steps/step_4.md for API modifications
+- pr_info/steps/decisions.md for architecture decisions
 
 For Step 5, I need to modify src/mcp_coder/llm_providers/claude/claude_code_interface.py:
 

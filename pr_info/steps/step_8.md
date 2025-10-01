@@ -102,7 +102,7 @@ __all__ = [
 
 ### File 2: Verify `src/mcp_coder/llm_types.py`
 
-**Check exports**:
+**Expected exports** (verify these are present):
 ```python
 __all__ = [
     "LLMResponseDict",
@@ -110,19 +110,25 @@ __all__ = [
 ]
 ```
 
+**Action:** If `__all__` is missing or incomplete, add/update it to match the expected list above.
+
 ### File 3: Verify `src/mcp_coder/llm_serialization.py`
 
-**Check exports**:
+**Expected exports** (verify these are present):
 ```python
 __all__ = [
+    "to_json_string",
+    "from_json_string",
     "serialize_llm_response",
     "deserialize_llm_response",
 ]
 ```
 
+**Action:** If `__all__` is missing or incomplete, add/update it to match the expected list above. Note that all four functions (including the pure functions) should be exported.
+
 ### File 4: Verify `src/mcp_coder/llm_interface.py`
 
-**Check exports**:
+**Expected exports** (verify these are present):
 ```python
 __all__ = [
     "ask_llm",
@@ -131,6 +137,8 @@ __all__ = [
     "deserialize_llm_response",
 ]
 ```
+
+**Action:** If `__all__` is missing or incomplete, add/update it to match the expected list above. This module re-exports serialization functions for convenience.
 
 ## Testing
 
@@ -219,6 +227,8 @@ def test_llm_serialization_all_is_correct():
     from mcp_coder import llm_serialization
     
     expected = [
+        "to_json_string",
+        "from_json_string",
         "serialize_llm_response",
         "deserialize_llm_response",
     ]
@@ -304,7 +314,10 @@ processed = process_response(result)
 - [ ] `__init__.py` updated with new imports
 - [ ] All new functions in `__all__` list
 - [ ] Types exported from main module
-- [ ] Verify exports in submodules (llm_types, llm_serialization, llm_interface)
+- [ ] Verify exports in submodules:
+  - [ ] `llm_types`: 2 exports (LLMResponseDict, LLM_RESPONSE_VERSION)
+  - [ ] `llm_serialization`: 4 exports (to_json_string, from_json_string, serialize_llm_response, deserialize_llm_response)
+  - [ ] `llm_interface`: 4 exports (ask_llm, prompt_llm, serialize_llm_response, deserialize_llm_response)
 - [ ] Tests created for module exports
 - [ ] All import tests pass
 - [ ] No import errors when loading module
@@ -319,6 +332,7 @@ I am implementing Step 8 of the LLM Session Management implementation plan.
 Please review:
 - pr_info/steps/summary.md for architectural context
 - pr_info/steps/step_7.md for the functions to be exported
+- pr_info/steps/decisions.md for architecture decisions
 
 For Step 8, I need to update module exports:
 

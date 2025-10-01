@@ -150,6 +150,7 @@ Please offer, whenever possible, simple options like
 - A
 - B
 - C
+Always just ask ONE question
 ```
 
 If there are inconsistencies in the project plan (eg due to previous revisions with incomplete adjustments):
@@ -157,9 +158,9 @@ If there are inconsistencies in the project plan (eg due to previous revisions w
 Please clean up the project plan. Ensure that it is consistent.
 ```
 ```
-Please review the project plan for a new feature in folder PR_Info\steps.
+Please review the project plan for a new feature in the folder PR_Info\steps.
 Please review for consistency.
-Please tell me all consistencies you found and how you want to fix them.
+Please tell me all inconsistencies you find and how you want to fix them.
 ```
 
 **typical questions and answers**:
