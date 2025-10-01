@@ -75,15 +75,6 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Run quality checks: pylint, pytest, mypy - fix all issues
 [x] Prepare git commit message for Step 5
 
-### Step 6: Final Verification
-[ ] Run all unit tests: pytest tests/workflows/test_define_labels.py -v
-[ ] Verify 17+ tests pass (8 calculate_label_changes, 3 apply_labels, 4 CLI, 2 main)
-[ ] Test script imports: python -c "from workflows.define_labels import main"
-[ ] Manual smoke test: python workflows/define_labels.py --dry-run --log-level DEBUG
-[ ] Verify batch file works: workflows\define_labels.bat --help
-[ ] Run quality checks: pylint, pytest, mypy - fix all issues
-[ ] Prepare git commit message for Step 6
-
 ---
 
 ## Pull Request
