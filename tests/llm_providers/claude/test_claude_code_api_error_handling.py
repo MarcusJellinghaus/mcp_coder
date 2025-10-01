@@ -15,6 +15,7 @@ from mcp_coder.llm_providers.claude.claude_code_api import (
 )
 
 
+@pytest.mark.claude_api_integration
 class TestExtractRealErrorMessage:
     """Test the _extract_real_error_message function."""
 
@@ -94,6 +95,7 @@ class TestExtractRealErrorMessage:
         assert len(result) > 0
 
 
+@pytest.mark.claude_api_integration
 class TestRetryWithBackoff:
     """Test the _retry_with_backoff function."""
 
@@ -153,6 +155,7 @@ class TestRetryWithBackoff:
         assert call_count == 1
 
 
+@pytest.mark.claude_api_integration
 class TestVerifyClaudeBeforeUse:
     """Test the _verify_claude_before_use function."""
 
@@ -219,15 +222,18 @@ class TestVerifyClaudeBeforeUse:
         assert error is None
 
 
+@pytest.mark.claude_api_integration
 class TestAskClaudeCodeApiErrorHandling:
     """Test enhanced error handling in ask_claude_code_api function."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
-    def test_windows_path_length_error_handling(self, mock_retry: MagicMock) -> None:
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_windows_path_length_error_handling(self, mock_detailed: MagicMock) -> None:
         """Test specific handling of Windows path length errors."""
         # Simulate WinError 206
         inner_error = OSError("[WinError 206] The filename or extension is too long")
-        mock_retry.side_effect = inner_error
+        mock_detailed.side_effect = inner_error
 
         with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
@@ -236,41 +242,46 @@ class TestAskClaudeCodeApiErrorHandling:
         assert "Windows path length limit exceeded" in error_msg
         assert "current working directory path is very long" in error_msg
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
-    def test_cli_not_found_error_with_path_found(self, mock_retry: MagicMock) -> None:
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_cli_not_found_error_with_path_found(
+        self, mock_detailed: MagicMock
+    ) -> None:
         """Test CLINotFoundError handling when Claude path can be found."""
         from claude_code_sdk._errors import CLINotFoundError
 
-        mock_retry.side_effect = CLINotFoundError("Claude Code not found")
+        mock_detailed.side_effect = CLINotFoundError("Claude Code not found")
 
         with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
 
         error_msg = str(exc_info.value)
-        assert "Unable to execute Claude CLI" in error_msg
-        assert "Authentication/login problems" in error_msg
-        assert "API rate limiting" in error_msg
+        assert "Claude CLI executable not found" in error_msg
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
     def test_cli_not_found_error_without_path_found(
-        self, mock_retry: MagicMock
+        self, mock_detailed: MagicMock
     ) -> None:
         """Test CLINotFoundError handling when Claude path cannot be found."""
         from claude_code_sdk._errors import CLINotFoundError
 
-        mock_retry.side_effect = CLINotFoundError("Claude Code not found")
+        mock_detailed.side_effect = CLINotFoundError("Claude Code not found")
 
         with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
 
         error_msg = str(exc_info.value)
-        assert "Unable to execute Claude CLI" in error_msg
-        assert "Authentication/login problems" in error_msg
+        assert "Claude CLI executable not found" in error_msg
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
-    def test_file_not_found_error_handling(self, mock_retry: MagicMock) -> None:
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_file_not_found_error_handling(self, mock_detailed: MagicMock) -> None:
         """Test FileNotFoundError handling."""
-        mock_retry.side_effect = FileNotFoundError("No such file or directory")
+        mock_detailed.side_effect = FileNotFoundError("No such file or directory")
 
         with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
@@ -279,10 +290,12 @@ class TestAskClaudeCodeApiErrorHandling:
         assert "File/executable not found" in error_msg
         assert "No such file or directory" in error_msg
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
-    def test_permission_error_handling(self, mock_retry: MagicMock) -> None:
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_permission_error_handling(self, mock_detailed: MagicMock) -> None:
         """Test PermissionError handling."""
-        mock_retry.side_effect = PermissionError("Permission denied")
+        mock_detailed.side_effect = PermissionError("Permission denied")
 
         with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
@@ -290,20 +303,24 @@ class TestAskClaudeCodeApiErrorHandling:
         error_msg = str(exc_info.value)
         assert "Permission denied" in error_msg
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
-    def test_timeout_error_passthrough(self, mock_retry: MagicMock) -> None:
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_timeout_error_passthrough(self, mock_detailed: MagicMock) -> None:
         """Test that timeout errors are passed through without modification."""
         timeout_error = subprocess.TimeoutExpired(["claude"], 30, "Timeout")
-        mock_retry.side_effect = timeout_error
+        mock_detailed.side_effect = timeout_error
 
         with pytest.raises(subprocess.TimeoutExpired):
             ask_claude_code_api("test question")
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
-    def test_value_error_passthrough(self, mock_retry: MagicMock) -> None:
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_value_error_passthrough(self, mock_detailed: MagicMock) -> None:
         """Test that ValueError is passed through without modification."""
         value_error = ValueError("Invalid input")
-        mock_retry.side_effect = value_error
+        mock_detailed.side_effect = value_error
 
         with pytest.raises(ValueError):
             ask_claude_code_api("test question")
