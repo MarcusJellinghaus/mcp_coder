@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.utils.github_operations.labels_manager import LabelsManager
+from mcp_coder.utils.log_utils import setup_logging
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -307,3 +308,56 @@ def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
         sys.exit(1)
     
     return project_path
+
+
+def main() -> None:
+    """Main entry point for label definition workflow."""
+    # Parse command line arguments
+    args = parse_arguments()
+    
+    # Setup logging BEFORE any other operations that might use logger
+    setup_logging(args.log_level)
+    
+    # Now resolve project directory (which may use logger)
+    project_dir = resolve_project_dir(args.project_dir)
+    
+    logger.info("Starting define labels workflow...")
+    logger.info(f"Project directory: {project_dir}")
+    
+    # Get repository name for context logging
+    try:
+        from mcp_coder.utils.git_operations import get_github_repository_url
+        repo_url = get_github_repository_url(project_dir)
+        repo_name = repo_url.split('/')[-1] if repo_url else str(project_dir.name)
+        logger.info(f"Repository: {repo_name}")
+    except Exception:
+        # If we can't get repo name, just skip it
+        pass
+    
+    # Log dry-run mode status
+    if args.dry_run:
+        logger.info("DRY RUN MODE: Changes will be previewed only")
+    
+    # Apply labels to repository
+    try:
+        results = apply_labels(project_dir, dry_run=args.dry_run)
+        
+        # Log summary of results
+        logger.info("Label operation completed successfully")
+        logger.info(f"Summary: Created={len(results['created'])}, "
+                   f"Updated={len(results['updated'])}, "
+                   f"Deleted={len(results['deleted'])}, "
+                   f"Unchanged={len(results['unchanged'])}")
+        
+        sys.exit(0)
+        
+    except SystemExit:
+        # Re-raise SystemExit from apply_labels (fail fast on errors)
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in main workflow: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
