@@ -35,14 +35,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Implement Serialization Functions
 **Details:** [step_2.md](./steps/step_2.md)
 
-- [ ] Create `src/mcp_coder/llm_serialization.py`
-- [ ] Implement pure functions: `to_json_string()`, `from_json_string()`
-- [ ] Implement I/O wrappers: `serialize_llm_response()`, `deserialize_llm_response()`
-- [ ] Create `tests/test_llm_serialization.py` with ~8 test cases
-- [ ] Run code quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message
-- [ ] Step 2 complete
+- [x] Create `src/mcp_coder/llm_serialization.py`
+- [x] Implement pure functions: `to_json_string()`, `from_json_string()`
+- [x] Implement I/O wrappers: `serialize_llm_response()`, `deserialize_llm_response()`
+- [x] Create `tests/test_llm_serialization.py` with ~8 test cases
+- [x] Run code quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message
+- [x] Step 2 complete
 
 ### Step 3: Enhance CLI Method with JSON Parsing and Session Support
 **Details:** [step_3.md](./steps/step_3.md)
