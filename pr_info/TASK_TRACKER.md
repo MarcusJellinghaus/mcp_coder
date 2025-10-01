@@ -29,8 +29,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Create `tests/test_llm_types.py` with type validation tests
 - [x] Run code quality checks: pylint, pytest, mypy
 - [x] Fix all issues found by quality checks
-- [ ] Prepare git commit message
-- [ ] Step 1 complete
+- [x] Prepare git commit message
+- [x] Step 1 complete
 
 ### Step 2: Implement Serialization Functions
 **Details:** [step_2.md](./steps/step_2.md)
