@@ -65,15 +65,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [ ] Prepare git commit message for Step 4
 
 ### Step 5: Create Windows Batch Wrapper Script
-[ ] Copy workflows/create_PR.bat to workflows/define_labels.bat
-[ ] Update script name and description in comments
-[ ] Remove --llm-method parameter (not needed)
-[ ] Keep --project-dir, --log-level, and --dry-run parameters
-[ ] Update python command to call define_labels.py
-[ ] Verify UTF-8 encoding setup is preserved
-[ ] Test batch file: workflows\define_labels.bat --help
-[ ] Run quality checks: pylint, pytest, mypy - fix all issues
-[ ] Prepare git commit message for Step 5
+[x] Copy workflows/create_PR.bat to workflows/define_labels.bat
+[x] Update script name and description in comments
+[x] Remove --llm-method parameter (not needed)
+[x] Keep --project-dir, --log-level, and --dry-run parameters
+[x] Update python command to call define_labels.py
+[x] Verify UTF-8 encoding setup is preserved
+[x] Test batch file: workflows\define_labels.bat --help
+[x] Run quality checks: pylint, pytest, mypy - fix all issues
+[x] Prepare git commit message for Step 5
 
 ### Step 6: Final Verification
 [ ] Run all unit tests: pytest tests/workflows/test_define_labels.py -v
