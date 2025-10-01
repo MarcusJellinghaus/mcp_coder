@@ -103,16 +103,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 7: Implement prompt_llm() for Full Session Management
 **Details:** [step_7.md](./steps/step_7.md)
 
-- [ ] Modify `src/mcp_coder/llm_interface.py`
-- [ ] Add imports: LLMResponseDict, provider functions, serialization
-- [ ] Update `__all__` to export: ask_llm, prompt_llm, serialize_llm_response, deserialize_llm_response
-- [ ] Implement `prompt_llm()` function returning `LLMResponseDict`
-- [ ] Add comprehensive docstring with session management examples
-- [ ] Add tests to `tests/test_llm_interface.py`
-- [ ] Run code quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message
-- [ ] Step 7 complete
+- [x] Modify `src/mcp_coder/llm_interface.py`
+- [x] Add imports: LLMResponseDict, provider functions, serialization
+- [x] Update `__all__` to export: ask_llm, prompt_llm, serialize_llm_response, deserialize_llm_response
+- [x] Implement `prompt_llm()` function returning `LLMResponseDict`
+- [x] Add comprehensive docstring with session management examples
+- [x] Add tests to `tests/test_llm_interface.py`
+- [x] Run code quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message
+- [x] Step 7 complete
 
 ### Step 8: Update Module Exports and Documentation
 **Details:** [step_8.md](./steps/step_8.md)
