@@ -90,15 +90,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 6: Update Top-Level ask_llm() Interface
 **Details:** [step_6.md](./steps/step_6.md)
 
-- [ ] Modify `src/mcp_coder/llm_interface.py`
-- [ ] Add `session_id` parameter to `ask_llm()` function
-- [ ] Pass `session_id` through to `ask_claude_code()`
-- [ ] Update docstring with session parameter explanation
-- [ ] Add tests to `tests/test_llm_interface.py`
-- [ ] Run code quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message
-- [ ] Step 6 complete
+- [x] Modify `src/mcp_coder/llm_interface.py`
+- [x] Add `session_id` parameter to `ask_llm()` function
+- [x] Pass `session_id` through to `ask_claude_code()`
+- [x] Update docstring with session parameter explanation
+- [x] Add tests to `tests/test_llm_interface.py`
+- [x] Run code quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message
+- [x] Step 6 complete
 
 ### Step 7: Implement prompt_llm() for Full Session Management
 **Details:** [step_7.md](./steps/step_7.md)

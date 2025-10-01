@@ -21,7 +21,7 @@ class TestAskLLM:
         result = ask_llm("Test question", provider="claude", method="cli", timeout=30)
 
         mock_ask_claude_code.assert_called_once_with(
-            "Test question", method="cli", timeout=30, cwd=None
+            "Test question", method="cli", session_id=None, timeout=30, cwd=None
         )
         assert result == "Test response from Claude"
 
@@ -33,7 +33,7 @@ class TestAskLLM:
         result = ask_llm("Test question")
 
         mock_ask_claude_code.assert_called_once_with(
-            "Test question", method="cli", timeout=30, cwd=None
+            "Test question", method="cli", session_id=None, timeout=30, cwd=None
         )
         assert result == "Default response"
 
@@ -60,7 +60,7 @@ class TestAskLLM:
         result = ask_llm("Test question", timeout=60)
 
         mock_ask_claude_code.assert_called_once_with(
-            "Test question", method="cli", timeout=60, cwd=None
+            "Test question", method="cli", session_id=None, timeout=60, cwd=None
         )
         assert result == "Timeout response"
 
@@ -74,9 +74,72 @@ class TestAskLLM:
         )  # Even though not implemented yet
 
         mock_ask_claude_code.assert_called_once_with(
-            "Test question", method="api", timeout=30, cwd=None
+            "Test question", method="api", session_id=None, timeout=30, cwd=None
         )
         assert result == "Method response"
+
+    @patch("mcp_coder.llm_interface.ask_claude_code")
+    def test_ask_llm_with_session_id(self, mock_ask_claude_code: MagicMock) -> None:
+        """Test that session_id is passed through to ask_claude_code."""
+        mock_ask_claude_code.return_value = "Response with session"
+
+        result = ask_llm(
+            "Test question",
+            provider="claude",
+            method="cli",
+            session_id="test-session-123",
+        )
+
+        mock_ask_claude_code.assert_called_once_with(
+            "Test question",
+            method="cli",
+            session_id="test-session-123",
+            timeout=30,
+            cwd=None,
+        )
+        assert result == "Response with session"
+
+    @patch("mcp_coder.llm_interface.ask_claude_code")
+    def test_ask_llm_without_session_id(self, mock_ask_claude_code: MagicMock) -> None:
+        """Test that session_id is optional and defaults to None."""
+        mock_ask_claude_code.return_value = "Response without session"
+
+        # Should work without session_id (backward compatible)
+        result = ask_llm("Test question")
+
+        mock_ask_claude_code.assert_called_once_with(
+            "Test question", method="cli", session_id=None, timeout=30, cwd=None
+        )
+        assert result == "Response without session"
+
+    @patch("mcp_coder.llm_interface.ask_claude_code")
+    def test_ask_llm_session_id_with_api_method(
+        self, mock_ask_claude_code: MagicMock
+    ) -> None:
+        """Test that session_id works with API method."""
+        mock_ask_claude_code.return_value = "API response with session"
+
+        result = ask_llm("Test question", method="api", session_id="api-session-456")
+
+        mock_ask_claude_code.assert_called_once_with(
+            "Test question",
+            method="api",
+            session_id="api-session-456",
+            timeout=30,
+            cwd=None,
+        )
+        assert result == "API response with session"
+
+    @patch("mcp_coder.llm_interface.ask_claude_code")
+    def test_ask_llm_returns_string_only(self, mock_ask_claude_code: MagicMock) -> None:
+        """Test that ask_llm returns string, not dict."""
+        mock_ask_claude_code.return_value = "Just the text"
+
+        response = ask_llm("Test", session_id="some-session")
+
+        # Should return string only
+        assert isinstance(response, str)
+        assert response == "Just the text"
 
 
 class TestAskClaudeCode:
@@ -87,12 +150,16 @@ class TestAskClaudeCode:
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
         """Test that ask_claude_code routes to CLI implementation."""
-        mock_ask_claude_code_cli.return_value = "CLI response"
+        mock_ask_claude_code_cli.return_value = {
+            "text": "CLI response",
+            "session_id": "test-session",
+            "version": "1.0",
+        }
 
         result = ask_claude_code("Test question", method="cli", timeout=30)
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question", timeout=30, cwd=None
+            "Test question", session_id=None, timeout=30, cwd=None
         )
         assert result == "CLI response"
 
@@ -101,12 +168,16 @@ class TestAskClaudeCode:
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
         """Test that ask_claude_code uses correct default parameters."""
-        mock_ask_claude_code_cli.return_value = "Default CLI response"
+        mock_ask_claude_code_cli.return_value = {
+            "text": "Default CLI response",
+            "session_id": "test-session",
+            "version": "1.0",
+        }
 
         result = ask_claude_code("Test question")
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question", timeout=30, cwd=None
+            "Test question", session_id=None, timeout=30, cwd=None
         )
         assert result == "Default CLI response"
 
@@ -115,11 +186,17 @@ class TestAskClaudeCode:
         self, mock_ask_claude_code_api: MagicMock
     ) -> None:
         """Test that ask_claude_code routes to API implementation."""
-        mock_ask_claude_code_api.return_value = "API response"
+        mock_ask_claude_code_api.return_value = {
+            "text": "API response",
+            "session_id": "api-session",
+            "version": "1.0",
+        }
 
         result = ask_claude_code("Test question", method="api", timeout=30)
 
-        mock_ask_claude_code_api.assert_called_once_with("Test question", timeout=30)
+        mock_ask_claude_code_api.assert_called_once_with(
+            "Test question", session_id=None, timeout=30
+        )
         assert result == "API response"
 
     def test_ask_claude_code_unsupported_method(self) -> None:
@@ -142,12 +219,16 @@ class TestAskClaudeCode:
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
         """Test that ask_claude_code passes through custom timeout."""
-        mock_ask_claude_code_cli.return_value = "Custom timeout response"
+        mock_ask_claude_code_cli.return_value = {
+            "text": "Custom timeout response",
+            "session_id": "test-session",
+            "version": "1.0",
+        }
 
         result = ask_claude_code("Test question", timeout=45)
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question", timeout=45, cwd=None
+            "Test question", session_id=None, timeout=45, cwd=None
         )
         assert result == "Custom timeout response"
 
@@ -158,14 +239,18 @@ class TestIntegration:
     @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_full_routing_chain(self, mock_ask_claude_code_cli: MagicMock) -> None:
         """Test the full routing chain from ask_llm to ask_claude_code_cli."""
-        mock_ask_claude_code_cli.return_value = "Full chain response"
+        mock_ask_claude_code_cli.return_value = {
+            "text": "Full chain response",
+            "session_id": "chain-session",
+            "version": "1.0",
+        }
 
         result = ask_llm(
             "Integration test question", provider="claude", method="cli", timeout=25
         )
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Integration test question", timeout=25, cwd=None
+            "Integration test question", session_id=None, timeout=25, cwd=None
         )
         assert result == "Full chain response"
 
@@ -178,6 +263,33 @@ class TestIntegration:
         # Test invalid method (will be caught at claude_code_interface level)
         with pytest.raises(ValueError, match="Unsupported method"):
             ask_llm("Test", provider="claude", method="invalid")
+
+    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    def test_full_routing_chain_with_session_id(
+        self, mock_ask_claude_code_cli: MagicMock
+    ) -> None:
+        """Test the full routing chain with session_id parameter."""
+        mock_ask_claude_code_cli.return_value = {
+            "text": "Full chain response with session",
+            "session_id": "integration-session-789",
+            "version": "1.0",
+        }
+
+        result = ask_llm(
+            "Integration test with session",
+            provider="claude",
+            method="cli",
+            session_id="integration-session-789",
+            timeout=25,
+        )
+
+        mock_ask_claude_code_cli.assert_called_once_with(
+            "Integration test with session",
+            session_id="integration-session-789",
+            timeout=25,
+            cwd=None,
+        )
+        assert result == "Full chain response with session"
 
 
 @pytest.mark.claude_cli_integration
