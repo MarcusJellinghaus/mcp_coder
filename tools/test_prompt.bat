@@ -65,79 +65,155 @@ if errorlevel 1 (
 echo.
 
 REM Test 3: Long prompt with API method (10,000+ characters)
-REM Use Python script to test internal code path (not CLI entry point)
 echo ========================================
 echo Test 3: Long prompt with API method
 echo ========================================
-echo Testing long prompt via internal Python API...
+echo Generating long prompt (~24KB)...
 echo.
 
-python -c "import sys; sys.path.insert(0, 'src'); from mcp_coder.llm_interface import ask_llm; text = 'Summarize in one word. ' + ('Line {}: This is test data for long prompt handling. ' * 400).format(*range(400)); print(f'Prompt length: {len(text)} chars'); result = ask_llm(text, provider='claude', method='api', timeout=60); print(f'Response: {result[:100]}...')" 2>&1
-set "EXIT_CODE=!errorlevel!"
+REM Generate long prompt using PowerShell and save to temp file
+powershell -Command "$prompt = 'Summarize in one word. '; for($i=0; $i -lt 400; $i++) { $prompt += \"Line $i`: This is test data for long prompt handling. \" }; $prompt | Out-File -FilePath '%TEMP%\test3_prompt.txt' -Encoding UTF8 -NoNewline"
 
-if !EXIT_CODE! neq 0 (
+REM Display prompt length
+for %%A in ("%TEMP%\test3_prompt.txt") do set "PROMPT_SIZE=%%~zA"
+echo Prompt length: !PROMPT_SIZE! bytes
+echo.
+
+REM Read prompt from file and pass to mcp-coder
+set /p LONG_PROMPT=<"%TEMP%\test3_prompt.txt"
+mcp-coder prompt "!LONG_PROMPT!" --llm-method claude_code_api --timeout 90
+if errorlevel 1 (
     set "TEST3_RESULT=FAILED"
-    echo FAILED: Test 3 failed with exit code !EXIT_CODE!
+    echo FAILED: Test 3 failed with exit code !errorlevel!
     echo Note: Long prompts may fail due to token limits or timeout
 ) else (
     set "TEST3_RESULT=PASSED"
     echo SUCCESS: Test 3 passed
 )
+
+REM Clean up temp file
+if exist "%TEMP%\test3_prompt.txt" del "%TEMP%\test3_prompt.txt"
 echo.
 
 REM Test 4: Long prompt with CLI method (10,000+ characters)
 echo ========================================
 echo Test 4: Long prompt with CLI method
 echo ========================================
-echo Testing long prompt via internal Python CLI...
+echo Generating long prompt (~24KB)...
 echo.
 
-python -c "import sys; sys.path.insert(0, 'src'); from mcp_coder.llm_interface import ask_llm; text = 'Summarize in one word. ' + ('Line {}: This is test data for long prompt handling. ' * 400).format(*range(400)); print(f'Prompt length: {len(text)} chars'); result = ask_llm(text, provider='claude', method='cli', timeout=60); print(f'Response: {result[:100]}...')" 2>&1
-set "EXIT_CODE=!errorlevel!"
+REM Generate long prompt using PowerShell and save to temp file
+powershell -Command "$prompt = 'Summarize in one word. '; for($i=0; $i -lt 400; $i++) { $prompt += \"Line $i`: This is test data for long prompt handling. \" }; $prompt | Out-File -FilePath '%TEMP%\test4_prompt.txt' -Encoding UTF8 -NoNewline"
 
-if !EXIT_CODE! neq 0 (
+REM Display prompt length
+for %%A in ("%TEMP%\test4_prompt.txt") do set "PROMPT_SIZE=%%~zA"
+echo Prompt length: !PROMPT_SIZE! bytes
+echo.
+
+REM Read prompt from file and pass to mcp-coder
+set /p LONG_PROMPT=<"%TEMP%\test4_prompt.txt"
+mcp-coder prompt "!LONG_PROMPT!" --llm-method claude_code_cli --timeout 90
+if errorlevel 1 (
     set "TEST4_RESULT=FAILED"
-    echo FAILED: Test 4 failed with exit code !EXIT_CODE!
-    echo Note: CLI method requires stdin workaround for long prompts
+    echo FAILED: Test 4 failed with exit code !errorlevel!
+    echo Note: CLI method may have issues with very long prompts
 ) else (
     set "TEST4_RESULT=PASSED"
     echo SUCCESS: Test 4 passed
 )
+
+REM Clean up temp file
+if exist "%TEMP%\test4_prompt.txt" del "%TEMP%\test4_prompt.txt"
 echo.
 
-REM Test 5: Continue session test with API method (using Python to handle session capture)
+REM Test 5: Session continuity with API method using session_id
 echo ========================================
-echo Test 5: Continue session with API method
+echo Test 5: Session continuity with API method
 echo ========================================
-echo Testing session continuity with API method...
+echo Testing session continuity with API method using session_id...
+echo Session ID: %SESSION_ID_API%
 echo.
-python -c "import sys; sys.path.insert(0, 'src'); from mcp_coder.llm_interface import prompt_llm; r1 = prompt_llm('Remember: 555', method='api', timeout=30); print(f'First call session_id: {r1.get(\"session_id\")}'); sid = r1.get('session_id'); r2 = prompt_llm('What number did I tell you to remember?', method='api', session_id=sid, timeout=30) if sid else None; print(f'Session test: {\"PASSED\" if (r2 and \"555\" in r2.get(\"text\", \"\")) else \"FAILED - API does not support sessions yet\"}')" 2>&1
-set "EXIT_CODE=!errorlevel!"
-if !EXIT_CODE! neq 0 (
+
+REM First call - establish session
+echo First call: Setting up session with number 555...
+mcp-coder prompt "Remember this number: 555" --llm-method claude_code_api --session-id %SESSION_ID_API% --timeout 30 > nul 2>&1
+if errorlevel 1 (
     set "TEST5_RESULT=FAILED"
-    echo FAILED: Test 5 failed with exit code !EXIT_CODE!
+    echo FAILED: Test 5 failed on first call with exit code !errorlevel!
+    goto :test5_end
+)
+echo First call succeeded
+
+REM Second call - continue session
+echo Second call: Testing session memory...
+mcp-coder prompt "What number did I tell you to remember?" --llm-method claude_code_api --session-id %SESSION_ID_API% --timeout 30 > "%TEMP%\test5_response.txt" 2>&1
+if errorlevel 1 (
+    set "TEST5_RESULT=FAILED"
+    echo FAILED: Test 5 failed on second call with exit code !errorlevel!
+    goto :test5_end
+)
+
+REM Check if response contains the number 555
+findstr /i "555" "%TEMP%\test5_response.txt" > nul
+if errorlevel 1 (
+    set "TEST5_RESULT=FAILED"
+    echo FAILED: Response does not contain "555" - session not maintained
+    echo Response:
+    type "%TEMP%\test5_response.txt"
 ) else (
     set "TEST5_RESULT=PASSED"
-    echo SUCCESS: Test 5 completed
+    echo SUCCESS: Session maintained via session_id - response contains "555"
 )
+
+:test5_end
+REM Clean up temp file
+if exist "%TEMP%\test5_response.txt" del "%TEMP%\test5_response.txt"
 echo.
 
-REM Test 6: Continue session test with CLI method (using Python to handle session capture)
+REM Test 6: Session continuity with CLI method using session_id
 echo ========================================
-echo Test 6: Continue session with CLI method
+echo Test 6: Session continuity with CLI method
 echo ========================================
-echo Testing session continuity with CLI method...
+echo Testing session continuity with CLI method using session_id...
+echo Session ID: %SESSION_ID_CLI%
 echo.
-python -c "import sys; sys.path.insert(0, 'src'); from mcp_coder.llm_interface import prompt_llm; r1 = prompt_llm('Remember: 777', method='cli', timeout=30); print(f'First call session_id: {r1.get(\"session_id\")}'); sid = r1.get('session_id'); r2 = prompt_llm('What number did I tell you to remember?', method='cli', session_id=sid, timeout=30) if sid else None; print(f'Second call response contains 777: {\"777\" in r2.get(\"text\", \"\") if r2 else False}'); print(f'Session test: {\"PASSED\" if (r2 and \"777\" in r2.get(\"text\", \"\")) else \"FAILED\"}')" 2>&1
-set "EXIT_CODE=!errorlevel!"
-if !EXIT_CODE! neq 0 (
+
+REM First call - establish session
+echo First call: Setting up session with number 777...
+mcp-coder prompt "Remember this number: 777" --llm-method claude_code_cli --session-id %SESSION_ID_CLI% --timeout 30 > nul 2>&1
+if errorlevel 1 (
     set "TEST6_RESULT=FAILED"
-    echo FAILED: Test 6 failed with exit code !EXIT_CODE!
+    echo FAILED: Test 6 failed on first call with exit code !errorlevel!
+    goto :test6_end
+)
+echo First call succeeded
+
+REM Second call - continue session
+echo Second call: Testing session memory...
+mcp-coder prompt "What number did I tell you to remember?" --llm-method claude_code_cli --session-id %SESSION_ID_CLI% --timeout 30 > "%TEMP%\test6_response.txt" 2>&1
+if errorlevel 1 (
+    set "TEST6_RESULT=FAILED"
+    echo FAILED: Test 6 failed on second call with exit code !errorlevel!
+    goto :test6_end
+)
+
+REM Check if response contains the number 777
+findstr /i "777" "%TEMP%\test6_response.txt" > nul
+if errorlevel 1 (
+    set "TEST6_RESULT=FAILED"
+    echo FAILED: Response does not contain "777" - session not maintained
+    echo Response:
+    type "%TEMP%\test6_response.txt"
 ) else (
     set "TEST6_RESULT=PASSED"
-    echo SUCCESS: Test 6 completed
+    echo SUCCESS: Session maintained via session_id - response contains "777"
 )
+
+:test6_end
+REM Clean up temp file
+if exist "%TEMP%\test6_response.txt" del "%TEMP%\test6_response.txt"
 echo.
+
 echo ========================================
 echo Test Results Summary
 echo ========================================
@@ -145,8 +221,24 @@ echo Test 1 (Short/API):            !TEST1_RESULT!
 echo Test 2 (Short/CLI):            !TEST2_RESULT!
 echo Test 3 (Long/API):             !TEST3_RESULT!
 echo Test 4 (Long/CLI):             !TEST4_RESULT!
-echo Test 5 (Session/Continue/API): !TEST5_RESULT!
-echo Test 6 (Session/Continue/CLI): !TEST6_RESULT!
+echo Test 5 (Session/API):          !TEST5_RESULT!
+echo Test 6 (Session/CLI):          !TEST6_RESULT!
+echo.
+
+REM Count failures
+set /a FAILURES=0
+if "!TEST1_RESULT!"=="FAILED" set /a FAILURES+=1
+if "!TEST2_RESULT!"=="FAILED" set /a FAILURES+=1
+if "!TEST3_RESULT!"=="FAILED" set /a FAILURES+=1
+if "!TEST4_RESULT!"=="FAILED" set /a FAILURES+=1
+if "!TEST5_RESULT!"=="FAILED" set /a FAILURES+=1
+if "!TEST6_RESULT!"=="FAILED" set /a FAILURES+=1
+
+echo Total failures: !FAILURES!/6
 echo.
 
 endlocal
+
+REM Return failure code if any tests failed
+if !FAILURES! gtr 0 exit /b 1
+exit /b 0
