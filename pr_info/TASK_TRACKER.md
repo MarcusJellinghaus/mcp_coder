@@ -117,15 +117,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 8: Update Module Exports and Documentation
 **Details:** [step_8.md](./steps/step_8.md)
 
-- [ ] Modify `src/mcp_coder/__init__.py` to export new functions
-- [ ] Verify `__all__` in `src/mcp_coder/llm_types.py`
-- [ ] Verify `__all__` in `src/mcp_coder/llm_serialization.py`
-- [ ] Verify `__all__` in `src/mcp_coder/llm_interface.py`
-- [ ] Create `tests/test_module_exports.py` with import tests
-- [ ] Run code quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message
-- [ ] Step 8 complete
+- [x] Modify `src/mcp_coder/__init__.py` to export new functions
+- [x] Verify `__all__` in `src/mcp_coder/llm_types.py`
+- [x] Verify `__all__` in `src/mcp_coder/llm_serialization.py`
+- [x] Verify `__all__` in `src/mcp_coder/llm_interface.py`
+- [x] Create `tests/test_module_exports.py` with import tests
+- [x] Run code quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message
+- [x] Step 8 complete
 
 ### Step 9: Integration Testing and Validation
 **Details:** [step_9.md](./steps/step_9.md)
