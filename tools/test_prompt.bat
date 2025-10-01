@@ -16,11 +16,21 @@ cd /d "%PROJECT_ROOT%"
 echo Current directory: %CD%
 echo.
 
+REM Generate UUIDs for session tracking (separate sessions for API and CLI tests)
+for /f %%i in ('powershell -Command "[guid]::NewGuid().ToString()"') do set SESSION_ID_API=%%i
+for /f %%i in ('powershell -Command "[guid]::NewGuid().ToString()"') do set SESSION_ID_CLI=%%i
+echo Generated session IDs:
+echo   API: %SESSION_ID_API%
+echo   CLI: %SESSION_ID_CLI%
+echo.
+
 REM Initialize test result tracking
 set "TEST1_RESULT=UNKNOWN"
 set "TEST2_RESULT=UNKNOWN"
 set "TEST3_RESULT=UNKNOWN"
 set "TEST4_RESULT=UNKNOWN"
+set "TEST5_RESULT=UNKNOWN"
+set "TEST6_RESULT=UNKNOWN"
 
 REM Test 1: Short prompt with API method
 echo ========================================
@@ -37,7 +47,6 @@ if errorlevel 1 (
     echo SUCCESS: Test 1 passed
 )
 echo.
-echo.
 
 REM Test 2: Short prompt with CLI method
 echo ========================================
@@ -53,7 +62,6 @@ if errorlevel 1 (
     set "TEST2_RESULT=PASSED"
     echo SUCCESS: Test 2 passed
 )
-echo.
 echo.
 
 REM Test 3: Long prompt with API method (10,000+ characters)
@@ -76,7 +84,6 @@ if !EXIT_CODE! neq 0 (
     echo SUCCESS: Test 3 passed
 )
 echo.
-echo.
 
 REM Test 4: Long prompt with CLI method (10,000+ characters)
 echo ========================================
@@ -98,14 +105,68 @@ if !EXIT_CODE! neq 0 (
 )
 echo.
 
+REM Test 5: Continue session test with API method
+echo ========================================
+echo Test 5: Continue session with API method
+echo ========================================
+echo Session ID: %SESSION_ID_API%
+echo Initial question: What is 5+5?
+echo.
+mcp-coder prompt "What is 5+5?" --llm-method claude_code_api --timeout 30 --session-id "%SESSION_ID_API%"
+if errorlevel 1 (
+    set "TEST5_RESULT=FAILED"
+    echo FAILED: Test 5 initial prompt failed with exit code !errorlevel!
+) else (
+    echo SUCCESS: Initial prompt completed
+    echo.
+    echo Now continuing session with follow-up question: What was my previous question?
+    echo.
+    mcp-coder prompt "What was my previous question?" --llm-method claude_code_api --timeout 30 --session-id "%SESSION_ID_API%" --continue-session
+    if errorlevel 1 (
+        set "TEST5_RESULT=FAILED"
+        echo FAILED: Test 5 continue session failed with exit code !errorlevel!
+    ) else (
+        set "TEST5_RESULT=PASSED"
+        echo SUCCESS: Test 5 passed - session continued successfully
+    )
+)
+echo.
+
+REM Test 6: Continue session test with CLI method
+echo ========================================
+echo Test 6: Continue session with CLI method
+echo ========================================
+echo Session ID: %SESSION_ID_CLI%
+echo Initial question: What is 3+3?
+echo.
+mcp-coder prompt "What is 3+3?" --llm-method claude_code_cli --timeout 30 --session-id "%SESSION_ID_CLI%"
+if errorlevel 1 (
+    set "TEST6_RESULT=FAILED"
+    echo FAILED: Test 6 initial prompt failed with exit code !errorlevel!
+) else (
+    echo SUCCESS: Initial prompt completed
+    echo.
+    echo Now continuing session with follow-up question: What was my previous question?
+    echo.
+    mcp-coder prompt "What was my previous question?" --llm-method claude_code_cli --timeout 30 --session-id "%SESSION_ID_CLI%" --continue-session
+    if errorlevel 1 (
+        set "TEST6_RESULT=FAILED"
+        echo FAILED: Test 6 continue session failed with exit code !errorlevel!
+    ) else (
+        set "TEST6_RESULT=PASSED"
+        echo SUCCESS: Test 6 passed - session continued successfully
+    )
+)
 echo.
 echo ========================================
 echo Test Results Summary
 echo ========================================
-echo Test 1 (Short/API): !TEST1_RESULT!
-echo Test 2 (Short/CLI): !TEST2_RESULT!
-echo Test 3 (Long/API):  !TEST3_RESULT!
-echo Test 4 (Long/CLI):  !TEST4_RESULT!
+echo Test 1 (Short/API):            !TEST1_RESULT!
+echo Test 2 (Short/CLI):            !TEST2_RESULT!
+echo Test 3 (Long/API):             !TEST3_RESULT!
+echo Test 4 (Long/CLI):             !TEST4_RESULT!
+echo Test 5 (Session/Continue/API): !TEST5_RESULT!
+echo Test 6 (Session/Continue/CLI): !TEST6_RESULT!
 echo.
 
 endlocal
