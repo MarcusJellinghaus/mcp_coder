@@ -61,17 +61,17 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 4: Add Session Support to API Method
 **Details:** [step_4.md](./steps/step_4.md)
 
-- [ ] Modify `src/mcp_coder/llm_providers/claude/claude_code_api.py`
-- [ ] Add imports: datetime, LLMResponseDict, LLM_RESPONSE_VERSION
-- [ ] Implement `create_api_response_dict()` helper function
-- [ ] Update `ask_claude_code_api()` to accept `session_id` parameter
-- [ ] Update return type to `LLMResponseDict`
-- [ ] Leverage existing `ask_claude_code_api_detailed_sync()` function
-- [ ] Add API tests to `tests/llm_providers/claude/test_claude_code_api.py`
-- [ ] Run code quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message
-- [ ] Step 4 complete
+- [x] Modify `src/mcp_coder/llm_providers/claude/claude_code_api.py`
+- [x] Add imports: datetime, LLMResponseDict, LLM_RESPONSE_VERSION
+- [x] Implement `create_api_response_dict()` helper function
+- [x] Update `ask_claude_code_api()` to accept `session_id` parameter
+- [x] Update return type to `LLMResponseDict`
+- [x] Leverage existing `ask_claude_code_api_detailed_sync()` function
+- [x] Add API tests to `tests/llm_providers/claude/test_claude_code_api.py`
+- [x] Run code quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message
+- [x] Step 4 complete
 
 ### Step 5: Update Interface Router for TypedDict Returns
 **Details:** [step_5.md](./steps/step_5.md)

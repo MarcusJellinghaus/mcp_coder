@@ -51,7 +51,8 @@ def ask_claude_code(
         result = ask_claude_code_cli(question, timeout=timeout, cwd=cwd)
         return result["text"]  # Extract text from LLMResponseDict
     elif method == "api":
-        return ask_claude_code_api(question, timeout=timeout)
+        result = ask_claude_code_api(question, timeout=timeout)
+        return result["text"]  # Extract text from LLMResponseDict
     else:
         raise ValueError(
             f"Unsupported method: {method}. Supported methods: 'cli', 'api'"

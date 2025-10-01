@@ -6,6 +6,7 @@ import logging
 import os
 import subprocess
 import time
+from datetime import datetime
 from typing import Any, Callable, Optional, Tuple
 
 from claude_code_sdk import (
@@ -19,6 +20,7 @@ from claude_code_sdk import (
 )
 from claude_code_sdk._errors import CLINotFoundError
 
+from ...llm_types import LLM_RESPONSE_VERSION, LLMResponseDict
 from .claude_executable_finder import (
     find_claude_executable,
     setup_claude_path,
@@ -47,6 +49,7 @@ __all__ = [
     "ask_claude_code_api",
     "ask_claude_code_api_detailed",
     "ask_claude_code_api_detailed_sync",
+    "create_api_response_dict",
     "_ask_claude_code_api_async",
     "_create_claude_client",
     "_extract_real_error_message",
@@ -233,6 +236,34 @@ def _create_claude_client() -> ClaudeCodeOptions:
     return ClaudeCodeOptions()
 
 
+def create_api_response_dict(
+    text: str, session_id: str | None, detailed_response: dict[str, Any]
+) -> LLMResponseDict:
+    """Create LLMResponseDict from API detailed response.
+
+    Args:
+        text: Extracted response text
+        session_id: Session ID from session_info
+        detailed_response: Complete response from ask_claude_code_api_detailed_sync()
+
+    Returns:
+        Complete LLMResponseDict
+    """
+    return {
+        "version": LLM_RESPONSE_VERSION,
+        "timestamp": datetime.now().isoformat(),
+        "text": text,
+        "session_id": session_id,
+        "method": "api",
+        "provider": "claude",
+        "raw_response": {
+            "session_info": detailed_response["session_info"],
+            "result_info": detailed_response["result_info"],
+            "raw_messages": detailed_response["raw_messages"],
+        },
+    }
+
+
 async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
     """
     Ask Claude a question via Python SDK asynchronously.
@@ -331,104 +362,68 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
         ) from exc
 
 
-def ask_claude_code_api(question: str, timeout: int = 30) -> str:
+def ask_claude_code_api(
+    question: str, session_id: str | None = None, timeout: int = 30
+) -> LLMResponseDict:
     """
-    Ask Claude a question via Python SDK and return the response.
+    Ask Claude a question via Python SDK and return structured response.
 
-    This is a synchronous wrapper around the async SDK functionality.
-    The function makes a real API call to Claude using the claude-code-sdk.
-
-    The SDK returns multiple message types in sequence:
-    1. SystemMessage: Contains session info, available tools, model details
-    2. AssistantMessage: Contains TextBlock objects with Claude's actual response
-    3. ResultMessage: Contains cost, duration, and usage statistics
-
-    This function extracts only the text content from AssistantMessage.TextBlock objects
-    and returns it as a concatenated string.
-
-    Response Structure Example:
-        SystemMessage(
-            session_id='abc123',
-            data={'model': 'claude-sonnet-4', 'tools': [...], 'mcp_servers': [...]}
-        )
-        AssistantMessage(
-            content=[TextBlock(text="10")]
-        )
-        ResultMessage(
-            total_cost_usd=0.058779,
-            duration_ms=2801,
-            usage={'input_tokens': 4, 'output_tokens': 5, ...}
-        )
-
-    For complete SDK documentation, see:
-    https://docs.anthropic.com/en/docs/claude-code/sdk/sdk-python
+    Leverages existing ask_claude_code_api_detailed_sync() which handles
+    session extraction and metadata collection.
 
     Args:
         question: The question to ask Claude
+        session_id: Optional session ID to resume conversation
         timeout: Timeout in seconds for the request (default: 30)
 
     Returns:
-        Claude's response as a string (text content only)
+        LLMResponseDict with complete response data
 
     Raises:
         ValueError: If input validation fails
         subprocess.TimeoutExpired: If the request times out
-        subprocess.CalledProcessError: If the SDK request fails (with helpful error messages)
+        subprocess.CalledProcessError: If the SDK request fails
+
+    Examples:
+        >>> result = ask_claude_code_api("What is Python?")
+        >>> print(result["text"])
+        >>> session_id = result["session_id"]
+
+        >>> result2 = ask_claude_code_api("Tell me more", session_id=session_id)
     """
-    logger.debug(
-        "ask_claude_code_api called with question length: %d, timeout: %d",
-        len(question) if question else 0,
-        timeout,
-    )
+    # Input validation
+    if not question or not question.strip():
+        raise ValueError("Question cannot be empty or whitespace only")
+    if timeout <= 0:
+        raise ValueError("Timeout must be a positive number")
 
-    # Input validation is handled by _ask_claude_code_api_async
+    # Note: session_id parameter is currently not used because
+    # ask_claude_code_api_detailed_sync() doesn't support it yet.
+    # This will be implemented when the underlying detailed function
+    # supports session resumption via ClaudeCodeOptions(resume=session_id)
+
     try:
-        # Define a wrapper function for retry logic
-        def execute_request() -> str:
-            return asyncio.run(_ask_claude_code_api_async(question, timeout))
+        # Call detailed function (already extracts everything we need)
+        detailed = ask_claude_code_api_detailed_sync(question, timeout)
 
-        # Use retry logic for intermittent issues (like PATH resolution)
-        # Only retry on specific errors that might be transient
-        try:
-            result = _retry_with_backoff(execute_request, max_retries=2, base_delay=0.5)
-            logger.debug("Claude API request completed successfully")
-            return str(result)
-        except Exception as retry_error:
-            # If retries failed, proceed to main error handling
-            raise retry_error
+        # Extract session_id from session_info
+        session_id_result = detailed["session_info"].get("session_id")
+
+        # Build and return response
+        return create_api_response_dict(detailed["text"], session_id_result, detailed)
 
     except subprocess.TimeoutExpired:
-        logger.error("Claude API request timed out after %d seconds", timeout)
-        # Re-raise timeout errors as-is for consistency with CLI version
+        # Re-raise timeout errors as-is
         raise
 
-    except ValueError as ve:
-        logger.error("Input validation failed: %s", ve)
+    except ValueError:
         # Re-raise input validation errors as-is
         raise
 
     except Exception as e:
-        # Extract the real error message from nested exceptions
+        # Convert to ClaudeAPIError for consistency
         real_error = _extract_real_error_message(e)
-        logger.error("Claude API request failed: %s (original: %s)", real_error, str(e))
-
-        # Determine error type and create appropriate user-friendly message
-        if (
-            "CLINotFoundError" in str(e)
-            or "Claude Code not found" in str(e)
-            or isinstance(e, CLINotFoundError)
-        ):
-            # This error is misleading - claude.exe exists but can't be executed
-            error_msg = (
-                "Claude API Error: Unable to execute Claude CLI.\n"
-                "Possible causes:\n"
-                "  - PATH environment variable issues\n"
-                "  - Authentication/login problems\n"
-                "  - API rate limiting (overusage)\n\n"
-            )
-        else:
-            error_msg = f"Claude API Error: {real_error}"
-
+        error_msg = f"Claude API Error: {real_error}"
         raise ClaudeAPIError(error_msg) from e
 
 

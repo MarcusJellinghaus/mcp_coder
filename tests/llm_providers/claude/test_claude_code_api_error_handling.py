@@ -308,17 +308,20 @@ class TestAskClaudeCodeApiErrorHandling:
         with pytest.raises(ValueError):
             ask_claude_code_api("test question")
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._retry_with_backoff")
-    def test_retry_logic_called(self, mock_retry: MagicMock) -> None:
-        """Test that retry logic is properly called."""
-        mock_retry.return_value = "success"
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_retry_logic_called(self, mock_detailed_sync: MagicMock) -> None:
+        """Test that API method returns LLMResponseDict."""
+        mock_detailed_sync.return_value = {
+            "text": "success",
+            "session_info": {"session_id": "test-123"},
+            "result_info": {},
+            "raw_messages": [],
+        }
 
         result = ask_claude_code_api("test question")
 
-        assert result == "success"
-        mock_retry.assert_called_once()
-        # Check that the retry was called with correct parameters
-        args, kwargs = mock_retry.call_args
-        assert len(args) == 1  # The function to retry
-        assert kwargs.get("max_retries") == 2
-        assert kwargs.get("base_delay") == 0.5
+        assert isinstance(result, dict)
+        assert result["text"] == "success"
+        mock_detailed_sync.assert_called_once()
