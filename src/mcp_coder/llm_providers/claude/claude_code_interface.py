@@ -48,7 +48,8 @@ def ask_claude_code(
         raise ValueError("Timeout must be a positive number")
 
     if method == "cli":
-        return ask_claude_code_cli(question, timeout=timeout, cwd=cwd)
+        result = ask_claude_code_cli(question, timeout=timeout, cwd=cwd)
+        return result["text"]  # Extract text from LLMResponseDict
     elif method == "api":
         return ask_claude_code_api(question, timeout=timeout)
     else:

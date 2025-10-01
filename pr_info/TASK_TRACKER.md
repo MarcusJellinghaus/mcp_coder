@@ -47,16 +47,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Enhance CLI Method with JSON Parsing and Session Support
 **Details:** [step_3.md](./steps/step_3.md)
 
-- [ ] Modify `src/mcp_coder/llm_providers/claude/claude_code_cli.py`
-- [ ] Add imports: json, datetime, LLMResponseDict, LLM_RESPONSE_VERSION
-- [ ] Implement pure functions: `parse_cli_json_string()`, `build_cli_command()`, `create_response_dict()`
-- [ ] Update `ask_claude_code_cli()` to accept `session_id` parameter
-- [ ] Update return type to `LLMResponseDict`
-- [ ] Add CLI tests to `tests/llm_providers/claude/test_claude_code_cli.py`
-- [ ] Run code quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message
-- [ ] Step 3 complete
+- [x] Modify `src/mcp_coder/llm_providers/claude/claude_code_cli.py`
+- [x] Add imports: json, datetime, LLMResponseDict, LLM_RESPONSE_VERSION
+- [x] Implement pure functions: `parse_cli_json_string()`, `build_cli_command()`, `create_response_dict()`
+- [x] Update `ask_claude_code_cli()` to accept `session_id` parameter
+- [x] Update return type to `LLMResponseDict`
+- [x] Add CLI tests to `tests/llm_providers/claude/test_claude_code_cli.py`
+- [x] Run code quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message
+- [x] Step 3 complete
 
 ### Step 4: Add Session Support to API Method
 **Details:** [step_4.md](./steps/step_4.md)
