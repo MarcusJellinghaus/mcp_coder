@@ -154,6 +154,7 @@ class TestExecutePrompt:
             provider="claude",
             method="api",
             timeout=30,
+            session_id=None,
         )
 
         # Verify basic output presence (Claude response visible)
@@ -182,7 +183,11 @@ class TestExecutePrompt:
 
         # Verify ask_llm was called with correct parameters
         mock_ask_llm.assert_called_once_with(
-            "Test question", provider="claude", method="api", timeout=30
+            "Test question",
+            provider="claude",
+            method="api",
+            timeout=30,
+            session_id=None,
         )
 
         # Verify error message is displayed
@@ -585,6 +590,7 @@ class TestExecutePrompt:
             provider="claude",
             method="api",
             timeout=30,
+            session_id=None,
         )
 
         # Note: For store_response test with ask_llm, we need to mock the storage differently
@@ -1200,7 +1206,11 @@ class TestExecutePrompt:
 
         # Verify ask_llm was called with original prompt (no context enhancement)
         mock_ask_llm.assert_called_once_with(
-            "Tell me about Python", provider="claude", method="api", timeout=30
+            "Tell me about Python",
+            provider="claude",
+            method="api",
+            timeout=30,
+            session_id=None,
         )
 
         # Verify normal output is displayed
@@ -1392,7 +1402,11 @@ class TestExecutePrompt:
 
             # Verify ask_llm was called with original prompt (no context enhancement)
             mock_ask_llm.assert_called_once_with(
-                "Tell me about Python", provider="claude", method="api", timeout=30
+                "Tell me about Python",
+                provider="claude",
+                method="api",
+                timeout=30,
+                session_id=None,
             )
 
     def test_continue_with_user_feedback_display(self) -> None:

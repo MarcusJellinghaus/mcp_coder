@@ -98,6 +98,35 @@ class TestSessionIdHandling:
             assert result["method"] == "api"
 
 
+@pytest.mark.claude_api_integration
+class TestApiRealIntegration:
+    """REAL integration test for API method."""
+
+    def test_api_basic_call_without_session(self) -> None:
+        """Test that API method works with a real API call (no session_id).
+
+        This makes a REAL call to Claude API.
+        """
+        # Should work - makes actual API call
+        result = ask_claude_code_api(
+            "What is 2+2? Answer with just the number.",
+            timeout=30,
+        )
+
+        # Verify structure
+        assert "text" in result
+        assert "session_id" in result  # API may or may not provide session_id
+        assert "method" in result
+        assert result["method"] == "api"
+        assert "provider" in result
+        assert result["provider"] == "claude"
+
+        # Verify we got a response
+        assert len(result["text"]) > 0
+        # Claude should answer with "4"
+        assert "4" in result["text"]
+
+
 @pytest.mark.claude_cli_integration
 class TestCliSessionRealIntegration:
     """REAL integration test for CLI session continuity."""

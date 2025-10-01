@@ -8,9 +8,12 @@ These tests make REAL calls to Claude services and should only be run when:
 Run with: pytest -m claude_cli_integration or -m claude_api_integration
 """
 
+from typing import Any
+
 import pytest
 
 from mcp_coder import ask_llm, prompt_llm
+from mcp_coder.llm_types import LLMResponseDict
 
 
 @pytest.mark.claude_cli_integration
@@ -109,15 +112,15 @@ class TestRealClaudeAPI:
 
         This test makes a REAL call to verify cost tracking works.
         """
-        result = prompt_llm("Say hello", method="api")
+        result: LLMResponseDict = prompt_llm("Say hello", method="api")
 
         # Verify response structure
         assert "raw_response" in result
-        raw_response = result["raw_response"]
+        raw_response: Any = result["raw_response"]
 
         # Cost info is in raw_response.result_info
         assert "result_info" in raw_response
-        result_info = raw_response["result_info"]
+        result_info: Any = raw_response["result_info"]
 
         # Verify cost tracking fields exist
         assert "cost_usd" in result_info or "usage" in result_info

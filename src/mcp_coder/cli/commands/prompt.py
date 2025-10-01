@@ -372,17 +372,22 @@ def execute_prompt(args: argparse.Namespace) -> int:
             previous_context = _load_previous_chat(continue_file_path)
             enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
 
-        # Get user-specified timeout and llm_method
+        # Get user-specified timeout, llm_method, and session_id
         timeout = getattr(args, "timeout", 30)
         llm_method = getattr(args, "llm_method", "claude_code_api")
         verbosity = getattr(args, "verbosity", "just-text")
+        session_id = getattr(args, "session_id", None)
 
         # Route to appropriate method based on verbosity level
         if verbosity == "just-text":
             # Use unified ask_llm interface for simple text output
             provider, method = parse_llm_method(llm_method)
             response = ask_llm(
-                enhanced_prompt, provider=provider, method=method, timeout=timeout
+                enhanced_prompt,
+                provider=provider,
+                method=method,
+                timeout=timeout,
+                session_id=session_id,
             )
 
             # Simple text output with tool summary

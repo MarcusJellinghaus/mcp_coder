@@ -75,7 +75,7 @@ def build_cli_command(session_id: str | None, claude_cmd: str) -> list[str]:
     The prompt is passed via stdin using the -p "" pattern.
 
     Args:
-        session_id: Optional session ID for continuation
+        session_id: Optional session ID to resume previous conversation
         claude_cmd: Path to claude executable
 
     Returns:
@@ -191,11 +191,11 @@ def ask_claude_code_cli(
 
     # Execute command with stdin input (I/O)
     # This avoids Windows command-line length limits by passing prompt via stdin
-    logger.debug(f"Executing CLI command with stdin (cwd={cwd}, prompt_len={len(question)})")
+    logger.debug(
+        f"Executing CLI command with stdin (cwd={cwd}, prompt_len={len(question)})"
+    )
     options = CommandOptions(
-        timeout_seconds=timeout,
-        cwd=cwd,
-        input_data=question  # Pass question via stdin
+        timeout_seconds=timeout, cwd=cwd, input_data=question  # Pass question via stdin
     )
     result = execute_subprocess(command, options)
 

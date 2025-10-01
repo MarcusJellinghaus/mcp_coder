@@ -105,6 +105,16 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         default="claude_code_api",
         help="LLM method to use (default: claude_code_api)",
     )
+    prompt_parser.add_argument(
+        "--session-id",
+        type=str,
+        help="Session ID for maintaining conversation context (CLI method only)",
+    )
+    prompt_parser.add_argument(
+        "--continue-session",
+        action="store_true",
+        help="Continue using the same session ID from --session-id",
+    )
 
     # Commit commands - Step 5
     commit_parser = subparsers.add_parser("commit", help="Git commit operations")
