@@ -397,10 +397,13 @@ def ask_claude_code_api(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    # Note: session_id parameter is currently not used because
-    # ask_claude_code_api_detailed_sync() doesn't support it yet.
-    # This will be implemented when the underlying detailed function
-    # supports session resumption via ClaudeCodeOptions(resume=session_id)
+    # Check if session_id was provided - API method doesn't support session resumption yet
+    if session_id is not None:
+        raise NotImplementedError(
+            "Session resumption (session_id parameter) is not yet supported for the API method. "
+            "The Claude Code SDK does not currently provide session resumption functionality. "
+            "Use the CLI method if you need session continuity."
+        )
 
     try:
         # Call detailed function (already extracts everything we need)
