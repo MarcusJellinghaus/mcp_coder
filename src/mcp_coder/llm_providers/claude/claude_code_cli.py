@@ -68,29 +68,29 @@ def parse_cli_json_string(json_str: str) -> ParsedCliResponse:
     )
 
 
-def build_cli_command(
-    question: str, session_id: str | None, claude_cmd: str
-) -> list[str]:
-    """Build CLI command arguments (pure function).
+def build_cli_command(session_id: str | None, claude_cmd: str) -> list[str]:
+    """Build CLI command arguments for stdin input (pure function).
+
+    Uses stdin for prompt input to avoid Windows command-line length limits (~8191 chars).
+    The prompt is passed via stdin using the -p "" pattern.
 
     Args:
-        question: Question to ask
         session_id: Optional session ID for continuation
         claude_cmd: Path to claude executable
 
     Returns:
-        Command list ready for subprocess execution
+        Command list ready for subprocess execution with stdin
 
     Example:
-        >>> cmd = build_cli_command("test", None, "claude")
-        >>> assert cmd == ["claude", "--print", "--output-format", "json", "test"]
+        >>> cmd = build_cli_command(None, "claude")
+        >>> assert cmd == ["claude", "-p", "", "--output-format", "json"]
     """
-    command = [claude_cmd, "--print", "--output-format", "json"]
+    # Use -p "" to read prompt from stdin (avoids command-line length limits)
+    command = [claude_cmd, "-p", "", "--output-format", "json"]
 
     if session_id:
         command.extend(["--resume", session_id])
 
-    command.append(question)
     return command
 
 
@@ -186,12 +186,18 @@ def ask_claude_code_cli(
     # Find executable
     claude_cmd = _find_claude_executable()
 
-    # Build command (pure function)
-    command = build_cli_command(question, session_id, claude_cmd)
+    # Build command (pure function) - uses stdin for prompt
+    command = build_cli_command(session_id, claude_cmd)
 
-    # Execute command (I/O)
-    logger.debug(f"Executing CLI command (cwd={cwd})")
-    result = execute_command(command, timeout_seconds=timeout, cwd=cwd)
+    # Execute command with stdin input (I/O)
+    # This avoids Windows command-line length limits by passing prompt via stdin
+    logger.debug(f"Executing CLI command with stdin (cwd={cwd}, prompt_len={len(question)})")
+    options = CommandOptions(
+        timeout_seconds=timeout,
+        cwd=cwd,
+        input_data=question  # Pass question via stdin
+    )
+    result = execute_subprocess(command, options)
 
     # Error handling
     if result.timed_out:

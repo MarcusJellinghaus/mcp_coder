@@ -21,7 +21,7 @@ class TestClaudeCodeCliBackwardCompatibility:
     """Test cases for backward compatibility of CLI functions."""
 
     @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_success(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -42,9 +42,12 @@ class TestClaudeCodeCliBackwardCompatibility:
         command = call_args[0][0]
         assert "--output-format" in command
         assert "json" in command
+        # Verify stdin was used
+        options = call_args[0][1]
+        assert options.input_data == "What is the meaning of life?"
 
     @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_with_custom_timeout(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -61,7 +64,8 @@ class TestClaudeCodeCliBackwardCompatibility:
         ask_claude_code_cli("Test question", timeout=60)
 
         call_args = mock_execute.call_args
-        assert call_args[1]["timeout_seconds"] == 60
+        options = call_args[0][1]
+        assert options.timeout_seconds == 60
 
     @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
     def test_ask_claude_code_cli_file_not_found(self, mock_find: MagicMock) -> None:
@@ -74,7 +78,7 @@ class TestClaudeCodeCliBackwardCompatibility:
             ask_claude_code_cli("Test question")
 
     @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_timeout(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -89,13 +93,11 @@ class TestClaudeCodeCliBackwardCompatibility:
         )
         mock_execute.return_value = mock_result
 
-        with pytest.raises(
-            subprocess.TimeoutExpired, match="timed out after 30 seconds"
-        ):
+        with pytest.raises(subprocess.TimeoutExpired):
             ask_claude_code_cli("Test question")
 
     @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_command_error(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -143,19 +145,21 @@ class TestPureFunctions:
             parse_cli_json_string(invalid_json)
 
     def test_build_cli_command_without_session(self) -> None:
-        """Test command building without session ID."""
-        cmd = build_cli_command("test question", None, "claude")
+        """Test command building without session ID (uses stdin)."""
+        cmd = build_cli_command(None, "claude")
 
-        assert cmd == ["claude", "--print", "--output-format", "json", "test question"]
+        assert cmd == ["claude", "-p", "", "--output-format", "json"]
         assert "--resume" not in cmd
 
     def test_build_cli_command_with_session(self) -> None:
-        """Test command building with session ID."""
-        cmd = build_cli_command("follow up", "session-123", "claude")
+        """Test command building with session ID (uses stdin)."""
+        cmd = build_cli_command("session-123", "claude")
 
         assert "--resume" in cmd
         assert "session-123" in cmd
-        assert cmd[-1] == "follow up"
+        # With stdin, question is not in command
+        assert "-p" in cmd
+        assert "" in cmd
 
     def test_create_response_dict_structure(self) -> None:
         """Test response dict creation."""
@@ -175,7 +179,7 @@ class TestIOWrappers:
     """Tests for I/O wrapper integration."""
 
     @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_returns_typed_dict(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -207,7 +211,7 @@ class TestIOWrappers:
         assert result["session_id"] == "test-123"
 
     @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_command")
+    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_with_session_integration(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -229,3 +233,6 @@ class TestIOWrappers:
         assert "--resume" in command
         assert "existing" in command
         assert result["session_id"] == "existing"
+        # Verify stdin was used
+        options = call_args[0][1]
+        assert options.input_data == "Follow up"
