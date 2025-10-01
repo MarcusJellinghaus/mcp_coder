@@ -76,16 +76,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 5: Update Interface Router for TypedDict Returns
 **Details:** [step_5.md](./steps/step_5.md)
 
-- [ ] Modify `src/mcp_coder/llm_providers/claude/claude_code_interface.py`
-- [ ] Add `session_id` parameter to `ask_claude_code()` function
-- [ ] Pass `session_id` to CLI and API methods
-- [ ] Extract text from `LLMResponseDict`: `return result["text"]`
-- [ ] Update docstring to explain text-only return
-- [ ] Add tests to `tests/llm_providers/claude/test_claude_code_interface.py`
-- [ ] Run code quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message
-- [ ] Step 5 complete
+- [x] Modify `src/mcp_coder/llm_providers/claude/claude_code_interface.py`
+- [x] Add `session_id` parameter to `ask_claude_code()` function
+- [x] Pass `session_id` to CLI and API methods
+- [x] Extract text from `LLMResponseDict`: `return result["text"]`
+- [x] Update docstring to explain text-only return
+- [x] Add tests to `tests/llm_providers/claude/test_claude_code_interface.py`
+- [x] Run code quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message
+- [x] Step 5 complete
 
 ### Step 6: Update Top-Level ask_llm() Interface
 **Details:** [step_6.md](./steps/step_6.md)
