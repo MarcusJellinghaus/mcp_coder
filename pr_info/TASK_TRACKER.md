@@ -24,11 +24,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Define LLM Response Types and Constants
 **Details:** [step_1.md](./steps/step_1.md)
 
-- [ ] Create `src/mcp_coder/llm_types.py` with `LLMResponseDict` TypedDict
-- [ ] Define `LLM_RESPONSE_VERSION = "1.0"` constant
-- [ ] Create `tests/test_llm_types.py` with type validation tests
-- [ ] Run code quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
+- [x] Create `src/mcp_coder/llm_types.py` with `LLMResponseDict` TypedDict
+- [x] Define `LLM_RESPONSE_VERSION = "1.0"` constant
+- [x] Create `tests/test_llm_types.py` with type validation tests
+- [x] Run code quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
 - [ ] Prepare git commit message
 - [ ] Step 1 complete
 
