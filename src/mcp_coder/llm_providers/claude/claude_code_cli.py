@@ -36,7 +36,9 @@ def _find_claude_executable() -> str:
     return result
 
 
-def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
+def ask_claude_code_cli(
+    question: str, timeout: int = 30, cwd: str | None = None
+) -> str:
     """
     Ask Claude a question via Claude Code CLI and return the response.
 
@@ -45,6 +47,8 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     Args:
         question: The question to ask Claude
         timeout: Timeout in seconds for the command (default: 30)
+        cwd: Working directory for the command (default: None, uses current directory)
+             This is important for Claude to find .claude/settings.local.json
 
     Returns:
         Claude's response as a string
@@ -70,20 +74,21 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
     command_line_length = len(claude_cmd) + len("--print ") + len(question)
 
     if command_line_length > 7000:  # Conservative threshold
-        logger.debug(
-            f"Using stdin for long prompt ({len(question)} chars) to avoid CLI limit"
-        )
         # Use stdin input method: echo "prompt" | claude -p ""
-        options = CommandOptions(timeout_seconds=timeout, input_data=question)
+        logger.debug(f"Executing: {claude_cmd} -p '' (with stdin input, cwd={cwd})")
+        options = CommandOptions(timeout_seconds=timeout, input_data=question, cwd=cwd)
         result = execute_subprocess([claude_cmd, "-p", ""], options)
     else:
         # Use direct command line argument for shorter prompts
+        logger.debug(f"Executing: {claude_cmd} --print <question> (cwd={cwd})")
         result = execute_command(
             [claude_cmd, "--print", question],
             timeout_seconds=timeout,
+            cwd=cwd,
         )
 
     if result.timed_out:
+        logger.error(f"Claude Code CLI timed out after {timeout} seconds")
         raise subprocess.TimeoutExpired(
             result.command or [claude_cmd],
             timeout,
@@ -91,11 +96,14 @@ def ask_claude_code_cli(question: str, timeout: int = 30) -> str:
         )
 
     if result.return_code != 0:
+        logger.error(f"Claude Code CLI failed with return code {result.return_code}")
         raise subprocess.CalledProcessError(
             result.return_code,
             result.command or [claude_cmd],
             output=result.stdout,
             stderr=f"Claude Code command failed: {result.stderr}",
         )
+
+    logger.debug(f"Claude CLI success: response length={len(result.stdout.strip())}")
 
     return result.stdout.strip()

@@ -4,7 +4,11 @@ from .llm_providers.claude.claude_code_interface import ask_claude_code
 
 
 def ask_llm(
-    question: str, provider: str = "claude", method: str = "cli", timeout: int = 30
+    question: str,
+    provider: str = "claude",
+    method: str = "cli",
+    timeout: int = 30,
+    cwd: str | None = None,
 ) -> str:
     """
     Ask a question to an LLM provider using the specified method.
@@ -19,6 +23,8 @@ def ask_llm(
                 - "cli": Uses Claude Code CLI executable (requires installation)
                 - "api": Uses Claude Code Python SDK (automatic authentication)
         timeout: Timeout in seconds for the request (default: 30)
+        cwd: Working directory for the command (only used for CLI method)
+             This is important for Claude to find .claude/settings.local.json
 
     Returns:
         The LLM's response as a string
@@ -48,7 +54,7 @@ def ask_llm(
         raise ValueError("Timeout must be a positive number")
 
     if provider == "claude":
-        return ask_claude_code(question, method=method, timeout=timeout)
+        return ask_claude_code(question, method=method, timeout=timeout, cwd=cwd)
     else:
         raise ValueError(
             f"Unsupported provider: {provider}. Currently supported: 'claude'"

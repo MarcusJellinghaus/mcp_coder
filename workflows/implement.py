@@ -47,6 +47,7 @@ from mcp_coder.utils.git_operations import (
     get_current_branch_name,
     get_default_branch_name,
     get_full_status,
+    get_github_repository_url,
     git_push,
     is_working_directory_clean,
 )
@@ -185,7 +186,8 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
         
         # Call LLM with the prompt
         provider, method = parse_llm_method(llm_method)
-        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300)
+        
+        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300, cwd=str(project_dir))
         
         if not response or not response.strip():
             logger.error("LLM returned empty response for task tracker update")
@@ -658,6 +660,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--log-level",
+        type=str.upper,
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default="INFO",
         help="Set the logging level (default: INFO)"
@@ -717,12 +720,22 @@ def main() -> None:
     """Main workflow orchestration function - processes all implementation tasks in sequence."""
     # Parse command line arguments
     args = parse_arguments()
-    project_dir = resolve_project_dir(args.project_dir)
     
-    # Setup logging early
+    # Setup logging BEFORE any other operations that might use logger
     setup_logging(args.log_level)
     
+    # Now resolve project directory (which may use logger)
+    project_dir = resolve_project_dir(args.project_dir)
+    
     log_step("Starting implement workflow...")
+    
+    # Get repository name and current branch for context logging
+    repo_url = get_github_repository_url(project_dir)
+    repo_name = repo_url.split('/')[-1] if repo_url else str(project_dir.name)
+    current_branch = get_current_branch_name(project_dir) or "unknown"
+    
+    # Log workflow context at the beginning
+    log_step(f"Workflow Context - Repository: {repo_name}, Branch: {current_branch}, LLM Method: {args.llm_method}, Log Level: {args.log_level}")
     log_step(f"Using project directory: {project_dir}")
     
     # Step 1: Check git status and prerequisites

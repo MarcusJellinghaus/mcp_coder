@@ -34,6 +34,7 @@ class TestClaudeCodeCli:
         mock_execute.assert_called_once_with(
             ["claude", "--print", "What is the meaning of life?"],
             timeout_seconds=30,
+            cwd=None,
         )
 
     @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
@@ -56,6 +57,7 @@ class TestClaudeCodeCli:
         mock_execute.assert_called_once_with(
             ["claude", "--print", "Test question"],
             timeout_seconds=60,
+            cwd=None,
         )
 
     @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
