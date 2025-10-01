@@ -107,8 +107,5 @@ echo Test 2 (Short/CLI): !TEST2_RESULT!
 echo Test 3 (Long/API):  !TEST3_RESULT!
 echo Test 4 (Long/CLI):  !TEST4_RESULT!
 echo.
-echo IMPORTANT: If Test 4 failed, the stdin workaround was removed!
-echo The workaround from commit 18ea52e needs to be restored.
-echo.
 
 endlocal
