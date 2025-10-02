@@ -290,20 +290,17 @@ def log_progress_summary(project_dir: Path) -> None:
 
 
 def get_next_task(project_dir: Path) -> Optional[str]:
-    """Get next incomplete task from task tracker."""
+    """Get next incomplete task from task tracker (excluding meta-tasks)."""
     log_step("Checking for incomplete tasks...")
     
     try:
         pr_info_dir = str(project_dir / PR_INFO_DIR)
         
-        # Use has_incomplete_work() for clearer semantics
-        if not has_incomplete_work(pr_info_dir):
-            log_step("No incomplete work found")
-            return None
+        # Get incomplete tasks, excluding meta-tasks
+        incomplete_tasks = get_incomplete_tasks(pr_info_dir, exclude_meta_tasks=True)
         
-        incomplete_tasks = get_incomplete_tasks(pr_info_dir)
         if not incomplete_tasks:
-            log_step("No incomplete tasks found")
+            log_step("No incomplete implementation tasks found (meta-tasks excluded)")
             return None
         
         next_task = incomplete_tasks[0]
@@ -693,19 +690,33 @@ Generated on: {datetime.now().isoformat()}"""
         logger.error(f"Error saving initial conversation: {e}")
         return False
     
-    # Step 6: Run mypy check and fixes (each fix will be saved separately)
+    # Step 6: Check if any files were actually changed
+    try:
+        status = get_full_status(project_dir)
+        all_changes = status["staged"] + status["modified"] + status["untracked"]
+        
+        if not all_changes:
+            logger.warning(f"No files were changed for task: {next_task}")
+            logger.warning("This might indicate the task is already complete or the LLM didn't make changes")
+            logger.warning("Skipping commit/push for this task")
+            return True  # Consider it successful but skip commit
+    except Exception as e:
+        logger.error(f"Error checking file changes: {e}")
+        return False
+    
+    # Step 7: Run mypy check and fixes (each fix will be saved separately)
     if not check_and_fix_mypy(project_dir, step_num, llm_method):
         logger.warning("Mypy check failed or found unresolved issues - continuing anyway")
     
-    # Step 7: Run formatters
+    # Step 8: Run formatters
     if not run_formatters(project_dir):
         return False
     
-    # Step 8: Commit changes
+    # Step 9: Commit changes
     if not commit_changes(project_dir):
         return False
     
-    # Step 9: Push changes to remote
+    # Step 10: Push changes to remote
     if not push_changes(project_dir):
         return False
     
