@@ -187,7 +187,7 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
         # Call LLM with the prompt
         provider, method = parse_llm_method(llm_method)
         
-        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300, cwd=str(project_dir))
+        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300)
         
         if not response or not response.strip():
             logger.error("LLM returned empty response for task tracker update")
