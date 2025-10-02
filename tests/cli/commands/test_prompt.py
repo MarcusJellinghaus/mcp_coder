@@ -116,16 +116,16 @@ class TestExecutePrompt:
     def _create_continue_args(
         self,
         prompt: str = "Test prompt",
-        continue_from: Optional[str] = None,
-        continue_flag: bool = False,
+        continue_session_from: Optional[str] = None,
+        continue_session: bool = False,
         verbosity: str = "just-text",
     ) -> argparse.Namespace:
         """Create standardized argument namespace for continue tests."""
         args = argparse.Namespace(prompt=prompt, verbosity=verbosity)
 
         # Set continue options
-        setattr(args, "continue_from", continue_from)
-        setattr(args, "continue", continue_flag)
+        setattr(args, "continue_session_from", continue_session_from)
+        setattr(args, "continue_session", continue_session)
 
         return args
 
@@ -656,10 +656,10 @@ class TestExecutePrompt:
             "Now let's also add some error handling to that file."
         )
 
-        # Create test arguments with continue_from parameter
+        # Create test arguments with continue_session_from parameter
         args = argparse.Namespace(
             prompt="Add error handling",
-            continue_from="path/to/previous_response.json",
+            continue_session_from="path/to/previous_response.json",
         )
 
         # Execute the prompt command
@@ -705,10 +705,10 @@ class TestExecutePrompt:
         # Setup mock response for ask_llm
         mock_ask_llm.return_value = "Starting new conversation."
 
-        # Create test arguments with continue_from parameter pointing to non-existent file
+        # Create test arguments with continue_session_from parameter pointing to non-existent file
         args = argparse.Namespace(
             prompt="Continue conversation",
-            continue_from="path/to/nonexistent_file.json",
+            continue_session_from="path/to/nonexistent_file.json",
         )
 
         # Execute the prompt command - should succeed with warning
@@ -732,7 +732,10 @@ class TestExecutePrompt:
         # Verify warning message is displayed
         captured = capsys.readouterr()
         captured_out: str = captured.out or ""
-        assert "Warning: No session_id found" in captured_out or "starting new conversation" in captured_out.lower()
+        assert (
+            "Warning: No session_id found" in captured_out
+            or "starting new conversation" in captured_out.lower()
+        )
 
     @patch("mcp_coder.cli.commands.prompt.ask_llm")
     @patch("builtins.open", new_callable=mock_open)
@@ -752,10 +755,10 @@ class TestExecutePrompt:
         # Setup mock response for ask_llm
         mock_ask_llm.return_value = "Starting new conversation."
 
-        # Create test arguments with continue_from parameter
+        # Create test arguments with continue_session_from parameter
         args = argparse.Namespace(
             prompt="Continue conversation",
-            continue_from="path/to/invalid.json",
+            continue_session_from="path/to/invalid.json",
         )
 
         # Execute the prompt command - should succeed with warning
@@ -782,7 +785,10 @@ class TestExecutePrompt:
         # Verify warning message is displayed
         captured = capsys.readouterr()
         captured_out: str = captured.out or ""
-        assert "Warning: No session_id found" in captured_out or "starting new conversation" in captured_out.lower()
+        assert (
+            "Warning: No session_id found" in captured_out
+            or "starting new conversation" in captured_out.lower()
+        )
 
     @patch("mcp_coder.cli.commands.prompt.ask_llm")
     @patch("builtins.open", new_callable=mock_open)
@@ -811,10 +817,10 @@ class TestExecutePrompt:
         # Setup mock response for ask_llm
         mock_ask_llm.return_value = "Starting new conversation."
 
-        # Create test arguments with continue_from parameter
+        # Create test arguments with continue_session_from parameter
         args = argparse.Namespace(
             prompt="Continue conversation",
-            continue_from="path/to/incomplete.json",
+            continue_session_from="path/to/incomplete.json",
         )
 
         # Execute the prompt command - should succeed with warning
@@ -901,10 +907,10 @@ class TestExecutePrompt:
         }
         mock_ask_claude.return_value = new_response
 
-        # Create test arguments with continue_from and verbose verbosity
+        # Create test arguments with continue_session_from and verbose verbosity
         args = argparse.Namespace(
             prompt="Tell me about advanced features",
-            continue_from="path/to/previous.json",
+            continue_session_from="path/to/previous.json",
             verbosity="verbose",
         )
 
@@ -1136,9 +1142,10 @@ class TestExecutePrompt:
             mock_find_latest.return_value = self.FAKE_RESPONSE_PATH
             mock_exists.return_value = True
 
-            # Test current continue_from functionality as baseline
+            # Test current continue_session_from functionality as baseline
             args = self._create_continue_args(
-                prompt="Add error handling", continue_from=self.FAKE_RESPONSE_PATH
+                prompt="Add error handling",
+                continue_session_from=self.FAKE_RESPONSE_PATH,
             )
 
             # Execute the prompt command
@@ -1327,10 +1334,11 @@ class TestExecutePrompt:
                 "Now let's also add some error handling to that file."
             )
 
-            # Test the current continue_from functionality
+            # Test the current continue_session_from functionality
             # Create test arguments using helper method
             args = self._create_continue_args(
-                prompt="Add error handling", continue_from=self.FAKE_RESPONSE_PATH
+                prompt="Add error handling",
+                continue_session_from=self.FAKE_RESPONSE_PATH,
             )
 
             # Execute the prompt command
@@ -1453,7 +1461,8 @@ class TestExecutePrompt:
 
             # Create args using helper method
             args = self._create_continue_args(
-                prompt="Add advanced testing patterns", continue_from=selected_file
+                prompt="Add advanced testing patterns",
+                continue_session_from=selected_file,
             )
 
             # Execute the prompt command

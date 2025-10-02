@@ -20,7 +20,6 @@ def ask_llm(
     method: str = "cli",
     session_id: str | None = None,
     timeout: int = 30,
-    cwd: str | None = None,
 ) -> str:
     """
     Ask a question to an LLM provider using the specified method.
@@ -39,8 +38,6 @@ def ask_llm(
                    Note: This function doesn't return session_id. Use prompt_llm()
                    for full session management capabilities.
         timeout: Timeout in seconds for the request (default: 30)
-        cwd: Working directory for the command (only used for CLI method)
-             This is important for Claude to find .claude/settings.local.json
 
     Returns:
         The LLM's response text as a string
@@ -76,7 +73,7 @@ def ask_llm(
 
     if provider == "claude":
         return ask_claude_code(
-            question, method=method, session_id=session_id, timeout=timeout, cwd=cwd
+            question, method=method, session_id=session_id, timeout=timeout
         )
     else:
         raise ValueError(
@@ -90,7 +87,6 @@ def prompt_llm(
     method: str = "cli",
     session_id: str | None = None,
     timeout: int = 30,
-    cwd: str | None = None,
 ) -> LLMResponseDict:
     """
     Ask a question to an LLM provider with full session management.
@@ -106,8 +102,6 @@ def prompt_llm(
                 - "api": Uses Claude Code Python SDK (automatic authentication)
         session_id: Optional session ID to resume previous conversation
         timeout: Timeout in seconds for the request (default: 30)
-        cwd: Working directory for the command (only used for CLI method)
-             This is important for Claude to find .claude/settings.local.json
 
     Returns:
         LLMResponseDict containing:
@@ -159,9 +153,7 @@ def prompt_llm(
     # Call lower-level functions directly to get LLMResponseDict
     if provider == "claude":
         if method == "cli":
-            return ask_claude_code_cli(
-                question, session_id=session_id, timeout=timeout, cwd=cwd
-            )
+            return ask_claude_code_cli(question, session_id=session_id, timeout=timeout)
         elif method == "api":
             return ask_claude_code_api(question, session_id=session_id, timeout=timeout)
         else:

@@ -57,7 +57,9 @@ class TestSessionIdHandling:
             assert result["text"] == "Mock response"
             assert result["method"] == "api"
             # Verify session_id was passed through
-            mock_detailed.assert_called_once_with("Test question", 30, "some-session-id")
+            mock_detailed.assert_called_once_with(
+                "Test question", 30, "some-session-id"
+            )
 
     def test_api_works_without_session_id(self) -> None:
         """Test that API method works when session_id is None (default).

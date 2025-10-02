@@ -86,7 +86,7 @@ def build_cli_command(session_id: str | None, claude_cmd: str) -> list[str]:
     Example:
         >>> cmd = build_cli_command(None, "claude")
         >>> assert cmd == ["claude", "-p", "", "--output-format", "json"]
-        
+
         >>> cmd = build_cli_command("abc123", "claude")
         >>> assert "--resume" in cmd and "abc123" in cmd
     """
@@ -153,7 +153,6 @@ def ask_claude_code_cli(
     question: str,
     session_id: str | None = None,
     timeout: int = 30,
-    cwd: str | None = None,
 ) -> LLMResponseDict:
     """Ask Claude via CLI with native session support.
 
@@ -164,7 +163,6 @@ def ask_claude_code_cli(
         question: The question to ask Claude
         session_id: Optional Claude session ID to resume previous conversation
         timeout: Timeout in seconds (default: 30)
-        cwd: Working directory (default: None)
 
     Returns:
         LLMResponseDict with complete response data including session_id
@@ -197,10 +195,10 @@ def ask_claude_code_cli(
     # Execute command with stdin input (I/O)
     # This avoids Windows command-line length limits by passing prompt via stdin
     logger.debug(
-        f"Executing CLI command with stdin (cwd={cwd}, prompt_len={len(question)}, session_id={session_id})"
+        f"Executing CLI command with stdin (prompt_len={len(question)}, session_id={session_id})"
     )
     options = CommandOptions(
-        timeout_seconds=timeout, cwd=cwd, input_data=question  # Pass question via stdin
+        timeout_seconds=timeout, input_data=question  # Pass question via stdin
     )
     result = execute_subprocess(command, options)
 

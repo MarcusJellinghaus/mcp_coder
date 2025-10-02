@@ -63,58 +63,63 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         "verify", help="Verify Claude CLI installation and configuration"
     )
 
-    # Prompt command - Execute prompt via Claude API with debug output
+    # Prompt command - Execute prompt via Claude API with configurable debug output
     prompt_parser = subparsers.add_parser(
-        "prompt", help="Execute prompt via Claude API with debug output"
+        "prompt", help="Execute prompt via Claude API with configurable debug output"
     )
     prompt_parser.add_argument("prompt", help="The prompt to send to Claude")
     prompt_parser.add_argument(
         "--verbosity",
         choices=["just-text", "verbose", "raw"],
         default="just-text",
-        help="Output verbosity level (default: just-text)",
+        help="Output detail: just-text (response only), verbose (+ metrics), raw (+ full JSON)",
     )
     prompt_parser.add_argument(
         "--store-response",
         action="store_true",
-        help="Store complete session data for continuation",
+        help="Save session to .mcp-coder/responses/ for later continuation",
     )
 
-    # Create mutually exclusive group for continue options
+    # Session continuation options (mutually exclusive with each other, but --session-id has priority)
     continue_group = prompt_parser.add_mutually_exclusive_group()
     continue_group.add_argument(
-        "--continue-from",
+        "--continue-session-from",
         type=str,
-        help="Continue from previous stored session file",
+        metavar="FILE",
+        help="Resume conversation from specific stored session file",
     )
     continue_group.add_argument(
-        "--continue",
+        "--continue-session",
         action="store_true",
-        help="Continue from the most recent stored session (auto-finds latest response file)",
+        help="Resume from most recent session (auto-discovers latest file)",
     )
 
+    prompt_parser.add_argument(
+        "--session-id",
+        type=str,
+        metavar="ID",
+        help="Direct session ID for continuation (overrides file-based options)",
+    )
     prompt_parser.add_argument(
         "--timeout",
         type=int,
         default=60,
-        help="Timeout in seconds for the Claude API request (default: 60)",
+        metavar="SECONDS",
+        help="API request timeout in seconds (default: 60)",
     )
     prompt_parser.add_argument(
         "--llm-method",
         choices=["claude_code_cli", "claude_code_api"],
         default="claude_code_api",
-        help="LLM method to use (default: claude_code_api)",
-    )
-    prompt_parser.add_argument(
-        "--session-id",
-        type=str,
-        help="Session ID for maintaining conversation context (works with both CLI and API methods)",
+        metavar="METHOD",
+        help="Communication method: claude_code_api (default) or claude_code_cli",
     )
     prompt_parser.add_argument(
         "--output-format",
         choices=["text", "json"],
         default="text",
-        help="Output format: text (default) or json (full response with session_id)",
+        metavar="FORMAT",
+        help="Output format: text (default) or json (includes session_id)",
     )
 
     # Commit commands - Step 5

@@ -595,7 +595,9 @@ def ask_claude_code_api_detailed_sync(
     """
     # Input validation is handled by ask_claude_code_api_detailed
     try:
-        result = asyncio.run(ask_claude_code_api_detailed(question, timeout, session_id))
+        result = asyncio.run(
+            ask_claude_code_api_detailed(question, timeout, session_id)
+        )
         return result
 
     except subprocess.TimeoutExpired:

@@ -28,7 +28,7 @@ class TestAskClaudeCodeSessionSupport:
 
         assert response == "CLI response"
         mock_cli.assert_called_once_with(
-            "Test", session_id="cli-session-123", timeout=30, cwd=None
+            "Test", session_id="cli-session-123", timeout=30
         )
 
     @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_api")
@@ -103,7 +103,7 @@ class TestAskClaudeCodeSessionSupport:
         response = ask_claude_code("Test", method="cli")
 
         # Should pass None as session_id to underlying function
-        mock_cli.assert_called_once_with("Test", session_id=None, timeout=30, cwd=None)
+        mock_cli.assert_called_once_with("Test", session_id=None, timeout=30)
         assert response == "Default behavior"
 
     @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_api")
@@ -125,25 +125,6 @@ class TestAskClaudeCodeSessionSupport:
         assert response == "API default"
 
     @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
-    def test_cwd_parameter_passthrough(self, mock_cli: MagicMock) -> None:
-        """Test that cwd parameter is passed to CLI method."""
-        mock_cli.return_value = {
-            "text": "Response",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2025-01-01T00:00:00Z",
-            "method": "cli",
-            "provider": "claude",
-            "raw_response": {},
-        }
-
-        ask_claude_code("Test", method="cli", cwd="/custom/path")
-
-        mock_cli.assert_called_once_with(
-            "Test", session_id=None, timeout=30, cwd="/custom/path"
-        )
-
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_timeout_parameter_passthrough(self, mock_cli: MagicMock) -> None:
         """Test that timeout parameter is passed through."""
         mock_cli.return_value = {
@@ -158,7 +139,7 @@ class TestAskClaudeCodeSessionSupport:
 
         ask_claude_code("Test", method="cli", timeout=60)
 
-        mock_cli.assert_called_once_with("Test", session_id=None, timeout=60, cwd=None)
+        mock_cli.assert_called_once_with("Test", session_id=None, timeout=60)
 
 
 class TestAskClaudeCodeValidation:

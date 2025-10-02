@@ -357,26 +357,37 @@ def execute_prompt(args: argparse.Namespace) -> int:
 
     try:
         # Handle continuation from previous session if requested
-        # Extract session_id from stored response file if --continue or --continue-from is used
+        # Priority: --session-id > --continue-session-from > --continue-session
         resume_session_id = getattr(args, "session_id", None)
         continue_file_path = None
 
-        if getattr(args, "continue_from", None):
-            continue_file_path = args.continue_from
-        elif getattr(args, "continue", False):
-            continue_file_path = _find_latest_response_file()
-            if continue_file_path is None:
-                print("No previous response files found, starting new conversation")
-                # Continue execution without session resumption
+        # Only check file-based continuation if --session-id not provided
+        if not resume_session_id:
+            if getattr(args, "continue_session_from", None):
+                continue_file_path = args.continue_session_from
+            elif getattr(args, "continue_session", False):
+                # Find latest session file
+                continue_file_path = _find_latest_response_file()
+                if continue_file_path is None:
+                    print("No previous response files found, starting new conversation")
+                    # Continue execution without session resumption
 
-        if continue_file_path:
-            # Extract session_id from the stored response file
-            extracted_session_id = _extract_session_id_from_file(continue_file_path)
-            if extracted_session_id:
-                resume_session_id = extracted_session_id
-                print(f"Resuming session: {resume_session_id[:16]}...")
-            else:
-                print("Warning: No session_id found in stored response, starting new conversation")
+            if continue_file_path:
+                # Extract session_id from the stored response file
+                extracted_session_id = _extract_session_id_from_file(continue_file_path)
+                if extracted_session_id:
+                    resume_session_id = extracted_session_id
+                    print(f"Resuming session: {resume_session_id[:16]}...")
+                else:
+                    print(
+                        "Warning: No session_id found in stored response, starting new conversation"
+                    )
+        else:
+            # User provided explicit --session-id, inform them it takes priority
+            if getattr(args, "continue_session_from", None) or getattr(
+                args, "continue_session", False
+            ):
+                print(f"Using explicit session ID (ignoring file-based continuation)")
 
         # Get user-specified timeout, llm_method, and output_format
         timeout = getattr(args, "timeout", 30)
@@ -388,6 +399,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
         if output_format == "json":
             # JSON output mode - return full LLMResponseDict
             from ...llm_interface import prompt_llm
+
             provider, method = parse_llm_method(llm_method)
             response_dict = prompt_llm(
                 args.prompt,
@@ -424,7 +436,9 @@ def execute_prompt(args: argparse.Namespace) -> int:
                 logger.info("Response stored to: %s", stored_path)
         else:
             # Use detailed API for verbose/raw modes that need metadata
-            response_data = ask_claude_code_api_detailed_sync(args.prompt, timeout, resume_session_id)
+            response_data = ask_claude_code_api_detailed_sync(
+                args.prompt, timeout, resume_session_id
+            )
 
             # Store response if requested
             if getattr(args, "store_response", False):
@@ -703,7 +717,9 @@ def _extract_session_id_from_file(file_path: str) -> Optional[str]:
             .get("session_id")
         )
         if session_id and isinstance(session_id, str):
-            logger.debug("Found session_id in response_data.session_info: %s", session_id)
+            logger.debug(
+                "Found session_id in response_data.session_info: %s", session_id
+            )
             return session_id
 
         # Path 2: Direct session_id field (simple response format)
@@ -783,10 +799,11 @@ def _find_latest_response_file(
         valid_files.sort()
         latest_file = valid_files[-1]  # Last file after sorting is the latest
 
-        # Show selected filename to user for transparency (Decision #6)
+        # Provide user feedback showing count and selected file
+        num_sessions = len(valid_files)
         selected_filename = os.path.basename(latest_file)
         print(
-            f"Found {len(valid_files)} previous sessions, continuing from: {selected_filename}"
+            f"Found {num_sessions} previous sessions, continuing from: {selected_filename}"
         )
 
         logger.debug("Selected latest response file: %s", latest_file)
