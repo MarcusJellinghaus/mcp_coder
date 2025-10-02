@@ -1,6 +1,6 @@
 @echo off
 REM Test prompt command with both short and long inputs
-REM Tests both CLI and API methods
+REM Tests both CLI and API methods with native Claude session support
 
 setlocal enabledelayedexpansion
 
@@ -13,15 +13,22 @@ REM Get the project root (parent of tools directory)
 set "PROJECT_ROOT=%~dp0.."
 cd /d "%PROJECT_ROOT%"
 
-echo Current directory: %CD%
+REM Activate virtual environment if not already activated
+if not defined VIRTUAL_ENV (
+    echo Activating virtual environment...
+    if exist ".venv\Scripts\activate.bat" (
+        call .venv\Scripts\activate.bat
+        echo Virtual environment activated
+    ) else (
+        echo ERROR: Virtual environment not found at .venv\Scripts\activate.bat
+        exit /b 1
+    )
+) else (
+    echo Virtual environment already active: %VIRTUAL_ENV%
+)
 echo.
 
-REM Generate UUIDs for session tracking (separate sessions for API and CLI tests)
-for /f %%i in ('powershell -Command "[guid]::NewGuid().ToString()"') do set SESSION_ID_API=%%i
-for /f %%i in ('powershell -Command "[guid]::NewGuid().ToString()"') do set SESSION_ID_CLI=%%i
-echo Generated session IDs:
-echo   API: %SESSION_ID_API%
-echo   CLI: %SESSION_ID_CLI%
+echo Current directory: %CD%
 echo.
 
 REM Initialize test result tracking
@@ -126,30 +133,48 @@ REM Clean up temp file
 if exist "%TEMP%\test4_prompt.txt" del "%TEMP%\test4_prompt.txt"
 echo.
 
-REM Test 5: Session continuity with API method using session_id
+REM Test 5: Session continuity with API method using Claude's native sessions
 echo ========================================
 echo Test 5: Session continuity with API method
 echo ========================================
-echo Testing session continuity with API method using session_id...
-echo Session ID: %SESSION_ID_API%
+echo Testing session continuity with API method using Claude native sessions...
 echo.
 
-REM First call - establish session
+REM First call - establish session and capture session_id
 echo First call: Setting up session with number 555...
-mcp-coder prompt "Remember this number: 555" --llm-method claude_code_api --session-id %SESSION_ID_API% --timeout 30 > nul 2>&1
+mcp-coder prompt "Remember this number: 555. Reply with only 'OK' and nothing else." --llm-method claude_code_api --timeout 30 --output-format json > "%TEMP%\test5_first.json" 2>&1
 if errorlevel 1 (
     set "TEST5_RESULT=FAILED"
     echo FAILED: Test 5 failed on first call with exit code !errorlevel!
+    echo First call output:
+    type "%TEMP%\test5_first.json"
     goto :test5_end
 )
 echo First call succeeded
 
-REM Second call - continue session
-echo Second call: Testing session memory...
+REM Extract session_id from JSON output using PowerShell
+set "SESSION_ID_API="
+for /f "delims=" %%i in ('powershell -Command "(Get-Content '%TEMP%\test5_first.json' -Raw | ConvertFrom-Json).session_id"') do set "SESSION_ID_API=%%i"
+
+if "%SESSION_ID_API%"=="" (
+    set "TEST5_RESULT=FAILED"
+    echo FAILED: Could not extract session_id from first response
+    echo First call output:
+    type "%TEMP%\test5_first.json"
+    goto :test5_end
+)
+
+echo Extracted session_id: %SESSION_ID_API%
+echo.
+
+REM Second call - continue session using extracted session_id
+echo Second call: Testing session memory with session_id...
 mcp-coder prompt "What number did I tell you to remember?" --llm-method claude_code_api --session-id %SESSION_ID_API% --timeout 30 > "%TEMP%\test5_response.txt" 2>&1
 if errorlevel 1 (
     set "TEST5_RESULT=FAILED"
     echo FAILED: Test 5 failed on second call with exit code !errorlevel!
+    echo Second call output:
+    type "%TEMP%\test5_response.txt"
     goto :test5_end
 )
 
@@ -162,38 +187,57 @@ if errorlevel 1 (
     type "%TEMP%\test5_response.txt"
 ) else (
     set "TEST5_RESULT=PASSED"
-    echo SUCCESS: Session maintained via session_id - response contains "555"
+    echo SUCCESS: Session maintained - response contains "555"
 )
 
 :test5_end
-REM Clean up temp file
+REM Clean up temp files
+if exist "%TEMP%\test5_first.json" del "%TEMP%\test5_first.json"
 if exist "%TEMP%\test5_response.txt" del "%TEMP%\test5_response.txt"
 echo.
 
-REM Test 6: Session continuity with CLI method using session_id
+REM Test 6: Session continuity with CLI method using Claude's native sessions
 echo ========================================
 echo Test 6: Session continuity with CLI method
 echo ========================================
-echo Testing session continuity with CLI method using session_id...
-echo Session ID: %SESSION_ID_CLI%
+echo Testing session continuity with CLI method using Claude native sessions...
 echo.
 
-REM First call - establish session
+REM First call - establish session and capture session_id
 echo First call: Setting up session with number 777...
-mcp-coder prompt "Remember this number: 777" --llm-method claude_code_cli --session-id %SESSION_ID_CLI% --timeout 30 > nul 2>&1
+mcp-coder prompt "Remember this number: 777. Reply with only 'OK' and nothing else." --llm-method claude_code_cli --timeout 30 --output-format json > "%TEMP%\test6_first.json" 2>&1
 if errorlevel 1 (
     set "TEST6_RESULT=FAILED"
     echo FAILED: Test 6 failed on first call with exit code !errorlevel!
+    echo First call output:
+    type "%TEMP%\test6_first.json"
     goto :test6_end
 )
 echo First call succeeded
 
-REM Second call - continue session
-echo Second call: Testing session memory...
+REM Extract session_id from JSON output using PowerShell
+set "SESSION_ID_CLI="
+for /f "delims=" %%i in ('powershell -Command "(Get-Content '%TEMP%\test6_first.json' -Raw | ConvertFrom-Json).session_id"') do set "SESSION_ID_CLI=%%i"
+
+if "%SESSION_ID_CLI%"=="" (
+    set "TEST6_RESULT=FAILED"
+    echo FAILED: Could not extract session_id from first response
+    echo First call output:
+    type "%TEMP%\test6_first.json"
+    goto :test6_end
+)
+
+echo Extracted session_id: %SESSION_ID_CLI%
+echo.
+
+REM Second call - continue session using extracted session_id
+echo Second call: Testing session memory with session_id...
 mcp-coder prompt "What number did I tell you to remember?" --llm-method claude_code_cli --session-id %SESSION_ID_CLI% --timeout 30 > "%TEMP%\test6_response.txt" 2>&1
 if errorlevel 1 (
     set "TEST6_RESULT=FAILED"
     echo FAILED: Test 6 failed on second call with exit code !errorlevel!
+    echo Second call output:
+    type "%TEMP%\test6_response.txt"
     goto :test6_end
 )
 
@@ -206,11 +250,12 @@ if errorlevel 1 (
     type "%TEMP%\test6_response.txt"
 ) else (
     set "TEST6_RESULT=PASSED"
-    echo SUCCESS: Session maintained via session_id - response contains "777"
+    echo SUCCESS: Session maintained - response contains "777"
 )
 
 :test6_end
-REM Clean up temp file
+REM Clean up temp files
+if exist "%TEMP%\test6_first.json" del "%TEMP%\test6_first.json"
 if exist "%TEMP%\test6_response.txt" del "%TEMP%\test6_response.txt"
 echo.
 
