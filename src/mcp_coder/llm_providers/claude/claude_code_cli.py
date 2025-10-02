@@ -74,8 +74,10 @@ def build_cli_command(session_id: str | None, claude_cmd: str) -> list[str]:
     Uses stdin for prompt input to avoid Windows command-line length limits (~8191 chars).
     The prompt is passed via stdin using the -p "" pattern.
 
+    If session_id is provided, uses --resume flag to continue Claude's native session.
+
     Args:
-        session_id: Optional session ID to resume previous conversation
+        session_id: Optional Claude session ID to resume previous conversation
         claude_cmd: Path to claude executable
 
     Returns:
@@ -84,10 +86,14 @@ def build_cli_command(session_id: str | None, claude_cmd: str) -> list[str]:
     Example:
         >>> cmd = build_cli_command(None, "claude")
         >>> assert cmd == ["claude", "-p", "", "--output-format", "json"]
+        
+        >>> cmd = build_cli_command("abc123", "claude")
+        >>> assert "--resume" in cmd and "abc123" in cmd
     """
     # Use -p "" to read prompt from stdin (avoids command-line length limits)
     command = [claude_cmd, "-p", "", "--output-format", "json"]
 
+    # Resume Claude's native session if session_id provided
     if session_id:
         command.extend(["--resume", session_id])
 
@@ -149,19 +155,19 @@ def ask_claude_code_cli(
     timeout: int = 30,
     cwd: str | None = None,
 ) -> LLMResponseDict:
-    """Ask Claude via CLI and return structured response (I/O wrapper).
+    """Ask Claude via CLI with native session support.
 
-    Thin wrapper that handles subprocess execution, delegating parsing
-    and response construction to pure functions.
+    Uses Claude CLI's native --resume flag for session continuity.
+    Session management is handled by Claude Code CLI - no manual history needed.
 
     Args:
         question: The question to ask Claude
-        session_id: Optional session ID to resume previous conversation
+        session_id: Optional Claude session ID to resume previous conversation
         timeout: Timeout in seconds (default: 30)
         cwd: Working directory (default: None)
 
     Returns:
-        LLMResponseDict with complete response data
+        LLMResponseDict with complete response data including session_id
 
     Raises:
         ValueError: If input validation fails or JSON parsing fails
@@ -169,13 +175,12 @@ def ask_claude_code_cli(
         subprocess.CalledProcessError: If command fails
 
     Examples:
-        >>> # Start new conversation
-        >>> result = ask_claude_code_cli("What is Python?")
-        >>> print(result["text"])
+        >>> # Start new conversation - get session_id from Claude
+        >>> result = ask_claude_code_cli("Remember: my name is Alice")
         >>> session_id = result["session_id"]
 
-        >>> # Continue conversation
-        >>> result2 = ask_claude_code_cli("Tell me more", session_id=session_id)
+        >>> # Resume conversation with Claude's session_id
+        >>> result2 = ask_claude_code_cli("What's my name?", session_id=session_id)
     """
     # Input validation
     if not question or not question.strip():
@@ -186,13 +191,13 @@ def ask_claude_code_cli(
     # Find executable
     claude_cmd = _find_claude_executable()
 
-    # Build command (pure function) - uses stdin for prompt
+    # Build command with optional --resume (pure function)
     command = build_cli_command(session_id, claude_cmd)
 
     # Execute command with stdin input (I/O)
     # This avoids Windows command-line length limits by passing prompt via stdin
     logger.debug(
-        f"Executing CLI command with stdin (cwd={cwd}, prompt_len={len(question)})"
+        f"Executing CLI command with stdin (cwd={cwd}, prompt_len={len(question)}, session_id={session_id})"
     )
     options = CommandOptions(
         timeout_seconds=timeout, cwd=cwd, input_data=question  # Pass question via stdin
@@ -210,7 +215,7 @@ def ask_claude_code_cli(
             result.return_code, command, output=result.stdout, stderr=result.stderr
         )
 
-    logger.debug(f"CLI success: {len(result.stdout)} bytes")
+    logger.debug(f"CLI success: {len(result.stdout)} bytes, session_id from response")
 
     # Parse JSON (pure function)
     parsed = parse_cli_json_string(result.stdout.strip())

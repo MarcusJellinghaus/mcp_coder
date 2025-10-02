@@ -30,25 +30,38 @@ class TestSessionIdHandling:
         assert "session_id" in result
         assert result["method"] == "cli"
 
-    def test_api_raises_error_when_session_id_provided(self) -> None:
-        """Test that API method raises NotImplementedError when session_id is used.
+    def test_api_accepts_session_id_without_error(self) -> None:
+        """Test that API method accepts session_id parameter.
 
-        This is a unit test - doesn't call real API.
+        Uses mock since we're testing behavior, not real API call.
         """
-        # Should raise NotImplementedError when session_id is not None
-        with pytest.raises(NotImplementedError) as exc_info:
-            ask_claude_code_api("Test question", session_id="some-session-id")
+        from unittest.mock import patch
 
-        # Verify error message is helpful
-        error_msg = str(exc_info.value)
-        assert "not yet supported" in error_msg.lower()
-        assert "API method" in error_msg
-        assert "CLI method" in error_msg
+        with patch(
+            "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        ) as mock_detailed:
+            # Setup mock
+            mock_detailed.return_value = {
+                "text": "Mock response",
+                "session_info": {"session_id": "api-generated-123"},
+                "result_info": {},
+                "raw_messages": [],
+            }
+
+            # Should work with session_id
+            result = ask_claude_code_api(
+                "Test question", session_id="some-session-id", timeout=30
+            )
+
+            # Verify it worked
+            assert result["text"] == "Mock response"
+            assert result["method"] == "api"
+            # Verify session_id was passed through
+            mock_detailed.assert_called_once_with("Test question", 30, "some-session-id")
 
     def test_api_works_without_session_id(self) -> None:
         """Test that API method works when session_id is None (default).
 
-        This tests that the NotImplementedError check doesn't break normal usage.
         Uses mock since we're testing behavior, not real API call.
         """
         from unittest.mock import patch
@@ -115,7 +128,7 @@ class TestApiRealIntegration:
 
         # Verify structure
         assert "text" in result
-        assert "session_id" in result  # API may or may not provide session_id
+        assert "session_id" in result  # API should provide session_id
         assert "method" in result
         assert result["method"] == "api"
         assert "provider" in result
@@ -160,3 +173,37 @@ class TestCliSessionRealIntegration:
         assert result2["session_id"] == session_id
         # Claude should remember "777"
         assert "777" in result2["text"]
+
+
+@pytest.mark.claude_api_integration
+class TestApiSessionRealIntegration:
+    """REAL integration test for API session continuity."""
+
+    def test_api_session_continuity_real(self) -> None:
+        """Test that API actually maintains session across multiple calls.
+
+        This makes REAL calls to Claude API with native session support.
+        """
+        # First call - establish session
+        result1 = ask_claude_code_api(
+            "Remember this number: 999. Confirm you remember it.", timeout=30
+        )
+
+        assert "text" in result1
+        assert "session_id" in result1
+        session_id = result1["session_id"]
+
+        # Verify we got a session_id
+        assert session_id is not None
+        assert len(session_id) > 0
+
+        # Second call - use the session
+        result2 = ask_claude_code_api(
+            "What number did I ask you to remember? Answer with just the number.",
+            session_id=session_id,
+            timeout=30,
+        )
+
+        # Verify session was maintained (session_id should be same or consistent)
+        # Note: Claude may return same or different session_id on resume
+        assert "999" in result2["text"]

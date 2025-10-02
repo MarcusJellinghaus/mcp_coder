@@ -259,7 +259,7 @@ class TestAskClaudeCodeApi:
         # Verify - now returns dict, not string
         assert isinstance(result, dict)
         assert result["text"] == "Test response"
-        mock_detailed_sync.assert_called_once_with("test question", 60)
+        mock_detailed_sync.assert_called_once_with("test question", 60, None)
 
     @patch(
         "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"

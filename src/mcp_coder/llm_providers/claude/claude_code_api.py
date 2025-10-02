@@ -2,6 +2,7 @@
 """Claude Code Python SDK implementation for programmatic interaction."""
 
 import asyncio
+import json
 import logging
 import os
 import subprocess
@@ -208,11 +209,14 @@ def _retry_with_backoff(
         raise RuntimeError("All retry attempts failed with no exception recorded")
 
 
-def _create_claude_client() -> ClaudeCodeOptions:
-    """Create a Claude Code SDK client with basic configuration.
+def _create_claude_client(session_id: str | None = None) -> ClaudeCodeOptions:
+    """Create a Claude Code SDK client with optional session resumption.
+
+    Args:
+        session_id: Optional Claude session ID to resume conversation
 
     Returns:
-        ClaudeCodeOptions object configured for basic usage
+        ClaudeCodeOptions object configured for basic usage or session resumption
 
     Note:
         The SDK will use existing CLI subscription authentication automatically.
@@ -232,8 +236,12 @@ def _create_claude_client() -> ClaudeCodeOptions:
 
     logger.debug("Claude CLI verified successfully at: %s", claude_path)
 
-    # Use basic configuration - SDK should now find Claude
-    return ClaudeCodeOptions()
+    # Use basic configuration with optional session resumption
+    if session_id:
+        logger.debug(f"Resuming session: {session_id}")
+        return ClaudeCodeOptions(resume=session_id)
+    else:
+        return ClaudeCodeOptions()
 
 
 def create_api_response_dict(
@@ -264,7 +272,9 @@ def create_api_response_dict(
     }
 
 
-async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
+async def _ask_claude_code_api_async(
+    question: str, timeout: int = 30, session_id: str | None = None
+) -> str:
     """
     Ask Claude a question via Python SDK asynchronously.
 
@@ -281,6 +291,7 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
     Args:
         question: The question to ask Claude
         timeout: Timeout in seconds for the request (default: 30)
+        session_id: Optional Claude session ID to resume conversation
 
     Returns:
         Claude's response as a string (concatenated text from all TextBlocks)
@@ -297,7 +308,7 @@ async def _ask_claude_code_api_async(question: str, timeout: int = 30) -> str:
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    options = _create_claude_client()
+    options = _create_claude_client(session_id)
 
     # Message types are now available at module level
 
@@ -366,18 +377,18 @@ def ask_claude_code_api(
     question: str, session_id: str | None = None, timeout: int = 30
 ) -> LLMResponseDict:
     """
-    Ask Claude a question via Python SDK and return structured response.
+    Ask Claude a question via Python SDK with native session support.
 
-    Leverages existing ask_claude_code_api_detailed_sync() which handles
-    session extraction and metadata collection.
+    Uses Claude's native session resumption via the resume parameter.
+    Session continuity is handled by Claude Code SDK - no manual history management needed.
 
     Args:
         question: The question to ask Claude
-        session_id: Optional session ID to resume conversation
+        session_id: Optional Claude session ID to resume conversation
         timeout: Timeout in seconds for the request (default: 30)
 
     Returns:
-        LLMResponseDict with complete response data
+        LLMResponseDict with complete response data including session_id
 
     Raises:
         ValueError: If input validation fails
@@ -385,11 +396,12 @@ def ask_claude_code_api(
         subprocess.CalledProcessError: If the SDK request fails
 
     Examples:
-        >>> result = ask_claude_code_api("What is Python?")
-        >>> print(result["text"])
+        >>> # First call - get session_id from Claude
+        >>> result = ask_claude_code_api("Remember: my color is blue")
         >>> session_id = result["session_id"]
 
-        >>> result2 = ask_claude_code_api("Tell me more", session_id=session_id)
+        >>> # Resume conversation with Claude's session_id
+        >>> result2 = ask_claude_code_api("What's my color?", session_id=session_id)
     """
     # Input validation
     if not question or not question.strip():
@@ -397,23 +409,15 @@ def ask_claude_code_api(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    # Check if session_id was provided - API method doesn't support session resumption yet
-    if session_id is not None:
-        raise NotImplementedError(
-            "Session resumption (session_id parameter) is not yet supported for the API method. "
-            "The Claude Code SDK does not currently provide session resumption functionality. "
-            "Use the CLI method if you need session continuity."
-        )
-
     try:
-        # Call detailed function (already extracts everything we need)
-        detailed = ask_claude_code_api_detailed_sync(question, timeout)
+        # Call detailed function with session_id for native resumption
+        detailed = ask_claude_code_api_detailed_sync(question, timeout, session_id)
 
-        # Extract session_id from session_info
-        session_id_result = detailed["session_info"].get("session_id")
+        # Extract session_id from Claude's response
+        actual_session_id = detailed["session_info"].get("session_id")
 
         # Build and return response
-        return create_api_response_dict(detailed["text"], session_id_result, detailed)
+        return create_api_response_dict(detailed["text"], actual_session_id, detailed)
 
     except subprocess.TimeoutExpired:
         # Re-raise timeout errors as-is
@@ -431,7 +435,7 @@ def ask_claude_code_api(
 
 
 async def ask_claude_code_api_detailed(
-    question: str, timeout: int = 30
+    question: str, timeout: int = 30, session_id: str | None = None
 ) -> dict[str, Any]:
     """
     Ask Claude a question via Python SDK and return detailed response information.
@@ -442,6 +446,7 @@ async def ask_claude_code_api_detailed(
     Args:
         question: The question to ask Claude
         timeout: Timeout in seconds for the request (default: 30)
+        session_id: Optional Claude session ID to resume conversation
 
     Returns:
         Dictionary containing:
@@ -479,7 +484,7 @@ async def ask_claude_code_api_detailed(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    options = _create_claude_client()
+    options = _create_claude_client(session_id)
 
     # Message types are now available at module level
 
@@ -534,7 +539,7 @@ async def ask_claude_code_api_detailed(
                 )
 
             elif isinstance(message, ResultMessage):
-                # ResultMessage contains cost and usage information
+                # ResultMessage contains cost and usage information + session_id
                 result_info.update(
                     {
                         "duration_ms": getattr(message, "duration_ms", None),
@@ -546,6 +551,10 @@ async def ask_claude_code_api_detailed(
                         "is_error": getattr(message, "is_error", False),
                     }
                 )
+                # Extract session_id from ResultMessage and store in session_info
+                result_session_id = getattr(message, "session_id", None)
+                if result_session_id:
+                    session_info["session_id"] = result_session_id
 
         return {
             "text": "".join(response_parts).strip(),
@@ -564,7 +573,7 @@ async def ask_claude_code_api_detailed(
 
 
 def ask_claude_code_api_detailed_sync(
-    question: str, timeout: int = 30
+    question: str, timeout: int = 30, session_id: str | None = None
 ) -> dict[str, Any]:
     """
     Synchronous wrapper for ask_claude_code_api_detailed.
@@ -574,6 +583,7 @@ def ask_claude_code_api_detailed_sync(
     Args:
         question: The question to ask Claude
         timeout: Timeout in seconds for the request (default: 30)
+        session_id: Optional Claude session ID to resume conversation
 
     Returns:
         Dictionary with detailed response information
@@ -585,7 +595,7 @@ def ask_claude_code_api_detailed_sync(
     """
     # Input validation is handled by ask_claude_code_api_detailed
     try:
-        result = asyncio.run(ask_claude_code_api_detailed(question, timeout))
+        result = asyncio.run(ask_claude_code_api_detailed(question, timeout, session_id))
         return result
 
     except subprocess.TimeoutExpired:

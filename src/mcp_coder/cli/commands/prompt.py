@@ -372,14 +372,28 @@ def execute_prompt(args: argparse.Namespace) -> int:
             previous_context = _load_previous_chat(continue_file_path)
             enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
 
-        # Get user-specified timeout, llm_method, and session_id
+        # Get user-specified timeout, llm_method, session_id, and output_format
         timeout = getattr(args, "timeout", 30)
         llm_method = getattr(args, "llm_method", "claude_code_api")
         verbosity = getattr(args, "verbosity", "just-text")
         session_id = getattr(args, "session_id", None)
+        output_format = getattr(args, "output_format", "text")
 
-        # Route to appropriate method based on verbosity level
-        if verbosity == "just-text":
+        # Route to appropriate method based on output_format and verbosity
+        if output_format == "json":
+            # JSON output mode - return full LLMResponseDict
+            from ...llm_interface import prompt_llm
+            provider, method = parse_llm_method(llm_method)
+            response_dict = prompt_llm(
+                enhanced_prompt,
+                provider=provider,
+                method=method,
+                timeout=timeout,
+                session_id=session_id,
+            )
+            # Output complete response as JSON (includes session_id)
+            formatted_output = json.dumps(response_dict, indent=2, default=str)
+        elif verbosity == "just-text":
             # Use unified ask_llm interface for simple text output
             provider, method = parse_llm_method(llm_method)
             response = ask_llm(

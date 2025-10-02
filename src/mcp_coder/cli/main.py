@@ -115,6 +115,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         action="store_true",
         help="Continue using the same session ID from --session-id",
     )
+    prompt_parser.add_argument(
+        "--output-format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format: text (default) or json (full response with session_id)",
+    )
 
     # Commit commands - Step 5
     commit_parser = subparsers.add_parser("commit", help="Git commit operations")
