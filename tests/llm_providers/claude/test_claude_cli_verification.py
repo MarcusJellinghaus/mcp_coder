@@ -218,6 +218,7 @@ class TestVerifyClaudeCliInstallation:
 class TestVerifyCommandIntegration:
     """Integration tests for the verify command (require real Claude installation to be meaningful)."""
 
+    @pytest.mark.claude_cli_integration
     def test_verify_command_structure(self) -> None:
         """Test that the verify command has the correct structure."""
         # This is a minimal test that doesn't require Claude to be installed

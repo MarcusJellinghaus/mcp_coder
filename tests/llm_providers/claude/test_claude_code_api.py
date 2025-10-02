@@ -13,6 +13,7 @@ from mcp_coder.llm_providers.claude.claude_code_api import (
     _ask_claude_code_api_async,
     _create_claude_client,
     ask_claude_code_api,
+    create_api_response_dict,
 )
 
 
@@ -237,55 +238,166 @@ class TestAskClaudeCodeApiAsync:
 
 
 class TestAskClaudeCodeApi:
-    """Test the synchronous ask_claude_code_api function."""
+    """Test the synchronous ask_claude_code_api function (legacy tests for old string return)."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.asyncio.run")
-    def test_basic_question(self, mock_asyncio_run: MagicMock) -> None:
-        """Test asking a basic question."""
-        # Setup
-        mock_asyncio_run.return_value = "Test response"
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_basic_question(self, mock_detailed_sync: MagicMock) -> None:
+        """Test asking a basic question returns LLMResponseDict."""
+        # Setup - mock the detailed sync function
+        mock_detailed_sync.return_value = {
+            "text": "Test response",
+            "session_info": {"session_id": "test-123"},
+            "result_info": {},
+            "raw_messages": [],
+        }
 
         # Execute
         result = ask_claude_code_api("test question", timeout=60)
 
-        # Verify
-        assert result == "Test response"
-        mock_asyncio_run.assert_called_once()
-        # The actual async function call is passed to asyncio.run
-        args, _ = mock_asyncio_run.call_args
-        assert len(args) == 1  # One positional argument (the coroutine)
+        # Verify - now returns dict, not string
+        assert isinstance(result, dict)
+        assert result["text"] == "Test response"
+        mock_detailed_sync.assert_called_once_with("test question", 60, None)
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.asyncio.run")
-    def test_timeout_exception_passthrough(self, mock_asyncio_run: MagicMock) -> None:
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_timeout_exception_passthrough(self, mock_detailed_sync: MagicMock) -> None:
         """Test that TimeoutExpired exceptions are passed through."""
         # Setup
         timeout_error = subprocess.TimeoutExpired(
             ["claude-code-sdk", "query"], 30, "Timeout"
         )
-        mock_asyncio_run.side_effect = timeout_error
+        mock_detailed_sync.side_effect = timeout_error
 
         # Execute & Verify
         with pytest.raises(subprocess.TimeoutExpired):
             ask_claude_code_api("test question")
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.asyncio.run")
-    def test_other_exception_conversion(self, mock_asyncio_run: MagicMock) -> None:
-        """Test that other exceptions (non-ValueError, non-TimeoutExpired) are converted to ClaudeAPIError."""
-        # Setup - use RuntimeError instead of ValueError since ValueError is now re-raised
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_other_exception_conversion(self, mock_detailed_sync: MagicMock) -> None:
+        """Test that other exceptions are converted to ClaudeAPIError."""
+        # Setup - use RuntimeError
         original_error = RuntimeError("Some SDK error")
-        mock_asyncio_run.side_effect = original_error
+        mock_detailed_sync.side_effect = original_error
 
         # Execute & Verify
         with pytest.raises(ClaudeAPIError) as exc_info:
             ask_claude_code_api("test question")
 
         error_msg = str(exc_info.value)
-        assert "Some SDK error" in error_msg
+        assert "Claude API Error" in error_msg
         assert exc_info.value.__cause__ == original_error
 
 
 # Note: ImportError tests removed since claude-code-sdk is now a required dependency
 # Any import errors will occur at module load time if the dependency is missing
+
+
+class TestCreateApiResponseDict:
+    """Test the create_api_response_dict helper function."""
+
+    def test_create_api_response_dict_structure(self) -> None:
+        """Test API response dict creation with all required fields."""
+        detailed = {
+            "text": "API response",
+            "session_info": {"session_id": "api-123", "model": "claude-sonnet-4"},
+            "result_info": {"cost_usd": 0.058, "duration_ms": 2801},
+            "raw_messages": [],
+        }
+
+        result = create_api_response_dict("API response", "api-123", detailed)
+
+        assert result["text"] == "API response"
+        assert result["session_id"] == "api-123"
+        assert result["method"] == "api"
+        assert result["provider"] == "claude"
+        assert "version" in result
+        assert "timestamp" in result
+        assert result["raw_response"]["session_info"]["session_id"] == "api-123"  # type: ignore[index]
+        assert result["raw_response"]["result_info"]["cost_usd"] == 0.058  # type: ignore[index]
+
+    def test_create_api_response_dict_none_session(self) -> None:
+        """Test API response dict creation with None session_id."""
+        detailed = {
+            "text": "Response without session",
+            "session_info": {},
+            "result_info": {},
+            "raw_messages": [],
+        }
+
+        result = create_api_response_dict("Response without session", None, detailed)
+
+        assert result["session_id"] is None
+        assert result["text"] == "Response without session"
+
+
+class TestAskClaudeCodeApiTypedDict:
+    """Test ask_claude_code_api returns LLMResponseDict."""
+
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_ask_claude_code_api_returns_typed_dict(
+        self, mock_detailed_sync: MagicMock
+    ) -> None:
+        """Test that API method returns complete LLMResponseDict."""
+        mock_detailed_sync.return_value = {
+            "text": "Test response",
+            "session_info": {"session_id": "test-123", "model": "claude-sonnet-4"},
+            "result_info": {"cost_usd": 0.05, "duration_ms": 1500},
+            "raw_messages": [],
+        }
+
+        result = ask_claude_code_api("Test question")
+
+        # Check all required fields
+        assert isinstance(result, dict)
+        required_fields = [
+            "version",
+            "timestamp",
+            "text",
+            "session_id",
+            "method",
+            "provider",
+            "raw_response",
+        ]
+        for field in required_fields:
+            assert field in result, f"Missing required field: {field}"
+
+        # Verify content
+        assert result["text"] == "Test response"
+        assert result["method"] == "api"
+        assert result["provider"] == "claude"
+
+    @patch(
+        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_ask_claude_code_api_extracts_session_from_detailed(
+        self, mock_detailed_sync: MagicMock
+    ) -> None:
+        """Test session_id extraction from detailed response."""
+        mock_detailed_sync.return_value = {
+            "text": "Response text",
+            "session_info": {
+                "session_id": "extracted-session",
+                "model": "claude",
+            },
+            "result_info": {"cost_usd": 0.05},
+            "raw_messages": [],
+        }
+
+        result = ask_claude_code_api("Test")
+
+        assert result["session_id"] == "extracted-session"
+        assert (
+            result["raw_response"]["session_info"]["session_id"]  # type: ignore[index]
+            == "extracted-session"
+        )
 
 
 @pytest.mark.claude_api_integration

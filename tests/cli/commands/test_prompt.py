@@ -116,16 +116,16 @@ class TestExecutePrompt:
     def _create_continue_args(
         self,
         prompt: str = "Test prompt",
-        continue_from: Optional[str] = None,
-        continue_flag: bool = False,
+        continue_session_from: Optional[str] = None,
+        continue_session: bool = False,
         verbosity: str = "just-text",
     ) -> argparse.Namespace:
         """Create standardized argument namespace for continue tests."""
         args = argparse.Namespace(prompt=prompt, verbosity=verbosity)
 
         # Set continue options
-        setattr(args, "continue_from", continue_from)
-        setattr(args, "continue", continue_flag)
+        setattr(args, "continue_session_from", continue_session_from)
+        setattr(args, "continue_session", continue_session)
 
         return args
 
@@ -154,6 +154,7 @@ class TestExecutePrompt:
             provider="claude",
             method="api",
             timeout=30,
+            session_id=None,
         )
 
         # Verify basic output presence (Claude response visible)
@@ -182,7 +183,11 @@ class TestExecutePrompt:
 
         # Verify ask_llm was called with correct parameters
         mock_ask_llm.assert_called_once_with(
-            "Test question", provider="claude", method="api", timeout=30
+            "Test question",
+            provider="claude",
+            method="api",
+            timeout=30,
+            session_id=None,
         )
 
         # Verify error message is displayed
@@ -246,8 +251,8 @@ class TestExecutePrompt:
         # Assert successful execution
         assert result == 0
 
-        # Verify Claude API was called with correct prompt
-        mock_ask_claude.assert_called_once_with("How do I create a file?", 30)
+        # Verify Claude API was called with correct prompt and session_id=None
+        mock_ask_claude.assert_called_once_with("How do I create a file?", 30, None)
 
         # Capture output for verbose format verification
         captured = capsys.readouterr()
@@ -405,8 +410,8 @@ class TestExecutePrompt:
         # Assert successful execution
         assert result == 0
 
-        # Verify Claude API was called with correct prompt
-        mock_ask_claude.assert_called_once_with("Debug this system", 30)
+        # Verify Claude API was called with correct prompt and session_id=None
+        mock_ask_claude.assert_called_once_with("Debug this system", 30, None)
 
         # Capture output for raw format verification
         captured = capsys.readouterr()
@@ -585,6 +590,7 @@ class TestExecutePrompt:
             provider="claude",
             method="api",
             timeout=30,
+            session_id=None,
         )
 
         # Note: For store_response test with ask_llm, we need to mock the storage differently
@@ -606,7 +612,7 @@ class TestExecutePrompt:
         mock_ask_llm: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test successful continuation from stored response file."""
+        """Test successful continuation from stored response file using session_id."""
         # Setup mock for stored response file
         stored_response = {
             "prompt": "How do I create a Python file?",
@@ -650,10 +656,10 @@ class TestExecutePrompt:
             "Now let's also add some error handling to that file."
         )
 
-        # Create test arguments with continue_from parameter
+        # Create test arguments with continue_session_from parameter
         args = argparse.Namespace(
             prompt="Add error handling",
-            continue_from="path/to/previous_response.json",
+            continue_session_from="path/to/previous_response.json",
         )
 
         # Execute the prompt command
@@ -668,90 +674,98 @@ class TestExecutePrompt:
             "path/to/previous_response.json", "r", encoding="utf-8"
         )
 
-        # Verify ask_llm was called with enhanced context
-        # Should include both previous context and new prompt
-        mock_ask_llm.assert_called_once()
-        api_call_args = mock_ask_llm.call_args
-        enhanced_prompt = api_call_args[0][0]  # First positional argument
-
-        # Verify the enhanced prompt contains previous context
-        assert "How do I create a Python file?" in enhanced_prompt
-        assert "Here's how to create a Python file." in enhanced_prompt
-        assert "Add error handling" in enhanced_prompt
-        assert (
-            "Previous conversation:" in enhanced_prompt or "Context:" in enhanced_prompt
+        # Verify ask_llm was called with the new prompt and extracted session_id
+        mock_ask_llm.assert_called_once_with(
+            "Add error handling",
+            provider="claude",
+            method="api",
+            timeout=30,
+            session_id="previous-session-456",  # Extracted from stored response
         )
 
         # Verify normal output is displayed
         captured = capsys.readouterr()
         captured_out: str = captured.out or ""
         assert "Now let's also add some error handling to that file." in captured_out
+        # Verify resumption feedback is shown
+        assert "Resuming session: previous-session" in captured_out
 
-    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+    @patch("mcp_coder.cli.commands.prompt.ask_llm")
     @patch("os.path.exists")
     def test_continue_from_file_not_found(
         self,
         mock_exists: Mock,
-        mock_ask_claude: Mock,
+        mock_ask_llm: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test error handling when continue_from file doesn't exist."""
+        """Test graceful handling when continue_from file doesn't exist."""
         # Setup mock file system - file doesn't exist
         mock_exists.return_value = False
 
-        # Create test arguments with continue_from parameter pointing to non-existent file
+        # Setup mock response for ask_llm
+        mock_ask_llm.return_value = "Starting new conversation."
+
+        # Create test arguments with continue_session_from parameter pointing to non-existent file
         args = argparse.Namespace(
             prompt="Continue conversation",
-            continue_from="path/to/nonexistent_file.json",
+            continue_session_from="path/to/nonexistent_file.json",
         )
 
-        # Execute the prompt command
+        # Execute the prompt command - should succeed with warning
         result = execute_prompt(args)
 
-        # Assert error return code
-        assert result == 1
+        # Assert successful execution (graceful fallback to new conversation)
+        assert result == 0
 
         # Verify file existence check was called
         mock_exists.assert_called_once_with("path/to/nonexistent_file.json")
 
-        # Verify Claude API was NOT called (due to file error)
-        mock_ask_claude.assert_not_called()
-
-        # Verify error message is displayed
-        captured = capsys.readouterr()
-        captured_err: str = captured.err or ""
-        assert "Error" in captured_err
-        assert (
-            "nonexistent_file.json" in captured_err
-            or "not found" in captured_err.lower()
+        # Verify ask_llm was called without session_id (new conversation)
+        mock_ask_llm.assert_called_once_with(
+            "Continue conversation",
+            provider="claude",
+            method="api",
+            timeout=30,
+            session_id=None,
         )
 
-    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+        # Verify warning message is displayed
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert (
+            "Warning: No session_id found" in captured_out
+            or "starting new conversation" in captured_out.lower()
+        )
+
+    @patch("mcp_coder.cli.commands.prompt.ask_llm")
     @patch("builtins.open", new_callable=mock_open)
     @patch("os.path.exists")
     def test_continue_from_invalid_json(
         self,
         mock_exists: Mock,
         mock_file_open: Mock,
-        mock_ask_claude: Mock,
+        mock_ask_llm: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test error handling when continue_from file contains invalid JSON."""
+        """Test graceful handling when continue_from file contains invalid JSON."""
         # Setup mock file system - file exists but contains invalid JSON
         mock_exists.return_value = True
         mock_file_open.return_value.read.return_value = "{ invalid json content }"
 
-        # Create test arguments with continue_from parameter
+        # Setup mock response for ask_llm
+        mock_ask_llm.return_value = "Starting new conversation."
+
+        # Create test arguments with continue_session_from parameter
         args = argparse.Namespace(
             prompt="Continue conversation",
-            continue_from="path/to/invalid.json",
+            continue_session_from="path/to/invalid.json",
         )
 
-        # Execute the prompt command
+        # Execute the prompt command - should succeed with warning
         result = execute_prompt(args)
 
-        # Assert error return code
-        assert result == 1
+        # Assert successful execution (graceful fallback to new conversation)
+        assert result == 0
 
         # Verify file operations were attempted
         mock_exists.assert_called_once_with("path/to/invalid.json")
@@ -759,55 +773,61 @@ class TestExecutePrompt:
             "path/to/invalid.json", "r", encoding="utf-8"
         )
 
-        # Verify Claude API was NOT called (due to JSON error)
-        mock_ask_claude.assert_not_called()
-
-        # Verify error message is displayed
-        captured = capsys.readouterr()
-        captured_err: str = captured.err or ""
-        assert "Error" in captured_err
-        # Accept Python's standard JSON parsing error messages
-        assert (
-            "expecting" in captured_err.lower()
-            or "invalid" in captured_err.lower()
-            or "json" in captured_err.lower()
+        # Verify ask_llm was called without session_id (new conversation)
+        mock_ask_llm.assert_called_once_with(
+            "Continue conversation",
+            provider="claude",
+            method="api",
+            timeout=30,
+            session_id=None,
         )
 
-    @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
+        # Verify warning message is displayed
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert (
+            "Warning: No session_id found" in captured_out
+            or "starting new conversation" in captured_out.lower()
+        )
+
+    @patch("mcp_coder.cli.commands.prompt.ask_llm")
     @patch("builtins.open", new_callable=mock_open)
     @patch("os.path.exists")
     def test_continue_from_missing_required_fields(
         self,
         mock_exists: Mock,
         mock_file_open: Mock,
-        mock_ask_claude: Mock,
+        mock_ask_llm: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test error handling when continue_from file has missing required fields."""
-        # Setup mock for incomplete stored response (missing prompt or response_data)
+        """Test graceful handling when continue_from file has missing session_id."""
+        # Setup mock for incomplete stored response (missing session_id)
         incomplete_response = {
             "metadata": {
                 "timestamp": "2025-09-19T10:30:00Z",
                 "working_directory": "/test/dir",
             }
-            # Missing "prompt" and "response_data" fields
+            # Missing "prompt" and "response_data" fields - no session_id available
         }
 
         # Setup mock file system
         mock_exists.return_value = True
         mock_file_open.return_value.read.return_value = json.dumps(incomplete_response)
 
-        # Create test arguments with continue_from parameter
+        # Setup mock response for ask_llm
+        mock_ask_llm.return_value = "Starting new conversation."
+
+        # Create test arguments with continue_session_from parameter
         args = argparse.Namespace(
             prompt="Continue conversation",
-            continue_from="path/to/incomplete.json",
+            continue_session_from="path/to/incomplete.json",
         )
 
-        # Execute the prompt command
+        # Execute the prompt command - should succeed with warning
         result = execute_prompt(args)
 
-        # Assert error return code
-        assert result == 1
+        # Assert successful execution (graceful fallback to new conversation)
+        assert result == 0
 
         # Verify file operations were attempted
         mock_exists.assert_called_once_with("path/to/incomplete.json")
@@ -815,18 +835,19 @@ class TestExecutePrompt:
             "path/to/incomplete.json", "r", encoding="utf-8"
         )
 
-        # Verify Claude API was NOT called (due to missing data)
-        mock_ask_claude.assert_not_called()
-
-        # Verify error message is displayed
-        captured = capsys.readouterr()
-        captured_err: str = captured.err or ""
-        assert "Error" in captured_err
-        assert (
-            "missing" in captured_err.lower()
-            or "required" in captured_err.lower()
-            or "invalid" in captured_err.lower()
+        # Verify ask_llm was called without session_id (new conversation)
+        mock_ask_llm.assert_called_once_with(
+            "Continue conversation",
+            provider="claude",
+            method="api",
+            timeout=30,
+            session_id=None,
         )
+
+        # Verify warning message is displayed
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert "Warning: No session_id found" in captured_out
 
     @patch("mcp_coder.cli.commands.prompt.ask_claude_code_api_detailed_sync")
     @patch("builtins.open", new_callable=mock_open)
@@ -886,10 +907,10 @@ class TestExecutePrompt:
         }
         mock_ask_claude.return_value = new_response
 
-        # Create test arguments with continue_from and verbose verbosity
+        # Create test arguments with continue_session_from and verbose verbosity
         args = argparse.Namespace(
             prompt="Tell me about advanced features",
-            continue_from="path/to/previous.json",
+            continue_session_from="path/to/previous.json",
             verbosity="verbose",
         )
 
@@ -905,15 +926,12 @@ class TestExecutePrompt:
             "path/to/previous.json", "r", encoding="utf-8"
         )
 
-        # Verify Claude API was called with enhanced context
-        mock_ask_claude.assert_called_once()
-        api_call_args = mock_ask_claude.call_args
-        enhanced_prompt = api_call_args[0][0]
-
-        # Verify the enhanced prompt contains previous context
-        assert "What is Python?" in enhanced_prompt
-        assert "Python is a programming language." in enhanced_prompt
-        assert "Tell me about advanced features" in enhanced_prompt
+        # Verify Claude API was called with extracted session_id
+        mock_ask_claude.assert_called_once_with(
+            "Tell me about advanced features",
+            30,
+            "verbose-continuation-123",  # Extracted from stored_response
+        )
 
         # Verify verbose output format is applied
         captured = capsys.readouterr()
@@ -1108,7 +1126,7 @@ class TestExecutePrompt:
         sample_stored_response: Dict[str, Any],
         sample_claude_response: Dict[str, Any],
     ) -> None:
-        """Test successful --continue execution with file discovery and user feedback."""
+        """Test successful --continue execution with file discovery and session resumption."""
         mock_ask_llm.return_value = (
             "Now let's also add some error handling to that file."
         )
@@ -1124,12 +1142,10 @@ class TestExecutePrompt:
             mock_find_latest.return_value = self.FAKE_RESPONSE_PATH
             mock_exists.return_value = True
 
-            # The test doesn't actually call _find_latest_response_file directly
-            # since we're testing continue_from, not continue functionality
-
-            # Test current continue_from functionality as baseline
+            # Test current continue_session_from functionality as baseline
             args = self._create_continue_args(
-                prompt="Add error handling", continue_from=self.FAKE_RESPONSE_PATH
+                prompt="Add error handling",
+                continue_session_from=self.FAKE_RESPONSE_PATH,
             )
 
             # Execute the prompt command
@@ -1138,18 +1154,13 @@ class TestExecutePrompt:
             # Assert successful execution
             assert result == 0
 
-            # Verify ask_llm was called with enhanced context
-            mock_ask_llm.assert_called_once()
-            api_call_args = mock_ask_llm.call_args
-            enhanced_prompt = api_call_args[0][0]  # First positional argument
-
-            # Verify the enhanced prompt contains previous context
-            assert "How do I create a Python file?" in enhanced_prompt
-            assert "Here's how to create a Python file." in enhanced_prompt
-            assert "Add error handling" in enhanced_prompt
-            assert (
-                "Previous conversation:" in enhanced_prompt
-                or "Context:" in enhanced_prompt
+            # Verify ask_llm was called with extracted session_id
+            mock_ask_llm.assert_called_once_with(
+                "Add error handling",
+                provider="claude",
+                method="api",
+                timeout=30,
+                session_id="previous-session-456",  # Extracted from sample_stored_response
             )
 
             # Verify normal output is displayed
@@ -1158,6 +1169,8 @@ class TestExecutePrompt:
             assert (
                 "Now let's also add some error handling to that file." in captured_out
             )
+            # Verify session resumption feedback
+            assert "Resuming session: previous-session" in captured_out
 
     @patch("mcp_coder.cli.commands.prompt.glob.glob")
     @patch("mcp_coder.cli.commands.prompt.os.path.exists")
@@ -1200,7 +1213,11 @@ class TestExecutePrompt:
 
         # Verify ask_llm was called with original prompt (no context enhancement)
         mock_ask_llm.assert_called_once_with(
-            "Tell me about Python", provider="claude", method="api", timeout=30
+            "Tell me about Python",
+            provider="claude",
+            method="api",
+            timeout=30,
+            session_id=None,
         )
 
         # Verify normal output is displayed
@@ -1297,7 +1314,7 @@ class TestExecutePrompt:
         sample_stored_response: Dict[str, Any],
         sample_claude_response: Dict[str, Any],
     ) -> None:
-        """Test CLI integration for continue with file discovery."""
+        """Test CLI integration for continue with file discovery and session resumption."""
         with (
             patch(
                 "mcp_coder.cli.commands.prompt._find_latest_response_file"
@@ -1317,10 +1334,11 @@ class TestExecutePrompt:
                 "Now let's also add some error handling to that file."
             )
 
-            # Test the current continue_from functionality that Step 5 will leverage
+            # Test the current continue_session_from functionality
             # Create test arguments using helper method
             args = self._create_continue_args(
-                prompt="Add error handling", continue_from=self.FAKE_RESPONSE_PATH
+                prompt="Add error handling",
+                continue_session_from=self.FAKE_RESPONSE_PATH,
             )
 
             # Execute the prompt command
@@ -1333,21 +1351,16 @@ class TestExecutePrompt:
                 self.FAKE_RESPONSE_PATH, "r", encoding="utf-8"
             )
 
-            # Verify ask_llm was called with enhanced context
-            mock_ask_llm.assert_called_once()
-            api_call_args = mock_ask_llm.call_args
-            enhanced_prompt = api_call_args[0][0]
-
-            # Verify the enhanced prompt contains previous context
-            assert "How do I create a Python file?" in enhanced_prompt
-            assert "Here's how to create a Python file." in enhanced_prompt
-            assert "Add error handling" in enhanced_prompt
-            assert (
-                "Previous conversation:" in enhanced_prompt
-                or "Context:" in enhanced_prompt
+            # Verify ask_llm was called with extracted session_id
+            mock_ask_llm.assert_called_once_with(
+                "Add error handling",
+                provider="claude",
+                method="api",
+                timeout=30,
+                session_id="previous-session-456",  # Extracted from sample_stored_response
             )
 
-            # Verify file discovery works for Step 5 integration
+            # Verify file discovery works for integration
             assert mock_find_latest.return_value == self.FAKE_RESPONSE_PATH
 
     def test_continue_no_files_found_scenario(self) -> None:
@@ -1392,11 +1405,15 @@ class TestExecutePrompt:
 
             # Verify ask_llm was called with original prompt (no context enhancement)
             mock_ask_llm.assert_called_once_with(
-                "Tell me about Python", provider="claude", method="api", timeout=30
+                "Tell me about Python",
+                provider="claude",
+                method="api",
+                timeout=30,
+                session_id=None,
             )
 
     def test_continue_with_user_feedback_display(self) -> None:
-        """Test CLI integration with user feedback showing selected filename."""
+        """Test CLI integration with user feedback showing session resumption."""
         # Create custom response data for this specific test
         test_stored_response = {
             "prompt": "Previous question about testing",
@@ -1444,22 +1461,22 @@ class TestExecutePrompt:
 
             # Create args using helper method
             args = self._create_continue_args(
-                prompt="Add advanced testing patterns", continue_from=selected_file
+                prompt="Add advanced testing patterns",
+                continue_session_from=selected_file,
             )
 
             # Execute the prompt command
             result = execute_prompt(args)
             assert result == 0
 
-            # Verify ask_llm was called with enhanced context
-            mock_ask_llm.assert_called_once()
-            api_call_args = mock_ask_llm.call_args
-            enhanced_prompt = api_call_args[0][0]
-
-            # Verify enhanced prompt contains previous context
-            assert "Previous question about testing" in enhanced_prompt
-            assert "Here's how to write tests." in enhanced_prompt
-            assert "Add advanced testing patterns" in enhanced_prompt
+            # Verify ask_llm was called with extracted session_id
+            mock_ask_llm.assert_called_once_with(
+                "Add advanced testing patterns",
+                provider="claude",
+                method="api",
+                timeout=30,
+                session_id=self.FAKE_SESSION_ID,  # Extracted from test_stored_response
+            )
 
             # Verify file discovery functionality
             assert mock_find_latest.return_value == selected_file

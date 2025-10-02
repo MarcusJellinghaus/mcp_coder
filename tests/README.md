@@ -7,12 +7,14 @@
 pytest
 
 # Fast unit tests only
-pytest -m "not git_integration and not claude_integration and not github_integration"
+pytest -m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"
 
 # Run specific test types
-pytest -m git_integration      # File system operations
-pytest -m claude_integration   # Claude API (requires auth)
-pytest -m github_integration   # GitHub API (requires config)
+pytest -m git_integration            # File system operations
+pytest -m claude_cli_integration     # Claude CLI tests (requires CLI installed)
+pytest -m claude_api_integration     # Claude API tests (requires auth)
+pytest -m formatter_integration      # Code formatter tests (black, isort)
+pytest -m github_integration         # GitHub API (requires config)
 
 # Run specific subdirectories
 pytest tests/utils/github_operations/    # All GitHub operations tests
@@ -47,7 +49,9 @@ tests/
 |--------|---------|-------|--------------|
 | *(none)* | Unit tests | < 10s | None |
 | `git_integration` | File system + git ops | < 60s | Git |
-| `claude_integration` | Claude CLI/API calls | Variable | Auth setup |
+| `claude_cli_integration` | Claude CLI calls | Variable | CLI installed |
+| `claude_api_integration` | Claude API calls | Variable | Auth setup |
+| `formatter_integration` | Code formatting | < 30s | black, isort |
 | `github_integration` | GitHub API operations | < 30s | GitHub config |
 
 ## Marking Tests
@@ -61,8 +65,16 @@ def test_validation():
 def test_git_workflow(git_repo):
     pass
 
-@pytest.mark.claude_integration
+@pytest.mark.claude_cli_integration
+def test_claude_cli():
+    pass
+
+@pytest.mark.claude_api_integration
 def test_claude_api():
+    pass
+
+@pytest.mark.formatter_integration
+def test_formatter():
     pass
 
 @pytest.mark.github_integration

@@ -34,25 +34,24 @@ COMMANDS:
     verify                  Verify Claude CLI installation and configuration
     prompt <text>           Execute prompt via Claude API with configurable debug output
 
-                           Parameters:
-                           <text>                 The prompt/question to send to Claude
-                           --verbosity LEVEL      Output detail level:
-                                                  • just-text (default): Claude's response + tool summary
-                                                  • verbose: + tool interactions + performance metrics
-                                                  • raw: + complete JSON structures + API responses
-                           --store-response       Save complete session data to .mcp-coder/responses/
-                                                  for later continuation or reference
-                           --continue-from FILE   Continue conversation from previous stored session
-                                                  (enhances prompt with previous context)
-                           --continue             Continue from the most recent stored session
-                                                  (automatically finds latest response file)
-                           --timeout SECONDS      Timeout for Claude API request in seconds (default: 60)
-                           --llm-method METHOD    LLM method to use:
-                                                  • claude_code_api (default): Direct API access
-                                                  • claude_code_cli: Use Claude Code CLI
+                           Output Control:
+                           --verbosity LEVEL      just-text (default) | verbose: + tool interactions + performance metrics | raw: + complete JSON structures + API responses
+                           --output-format        text (default) | json (includes session_id)
+
+                           Session Continuation (Priority: --session-id > --continue-session-from > --continue-session):
+                           --session-id ID                Direct session ID for resuming conversation
+                           --continue-session-from FILE   Resume from specific stored session file
+                           --continue-from FILE           Alias for --continue-session-from
+                           --continue-session             Resume from most recent session (auto-discovers)
+                           --store-response               Save session to .mcp-coder/responses/ for later use
+
+                           Configuration:
+                           --timeout SECONDS      API timeout in seconds (default: 60)
+                           --llm-method METHOD    claude_code_api (default) | claude_code_cli
+
     commit auto             Auto-generate commit message using LLM
     commit auto --preview   Show generated message and ask for confirmation
-    commit auto --llm-method METHOD   LLM method (claude_code_api or claude_code_cli)
+    commit auto --llm-method METHOD   Communication method (default: claude_code_api)
     commit clipboard        Use commit message from clipboard
 
 {examples}

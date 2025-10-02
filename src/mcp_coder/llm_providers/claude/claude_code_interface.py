@@ -5,40 +5,42 @@ from .claude_code_cli import ask_claude_code_cli
 
 
 def ask_claude_code(
-    question: str, method: str = "cli", timeout: int = 30, cwd: str | None = None
+    question: str,
+    method: str = "cli",
+    session_id: str | None = None,
+    timeout: int = 30,
 ) -> str:
     """
     Ask Claude a question using the specified implementation method.
 
     Routes between different Claude Code implementation methods (CLI, API, etc.).
-    Supports both CLI and Python SDK (API) methods.
+    Supports both CLI and Python SDK (API) methods with session continuity.
+
+    This function returns only the text response. For full session information
+    and metadata, use the lower-level functions directly or use prompt_llm().
 
     Args:
         question: The question to ask Claude
         method: The implementation method to use ("cli" or "api")
+        session_id: Optional session ID to resume previous conversation
         timeout: Timeout in seconds for the request (default: 30)
-        cwd: Working directory for the command (only used for CLI method)
-             This is important for Claude to find .claude/settings.local.json
 
     Returns:
-        Claude's response as a string
+        Claude's response text as a string
 
     Raises:
         ValueError: If the method is not supported or if input validation fails
         Various exceptions from underlying implementations (e.g., subprocess errors for CLI)
 
     Examples:
-        >>> # Use CLI method
-        >>> response = ask_claude_code("Explain recursion", method="cli")
+        >>> # Simple usage without session
+        >>> response = ask_claude_code("Explain recursion")
         >>> print(response)
 
-        >>> # Use API method (recommended)
-        >>> response = ask_claude_code("Review this function", method="api")
-        >>> print(response)
-
-        >>> # Default method (CLI)
-        >>> response = ask_claude_code("Optimize this code")
-        >>> print(response)
+        >>> # With session continuity (text-only, session_id managed externally)
+        >>> response1 = ask_claude_code("My color is blue")
+        >>> # Note: session_id not available from this function
+        >>> # Use ask_claude_code_cli/api directly or prompt_llm() for session management
     """
     # Input validation
     if not question or not question.strip():
@@ -48,9 +50,11 @@ def ask_claude_code(
         raise ValueError("Timeout must be a positive number")
 
     if method == "cli":
-        return ask_claude_code_cli(question, timeout=timeout, cwd=cwd)
+        result = ask_claude_code_cli(question, session_id=session_id, timeout=timeout)
+        return result["text"]  # Extract text from LLMResponseDict
     elif method == "api":
-        return ask_claude_code_api(question, timeout=timeout)
+        result = ask_claude_code_api(question, session_id=session_id, timeout=timeout)
+        return result["text"]  # Extract text from LLMResponseDict
     else:
         raise ValueError(
             f"Unsupported method: {method}. Supported methods: 'cli', 'api'"

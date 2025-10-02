@@ -32,6 +32,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest-asyncio",
+    "pytest-xdist",   # for parallelisation "-n" on CI bots
     "types-pyperclip",
     "mcp-server-filesystem @ git+https://github.com/MarcusJellinghaus/mcp_server_filesystem.git",
 ]
@@ -57,26 +58,28 @@ mcp_coder = ["prompts/*.md"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-    "claude_cli_integration: tests that use real Claude CLI executable (slow, requires claude CLI installed)",
-    "claude_api_integration: tests that make actual API calls to Claude API (slow, unreliable, requires API access)",
+    "claude_cli_integration: tests that use real Claude CLI executable (slow)",
+    "claude_api_integration: tests that make actual API calls to Claude API (slow)",
     "git_integration: tests with file system git operations (repos, commits)", 
+    "checker_integration: tests for code checker integration (pylint, pytest, mypy)",
     "formatter_integration: tests for code formatter integration (black, isort)",
-    "github_integration: tests requiring GitHub API access (network, auth needed)"
+    "github_integration: tests requiring GitHub API access (network, auth needed)",
 ]
 # RECOMMENDED usage patterns:
 # pytest (no markers) - All unit tests (fast, mocked, default for CI)
 # -m "not claude_cli_integration and not claude_api_integration and not git_integration and not formatter_integration and not github_integration" - All unit tests (explicit)
-# -m "claude_cli_integration" - Real Claude CLI tests (slow, requires claude CLI installed)
-# -m "claude_api_integration" - Real Claude API tests (slow, requires API access)
-# -m "git_integration" - Real git operation tests (creates repos, commits)
-# -m "formatter_integration" - Real formatter tests (requires black, isort installed)
-# -m "github_integration" - Real GitHub API tests (requires auth tokens)
+# -m "claude_cli_integration"
+# -m "claude_api_integration"
+# -m "git_integration"
+# -m "checker_integration"
+# -m "formatter_integration"
+# -m "github_integration"
 
 # Default pytest options:
 # --strict-markers: Fail if unknown markers are used (prevents typos)
 # --tb=short: Show concise error tracebacks (not full stack traces)
 # -v: Verbose output showing individual test names
-addopts = ["--strict-markers", "--tb=short", "-v"]
+addopts = ["--strict-markers", "--tb=short", "-v", "-n", "auto"]
 
 [tool.black]
 line-length = 88

@@ -357,32 +357,68 @@ def execute_prompt(args: argparse.Namespace) -> int:
 
     try:
         # Handle continuation from previous session if requested
-        enhanced_prompt = args.prompt
+        # Priority: --session-id > --continue-session-from > --continue-session
+        resume_session_id = getattr(args, "session_id", None)
         continue_file_path = None
 
-        if getattr(args, "continue_from", None):
-            continue_file_path = args.continue_from
-        elif getattr(args, "continue", False):
-            continue_file_path = _find_latest_response_file()
-            if continue_file_path is None:
-                print("No previous response files found, starting new conversation")
-                # Continue execution with empty context instead of returning
+        # Only check file-based continuation if --session-id not provided
+        if not resume_session_id:
+            if getattr(args, "continue_session_from", None):
+                continue_file_path = args.continue_session_from
+            elif getattr(args, "continue_session", False):
+                # Find latest session file
+                continue_file_path = _find_latest_response_file()
+                if continue_file_path is None:
+                    print("No previous response files found, starting new conversation")
+                    # Continue execution without session resumption
 
-        if continue_file_path:
-            previous_context = _load_previous_chat(continue_file_path)
-            enhanced_prompt = _build_context_prompt(previous_context, args.prompt)
+            if continue_file_path:
+                # Extract session_id from the stored response file
+                extracted_session_id = _extract_session_id_from_file(continue_file_path)
+                if extracted_session_id:
+                    resume_session_id = extracted_session_id
+                    print(f"Resuming session: {resume_session_id[:16]}...")
+                else:
+                    print(
+                        "Warning: No session_id found in stored response, starting new conversation"
+                    )
+        else:
+            # User provided explicit --session-id, inform them it takes priority
+            if getattr(args, "continue_session_from", None) or getattr(
+                args, "continue_session", False
+            ):
+                print(f"Using explicit session ID (ignoring file-based continuation)")
 
-        # Get user-specified timeout and llm_method
+        # Get user-specified timeout, llm_method, and output_format
         timeout = getattr(args, "timeout", 30)
         llm_method = getattr(args, "llm_method", "claude_code_api")
         verbosity = getattr(args, "verbosity", "just-text")
+        output_format = getattr(args, "output_format", "text")
 
-        # Route to appropriate method based on verbosity level
-        if verbosity == "just-text":
+        # Route to appropriate method based on output_format and verbosity
+        if output_format == "json":
+            # JSON output mode - return full LLMResponseDict
+            from ...llm_interface import prompt_llm
+
+            provider, method = parse_llm_method(llm_method)
+            response_dict = prompt_llm(
+                args.prompt,
+                provider=provider,
+                method=method,
+                timeout=timeout,
+                session_id=resume_session_id,
+            )
+            # Output complete response as JSON (includes session_id)
+            formatted_output = json.dumps(response_dict, indent=2, default=str)
+        elif verbosity == "just-text":
             # Use unified ask_llm interface for simple text output
             provider, method = parse_llm_method(llm_method)
             response = ask_llm(
-                enhanced_prompt, provider=provider, method=method, timeout=timeout
+                args.prompt,
+                provider=provider,
+                method=method,
+                timeout=timeout,
+                session_id=resume_session_id,
             )
 
             # Simple text output with tool summary
@@ -400,7 +436,9 @@ def execute_prompt(args: argparse.Namespace) -> int:
                 logger.info("Response stored to: %s", stored_path)
         else:
             # Use detailed API for verbose/raw modes that need metadata
-            response_data = ask_claude_code_api_detailed_sync(enhanced_prompt, timeout)
+            response_data = ask_claude_code_api_detailed_sync(
+                args.prompt, timeout, resume_session_id
+            )
 
             # Store response if requested
             if getattr(args, "store_response", False):
@@ -650,70 +688,61 @@ def _format_verbose(response_data: Dict[str, Any]) -> str:
     return "\n".join(formatted_parts)
 
 
-def _load_previous_chat(file_path: str) -> Dict[str, Any]:
-    """Load stored session from JSON file for continuation.
+def _extract_session_id_from_file(file_path: str) -> Optional[str]:
+    """Extract session_id from a stored response file.
 
     Args:
         file_path: Path to the stored session JSON file
 
     Returns:
-        Dictionary containing previous session context
-
-    Raises:
-        FileNotFoundError: If file doesn't exist
-        json.JSONDecodeError: If file contains invalid JSON
-        KeyError: If file is missing required fields
+        Session ID string if found, None otherwise
     """
-    logger.info("Loading previous chat from: %s", file_path)
+    logger.info("Extracting session_id from: %s", file_path)
 
-    # Check if file exists
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Previous session file not found: {file_path}")
+    try:
+        # Check if file exists
+        if not os.path.exists(file_path):
+            logger.warning("Response file not found: %s", file_path)
+            return None
 
-    # Read and parse JSON file
-    with open(file_path, "r", encoding="utf-8") as f:
-        session_data = json.load(f)
+        # Read and parse JSON file
+        with open(file_path, "r", encoding="utf-8") as f:
+            session_data = json.load(f)
 
-    # Validate required fields
-    required_fields = ["prompt", "response_data"]
-    for field in required_fields:
-        if field not in session_data:
-            raise KeyError(f"Missing required field '{field}' in session file")
+        # Try multiple paths to find session_id
+        # Path 1: response_data.session_info.session_id (detailed API response)
+        session_id: Optional[str] = (
+            session_data.get("response_data", {})
+            .get("session_info", {})
+            .get("session_id")
+        )
+        if session_id and isinstance(session_id, str):
+            logger.debug(
+                "Found session_id in response_data.session_info: %s", session_id
+            )
+            return session_id
 
-    # Extract previous conversation context
-    previous_prompt = session_data["prompt"]
-    previous_response = session_data["response_data"].get("text", "")
+        # Path 2: Direct session_id field (simple response format)
+        session_id = session_data.get("session_id")
+        if session_id and isinstance(session_id, str):
+            logger.debug("Found session_id at root level: %s", session_id)
+            return session_id
 
-    return {
-        "previous_prompt": previous_prompt,
-        "previous_response": previous_response,
-        "metadata": session_data.get("metadata", {}),
-    }
+        # Path 3: metadata.session_id (alternative storage location)
+        session_id = session_data.get("metadata", {}).get("session_id")
+        if session_id and isinstance(session_id, str):
+            logger.debug("Found session_id in metadata: %s", session_id)
+            return session_id
 
+        logger.warning("No session_id found in file: %s", file_path)
+        return None
 
-def _build_context_prompt(previous_context: Dict[str, Any], new_prompt: str) -> str:
-    """Build enhanced prompt with previous conversation context.
-
-    Args:
-        previous_context: Context from previous session
-        new_prompt: New prompt from user
-
-    Returns:
-        Enhanced prompt combining previous context with new prompt
-    """
-    previous_prompt = previous_context.get("previous_prompt", "")
-    previous_response = previous_context.get("previous_response", "")
-
-    # Build context-aware prompt
-    context_parts = [
-        "Previous conversation:",
-        f"User: {previous_prompt}",
-        f"Assistant: {previous_response}",
-        "",
-        f"Current question: {new_prompt}",
-    ]
-
-    return "\n".join(context_parts)
+    except json.JSONDecodeError as e:
+        logger.error("Invalid JSON in file %s: %s", file_path, e)
+        return None
+    except Exception as e:
+        logger.error("Error reading session file %s: %s", file_path, e)
+        return None
 
 
 def _find_latest_response_file(
@@ -770,10 +799,11 @@ def _find_latest_response_file(
         valid_files.sort()
         latest_file = valid_files[-1]  # Last file after sorting is the latest
 
-        # Show selected filename to user for transparency (Decision #6)
+        # Provide user feedback showing count and selected file
+        num_sessions = len(valid_files)
         selected_filename = os.path.basename(latest_file)
         print(
-            f"Found {len(valid_files)} previous sessions, continuing from: {selected_filename}"
+            f"Found {num_sessions} previous sessions, continuing from: {selected_filename}"
         )
 
         logger.debug("Selected latest response file: %s", latest_file)

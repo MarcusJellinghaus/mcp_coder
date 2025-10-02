@@ -14,6 +14,7 @@ import pytest
 from mcp_coder.utils.git_operations import get_branch_diff, is_git_repository
 
 
+@pytest.mark.git_integration
 class TestGitEncodingStress:
     """Test git operations with heavy Unicode and special character content."""
 

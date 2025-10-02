@@ -134,6 +134,7 @@ class TestGitHubUtils:
         assert get_repo_full_name("invalid-url") is None
 
 
+@pytest.mark.git_integration
 class TestPullRequestManagerUnit:
     """Unit tests for PullRequestManager with mocked dependencies."""
 
@@ -612,6 +613,7 @@ class TestPullRequestManagerIntegration:
         assert invalid_list_result == expected_empty_list
 
 
+@pytest.mark.git_integration
 class TestLabelsManagerUnit:
     """Unit tests for LabelsManager with mocked dependencies."""
 

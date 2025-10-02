@@ -88,12 +88,14 @@ jobs:
         
     - name: Run unit tests (fast)
       id: unit-tests
-      run: pytest -m "not git_integration and not claude_integration and not formatter_integration and not github_integration" --junitxml=unit-tests.xml
+      run: pytest -m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration" --junitxml=unit-tests.xml
       continue-on-error: true
         
     - name: Run integration tests
       id: integration-tests
-      run: pytest -m "git_integration or claude_integration or formatter_integration or github_integration" --junitxml=integration-tests.xml
+      # Note: Claude integration tests are skipped in CI (no Claude CLI/API available)
+      # Only runs: git_integration, formatter_integration, github_integration
+      run: pytest -m "git_integration or formatter_integration or github_integration" --junitxml=integration-tests.xml
       continue-on-error: true
         
     - name: Check type hints with mypy
