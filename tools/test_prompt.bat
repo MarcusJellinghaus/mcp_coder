@@ -59,14 +59,25 @@ set "TEST4_RESULT=UNKNOWN"
 set "TEST5_RESULT=UNKNOWN"
 set "TEST6_RESULT=UNKNOWN"
 
+REM Initialize duration tracking
+set "TEST1_DURATION=N/A"
+set "TEST2_DURATION=N/A"
+set "TEST3_DURATION=N/A"
+set "TEST4_DURATION=N/A"
+set "TEST5_DURATION=N/A"
+set "TEST6_DURATION=N/A"
+
 REM Test 1: Short prompt with API method
 echo ========================================
 echo Test 1: Short prompt with API method
 echo ========================================
 echo Question: 1+1
 echo.
+set "TEST1_START=%TIME%"
 mcp-coder prompt "1+1" --llm-method claude_code_api --timeout 30 > "%TEMP%\test1_output.txt" 2>&1
 set "TEST1_EXIT=!errorlevel!"
+set "TEST1_END=%TIME%"
+call :calculate_duration "!TEST1_START!" "!TEST1_END!" TEST1_DURATION
 if "%DEBUG_MODE%"=="1" (
     echo [DEBUG] Response:
     type "%TEMP%\test1_output.txt"
@@ -88,8 +99,11 @@ echo Test 2: Short prompt with CLI method
 echo ========================================
 echo Question: 1+1
 echo.
+set "TEST2_START=%TIME%"
 mcp-coder prompt "1+1" --llm-method claude_code_cli --timeout 30 > "%TEMP%\test2_output.txt" 2>&1
 set "TEST2_EXIT=!errorlevel!"
+set "TEST2_END=%TIME%"
+call :calculate_duration "!TEST2_START!" "!TEST2_END!" TEST2_DURATION
 if "%DEBUG_MODE%"=="1" (
     echo [DEBUG] Response:
     type "%TEMP%\test2_output.txt"
@@ -122,8 +136,11 @@ echo.
 
 REM Read prompt from file and pass to mcp-coder
 set /p LONG_PROMPT=<"%TEMP%\test3_prompt.txt"
+set "TEST3_START=%TIME%"
 mcp-coder prompt "!LONG_PROMPT!" --llm-method claude_code_api --timeout 90 > "%TEMP%\test3_output.txt" 2>&1
 set "TEST3_EXIT=!errorlevel!"
+set "TEST3_END=%TIME%"
+call :calculate_duration "!TEST3_START!" "!TEST3_END!" TEST3_DURATION
 if "%DEBUG_MODE%"=="1" (
     echo [DEBUG] Response:
     type "%TEMP%\test3_output.txt"
@@ -160,8 +177,11 @@ echo.
 
 REM Read prompt from file and pass to mcp-coder
 set /p LONG_PROMPT=<"%TEMP%\test4_prompt.txt"
+set "TEST4_START=%TIME%"
 mcp-coder prompt "!LONG_PROMPT!" --llm-method claude_code_cli --timeout 90 > "%TEMP%\test4_output.txt" 2>&1
 set "TEST4_EXIT=!errorlevel!"
+set "TEST4_END=%TIME%"
+call :calculate_duration "!TEST4_START!" "!TEST4_END!" TEST4_DURATION
 if "%DEBUG_MODE%"=="1" (
     echo [DEBUG] Response:
     type "%TEMP%\test4_output.txt"
@@ -187,6 +207,7 @@ echo Test 5: Session continuity with API method
 echo ========================================
 echo Testing session continuity with API method using Claude native sessions...
 echo.
+set "TEST5_START=%TIME%"
 
 REM First call - establish session and capture session_id
 echo First call: Setting up session with number 555...
@@ -249,6 +270,8 @@ if errorlevel 1 (
 )
 
 :test5_end
+set "TEST5_END=%TIME%"
+call :calculate_duration "!TEST5_START!" "!TEST5_END!" TEST5_DURATION
 REM Clean up temp files
 if exist "%TEMP%\test5_first.json" del "%TEMP%\test5_first.json"
 if exist "%TEMP%\test5_response.txt" del "%TEMP%\test5_response.txt"
@@ -260,6 +283,7 @@ echo Test 6: Session continuity with CLI method
 echo ========================================
 echo Testing session continuity with CLI method using Claude native sessions...
 echo.
+set "TEST6_START=%TIME%"
 
 REM First call - establish session and capture session_id
 echo First call: Setting up session with number 777...
@@ -322,6 +346,8 @@ if errorlevel 1 (
 )
 
 :test6_end
+set "TEST6_END=%TIME%"
+call :calculate_duration "!TEST6_START!" "!TEST6_END!" TEST6_DURATION
 REM Clean up temp files
 if exist "%TEMP%\test6_first.json" del "%TEMP%\test6_first.json"
 if exist "%TEMP%\test6_response.txt" del "%TEMP%\test6_response.txt"
@@ -330,12 +356,12 @@ echo.
 echo ========================================
 echo Test Results Summary
 echo ========================================
-echo Test 1 (Short/API):            !TEST1_RESULT!
-echo Test 2 (Short/CLI):            !TEST2_RESULT!
-echo Test 3 (Long/API):             !TEST3_RESULT!
-echo Test 4 (Long/CLI):             !TEST4_RESULT!
-echo Test 5 (Session/API):          !TEST5_RESULT!
-echo Test 6 (Session/CLI):          !TEST6_RESULT!
+echo Test 1 (Short/API):            !TEST1_RESULT!    Duration: !TEST1_DURATION!
+echo Test 2 (Short/CLI):            !TEST2_RESULT!    Duration: !TEST2_DURATION!
+echo Test 3 (Long/API):             !TEST3_RESULT!    Duration: !TEST3_DURATION!
+echo Test 4 (Long/CLI):             !TEST4_RESULT!    Duration: !TEST4_DURATION!
+echo Test 5 (Session/API):          !TEST5_RESULT!    Duration: !TEST5_DURATION!
+echo Test 6 (Session/CLI):          !TEST6_RESULT!    Duration: !TEST6_DURATION!
 echo.
 
 REM Count failures
@@ -360,3 +386,51 @@ endlocal
 REM Return failure code if any tests failed
 if !FAILURES! gtr 0 exit /b 1
 exit /b 0
+
+REM Function to calculate duration between two times
+:calculate_duration
+setlocal enabledelayedexpansion
+set "start_time=%~1"
+set "end_time=%~2"
+set "return_var=%~3"
+
+REM Extract hours, minutes, seconds, and centiseconds
+for /f "tokens=1-4 delims=:., " %%a in ("!start_time!") do (
+    set /a start_h=%%a
+    set /a start_m=%%b
+    set /a start_s=%%c
+    set /a start_cs=%%d
+)
+
+for /f "tokens=1-4 delims=:., " %%a in ("!end_time!") do (
+    set /a end_h=%%a
+    set /a end_m=%%b
+    set /a end_s=%%c
+    set /a end_cs=%%d
+)
+
+REM Convert to centiseconds
+set /a start_total=((start_h*3600)+(start_m*60)+start_s)*100+start_cs
+set /a end_total=((end_h*3600)+(end_m*60)+end_s)*100+end_cs
+
+REM Handle midnight crossing
+if !end_total! lss !start_total! set /a end_total+=8640000
+
+REM Calculate difference
+set /a diff=end_total-start_total
+
+REM Convert back to readable format
+set /a diff_s=diff/100
+set /a diff_cs=diff%%100
+set /a diff_m=diff_s/60
+set /a diff_s=diff_s%%60
+
+REM Format output
+if !diff_m! gtr 0 (
+    set "duration=!diff_m!m !diff_s!.!diff_cs!s"
+) else (
+    set "duration=!diff_s!.!diff_cs!s"
+)
+
+endlocal & set "%return_var%=%duration%"
+goto :eof
