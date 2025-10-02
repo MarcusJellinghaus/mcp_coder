@@ -108,12 +108,7 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     prompt_parser.add_argument(
         "--session-id",
         type=str,
-        help="Session ID for maintaining conversation context (CLI method only)",
-    )
-    prompt_parser.add_argument(
-        "--continue-session",
-        action="store_true",
-        help="Continue using the same session ID from --session-id",
+        help="Session ID for maintaining conversation context (works with both CLI and API methods)",
     )
     prompt_parser.add_argument(
         "--output-format",
