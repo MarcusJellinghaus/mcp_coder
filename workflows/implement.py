@@ -52,7 +52,11 @@ from mcp_coder.utils.git_operations import (
     is_working_directory_clean,
 )
 from mcp_coder.utils.log_utils import setup_logging
-from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
+from mcp_coder.workflow_utils.task_tracker import (
+    get_incomplete_tasks,
+    get_step_progress,
+    has_incomplete_work,
+)
 
 # Constants
 PR_INFO_DIR = "pr_info"
@@ -230,12 +234,73 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
         return False
 
 
+def log_progress_summary(project_dir: Path) -> None:
+    """Log a summary of step-by-step progress from task tracker."""
+    try:
+        pr_info_dir = str(project_dir / PR_INFO_DIR)
+        progress = get_step_progress(pr_info_dir)
+        
+        if not progress:
+            logger.debug("No step progress information available")
+            return
+        
+        log_step("=" * 60)
+        log_step("TASK TRACKER PROGRESS SUMMARY")
+        log_step("=" * 60)
+        
+        for step_name, step_info in progress.items():
+            # Extract and validate types from step_info dict
+            total_val = step_info["total"]
+            completed_val = step_info["completed"]
+            incomplete_val = step_info["incomplete"]
+            incomplete_list_val = step_info["incomplete_tasks"]
+            
+            # Type narrowing assertions
+            assert isinstance(total_val, int), "total should be int"
+            assert isinstance(completed_val, int), "completed should be int"
+            assert isinstance(incomplete_val, int), "incomplete should be int"
+            assert isinstance(incomplete_list_val, list), "incomplete_tasks should be list"
+            
+            # Now we can use the narrowed types
+            total = total_val
+            completed = completed_val
+            incomplete = incomplete_val
+            incomplete_list = incomplete_list_val
+            
+            # Calculate percentage
+            percentage = (completed / total * 100) if total > 0 else 0
+            
+            # Create progress bar
+            bar_length = 20
+            filled = int(bar_length * completed / total) if total > 0 else 0
+            bar = "█" * filled + "░" * (bar_length - filled)
+            
+            # Log step summary
+            log_step(f"{step_name}:")
+            log_step(f"  [{bar}] {percentage:.0f}% ({completed}/{total} complete)")
+            
+            # Show incomplete tasks for this step if any
+            if incomplete > 0:
+                log_step(f"  Remaining: {', '.join(incomplete_list[:3])}{'...' if len(incomplete_list) > 3 else ''}")
+        
+        log_step("=" * 60)
+    
+    except Exception as e:
+        logger.debug(f"Could not generate progress summary: {e}")
+
+
 def get_next_task(project_dir: Path) -> Optional[str]:
     """Get next incomplete task from task tracker."""
     log_step("Checking for incomplete tasks...")
     
     try:
         pr_info_dir = str(project_dir / PR_INFO_DIR)
+        
+        # Use has_incomplete_work() for clearer semantics
+        if not has_incomplete_work(pr_info_dir):
+            log_step("No incomplete work found")
+            return None
+        
         incomplete_tasks = get_incomplete_tasks(pr_info_dir)
         if not incomplete_tasks:
             log_step("No incomplete tasks found")
@@ -752,7 +817,10 @@ def main() -> None:
     if not prepare_task_tracker(project_dir, args.llm_method):
         sys.exit(1)
     
-    # Step 3: Process all incomplete tasks in a loop
+    # Step 3: Show initial progress summary
+    log_progress_summary(project_dir)
+    
+    # Step 4: Process all incomplete tasks in a loop
     completed_tasks = 0
     while True:
         success = process_single_task(project_dir, args.llm_method)
@@ -762,9 +830,15 @@ def main() -> None:
         
         completed_tasks += 1
         log_step(f"Completed {completed_tasks} task(s). Checking for more...")
+        
+        # Show updated progress after each task
+        log_progress_summary(project_dir)
     
+    # Step 5: Show final progress summary
     if completed_tasks > 0:
         log_step(f"Implement workflow completed successfully! Processed {completed_tasks} task(s).")
+        log_step("\nFinal Progress:")
+        log_progress_summary(project_dir)
     else:
         log_step("No incomplete implementation tasks found - workflow complete")
     
