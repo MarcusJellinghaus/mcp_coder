@@ -93,7 +93,9 @@ jobs:
         
     - name: Run integration tests
       id: integration-tests
-      run: pytest -m "git_integration or claude_cli_integration or claude_api_integration or formatter_integration or github_integration" --junitxml=integration-tests.xml
+      # Note: Claude integration tests are skipped in CI (no Claude CLI/API available)
+      # Only runs: git_integration, formatter_integration, github_integration
+      run: pytest -m "git_integration or formatter_integration or github_integration" --junitxml=integration-tests.xml
       continue-on-error: true
         
     - name: Check type hints with mypy
