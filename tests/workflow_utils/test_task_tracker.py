@@ -748,7 +748,7 @@ class TestGetStepProgress:
             tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
             content = """# Task Status Tracker
 
-### Tasks
+## Tasks
 
 ### Step 1: Create Package Structure
 - [x] Create directory structure
@@ -760,12 +760,17 @@ class TestGetStepProgress:
 
             progress = get_step_progress(temp_dir)
 
+            # Debug: print what we got
+            print(f"Progress keys: {list(progress.keys())}")
             assert "Step 1: Create Package Structure" in progress
             step_info = progress["Step 1: Create Package Structure"]
             assert step_info["total"] == 4
             assert step_info["completed"] == 2
             assert step_info["incomplete"] == 2
-            assert step_info["incomplete_tasks"] == ["Prepare git commit", "All tasks completed"]
+            assert step_info["incomplete_tasks"] == [
+                "Prepare git commit",
+                "All tasks completed",
+            ]
 
     def test_multiple_steps_progress(self) -> None:
         """Test progress for multiple steps."""
@@ -773,7 +778,7 @@ class TestGetStepProgress:
             tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
             content = """# Task Status Tracker
 
-### Tasks
+## Tasks
 
 ### Step 1: Create Package Structure
 - [x] Create directory structure
@@ -805,7 +810,9 @@ class TestGetStepProgress:
             assert step2["total"] == 3
             assert step2["completed"] == 0
             assert step2["incomplete"] == 3
-            assert len(step2["incomplete_tasks"]) == 3
+            incomplete_tasks = step2["incomplete_tasks"]
+            assert isinstance(incomplete_tasks, list)
+            assert len(incomplete_tasks) == 3
 
             # Check Step 3
             assert "Step 3: Documentation" in progress
@@ -820,7 +827,7 @@ class TestGetStepProgress:
             tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
             content = """# Task Status Tracker
 
-### Tasks
+## Tasks
 
 ### Step 1: Setup
 - [x] Task A
@@ -887,7 +894,7 @@ class TestGetIncompleteTasksEdgeCases:
 
     def test_current_task_tracker_structure(self) -> None:
         """Test with the actual current TASK_TRACKER.md structure to verify behavior.
-        
+
         This test documents the current behavior with the real TASK_TRACKER.md structure
         that includes meta-tasks like 'Prepare git commit' and 'All Step X tasks completed'.
         """
@@ -1180,18 +1187,20 @@ class TestNormalizeTaskName:
         assert tasks[2].name == "Task on line 6"
         assert tasks[2].line_number == 6
 
-    @pytest.mark.xfail(reason="Current implementation includes meta-tasks like 'Prepare git commit' - needs filtering logic")
+    @pytest.mark.xfail(
+        reason="Current implementation includes meta-tasks like 'Prepare git commit' - needs filtering logic"
+    )
     def test_get_incomplete_tasks_with_meta_tasks(self) -> None:
         """Test getting incomplete tasks from real TASK_TRACKER.md structure with meta-tasks.
-        
+
         This test demonstrates an edge case from the current TASK_TRACKER.md where each step
         has multiple sub-tasks including meta-tasks like:
         - 'Prepare git commit message for step N'
         - 'All Step N tasks completed'
-        
+
         The workflow expects one task = one step to implement, but the current structure
         returns ALL incomplete tasks including meta-tasks, causing confusion.
-        
+
         This test is marked as xfail to document the issue for future fixes.
         """
         with TemporaryDirectory() as temp_dir:
@@ -1236,9 +1245,9 @@ class TestNormalizeTaskName:
                 "Move llm_types.py → llm/types.py (preserve git history)",
                 # Should NOT include meta-tasks from Step 1:
                 # - "Prepare git commit message for step 1"
-                # - "All Step 1 tasks completed" 
+                # - "All Step 1 tasks completed"
             ]
-            
+
             # ACTUAL behavior: Returns ALL incomplete tasks including meta-tasks
             actual_current_behavior = [
                 "Prepare git commit message for step 1",
@@ -1248,7 +1257,7 @@ class TestNormalizeTaskName:
                 "Move llm_serialization.py → llm/serialization.py",
                 "Update llm/__init__.py with public API exports",
             ]
-            
+
             # This assertion will fail, demonstrating the issue
             assert result == expected, (
                 f"Expected filtering of meta-tasks, but got: {result}\n"

@@ -296,10 +296,12 @@ def has_incomplete_work(folder_path: str = "pr_info") -> bool:
     return len(incomplete_tasks) > 0
 
 
-def get_step_progress(folder_path: str = "pr_info") -> dict[str, dict[str, int | list[str]]]:
+def get_step_progress(
+    folder_path: str = "pr_info",
+) -> dict[str, dict[str, int | list[str]]]:
     """Get detailed progress information for each step.
 
-    Returns a 2-tier hierarchy: steps (indentation 0) containing tasks (indentation 1+).
+    Returns a 2-tier hierarchy: steps (markdown headers) containing tasks (checkboxes).
 
     Args:
         folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
@@ -333,28 +335,32 @@ def get_step_progress(folder_path: str = "pr_info") -> dict[str, dict[str, int |
     # Find the Implementation Steps section
     section_content = _find_implementation_section(content)
 
-    # Parse all tasks
-    all_tasks = _parse_task_lines(section_content)
-
-    # Build step hierarchy
+    # Parse tasks and track step headers from markdown
+    lines = section_content.split("\n")
     progress: dict[str, dict[str, int | list[str]]] = {}
     current_step_name: str | None = None
     current_step_tasks: list[TaskInfo] = []
 
-    for task in all_tasks:
-        # Top-level task (indentation 0) = step header
-        if task.indentation_level == 0:
+    # Also parse all tasks to get TaskInfo objects
+    all_tasks = _parse_task_lines(section_content)
+    task_index = 0
+
+    for line in lines:
+        # Check if this is a step header (### Step N:)
+        if line.strip().startswith("###"):
             # Save previous step if exists
             if current_step_name and current_step_tasks:
                 _save_step_progress(progress, current_step_name, current_step_tasks)
 
-            # Start new step
-            current_step_name = task.name
+            # Extract step name from header
+            current_step_name = line.strip().lstrip("#").strip()
             current_step_tasks = []
-        else:
-            # Sub-task under current step
-            if current_step_name:
-                current_step_tasks.append(task)
+        # Check if this line is a task checkbox
+        elif line.strip() and CHECKBOX_PATTERN.match(line.strip()):
+            # Add task to current step
+            if current_step_name and task_index < len(all_tasks):
+                current_step_tasks.append(all_tasks[task_index])
+                task_index += 1
 
     # Save last step
     if current_step_name and current_step_tasks:
@@ -364,9 +370,9 @@ def get_step_progress(folder_path: str = "pr_info") -> dict[str, dict[str, int |
 
 
 def _save_step_progress(
-    progress: dict[str, dict[str, int | list[str]]], 
-    step_name: str, 
-    tasks: list[TaskInfo]
+    progress: dict[str, dict[str, int | list[str]]],
+    step_name: str,
+    tasks: list[TaskInfo],
 ) -> None:
     """Helper to save step progress information."""
     total = len(tasks)
