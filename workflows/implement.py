@@ -31,7 +31,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.cli.llm_helpers import parse_llm_method
@@ -279,7 +279,7 @@ def save_conversation(project_dir: Path, content: str, step_num: int, conversati
     logger.debug(f"Conversation saved to {conversation_path.absolute()}")
 
 
-def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: int = 300) -> tuple[str, dict]:
+def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: int = 300) -> tuple[str, dict[Any, Any]]:
     """Call LLM and capture both text response and comprehensive data.
     
     Args:
@@ -319,7 +319,7 @@ def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: 
 
 
 def save_conversation_comprehensive(project_dir: Path, content: str, step_num: int, 
-                                  conversation_type: str = "", comprehensive_data: dict = None) -> None:
+                                  conversation_type: str = "", comprehensive_data: dict[Any, Any] | None = None) -> None:
     """Save both markdown conversation and comprehensive JSON data.
     
     Args:
