@@ -21,5 +21,6 @@
   "enabledMcpjsonServers": [
     "code-checker",
     "filesystem"
-  ]
+  ],
+  "enableAllProjectMcpServers": true
 }
