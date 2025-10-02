@@ -10,6 +10,7 @@ from github.GithubException import GithubException
 from mcp_coder.utils.github_operations.issue_manager import IssueManager
 
 
+@pytest.mark.git_integration
 class TestIssueManagerUnit:
     """Unit tests for IssueManager with mocked dependencies."""
 
