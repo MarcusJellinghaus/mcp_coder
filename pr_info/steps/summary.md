@@ -206,6 +206,24 @@ tests/cli/commands/test_prompt_sdk_utilities.py  # Moved to llm/formatting/
 10. **Step 10: Extract Storage/Session Tests** - Extract from `test_prompt.py`
 11. **Step 11: Verify & Cleanup** - Run all tests, update imports, cleanup
 
+## Import Guidelines
+
+**Always use absolute imports starting with `mcp_coder`:**
+
+```python
+# ✅ Acceptable styles
+from mcp_coder.llm.types import LLMResponseDict
+from mcp_coder.llm import LLMResponseDict  # Via public API
+
+# ❌ Avoid relative imports
+from .types import LLMResponseDict
+```
+
+**Rationale:**
+- Absolute imports provide clarity about module location
+- Both direct and public API imports are acceptable
+- Relative imports can be confusing in larger codebases
+
 ## Benefits
 
 1. **Clear Organization** - All LLM functionality in one place (`llm/` module)

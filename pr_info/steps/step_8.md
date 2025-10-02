@@ -200,6 +200,7 @@ ls tests/llm_providers/ 2>&1 | grep "No such file"
 - [ ] Old test files deleted
 - [ ] Full test suite passes
 - [ ] Test structure mirrors code structure
+- [ ] Create `tests/llm/conftest.py` only if shared fixtures are needed
 
 ## LLM Prompt for Implementation
 

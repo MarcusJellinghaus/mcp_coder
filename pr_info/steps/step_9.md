@@ -325,6 +325,7 @@ pytest tests/ -v
 - [ ] All formatting tests pass
 - [ ] Full test suite passes
 - [ ] `test_prompt.py` line count reduced
+- [ ] Create `tests/llm/formatting/conftest.py` only if shared fixtures are needed
 
 ## LLM Prompt for Implementation
 

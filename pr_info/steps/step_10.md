@@ -323,6 +323,8 @@ pytest tests/ -v
 - [ ] Prompt tests pass (slimmed down)
 - [ ] Full test suite passes
 - [ ] Test structure mirrors code structure
+- [ ] Create `tests/llm/storage/conftest.py` only if shared fixtures are needed
+- [ ] Create `tests/llm/session/conftest.py` only if shared fixtures are needed
 
 ## LLM Prompt for Implementation
 
