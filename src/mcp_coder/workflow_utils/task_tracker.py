@@ -270,6 +270,118 @@ def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
     return incomplete_tasks
 
 
+def has_incomplete_work(folder_path: str = "pr_info") -> bool:
+    """Check if there is any incomplete work in the task tracker.
+
+    This is a simple yes/no check across all steps and tasks.
+
+    Args:
+        folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
+
+    Returns:
+        True if there are any incomplete tasks, False otherwise
+
+    Raises:
+        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+
+    Examples:
+        >>> has_incomplete_work("my_project")
+        True  # There are incomplete tasks
+
+        >>> has_incomplete_work("completed_project")
+        False  # All tasks are complete
+    """
+    incomplete_tasks = get_incomplete_tasks(folder_path)
+    return len(incomplete_tasks) > 0
+
+
+def get_step_progress(folder_path: str = "pr_info") -> dict[str, dict[str, int | list[str]]]:
+    """Get detailed progress information for each step.
+
+    Returns a 2-tier hierarchy: steps (indentation 0) containing tasks (indentation 1+).
+
+    Args:
+        folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
+
+    Returns:
+        Dictionary mapping step names to their progress info:
+        {
+            "Step 1: Create Package Structure": {
+                "total": 5,
+                "completed": 3,
+                "incomplete": 2,
+                "incomplete_tasks": ["Task A", "Task B"]
+            },
+            ...
+        }
+
+    Raises:
+        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+
+    Examples:
+        >>> progress = get_step_progress("my_project")
+        >>> for step, info in progress.items():
+        ...     print(f"{step}: {info['completed']}/{info['total']} complete")
+        Step 1: Create Package Structure: 3/5 complete
+        Step 2: Move Core Modules: 0/4 complete
+    """
+    # Read the tracker file
+    content = _read_task_tracker(folder_path)
+
+    # Find the Implementation Steps section
+    section_content = _find_implementation_section(content)
+
+    # Parse all tasks
+    all_tasks = _parse_task_lines(section_content)
+
+    # Build step hierarchy
+    progress: dict[str, dict[str, int | list[str]]] = {}
+    current_step_name: str | None = None
+    current_step_tasks: list[TaskInfo] = []
+
+    for task in all_tasks:
+        # Top-level task (indentation 0) = step header
+        if task.indentation_level == 0:
+            # Save previous step if exists
+            if current_step_name and current_step_tasks:
+                _save_step_progress(progress, current_step_name, current_step_tasks)
+
+            # Start new step
+            current_step_name = task.name
+            current_step_tasks = []
+        else:
+            # Sub-task under current step
+            if current_step_name:
+                current_step_tasks.append(task)
+
+    # Save last step
+    if current_step_name and current_step_tasks:
+        _save_step_progress(progress, current_step_name, current_step_tasks)
+
+    return progress
+
+
+def _save_step_progress(
+    progress: dict[str, dict[str, int | list[str]]], 
+    step_name: str, 
+    tasks: list[TaskInfo]
+) -> None:
+    """Helper to save step progress information."""
+    total = len(tasks)
+    completed = sum(1 for t in tasks if t.is_complete)
+    incomplete = total - completed
+    incomplete_task_names = [t.name for t in tasks if not t.is_complete]
+
+    progress[step_name] = {
+        "total": total,
+        "completed": completed,
+        "incomplete": incomplete,
+        "incomplete_tasks": incomplete_task_names,
+    }
+
+
 def is_task_done(task_name: str, folder_path: str = "pr_info") -> bool:
     """Check if specific task is marked as complete.
 
