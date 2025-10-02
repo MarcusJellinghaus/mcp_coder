@@ -104,10 +104,9 @@ __all__ = [
 **Step 2.3: Update Root `__init__.py`**
 ```python
 # Update imports from old paths to new paths
-from .llm.interface import (
-    ask_llm,
+from .llm.interface import ask_llm, prompt_llm
+from .llm.serialization import (
     deserialize_llm_response,
-    prompt_llm,
     serialize_llm_response,
 )
 from .llm.types import LLM_RESPONSE_VERSION, LLMResponseDict

@@ -33,11 +33,11 @@ tests/cli/commands/test_prompt.py          (Remove extracted tests, slim down)
 
 ### WHAT
 
-**Tests to Extract to `test_session_storage.py` (~100 lines):**
+**Tests to Extract to `test_session_storage.py` (~80 lines):**
 1. `test_store_response()` - Test session storage
 2. Tests for session ID extraction
 
-**Tests to Extract to `test_session_finder.py` (~200 lines):**
+**Tests to Extract to `test_session_finder.py` (~180 lines):**
 1. `test_find_latest_response_file_success()` - Test finding latest
 2. `test_find_latest_response_file_edge_cases()` - Edge cases
 3. `test_find_latest_response_file_mixed_valid_invalid()` - Validation
@@ -46,7 +46,7 @@ tests/cli/commands/test_prompt.py          (Remove extracted tests, slim down)
 6. `test_find_latest_response_file_lexicographic_sorting()` - Sorting
 7. `test_find_latest_response_file_user_feedback_message()` - User feedback
 
-**Tests to Extract to `test_resolver.py` (~150 lines):**
+**Tests to Extract to `test_resolver.py` (~140 lines):**
 1. `test_continue_from_success()` - Session continuation
 2. `test_continue_from_file_not_found()` - Error handling
 3. `test_continue_from_invalid_json()` - Error handling
@@ -253,16 +253,17 @@ Remove all extracted tests, keeping only CLI orchestration tests (~200 lines):
 **Test Organization:**
 ```python
 {
-    "test_session_storage.py": ["store_session", "extract_session_id"],
-    "test_session_finder.py": ["find_latest_session"],
-    "test_resolver.py": ["parse_llm_method"],
-    "test_prompt.py": ["CLI orchestration only"],
+    "test_session_storage.py": ["store_session", "extract_session_id"],  # ~80 lines
+    "test_session_finder.py": ["find_latest_session"],  # ~180 lines
+    "test_resolver.py": ["parse_llm_method"],  # ~140 lines
+    "test_prompt.py": ["CLI orchestration only"],  # ~200 lines remaining
 }
 ```
 
 **Test Count Reduction:**
 ```
 test_prompt.py: ~800 lines → ~200 lines (75% reduction)
+Total extracted to llm/: ~400 lines (80 + 180 + 140)
 ```
 
 ## Testing
