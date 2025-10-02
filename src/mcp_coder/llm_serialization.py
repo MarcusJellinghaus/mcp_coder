@@ -7,7 +7,7 @@ objects to/from JSON files with versioning support for future compatibility.
 import json
 from pathlib import Path
 
-from .llm_types import LLMResponseDict
+from .llm.types import LLMResponseDict
 
 __all__ = [
     "to_json_string",

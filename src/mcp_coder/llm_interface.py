@@ -4,7 +4,7 @@ from .llm_providers.claude.claude_code_api import ask_claude_code_api
 from .llm_providers.claude.claude_code_cli import ask_claude_code_cli
 from .llm_providers.claude.claude_code_interface import ask_claude_code
 from .llm_serialization import deserialize_llm_response, serialize_llm_response
-from .llm_types import LLMResponseDict
+from .llm.types import LLMResponseDict
 
 __all__ = [
     "ask_llm",

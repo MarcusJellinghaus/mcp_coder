@@ -11,7 +11,7 @@ from mcp_coder.llm_serialization import (
     serialize_llm_response,
     to_json_string,
 )
-from mcp_coder.llm_types import LLMResponseDict
+from mcp_coder.llm.types import LLMResponseDict
 
 
 @pytest.fixture

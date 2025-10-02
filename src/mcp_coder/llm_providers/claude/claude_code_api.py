@@ -21,7 +21,7 @@ from claude_code_sdk import (
 )
 from claude_code_sdk._errors import CLINotFoundError
 
-from ...llm_types import LLM_RESPONSE_VERSION, LLMResponseDict
+from ...llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
 from .claude_executable_finder import (
     find_claude_executable,
     setup_claude_path,

@@ -35,7 +35,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Move Core Modules
 **File:** [pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Move llm_types.py → llm/types.py (preserve git history)
+- [x] Move llm_types.py → llm/types.py (preserve git history)
 - [ ] Move llm_interface.py → llm/interface.py
 - [ ] Move llm_serialization.py → llm/serialization.py
 - [ ] Update llm/__init__.py with public API exports

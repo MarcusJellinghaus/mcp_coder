@@ -7,4 +7,9 @@ This package consolidates all LLM-related functionality including:
 - Type definitions and serialization
 """
 
-__all__: list[str] = []  # Will be populated in later steps
+from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
+
+__all__ = [
+    "LLMResponseDict",
+    "LLM_RESPONSE_VERSION",
+]

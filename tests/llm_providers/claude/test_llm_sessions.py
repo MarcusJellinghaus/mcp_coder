@@ -20,7 +20,7 @@ from mcp_coder import (
     prompt_llm,
     serialize_llm_response,
 )
-from mcp_coder.llm_types import LLMResponseDict
+from mcp_coder.llm.types import LLMResponseDict
 
 
 class MockClaudeCLI:

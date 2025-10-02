@@ -2,7 +2,7 @@
 
 import pytest
 
-from mcp_coder.llm_types import LLM_RESPONSE_VERSION, LLMResponseDict
+from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
 
 
 def test_llm_response_version_format() -> None:

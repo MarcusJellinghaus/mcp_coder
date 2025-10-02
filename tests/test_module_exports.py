@@ -65,15 +65,15 @@ def test_llm_interface_all_is_correct() -> None:
 
 
 def test_llm_types_all_is_correct() -> None:
-    """Test that llm_types module exports correct items."""
-    from mcp_coder import llm_types
+    """Test that llm.types module exports correct items."""
+    from mcp_coder.llm import types
 
     expected = [
         "LLMResponseDict",
         "LLM_RESPONSE_VERSION",
     ]
 
-    assert set(llm_types.__all__) == set(expected)
+    assert set(types.__all__) == set(expected)
 
 
 def test_llm_serialization_all_is_correct() -> None:

@@ -13,7 +13,7 @@ from mcp_coder.llm_providers.claude.claude_code_cli import (
     create_response_dict,
     parse_cli_json_string,
 )
-from mcp_coder.llm_types import LLMResponseDict
+from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.utils.subprocess_runner import CommandResult
 
 
