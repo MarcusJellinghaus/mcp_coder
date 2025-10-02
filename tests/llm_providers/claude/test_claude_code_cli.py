@@ -118,6 +118,30 @@ class TestClaudeCodeCliBackwardCompatibility:
 class TestPureFunctions:
     """Tests for pure functions (fast, no I/O)."""
 
+    def test_parse_cli_json_string_validates_session_id_type(self) -> None:
+        """Test that parse_cli_json_string validates session_id is a string."""
+        # session_id as int should raise error
+        json_str = json.dumps({"result": "Test", "session_id": 123})
+
+        with pytest.raises(ValueError, match="session_id must be string, got int"):
+            parse_cli_json_string(json_str)
+
+    def test_build_cli_command_validates_empty_claude_cmd(self) -> None:
+        """Test that build_cli_command validates claude_cmd is not empty."""
+        with pytest.raises(ValueError, match="claude_cmd cannot be empty"):
+            build_cli_command(None, "")
+
+        with pytest.raises(ValueError, match="claude_cmd cannot be empty"):
+            build_cli_command(None, "   ")
+
+    def test_build_cli_command_validates_empty_session_id(self) -> None:
+        """Test that build_cli_command validates session_id is not empty string."""
+        with pytest.raises(ValueError, match="session_id cannot be empty string"):
+            build_cli_command("", "claude")
+
+        with pytest.raises(ValueError, match="session_id cannot be empty string"):
+            build_cli_command("   ", "claude")
+
     def test_parse_cli_json_string_basic(self) -> None:
         """Test parsing basic CLI JSON with real structure."""
         json_str = json.dumps({"result": "Test response", "session_id": "abc-123"})

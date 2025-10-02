@@ -59,9 +59,16 @@ def parse_cli_json_string(json_str: str) -> ParsedCliResponse:
     # Extract text from "result" field (verified from real CLI output)
     text = str(raw_response.get("result", ""))
 
-    # Extract session_id
+    # Extract session_id with type validation
     session_id_raw = raw_response.get("session_id")
-    session_id = str(session_id_raw) if session_id_raw is not None else None
+    if session_id_raw is not None:
+        if not isinstance(session_id_raw, str):
+            raise ValueError(
+                f"session_id must be string, got {type(session_id_raw).__name__}"
+            )
+        session_id = session_id_raw
+    else:
+        session_id = None
 
     return ParsedCliResponse(
         text=text, session_id=session_id, raw_response=raw_response
@@ -90,6 +97,12 @@ def build_cli_command(session_id: str | None, claude_cmd: str) -> list[str]:
         >>> cmd = build_cli_command("abc123", "claude")
         >>> assert "--resume" in cmd and "abc123" in cmd
     """
+    # Input validation
+    if not claude_cmd or not claude_cmd.strip():
+        raise ValueError("claude_cmd cannot be empty")
+    if session_id is not None and not session_id.strip():
+        raise ValueError("session_id cannot be empty string")
+
     # Use -p "" to read prompt from stdin (avoids command-line length limits)
     command = [claude_cmd, "-p", "", "--output-format", "json"]
 

@@ -416,6 +416,12 @@ def ask_claude_code_api(
         # Extract session_id from Claude's response
         actual_session_id = detailed["session_info"].get("session_id")
 
+        # Log warning if session IDs don't match (informational only)
+        if session_id and actual_session_id and session_id != actual_session_id:
+            logger.warning(
+                f"Session ID mismatch: requested '{session_id}', got '{actual_session_id}' from Claude"
+            )
+
         # Build and return response
         return create_api_response_dict(detailed["text"], actual_session_id, detailed)
 
