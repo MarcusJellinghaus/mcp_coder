@@ -13,12 +13,17 @@ from mcp_code_checker.code_checker_mypy import (
 from mcp_code_checker.code_checker_mypy import run_mypy_check as _run_mypy_check
 
 
-def run_mypy_check(project_dir: Union[str, Path]) -> MypyResult:
+def run_mypy_check(
+    project_dir: Union[str, Path],
+    target_directories: list[str] | None = None,
+) -> MypyResult:
     """
     Run mypy type checking on the project.
 
     Args:
         project_dir: Path to the project directory
+        target_directories: Optional list of directories to check relative to project_dir.
+                          Defaults to ["src"] and conditionally "tests" if it exists.
 
     Returns:
         MypyResult from mcp_code_checker with return_code, messages, errors_found, etc.
@@ -27,7 +32,7 @@ def run_mypy_check(project_dir: Union[str, Path]) -> MypyResult:
         project_dir=str(project_dir),
         strict=True,
         disable_error_codes=None,
-        target_directories=None,  # Let MCP tool choose defaults (src/, tests/)
+        target_directories=target_directories,
         follow_imports="normal",
         cache_dir=None,
     )

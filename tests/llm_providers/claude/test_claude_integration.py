@@ -26,8 +26,6 @@ def method(request: pytest.FixtureRequest) -> str:
     return str(request.param)
 
 
-
-
 @pytest.fixture
 def ask_function(method: str) -> Callable[..., Any]:
     """Fixture providing the appropriate ask function based on method."""
