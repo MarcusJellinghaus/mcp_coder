@@ -1,11 +1,31 @@
 @echo off
 REM Test prompt command with both short and long inputs
 REM Tests both CLI and API methods with native Claude session support
+REM
+REM Usage:
+REM   test_prompt.bat           Run tests in normal mode (minimal output)
+REM   test_prompt.bat --debug   Run tests in debug mode (shows all LLM responses)
+REM
+REM Parameters:
+REM   --debug    Optional. Enables debug mode which displays all LLM responses
+REM              and JSON outputs. Does not change the commands executed.
 
 setlocal enabledelayedexpansion
 
+REM Parse command line arguments
+set "DEBUG_MODE=0"
+:parse_args
+if "%~1"=="" goto args_done
+if /i "%~1"=="--debug" (
+    set "DEBUG_MODE=1"
+)
+shift
+goto parse_args
+:args_done
+
 echo ========================================
 echo Testing MCP Coder Prompt Command
+if "%DEBUG_MODE%"=="1" echo [DEBUG MODE ENABLED]
 echo ========================================
 echo.
 
@@ -45,14 +65,21 @@ echo Test 1: Short prompt with API method
 echo ========================================
 echo Question: 1+1
 echo.
-mcp-coder prompt "1+1" --llm-method claude_code_api --timeout 30
-if errorlevel 1 (
+mcp-coder prompt "1+1" --llm-method claude_code_api --timeout 30 > "%TEMP%\test1_output.txt" 2>&1
+set "TEST1_EXIT=!errorlevel!"
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] Response:
+    type "%TEMP%\test1_output.txt"
+    echo.
+)
+if !TEST1_EXIT! neq 0 (
     set "TEST1_RESULT=FAILED"
-    echo FAILED: Test 1 failed with exit code !errorlevel!
+    echo FAILED: Test 1 failed with exit code !TEST1_EXIT!
 ) else (
     set "TEST1_RESULT=PASSED"
     echo SUCCESS: Test 1 passed
 )
+if exist "%TEMP%\test1_output.txt" del "%TEMP%\test1_output.txt"
 echo.
 
 REM Test 2: Short prompt with CLI method
@@ -61,14 +88,21 @@ echo Test 2: Short prompt with CLI method
 echo ========================================
 echo Question: 1+1
 echo.
-mcp-coder prompt "1+1" --llm-method claude_code_cli --timeout 30
-if errorlevel 1 (
+mcp-coder prompt "1+1" --llm-method claude_code_cli --timeout 30 > "%TEMP%\test2_output.txt" 2>&1
+set "TEST2_EXIT=!errorlevel!"
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] Response:
+    type "%TEMP%\test2_output.txt"
+    echo.
+)
+if !TEST2_EXIT! neq 0 (
     set "TEST2_RESULT=FAILED"
-    echo FAILED: Test 2 failed with exit code !errorlevel!
+    echo FAILED: Test 2 failed with exit code !TEST2_EXIT!
 ) else (
     set "TEST2_RESULT=PASSED"
     echo SUCCESS: Test 2 passed
 )
+if exist "%TEMP%\test2_output.txt" del "%TEMP%\test2_output.txt"
 echo.
 
 REM Test 3: Long prompt with API method (10,000+ characters)
@@ -88,15 +122,22 @@ echo.
 
 REM Read prompt from file and pass to mcp-coder
 set /p LONG_PROMPT=<"%TEMP%\test3_prompt.txt"
-mcp-coder prompt "!LONG_PROMPT!" --llm-method claude_code_api --timeout 90
-if errorlevel 1 (
+mcp-coder prompt "!LONG_PROMPT!" --llm-method claude_code_api --timeout 90 > "%TEMP%\test3_output.txt" 2>&1
+set "TEST3_EXIT=!errorlevel!"
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] Response:
+    type "%TEMP%\test3_output.txt"
+    echo.
+)
+if !TEST3_EXIT! neq 0 (
     set "TEST3_RESULT=FAILED"
-    echo FAILED: Test 3 failed with exit code !errorlevel!
+    echo FAILED: Test 3 failed with exit code !TEST3_EXIT!
     echo Note: Long prompts may fail due to token limits or timeout
 ) else (
     set "TEST3_RESULT=PASSED"
     echo SUCCESS: Test 3 passed
 )
+if exist "%TEMP%\test3_output.txt" del "%TEMP%\test3_output.txt"
 
 REM Clean up temp file
 if exist "%TEMP%\test3_prompt.txt" del "%TEMP%\test3_prompt.txt"
@@ -119,15 +160,22 @@ echo.
 
 REM Read prompt from file and pass to mcp-coder
 set /p LONG_PROMPT=<"%TEMP%\test4_prompt.txt"
-mcp-coder prompt "!LONG_PROMPT!" --llm-method claude_code_cli --timeout 90
-if errorlevel 1 (
+mcp-coder prompt "!LONG_PROMPT!" --llm-method claude_code_cli --timeout 90 > "%TEMP%\test4_output.txt" 2>&1
+set "TEST4_EXIT=!errorlevel!"
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] Response:
+    type "%TEMP%\test4_output.txt"
+    echo.
+)
+if !TEST4_EXIT! neq 0 (
     set "TEST4_RESULT=FAILED"
-    echo FAILED: Test 4 failed with exit code !errorlevel!
+    echo FAILED: Test 4 failed with exit code !TEST4_EXIT!
     echo Note: CLI method may have issues with very long prompts
 ) else (
     set "TEST4_RESULT=PASSED"
     echo SUCCESS: Test 4 passed
 )
+if exist "%TEMP%\test4_output.txt" del "%TEMP%\test4_output.txt"
 
 REM Clean up temp file
 if exist "%TEMP%\test4_prompt.txt" del "%TEMP%\test4_prompt.txt"
@@ -165,6 +213,11 @@ if "%SESSION_ID_API%"=="" (
 )
 
 echo Extracted session_id: %SESSION_ID_API%
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] First call JSON response:
+    type "%TEMP%\test5_first.json"
+    echo.
+)
 echo.
 
 REM Second call - continue session using extracted session_id
@@ -179,6 +232,11 @@ if errorlevel 1 (
 )
 
 REM Check if response contains the number 555
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] Second call response:
+    type "%TEMP%\test5_response.txt"
+    echo.
+)
 findstr /i "555" "%TEMP%\test5_response.txt" > nul
 if errorlevel 1 (
     set "TEST5_RESULT=FAILED"
@@ -228,6 +286,11 @@ if "%SESSION_ID_CLI%"=="" (
 )
 
 echo Extracted session_id: %SESSION_ID_CLI%
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] First call JSON response:
+    type "%TEMP%\test6_first.json"
+    echo.
+)
 echo.
 
 REM Second call - continue session using extracted session_id
@@ -242,6 +305,11 @@ if errorlevel 1 (
 )
 
 REM Check if response contains the number 777
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] Second call response:
+    type "%TEMP%\test6_response.txt"
+    echo.
+)
 findstr /i "777" "%TEMP%\test6_response.txt" > nul
 if errorlevel 1 (
     set "TEST6_RESULT=FAILED"
@@ -281,6 +349,11 @@ if "!TEST6_RESULT!"=="FAILED" set /a FAILURES+=1
 
 echo Total failures: !FAILURES!/6
 echo.
+
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] Debug mode was enabled
+    echo.
+)
 
 endlocal
 
