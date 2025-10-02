@@ -232,11 +232,68 @@ def _normalize_task_name(name: str) -> str:
     return WHITESPACE_PATTERN.sub(" ", name.strip().lower())
 
 
-def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
+def _get_incomplete_tasks(content: str, exclude_meta_tasks: bool = False) -> list[str]:
+    """Get list of incomplete task names from TASK_TRACKER.md content.
+
+    Args:
+        content: Full TASK_TRACKER.md content
+        exclude_meta_tasks: If True, exclude meta-tasks like "Prepare git commit message"
+                           and "All Step X tasks completed" (default: False)
+
+    Returns:
+        List of incomplete task names
+
+    Raises:
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+
+    Examples:
+        >>> content = '''## Tasks
+        ... - [ ] Setup database
+        ... - [x] Add tests
+        ... - [ ] Prepare git commit message for step 1
+        ... '''
+        >>> _get_incomplete_tasks(content, exclude_meta_tasks=False)
+        ["Setup database", "Prepare git commit message for step 1"]
+
+        >>> _get_incomplete_tasks(content, exclude_meta_tasks=True)
+        ["Setup database"]  # Meta-task excluded
+    """
+    # Find the Implementation Steps section
+    section_content = _find_implementation_section(content)
+
+    # Parse all tasks
+    all_tasks = _parse_task_lines(section_content)
+
+    # Filter for incomplete tasks
+    incomplete_tasks = [task.name for task in all_tasks if not task.is_complete]
+
+    # Optionally filter out meta-tasks
+    if exclude_meta_tasks:
+        meta_patterns = [
+            r"prepare git commit message",
+            r"all step \d+ tasks completed",
+            r"all .* tasks completed",
+        ]
+        filtered = []
+        for task in incomplete_tasks:
+            task_lower = task.lower()
+            is_meta = any(re.search(pattern, task_lower) for pattern in meta_patterns)
+            if not is_meta:
+                filtered.append(task)
+        incomplete_tasks = filtered
+
+    return incomplete_tasks
+
+
+def get_incomplete_tasks(
+    folder_path: str = "pr_info", exclude_meta_tasks: bool = False
+) -> list[str]:
     """Get list of incomplete task names from Implementation Steps section.
 
     Args:
         folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
+        exclude_meta_tasks: If True, exclude meta-tasks like "Prepare git commit message"
+                           and "All Step X tasks completed" (default: False)
 
     Returns:
         List of incomplete task names
@@ -254,20 +311,15 @@ def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
 
         >>> get_incomplete_tasks("empty_project")
         []  # No incomplete tasks found
+
+        >>> get_incomplete_tasks("my_project", exclude_meta_tasks=True)
+        ["Setup database", "Add authentication"]  # Excludes "Prepare commit message", etc.
     """
     # Read the tracker file
     content = _read_task_tracker(folder_path)
 
-    # Find the Implementation Steps section
-    section_content = _find_implementation_section(content)
-
-    # Parse all tasks
-    all_tasks = _parse_task_lines(section_content)
-
-    # Filter for incomplete tasks and return their names
-    incomplete_tasks = [task.name for task in all_tasks if not task.is_complete]
-
-    return incomplete_tasks
+    # Delegate to internal function
+    return _get_incomplete_tasks(content, exclude_meta_tasks)
 
 
 def has_incomplete_work(folder_path: str = "pr_info") -> bool:

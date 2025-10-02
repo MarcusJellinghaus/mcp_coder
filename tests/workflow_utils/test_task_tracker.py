@@ -11,6 +11,7 @@ from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     TaskTrackerSectionNotFoundError,
     _find_implementation_section,
+    _get_incomplete_tasks,
     _normalize_task_name,
     _parse_task_lines,
     _read_task_tracker,
@@ -488,6 +489,119 @@ class TestParseTaskLines:
         content_without_dashes = create_test_tracker_content(tasks, use_dashes=False)
         assert "[ ] Test task" in content_without_dashes
         assert "- [ ]" not in content_without_dashes
+
+
+class TestGetIncompleteTasksInternal:
+    """Test _get_incomplete_tasks internal function."""
+
+    def test_get_incomplete_basic(self) -> None:
+        """Test getting incomplete tasks from content string."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+- [ ] Setup database
+- [x] Add tests
+- [ ] Write docs
+"""
+        result = _get_incomplete_tasks(content)
+        assert result == ["Setup database", "Write docs"]
+
+    def test_get_incomplete_with_meta_tasks_included(self) -> None:
+        """Test getting incomplete tasks including meta-tasks."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+- [x] Create directories
+- [ ] Add __init__.py files
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+"""
+        result = _get_incomplete_tasks(content, exclude_meta_tasks=False)
+        expected = [
+            "Add __init__.py files",
+            "Prepare git commit message for step 1",
+            "All Step 1 tasks completed",
+        ]
+        assert result == expected
+
+    def test_get_incomplete_with_meta_tasks_excluded(self) -> None:
+        """Test getting incomplete tasks excluding meta-tasks."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+- [x] Create directories
+- [ ] Add __init__.py files
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+"""
+        result = _get_incomplete_tasks(content, exclude_meta_tasks=True)
+        assert result == ["Add __init__.py files"]
+
+    def test_get_incomplete_real_task_tracker_structure(self) -> None:
+        """Test with real TASK_TRACKER.md structure."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+**File:** [pr_info/steps/step_1.md](steps/step_1.md)
+
+- [x] Create directory structure for llm package with subdirectories
+- [x] Create all __init__.py files with appropriate docstrings
+- [x] Verify all packages are importable
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+
+### Step 2: Move Core Modules
+**File:** [pr_info/steps/step_2.md](steps/step_2.md)
+
+- [ ] Move llm_types.py → llm/types.py (preserve git history)
+- [ ] Move llm_interface.py → llm/interface.py
+- [ ] Move llm_serialization.py → llm/serialization.py
+"""
+        # Without filtering - gets meta-tasks from Step 1 first
+        result_with_meta = _get_incomplete_tasks(content, exclude_meta_tasks=False)
+        assert result_with_meta[0] == "Prepare git commit message for step 1"
+        assert result_with_meta[1] == "All Step 1 tasks completed"
+        assert len(result_with_meta) == 5  # 2 meta + 3 real from Step 2
+
+        # With filtering - skips meta-tasks, goes straight to Step 2
+        result_without_meta = _get_incomplete_tasks(content, exclude_meta_tasks=True)
+        assert (
+            result_without_meta[0]
+            == "Move llm_types.py → llm/types.py (preserve git history)"
+        )
+        assert len(result_without_meta) == 3  # Only real tasks from Step 2
+
+    def test_get_incomplete_all_complete(self) -> None:
+        """Test when all tasks are complete."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+- [x] Task 1
+- [x] Task 2
+"""
+        result = _get_incomplete_tasks(content)
+        assert result == []
+
+    def test_get_incomplete_section_not_found(self) -> None:
+        """Test error when Implementation Steps section missing."""
+        content = """# Task Status Tracker
+
+## Some Other Section
+
+- [ ] Not in implementation section
+"""
+        with pytest.raises(TaskTrackerSectionNotFoundError):
+            _get_incomplete_tasks(content)
 
 
 class TestGetIncompleteTasks:
@@ -1187,21 +1301,14 @@ class TestNormalizeTaskName:
         assert tasks[2].name == "Task on line 6"
         assert tasks[2].line_number == 6
 
-    @pytest.mark.xfail(
-        reason="Current implementation includes meta-tasks like 'Prepare git commit' - needs filtering logic"
-    )
-    def test_get_incomplete_tasks_with_meta_tasks(self) -> None:
-        """Test getting incomplete tasks from real TASK_TRACKER.md structure with meta-tasks.
+    def test_get_incomplete_tasks_with_meta_tasks_excluded(self) -> None:
+        """Test getting incomplete tasks with meta-tasks excluded.
 
-        This test demonstrates an edge case from the current TASK_TRACKER.md where each step
-        has multiple sub-tasks including meta-tasks like:
-        - 'Prepare git commit message for step N'
-        - 'All Step N tasks completed'
+        This test verifies the fix for the issue where the workflow was getting
+        meta-tasks like 'Prepare git commit message' as the next task to implement.
 
-        The workflow expects one task = one step to implement, but the current structure
-        returns ALL incomplete tasks including meta-tasks, causing confusion.
-
-        This test is marked as xfail to document the issue for future fixes.
+        With exclude_meta_tasks=True, it should skip meta-tasks and return only
+        real implementation tasks.
         """
         with TemporaryDirectory() as temp_dir:
             # Create test tracker file matching current TASK_TRACKER.md structure
@@ -1236,30 +1343,22 @@ class TestNormalizeTaskName:
 """
             tracker_path.write_text(content, encoding="utf-8")
 
-            # Test function
-            result = get_incomplete_tasks(temp_dir)
+            # Test WITHOUT filtering (old behavior)
+            result_with_meta = get_incomplete_tasks(temp_dir, exclude_meta_tasks=False)
+            # Should include meta-tasks
+            assert "Prepare git commit message for step 1" in result_with_meta
+            assert "All Step 1 tasks completed" in result_with_meta
+            assert len(result_with_meta) == 6  # 2 meta from Step 1 + 4 from Step 2
 
-            # EXPECTED behavior: Should return only the next implementation step
-            # Step 1 is mostly complete (only meta-tasks remain), so should skip to Step 2
+            # Test WITH filtering (new behavior)
+            result_without_meta = get_incomplete_tasks(
+                temp_dir, exclude_meta_tasks=True
+            )
+            # Should skip meta-tasks and go straight to Step 2 implementation tasks
             expected = [
-                "Move llm_types.py → llm/types.py (preserve git history)",
-                # Should NOT include meta-tasks from Step 1:
-                # - "Prepare git commit message for step 1"
-                # - "All Step 1 tasks completed"
-            ]
-
-            # ACTUAL behavior: Returns ALL incomplete tasks including meta-tasks
-            actual_current_behavior = [
-                "Prepare git commit message for step 1",
-                "All Step 1 tasks completed",
                 "Move llm_types.py → llm/types.py (preserve git history)",
                 "Move llm_interface.py → llm/interface.py",
                 "Move llm_serialization.py → llm/serialization.py",
                 "Update llm/__init__.py with public API exports",
             ]
-
-            # This assertion will fail, demonstrating the issue
-            assert result == expected, (
-                f"Expected filtering of meta-tasks, but got: {result}\n"
-                f"Current behavior returns: {actual_current_behavior}"
-            )
+            assert result_without_meta == expected
