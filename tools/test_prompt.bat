@@ -355,6 +355,7 @@ echo.
 
 echo ========================================
 echo Test Results Summary
+echo %DATE% - %TIME:~0,5%
 echo ========================================
 echo Test 1 (Short/API):            !TEST1_RESULT!    Duration: !TEST1_DURATION!
 echo Test 2 (Short/CLI):            !TEST2_RESULT!    Duration: !TEST2_DURATION!
