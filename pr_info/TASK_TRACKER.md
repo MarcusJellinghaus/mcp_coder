@@ -79,16 +79,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 5: Extract Formatters
 **File:** [pr_info/steps/step_5.md](steps/step_5.md)
 
-- [ ] Create llm/formatting/formatters.py with 3 formatter functions
-- [ ] Copy implementations from prompt.py (rename, make public)
-- [ ] Import SDK utilities (extract_tool_interactions, etc.)
-- [ ] Update llm/formatting/__init__.py to export formatters
-- [ ] Update prompt.py: add import from formatters
-- [ ] Update prompt.py: remove 3 private formatter functions
-- [ ] Update all formatter calls in execute_prompt()
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for step 5
+- [x] Create llm/formatting/formatters.py with 3 formatter functions
+- [x] Copy implementations from prompt.py (rename, make public)
+- [x] Import SDK utilities (extract_tool_interactions, etc.)
+- [x] Update llm/formatting/__init__.py to export formatters
+- [x] Update prompt.py: add import from formatters
+- [x] Update prompt.py: remove 3 private formatter functions
+- [x] Update all formatter calls in execute_prompt()
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for step 5
 
 ### Step 6: Extract Storage Functions
 **File:** [pr_info/steps/step_6.md](steps/step_6.md)
