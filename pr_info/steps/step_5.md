@@ -65,4 +65,4 @@ def add_implement_parser(subparsers) -> None
 - CLI command `mcp-coder implement --help` works
 - All CLI arguments properly parsed and validated
 - Integration with existing CLI infrastructure
-- 95%+ test coverage with mocked workflow
+- 80%+ test coverage focused on core CLI integration

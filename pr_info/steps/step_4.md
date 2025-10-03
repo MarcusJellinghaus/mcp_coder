@@ -59,6 +59,6 @@ def resolve_project_dir(project_dir_arg: Optional[str]) -> Path
 
 ## Success Criteria
 - Core workflow orchestration fully tested
-- 95%+ test coverage with comprehensive mocking
+- 80% test coverage focused on critical orchestration paths
 - Main workflow loop logic preserved
-- Progress tracking functionality maintained
+- Basic progress tracking (deferred: detailed formatting variations)

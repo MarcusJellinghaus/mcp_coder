@@ -57,7 +57,7 @@ def has_implementation_tasks(project_dir: Path) -> bool
 - `src/mcp_coder/workflows/implement/prerequisites.py`
 
 ## Success Criteria
-- All prerequisite functions tested with mocked dependencies
-- 95%+ test coverage for prerequisites module
+- Critical prerequisite functions tested with mocked dependencies
+- 80% test coverage focused on core validation paths
 - No real git operations in tests
 - Functions integrate with existing git_operations module

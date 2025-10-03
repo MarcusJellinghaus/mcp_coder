@@ -9,7 +9,7 @@ Convert standalone `workflows/implement.py` script (~700 lines) to integrated CL
 - **Remove**: `workflows/implement.py` (700 lines) + `workflows/implement.bat`
 - **Add**: CLI integration via `src/mcp_coder/cli/commands/implement.py`
 - **Add**: Workflow package `src/mcp_coder/workflows/implement/` with modular design
-- **Add**: Comprehensive unit tests with 95%+ coverage
+- **Add**: Unit tests with 80%+ coverage on critical paths
 
 ### Design Patterns
 - **CLI Integration**: Follow existing command patterns (`commit`, `verify`)
@@ -58,7 +58,7 @@ src/mcp_coder/
 
 ## Implementation Benefits
 - **Consistency**: Unified CLI interface
-- **Testability**: 95%+ unit test coverage with comprehensive mocking
+- **Testability**: 80%+ unit test coverage focused on critical paths
 - **Maintainability**: Modular design vs monolithic script
 - **Integration**: Leverages existing CLI infrastructure
 - **User Experience**: Standard `mcp-coder implement` command

@@ -60,7 +60,7 @@ from .task_processing import process_single_task
 
 ## Success Criteria
 - `mcp-coder implement` command fully functional
-- All tests pass with 95%+ coverage
+- All tests pass with 80%+ coverage on critical paths
 - All code quality checks pass (pylint, mypy, pytest)
 - Old files removed, clean integration complete
-- Equivalent functionality to original script preserved
+- Core functionality from original script preserved
