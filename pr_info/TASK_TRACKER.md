@@ -93,16 +93,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 6: Extract Storage Functions
 **File:** [pr_info/steps/step_6.md](steps/step_6.md)
 
-- [ ] Create llm/storage/session_storage.py with 2 functions
-- [ ] Create llm/storage/session_finder.py with 1 function
-- [ ] Copy implementations from prompt.py (rename, make public)
-- [ ] Update llm/storage/__init__.py to export all 3 functions
-- [ ] Update prompt.py: add import from llm.storage
-- [ ] Update prompt.py: remove 3 private storage functions
-- [ ] Update all function calls in prompt.py
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for step 6
+- [x] Create llm/storage/session_storage.py with 2 functions
+- [x] Create llm/storage/session_finder.py with 1 function
+- [x] Copy implementations from prompt.py (rename, make public)
+- [x] Update llm/storage/__init__.py to export all 3 functions
+- [x] Update prompt.py: add import from llm.storage
+- [x] Update prompt.py: remove 3 private storage functions
+- [x] Update all function calls in prompt.py
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for step 6
 
 ### Step 7: Extract Session Logic
 **File:** [pr_info/steps/step_7.md](steps/step_7.md)

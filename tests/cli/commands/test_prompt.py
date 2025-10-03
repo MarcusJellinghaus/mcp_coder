@@ -10,8 +10,8 @@ from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
-# _find_latest_response_file is available from the prompt module
-from mcp_coder.cli.commands.prompt import _find_latest_response_file, execute_prompt
+from mcp_coder.cli.commands.prompt import execute_prompt
+from mcp_coder.llm.storage import find_latest_session
 
 
 class TestExecutePrompt:
@@ -551,10 +551,10 @@ class TestExecutePrompt:
         assert "api.anthropic.com" not in verbose_output
 
     @patch("mcp_coder.cli.commands.prompt.ask_llm")
-    @patch("mcp_coder.cli.commands.prompt._store_response")
+    @patch("mcp_coder.llm.storage.store_session")
     def test_store_response(
         self,
-        mock_store_response: Mock,
+        mock_store_session: Mock,
         mock_ask_llm: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -574,9 +574,7 @@ class TestExecutePrompt:
         )
 
         # Mock the storage function to return a fake path
-        mock_store_response.return_value = (
-            "/fake/path/response_2025-01-01T12-00-00.json"
-        )
+        mock_store_session.return_value = "/fake/path/response_2025-01-01T12-00-00.json"
 
         # Execute the prompt command
         result = execute_prompt(args)
@@ -954,7 +952,7 @@ class TestExecutePrompt:
             self._create_test_files_in_temp_dir(temp_dir, self.VALID_TIMESTAMPS)
 
             # Call the function
-            result = _find_latest_response_file(temp_dir)
+            result = find_latest_session(temp_dir)
 
             # Verify it returns the latest file
             expected_path = os.path.join(temp_dir, "response_2025-09-19T14-30-25.json")
@@ -965,12 +963,12 @@ class TestExecutePrompt:
         """Test edge cases: no directory, no files, mixed file types."""
         # Test 1: Non-existent directory
         non_existent_dir = "/path/that/does/not/exist"
-        result = _find_latest_response_file(non_existent_dir)
+        result = find_latest_session(non_existent_dir)
         assert result is None
 
         # Test 2: Empty directory
         with tempfile.TemporaryDirectory() as temp_dir:
-            result = _find_latest_response_file(temp_dir)
+            result = find_latest_session(temp_dir)
             assert result is None
 
         # Test 3: Directory with no valid response files
@@ -988,7 +986,7 @@ class TestExecutePrompt:
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write("test content")
 
-            result = _find_latest_response_file(temp_dir)
+            result = find_latest_session(temp_dir)
             assert result is None
 
     def test_find_latest_response_file_mixed_valid_invalid(self) -> None:
@@ -999,7 +997,7 @@ class TestExecutePrompt:
             self._create_test_files_in_temp_dir(temp_dir, test_files)
 
             # Call the function
-            result = _find_latest_response_file(temp_dir)
+            result = find_latest_session(temp_dir)
 
             # Verify it returns only the latest VALID file
             expected_path = os.path.join(temp_dir, "response_2025-09-19T14-30-25.json")
@@ -1030,7 +1028,7 @@ class TestExecutePrompt:
                     json.dump({"test": "data"}, f)
 
             # Should return None when all files have invalid date/time values
-            result = _find_latest_response_file(temp_dir)
+            result = find_latest_session(temp_dir)
             assert result is None
 
     def test_find_latest_response_file_only_invalid_files_remain(self) -> None:
@@ -1050,7 +1048,7 @@ class TestExecutePrompt:
                     json.dump({"test": "data"}, f)
 
             # Verify it initially finds valid files
-            result = _find_latest_response_file(temp_dir)
+            result = find_latest_session(temp_dir)
             assert result is not None
             assert "response_2025-09-19T14-30-25.json" in result
 
@@ -1062,7 +1060,7 @@ class TestExecutePrompt:
                 os.remove(os.path.join(temp_dir, filename))
 
             # Should return None when only invalid files remain
-            result = _find_latest_response_file(temp_dir)
+            result = find_latest_session(temp_dir)
             assert result is None
 
     def test_find_latest_response_file_lexicographic_sorting(self) -> None:
@@ -1082,7 +1080,7 @@ class TestExecutePrompt:
                     json.dump({"filename": filename}, f)
 
             # Call the function
-            result = _find_latest_response_file(temp_dir)
+            result = find_latest_session(temp_dir)
 
             # Verify it returns the lexicographically latest file
             expected_path = os.path.join(temp_dir, "response_2025-09-20T10-00-01.json")
@@ -1102,7 +1100,7 @@ class TestExecutePrompt:
             self._create_test_files_in_temp_dir(temp_dir, self.VALID_TIMESTAMPS)
 
             # Call the function
-            result = _find_latest_response_file(temp_dir)
+            result = find_latest_session(temp_dir)
 
             # Verify return value
             assert result is not None
@@ -1116,7 +1114,7 @@ class TestExecutePrompt:
                 in captured_out
             )
 
-    @patch("mcp_coder.cli.commands.prompt._find_latest_response_file")
+    @patch("mcp_coder.llm.storage.find_latest_session")
     @patch("mcp_coder.cli.commands.prompt.ask_llm")
     def test_continue_success(
         self,
@@ -1184,7 +1182,7 @@ class TestExecutePrompt:
     ) -> None:
         """Test file discovery when no response files are found.
 
-        This test verifies the _find_latest_response_file function behavior
+        This test verifies the find_latest_session function behavior
         that will be integrated in Step 5.
         """
         # Setup mocks for no files found
@@ -1195,9 +1193,7 @@ class TestExecutePrompt:
         mock_ask_llm.return_value = "Starting a new conversation about Python."
 
         # Test file discovery functionality when no files exist
-        from mcp_coder.cli.commands.prompt import _find_latest_response_file
-
-        latest_file = _find_latest_response_file()
+        latest_file = find_latest_session()
 
         # Verify file discovery returns None when no files found
         assert latest_file is None
@@ -1235,7 +1231,7 @@ class TestExecutePrompt:
     ) -> None:
         """Test that user feedback shows selected filename clearly.
 
-        This test verifies the _find_latest_response_file function provides
+        This test verifies the find_latest_session function provides
         user feedback that will be used in Step 5.
         """
         # Setup mocks for file discovery
@@ -1247,10 +1243,8 @@ class TestExecutePrompt:
         ]
 
         # Test the file discovery function directly
-        from mcp_coder.cli.commands.prompt import _find_latest_response_file
-
         # Call the function to test user feedback
-        result = _find_latest_response_file()
+        result = find_latest_session()
 
         # Verify the function returns the latest file
         assert result == "/fake/responses/response_2025-09-22T16-45-30.json"
@@ -1316,9 +1310,7 @@ class TestExecutePrompt:
     ) -> None:
         """Test CLI integration for continue with file discovery and session resumption."""
         with (
-            patch(
-                "mcp_coder.cli.commands.prompt._find_latest_response_file"
-            ) as mock_find_latest,
+            patch("mcp_coder.llm.storage.find_latest_session") as mock_find_latest,
             patch("mcp_coder.cli.commands.prompt.ask_llm") as mock_ask_llm,
             patch("builtins.open", mock_open()) as mock_file_open,
             patch("os.path.exists") as mock_exists,
@@ -1366,18 +1358,16 @@ class TestExecutePrompt:
     def test_continue_no_files_found_scenario(self) -> None:
         """Test CLI integration when no response files are found.
 
-        This test focuses on the CLI integration when _find_latest_response_file
+        This test focuses on the CLI integration when find_latest_session
         returns None (no files found). Should proceed with normal execution.
 
         Since Step 5 hasn't been implemented yet, this test verifies:
-        1. The _find_latest_response_file function returns None when no files exist
+        1. The find_latest_session function returns None when no files exist
         2. Normal execution works without continue_from (Step 5 will use this path)
         3. User feedback functionality is ready for integration
         """
         with (
-            patch(
-                "mcp_coder.cli.commands.prompt._find_latest_response_file"
-            ) as mock_find_latest,
+            patch("mcp_coder.llm.storage.find_latest_session") as mock_find_latest,
             patch("mcp_coder.cli.commands.prompt.ask_llm") as mock_ask_llm,
         ):
 
@@ -1398,7 +1388,7 @@ class TestExecutePrompt:
             # Assert successful execution
             assert result == 0
 
-            # Test that _find_latest_response_file() returns None when no files found
+            # Test that find_latest_session() returns None when no files found
             # Step 5 will use this to determine when to show "no files found" message
             discovered_file = mock_find_latest.return_value
             assert discovered_file is None
@@ -1440,9 +1430,7 @@ class TestExecutePrompt:
         }
 
         with (
-            patch(
-                "mcp_coder.cli.commands.prompt._find_latest_response_file"
-            ) as mock_find_latest,
+            patch("mcp_coder.llm.storage.find_latest_session") as mock_find_latest,
             patch("mcp_coder.cli.commands.prompt.ask_llm") as mock_ask_llm,
             patch("builtins.open", mock_open()) as mock_file_open,
             patch("os.path.exists") as mock_exists,

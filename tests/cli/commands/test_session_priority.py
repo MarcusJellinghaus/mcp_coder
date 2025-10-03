@@ -63,7 +63,7 @@ class TestSessionPriority:
         assert "Using explicit session ID" in captured.out
 
     @patch("mcp_coder.cli.commands.prompt.ask_llm")
-    @patch("mcp_coder.cli.commands.prompt._find_latest_response_file")
+    @patch("mcp_coder.llm.storage.find_latest_session")
     @patch(
         "builtins.open",
         mock_open(
@@ -154,7 +154,7 @@ class TestSessionPriority:
     ) -> None:
         """Test --continue-session works when --session-id not provided."""
         mock_ask_llm.return_value = "Response"
-        # Mock glob to return valid response files so _find_latest_response_file runs and prints
+        # Mock glob to return valid response files so find_latest_session runs and prints
         mock_glob.return_value = [
             ".mcp-coder/responses/response_2025-09-19T14-30-22.json"
         ]
