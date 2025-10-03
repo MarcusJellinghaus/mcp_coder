@@ -136,16 +136,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 9: Extract Formatting Tests
 **File:** [pr_info/steps/step_9.md](steps/step_9.md)
 
-- [ ] Move test_prompt_sdk_utilities.py → llm/formatting/test_sdk_serialization.py
-- [ ] Update imports in test_sdk_serialization.py (remove underscores)
-- [ ] Update all function calls (remove underscores)
-- [ ] Create tests/llm/formatting/test_formatters.py
-- [ ] Extract formatter tests from test_prompt.py
-- [ ] Adapt tests to call formatter functions directly
-- [ ] Remove extracted tests from test_prompt.py
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for step 9
+- [x] Move test_prompt_sdk_utilities.py → llm/formatting/test_sdk_serialization.py
+- [x] Update imports in test_sdk_serialization.py (remove underscores)
+- [x] Update all function calls (remove underscores)
+- [x] Create tests/llm/formatting/test_formatters.py
+- [x] Extract formatter tests from test_prompt.py
+- [x] Adapt tests to call formatter functions directly
+- [x] Remove extracted tests from test_prompt.py
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for step 9
 
 ### Step 10: Extract Storage/Session Tests
 **File:** [pr_info/steps/step_10.md](steps/step_10.md)
