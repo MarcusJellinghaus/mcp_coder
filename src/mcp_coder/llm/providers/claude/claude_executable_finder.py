@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, List, Optional
 
-from ...utils.subprocess_runner import execute_command
+from ....utils.subprocess_runner import execute_command
 
 
 def _get_claude_search_paths() -> List[str]:

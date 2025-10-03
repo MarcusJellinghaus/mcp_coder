@@ -1,8 +1,8 @@
 """High-level LLM interface for extensible provider support."""
 
-from ..llm_providers.claude.claude_code_api import ask_claude_code_api
-from ..llm_providers.claude.claude_code_cli import ask_claude_code_cli
-from ..llm_providers.claude.claude_code_interface import ask_claude_code
+from .providers.claude.claude_code_api import ask_claude_code_api
+from .providers.claude.claude_code_cli import ask_claude_code_cli
+from .providers.claude.claude_code_interface import ask_claude_code
 
 # Serialization functions are now in .serialization module
 from .types import LLMResponseDict

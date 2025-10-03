@@ -9,8 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, TypedDict, cast
 
-from ...llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
-from ...utils.subprocess_runner import (
+from ...types import LLM_RESPONSE_VERSION, LLMResponseDict
+from ....utils.subprocess_runner import (
     CommandOptions,
     execute_command,
     execute_subprocess,

@@ -51,16 +51,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Move Providers Package
 **File:** [pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Move llm_providers/ → llm/providers/ (preserve git history)
-- [ ] Update llm/interface.py provider imports
-- [ ] Update root __init__.py provider imports
-- [ ] Update cli/commands/prompt.py provider imports
-- [ ] Find and replace provider import paths in all source files
-- [ ] Find and replace provider import paths in all test files
-- [ ] Create tests/llm/providers/test_provider_structure.py
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for step 3
+- [x] Move llm_providers/ → llm/providers/ (preserve git history)
+- [x] Update llm/interface.py provider imports
+- [x] Update root __init__.py provider imports
+- [x] Update cli/commands/prompt.py provider imports
+- [x] Find and replace provider import paths in all source files
+- [x] Find and replace provider import paths in all test files
+- [x] Create tests/llm/providers/test_provider_structure.py
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for step 3
 
 ### Step 4: Extract SDK Utilities
 **File:** [pr_info/steps/step_4.md](steps/step_4.md)

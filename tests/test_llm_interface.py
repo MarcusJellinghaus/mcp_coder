@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.interface import ask_llm, prompt_llm
-from mcp_coder.llm_providers.claude.claude_code_interface import ask_claude_code
+from mcp_coder.llm.providers.claude.claude_code_interface import ask_claude_code
 
 
 class TestAskLLM:
@@ -143,7 +143,7 @@ class TestAskLLM:
 class TestAskClaudeCode:
     """Test the Claude-specific routing function."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_ask_claude_code_routes_to_cli(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:

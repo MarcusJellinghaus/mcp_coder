@@ -28,7 +28,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from ...llm.interface import ask_llm
-from ...llm_providers.claude.claude_code_api import (
+from ...llm.providers.claude.claude_code_api import (
     AssistantMessage,
     ResultMessage,
     SystemMessage,
