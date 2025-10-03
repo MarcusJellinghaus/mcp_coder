@@ -44,7 +44,7 @@ class TestBasicIntegration:
             "What is 2+2? Answer with just the number.",
             provider="claude",
             method="cli",
-            timeout=30,
+            timeout=60,
         )
 
         assert isinstance(result, str)
@@ -100,7 +100,7 @@ class TestSessionManagement:
         Replaces test_api_with_session from multiple files.
         """
         # First turn
-        result1 = prompt_llm("Remember this word: elephant", method="api")
+        result1 = prompt_llm("Remember this word: elephant", method="api", timeout=60)
 
         assert "session_id" in result1
         assert "text" in result1
