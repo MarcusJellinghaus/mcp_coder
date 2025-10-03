@@ -31,7 +31,7 @@ if %PYLINT_EXIT_CODE% neq 0 (
 
 REM Run pytest after Pylint passes
 echo Running Pytest checks...
-pytest tests --tb=short -v -n auto > checks_output.txt 2>&1
+pytest tests --tb=short -n auto > checks_output.txt 2>&1
 set PYTEST_EXIT_CODE=%errorlevel%
 
 REM Parse pytest output for detailed information
