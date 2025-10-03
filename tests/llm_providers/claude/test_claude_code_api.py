@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm_providers.claude.claude_code_api import (
+from mcp_coder.llm.providers.claude.claude_code_api import (
     ClaudeAPIError,
     _ask_claude_code_api_async,
     _create_claude_client,
@@ -20,12 +20,12 @@ from mcp_coder.llm_providers.claude.claude_code_api import (
 class TestCreateClaudeClient:
     """Test the _create_claude_client function."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.ClaudeCodeOptions")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions")
     def test_create_claude_client_basic(self, mock_options_class: MagicMock) -> None:
         """Test that _create_claude_client creates basic options."""
         # Mock verification function - required on Linux/CI, helpful for isolation on Windows
         with patch(
-            "mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use"
+            "mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use"
         ) as mock_verify:
             # Use platform-appropriate mock paths
             if platform.system() == "Windows":
@@ -44,7 +44,7 @@ class TestCreateClaudeClient:
             mock_options_class.assert_called_once_with()
             assert result == mock_options
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._verify_claude_before_use")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use")
     def test_create_claude_client_verification_fails(
         self, mock_verify: MagicMock
     ) -> None:
@@ -64,8 +64,8 @@ class TestAskClaudeCodeApiAsync:
     """Test the async _ask_claude_code_api_async function."""
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api._create_claude_client")
     async def test_multiple_text_blocks_concatenated(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -75,7 +75,7 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.llm_providers.claude.claude_code_api import (
+        from mcp_coder.llm.providers.claude.claude_code_api import (
             AssistantMessage,
             TextBlock,
         )
@@ -106,8 +106,8 @@ class TestAskClaudeCodeApiAsync:
         mock_query.assert_called_once_with(prompt="test question", options=mock_options)
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api._create_claude_client")
     async def test_basic_question_with_assistant_message(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -117,7 +117,7 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.llm_providers.claude.claude_code_api import (
+        from mcp_coder.llm.providers.claude.claude_code_api import (
             AssistantMessage,
             TextBlock,
         )
@@ -140,8 +140,8 @@ class TestAskClaudeCodeApiAsync:
         assert result == "Response from TextBlock"
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api._create_claude_client")
     async def test_unknown_message_type_ignored(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -151,7 +151,7 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.llm_providers.claude.claude_code_api import (
+        from mcp_coder.llm.providers.claude.claude_code_api import (
             AssistantMessage,
             TextBlock,
         )
@@ -180,8 +180,8 @@ class TestAskClaudeCodeApiAsync:
         assert result == "Real response"
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api._create_claude_client")
     async def test_timeout_handling(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -203,8 +203,8 @@ class TestAskClaudeCodeApiAsync:
         assert "timed out after 1 seconds" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.query")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api._create_claude_client")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api._create_claude_client")
     async def test_strips_whitespace(
         self, mock_create_client: MagicMock, mock_query: AsyncMock
     ) -> None:
@@ -214,7 +214,7 @@ class TestAskClaudeCodeApiAsync:
         mock_create_client.return_value = mock_options
 
         # Import the real SDK classes to create proper mock objects
-        from mcp_coder.llm_providers.claude.claude_code_api import (
+        from mcp_coder.llm.providers.claude.claude_code_api import (
             AssistantMessage,
             TextBlock,
         )
@@ -241,7 +241,7 @@ class TestAskClaudeCodeApi:
     """Test the synchronous ask_claude_code_api function (legacy tests for old string return)."""
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_basic_question(self, mock_detailed_sync: MagicMock) -> None:
         """Test asking a basic question returns LLMResponseDict."""
@@ -262,7 +262,7 @@ class TestAskClaudeCodeApi:
         mock_detailed_sync.assert_called_once_with("test question", 60, None)
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_timeout_exception_passthrough(self, mock_detailed_sync: MagicMock) -> None:
         """Test that TimeoutExpired exceptions are passed through."""
@@ -277,7 +277,7 @@ class TestAskClaudeCodeApi:
             ask_claude_code_api("test question")
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_other_exception_conversion(self, mock_detailed_sync: MagicMock) -> None:
         """Test that other exceptions are converted to ClaudeAPIError."""
@@ -340,7 +340,7 @@ class TestAskClaudeCodeApiTypedDict:
     """Test ask_claude_code_api returns LLMResponseDict."""
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_ask_claude_code_api_returns_typed_dict(
         self, mock_detailed_sync: MagicMock
@@ -375,7 +375,7 @@ class TestAskClaudeCodeApiTypedDict:
         assert result["provider"] == "claude"
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_ask_claude_code_api_extracts_session_from_detailed(
         self, mock_detailed_sync: MagicMock

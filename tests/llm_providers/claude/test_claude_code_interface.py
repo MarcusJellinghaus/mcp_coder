@@ -5,13 +5,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm_providers.claude.claude_code_interface import ask_claude_code
+from mcp_coder.llm.providers.claude.claude_code_interface import ask_claude_code
 
 
 class TestAskClaudeCodeSessionSupport:
     """Test ask_claude_code session ID support."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_cli_with_session_id(self, mock_cli: MagicMock) -> None:
         """Test that session_id is passed through to CLI method."""
         mock_cli.return_value = {
@@ -31,7 +31,7 @@ class TestAskClaudeCodeSessionSupport:
             "Test", session_id="cli-session-123", timeout=30
         )
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_api")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_api")
     def test_api_with_session_id(self, mock_api: MagicMock) -> None:
         """Test that session_id is passed through to API method."""
         mock_api.return_value = {
@@ -51,7 +51,7 @@ class TestAskClaudeCodeSessionSupport:
             "Test", session_id="api-session-456", timeout=30
         )
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_returns_text_only(self, mock_cli: MagicMock) -> None:
         """Test that function returns only text, not full dict."""
         mock_cli.return_value = {
@@ -70,7 +70,7 @@ class TestAskClaudeCodeSessionSupport:
         assert isinstance(response, str)
         assert response == "Just the text"
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_without_session_id(self, mock_cli: MagicMock) -> None:
         """Test that session_id is optional."""
         mock_cli.return_value = {
@@ -87,7 +87,7 @@ class TestAskClaudeCodeSessionSupport:
         response = ask_claude_code("Test", method="cli")
         assert response == "Response without session"
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_session_id_none_by_default(self, mock_cli: MagicMock) -> None:
         """Test that session_id defaults to None."""
         mock_cli.return_value = {
@@ -106,7 +106,7 @@ class TestAskClaudeCodeSessionSupport:
         mock_cli.assert_called_once_with("Test", session_id=None, timeout=30)
         assert response == "Default behavior"
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_api")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_api")
     def test_api_session_id_default_none(self, mock_api: MagicMock) -> None:
         """Test that API method also gets None by default."""
         mock_api.return_value = {
@@ -124,7 +124,7 @@ class TestAskClaudeCodeSessionSupport:
         mock_api.assert_called_once_with("Test", session_id=None, timeout=30)
         assert response == "API default"
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_timeout_parameter_passthrough(self, mock_cli: MagicMock) -> None:
         """Test that timeout parameter is passed through."""
         mock_cli.return_value = {
@@ -145,7 +145,7 @@ class TestAskClaudeCodeSessionSupport:
 class TestAskClaudeCodeValidation:
     """Test input validation for ask_claude_code."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_empty_question_raises_error(self, mock_cli: MagicMock) -> None:
         """Test that empty question raises ValueError."""
         with pytest.raises(ValueError, match="Question cannot be empty"):
@@ -153,7 +153,7 @@ class TestAskClaudeCodeValidation:
 
         mock_cli.assert_not_called()
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_whitespace_only_question_raises_error(self, mock_cli: MagicMock) -> None:
         """Test that whitespace-only question raises ValueError."""
         with pytest.raises(ValueError, match="Question cannot be empty"):
@@ -161,7 +161,7 @@ class TestAskClaudeCodeValidation:
 
         mock_cli.assert_not_called()
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_invalid_timeout_raises_error(self, mock_cli: MagicMock) -> None:
         """Test that invalid timeout raises ValueError."""
         with pytest.raises(ValueError, match="Timeout must be a positive number"):
@@ -181,7 +181,7 @@ class TestAskClaudeCodeValidation:
 class TestAskClaudeCodeBackwardCompatibility:
     """Test backward compatibility of ask_claude_code."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_existing_code_still_works(self, mock_cli: MagicMock) -> None:
         """Test that existing code without session_id still works."""
         mock_cli.return_value = {
@@ -200,7 +200,7 @@ class TestAskClaudeCodeBackwardCompatibility:
         assert response == "Legacy response"
         assert isinstance(response, str)
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_api")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_api")
     def test_api_method_still_works(self, mock_api: MagicMock) -> None:
         """Test that API method works without session_id."""
         mock_api.return_value = {

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm_providers.claude.claude_cli_verification import (
+from mcp_coder.llm.providers.claude.claude_cli_verification import (
     verify_claude_cli_installation,
 )
 
@@ -16,10 +16,10 @@ class TestVerifyClaudeCliInstallation:
     """Test the verify_claude_cli_installation function."""
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification.verify_claude_installation"
+        "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
     )
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification._verify_claude_before_use"
+        "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
     @patch("builtins.print")
     def test_successful_verification(
@@ -55,10 +55,10 @@ class TestVerifyClaudeCliInstallation:
         assert len(success_messages) >= 2  # Should have multiple success indicators
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification.verify_claude_installation"
+        "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
     )
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification._verify_claude_before_use"
+        "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
     @patch("builtins.print")
     def test_failed_basic_verification(
@@ -98,10 +98,10 @@ class TestVerifyClaudeCliInstallation:
         assert len(recommendation_messages) >= 1
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification.verify_claude_installation"
+        "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
     )
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification._verify_claude_before_use"
+        "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
     @patch("builtins.print")
     def test_basic_success_api_failure(
@@ -136,10 +136,10 @@ class TestVerifyClaudeCliInstallation:
         assert len(failure_messages) >= 1  # API verification failure
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification.verify_claude_installation"
+        "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
     )
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification._verify_claude_before_use"
+        "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
     @patch("builtins.print")
     def test_api_verification_exception(
@@ -171,10 +171,10 @@ class TestVerifyClaudeCliInstallation:
         assert len(exception_messages) >= 1
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification.verify_claude_installation"
+        "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
     )
     @patch(
-        "mcp_coder.llm_providers.claude.claude_cli_verification._verify_claude_before_use"
+        "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
     @patch("builtins.print")
     def test_partial_basic_verification_info(

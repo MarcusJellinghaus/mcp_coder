@@ -3,7 +3,7 @@
 import pytest
 
 
-def test_providers_package_structure():
+def test_providers_package_structure() -> None:
     """Verify providers package structure and imports."""
     import mcp_coder.llm.providers
     import mcp_coder.llm.providers.claude
@@ -20,14 +20,14 @@ def test_providers_package_structure():
     assert hasattr(claude_code_api, 'ask_claude_code_api')
 
 
-def test_public_api_provider_exports():
+def test_public_api_provider_exports() -> None:
     """Verify provider functions accessible via public API."""
     from mcp_coder import ask_claude_code
     
     assert callable(ask_claude_code)
 
 
-def test_provider_modules_exist():
+def test_provider_modules_exist() -> None:
     """Test that all expected provider modules exist and are importable."""
     # Test claude provider modules
     try:
@@ -40,7 +40,7 @@ def test_provider_modules_exist():
         pytest.fail(f"Failed to import claude provider modules: {e}")
 
 
-def test_claude_provider_functions():
+def test_claude_provider_functions() -> None:
     """Test that claude provider functions are accessible."""
     from mcp_coder.llm.providers.claude.claude_code_interface import ask_claude_code
     from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
@@ -58,7 +58,7 @@ def test_claude_provider_functions():
     assert callable(verify_claude_installation)
 
 
-def test_provider_package_init():
+def test_provider_package_init() -> None:
     """Test that provider package __init__.py files exist and are loadable."""
     # These should not raise ImportError
     import mcp_coder.llm.providers

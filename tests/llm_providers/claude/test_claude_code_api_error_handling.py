@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm_providers.claude.claude_code_api import (
+from mcp_coder.llm.providers.claude.claude_code_api import (
     ClaudeAPIError,
     _extract_real_error_message,
     _retry_with_backoff,
@@ -159,8 +159,8 @@ class TestRetryWithBackoff:
 class TestVerifyClaudeBeforeUse:
     """Test the _verify_claude_before_use function."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.setup_claude_path")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.verify_claude_installation")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.setup_claude_path")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.verify_claude_installation")
     def test_successful_verification(
         self, mock_verify: MagicMock, mock_setup: MagicMock
     ) -> None:
@@ -180,8 +180,8 @@ class TestVerifyClaudeBeforeUse:
         assert path == "/usr/local/bin/claude"
         assert error is None
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.setup_claude_path")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.verify_claude_installation")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.setup_claude_path")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.verify_claude_installation")
     def test_failed_verification(
         self, mock_verify: MagicMock, mock_setup: MagicMock
     ) -> None:
@@ -200,8 +200,8 @@ class TestVerifyClaudeBeforeUse:
         assert path is None
         assert error == "Claude CLI not found"
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.setup_claude_path")
-    @patch("mcp_coder.llm_providers.claude.claude_code_api.verify_claude_installation")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.setup_claude_path")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.verify_claude_installation")
     def test_setup_path_exception(
         self, mock_verify: MagicMock, mock_setup: MagicMock
     ) -> None:
@@ -227,7 +227,7 @@ class TestAskClaudeCodeApiErrorHandling:
     """Test enhanced error handling in ask_claude_code_api function."""
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_windows_path_length_error_handling(self, mock_detailed: MagicMock) -> None:
         """Test specific handling of Windows path length errors."""
@@ -243,7 +243,7 @@ class TestAskClaudeCodeApiErrorHandling:
         assert "current working directory path is very long" in error_msg
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_cli_not_found_error_with_path_found(
         self, mock_detailed: MagicMock
@@ -260,7 +260,7 @@ class TestAskClaudeCodeApiErrorHandling:
         assert "Claude CLI executable not found" in error_msg
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_cli_not_found_error_without_path_found(
         self, mock_detailed: MagicMock
@@ -277,7 +277,7 @@ class TestAskClaudeCodeApiErrorHandling:
         assert "Claude CLI executable not found" in error_msg
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_file_not_found_error_handling(self, mock_detailed: MagicMock) -> None:
         """Test FileNotFoundError handling."""
@@ -291,7 +291,7 @@ class TestAskClaudeCodeApiErrorHandling:
         assert "No such file or directory" in error_msg
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_permission_error_handling(self, mock_detailed: MagicMock) -> None:
         """Test PermissionError handling."""
@@ -304,7 +304,7 @@ class TestAskClaudeCodeApiErrorHandling:
         assert "Permission denied" in error_msg
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_timeout_error_passthrough(self, mock_detailed: MagicMock) -> None:
         """Test that timeout errors are passed through without modification."""
@@ -315,7 +315,7 @@ class TestAskClaudeCodeApiErrorHandling:
             ask_claude_code_api("test question")
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_value_error_passthrough(self, mock_detailed: MagicMock) -> None:
         """Test that ValueError is passed through without modification."""
@@ -326,7 +326,7 @@ class TestAskClaudeCodeApiErrorHandling:
             ask_claude_code_api("test question")
 
     @patch(
-        "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
     )
     def test_retry_logic_called(self, mock_detailed_sync: MagicMock) -> None:
         """Test that API method returns LLMResponseDict."""

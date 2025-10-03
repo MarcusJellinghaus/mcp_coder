@@ -15,8 +15,8 @@ import pytest
 
 from mcp_coder import ask_llm, prompt_llm
 from mcp_coder.llm.types import LLMResponseDict
-from mcp_coder.llm_providers.claude.claude_code_api import ask_claude_code_api
-from mcp_coder.llm_providers.claude.claude_code_cli import ask_claude_code_cli
+from mcp_coder.llm.providers.claude.claude_code_api import ask_claude_code_api
+from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
 
 
 # Shared fixtures for parameterized tests
@@ -197,7 +197,7 @@ class TestSessionIdHandling:
         from unittest.mock import patch
 
         with patch(
-            "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+            "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
         ) as mock_detailed:
             mock_detailed.return_value = {
                 "text": "Mock response",
@@ -224,7 +224,7 @@ class TestSessionIdHandling:
         from unittest.mock import patch
 
         with patch(
-            "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+            "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
         ) as mock_detailed:
             mock_detailed.return_value = {
                 "text": "Mock response",
@@ -247,7 +247,7 @@ class TestSessionIdHandling:
         from unittest.mock import patch
 
         with patch(
-            "mcp_coder.llm_providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+            "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
         ) as mock_detailed:
             mock_detailed.return_value = {
                 "text": "Mock response",

@@ -161,7 +161,7 @@ class TestAskClaudeCode:
         )
         assert result == "CLI response"
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_ask_claude_code_default_parameters(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -179,7 +179,7 @@ class TestAskClaudeCode:
         )
         assert result == "Default CLI response"
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_api")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_api")
     def test_ask_claude_code_routes_to_api(
         self, mock_ask_claude_code_api: MagicMock
     ) -> None:
@@ -202,7 +202,7 @@ class TestAskClaudeCode:
         with pytest.raises(ValueError, match="Unsupported method: invalid"):
             ask_claude_code("Test question", method="invalid")
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_ask_claude_code_passes_through_exceptions(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -212,7 +212,7 @@ class TestAskClaudeCode:
         with pytest.raises(FileNotFoundError, match="Claude CLI not found"):
             ask_claude_code("Test question", method="cli")
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_ask_claude_code_custom_timeout(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -234,7 +234,7 @@ class TestAskClaudeCode:
 class TestIntegration:
     """Integration tests for the full routing chain."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_full_routing_chain(self, mock_ask_claude_code_cli: MagicMock) -> None:
         """Test the full routing chain from ask_llm to ask_claude_code_cli."""
         mock_ask_claude_code_cli.return_value = {
@@ -262,7 +262,7 @@ class TestIntegration:
         with pytest.raises(ValueError, match="Unsupported method"):
             ask_llm("Test", provider="claude", method="invalid")
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
     def test_full_routing_chain_with_session_id(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:

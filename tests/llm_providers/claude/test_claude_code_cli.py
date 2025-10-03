@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.types import LLMResponseDict
-from mcp_coder.llm_providers.claude.claude_code_cli import (
+from mcp_coder.llm.providers.claude.claude_code_cli import (
     ask_claude_code_cli,
     build_cli_command,
     create_response_dict,
@@ -20,8 +20,8 @@ from mcp_coder.utils.subprocess_runner import CommandResult
 class TestClaudeCodeCliBackwardCompatibility:
     """Test cases for backward compatibility of CLI functions."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_success(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -46,8 +46,8 @@ class TestClaudeCodeCliBackwardCompatibility:
         options = call_args[0][1]
         assert options.input_data == "What is the meaning of life?"
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_with_custom_timeout(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -67,7 +67,7 @@ class TestClaudeCodeCliBackwardCompatibility:
         options = call_args[0][1]
         assert options.timeout_seconds == 60
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
     def test_ask_claude_code_cli_file_not_found(self, mock_find: MagicMock) -> None:
         """Test Claude CLI not found error."""
         mock_find.side_effect = FileNotFoundError(
@@ -77,8 +77,8 @@ class TestClaudeCodeCliBackwardCompatibility:
         with pytest.raises(FileNotFoundError, match="Claude Code CLI not found"):
             ask_claude_code_cli("Test question")
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_timeout(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -96,8 +96,8 @@ class TestClaudeCodeCliBackwardCompatibility:
         with pytest.raises(subprocess.TimeoutExpired):
             ask_claude_code_cli("Test question")
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_command_error(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -202,8 +202,8 @@ class TestPureFunctions:
 class TestIOWrappers:
     """Tests for I/O wrapper integration."""
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_returns_typed_dict(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
@@ -234,8 +234,8 @@ class TestIOWrappers:
         assert result["text"] == "Test response"
         assert result["session_id"] == "test-123"
 
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm_providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     def test_ask_claude_code_cli_with_session_integration(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:

@@ -65,16 +65,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 4: Extract SDK Utilities
 **File:** [pr_info/steps/step_4.md](steps/step_4.md)
 
-- [ ] Create llm/formatting/sdk_serialization.py with 5 functions
-- [ ] Copy implementations from prompt.py (remove underscores)
-- [ ] Add necessary imports (SDK types from providers)
-- [ ] Update llm/formatting/__init__.py to export functions
-- [ ] Update prompt.py: add import from sdk_serialization
-- [ ] Update prompt.py: remove 5 private functions
-- [ ] Update all function calls in prompt.py (remove underscores)
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for step 4
+- [x] Create llm/formatting/sdk_serialization.py with 5 functions
+- [x] Copy implementations from prompt.py (remove underscores)
+- [x] Add necessary imports (SDK types from providers)
+- [x] Update llm/formatting/__init__.py to export functions
+- [x] Update prompt.py: add import from sdk_serialization
+- [x] Update prompt.py: remove 5 private functions
+- [x] Update all function calls in prompt.py (remove underscores)
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for step 4
 
 ### Step 5: Extract Formatters
 **File:** [pr_info/steps/step_5.md](steps/step_5.md)
