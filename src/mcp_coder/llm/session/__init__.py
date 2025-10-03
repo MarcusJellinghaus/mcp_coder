@@ -1,3 +1,7 @@
 """Session management and resolution utilities."""
 
-__all__: list[str] = []
+from .resolver import parse_llm_method
+
+__all__ = [
+    "parse_llm_method",
+]

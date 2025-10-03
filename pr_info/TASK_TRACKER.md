@@ -107,15 +107,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 7: Extract Session Logic
 **File:** [pr_info/steps/step_7.md](steps/step_7.md)
 
-- [ ] Create llm/session/resolver.py with parse_llm_method()
-- [ ] Copy implementation from cli/llm_helpers.py (no changes)
-- [ ] Update llm/session/__init__.py to export parse_llm_method
-- [ ] Update prompt.py import to use llm.session
-- [ ] Verify no other files import from cli/llm_helpers.py
-- [ ] Delete cli/llm_helpers.py
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for step 7
+- [x] Create llm/session/resolver.py with parse_llm_method()
+- [x] Copy implementation from cli/llm_helpers.py (no changes)
+- [x] Update llm/session/__init__.py to export parse_llm_method
+- [x] Update prompt.py import to use llm.session
+- [x] Verify no other files import from cli/llm_helpers.py
+- [x] Delete cli/llm_helpers.py
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for step 7
 
 ### Step 8: Move Core Tests
 **File:** [pr_info/steps/step_8.md](steps/step_8.md)

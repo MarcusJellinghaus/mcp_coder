@@ -48,12 +48,12 @@ from ...llm.providers.claude.claude_code_api import (
     UserMessage,
     ask_claude_code_api_detailed_sync,
 )
+from ...llm.session import parse_llm_method
 from ...llm.storage import (
     extract_session_id,
     find_latest_session,
     store_session,
 )
-from ..llm_helpers import parse_llm_method
 
 logger = logging.getLogger(__name__)
 

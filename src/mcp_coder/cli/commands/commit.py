@@ -9,6 +9,7 @@ from typing import Optional, Tuple
 from ...constants import PROMPTS_FILE_PATH
 from ...llm.interface import ask_llm
 from ...llm.providers.claude.claude_code_api import ClaudeAPIError
+from ...llm.session import parse_llm_method
 from ...prompt_manager import get_prompt
 from ...utils.clipboard import (
     get_clipboard_text,
@@ -21,7 +22,6 @@ from ...utils.git_operations import (
     is_git_repository,
     stage_all_changes,
 )
-from ..llm_helpers import parse_llm_method
 
 logger = logging.getLogger(__name__)
 
