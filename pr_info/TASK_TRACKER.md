@@ -120,18 +120,18 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 8: Move Core Tests
 **File:** [pr_info/steps/step_8.md](steps/step_8.md)
 
-- [ ] Move test_llm_types.py → llm/test_types.py
-- [ ] Move test_llm_interface.py → llm/test_interface.py
-- [ ] Move test_llm_serialization.py → llm/test_serialization.py
-- [ ] Move llm_providers/ → llm/providers/
-- [ ] Update imports in llm/test_types.py
-- [ ] Update imports in llm/test_interface.py
-- [ ] Update imports in llm/test_serialization.py
-- [ ] Update imports in llm/providers/ test files
-- [ ] Verify test discovery works in new location
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for step 8
+- [x] Move test_llm_types.py → llm/test_types.py
+- [x] Move test_llm_interface.py → llm/test_interface.py
+- [x] Move test_llm_serialization.py → llm/test_serialization.py
+- [x] Move llm_providers/ → llm/providers/
+- [x] Update imports in llm/test_types.py
+- [x] Update imports in llm/test_interface.py
+- [x] Update imports in llm/test_serialization.py
+- [x] Update imports in llm/providers/ test files
+- [x] Verify test discovery works in new location
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for step 8
 
 ### Step 9: Extract Formatting Tests
 **File:** [pr_info/steps/step_9.md](steps/step_9.md)
