@@ -132,11 +132,18 @@ class TestSDKMessageDetection:
 
         # Mock the SDK classes in the sdk_serialization module
         with (
-            patch("mcp_coder.llm.formatting.sdk_serialization.SystemMessage", MockSystemMessage),
             patch(
-                "mcp_coder.llm.formatting.sdk_serialization.AssistantMessage", MockAssistantMessage
+                "mcp_coder.llm.formatting.sdk_serialization.SystemMessage",
+                MockSystemMessage,
             ),
-            patch("mcp_coder.llm.formatting.sdk_serialization.ResultMessage", MockResultMessage),
+            patch(
+                "mcp_coder.llm.formatting.sdk_serialization.AssistantMessage",
+                MockAssistantMessage,
+            ),
+            patch(
+                "mcp_coder.llm.formatting.sdk_serialization.ResultMessage",
+                MockResultMessage,
+            ),
         ):
 
             # Create instances of mock classes

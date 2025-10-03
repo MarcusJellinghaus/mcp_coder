@@ -7,13 +7,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.llm.providers.claude.claude_code_cli import (
     ask_claude_code_cli,
     build_cli_command,
     create_response_dict,
     parse_cli_json_string,
 )
+from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.utils.subprocess_runner import CommandResult
 
 

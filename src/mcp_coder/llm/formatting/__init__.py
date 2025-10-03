@@ -25,5 +25,3 @@ __all__ = [
     "serialize_message_for_json",
     "extract_tool_interactions",
 ]
-
-

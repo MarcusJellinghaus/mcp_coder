@@ -175,9 +175,6 @@ def execute_prompt(args: argparse.Namespace) -> int:
         return 1
 
 
-
-
-
 def _store_response(
     response_data: Dict[str, Any], prompt: str, store_path: Optional[str] = None
 ) -> str:
@@ -223,12 +220,6 @@ def _store_response(
         json.dump(session_data, f, indent=2, default=str)
 
     return file_path
-
-
-
-
-
-
 
 
 def _extract_session_id_from_file(file_path: str) -> Optional[str]:
