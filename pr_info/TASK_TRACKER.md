@@ -29,22 +29,22 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Verify all packages are importable
 - [x] Run quality checks: pylint, pytest, mypy
 - [x] Fix all issues found by quality checks
-- [ ] Prepare git commit message for step 1
-- [ ] All Step 1 tasks completed
+- [x] Prepare git commit message for step 1
+- [x] All Step 1 tasks completed
 
 ### Step 2: Move Core Modules
 **File:** [pr_info/steps/step_2.md](steps/step_2.md)
 
 - [x] Move llm_types.py → llm/types.py (preserve git history)
-- [ ] Move llm_interface.py → llm/interface.py
-- [ ] Move llm_serialization.py → llm/serialization.py
-- [ ] Update llm/__init__.py with public API exports
-- [ ] Update root __init__.py imports
-- [ ] Find and replace all import statements in source files
-- [ ] Find and replace all import statements in test files
+- [x] Move llm_interface.py → llm/interface.py
+- [x] Move llm_serialization.py → llm/serialization.py
+- [x] Update llm/__init__.py with public API exports
+- [x] Update root __init__.py imports
+- [x] Find and replace all import statements in source files
+- [x] Find and replace all import statements in test files
 - [ ] Create tests/llm/test_module_structure.py
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
 - [ ] Prepare git commit message for step 2
 - [ ] All Step 2 tasks completed
 

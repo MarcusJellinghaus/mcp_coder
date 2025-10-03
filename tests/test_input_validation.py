@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 import pytest
 
-from mcp_coder.llm_interface import ask_llm
+from mcp_coder.llm.interface import ask_llm
 from mcp_coder.llm_providers.claude.claude_code_api import (
     ask_claude_code_api,
     ask_claude_code_api_detailed_sync,

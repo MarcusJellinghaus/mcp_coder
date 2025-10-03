@@ -27,7 +27,7 @@ import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from ...llm_interface import ask_llm
+from ...llm.interface import ask_llm
 from ...llm_providers.claude.claude_code_api import (
     AssistantMessage,
     ResultMessage,
@@ -398,7 +398,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
         # Route to appropriate method based on output_format and verbosity
         if output_format == "json":
             # JSON output mode - return full LLMResponseDict
-            from ...llm_interface import prompt_llm
+            from ...llm.interface import prompt_llm
 
             provider, method = parse_llm_method(llm_method)
             response_dict = prompt_llm(

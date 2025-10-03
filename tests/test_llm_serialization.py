@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.llm_serialization import (
+from mcp_coder.llm.serialization import (
     deserialize_llm_response,
     from_json_string,
     serialize_llm_response,

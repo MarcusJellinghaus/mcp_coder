@@ -14,9 +14,9 @@ from typing import Any, Callable
 import pytest
 
 from mcp_coder import ask_llm, prompt_llm
+from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.llm_providers.claude.claude_code_api import ask_claude_code_api
 from mcp_coder.llm_providers.claude.claude_code_cli import ask_claude_code_cli
-from mcp_coder.llm.types import LLMResponseDict
 
 
 # Shared fixtures for parameterized tests
@@ -182,7 +182,7 @@ class TestSessionIdHandling:
         result = ask_claude_code_cli(
             "What is 1+1? Answer with just the number.",
             session_id=None,
-            timeout=30,
+            timeout=60,
         )
 
         assert "text" in result

@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm_interface import ask_llm, prompt_llm
+from mcp_coder.llm.interface import ask_llm, prompt_llm
 from mcp_coder.llm_providers.claude.claude_code_interface import ask_claude_code
 
 
 class TestAskLLM:
     """Test the main ask_llm function."""
 
-    @patch("mcp_coder.llm_interface.ask_claude_code")
+    @patch("mcp_coder.llm.interface.ask_claude_code")
     def test_ask_llm_routes_to_claude_code(
         self, mock_ask_claude_code: MagicMock
     ) -> None:
@@ -25,7 +25,7 @@ class TestAskLLM:
         )
         assert result == "Test response from Claude"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code")
+    @patch("mcp_coder.llm.interface.ask_claude_code")
     def test_ask_llm_default_parameters(self, mock_ask_claude_code: MagicMock) -> None:
         """Test that ask_llm uses correct default parameters."""
         mock_ask_claude_code.return_value = "Default response"
@@ -42,7 +42,7 @@ class TestAskLLM:
         with pytest.raises(ValueError, match="Unsupported provider: gpt"):
             ask_llm("Test question", provider="gpt")
 
-    @patch("mcp_coder.llm_interface.ask_claude_code")
+    @patch("mcp_coder.llm.interface.ask_claude_code")
     def test_ask_llm_passes_through_exceptions(
         self, mock_ask_claude_code: MagicMock
     ) -> None:
@@ -52,7 +52,7 @@ class TestAskLLM:
         with pytest.raises(RuntimeError, match="Claude error"):
             ask_llm("Test question", provider="claude")
 
-    @patch("mcp_coder.llm_interface.ask_claude_code")
+    @patch("mcp_coder.llm.interface.ask_claude_code")
     def test_ask_llm_custom_timeout(self, mock_ask_claude_code: MagicMock) -> None:
         """Test that ask_llm passes through custom timeout."""
         mock_ask_claude_code.return_value = "Timeout response"
@@ -64,7 +64,7 @@ class TestAskLLM:
         )
         assert result == "Timeout response"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code")
+    @patch("mcp_coder.llm.interface.ask_claude_code")
     def test_ask_llm_custom_method(self, mock_ask_claude_code: MagicMock) -> None:
         """Test that ask_llm passes through custom method."""
         mock_ask_claude_code.return_value = "Method response"
@@ -78,7 +78,7 @@ class TestAskLLM:
         )
         assert result == "Method response"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code")
+    @patch("mcp_coder.llm.interface.ask_claude_code")
     def test_ask_llm_with_session_id(self, mock_ask_claude_code: MagicMock) -> None:
         """Test that session_id is passed through to ask_claude_code."""
         mock_ask_claude_code.return_value = "Response with session"
@@ -98,7 +98,7 @@ class TestAskLLM:
         )
         assert result == "Response with session"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code")
+    @patch("mcp_coder.llm.interface.ask_claude_code")
     def test_ask_llm_without_session_id(self, mock_ask_claude_code: MagicMock) -> None:
         """Test that session_id is optional and defaults to None."""
         mock_ask_claude_code.return_value = "Response without session"
@@ -111,7 +111,7 @@ class TestAskLLM:
         )
         assert result == "Response without session"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code")
+    @patch("mcp_coder.llm.interface.ask_claude_code")
     def test_ask_llm_session_id_with_api_method(
         self, mock_ask_claude_code: MagicMock
     ) -> None:
@@ -128,7 +128,7 @@ class TestAskLLM:
         )
         assert result == "API response with session"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code")
+    @patch("mcp_coder.llm.interface.ask_claude_code")
     def test_ask_llm_returns_string_only(self, mock_ask_claude_code: MagicMock) -> None:
         """Test that ask_llm returns string, not dict."""
         mock_ask_claude_code.return_value = "Just the text"
@@ -348,7 +348,7 @@ class TestLLMInterfaceAPIRealIntegration:
 class TestPromptLLM:
     """Tests for the prompt_llm function."""
 
-    @patch("mcp_coder.llm_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_returns_typed_dict_cli(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -376,7 +376,7 @@ class TestPromptLLM:
         assert result["method"] == "cli"
         assert result["provider"] == "claude"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code_api")
+    @patch("mcp_coder.llm.interface.ask_claude_code_api")
     def test_prompt_llm_returns_typed_dict_api(
         self, mock_ask_claude_code_api: MagicMock
     ) -> None:
@@ -401,7 +401,7 @@ class TestPromptLLM:
         assert result["method"] == "api"
         assert result["session_id"] == "api-456"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_with_session_id_cli(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -424,7 +424,7 @@ class TestPromptLLM:
         )
         assert result["session_id"] == "existing-session"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code_api")
+    @patch("mcp_coder.llm.interface.ask_claude_code_api")
     def test_prompt_llm_with_session_id_api(
         self, mock_ask_claude_code_api: MagicMock
     ) -> None:
@@ -447,7 +447,7 @@ class TestPromptLLM:
         )
         assert result["session_id"] == "api-session"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_preserves_metadata(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -502,7 +502,7 @@ class TestPromptLLM:
         with pytest.raises(ValueError, match="positive number"):
             prompt_llm("Test", timeout=-5)
 
-    @patch("mcp_coder.llm_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_custom_timeout(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -525,7 +525,7 @@ class TestPromptLLM:
         )
         assert result["text"] == "Response with custom timeout"
 
-    @patch("mcp_coder.llm_interface.ask_claude_code_cli")
+    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_default_parameters(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:

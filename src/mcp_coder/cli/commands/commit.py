@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from ...constants import PROMPTS_FILE_PATH
-from ...llm_interface import ask_llm
+from ...llm.interface import ask_llm
 from ...llm_providers.claude.claude_code_api import ClaudeAPIError
 from ...prompt_manager import get_prompt
 from ...utils.clipboard import (

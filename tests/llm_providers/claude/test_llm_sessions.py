@@ -138,7 +138,7 @@ class TestSessionContinuity:
     def test_session_continuity_cli(self, mock_claude_cli: MockClaudeCLI) -> None:
         """Test multi-turn conversation with CLI method."""
         with patch(
-            "mcp_coder.llm_interface.ask_claude_code_cli",
+            "mcp_coder.llm.interface.ask_claude_code_cli",
             mock_claude_cli,
         ):
             # First turn
@@ -183,7 +183,7 @@ class TestSessionContinuity:
     def test_session_continuity_api(self, mock_claude_api: MockClaudeAPI) -> None:
         """Test multi-turn conversation with API method."""
         with patch(
-            "mcp_coder.llm_interface.ask_claude_code_api",
+            "mcp_coder.llm.interface.ask_claude_code_api",
             mock_claude_api,
         ):
             # First turn
@@ -226,7 +226,7 @@ class TestSessionContinuity:
     def test_multi_turn_conversation(self, mock_claude_cli: MockClaudeCLI) -> None:
         """Test conversation with 3+ turns."""
         with patch(
-            "mcp_coder.llm_interface.ask_claude_code_cli",
+            "mcp_coder.llm.interface.ask_claude_code_cli",
             mock_claude_cli,
         ):
             session_id = "multi-turn-session"
@@ -292,7 +292,7 @@ class TestSerialization:
     ) -> None:
         """Test save and load preserves all data."""
         with patch(
-            "mcp_coder.llm_interface.ask_claude_code_cli",
+            "mcp_coder.llm.interface.ask_claude_code_cli",
             mock_claude_cli,
         ):
             mock_claude_cli.set_response_dict(
@@ -332,7 +332,7 @@ class TestSerialization:
     ) -> None:
         """Test resuming session from saved file."""
         with patch(
-            "mcp_coder.llm_interface.ask_claude_code_cli",
+            "mcp_coder.llm.interface.ask_claude_code_cli",
             mock_claude_cli,
         ):
             # First conversation
@@ -380,7 +380,7 @@ class TestParallelSafety:
     def test_parallel_sessions_cli(self, mock_claude_cli: MockClaudeCLI) -> None:
         """Test two independent sessions running in parallel."""
         with patch(
-            "mcp_coder.llm_interface.ask_claude_code_cli",
+            "mcp_coder.llm.interface.ask_claude_code_cli",
             mock_claude_cli,
         ):
             # Session 1: Color is blue
@@ -460,11 +460,11 @@ class TestParallelSafety:
         """Test CLI and API sessions can run independently."""
         with (
             patch(
-                "mcp_coder.llm_interface.ask_claude_code_cli",
+                "mcp_coder.llm.interface.ask_claude_code_cli",
                 mock_claude_cli,
             ),
             patch(
-                "mcp_coder.llm_interface.ask_claude_code_api",
+                "mcp_coder.llm.interface.ask_claude_code_api",
                 mock_claude_api,
             ),
         ):
@@ -511,7 +511,7 @@ class TestMetadataTracking:
     ) -> None:
         """Test that metadata is preserved through complete workflow."""
         with patch(
-            "mcp_coder.llm_interface.ask_claude_code_cli",
+            "mcp_coder.llm.interface.ask_claude_code_cli",
             mock_claude_cli,
         ):
             mock_claude_cli.set_response_dict(
@@ -559,7 +559,7 @@ class TestMetadataTracking:
     ) -> None:
         """Test accumulating costs across conversation turns."""
         with patch(
-            "mcp_coder.llm_interface.ask_claude_code_cli",
+            "mcp_coder.llm.interface.ask_claude_code_cli",
             mock_claude_cli,
         ):
             session_id = "cost-tracking"
@@ -610,7 +610,7 @@ class TestErrorHandling:
     def test_invalid_session_id_handled(self, mock_claude_cli: MockClaudeCLI) -> None:
         """Test behavior with invalid session_id."""
         with patch(
-            "mcp_coder.llm_interface.ask_claude_code_cli",
+            "mcp_coder.llm.interface.ask_claude_code_cli",
             mock_claude_cli,
         ):
             mock_claude_cli.set_error_on_invalid_session(True)
@@ -643,7 +643,7 @@ class TestBackwardCompatibility:
 
     def test_ask_llm_still_works(self, mock_claude_cli: MockClaudeCLI) -> None:
         """Test that ask_llm (simple interface) still works."""
-        with patch("mcp_coder.llm_interface.ask_claude_code") as mock_ask_claude_code:
+        with patch("mcp_coder.llm.interface.ask_claude_code") as mock_ask_claude_code:
             mock_ask_claude_code.return_value = "Simple response"
 
             response = ask_llm("Simple question")
@@ -654,7 +654,7 @@ class TestBackwardCompatibility:
 
     def test_ask_llm_without_session_id(self, mock_claude_cli: MockClaudeCLI) -> None:
         """Test ask_llm works without session_id parameter."""
-        with patch("mcp_coder.llm_interface.ask_claude_code") as mock_ask_claude_code:
+        with patch("mcp_coder.llm.interface.ask_claude_code") as mock_ask_claude_code:
             mock_ask_claude_code.return_value = "No session needed"
 
             # Old calling pattern should still work
