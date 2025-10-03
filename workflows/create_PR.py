@@ -14,9 +14,9 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
-from mcp_coder.cli.llm_helpers import parse_llm_method
 from mcp_coder.constants import PROMPTS_FILE_PATH
-from mcp_coder.llm_interface import ask_llm
+from mcp_coder.llm.interface import ask_llm
+from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import (
     commit_all_changes,

@@ -232,11 +232,68 @@ def _normalize_task_name(name: str) -> str:
     return WHITESPACE_PATTERN.sub(" ", name.strip().lower())
 
 
-def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
+def _get_incomplete_tasks(content: str, exclude_meta_tasks: bool = False) -> list[str]:
+    """Get list of incomplete task names from TASK_TRACKER.md content.
+
+    Args:
+        content: Full TASK_TRACKER.md content
+        exclude_meta_tasks: If True, exclude meta-tasks like "Prepare git commit message"
+                           and "All Step X tasks completed" (default: False)
+
+    Returns:
+        List of incomplete task names
+
+    Raises:
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+
+    Examples:
+        >>> content = '''## Tasks
+        ... - [ ] Setup database
+        ... - [x] Add tests
+        ... - [ ] Prepare git commit message for step 1
+        ... '''
+        >>> _get_incomplete_tasks(content, exclude_meta_tasks=False)
+        ["Setup database", "Prepare git commit message for step 1"]
+
+        >>> _get_incomplete_tasks(content, exclude_meta_tasks=True)
+        ["Setup database"]  # Meta-task excluded
+    """
+    # Find the Implementation Steps section
+    section_content = _find_implementation_section(content)
+
+    # Parse all tasks
+    all_tasks = _parse_task_lines(section_content)
+
+    # Filter for incomplete tasks
+    incomplete_tasks = [task.name for task in all_tasks if not task.is_complete]
+
+    # Optionally filter out meta-tasks
+    if exclude_meta_tasks:
+        meta_patterns = [
+            r"prepare git commit message",
+            r"all step \d+ tasks completed",
+            r"all .* tasks completed",
+        ]
+        filtered = []
+        for task in incomplete_tasks:
+            task_lower = task.lower()
+            is_meta = any(re.search(pattern, task_lower) for pattern in meta_patterns)
+            if not is_meta:
+                filtered.append(task)
+        incomplete_tasks = filtered
+
+    return incomplete_tasks
+
+
+def get_incomplete_tasks(
+    folder_path: str = "pr_info", exclude_meta_tasks: bool = False
+) -> list[str]:
     """Get list of incomplete task names from Implementation Steps section.
 
     Args:
         folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
+        exclude_meta_tasks: If True, exclude meta-tasks like "Prepare git commit message"
+                           and "All Step X tasks completed" (default: False)
 
     Returns:
         List of incomplete task names
@@ -254,6 +311,75 @@ def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
 
         >>> get_incomplete_tasks("empty_project")
         []  # No incomplete tasks found
+
+        >>> get_incomplete_tasks("my_project", exclude_meta_tasks=True)
+        ["Setup database", "Add authentication"]  # Excludes "Prepare commit message", etc.
+    """
+    # Read the tracker file
+    content = _read_task_tracker(folder_path)
+
+    # Delegate to internal function
+    return _get_incomplete_tasks(content, exclude_meta_tasks)
+
+
+def has_incomplete_work(folder_path: str = "pr_info") -> bool:
+    """Check if there is any incomplete work in the task tracker.
+
+    This is a simple yes/no check across all steps and tasks.
+
+    Args:
+        folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
+
+    Returns:
+        True if there are any incomplete tasks, False otherwise
+
+    Raises:
+        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+
+    Examples:
+        >>> has_incomplete_work("my_project")
+        True  # There are incomplete tasks
+
+        >>> has_incomplete_work("completed_project")
+        False  # All tasks are complete
+    """
+    incomplete_tasks = get_incomplete_tasks(folder_path)
+    return len(incomplete_tasks) > 0
+
+
+def get_step_progress(
+    folder_path: str = "pr_info",
+) -> dict[str, dict[str, int | list[str]]]:
+    """Get detailed progress information for each step.
+
+    Returns a 2-tier hierarchy: steps (markdown headers) containing tasks (checkboxes).
+
+    Args:
+        folder_path: Path to folder containing TASK_TRACKER.md (default: "pr_info")
+
+    Returns:
+        Dictionary mapping step names to their progress info:
+        {
+            "Step 1: Create Package Structure": {
+                "total": 5,
+                "completed": 3,
+                "incomplete": 2,
+                "incomplete_tasks": ["Task A", "Task B"]
+            },
+            ...
+        }
+
+    Raises:
+        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
+        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
+
+    Examples:
+        >>> progress = get_step_progress("my_project")
+        >>> for step, info in progress.items():
+        ...     print(f"{step}: {info['completed']}/{info['total']} complete")
+        Step 1: Create Package Structure: 3/5 complete
+        Step 2: Move Core Modules: 0/4 complete
     """
     # Read the tracker file
     content = _read_task_tracker(folder_path)
@@ -261,13 +387,57 @@ def get_incomplete_tasks(folder_path: str = "pr_info") -> list[str]:
     # Find the Implementation Steps section
     section_content = _find_implementation_section(content)
 
-    # Parse all tasks
+    # Parse tasks and track step headers from markdown
+    lines = section_content.split("\n")
+    progress: dict[str, dict[str, int | list[str]]] = {}
+    current_step_name: str | None = None
+    current_step_tasks: list[TaskInfo] = []
+
+    # Also parse all tasks to get TaskInfo objects
     all_tasks = _parse_task_lines(section_content)
+    task_index = 0
 
-    # Filter for incomplete tasks and return their names
-    incomplete_tasks = [task.name for task in all_tasks if not task.is_complete]
+    for line in lines:
+        # Check if this is a step header (### Step N:)
+        if line.strip().startswith("###"):
+            # Save previous step if exists
+            if current_step_name and current_step_tasks:
+                _save_step_progress(progress, current_step_name, current_step_tasks)
 
-    return incomplete_tasks
+            # Extract step name from header
+            current_step_name = line.strip().lstrip("#").strip()
+            current_step_tasks = []
+        # Check if this line is a task checkbox
+        elif line.strip() and CHECKBOX_PATTERN.match(line.strip()):
+            # Add task to current step
+            if current_step_name and task_index < len(all_tasks):
+                current_step_tasks.append(all_tasks[task_index])
+                task_index += 1
+
+    # Save last step
+    if current_step_name and current_step_tasks:
+        _save_step_progress(progress, current_step_name, current_step_tasks)
+
+    return progress
+
+
+def _save_step_progress(
+    progress: dict[str, dict[str, int | list[str]]],
+    step_name: str,
+    tasks: list[TaskInfo],
+) -> None:
+    """Helper to save step progress information."""
+    total = len(tasks)
+    completed = sum(1 for t in tasks if t.is_complete)
+    incomplete = total - completed
+    incomplete_task_names = [t.name for t in tasks if not t.is_complete]
+
+    progress[step_name] = {
+        "total": total,
+        "completed": completed,
+        "incomplete": incomplete,
+        "incomplete_tasks": incomplete_task_names,
+    }
 
 
 def is_task_done(task_name: str, folder_path: str = "pr_info") -> bool:

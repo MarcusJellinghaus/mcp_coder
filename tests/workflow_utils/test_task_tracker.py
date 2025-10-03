@@ -11,10 +11,13 @@ from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     TaskTrackerSectionNotFoundError,
     _find_implementation_section,
+    _get_incomplete_tasks,
     _normalize_task_name,
     _parse_task_lines,
     _read_task_tracker,
     get_incomplete_tasks,
+    get_step_progress,
+    has_incomplete_work,
     is_task_done,
 )
 
@@ -488,6 +491,119 @@ class TestParseTaskLines:
         assert "- [ ]" not in content_without_dashes
 
 
+class TestGetIncompleteTasksInternal:
+    """Test _get_incomplete_tasks internal function."""
+
+    def test_get_incomplete_basic(self) -> None:
+        """Test getting incomplete tasks from content string."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+- [ ] Setup database
+- [x] Add tests
+- [ ] Write docs
+"""
+        result = _get_incomplete_tasks(content)
+        assert result == ["Setup database", "Write docs"]
+
+    def test_get_incomplete_with_meta_tasks_included(self) -> None:
+        """Test getting incomplete tasks including meta-tasks."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+- [x] Create directories
+- [ ] Add __init__.py files
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+"""
+        result = _get_incomplete_tasks(content, exclude_meta_tasks=False)
+        expected = [
+            "Add __init__.py files",
+            "Prepare git commit message for step 1",
+            "All Step 1 tasks completed",
+        ]
+        assert result == expected
+
+    def test_get_incomplete_with_meta_tasks_excluded(self) -> None:
+        """Test getting incomplete tasks excluding meta-tasks."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+- [x] Create directories
+- [ ] Add __init__.py files
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+"""
+        result = _get_incomplete_tasks(content, exclude_meta_tasks=True)
+        assert result == ["Add __init__.py files"]
+
+    def test_get_incomplete_real_task_tracker_structure(self) -> None:
+        """Test with real TASK_TRACKER.md structure."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+**File:** [pr_info/steps/step_1.md](steps/step_1.md)
+
+- [x] Create directory structure for llm package with subdirectories
+- [x] Create all __init__.py files with appropriate docstrings
+- [x] Verify all packages are importable
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+
+### Step 2: Move Core Modules
+**File:** [pr_info/steps/step_2.md](steps/step_2.md)
+
+- [ ] Move llm_types.py → llm/types.py (preserve git history)
+- [ ] Move llm_interface.py → llm/interface.py
+- [ ] Move llm_serialization.py → llm/serialization.py
+"""
+        # Without filtering - gets meta-tasks from Step 1 first
+        result_with_meta = _get_incomplete_tasks(content, exclude_meta_tasks=False)
+        assert result_with_meta[0] == "Prepare git commit message for step 1"
+        assert result_with_meta[1] == "All Step 1 tasks completed"
+        assert len(result_with_meta) == 5  # 2 meta + 3 real from Step 2
+
+        # With filtering - skips meta-tasks, goes straight to Step 2
+        result_without_meta = _get_incomplete_tasks(content, exclude_meta_tasks=True)
+        assert (
+            result_without_meta[0]
+            == "Move llm_types.py → llm/types.py (preserve git history)"
+        )
+        assert len(result_without_meta) == 3  # Only real tasks from Step 2
+
+    def test_get_incomplete_all_complete(self) -> None:
+        """Test when all tasks are complete."""
+        content = """# Task Status Tracker
+
+## Tasks
+
+- [x] Task 1
+- [x] Task 2
+"""
+        result = _get_incomplete_tasks(content)
+        assert result == []
+
+    def test_get_incomplete_section_not_found(self) -> None:
+        """Test error when Implementation Steps section missing."""
+        content = """# Task Status Tracker
+
+## Some Other Section
+
+- [ ] Not in implementation section
+"""
+        with pytest.raises(TaskTrackerSectionNotFoundError):
+            _get_incomplete_tasks(content)
+
+
 class TestGetIncompleteTasks:
     """Test get_incomplete_tasks function."""
 
@@ -684,6 +800,241 @@ class TestGetIncompleteTasks:
                 "Step 3: Another Link and formatting",
             ]
             assert result == expected
+
+
+class TestHasIncompleteWork:
+    """Test has_incomplete_work function."""
+
+    def test_has_work_with_incomplete_tasks(self) -> None:
+        """Test returns True when there are incomplete tasks."""
+        with TemporaryDirectory() as temp_dir:
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Tasks
+
+- [x] Completed task
+- [ ] Incomplete task
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            result = has_incomplete_work(temp_dir)
+            assert result is True
+
+    def test_has_work_all_complete(self) -> None:
+        """Test returns False when all tasks are complete."""
+        with TemporaryDirectory() as temp_dir:
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Tasks
+
+- [x] Task 1
+- [x] Task 2
+- [x] Task 3
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            result = has_incomplete_work(temp_dir)
+            assert result is False
+
+    def test_has_work_empty_tracker(self) -> None:
+        """Test returns False when there are no tasks."""
+        with TemporaryDirectory() as temp_dir:
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+### Tasks
+
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            result = has_incomplete_work(temp_dir)
+            assert result is False
+
+
+class TestGetStepProgress:
+    """Test get_step_progress function with 2-tier hierarchy."""
+
+    def test_single_step_progress(self) -> None:
+        """Test progress for a single step with tasks."""
+        with TemporaryDirectory() as temp_dir:
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+- [x] Create directory structure
+- [x] Create __init__.py files
+- [ ] Prepare git commit
+- [ ] All tasks completed
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            progress = get_step_progress(temp_dir)
+
+            # Debug: print what we got
+            print(f"Progress keys: {list(progress.keys())}")
+            assert "Step 1: Create Package Structure" in progress
+            step_info = progress["Step 1: Create Package Structure"]
+            assert step_info["total"] == 4
+            assert step_info["completed"] == 2
+            assert step_info["incomplete"] == 2
+            assert step_info["incomplete_tasks"] == [
+                "Prepare git commit",
+                "All tasks completed",
+            ]
+
+    def test_multiple_steps_progress(self) -> None:
+        """Test progress for multiple steps."""
+        with TemporaryDirectory() as temp_dir:
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+- [x] Create directory structure
+- [x] Create __init__.py files
+
+### Step 2: Move Core Modules
+- [ ] Move llm_types.py
+- [ ] Move llm_interface.py
+- [ ] Move llm_serialization.py
+
+### Step 3: Documentation
+- [x] Update README
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            progress = get_step_progress(temp_dir)
+
+            # Check Step 1
+            assert "Step 1: Create Package Structure" in progress
+            step1 = progress["Step 1: Create Package Structure"]
+            assert step1["total"] == 2
+            assert step1["completed"] == 2
+            assert step1["incomplete"] == 0
+            assert step1["incomplete_tasks"] == []
+
+            # Check Step 2
+            assert "Step 2: Move Core Modules" in progress
+            step2 = progress["Step 2: Move Core Modules"]
+            assert step2["total"] == 3
+            assert step2["completed"] == 0
+            assert step2["incomplete"] == 3
+            incomplete_tasks = step2["incomplete_tasks"]
+            assert isinstance(incomplete_tasks, list)
+            assert len(incomplete_tasks) == 3
+
+            # Check Step 3
+            assert "Step 3: Documentation" in progress
+            step3 = progress["Step 3: Documentation"]
+            assert step3["total"] == 1
+            assert step3["completed"] == 1
+            assert step3["incomplete"] == 0
+
+    def test_step_with_nested_tasks(self) -> None:
+        """Test step progress with indented sub-tasks."""
+        with TemporaryDirectory() as temp_dir:
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Setup
+- [x] Task A
+  - [x] Subtask A1
+  - [ ] Subtask A2
+- [ ] Task B
+  - [ ] Subtask B1
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            progress = get_step_progress(temp_dir)
+
+            step1 = progress["Step 1: Setup"]
+            # Should count all indented tasks under the step
+            assert step1["total"] == 5  # Task A, A1, A2, Task B, B1
+            assert step1["completed"] == 2  # Task A, A1
+            assert step1["incomplete"] == 3  # A2, B, B1
+
+    def test_current_task_tracker_structure_with_progress(self) -> None:
+        """Test get_step_progress with real TASK_TRACKER.md structure."""
+        with TemporaryDirectory() as temp_dir:
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+**File:** [pr_info/steps/step_1.md](steps/step_1.md)
+
+- [x] Create directory structure for llm package with subdirectories
+- [x] Create all __init__.py files with appropriate docstrings
+- [x] Verify all packages are importable
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+
+### Step 2: Move Core Modules
+**File:** [pr_info/steps/step_2.md](steps/step_2.md)
+
+- [ ] Move llm_types.py → llm/types.py (preserve git history)
+- [ ] Move llm_interface.py → llm/interface.py
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            progress = get_step_progress(temp_dir)
+
+            # Step 1 should show 3/5 complete
+            step1 = progress["Step 1: Create Package Structure"]
+            assert step1["total"] == 5
+            assert step1["completed"] == 3
+            assert step1["incomplete"] == 2
+
+            # Step 2 should show 0/2 complete
+            step2 = progress["Step 2: Move Core Modules"]
+            assert step2["total"] == 2
+            assert step2["completed"] == 0
+            assert step2["incomplete"] == 2
+
+            # has_incomplete_work should return True
+            assert has_incomplete_work(temp_dir) is True
+
+
+class TestGetIncompleteTasksEdgeCases:
+    """Test edge cases and real-world scenarios for get_incomplete_tasks."""
+
+    def test_current_task_tracker_structure(self) -> None:
+        """Test with the actual current TASK_TRACKER.md structure to verify behavior.
+
+        This test documents the current behavior with the real TASK_TRACKER.md structure
+        that includes meta-tasks like 'Prepare git commit' and 'All Step X tasks completed'.
+        """
+        with TemporaryDirectory() as temp_dir:
+            # Exact structure from current TASK_TRACKER.md (partial)
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+**File:** [pr_info/steps/step_1.md](steps/step_1.md)
+
+- [x] Create directory structure for llm package with subdirectories
+- [x] Create all __init__.py files with appropriate docstrings
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            result = get_incomplete_tasks(temp_dir)
+
+            # Document current behavior: includes meta-tasks
+            assert len(result) == 2
+            assert "Prepare git commit message for step 1" in result
+            assert "All Step 1 tasks completed" in result
 
 
 class TestIsTaskDone:
@@ -949,3 +1300,65 @@ class TestNormalizeTaskName:
 
         assert tasks[2].name == "Task on line 6"
         assert tasks[2].line_number == 6
+
+    def test_get_incomplete_tasks_with_meta_tasks_excluded(self) -> None:
+        """Test getting incomplete tasks with meta-tasks excluded.
+
+        This test verifies the fix for the issue where the workflow was getting
+        meta-tasks like 'Prepare git commit message' as the next task to implement.
+
+        With exclude_meta_tasks=True, it should skip meta-tasks and return only
+        real implementation tasks.
+        """
+        with TemporaryDirectory() as temp_dir:
+            # Create test tracker file matching current TASK_TRACKER.md structure
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+## Tasks
+
+### Step 1: Create Package Structure
+**File:** [pr_info/steps/step_1.md](steps/step_1.md)
+
+- [x] Create directory structure for llm package with subdirectories
+- [x] Create all __init__.py files with appropriate docstrings
+- [x] Verify all packages are importable
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+
+### Step 2: Move Core Modules
+**File:** [pr_info/steps/step_2.md](steps/step_2.md)
+
+- [ ] Move llm_types.py → llm/types.py (preserve git history)
+- [ ] Move llm_interface.py → llm/interface.py
+- [ ] Move llm_serialization.py → llm/serialization.py
+- [ ] Update llm/__init__.py with public API exports
+
+### Pull Request
+
+- [ ] Review all changes and ensure consistency
+- [ ] Submit pull request for review
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            # Test WITHOUT filtering (old behavior)
+            result_with_meta = get_incomplete_tasks(temp_dir, exclude_meta_tasks=False)
+            # Should include meta-tasks
+            assert "Prepare git commit message for step 1" in result_with_meta
+            assert "All Step 1 tasks completed" in result_with_meta
+            assert len(result_with_meta) == 6  # 2 meta from Step 1 + 4 from Step 2
+
+            # Test WITH filtering (new behavior)
+            result_without_meta = get_incomplete_tasks(
+                temp_dir, exclude_meta_tasks=True
+            )
+            # Should skip meta-tasks and go straight to Step 2 implementation tasks
+            expected = [
+                "Move llm_types.py → llm/types.py (preserve git history)",
+                "Move llm_interface.py → llm/interface.py",
+                "Move llm_serialization.py → llm/serialization.py",
+                "Update llm/__init__.py with public API exports",
+            ]
+            assert result_without_meta == expected

@@ -31,14 +31,14 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
-from mcp_coder.cli.llm_helpers import parse_llm_method
+from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
-from mcp_coder.llm_interface import ask_llm
-from mcp_coder.llm_providers.claude.claude_code_api import (
+from mcp_coder.llm.interface import ask_llm
+from mcp_coder.llm.providers.claude.claude_code_api import (
     ask_claude_code_api_detailed_sync,
 )
 from mcp_coder.prompt_manager import get_prompt
@@ -52,7 +52,11 @@ from mcp_coder.utils.git_operations import (
     is_working_directory_clean,
 )
 from mcp_coder.utils.log_utils import setup_logging
-from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
+from mcp_coder.workflow_utils.task_tracker import (
+    get_incomplete_tasks,
+    get_step_progress,
+    has_incomplete_work,
+)
 
 # Constants
 PR_INFO_DIR = "pr_info"
@@ -187,7 +191,7 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
         # Call LLM with the prompt
         provider, method = parse_llm_method(llm_method)
         
-        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300, cwd=str(project_dir))
+        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300)
         
         if not response or not response.strip():
             logger.error("LLM returned empty response for task tracker update")
@@ -230,15 +234,73 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
         return False
 
 
+def log_progress_summary(project_dir: Path) -> None:
+    """Log a summary of step-by-step progress from task tracker."""
+    try:
+        pr_info_dir = str(project_dir / PR_INFO_DIR)
+        progress = get_step_progress(pr_info_dir)
+        
+        if not progress:
+            logger.debug("No step progress information available")
+            return
+        
+        log_step("=" * 60)
+        log_step("TASK TRACKER PROGRESS SUMMARY")
+        log_step("=" * 60)
+        
+        for step_name, step_info in progress.items():
+            # Extract and validate types from step_info dict
+            total_val = step_info["total"]
+            completed_val = step_info["completed"]
+            incomplete_val = step_info["incomplete"]
+            incomplete_list_val = step_info["incomplete_tasks"]
+            
+            # Type narrowing assertions
+            assert isinstance(total_val, int), "total should be int"
+            assert isinstance(completed_val, int), "completed should be int"
+            assert isinstance(incomplete_val, int), "incomplete should be int"
+            assert isinstance(incomplete_list_val, list), "incomplete_tasks should be list"
+            
+            # Now we can use the narrowed types
+            total = total_val
+            completed = completed_val
+            incomplete = incomplete_val
+            incomplete_list = incomplete_list_val
+            
+            # Calculate percentage
+            percentage = (completed / total * 100) if total > 0 else 0
+            
+            # Create progress bar
+            bar_length = 20
+            filled = int(bar_length * completed / total) if total > 0 else 0
+            bar = "█" * filled + "░" * (bar_length - filled)
+            
+            # Log step summary
+            log_step(f"{step_name}:")
+            log_step(f"  [{bar}] {percentage:.0f}% ({completed}/{total} complete)")
+            
+            # Show incomplete tasks for this step if any
+            if incomplete > 0:
+                log_step(f"  Remaining: {', '.join(incomplete_list[:3])}{'...' if len(incomplete_list) > 3 else ''}")
+        
+        log_step("=" * 60)
+    
+    except Exception as e:
+        logger.debug(f"Could not generate progress summary: {e}")
+
+
 def get_next_task(project_dir: Path) -> Optional[str]:
-    """Get next incomplete task from task tracker."""
+    """Get next incomplete task from task tracker (excluding meta-tasks)."""
     log_step("Checking for incomplete tasks...")
     
     try:
         pr_info_dir = str(project_dir / PR_INFO_DIR)
-        incomplete_tasks = get_incomplete_tasks(pr_info_dir)
+        
+        # Get incomplete tasks, excluding meta-tasks
+        incomplete_tasks = get_incomplete_tasks(pr_info_dir, exclude_meta_tasks=True)
+        
         if not incomplete_tasks:
-            log_step("No incomplete tasks found")
+            log_step("No incomplete implementation tasks found (meta-tasks excluded)")
             return None
         
         next_task = incomplete_tasks[0]
@@ -279,7 +341,7 @@ def save_conversation(project_dir: Path, content: str, step_num: int, conversati
     logger.debug(f"Conversation saved to {conversation_path.absolute()}")
 
 
-def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: int = 300) -> tuple[str, dict]:
+def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: int = 300) -> tuple[str, dict[Any, Any]]:
     """Call LLM and capture both text response and comprehensive data.
     
     Args:
@@ -319,7 +381,7 @@ def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: 
 
 
 def save_conversation_comprehensive(project_dir: Path, content: str, step_num: int, 
-                                  conversation_type: str = "", comprehensive_data: dict = None) -> None:
+                                  conversation_type: str = "", comprehensive_data: dict[Any, Any] | None = None) -> None:
     """Save both markdown conversation and comprehensive JSON data.
     
     Args:
@@ -628,19 +690,33 @@ Generated on: {datetime.now().isoformat()}"""
         logger.error(f"Error saving initial conversation: {e}")
         return False
     
-    # Step 6: Run mypy check and fixes (each fix will be saved separately)
+    # Step 6: Check if any files were actually changed
+    try:
+        status = get_full_status(project_dir)
+        all_changes = status["staged"] + status["modified"] + status["untracked"]
+        
+        if not all_changes:
+            logger.warning(f"No files were changed for task: {next_task}")
+            logger.warning("This might indicate the task is already complete or the LLM didn't make changes")
+            logger.warning("Skipping commit/push for this task")
+            return True  # Consider it successful but skip commit
+    except Exception as e:
+        logger.error(f"Error checking file changes: {e}")
+        return False
+    
+    # Step 7: Run mypy check and fixes (each fix will be saved separately)
     if not check_and_fix_mypy(project_dir, step_num, llm_method):
         logger.warning("Mypy check failed or found unresolved issues - continuing anyway")
     
-    # Step 7: Run formatters
+    # Step 8: Run formatters
     if not run_formatters(project_dir):
         return False
     
-    # Step 8: Commit changes
+    # Step 9: Commit changes
     if not commit_changes(project_dir):
         return False
     
-    # Step 9: Push changes to remote
+    # Step 10: Push changes to remote
     if not push_changes(project_dir):
         return False
     
@@ -752,7 +828,10 @@ def main() -> None:
     if not prepare_task_tracker(project_dir, args.llm_method):
         sys.exit(1)
     
-    # Step 3: Process all incomplete tasks in a loop
+    # Step 3: Show initial progress summary
+    log_progress_summary(project_dir)
+    
+    # Step 4: Process all incomplete tasks in a loop
     completed_tasks = 0
     while True:
         success = process_single_task(project_dir, args.llm_method)
@@ -762,9 +841,15 @@ def main() -> None:
         
         completed_tasks += 1
         log_step(f"Completed {completed_tasks} task(s). Checking for more...")
+        
+        # Show updated progress after each task
+        log_progress_summary(project_dir)
     
+    # Step 5: Show final progress summary
     if completed_tasks > 0:
         log_step(f"Implement workflow completed successfully! Processed {completed_tasks} task(s).")
+        log_step("\nFinal Progress:")
+        log_progress_summary(project_dir)
     else:
         log_step("No incomplete implementation tasks found - workflow complete")
     

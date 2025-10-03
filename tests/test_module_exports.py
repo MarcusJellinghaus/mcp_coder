@@ -51,34 +51,32 @@ def test_all_contains_new_exports() -> None:
 
 
 def test_llm_interface_all_is_correct() -> None:
-    """Test that llm_interface module exports correct items."""
-    from mcp_coder import llm_interface
+    """Test that llm.interface module exports correct items."""
+    from mcp_coder.llm import interface
 
     expected = [
         "ask_llm",
         "prompt_llm",
-        "serialize_llm_response",
-        "deserialize_llm_response",
     ]
 
-    assert set(llm_interface.__all__) == set(expected)
+    assert set(interface.__all__) == set(expected)
 
 
 def test_llm_types_all_is_correct() -> None:
-    """Test that llm_types module exports correct items."""
-    from mcp_coder import llm_types
+    """Test that llm.types module exports correct items."""
+    from mcp_coder.llm import types
 
     expected = [
         "LLMResponseDict",
         "LLM_RESPONSE_VERSION",
     ]
 
-    assert set(llm_types.__all__) == set(expected)
+    assert set(types.__all__) == set(expected)
 
 
 def test_llm_serialization_all_is_correct() -> None:
-    """Test that llm_serialization module exports correct items."""
-    from mcp_coder import llm_serialization
+    """Test that llm.serialization module exports correct items."""
+    from mcp_coder.llm import serialization
 
     expected = [
         "to_json_string",
@@ -87,7 +85,7 @@ def test_llm_serialization_all_is_correct() -> None:
         "deserialize_llm_response",
     ]
 
-    assert set(llm_serialization.__all__) == set(expected)
+    assert set(serialization.__all__) == set(expected)
 
 
 def test_import_all_from_mcp_coder() -> None:

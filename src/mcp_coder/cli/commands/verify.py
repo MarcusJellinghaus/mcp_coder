@@ -3,7 +3,7 @@
 import argparse
 import logging
 
-from ...llm_providers.claude.claude_cli_verification import (
+from ...llm.providers.claude.claude_cli_verification import (
     verify_claude_cli_installation as _verify_claude_cli_installation,
 )
 

@@ -86,7 +86,7 @@ Each task should include:
 - Step implementation 
 - Quality checks: pylint, pytest, mypy - and work on all issues found
 - Preparation of a git commit message
-- put one [ ] for each task like `[ ] all tasks completed`
+- put one [ ] for each task
 
 Add "Pull Request" section at end with PR review and summary tasks.
 
