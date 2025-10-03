@@ -34,11 +34,11 @@ from pathlib import Path
 from typing import Any, Optional
 
 from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
-from mcp_coder.cli.llm_helpers import parse_llm_method
+from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
 from mcp_coder.llm.interface import ask_llm
-from mcp_coder.llm_providers.claude.claude_code_api import (
+from mcp_coder.llm.providers.claude.claude_code_api import (
     ask_claude_code_api_detailed_sync,
 )
 from mcp_coder.prompt_manager import get_prompt
