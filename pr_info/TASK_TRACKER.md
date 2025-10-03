@@ -150,37 +150,39 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 10: Extract Storage/Session Tests
 **File:** [pr_info/steps/step_10.md](steps/step_10.md)
 
-- [ ] Create tests/llm/storage/test_session_storage.py
-- [ ] Create tests/llm/storage/test_session_finder.py
-- [ ] Create tests/llm/session/test_resolver.py
-- [ ] Extract storage tests from test_prompt.py
-- [ ] Extract session tests from test_prompt.py
-- [ ] Adapt tests to call functions directly
-- [ ] Remove extracted tests from test_prompt.py
-- [ ] Verify test_prompt.py reduced to ~200 lines
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for step 10
+- [x] Create tests/llm/storage/test_session_storage.py
+- [x] Create tests/llm/storage/test_session_finder.py
+- [x] Create tests/llm/session/test_resolver.py
+- [x] Extract storage tests from test_prompt.py
+- [x] Extract session tests from test_prompt.py
+- [x] Adapt tests to call functions directly
+- [x] Remove extracted tests from test_prompt.py
+- [x] Verify test_prompt.py reduced to ~200 lines
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for step 10
+- [x] All Step 10 tasks completed
 
 ### Step 11: Final Verification & Cleanup
 **File:** [pr_info/steps/step_11.md](steps/step_11.md)
 
-- [ ] Verify file structure complete (all files in correct locations)
-- [ ] Verify old files deleted
-- [ ] Verify prompt.py reduced to ~100 lines
-- [ ] Verify test_prompt.py reduced to ~200 lines
-- [ ] Run complete test suite (all tests pass)
-- [ ] Run static analysis: pylint on llm/ modules
-- [ ] Run static analysis: mypy on llm/ modules
-- [ ] Fix all issues found by static analysis
-- [ ] Verify public API imports work
-- [ ] Manual CLI testing (just-text, verbose, raw)
-- [ ] Update docs/architecture/ARCHITECTURE.md
-- [ ] Create migration notes if needed
-- [ ] Final verification checklist complete
-- [ ] Run quality checks: pylint, pytest, mypy (final)
-- [ ] Fix all issues found by quality checks (final)
-- [ ] Prepare git commit message for step 11
+- [x] Verify file structure complete (all files in correct locations)
+- [x] Verify old files deleted
+- [x] Verify prompt.py reduced to ~100 lines
+- [x] Verify test_prompt.py reduced to ~200 lines
+- [x] Run complete test suite (all tests pass)
+- [x] Run static analysis: pylint on llm/ modules
+- [x] Run static analysis: mypy on llm/ modules
+- [x] Fix all issues found by static analysis
+- [x] Verify public API imports work
+- [x] Manual CLI testing (just-text, verbose, raw)
+- [x] Update docs/architecture/ARCHITECTURE.md
+- [x] Create migration notes if needed
+- [x] Final verification checklist complete
+- [x] Run quality checks: pylint, pytest, mypy (final)
+- [x] Fix all issues found by quality checks (final)
+- [x] Prepare git commit message for step 11
+- [x] All Step 11 tasks completed
 
 ---
 

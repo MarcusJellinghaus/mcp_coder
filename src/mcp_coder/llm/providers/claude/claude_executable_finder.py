@@ -189,6 +189,7 @@ def verify_claude_installation() -> dict[str, Any]:
                         timeout=10,
                         cwd=None,  # Use current directory
                         env=None,  # Use current environment
+                        check=False,
                     )
                     if simple_result.returncode == 0 and simple_result.stdout.strip():
                         result["version"] = simple_result.stdout.strip()
@@ -209,6 +210,7 @@ def verify_claude_installation() -> dict[str, Any]:
                     capture_output=True,
                     text=True,
                     timeout=10,
+                    check=False,
                 )
                 if simple_result.returncode == 0 and simple_result.stdout.strip():
                     result["version"] = simple_result.stdout.strip()

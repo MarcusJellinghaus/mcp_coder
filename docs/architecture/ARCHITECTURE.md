@@ -125,23 +125,31 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 ## 5. Building Block View
 
 ### Core System (`src/mcp_coder/`)
-- **Main interface**: `llm_interface.py` - Multi-provider LLM abstraction (tests: `test_llm_interface.py`)
+- **Main interface**: `llm/interface.py` - Multi-provider LLM abstraction (tests: `llm/test_interface.py`)
+- **Type definitions**: `llm/types.py` - LLM response structures (tests: `llm/test_types.py`)
+- **Serialization**: `llm/serialization.py` - JSON I/O utilities (tests: `llm/test_serialization.py`)
 - **Prompt management**: `prompt_manager.py` - Template and validation system (tests: `test_prompt_manager.py`)
 - **Code quality**: `mcp_code_checker.py` - Quality check integration (tests: `test_mcp_code_checker_integration.py`)
 - **Constants**: `constants.py` - Project-wide constants and paths (tests: ❌ missing)
 
+### LLM System (`src/mcp_coder/llm/`)
+- **Formatting**: `llm/formatting/` - Response formatters and SDK utilities
+  - `formatters.py` - Text/verbose/raw output formatting (tests: `llm/formatting/test_formatters.py`)
+  - `sdk_serialization.py` - SDK message object handling (tests: `llm/formatting/test_sdk_serialization.py`)
+- **Storage**: `llm/storage/` - Session persistence
+  - `session_storage.py` - Store/load session data (tests: `llm/storage/test_session_storage.py`)
+  - `session_finder.py` - Find latest session files (tests: `llm/storage/test_session_finder.py`)
+- **Session**: `llm/session/` - Session management
+  - `resolver.py` - LLM method parsing and session resolution (tests: `llm/session/test_resolver.py`)
+- **Providers**: `llm/providers/` - Provider implementations
+  - `claude/` - Claude Code CLI/API integration (tests: `llm/providers/claude/test_*.py`)
+
 ### CLI System (`src/mcp_coder/cli/`)
 - **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)
-- **Command implementations**: `cli/commands/` - Individual CLI commands (tests: `cli/commands/test_*.py`, `test_prompt_sdk_utilities.py` 🏷️ claude_cli_integration)
+- **Prompt command**: `cli/commands/prompt.py` - Slim CLI orchestration (~180 lines) (tests: `cli/commands/test_prompt.py`)
 - **Help system**: `cli/commands/help.py` - Documentation and usage (tests: `cli/commands/test_help.py`)
-- **LLM parameter utilities**: `cli/llm_helpers.py` - LLM method parsing and validation (tests: ❌ missing)
 
-### LLM Integration (`src/mcp_coder/llm_providers/`)
-- **Claude interface**: `llm_providers/claude/claude_code_interface.py` - Method routing (tests: ❌ missing)
-- **CLI implementation**: `llm_providers/claude/claude_code_cli.py` - Subprocess execution (tests: `claude/test_claude_code_cli.py`)
-- **API implementation**: `llm_providers/claude/claude_code_api.py` - SDK integration (tests: `claude/test_claude_code_api*.py` 🏷️ claude_api_integration)
-- **Executable finder**: `llm_providers/claude/claude_executable_finder.py` - Installation detection (tests: `claude/test_claude_executable_finder.py` 🏷️ claude_cli_integration)
-- **CLI verification**: `llm_providers/claude/claude_cli_verification.py` - Installation validation (tests: `claude/test_claude_cli_verification.py`)
+
 
 ### Automation & Operations (`src/mcp_coder/utils/`)
 - **Git operations**: `utils/git_operations.py` - Repository automation (tests: `utils/test_git_*.py` 🏷️ git_integration)
@@ -263,8 +271,8 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 For quick LLM navigation to core architectural components:
 
 **Core Interfaces:**
-- `src/mcp_coder/llm_interface.py` - Main LLM abstraction
-- `src/mcp_coder/llm_providers/claude/claude_code_interface.py` - Claude routing
+- `src/mcp_coder/llm/interface.py` - Main LLM abstraction
+- `src/mcp_coder/llm/providers/claude/claude_code_interface.py` - Claude routing
 
 **Workflow Engine:**
 - `src/mcp_coder/cli/main.py` - CLI entry and command routing

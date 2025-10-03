@@ -25,7 +25,7 @@ def _get_status_symbols() -> dict[str, str]:
         return {"success": "✓", "failure": "✗", "warning": "⚠"}
 
 
-def verify_claude_cli_installation(args: argparse.Namespace) -> int:
+def verify_claude_cli_installation(_: argparse.Namespace) -> int:
     """Execute verification command to check Claude installation. Returns exit code."""
     logger.info("Executing Claude installation verification")
 
