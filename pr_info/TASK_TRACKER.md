@@ -30,11 +30,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 1
 
 ### Step 2: Create Commit Operations Module
-- [ ] Create `src/mcp_coder/utils/commit_operations.py` with moved `generate_commit_message_with_llm()` function
-- [ ] Create comprehensive tests in `tests/utils/test_commit_operations.py`
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check and fix all issues
-- [ ] Run mypy check and fix all issues
+- [x] Create `src/mcp_coder/utils/commit_operations.py` with moved `generate_commit_message_with_llm()` function
+- [x] Create comprehensive tests in `tests/utils/test_commit_operations.py`
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check and fix all issues
+- [x] Run mypy check and fix all issues
 - [ ] Prepare git commit message for Step 2
 
 ### Step 3: Update CLI Commit Command
