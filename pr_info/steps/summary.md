@@ -79,22 +79,22 @@ success, msg, error = generate_commit_message_with_llm(project_dir, llm_method)
 
 ### Files Analyzed (No Changes)
 - `src/mcp_coder/utils/git_operations.py` - Existing git operations remain unchanged
-- `workflows/create_PR.py` - Uses different commit pattern, no changes needed
+- `workflows/create_PR.py` - Uses `commit_all_changes()` directly with hardcoded messages, no architectural violation
 
 ## Implementation Strategy
 
 ### Principles
 - **KISS**: Minimal changes, maximum impact
-- **TDD**: Tests first, implementation second
+- **TDD**: Unit tests first, implementation second
 - **Backward Compatibility**: No breaking changes to public APIs
 - **Clean Architecture**: Proper layering without circular dependencies
 
-### Approach
-1. Create tests for moved functionality
+### Approach (4-Step Implementation)
+1. Create comprehensive unit tests for moved functionality
 2. Move function with exact same implementation
 3. Update imports across codebase
 4. Add missing parameter to workflow calls
-5. Verify all tests pass
+5. Verify all unit tests pass
 
 ## Success Criteria
 - ✅ No CLI imports from workflows layer

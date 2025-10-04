@@ -20,7 +20,7 @@ def generate_commit_message_with_llm(
     """
 ```
 
-### Test Functions to Create
+### Test Functions to Create (Unit Tests Only)
 ```python
 def test_generate_commit_message_with_llm_success()
 def test_generate_commit_message_with_llm_respects_llm_method()

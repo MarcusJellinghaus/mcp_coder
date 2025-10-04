@@ -10,7 +10,7 @@ Verify that all changes work together correctly and run comprehensive tests to e
   - `tests/workflows/implement/test_task_processing.py` (if exists)
 
 ## WHAT
-### Verification Tests to Run
+### Verification Tests to Run (Unit Tests Focus)
 ```python
 # Test the new utils module
 pytest tests/utils/test_commit_operations.py -v
@@ -18,11 +18,8 @@ pytest tests/utils/test_commit_operations.py -v
 # Test CLI still works with moved function
 pytest tests/cli/commands/test_commit.py -v
 
-# Test full integration
+# Test all commit-related functionality
 pytest tests/ -k "commit" -v
-
-# Test workflow integration (if workflow tests exist)
-pytest tests/workflows/ -v
 ```
 
 ### Manual Verification Commands
@@ -53,7 +50,7 @@ from mcp_coder.workflows.implement.task_processing import commit_changes
 # Run tests in order:
 1. Unit tests for moved function (utils)
 2. CLI tests with updated mocks
-3. Integration tests across components
+3. Unit tests for all commit-related functionality
 4. Manual verification of CLI commands
 5. Check import paths are correct
 ```
