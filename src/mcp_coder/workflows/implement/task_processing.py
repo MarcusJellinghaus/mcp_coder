@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
+from mcp_coder.utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
 from mcp_coder.llm.interface import ask_llm

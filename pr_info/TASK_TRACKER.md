@@ -38,13 +38,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 2
 
 ### Step 3: Update CLI Commit Command
-- [ ] Remove `generate_commit_message_with_llm()` function from `src/mcp_coder/cli/commands/commit.py`
-- [ ] Add imports for shared utility and moved function
-- [ ] Update `execute_commit_auto()` to use new parameter flow
-- [ ] Update tests in `tests/cli/commands/test_commit.py`
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check and fix all issues
-- [ ] Run mypy check and fix all issues
+- [x] Remove `generate_commit_message_with_llm()` function from `src/mcp_coder/cli/commands/commit.py`
+- [x] Add imports for shared utility and moved function
+- [x] Update `execute_commit_auto()` to use new parameter flow
+- [x] Update tests in `tests/cli/commands/test_commit.py`
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check and fix all issues
+- [x] Run mypy check and fix all issues
 - [ ] Prepare git commit message for Step 3
 
 ### Step 4: Update CLI Prompt Command

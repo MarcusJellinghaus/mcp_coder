@@ -23,7 +23,7 @@ class TestExecuteCommitAuto:
     """Tests for execute_commit_auto function."""
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     def test_execute_commit_auto_success(
         self,
@@ -57,7 +57,7 @@ class TestExecuteCommitAuto:
         mock_commit.assert_called_once_with("feat: add new feature", Path.cwd())
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_with_preview_confirmed(
@@ -94,7 +94,7 @@ class TestExecuteCommitAuto:
         mock_input.assert_called_once_with("\nProceed with commit? (Y/n): ")
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_preview_empty_input_proceeds(
@@ -129,7 +129,7 @@ class TestExecuteCommitAuto:
         assert "Commit cancelled" not in captured_out
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("builtins.input")
     def test_execute_commit_auto_with_preview_cancelled(
         self,
@@ -155,7 +155,7 @@ class TestExecuteCommitAuto:
         assert "Commit cancelled." in captured_out
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_preview_various_cancel_inputs(
@@ -229,7 +229,7 @@ class TestExecuteCommitAuto:
         assert "Error: Not a git repository" in captured_err
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     def test_execute_commit_auto_no_changes(
         self,
         mock_generate: Mock,
@@ -258,7 +258,7 @@ class TestPreviewModeLogic:
     """Tests specifically for preview mode user input logic."""
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_preview_mode_cancel_variations(
@@ -283,7 +283,7 @@ class TestPreviewModeLogic:
             mock_commit.reset_mock()
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_preview_mode_proceed_variations(
@@ -328,8 +328,8 @@ class TestPreviewModeLogic:
 class TestGenerateCommitMessageWithLLM:
     """Tests for generate_commit_message_with_llm function."""
 
-    @patch("mcp_coder.utils.git_operations.stage_all_changes")
-    @patch("mcp_coder.utils.git_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
     def test_generate_commit_message_with_llm_success(
@@ -359,7 +359,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.assert_called_once_with(project_dir)
         mock_ask_llm.assert_called_once()
 
-    @patch("mcp_coder.utils.git_operations.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     def test_generate_commit_message_with_llm_stage_failure(
         self, mock_stage: Mock
     ) -> None:
@@ -376,8 +376,8 @@ class TestGenerateCommitMessageWithLLM:
         assert "Failed to stage changes in repository" in error_str
         assert "write permissions" in error_str
 
-    @patch("mcp_coder.utils.git_operations.stage_all_changes")
-    @patch("mcp_coder.utils.git_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     def test_generate_commit_message_with_llm_no_changes(
         self, mock_get_diff: Mock, mock_stage: Mock
     ) -> None:
@@ -395,8 +395,8 @@ class TestGenerateCommitMessageWithLLM:
         assert "No changes to commit" in error_str
         assert "modified, added, or deleted files" in error_str
 
-    @patch("mcp_coder.utils.git_operations.stage_all_changes")
-    @patch("mcp_coder.utils.git_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
     def test_generate_commit_message_with_llm_failure(
@@ -527,7 +527,7 @@ class TestValidateGitRepository:
 class TestGenerateCommitMessageWithLLMExtended:
     """Additional tests for the improved generate_commit_message_with_llm function."""
 
-    @patch("mcp_coder.cli.commands.commit.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     def test_stage_exception_handling(self, mock_stage: Mock) -> None:
         """Test staging operation exception handling."""
         mock_stage.side_effect = Exception("Permission denied")
@@ -542,8 +542,8 @@ class TestGenerateCommitMessageWithLLMExtended:
         assert "Permission denied" in error_str
         assert "git repository is accessible" in error_str
 
-    @patch("mcp_coder.utils.git_operations.stage_all_changes")
-    @patch("mcp_coder.utils.git_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     def test_git_diff_none_handling(
         self, mock_get_diff: Mock, mock_stage: Mock
     ) -> None:
@@ -560,8 +560,8 @@ class TestGenerateCommitMessageWithLLMExtended:
         assert "Failed to retrieve git diff" in error_str
         assert "invalid state" in error_str
 
-    @patch("mcp_coder.utils.git_operations.stage_all_changes")
-    @patch("mcp_coder.utils.git_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     def test_prompt_file_not_found(
         self, mock_get_prompt: Mock, mock_get_diff: Mock, mock_stage: Mock
@@ -580,8 +580,8 @@ class TestGenerateCommitMessageWithLLMExtended:
         assert "Commit prompt template not found" in error_str
         assert "prompts.md not found" in error_str
 
-    @patch("mcp_coder.utils.git_operations.stage_all_changes")
-    @patch("mcp_coder.utils.git_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
     def test_empty_llm_response(
@@ -606,8 +606,8 @@ class TestGenerateCommitMessageWithLLMExtended:
         assert "LLM returned empty or null response" in error_str
         assert "AI service may be unavailable" in error_str
 
-    @patch("mcp_coder.utils.git_operations.stage_all_changes")
-    @patch("mcp_coder.utils.git_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
     @patch("mcp_coder.utils.commit_operations.parse_llm_commit_response")
@@ -635,8 +635,8 @@ class TestGenerateCommitMessageWithLLMExtended:
         assert "LLM generated an empty commit message" in error_str
         assert "AI may not have understood" in error_str
 
-    @patch("mcp_coder.utils.git_operations.stage_all_changes")
-    @patch("mcp_coder.utils.git_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.utils.commit_operations.stage_all_changes")
+    @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
     @patch("mcp_coder.utils.commit_operations.parse_llm_commit_response")
