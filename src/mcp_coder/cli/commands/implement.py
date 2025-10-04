@@ -9,7 +9,8 @@ import logging
 import sys
 from pathlib import Path
 
-from ...workflows.implement.core import resolve_project_dir, run_implement_workflow
+from ...workflows.utils import resolve_project_dir
+from ...workflows.implement.core import run_implement_workflow
 
 logger = logging.getLogger(__name__)
 

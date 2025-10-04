@@ -3,5 +3,6 @@
 This package contains workflow implementations for various automated development tasks.
 """
 
-# Package structure placeholder - workflows will be added in subsequent steps
-__all__ = []
+from .utils import resolve_project_dir
+
+__all__ = ["resolve_project_dir"]

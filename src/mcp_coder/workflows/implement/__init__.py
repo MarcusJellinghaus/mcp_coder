@@ -7,7 +7,6 @@ code development and refactoring tasks.
 from .core import (
     log_progress_summary,
     prepare_task_tracker,
-    resolve_project_dir,
     run_implement_workflow,
 )
 from .prerequisites import (
@@ -42,6 +41,5 @@ __all__ = [
     "save_conversation_comprehensive",
     "log_progress_summary",
     "prepare_task_tracker",
-    "resolve_project_dir",
     "run_implement_workflow",
 ]
