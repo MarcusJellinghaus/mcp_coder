@@ -9,6 +9,7 @@ from .commands import (
     execute_commit_auto,
     execute_commit_clipboard,
     execute_help,
+    execute_implement,
     execute_prompt,
     execute_verify,
 )
@@ -149,6 +150,23 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         "clipboard", help="Use commit message from clipboard"
     )
 
+    # Implement command - Step 5
+    implement_parser = subparsers.add_parser(
+        "implement", help="Execute implementation workflow from task tracker"
+    )
+    implement_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    implement_parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_api",
+        help="LLM method to use (default: claude_code_api)",
+    )
+
     return parser
 
 
@@ -199,6 +217,8 @@ def main() -> int:
                     f"Error: Commit mode '{args.commit_mode}' is not yet implemented."
                 )
                 return 1
+        elif args.command == "implement":
+            return execute_implement(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")

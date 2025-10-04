@@ -15,7 +15,7 @@ import pytest
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
     from mcp_coder.cli.commands.implement import (
-        execute_implement,  # type: ignore[import-not-found]
+        execute_implement,
     )
 
     IMPLEMENT_MODULE_AVAILABLE = True
@@ -279,11 +279,10 @@ class TestImplementCommandIntegration:
 class TestImplementCommandError:
     """Test error handling scenarios for implement command."""
 
-    def test_implement_command_not_implemented_yet(self) -> None:
-        """Test that implement command is not yet implemented in main CLI.
+    def test_implement_command_is_implemented(self) -> None:
+        """Test that implement command is now implemented in main CLI.
 
-        This test documents the current state - implement command should not exist yet.
-        When the implement command is added to main.py, this test should be updated.
+        This test verifies that the implement command has been successfully added to the CLI.
         """
         from mcp_coder.cli.main import create_parser
 
@@ -296,37 +295,41 @@ class TestImplementCommandError:
             if isinstance(action, argparse._SubParsersAction)
         ]
 
-        if subparsers_actions:
-            subparser = subparsers_actions[0]
-            # Check if 'implement' is in the choices
-            assert (
-                "implement" not in subparser.choices
-            ), "implement command should not be implemented yet in main.py"
-        else:
-            # No subparsers found, which is expected if implement is not added yet
-            pass
+        assert subparsers_actions, "No subparsers found in CLI parser"
 
-    @patch("sys.argv", ["mcp-coder", "implement"])
-    def test_implement_command_unknown_command_error(
-        self, capsys: pytest.CaptureFixture[str]
+        subparser = subparsers_actions[0]
+        # Check if 'implement' is in the choices
+        assert (
+            "implement" in subparser.choices
+        ), "implement command should be implemented in main.py"
+
+        # Verify the implement parser has the expected arguments
+        implement_parser = subparser.choices["implement"]
+
+        # Parse a test argument to verify structure
+        test_args = implement_parser.parse_args(["--llm-method", "claude_code_api"])
+        assert hasattr(test_args, "project_dir")
+        assert hasattr(test_args, "llm_method")
+        assert test_args.llm_method == "claude_code_api"
+
+    @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
+    @patch("sys.argv", ["mcp-coder", "implement", "--project-dir", "/nonexistent"])
+    def test_implement_command_with_invalid_project_dir(
+        self, mock_resolve_dir: Mock, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Test that unknown implement command shows appropriate error.
+        """Test that implement command with invalid project directory shows appropriate error.
 
-        This test verifies the current behavior when implement command is not yet implemented.
+        This test verifies error handling when implement command is called with invalid arguments.
         """
         from mcp_coder.cli.main import main
+
+        # Mock resolve_project_dir to raise SystemExit for invalid path
+        mock_resolve_dir.side_effect = SystemExit(1)
 
         with pytest.raises(SystemExit) as exc_info:
             main()
 
-        # argparse exits with code 2 for invalid arguments
-        assert exc_info.value.code == 2
+        # Should exit with code 1 for invalid project directory
+        assert exc_info.value.code == 1
 
-        captured = capsys.readouterr()
-        captured_err: str = captured.err or ""
-        # Check that error mentions invalid choice or unknown command
-        assert (
-            "implement" in captured_err
-            or "invalid choice" in captured_err
-            or "unrecognized arguments" in captured_err
-        )
+        mock_resolve_dir.assert_called_once_with("/nonexistent")
