@@ -48,14 +48,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 3
 
 ### Step 4: Update CLI Prompt Command
-- [ ] Add import for shared CLI utility in `src/mcp_coder/cli/commands/prompt.py`
-- [ ] Update `execute_prompt()` to use shared utility
-- [ ] Remove direct import of `parse_llm_method`
-- [ ] Update tests in `tests/cli/commands/test_prompt.py`
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check and fix all issues
-- [ ] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 4
+- [x] Add import for shared CLI utility in `src/mcp_coder/cli/commands/prompt.py`
+- [x] Update `execute_prompt()` to use shared utility
+- [x] Remove direct import of `parse_llm_method`
+- [x] Update tests in `tests/cli/commands/test_prompt.py`
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check and fix all issues
+- [x] Run mypy check and fix all issues
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Update Workflow Layer
 - [ ] Update `src/mcp_coder/cli/commands/implement.py` to use shared utility
