@@ -35,13 +35,13 @@ from pathlib import Path
 from typing import Any, Optional
 
 from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
-from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.llm.providers.claude.claude_code_api import (
     ask_claude_code_api_detailed_sync,
 )
+from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import (
     commit_all_changes,
@@ -655,13 +655,19 @@ Mypy fix generated on: {datetime.now().isoformat()}
         return False
 
 
-def process_single_task(project_dir: Path, llm_method: str) -> bool:
-    """Process a single implementation task. Returns True if successful, False if failed."""
+def process_single_task(project_dir: Path, llm_method: str) -> tuple[bool, str]:
+    """Process a single implementation task. 
+    
+    Returns:
+        Tuple of (success, reason) where:
+        - success: True if task completed successfully
+        - reason: 'completed' | 'no_tasks' | 'error'
+    """
     # Get next incomplete task
     next_task = get_next_task(project_dir)
     if not next_task:
         log_step("No incomplete tasks found")
-        return False
+        return False, 'no_tasks'
     
     # Step 3: Get implementation prompt template
     logger.debug("Loading implementation prompt template...")
@@ -669,7 +675,7 @@ def process_single_task(project_dir: Path, llm_method: str) -> bool:
         prompt_template = get_prompt(str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker")
     except Exception as e:
         logger.error(f"Error loading prompt template: {e}")
-        return False
+        return False, 'error'
     
     # Step 4: Call LLM with prompt and capture comprehensive data
     log_step("Calling LLM for implementation...")
@@ -690,13 +696,13 @@ Please implement this task step by step."""
             logger.debug(f"Response was: {repr(response)}")
             if comprehensive_data:
                 logger.debug(f"Comprehensive data keys: {list(comprehensive_data.keys())}")
-            return False
+            return False, 'error'
         
         log_step("LLM response received successfully")
     
     except Exception as e:
         logger.error(f"Error calling LLM: {e}")
-        return False
+        return False, 'error'
     
     # Step 5: Extract step number and save initial implementation conversation
     try:
@@ -721,7 +727,7 @@ Generated on: {datetime.now().isoformat()}"""
         
     except Exception as e:
         logger.error(f"Error saving initial conversation: {e}")
-        return False
+        return False, 'error'
     
     # Step 6: Check if any files were actually changed
     try:
@@ -732,10 +738,10 @@ Generated on: {datetime.now().isoformat()}"""
             logger.warning(f"No files were changed for task: {next_task}")
             logger.warning("This might indicate the task is already complete or the LLM didn't make changes")
             logger.warning("Skipping commit/push for this task")
-            return True  # Consider it successful but skip commit
+            return True, 'completed'  # Consider it successful but skip commit
     except Exception as e:
         logger.error(f"Error checking file changes: {e}")
-        return False
+        return False, 'error'
     
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
     if not check_and_fix_mypy(project_dir, step_num, llm_method):
@@ -743,18 +749,18 @@ Generated on: {datetime.now().isoformat()}"""
     
     # Step 8: Run formatters
     if not run_formatters(project_dir):
-        return False
+        return False, 'error'
     
     # Step 9: Commit changes
     if not commit_changes(project_dir):
-        return False
+        return False, 'error'
     
     # Step 10: Push changes to remote
     if not push_changes(project_dir):
-        return False
+        return False, 'error'
     
     log_step(f"Task completed successfully: {next_task}")
-    return True
+    return True, 'completed'
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -866,11 +872,20 @@ def main() -> None:
     
     # Step 4: Process all incomplete tasks in a loop
     completed_tasks = 0
+    error_occurred = False
+    
     while True:
-        success = process_single_task(project_dir, args.llm_method)
+        success, reason = process_single_task(project_dir, args.llm_method)
+        
         if not success:
-            # No more tasks or error occurred
-            break
+            if reason == 'no_tasks':
+                # Legitimate completion - no more tasks
+                break
+            elif reason == 'error':
+                # Error occurred during task processing
+                error_occurred = True
+                logger.error("Task processing failed - stopping workflow")
+                break
         
         completed_tasks += 1
         log_step(f"Completed {completed_tasks} task(s). Checking for more...")
@@ -878,8 +893,14 @@ def main() -> None:
         # Show updated progress after each task
         log_progress_summary(project_dir)
     
-    # Step 5: Show final progress summary
-    if completed_tasks > 0:
+    # Step 5: Show final progress summary with appropriate messaging
+    if error_occurred:
+        log_step(f"Workflow stopped due to error after processing {completed_tasks} task(s).")
+        if completed_tasks > 0:
+            log_step("\nProgress before error:")
+            log_progress_summary(project_dir)
+        sys.exit(1)
+    elif completed_tasks > 0:
         log_step(f"Implement workflow completed successfully! Processed {completed_tasks} task(s).")
         log_step("\nFinal Progress:")
         log_progress_summary(project_dir)
