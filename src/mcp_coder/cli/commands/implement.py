@@ -11,6 +11,7 @@ from pathlib import Path
 
 from ...workflows.implement.core import run_implement_workflow
 from ...workflows.utils import resolve_project_dir
+from ..utils import parse_llm_method_from_args
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +33,11 @@ def execute_implement(args: argparse.Namespace) -> int:
         # Resolve project directory with validation
         project_dir = resolve_project_dir(args.project_dir)
 
+        # Parse LLM method using shared utility
+        provider, method = parse_llm_method_from_args(args.llm_method)
+
         # Run the implement workflow
-        return run_implement_workflow(project_dir, args.llm_method)
+        return run_implement_workflow(project_dir, provider, method)
 
     except KeyboardInterrupt:
         print("Operation cancelled by user.")

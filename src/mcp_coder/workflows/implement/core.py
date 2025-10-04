@@ -10,7 +10,6 @@ from typing import Optional
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.interface import ask_llm
-from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations import commit_all_changes, get_full_status
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
@@ -30,12 +29,13 @@ PR_INFO_DIR = "pr_info"
 logger = logging.getLogger(__name__)
 
 
-def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
+def prepare_task_tracker(project_dir: Path, provider: str, method: str) -> bool:
     """Prepare task tracker by populating it if it has no implementation steps.
 
     Args:
         project_dir: Path to the project directory
-        llm_method: LLM method to use for task tracker generation
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'cli' or 'api')
 
     Returns:
         bool: True if task tracker is ready (already had tasks or successfully updated), False on error
@@ -68,7 +68,6 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
         )
 
         # Call LLM with the prompt
-        provider, method = parse_llm_method(llm_method)
 
         response = ask_llm(
             prompt_template, provider=provider, method=method, timeout=300
@@ -192,12 +191,13 @@ def log_progress_summary(project_dir: Path) -> None:
         logger.debug(f"Could not generate progress summary: {e}")
 
 
-def run_implement_workflow(project_dir: Path, llm_method: str) -> int:
+def run_implement_workflow(project_dir: Path, provider: str, method: str) -> int:
     """Main workflow orchestration function - processes all implementation tasks in sequence.
 
     Args:
         project_dir: Path to the project directory
-        llm_method: LLM method to use ('claude_code_cli' or 'claude_code_api')
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'cli' or 'api')
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -219,7 +219,7 @@ def run_implement_workflow(project_dir: Path, llm_method: str) -> int:
         return 1
 
     # Step 2: Prepare task tracker if needed
-    if not prepare_task_tracker(project_dir, llm_method):
+    if not prepare_task_tracker(project_dir, provider, method):
         return 1
 
     # Step 3: Show initial progress summary
@@ -230,7 +230,7 @@ def run_implement_workflow(project_dir: Path, llm_method: str) -> int:
     error_occurred = False
 
     while True:
-        success, reason = process_single_task(project_dir, llm_method)
+        success, reason = process_single_task(project_dir, provider, method)
 
         if not success:
             if reason == "no_tasks":

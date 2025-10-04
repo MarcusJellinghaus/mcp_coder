@@ -86,7 +86,7 @@ class TestPrepareTaskTracker:
 
     def test_prepare_task_tracker_no_steps_dir(self, tmp_path: Path) -> None:
         """Test prepare_task_tracker when steps directory doesn't exist."""
-        result = prepare_task_tracker(tmp_path, "claude_code_cli")
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
         assert result is False
 
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
@@ -100,7 +100,7 @@ class TestPrepareTaskTracker:
 
         mock_has_tasks.return_value = True
 
-        result = prepare_task_tracker(tmp_path, "claude_code_cli")
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
 
         assert result is True
         mock_has_tasks.assert_called_once_with(tmp_path)
@@ -109,12 +109,10 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
-    @patch("mcp_coder.workflows.implement.core.parse_llm_method")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     def test_prepare_task_tracker_success(
         self,
         mock_get_prompt: MagicMock,
-        mock_parse_llm: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
@@ -132,7 +130,6 @@ class TestPrepareTaskTracker:
             True,
         ]  # First call: no tasks, second: has tasks
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_parse_llm.return_value = ("claude", "cli")
         mock_ask_llm.return_value = "LLM updated the task tracker"
         mock_get_status.return_value = {
             "staged": [],
@@ -141,12 +138,12 @@ class TestPrepareTaskTracker:
         }
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
 
-        result = prepare_task_tracker(tmp_path, "claude_code_cli")
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
 
         assert result is True
         assert mock_has_tasks.call_count == 2
         mock_get_prompt.assert_called_once()
-        mock_parse_llm.assert_called_once_with("claude_code_cli")
+        # No longer need to parse LLM method - using structured parameters
         mock_ask_llm.assert_called_once()
         mock_get_status.assert_called_once_with(tmp_path)
         mock_commit.assert_called_once()
@@ -154,12 +151,10 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
-    @patch("mcp_coder.workflows.implement.core.parse_llm_method")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     def test_prepare_task_tracker_empty_llm_response(
         self,
         mock_get_prompt: MagicMock,
-        mock_parse_llm: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
@@ -172,22 +167,19 @@ class TestPrepareTaskTracker:
 
         mock_has_tasks.return_value = False
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_parse_llm.return_value = ("claude", "cli")
         mock_ask_llm.return_value = ""  # Empty response
 
-        result = prepare_task_tracker(tmp_path, "claude_code_cli")
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
 
         assert result is False
 
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
-    @patch("mcp_coder.workflows.implement.core.parse_llm_method")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     def test_prepare_task_tracker_unexpected_files_changed(
         self,
         mock_get_prompt: MagicMock,
-        mock_parse_llm: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
@@ -200,7 +192,6 @@ class TestPrepareTaskTracker:
 
         mock_has_tasks.return_value = False
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_parse_llm.return_value = ("claude", "cli")
         mock_ask_llm.return_value = "LLM response"
         mock_get_status.return_value = {
             "staged": [],
@@ -208,7 +199,7 @@ class TestPrepareTaskTracker:
             "untracked": [],
         }
 
-        result = prepare_task_tracker(tmp_path, "claude_code_cli")
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
 
         assert result is False
 
@@ -216,12 +207,10 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
-    @patch("mcp_coder.workflows.implement.core.parse_llm_method")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     def test_prepare_task_tracker_still_no_tasks_after_update(
         self,
         mock_get_prompt: MagicMock,
-        mock_parse_llm: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
@@ -235,7 +224,6 @@ class TestPrepareTaskTracker:
 
         mock_has_tasks.return_value = False  # Always returns False
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_parse_llm.return_value = ("claude", "cli")
         mock_ask_llm.return_value = "LLM response"
         mock_get_status.return_value = {
             "staged": [],
@@ -243,7 +231,7 @@ class TestPrepareTaskTracker:
             "untracked": [],
         }
 
-        result = prepare_task_tracker(tmp_path, "claude_code_cli")
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
 
         assert result is False
 
@@ -251,12 +239,10 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
-    @patch("mcp_coder.workflows.implement.core.parse_llm_method")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     def test_prepare_task_tracker_commit_fails(
         self,
         mock_get_prompt: MagicMock,
-        mock_parse_llm: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
@@ -270,7 +256,6 @@ class TestPrepareTaskTracker:
 
         mock_has_tasks.side_effect = [False, True]
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_parse_llm.return_value = ("claude", "cli")
         mock_ask_llm.return_value = "LLM response"
         mock_get_status.return_value = {
             "staged": [],
@@ -279,7 +264,7 @@ class TestPrepareTaskTracker:
         }
         mock_commit.return_value = {"success": False, "error": "Commit failed"}
 
-        result = prepare_task_tracker(tmp_path, "claude_code_cli")
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
 
         assert result is False
 
@@ -294,7 +279,7 @@ class TestPrepareTaskTracker:
 
         mock_get_prompt.side_effect = Exception("Prompt loading error")
 
-        result = prepare_task_tracker(tmp_path, "claude_code_cli")
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
 
         assert result is False
 
@@ -428,7 +413,7 @@ class TestRunImplementWorkflow:
         # First call: success, second call: no tasks (completion)
         mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
 
-        result = run_implement_workflow(Path("/test/project"), "claude_code_cli")
+        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
 
         assert result == 0
         mock_check_git.assert_called_once()
@@ -445,7 +430,7 @@ class TestRunImplementWorkflow:
         """Test run_implement_workflow when git is not clean."""
         mock_check_git.return_value = False
 
-        result = run_implement_workflow(Path("/test/project"), "claude_code_cli")
+        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
 
         assert result == 1
         mock_check_git.assert_called_once()
@@ -459,7 +444,7 @@ class TestRunImplementWorkflow:
         mock_check_git.return_value = True
         mock_check_branch.return_value = False
 
-        result = run_implement_workflow(Path("/test/project"), "claude_code_cli")
+        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
 
         assert result == 1
         mock_check_git.assert_called_once()
@@ -479,7 +464,7 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = False
 
-        result = run_implement_workflow(Path("/test/project"), "claude_code_cli")
+        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
 
         assert result == 1
         mock_check_git.assert_called_once()
@@ -503,7 +488,7 @@ class TestRunImplementWorkflow:
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = False
 
-        result = run_implement_workflow(Path("/test/project"), "claude_code_cli")
+        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
 
         assert result == 1
         mock_prepare_tracker.assert_called_once()
@@ -530,7 +515,7 @@ class TestRunImplementWorkflow:
         mock_prepare_tracker.return_value = True
         mock_process_task.return_value = (False, "error")
 
-        result = run_implement_workflow(Path("/test/project"), "claude_code_cli")
+        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
 
         assert result == 1
         mock_process_task.assert_called_once()
@@ -557,7 +542,7 @@ class TestRunImplementWorkflow:
         mock_prepare_tracker.return_value = True
         mock_process_task.return_value = (False, "no_tasks")
 
-        result = run_implement_workflow(Path("/test/project"), "claude_code_cli")
+        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
 
         assert result == 0  # Should succeed with no tasks
         mock_process_task.assert_called_once()
@@ -591,7 +576,7 @@ class TestRunImplementWorkflow:
         ]
 
         with caplog.at_level("INFO"):
-            result = run_implement_workflow(Path("/test/project"), "claude_code_cli")
+            result = run_implement_workflow(Path("/test/project"), "claude", "cli")
 
         assert result == 1
         assert mock_process_task.call_count == 3
@@ -608,7 +593,6 @@ class TestIntegration:
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
-    @patch("mcp_coder.workflows.implement.core.parse_llm_method")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
@@ -619,7 +603,6 @@ class TestIntegration:
         mock_check_branch: MagicMock,
         mock_check_prereq: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_parse_llm: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
@@ -642,7 +625,6 @@ class TestIntegration:
         # Setup task tracker preparation
         mock_has_tasks.side_effect = [False, True]  # First no tasks, then has tasks
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_parse_llm.return_value = ("claude", "cli")
         mock_ask_llm.return_value = "LLM updated task tracker"
         mock_get_status.return_value = {
             "staged": [],
@@ -665,7 +647,7 @@ class TestIntegration:
         mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
 
         with caplog.at_level("INFO"):
-            result = run_implement_workflow(tmp_path, "claude_code_cli")
+            result = run_implement_workflow(tmp_path, "claude", "cli")
 
         # Verify successful completion
         assert result == 0
@@ -710,7 +692,7 @@ class TestIntegration:
         git_dir = tmp_path / ".git"
         git_dir.mkdir()
 
-        result = prepare_task_tracker(tmp_path, "claude_code_cli")
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
         assert result is False
 
         # Test progress logging without data

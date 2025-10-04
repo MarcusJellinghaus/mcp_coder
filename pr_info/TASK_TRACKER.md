@@ -58,14 +58,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 4
 
 ### Step 5: Update Workflow Layer
-- [ ] Update `src/mcp_coder/cli/commands/implement.py` to use shared utility
-- [ ] Update `src/mcp_coder/workflows/implement/core.py` function signature
-- [ ] Fix import violation in `src/mcp_coder/workflows/implement/task_processing.py`
-- [ ] Update function signatures to use structured parameters
-- [ ] Update tests for all modified files
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check and fix all issues
-- [ ] Run mypy check and fix all issues
+- [x] Update `src/mcp_coder/cli/commands/implement.py` to use shared utility
+- [x] Update `src/mcp_coder/workflows/implement/core.py` function signature
+- [x] Fix import violation in `src/mcp_coder/workflows/implement/task_processing.py`
+- [x] Update function signatures to use structured parameters
+- [x] Update tests for all modified files
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check and fix all issues
+- [x] Run mypy check and fix all issues
 - [ ] Prepare git commit message for Step 5
 
 ### Step 6: Final Integration Testing
