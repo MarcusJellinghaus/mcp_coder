@@ -62,6 +62,7 @@ from mcp_coder.workflow_utils.task_tracker import (
 # Constants
 PR_INFO_DIR = "pr_info"
 CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
+LLM_TIMEOUT_SECONDS = 1800  # 30 minutes - increased for complex prompts and long-running MCP tools
 # Note: PROMPTS_FILE_PATH imported from constants
 
 # Setup logger
@@ -383,8 +384,8 @@ def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: 
             logger.error(f"Current working directory: {os.getcwd()}")
             # Save timeout prompt for debugging
             logger.error(f"Timeout prompt saved to debug logs (first 500 chars): {prompt[:500]}")
-            logger.error(f"This may indicate: network issues, complex prompt, or insufficient timeout")
-            logger.error(f"Consider: checking network, simplifying prompt, or increasing timeout")
+            logger.error(f"This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout")
+            logger.error(f"Consider: checking network, simplifying prompt, waiting for MCP tools to complete, or increasing timeout")
             raise Exception(f"LLM request timed out after {timeout} seconds") from e
         except Exception as e:
             logger.error(f"Claude API call failed: {e}")
@@ -400,8 +401,8 @@ def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: 
             logger.error(f"Claude CLI call timed out after {timeout}s: {e}")
             logger.error(f"Prompt length: {len(prompt)} characters")
             logger.error(f"LLM method: {llm_method}")
-            logger.error(f"This may indicate: network issues, complex prompt, or insufficient timeout")
-            logger.error(f"Consider: checking network, simplifying prompt, or increasing timeout")
+            logger.error(f"This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout")
+            logger.error(f"Consider: checking network, simplifying prompt, waiting for MCP tools to complete, or increasing timeout")
             raise Exception(f"LLM request timed out after {timeout} seconds") from e
         except Exception as e:
             logger.error(f"Claude CLI call failed: {e}")
@@ -604,7 +605,7 @@ def check_and_fix_mypy(project_dir: Path, step_num: int, llm_method: str) -> boo
             
             # Call LLM for fixes with comprehensive data capture
             try:
-                fix_response, mypy_comprehensive_data = _call_llm_with_comprehensive_capture(mypy_prompt, llm_method, timeout=300)
+                fix_response, mypy_comprehensive_data = _call_llm_with_comprehensive_capture(mypy_prompt, llm_method, timeout=LLM_TIMEOUT_SECONDS)
                 
                 if not fix_response or not fix_response.strip():
                     logger.error("LLM returned empty response for mypy fixes")
@@ -680,8 +681,6 @@ def process_single_task(project_dir: Path, llm_method: str) -> tuple[bool, str]:
     # Step 4: Call LLM with prompt and capture comprehensive data
     log_step("Calling LLM for implementation...")
     try:
-        timeout = 900 # 600 might not be enough
-
         # Create the full prompt by combining template with task context
         full_prompt = f"""{prompt_template}
 
@@ -689,7 +688,7 @@ Current task from TASK_TRACKER.md: {next_task}
 
 Please implement this task step by step."""
         
-        response, comprehensive_data = _call_llm_with_comprehensive_capture(full_prompt, llm_method, timeout=timeout)
+        response, comprehensive_data = _call_llm_with_comprehensive_capture(full_prompt, llm_method, timeout=LLM_TIMEOUT_SECONDS)
         
         if not response or not response.strip():
             logger.error("LLM returned empty response")
