@@ -376,9 +376,13 @@ def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: 
             return response_text, detailed_response
             
         except subprocess.TimeoutExpired as e:
-            logger.error(f"Claude API call timed out after {timeout}s: {e}")
-            logger.error(f"Prompt length: {len(prompt)} characters")
+            duration = (datetime.now() - start_time).total_seconds() if 'start_time' in locals() else timeout
+            logger.error(f"Claude API call timed out after {timeout}s (actual: {duration:.1f}s): {e}")
+            logger.error(f"Prompt length: {len(prompt)} characters ({len(prompt.split())} words)")
             logger.error(f"LLM method: {llm_method}")
+            logger.error(f"Current working directory: {os.getcwd()}")
+            # Save timeout prompt for debugging
+            logger.error(f"Timeout prompt saved to debug logs (first 500 chars): {prompt[:500]}")
             logger.error(f"This may indicate: network issues, complex prompt, or insufficient timeout")
             logger.error(f"Consider: checking network, simplifying prompt, or increasing timeout")
             raise Exception(f"LLM request timed out after {timeout} seconds") from e
