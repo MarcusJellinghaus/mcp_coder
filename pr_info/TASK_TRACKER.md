@@ -28,10 +28,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 1
 
 ### Step 2: Implement Prerequisites Module with Tests
-- [ ] Create tests/workflows/implement/test_prerequisites.py (test-first approach)
-- [ ] Create src/mcp_coder/workflows/implement/prerequisites.py
-- [ ] Extract prerequisites logic with git status, branch checking, project validation
-- [ ] Run quality checks: pylint, pytest, mypy - and work on all issues found
+- [x] Create tests/workflows/implement/test_prerequisites.py (test-first approach)
+- [x] Create src/mcp_coder/workflows/implement/prerequisites.py
+- [x] Extract prerequisites logic with git status, branch checking, project validation
+- [x] Run quality checks: pylint, pytest, mypy - and work on all issues found
 - [ ] Prepare git commit message for Step 2
 
 ### Step 3: Implement Task Processing Module with Tests
