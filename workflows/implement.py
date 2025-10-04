@@ -28,6 +28,7 @@ import argparse
 import logging
 import os
 import re
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -358,26 +359,51 @@ def _call_llm_with_comprehensive_capture(prompt: str, llm_method: str, timeout: 
     if method == "api":
         # Use detailed API call to get comprehensive data
         try:
+            logger.info(f"Calling Claude API with {timeout}s timeout...")
+            logger.debug(f"Prompt preview: {prompt[:200]}{'...' if len(prompt) > 200 else ''}")
+            start_time = datetime.now()
             detailed_response = ask_claude_code_api_detailed_sync(prompt, timeout=timeout)
+            duration = (datetime.now() - start_time).total_seconds()
+            logger.info(f"Claude API call completed in {duration:.1f}s")
             
-            # Extract text response from detailed response
-            response_text = ""
-            if "response" in detailed_response and "content" in detailed_response["response"]:
-                for content_block in detailed_response["response"]["content"]:
-                    if content_block.get("type") == "text":
-                        response_text += content_block.get("text", "")
+            # Extract text response from detailed response structure
+            response_text = detailed_response.get("text", "")
+            
+            if not response_text:
+                logger.warning("Detailed API response had no text content")
+                logger.debug(f"Response structure: {list(detailed_response.keys())}")
             
             return response_text, detailed_response
             
+        except subprocess.TimeoutExpired as e:
+            logger.error(f"Claude API call timed out after {timeout}s: {e}")
+            logger.error(f"Prompt length: {len(prompt)} characters")
+            logger.error(f"LLM method: {llm_method}")
+            logger.error(f"This may indicate: network issues, complex prompt, or insufficient timeout")
+            logger.error(f"Consider: checking network, simplifying prompt, or increasing timeout")
+            raise Exception(f"LLM request timed out after {timeout} seconds") from e
         except Exception as e:
-            logger.warning(f"Failed to get detailed API response, falling back to simple call: {e}")
-            # Fall back to simple call
-            response_text = ask_llm(prompt, provider=provider, method=method, timeout=timeout)
-            return response_text, {}
+            logger.error(f"Claude API call failed: {e}")
+            # Don't fall back - we want to see the real error
+            raise Exception(f"LLM request failed: {e}") from e
     else:
         # CLI method - no comprehensive data available
-        response_text = ask_llm(prompt, provider=provider, method=method, timeout=timeout)
-        return response_text, {}
+        try:
+            logger.info(f"Calling Claude CLI with {timeout}s timeout...")
+            response_text = ask_llm(prompt, provider=provider, method=method, timeout=timeout)
+            return response_text, {}
+        except subprocess.TimeoutExpired as e:
+            logger.error(f"Claude CLI call timed out after {timeout}s: {e}")
+            logger.error(f"Prompt length: {len(prompt)} characters")
+            logger.error(f"LLM method: {llm_method}")
+            logger.error(f"This may indicate: network issues, complex prompt, or insufficient timeout")
+            logger.error(f"Consider: checking network, simplifying prompt, or increasing timeout")
+            raise Exception(f"LLM request timed out after {timeout} seconds") from e
+        except Exception as e:
+            logger.error(f"Claude CLI call failed: {e}")
+            logger.error(f"Prompt length: {len(prompt)} characters")
+            logger.error(f"LLM method: {llm_method}")
+            raise Exception(f"LLM request failed: {e}") from e
 
 
 def save_conversation_comprehensive(project_dir: Path, content: str, step_num: int, 
@@ -657,6 +683,9 @@ Please implement this task step by step."""
         
         if not response or not response.strip():
             logger.error("LLM returned empty response")
+            logger.debug(f"Response was: {repr(response)}")
+            if comprehensive_data:
+                logger.debug(f"Comprehensive data keys: {list(comprehensive_data.keys())}")
             return False
         
         log_step("LLM response received successfully")
