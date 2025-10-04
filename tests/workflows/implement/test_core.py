@@ -9,9 +9,9 @@ import pytest
 from mcp_coder.workflows.implement.core import (
     log_progress_summary,
     prepare_task_tracker,
-    resolve_project_dir,
     run_implement_workflow,
 )
+from mcp_coder.workflows.utils import resolve_project_dir
 
 
 class TestResolveProjectDir:
@@ -596,7 +596,7 @@ class TestRunImplementWorkflow:
         assert result == 1
         assert mock_process_task.call_count == 3
         # Check that it logged progress after completing tasks
-        assert "Completed 2 task(s)" in caplog.text
+        assert "Workflow stopped due to error after processing 2 task(s)" in caplog.text
 
 
 class TestIntegration:

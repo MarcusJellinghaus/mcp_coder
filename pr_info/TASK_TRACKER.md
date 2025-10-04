@@ -56,7 +56,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 5
 
 ### Step 6: Integration Testing and Cleanup
-- [ ] Run all code quality checks (pylint, pytest, mypy)
+- [x] Run all code quality checks (pylint, pytest, mypy)
 - [ ] Verify `mcp-coder implement` command works end-to-end
 - [ ] Delete workflows/implement.py and workflows/implement.bat
 - [ ] Update workflow exports in __init__.py files
