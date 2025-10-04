@@ -20,6 +20,12 @@ from .task_processing import (
     save_conversation,
     save_conversation_comprehensive,
 )
+from .core import (
+    log_progress_summary,
+    prepare_task_tracker,
+    resolve_project_dir,
+    run_implement_workflow,
+)
 
 __all__ = [
     "check_git_clean",
@@ -34,4 +40,8 @@ __all__ = [
     "run_formatters",
     "save_conversation",
     "save_conversation_comprehensive",
+    "log_progress_summary",
+    "prepare_task_tracker",
+    "resolve_project_dir",
+    "run_implement_workflow",
 ]
