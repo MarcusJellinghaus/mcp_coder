@@ -62,7 +62,7 @@ from mcp_coder.workflow_utils.task_tracker import (
 # Constants
 PR_INFO_DIR = "pr_info"
 CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
-LLM_TIMEOUT_SECONDS = 1800  # 30 minutes - increased for complex prompts and long-running MCP tools
+LLM_IMPLEMENTATION_TIMEOUT_SECONDS = 1800  # 30 minutes - increased for complex prompts and long-running MCP tools
 # Note: PROMPTS_FILE_PATH imported from constants
 
 # Setup logger
@@ -605,7 +605,7 @@ def check_and_fix_mypy(project_dir: Path, step_num: int, llm_method: str) -> boo
             
             # Call LLM for fixes with comprehensive data capture
             try:
-                fix_response, mypy_comprehensive_data = _call_llm_with_comprehensive_capture(mypy_prompt, llm_method, timeout=LLM_TIMEOUT_SECONDS)
+                fix_response, mypy_comprehensive_data = _call_llm_with_comprehensive_capture(mypy_prompt, llm_method, timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS)
                 
                 if not fix_response or not fix_response.strip():
                     logger.error("LLM returned empty response for mypy fixes")
@@ -688,7 +688,7 @@ Current task from TASK_TRACKER.md: {next_task}
 
 Please implement this task step by step."""
         
-        response, comprehensive_data = _call_llm_with_comprehensive_capture(full_prompt, llm_method, timeout=LLM_TIMEOUT_SECONDS)
+        response, comprehensive_data = _call_llm_with_comprehensive_capture(full_prompt, llm_method, timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS)
         
         if not response or not response.strip():
             logger.error("LLM returned empty response")

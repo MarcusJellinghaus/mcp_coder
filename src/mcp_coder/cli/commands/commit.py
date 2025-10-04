@@ -6,6 +6,9 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
+# Constants
+LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes for commit message generation
+
 from ...constants import PROMPTS_FILE_PATH
 from ...llm.interface import ask_llm
 from ...llm.providers.claude.claude_code_api import ClaudeAPIError
@@ -150,7 +153,7 @@ def generate_commit_message_with_llm(
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
         logger.debug("Calling LLM for auto generated commit message...")
         provider, method = parse_llm_method(llm_method)
-        response = ask_llm(full_prompt, provider=provider, method=method, timeout=30)
+        response = ask_llm(full_prompt, provider=provider, method=method, timeout=LLM_COMMIT_TIMEOUT_SECONDS)
 
         if not response or not response.strip():
             error_msg = "LLM returned empty or null response. The AI service may be unavailable or overloaded. Try again in a moment."
