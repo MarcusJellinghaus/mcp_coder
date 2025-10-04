@@ -35,10 +35,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 2
 
 ### Step 3: Implement Task Processing Module with Tests
-- [ ] Create tests/workflows/implement/test_task_processing.py (test-first approach)
-- [ ] Create src/mcp_coder/workflows/implement/task_processing.py
-- [ ] Extract task processing logic with LLM integration, mypy fixes, formatting
-- [ ] Run quality checks: pylint, pytest, mypy - and work on all issues found
+- [x] Create tests/workflows/implement/test_task_processing.py (test-first approach)
+- [x] Create src/mcp_coder/workflows/implement/task_processing.py
+- [x] Extract task processing logic with LLM integration, mypy fixes, formatting
+- [x] Run quality checks: pylint, pytest, mypy - and work on all issues found
 - [ ] Prepare git commit message for Step 3
 
 ### Step 4: Implement Core Workflow Orchestration with Tests
