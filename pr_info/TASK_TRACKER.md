@@ -20,3 +20,68 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### Step 1: Create CLI Utility Module
+- [ ] Create `src/mcp_coder/cli/utils.py` with `parse_llm_method_from_args()` function
+- [ ] Create comprehensive tests in `tests/cli/test_utils.py`
+- [ ] Run pylint check and fix all issues
+- [ ] Run pytest check and fix all issues
+- [ ] Run mypy check and fix all issues
+- [ ] Prepare git commit message for Step 1
+
+### Step 2: Create Commit Operations Module
+- [ ] Create `src/mcp_coder/utils/commit_operations.py` with moved `generate_commit_message_with_llm()` function
+- [ ] Create comprehensive tests in `tests/utils/test_commit_operations.py`
+- [ ] Run pylint check and fix all issues
+- [ ] Run pytest check and fix all issues
+- [ ] Run mypy check and fix all issues
+- [ ] Prepare git commit message for Step 2
+
+### Step 3: Update CLI Commit Command
+- [ ] Remove `generate_commit_message_with_llm()` function from `src/mcp_coder/cli/commands/commit.py`
+- [ ] Add imports for shared utility and moved function
+- [ ] Update `execute_commit_auto()` to use new parameter flow
+- [ ] Update tests in `tests/cli/commands/test_commit.py`
+- [ ] Run pylint check and fix all issues
+- [ ] Run pytest check and fix all issues
+- [ ] Run mypy check and fix all issues
+- [ ] Prepare git commit message for Step 3
+
+### Step 4: Update CLI Prompt Command
+- [ ] Add import for shared CLI utility in `src/mcp_coder/cli/commands/prompt.py`
+- [ ] Update `execute_prompt()` to use shared utility
+- [ ] Remove direct import of `parse_llm_method`
+- [ ] Update tests in `tests/cli/commands/test_prompt.py`
+- [ ] Run pylint check and fix all issues
+- [ ] Run pytest check and fix all issues
+- [ ] Run mypy check and fix all issues
+- [ ] Prepare git commit message for Step 4
+
+### Step 5: Update Workflow Layer
+- [ ] Update `src/mcp_coder/cli/commands/implement.py` to use shared utility
+- [ ] Update `src/mcp_coder/workflows/implement/core.py` function signature
+- [ ] Fix import violation in `src/mcp_coder/workflows/implement/task_processing.py`
+- [ ] Update function signatures to use structured parameters
+- [ ] Update tests for all modified files
+- [ ] Run pylint check and fix all issues
+- [ ] Run pytest check and fix all issues
+- [ ] Run mypy check and fix all issues
+- [ ] Prepare git commit message for Step 5
+
+### Step 6: Final Integration Testing
+- [ ] Run comprehensive test suite for all modified modules
+- [ ] Verify architecture has no import violations
+- [ ] Test all CLI commands manually with both LLM methods
+- [ ] Validate parameter flow works end-to-end
+- [ ] Check error handling across the system
+- [ ] Confirm all success criteria are met
+- [ ] Run pylint check and fix all issues
+- [ ] Run pytest check and fix all issues
+- [ ] Run mypy check and fix all issues
+- [ ] Prepare git commit message for Step 6
+
+## Pull Request
+- [ ] Review all implementation steps completed
+- [ ] Create comprehensive PR description summarizing changes
+- [ ] Verify all tests pass and code quality checks are clean
+- [ ] Ensure no functional regressions introduced
