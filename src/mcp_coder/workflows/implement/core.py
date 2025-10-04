@@ -116,12 +116,16 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
 
     try:
         # Get the Task Tracker Update Prompt
-        prompt_template = get_prompt(str(PROMPTS_FILE_PATH), "Task Tracker Update Prompt")
+        prompt_template = get_prompt(
+            str(PROMPTS_FILE_PATH), "Task Tracker Update Prompt"
+        )
 
         # Call LLM with the prompt
         provider, method = parse_llm_method(llm_method)
 
-        response = ask_llm(prompt_template, provider=provider, method=method, timeout=300)
+        response = ask_llm(
+            prompt_template, provider=provider, method=method, timeout=300
+        )
 
         if not response or not response.strip():
             logger.error("LLM returned empty response for task tracker update")
@@ -154,11 +158,15 @@ def prepare_task_tracker(project_dir: Path, llm_method: str) -> bool:
             return False
 
         # Commit the changes
-        commit_message = "TASK_TRACKER.md with implementation steps and PR tasks updated"
+        commit_message = (
+            "TASK_TRACKER.md with implementation steps and PR tasks updated"
+        )
         commit_result = commit_all_changes(commit_message, project_dir)
 
         if not commit_result["success"]:
-            logger.error(f"Error committing task tracker changes: {commit_result['error']}")
+            logger.error(
+                f"Error committing task tracker changes: {commit_result['error']}"
+            )
             return False
 
         logger.info("Task tracker updated and committed successfully")
@@ -202,7 +210,9 @@ def log_progress_summary(project_dir: Path) -> None:
             assert isinstance(total_val, int), "total should be int"
             assert isinstance(completed_val, int), "completed should be int"
             assert isinstance(incomplete_val, int), "incomplete should be int"
-            assert isinstance(incomplete_list_val, list), "incomplete_tasks should be list"
+            assert isinstance(
+                incomplete_list_val, list
+            ), "incomplete_tasks should be list"
 
             # Now we can use the narrowed types
             total = total_val
@@ -293,13 +303,17 @@ def run_implement_workflow(project_dir: Path, llm_method: str) -> int:
 
     # Step 5: Show final progress summary with appropriate messaging
     if error_occurred:
-        logger.info(f"Workflow stopped due to error after processing {completed_tasks} task(s).")
+        logger.info(
+            f"Workflow stopped due to error after processing {completed_tasks} task(s)."
+        )
         if completed_tasks > 0:
             logger.info("\nProgress before error:")
             log_progress_summary(project_dir)
         return 1
     elif completed_tasks > 0:
-        logger.info(f"Implement workflow completed successfully! Processed {completed_tasks} task(s).")
+        logger.info(
+            f"Implement workflow completed successfully! Processed {completed_tasks} task(s)."
+        )
         logger.info("\nFinal Progress:")
         log_progress_summary(project_dir)
     else:

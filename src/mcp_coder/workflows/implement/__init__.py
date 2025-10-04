@@ -4,6 +4,12 @@ This package contains the implementation workflow components for automated
 code development and refactoring tasks.
 """
 
+from .core import (
+    log_progress_summary,
+    prepare_task_tracker,
+    resolve_project_dir,
+    run_implement_workflow,
+)
 from .prerequisites import (
     check_git_clean,
     check_main_branch,
@@ -19,12 +25,6 @@ from .task_processing import (
     run_formatters,
     save_conversation,
     save_conversation_comprehensive,
-)
-from .core import (
-    log_progress_summary,
-    prepare_task_tracker,
-    resolve_project_dir,
-    run_implement_workflow,
 )
 
 __all__ = [
