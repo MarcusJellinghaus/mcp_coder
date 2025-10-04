@@ -1,127 +1,144 @@
-# Step 3: Fix Workflow Import and Parameter Threading
+# Step 3: Update CLI Commit Command
 
 ## Objective
-Update the implement workflow to import from utils (not CLI) and pass the `llm_method` parameter correctly.
+Update the CLI commit command to use the shared CLI utility and the moved commit function with structured parameters.
 
 ## WHERE
-- **Modify**: `src/mcp_coder/workflows/implement/task_processing.py`
-- **Function**: `commit_changes()` around line 545
+- **Modify**: `src/mcp_coder/cli/commands/commit.py`
+- **Update Tests**: `tests/cli/commands/test_commit.py`
 
 ## WHAT
-### Import to Change
+### Function to Remove
 ```python
-# OLD (importing from CLI - VIOLATION):
-from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
-
-# NEW (importing from utils - CORRECT):
-from mcp_coder.utils.commit_operations import generate_commit_message_with_llm
+def generate_commit_message_with_llm(
+    project_dir: Path, llm_method: str = "claude_code_api"
+) -> Tuple[bool, str, Optional[str]]:
+    # Remove this entire function - it's now in utils
 ```
 
-### Function Call to Fix
+### Imports to Add
 ```python
-# OLD (missing llm_method parameter):
-def commit_changes(project_dir: Path) -> bool:
-    success, commit_message, error = generate_commit_message_with_llm(project_dir)
-
-# NEW (passing llm_method parameter):
-def commit_changes(project_dir: Path, llm_method: str = "claude_code_api") -> bool:
-    success, commit_message, error = generate_commit_message_with_llm(project_dir, llm_method)
+from ..utils import parse_llm_method_from_args
+from ...utils.commit_operations import generate_commit_message_with_llm
 ```
 
-### Caller to Update
+### Function Call Updates
 ```python
-# Function that calls commit_changes() - around line 500+
-def process_single_task(project_dir: Path, llm_method: str) -> tuple[bool, str]:
-    # Update this call:
-    if not commit_changes(project_dir, llm_method):  # Pass llm_method
-        return False, "error"
+# OLD (string parameter):
+success, commit_message, error = generate_commit_message_with_llm(
+    project_dir, args.llm_method
+)
+
+# NEW (structured parameters):
+provider, method = parse_llm_method_from_args(args.llm_method)
+success, commit_message, error = generate_commit_message_with_llm(
+    project_dir, provider, method
+)
+```
+
+### Helper Functions to Keep
+```python
+def parse_llm_commit_response(response: str) -> Tuple[str, Optional[str]]
+def validate_git_repository(project_dir: Path) -> Tuple[bool, Optional[str]]
+def execute_commit_auto(args: argparse.Namespace) -> int
+def execute_commit_clipboard(args: argparse.Namespace) -> int
+def get_commit_message_from_clipboard() -> Tuple[bool, str, Optional[str]]
 ```
 
 ## HOW
 ### Integration Points
 ```python
-# Update import at top of file
-from mcp_coder.utils.commit_operations import generate_commit_message_with_llm
+# Remove existing function definition (~80 lines)
+# Add imports at top of file
+from ..utils import parse_llm_method_from_args
+from ...utils.commit_operations import generate_commit_message_with_llm
 
-# Update function signature
-def commit_changes(project_dir: Path, llm_method: str = "claude_code_api") -> bool:
-
-# Update function call in process_single_task()
-if not commit_changes(project_dir, llm_method):
+# Update function calls in execute_commit_auto()
+provider, method = parse_llm_method_from_args(args.llm_method)
+success, commit_message, error = generate_commit_message_with_llm(
+    project_dir, provider, method
+)
 ```
 
-### Threading llm_method Parameter
+### Test Updates
 ```python
-# Parameter flow:
-process_single_task(project_dir, llm_method)
-    ↓ passes llm_method to
-commit_changes(project_dir, llm_method) 
-    ↓ passes llm_method to
-generate_commit_message_with_llm(project_dir, llm_method)
+# Update mock patch paths in tests
+# OLD:
+@patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+
+# NEW:
+@patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+@patch("mcp_coder.cli.utils.parse_llm_method_from_args")
 ```
 
 ## ALGORITHM
 ```python
-# Parameter threading fix:
-1. Add llm_method parameter to commit_changes() signature
-2. Pass llm_method from process_single_task() to commit_changes()
-3. Pass llm_method from commit_changes() to generate_commit_message_with_llm()
-4. Update import from CLI to utils
-5. Verify parameter flows correctly through call chain
+# CLI integration fix:
+1. Remove function definition from cli/commands/commit.py (~80 lines)
+2. Add imports for CLI utility and utils module
+3. Update execute_commit_auto() to use shared utility for parameter conversion
+4. Update function call to use structured parameters
+5. Update all test mock paths for moved function
+6. Verify all CLI behavior remains identical
 ```
 
 ## DATA
-### Function Signatures
-```python
-# Before:
-def commit_changes(project_dir: Path) -> bool:
+### Files Modified
+- Remove ~80 lines from `cli/commands/commit.py` (function definition)
+- Add 2 import lines to `cli/commands/commit.py`
+- Update ~5 mock patch decorators in test files
+- Update function call in `execute_commit_auto()`
 
-# After:
-def commit_changes(project_dir: Path, llm_method: str = "claude_code_api") -> bool:
+### Parameter Flow Changes
+```python
+# Before (string parameter):
+args.llm_method → generate_commit_message_with_llm(project_dir, args.llm_method)
+
+# After (structured parameters):
+args.llm_method → parse_llm_method_from_args() → (provider, method) → 
+generate_commit_message_with_llm(project_dir, provider, method)
 ```
 
-### Function Calls
+### Import Structure
 ```python
-# In process_single_task():
-# Before:
-if not commit_changes(project_dir):
+# New imports in cli/commands/commit.py:
+from ..utils import parse_llm_method_from_args
+from ...utils.commit_operations import generate_commit_message_with_llm
 
-# After:  
-if not commit_changes(project_dir, llm_method):
-```
-
-### Import Changes
-```python
-# Remove:
-from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
-
-# Add:
-from mcp_coder.utils.commit_operations import generate_commit_message_with_llm
+# Dependencies (unchanged):
+from ...utils.git_operations import (
+    commit_staged_files,
+    get_git_diff_for_commit,
+    is_git_repository,
+    stage_all_changes,
+)
 ```
 
 ## LLM Prompt for Implementation
 
 ```
-You are implementing Step 3 of the commit auto function architecture fix.
+You are implementing Step 3 of the LLM parameter architecture improvement.
 
-Reference the summary.md for full context. Your task is to fix the workflow import violation and parameter threading in `src/mcp_coder/workflows/implement/task_processing.py`:
+Reference the summary.md for full context. Your task is to update the CLI commit command in `src/mcp_coder/cli/commands/commit.py`:
 
-1. Change the import from CLI to utils:
-   - Remove: `from mcp_coder.cli.commands.commit import generate_commit_message_with_llm`
-   - Add: `from mcp_coder.utils.commit_operations import generate_commit_message_with_llm`
+1. Remove the `generate_commit_message_with_llm()` function since it was moved to utils in Step 2.
 
-2. Fix the `commit_changes()` function to accept and pass `llm_method`:
-   - Add `llm_method: str = "claude_code_api"` parameter
-   - Pass it to `generate_commit_message_with_llm(project_dir, llm_method)`
+2. Add imports for the shared utility and moved function:
+   - `from ..utils import parse_llm_method_from_args`
+   - `from ...utils.commit_operations import generate_commit_message_with_llm`
 
-3. Update the caller `process_single_task()` to pass `llm_method`:
-   - Change `commit_changes(project_dir)` to `commit_changes(project_dir, llm_method)`
+3. Update `execute_commit_auto()` to use the new parameter flow:
+   - Parse: `provider, method = parse_llm_method_from_args(args.llm_method)`
+   - Call: `generate_commit_message_with_llm(project_dir, provider, method)`
 
-This fixes the architectural violation (workflows importing CLI) and ensures the user's chosen LLM method is respected in workflows.
+4. Update test files to mock the function from its new location and add mock for CLI utility.
+
+The goal is to make the CLI use the shared utility and moved function transparently. All CLI behavior must remain identical.
 
 Key requirements:
-- Remove CLI import, add utils import
-- Thread llm_method parameter through the call chain
-- Maintain backward compatibility with default parameter
-- No other behavior changes
+- Remove only the function definition, keep all other helper functions
+- Use shared CLI utility for parameter conversion
+- Update function calls to use structured parameters
+- Update all test mock paths
+- All existing tests must pass with no behavior changes
 ```

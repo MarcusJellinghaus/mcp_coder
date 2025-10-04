@@ -2,34 +2,46 @@
 
 ## Decisions Made During Plan Review
 
-### 1. Integration Testing Strategy
-**Decision**: Use unit tests only, no end-to-end integration tests  
-**When Discussed**: When I asked about adding integration tests to verify CLI → workflow parameter flow  
-**Your Response**: "Just unit tests"
+### 1. Broader Pattern Analysis
+**Decision**: Scan everything that is part of CLI (Option A from the scan results)  
+**When Discussed**: When I asked about analyzing the entire codebase for similar architectural violations  
+**Your Response**: "Scan everything that is part of CLI"
+**Result**: Found only the single violation we're already addressing
 
-### 2. Performance Validation
-**Decision**: No performance testing needed  
-**When Discussed**: When I asked about validating performance impact of moving the function  
-**Your Response**: "A" (No performance testing - function move is trivial)
+### 2. LLM Method Parameter Architecture
+**Decision**: Change to separate `provider: str, method: str` parameters  
+**When Discussed**: When I asked about keeping current function signature vs changing to separate parameters  
+**Your Response**: "B) Change to separate `provider: str, method: str` parameters"  
+**Additional**: "Keep llm_method preferably on the cli layer, and offer there a small shared utility (also to be used by prompt, implement)"
 
-### 3. Documentation Enhancement
-**Decision**: No additional documentation beyond commit messages and code changes  
-**When Discussed**: When I asked about adding ADR or code comments to document the architectural fix  
-**Your Response**: "A" (No additional documentation)
+### 3. Shared CLI Utility Location
+**Decision**: Create `src/mcp_coder/cli/utils.py` for CLI-specific utilities  
+**When Discussed**: When I asked where to put the shared CLI utility function  
+**Your Response**: "A" (Create new cli/utils.py file)
 
-### 4. Workflow Analysis Scope
-**Decision**: Focus only on implement workflow - create_PR workflow doesn't need changes  
-**When Discussed**: When you asked me to "review implementation and workflows\create_pr - both of them call commit make sure that they can call commit"  
-**Analysis Result**: create_PR workflow uses `commit_all_changes()` directly with hardcoded messages, no architectural violation  
-**Your Response**: "Yes," (confirming this addresses your concern)
+### 4. Implementation Scope Expansion
+**Decision**: Expand scope to update all CLI commands for consistency  
+**When Discussed**: When I asked about expanding the project to include updating all CLI commands  
+**Your Response**: "A - which other cli commands need to be changed, and how?"
 
-### 5. Step Structure
-**Decision**: Keep current 4-step approach for better validation  
-**When Discussed**: When I asked about reducing the 4 steps to fewer steps  
-**Your Response**: "A" (Keep current 4-step approach)
+### 5. Workflow Function Signatures
+**Decision**: Update all workflow functions to use `provider, method` parameters  
+**When Discussed**: When I asked whether to update all workflow functions for consistency  
+**Your Response**: "A" (Yes - update all workflow functions for consistency)
 
-## Implementation Approach Confirmed
-- TDD approach with comprehensive unit tests
-- Incremental 4-step implementation with validation at each stage
-- Focus on architectural fix without behavioral changes
-- Maintain backward compatibility throughout
+### 6. Implementation Strategy
+**Decision**: Break into 6-8 smaller steps for better validation at each stage  
+**When Discussed**: When I asked about implementation strategy given the expanded scope  
+**Your Response**: "B" (Break into 6-8 smaller steps)
+
+### 7. Final Step Granularity
+**Decision**: Keep the 6-step approach for good balance of safety and progress  
+**When Discussed**: When I asked about the step granularity  
+**Your Response**: "A" (Keep this 6-step approach)
+
+## Scope Evolution
+- Started as simple function move to fix architectural violation
+- Evolved to comprehensive parameter architecture improvement
+- Now affects CLI commands, workflows, and utils layers
+- Creates shared utilities and eliminates code duplication
+- Maintains backward compatibility while improving internal architecture

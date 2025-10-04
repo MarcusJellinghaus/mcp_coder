@@ -1,119 +1,119 @@
-# Step 2: Update CLI Command to Use New Module
+# Step 2: Create Commit Operations Module
 
 ## Objective
-Update the CLI commit command to import from the new utils module instead of having the function locally.
+Create the commit operations module with structured parameter signature and move the commit function with comprehensive tests.
 
 ## WHERE
-- **Modify**: `src/mcp_coder/cli/commands/commit.py`
-- **Update Tests**: `tests/cli/commands/test_commit.py`
+- **New File**: `src/mcp_coder/utils/commit_operations.py`
+- **New Test File**: `tests/utils/test_commit_operations.py`
 
 ## WHAT
-### Function to Remove
+### Function to Move and Update
 ```python
+# OLD signature (from CLI):
 def generate_commit_message_with_llm(
     project_dir: Path, llm_method: str = "claude_code_api"
 ) -> Tuple[bool, str, Optional[str]]:
-    # Remove this entire function - it's now in utils
+
+# NEW signature (in utils):
+def generate_commit_message_with_llm(
+    project_dir: Path, 
+    provider: str = "claude", 
+    method: str = "api"
+) -> Tuple[bool, str, Optional[str]]:
 ```
 
-### Import to Add
+### Test Functions to Create
 ```python
-from ...utils.commit_operations import generate_commit_message_with_llm
-```
-
-### Helper Functions to Keep
-```python
-def parse_llm_commit_response(response: str) -> Tuple[str, Optional[str]]
-def validate_git_repository(project_dir: Path) -> Tuple[bool, Optional[str]]
-def execute_commit_auto(args: argparse.Namespace) -> int
-def execute_commit_clipboard(args: argparse.Namespace) -> int
-def get_commit_message_from_clipboard() -> Tuple[bool, str, Optional[str]]
+def test_generate_commit_message_with_llm_success_api()
+def test_generate_commit_message_with_llm_success_cli()
+def test_generate_commit_message_with_llm_staging_failure()
+def test_generate_commit_message_with_llm_no_changes()
+def test_generate_commit_message_with_llm_llm_failure()
+def test_generate_commit_message_with_llm_invalid_provider()
 ```
 
 ## HOW
 ### Integration Points
 ```python
-# Remove existing function definition
-# Add import at top of file
-from ...utils.commit_operations import generate_commit_message_with_llm
-
-# All existing calls remain the same:
-success, commit_message, error = generate_commit_message_with_llm(
-    project_dir, args.llm_method
+# Import dependencies (same logic as CLI implementation)
+from ...constants import PROMPTS_FILE_PATH
+from ...llm.interface import ask_llm
+from ...prompt_manager import get_prompt
+from ...utils.git_operations import (
+    stage_all_changes,
+    get_git_diff_for_commit
 )
 ```
 
-### Test Updates
+### Test Integration
 ```python
-# Update mock patch paths in tests
-# OLD:
-@patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
-
-# NEW:  
-@patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+# Mock external dependencies in new location
+@patch("mcp_coder.utils.commit_operations.stage_all_changes")
+@patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
+@patch("mcp_coder.utils.commit_operations.get_prompt")
+@patch("mcp_coder.utils.commit_operations.ask_llm")
 ```
 
 ## ALGORITHM
 ```python
-# No algorithm changes - just import/remove:
-1. Remove function definition from cli/commands/commit.py
-2. Add import from utils.commit_operations
-3. Update all test mock paths
-4. Verify all calls still work identically
-5. Run tests to ensure no regression
+# Same logic, updated parameter handling:
+1. Stage all changes using stage_all_changes()
+2. Get git diff using get_git_diff_for_commit()
+3. Load commit prompt template using get_prompt()
+4. Call LLM with prompt using ask_llm() with provider, method
+5. Parse and validate LLM response
+6. Return (success, message, error) tuple
 ```
 
 ## DATA
-### Files Modified
-- Remove ~50 lines from `cli/commands/commit.py` (function definition)
-- Add 1 import line to `cli/commands/commit.py`
-- Update ~5 mock patch decorators in test files
+### Input Parameters
+- `project_dir: Path` - Project directory path
+- `provider: str` - LLM provider ("claude")
+- `method: str` - Communication method ("api" or "cli")
 
-### Function Calls (Unchanged)
+### Return Value
 ```python
-# These calls remain identical:
-success, commit_message, error = generate_commit_message_with_llm(
-    project_dir, args.llm_method
-)
+Tuple[bool, str, Optional[str]]
+# (success, commit_message, error_message)
+
+# Success case:
+(True, "feat: add new feature\n\nDetailed description", None)
+
+# Error case:
+(False, "", "No changes to commit. Ensure you have modified files...")
 ```
 
-### Import Structure
+### Function Call Changes
 ```python
-# New import in cli/commands/commit.py:
-from ...utils.commit_operations import generate_commit_message_with_llm
+# Instead of calling parse_llm_method() internally:
+# provider, method = parse_llm_method(llm_method)
 
-# Dependencies (unchanged):
-from ...utils.git_operations import (
-    commit_staged_files,
-    get_git_diff_for_commit,
-    is_git_repository,
-    stage_all_changes,
-)
+# Function now receives structured parameters directly:
+# ask_llm(prompt, provider=provider, method=method, timeout=timeout)
 ```
 
 ## LLM Prompt for Implementation
 
 ```
-You are implementing Step 2 of the commit auto function architecture fix.
+You are implementing Step 2 of the LLM parameter architecture improvement.
 
 Reference the summary.md for full context. Your task is to:
 
-1. Remove the `generate_commit_message_with_llm()` function from `src/mcp_coder/cli/commands/commit.py` since it was moved to utils in Step 1.
+1. Create `src/mcp_coder/utils/commit_operations.py` with the `generate_commit_message_with_llm()` function moved from CLI but with NEW signature using `provider, method` parameters.
 
-2. Add the import: `from ...utils.commit_operations import generate_commit_message_with_llm`
+2. Create comprehensive tests in `tests/utils/test_commit_operations.py` that cover:
+   - Successful commit message generation with both API and CLI methods
+   - Parameter validation for provider and method
+   - Error cases: staging failure, no changes, LLM failure
+   - Mock all external dependencies properly
 
-3. Update test files to mock the function from its new location:
-   - Change `@patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")` 
-   - To `@patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")`
-
-4. Verify all existing function calls remain identical - no behavior changes.
-
-The goal is to make the CLI use the moved function transparently. All existing functionality must work exactly the same.
+The goal is to move the function with cleaner parameter interface. Follow TDD - write tests first, then implement.
 
 Key requirements:
-- Remove only the function definition, keep all other helper functions
-- Add correct import with relative path
-- Update all test mock paths
-- No changes to function calls or behavior
-- All existing tests must pass
+- Function signature uses `provider: str, method: str` instead of `llm_method: str`
+- Same business logic as CLI version, just different parameter handling
+- All imports and dependencies must work in new location
+- Tests must verify provider/method parameters are passed to ask_llm()
+- Error handling and return values must be identical to current implementation
 ```

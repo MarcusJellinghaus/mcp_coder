@@ -1,150 +1,131 @@
-# Step 4: Verify Integration and Run Comprehensive Tests
+# Step 4: Update CLI Prompt Command
 
 ## Objective
-Verify that all changes work together correctly and run comprehensive tests to ensure no regressions.
+Update the CLI prompt command to use the shared CLI utility for consistent parameter handling across all CLI commands.
 
 ## WHERE
-- **Run Tests**: All test files, especially:
-  - `tests/utils/test_commit_operations.py`
-  - `tests/cli/commands/test_commit.py`
-  - `tests/workflows/implement/test_task_processing.py` (if exists)
+- **Modify**: `src/mcp_coder/cli/commands/prompt.py`
+- **Update Tests**: `tests/cli/commands/test_prompt.py`
 
 ## WHAT
-### Verification Tests to Run (Unit Tests Focus)
+### Code to Update
 ```python
-# Test the new utils module
-pytest tests/utils/test_commit_operations.py -v
-
-# Test CLI still works with moved function
-pytest tests/cli/commands/test_commit.py -v
-
-# Test all commit-related functionality
-pytest tests/ -k "commit" -v
+# Current prompt.py has duplicate parameter parsing:
+def execute_prompt(args: argparse.Namespace) -> int:
+    llm_method = getattr(args, "llm_method", "claude_code_api")
+    provider, method = parse_llm_method(llm_method)  # Duplicate logic
+    response = ask_llm(args.prompt, provider=provider, method=method, timeout=timeout)
 ```
 
-### Manual Verification Commands
-```bash
-# Test CLI command still works
-mcp-coder commit auto --llm-method claude_code_api --preview
-
-# Test CLI with different LLM method
-mcp-coder commit auto --llm-method claude_code_cli --preview
+### Import to Add
+```python
+from ..utils import parse_llm_method_from_args
 ```
 
-### Integration Points to Verify
+### Function Call to Update
 ```python
-# 1. CLI imports from utils correctly
-from mcp_coder.cli.commands.commit import execute_commit_auto
+# OLD (duplicate parsing logic):
+llm_method = getattr(args, "llm_method", "claude_code_api")
+provider, method = parse_llm_method(llm_method)
 
-# 2. Workflows import from utils correctly  
-from mcp_coder.workflows.implement.task_processing import commit_changes
+# NEW (using shared utility):
+llm_method = getattr(args, "llm_method", "claude_code_api")
+provider, method = parse_llm_method_from_args(llm_method)
+```
 
-# 3. llm_method parameter flows correctly
-# CLI → utils: ✓
-# Workflow → utils: ✓
+### Existing Import to Remove
+```python
+# Remove direct import since we'll use shared utility:
+from ...llm.session import parse_llm_method
 ```
 
 ## HOW
-### Test Strategy
+### Integration Points
 ```python
-# Run tests in order:
-1. Unit tests for moved function (utils)
-2. CLI tests with updated mocks
-3. Unit tests for all commit-related functionality
-4. Manual verification of CLI commands
-5. Check import paths are correct
+# Add import at top of file
+from ..utils import parse_llm_method_from_args
+
+# Update execute_prompt() function
+llm_method = getattr(args, "llm_method", "claude_code_api")
+provider, method = parse_llm_method_from_args(llm_method)
+
+# All other code remains the same
+response = ask_llm(args.prompt, provider=provider, method=method, timeout=timeout)
 ```
 
-### Verification Checklist
+### Test Updates
 ```python
-✓ No circular imports (workflows → CLI)
-✓ All existing tests pass
-✓ llm_method parameter works in CLI
-✓ llm_method parameter works in workflows  
-✓ No functional regressions
-✓ Error handling unchanged
+# Update tests to mock the shared utility
+@patch("mcp_coder.cli.utils.parse_llm_method_from_args")
+def test_execute_prompt(mock_parse):
+    mock_parse.return_value = ("claude", "api")
+    # Test continues as before
 ```
 
 ## ALGORITHM
 ```python
-# Verification process:
-1. Run utils tests to verify moved function works
-2. Run CLI tests to verify import changes work
-3. Run integration tests to verify end-to-end flow
-4. Test both llm_method options manually
-5. Verify no circular dependencies exist
-6. Confirm all success criteria met
+# Simple refactoring process:
+1. Add import for shared CLI utility
+2. Replace direct parse_llm_method() call with shared utility
+3. Remove direct import of parse_llm_method
+4. Update any tests that mock the parsing logic
+5. Verify prompt command still works with both LLM methods
 ```
 
 ## DATA
-### Test Results Expected
+### Files Modified
+- Add 1 import line to `cli/commands/prompt.py`
+- Update 1 function call in `execute_prompt()`
+- Remove 1 import line from `cli/commands/prompt.py`
+- Update test mocks if they mock parse_llm_method directly
+
+### Code Duplication Eliminated
 ```python
-# All tests should pass:
-tests/utils/test_commit_operations.py::test_generate_commit_message_with_llm_success PASSED
-tests/cli/commands/test_commit.py::test_execute_commit_auto_success PASSED
+# Before (duplicate parsing in each CLI command):
+cli/commands/commit.py: provider, method = parse_llm_method(llm_method)
+cli/commands/prompt.py: provider, method = parse_llm_method(llm_method)
+cli/commands/implement.py: provider, method = parse_llm_method(llm_method)
 
-# No import errors:
-ImportError: cannot import name 'generate_commit_message_with_llm' ❌ Should not appear
-
-# Parameter verification:
-# CLI: args.llm_method → generate_commit_message_with_llm() ✓
-# Workflow: llm_method → generate_commit_message_with_llm() ✓
+# After (shared utility):
+cli/commands/commit.py: provider, method = parse_llm_method_from_args(llm_method)
+cli/commands/prompt.py: provider, method = parse_llm_method_from_args(llm_method)
+cli/commands/implement.py: provider, method = parse_llm_method_from_args(llm_method)
 ```
 
-### Import Graph Verification
+### Import Structure
 ```python
-# Before (VIOLATION):
-workflows/implement/task_processing.py → cli/commands/commit.py
+# Updated imports in cli/commands/prompt.py:
+from ..utils import parse_llm_method_from_args
 
-# After (CLEAN):
-cli/commands/commit.py → utils/commit_operations.py
-workflows/implement/task_processing.py → utils/commit_operations.py
-```
-
-### Success Criteria Checklist
-```python
-✓ Function moved to utils/commit_operations.py
-✓ CLI imports from utils (not local function)
-✓ Workflows import from utils (not CLI)
-✓ llm_method parameter passed in task_processing.py
-✓ All existing tests pass
-✓ No circular dependencies
-✓ Backward compatibility maintained
+# Removed import:
+# from ...llm.session import parse_llm_method  (now via shared utility)
 ```
 
 ## LLM Prompt for Implementation
 
 ```
-You are implementing Step 4 of the commit auto function architecture fix.
+You are implementing Step 4 of the LLM parameter architecture improvement.
 
-Reference the summary.md for full context. Your task is to verify that all previous steps work together correctly:
+Reference the summary.md for full context. Your task is to update the CLI prompt command in `src/mcp_coder/cli/commands/prompt.py` to use the shared utility:
 
-1. Run comprehensive tests to ensure no regressions:
-   - `pytest tests/utils/test_commit_operations.py -v`
-   - `pytest tests/cli/commands/test_commit.py -v`
-   - `pytest tests/ -k "commit" -v`
+1. Add import for the shared CLI utility:
+   - `from ..utils import parse_llm_method_from_args`
 
-2. Verify the import chain is correct:
-   - CLI imports from utils ✓
-   - Workflows import from utils ✓  
-   - No workflows importing from CLI ✓
+2. Update the `execute_prompt()` function to use shared utility:
+   - Replace: `provider, method = parse_llm_method(llm_method)`
+   - With: `provider, method = parse_llm_method_from_args(llm_method)`
 
-3. Test llm_method parameter flows correctly:
-   - CLI: `mcp-coder commit auto --llm-method claude_code_cli` should work
-   - Workflow: llm_method should reach generate_commit_message_with_llm()
+3. Remove the direct import that's no longer needed:
+   - Remove: `from ...llm.session import parse_llm_method`
 
-4. Check that all success criteria are met:
-   - No circular dependencies
-   - All functionality preserved
-   - Parameter threading works
-   - Clean architecture maintained
+4. Update any tests that directly mock `parse_llm_method` to mock the shared utility instead.
 
-If any tests fail or issues are found, identify the specific problem and provide guidance for fixing it.
+The goal is to eliminate code duplication and use consistent parameter handling across all CLI commands.
 
-Key verification points:
-- All tests pass
-- Import paths are correct
-- llm_method parameter works everywhere
-- No functional regressions
-- Clean dependency graph
+Key requirements:
+- Use shared CLI utility for parameter conversion
+- No behavior changes for end users
+- All existing functionality preserved
+- Tests updated to mock shared utility if needed
+- Prompt command works with both claude_code_cli and claude_code_api
 ```

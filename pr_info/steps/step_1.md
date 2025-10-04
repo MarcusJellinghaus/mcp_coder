@@ -1,113 +1,115 @@
-# Step 1: Create Commit Operations Module and Tests
+# Step 1: Create CLI Utility Module
 
 ## Objective
-Create the new `utils/commit_operations.py` module and comprehensive tests following TDD principles.
+Create the new `cli/utils.py` module with shared parameter conversion utilities and comprehensive tests following TDD principles.
 
 ## WHERE
-- **New File**: `src/mcp_coder/utils/commit_operations.py`
-- **New Test File**: `tests/utils/test_commit_operations.py`
+- **New File**: `src/mcp_coder/cli/utils.py`
+- **New Test File**: `tests/cli/test_utils.py`
 
 ## WHAT
-### Main Function to Move
+### Main Function to Create
 ```python
-def generate_commit_message_with_llm(
-    project_dir: Path, 
-    llm_method: str = "claude_code_api"
-) -> Tuple[bool, str, Optional[str]]:
-    """Generate commit message using LLM. 
+def parse_llm_method_from_args(llm_method: str) -> tuple[str, str]:
+    """Parse CLI llm_method into provider, method for internal APIs.
     
-    Returns (success, message, error).
+    Args:
+        llm_method: CLI parameter ('claude_code_cli' or 'claude_code_api')
+        
+    Returns:
+        Tuple of (provider, method) for internal API usage
+        
+    Raises:
+        ValueError: If llm_method is not supported
     """
 ```
 
 ### Test Functions to Create (Unit Tests Only)
 ```python
-def test_generate_commit_message_with_llm_success()
-def test_generate_commit_message_with_llm_respects_llm_method()
-def test_generate_commit_message_with_llm_staging_failure()
-def test_generate_commit_message_with_llm_no_changes()
-def test_generate_commit_message_with_llm_llm_failure()
+def test_parse_llm_method_from_args_api()
+def test_parse_llm_method_from_args_cli()
+def test_parse_llm_method_from_args_invalid()
+def test_parse_llm_method_from_args_empty_string()
+def test_parse_llm_method_from_args_none_input()
 ```
 
 ## HOW
 ### Integration Points
 ```python
-# Import dependencies (same as current implementation)
-from ...constants import PROMPTS_FILE_PATH
-from ...llm.interface import ask_llm
-from ...llm.session import parse_llm_method
-from ...prompt_manager import get_prompt
-from ...utils.git_operations import (
-    stage_all_changes,
-    get_git_diff_for_commit
-)
+# Import dependency from existing LLM session module
+from ..llm.session import parse_llm_method
 ```
 
 ### Test Integration
 ```python
-# Mock the same external dependencies
-@patch("mcp_coder.utils.commit_operations.stage_all_changes")
-@patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
-@patch("mcp_coder.utils.commit_operations.get_prompt")
-@patch("mcp_coder.utils.commit_operations.ask_llm")
+# Mock the external dependency
+@patch("mcp_coder.cli.utils.parse_llm_method")
+class TestParseLLMMethodFromArgs:
+    # Test cases for parameter conversion
 ```
 
 ## ALGORITHM
 ```python
-# Core logic (unchanged from current implementation):
-1. Stage all changes using stage_all_changes()
-2. Get git diff using get_git_diff_for_commit()
-3. Load commit prompt template using get_prompt()
-4. Call LLM with prompt using ask_llm() and llm_method
-5. Parse and validate LLM response
-6. Return (success, message, error) tuple
+# Simple wrapper logic:
+1. Validate input parameter is not None/empty
+2. Call existing parse_llm_method() function
+3. Return the (provider, method) tuple
+4. Let parse_llm_method() handle ValueError for invalid inputs
 ```
 
 ## DATA
 ### Input Parameters
-- `project_dir: Path` - Project directory path
-- `llm_method: str` - LLM method ("claude_code_cli" or "claude_code_api")
+- `llm_method: str` - CLI parameter ("claude_code_cli" or "claude_code_api")
 
 ### Return Value
 ```python
-Tuple[bool, str, Optional[str]]
-# (success, commit_message, error_message)
+tuple[str, str]
+# (provider, method)
 
-# Success case:
-(True, "feat: add new feature\n\nDetailed description", None)
+# API case:
+("claude", "api")
 
-# Error case:
-(False, "", "No changes to commit. Ensure you have modified files...")
+# CLI case:
+("claude", "cli")
 ```
 
 ### Test Data Structures
 ```python
-# Mock return values for testing
-MOCK_GIT_DIFF = "diff --git a/file.py b/file.py\n+new line"
-MOCK_PROMPT = "Generate commit message for changes"
-MOCK_LLM_RESPONSE = "feat: add new feature"
+# Test cases for parameter conversion
+TEST_CASES = [
+    ("claude_code_api", ("claude", "api")),
+    ("claude_code_cli", ("claude", "cli")),
+]
+
+INVALID_CASES = [
+    "invalid_method",
+    "openai_api",
+    "",
+    None,
+]
 ```
 
 ## LLM Prompt for Implementation
 
 ```
-You are implementing Step 1 of the commit auto function architecture fix. 
+You are implementing Step 1 of the LLM parameter architecture improvement. 
 
 Reference the summary.md for full context. Your task is to:
 
-1. Create `src/mcp_coder/utils/commit_operations.py` with the `generate_commit_message_with_llm()` function moved from `src/mcp_coder/cli/commands/commit.py`. Keep the EXACT same implementation - just move it.
+1. Create `src/mcp_coder/cli/utils.py` with the `parse_llm_method_from_args()` function that provides a shared utility for all CLI commands.
 
-2. Create comprehensive tests in `tests/utils/test_commit_operations.py` that cover:
-   - Successful commit message generation
-   - llm_method parameter is actually used (not ignored)
-   - Error cases: staging failure, no changes, LLM failure
-   - Mock all external dependencies properly
+2. Create comprehensive tests in `tests/cli/test_utils.py` that cover:
+   - Successful parameter conversion for both API and CLI methods
+   - Error handling for invalid input values
+   - Edge cases like empty strings and None inputs
+   - Verify the function properly delegates to existing parse_llm_method()
 
-The goal is to move the function without changing behavior, but ensure it's properly tested in its new location. Follow TDD - write tests first, then move the function.
+The goal is to create a shared utility that eliminates code duplication across CLI commands. Follow TDD - write tests first, then implement the function.
 
 Key requirements:
-- Function signature must remain identical for backward compatibility
-- All imports and dependencies must work in new location
-- Tests must verify llm_method parameter is passed to ask_llm()
-- Error handling and return values must be identical to current implementation
+- Function should be a simple wrapper around existing parse_llm_method()
+- Proper error handling and input validation
+- Clear documentation for CLI usage
+- All tests should mock the underlying parse_llm_method() dependency
+- Function should be importable by other CLI command modules
 ```
