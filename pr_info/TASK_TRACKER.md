@@ -22,11 +22,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Create CLI Utility Module
-- [ ] Create `src/mcp_coder/cli/utils.py` with `parse_llm_method_from_args()` function
-- [ ] Create comprehensive tests in `tests/cli/test_utils.py`
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check and fix all issues
-- [ ] Run mypy check and fix all issues
+- [x] Create `src/mcp_coder/cli/utils.py` with `parse_llm_method_from_args()` function
+- [x] Create comprehensive tests in `tests/cli/test_utils.py`
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check and fix all issues
+- [x] Run mypy check and fix all issues
 - [ ] Prepare git commit message for Step 1
 
 ### Step 2: Create Commit Operations Module
