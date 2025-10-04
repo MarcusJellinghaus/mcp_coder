@@ -91,7 +91,7 @@ def find_claude_executable(
                 # Test with a simple command that should exit quickly
                 result = execute_command(
                     [str(claude_path), "--help"],
-                    timeout_seconds=15,
+                    timeout_seconds=20,
                 )
                 # Accept both 0 (success) and 1 (help shown) as valid
                 if result.return_code not in [0, 1]:
@@ -174,7 +174,7 @@ def verify_claude_installation() -> dict[str, Any]:
             # First try with our complex runner
             version_result = execute_command(
                 [str(claude_path), "--version"],
-                timeout_seconds=15,
+                timeout_seconds=20,
             )
             if version_result.return_code == 0 and version_result.stdout.strip():
                 result["version"] = version_result.stdout.strip()

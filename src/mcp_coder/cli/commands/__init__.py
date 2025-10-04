@@ -2,6 +2,7 @@
 
 from .commit import execute_commit_auto, execute_commit_clipboard
 from .help import execute_help
+from .implement import execute_implement
 from .prompt import execute_prompt
 from .verify import execute_verify
 
@@ -11,4 +12,5 @@ __all__ = [
     "execute_prompt",
     "execute_commit_auto",
     "execute_commit_clipboard",
+    "execute_implement",
 ]

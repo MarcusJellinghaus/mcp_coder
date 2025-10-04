@@ -7,6 +7,9 @@ from .providers.claude.claude_code_interface import ask_claude_code
 # Serialization functions are now in .serialization module
 from .types import LLMResponseDict
 
+# Constants
+LLM_DEFAULT_TIMEOUT_SECONDS = 30  # Default timeout for LLM requests
+
 __all__ = [
     "ask_llm",
     "prompt_llm",
@@ -18,7 +21,7 @@ def ask_llm(
     provider: str = "claude",
     method: str = "cli",
     session_id: str | None = None,
-    timeout: int = 30,
+    timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
 ) -> str:
     """
     Ask a question to an LLM provider using the specified method.
@@ -85,7 +88,7 @@ def prompt_llm(
     provider: str = "claude",
     method: str = "cli",
     session_id: str | None = None,
-    timeout: int = 30,
+    timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
 ) -> LLMResponseDict:
     """
     Ask a question to an LLM provider with full session management.
