@@ -657,8 +657,6 @@ class TestIntegration:
 
         with caplog.at_level("INFO"):
             result = run_implement_workflow(tmp_path, "claude", "cli")
-            # Capture log text inside context manager for pytest-xdist compatibility
-            log_text = caplog.text
 
         # Verify successful completion
         assert result == 0
@@ -677,10 +675,12 @@ class TestIntegration:
         # Verify task processing
         assert mock_process_task.call_count == 2
 
-        # Verify logging
-        assert "Starting implement workflow..." in log_text
-        assert "TASK TRACKER PROGRESS SUMMARY" in log_text
-        assert "Implement workflow completed successfully" in log_text
+        # Verify logging using caplog.records for pytest-xdist compatibility
+        log_messages = [record.message for record in caplog.records]
+        all_logs = " ".join(log_messages)
+        assert any("Starting implement workflow" in msg for msg in log_messages)
+        assert any("TASK TRACKER PROGRESS SUMMARY" in msg for msg in log_messages)
+        assert any("Implement workflow completed successfully" in msg for msg in log_messages)
 
     def test_resolve_project_dir_real_filesystem(self, tmp_path: Path) -> None:
         """Test resolve_project_dir with real filesystem operations."""
