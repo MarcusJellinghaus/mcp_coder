@@ -24,6 +24,9 @@ DELETE: src/mcp_coder/utils/git_operations.py  # Original file
 ## WHAT: Public API Definition
 
 ### Complete `__init__.py`
+
+**Note**: Internal functions (prefixed with `_`) like `_safe_repo_context()`, `_normalize_git_path()`, and `_close_repo_safely()` are NOT re-exported in `__init__.py`. They remain internal to the package and are only accessible via direct imports within the package modules (e.g., `from .core import _safe_repo_context`).
+
 ```python
 """Git operations package for repository management and automation."""
 
