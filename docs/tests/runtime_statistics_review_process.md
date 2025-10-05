@@ -35,12 +35,15 @@ For each flagged test, categorize as:
 
 ### Step 4: Update Documentation
 1. **Update Runtime Statistics**
-   - Add new slow tests to known registry
+   - Add new slow tests to known registry with **COMPLETE TEST IDENTIFIERS**
+   - Include full file path, class name, and test method name
+   - Format: `file_path::ClassName::test_method_name` for easy navigation
    - Update performance trends
    - Record analysis timestamp and branch
 
 2. **Update Issues Queue**
-   - Add new review items to `docs/tests/issues.md`
+   - Add new review items to `docs/tests/issues.md` with complete test paths
+   - Include file locations for immediate developer action
    - Prioritize by impact and test execution frequency
 
 ### Step 5: Generate Recommendations

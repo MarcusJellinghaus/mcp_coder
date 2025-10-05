@@ -38,7 +38,7 @@ call :echo_both ""
 call :echo_both "========================================"
 call :echo_both "Pytest Performance Statistics (Durations Only)"
 call :echo_both "========================================"
-call :echo_both ""
+call :echo_both " "
 
 REM Unit tests (no markers - fast, mocked tests)
 call :echo_both "[1/6] UNIT TESTS (no integration markers)"
@@ -48,7 +48,8 @@ pytest -m "not claude_cli_integration and not claude_api_integration and not git
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
-call :echo_both ""
+call :echo_both " "
+call :echo_both " "
 
 REM Claude CLI Integration Tests
 call :echo_both "[2/6] CLAUDE CLI INTEGRATION tests"
@@ -58,7 +59,8 @@ pytest -m "claude_cli_integration" --durations=20 -n auto -q --tb=no --no-header
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
-call :echo_both ""
+call :echo_both " "
+call :echo_both " "
 
 REM Claude API Integration Tests
 call :echo_both "[3/6] CLAUDE API INTEGRATION tests"
@@ -68,7 +70,8 @@ pytest -m "claude_api_integration" --durations=20 -n auto -q --tb=no --no-header
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
-call :echo_both ""
+call :echo_both " "
+call :echo_both " "
 
 REM Git Integration Tests
 call :echo_both "[4/6] GIT INTEGRATION tests"
@@ -78,7 +81,8 @@ pytest -m "git_integration" --durations=20 -n auto -q --tb=no --no-header -p no:
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
-call :echo_both ""
+call :echo_both " "
+call :echo_both " "
 
 REM Formatter Integration Tests
 call :echo_both "[5/6] FORMATTER INTEGRATION tests"
@@ -88,7 +92,8 @@ pytest -m "formatter_integration" --durations=20 -n auto -q --tb=no --no-header 
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
-call :echo_both ""
+call :echo_both " "
+call :echo_both " "
 
 REM GitHub Integration Tests
 call :echo_both "[6/6] GITHUB INTEGRATION tests"
@@ -98,7 +103,8 @@ pytest -m "github_integration" --durations=20 -n auto -q --tb=no --no-header -p 
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
-call :echo_both ""
+call :echo_both " "
+call :echo_both " "
 
 REM All tests combined
 call :echo_both "========================================"
@@ -109,7 +115,8 @@ pytest --durations=20 -n auto -q --tb=no --no-header -p no:warnings 2>nul | find
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
-call :echo_both ""
+call :echo_both " "
+call :echo_both " "
 call :echo_both "========================================"
 call :echo_both "Performance statistics collection complete!"
 call :echo_both "Output saved to: %output_file%"
