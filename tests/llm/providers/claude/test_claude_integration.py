@@ -69,17 +69,19 @@ class TestCriticalPathIntegration:
     @pytest.mark.claude_api_integration
     def test_interface_contracts(self) -> None:
         """Test ask_llm vs prompt_llm return different types correctly."""
-        # ask_llm should return string
-        text_result = ask_llm("Say hello", method="api", timeout=60)
-        assert isinstance(text_result, str)
-
         # prompt_llm should return dict with metadata
         dict_result = prompt_llm("Say hello", method="api", timeout=60)
         assert isinstance(dict_result, dict)
         assert "text" in dict_result
         assert "session_id" in dict_result
-        # Contract: same underlying response
-        assert dict_result["text"] == text_result
+        assert isinstance(dict_result["text"], str)
+        assert len(dict_result["text"]) > 0
+
+        # ask_llm should return string (just the text, no metadata)
+        text_result = ask_llm("Say hello", method="api", timeout=60)
+        assert isinstance(text_result, str)
+        assert len(text_result) > 0
+        # Note: Don't assert equality - these are separate API calls with non-deterministic responses
 
     @pytest.mark.claude_cli_integration
     def test_session_continuity(self) -> None:

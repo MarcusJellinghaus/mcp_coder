@@ -323,16 +323,18 @@ class TestLogProgressSummary:
 
         with caplog.at_level("INFO"):
             log_progress_summary(Path("/test/project"))
-            # Capture log text inside context manager for pytest-xdist compatibility
-            log_text = caplog.text
+
+        # Use caplog.records for pytest-xdist compatibility (more reliable than caplog.text)
+        log_messages = [record.message for record in caplog.records]
+        all_logs = " ".join(log_messages)
 
         # Check that progress information was logged
-        assert "TASK TRACKER PROGRESS SUMMARY" in log_text
-        assert "Step 1:" in log_text
-        assert "Step 2:" in log_text
-        assert "60%" in log_text  # 3/5 = 60%
-        assert "100%" in log_text  # 3/3 = 100%
-        assert "Task 1, Task 2" in log_text  # Incomplete tasks listed
+        assert any("TASK TRACKER PROGRESS SUMMARY" in msg for msg in log_messages)
+        assert any("Step 1:" in msg for msg in log_messages)
+        assert any("Step 2:" in msg for msg in log_messages)
+        assert "60%" in all_logs  # 3/5 = 60%
+        assert "100%" in all_logs  # 3/3 = 100%
+        assert "Task 1, Task 2" in all_logs  # Incomplete tasks listed
 
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     def test_log_progress_summary_with_many_incomplete_tasks(
@@ -350,10 +352,11 @@ class TestLogProgressSummary:
 
         with caplog.at_level("INFO"):
             log_progress_summary(Path("/test/project"))
-            # Capture log text inside context manager for pytest-xdist compatibility
-            log_text = caplog.text
 
-        assert "Task 1, Task 2, Task 3..." in log_text  # Truncated at 3 tasks
+        # Use caplog.records for pytest-xdist compatibility
+        all_logs = " ".join(record.message for record in caplog.records)
+
+        assert "Task 1, Task 2, Task 3..." in all_logs  # Truncated at 3 tasks
 
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     def test_log_progress_summary_zero_total_tasks(
@@ -371,10 +374,11 @@ class TestLogProgressSummary:
 
         with caplog.at_level("INFO"):
             log_progress_summary(Path("/test/project"))
-            # Capture log text inside context manager for pytest-xdist compatibility
-            log_text = caplog.text
 
-        assert "0%" in log_text  # 0/0 should show 0%
+        # Use caplog.records for pytest-xdist compatibility
+        all_logs = " ".join(record.message for record in caplog.records)
+
+        assert "0%" in all_logs  # 0/0 should show 0%
 
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     def test_log_progress_summary_exception(self, mock_get_progress: MagicMock) -> None:
