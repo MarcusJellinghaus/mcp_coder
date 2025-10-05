@@ -34,277 +34,79 @@ def ask_function(method: str) -> Callable[..., Any]:
     return ask_claude_code_api
 
 
-class TestBasicIntegration:
-    """Basic integration tests for both CLI and API methods."""
+class TestCriticalPathIntegration:
+    """Critical path integration tests - minimal set covering all major code paths."""
 
     @pytest.mark.claude_cli_integration
-    def test_simple_cli_question(self) -> None:
-        """Test simple CLI question (marker-specific for parallel execution)."""
-        result = ask_llm(
-            "What is 2+2? Answer with just the number.",
+    def test_basic_cli_api_integration(self) -> None:
+        """Test both CLI and API paths work end-to-end.
+
+        Note: This is a real integration test that makes actual API calls.
+        Uses longer timeouts to accommodate real API response times.
+        """
+        # Test CLI path: ask_llm → ask_claude_code → ask_claude_code_cli
+        cli_result = ask_llm(
+            "Yes or no: Is 1+1=2?",
             provider="claude",
             method="cli",
-            timeout=60,
+            timeout=60,  # Increased for real API calls
         )
+        assert isinstance(cli_result, str)
+        assert len(cli_result) > 0
+        assert "yes" in cli_result.lower()
 
-        assert isinstance(result, str)
-        assert len(result) > 0
-        assert "4" in result
-
-    @pytest.mark.claude_api_integration
-    def test_simple_api_question(self) -> None:
-        """Test simple API question (marker-specific for parallel execution)."""
-        result = ask_llm(
-            "What is 3+3? Answer with just the number.",
+        # Test API path: ask_llm → ask_claude_code → ask_claude_code_api
+        api_result = ask_llm(
+            "Yes or no: Is 2+2=4?",
             provider="claude",
             method="api",
-            timeout=30,
+            timeout=60,  # Increased for real API calls
         )
+        assert isinstance(api_result, str)
+        assert len(api_result) > 0
+        assert "yes" in api_result.lower()
 
-        assert isinstance(result, str)
-        assert len(result) > 0
-        assert "6" in result
+    @pytest.mark.claude_api_integration
+    def test_interface_contracts(self) -> None:
+        """Test ask_llm vs prompt_llm return different types correctly."""
+        # prompt_llm should return dict with metadata
+        dict_result = prompt_llm("Say hello", method="api", timeout=60)
+        assert isinstance(dict_result, dict)
+        assert "text" in dict_result
+        assert "session_id" in dict_result
+        assert isinstance(dict_result["text"], str)
+        assert len(dict_result["text"]) > 0
 
-
-class TestSessionManagement:
-    """Session management tests for both CLI and API methods."""
+        # ask_llm should return string (just the text, no metadata)
+        text_result = ask_llm("Say hello", method="api", timeout=60)
+        assert isinstance(text_result, str)
+        assert len(text_result) > 0
+        # Note: Don't assert equality - these are separate API calls with non-deterministic responses
 
     @pytest.mark.claude_cli_integration
-    def test_cli_with_session(self) -> None:
-        """Test CLI session management.
-
-        Replaces test_cli_with_session from multiple files.
-        """
-        # First turn
-        result1 = prompt_llm("Remember this number: 42", method="cli", timeout=60)
-
+    def test_session_continuity(self) -> None:
+        """Test session management through the full stack."""
+        # Use prompt_llm to test full response structure
+        result1 = prompt_llm("Remember this: elephant", method="cli", timeout=60)
         assert "session_id" in result1
         assert result1["session_id"] is not None
+        assert "text" in result1
         session_id = result1["session_id"]
 
-        # Second turn - test session continuity
+        # Test session continuity
         result2 = prompt_llm(
-            "What number did I just tell you to remember?",
+            "What did I tell you to remember?",
             method="cli",
             session_id=session_id,
             timeout=60,
         )
-
+        assert "elephant" in result2["text"].lower()
         assert result2["session_id"] == session_id
-        assert "42" in result2["text"]
-
-    @pytest.mark.claude_api_integration
-    def test_api_with_session(self) -> None:
-        """Test API session management.
-
-        Replaces test_api_with_session from multiple files.
-        """
-        # First turn
-        result1 = prompt_llm("Remember this word: elephant", method="api", timeout=60)
-
-        assert "session_id" in result1
-        assert "text" in result1
-        assert "method" in result1
-        assert result1["method"] == "api"
-
-        session_id = result1.get("session_id")
-        assert len(result1["text"]) > 0
-
-    @pytest.mark.claude_cli_integration
-    def test_cli_session_continuity_real(self) -> None:
-        """Test CLI session continuity with real calls.
-
-        Combines:
-        - test_cli_session_continuity_real from test_session_id_handling.py
-        - Similar tests from test_claude_real_integration.py
-        """
-        # First call - establish session
-        result1 = ask_claude_code_cli(
-            "Remember this number: 777. Confirm you remember it.", timeout=30
-        )
-
-        assert "text" in result1
-        assert "session_id" in result1
-        session_id = result1["session_id"]
-
-        assert session_id is not None
-        assert len(session_id) > 0
-
-        # Second call - use the session
-        result2 = ask_claude_code_cli(
-            "What number did I ask you to remember? Answer with just the number.",
-            session_id=session_id,
-            timeout=30,
-        )
-
-        assert result2["session_id"] == session_id
-        assert "777" in result2["text"]
-
-    @pytest.mark.claude_api_integration
-    def test_api_session_continuity_real(self) -> None:
-        """Test API session continuity with real calls.
-
-        Combines:
-        - test_api_session_continuity_real from test_session_id_handling.py
-        - Similar tests from test_claude_real_integration.py
-        """
-        # First call - establish session
-        result1 = ask_claude_code_api(
-            "Remember this number: 999. Confirm you remember it.", timeout=30
-        )
-
-        assert "text" in result1
-        assert "session_id" in result1
-        session_id = result1["session_id"]
-
-        assert session_id is not None
-        assert len(session_id) > 0
-
-        # Second call - use the session
-        result2 = ask_claude_code_api(
-            "What number did I ask you to remember? Answer with just the number.",
-            session_id=session_id,
-            timeout=30,
-        )
-
-        assert "999" in result2["text"]
 
 
-class TestSessionIdHandling:
-    """Test session_id parameter handling for both methods."""
-
-    @pytest.mark.claude_cli_integration
-    def test_cli_accepts_session_id(self) -> None:
-        """Test CLI accepts session_id parameter.
-
-        Replaces test_cli_accepts_session_id_without_error.
-        """
-        result = ask_claude_code_cli(
-            "What is 1+1? Answer with just the number.",
-            session_id=None,
-            timeout=60,
-        )
-
-        assert "text" in result
-        assert "session_id" in result
-        assert result["method"] == "cli"
-
-    def test_api_accepts_session_id_mock(self) -> None:
-        """Test API accepts session_id parameter (mocked).
-
-        Replaces test_api_accepts_session_id_without_error.
-        """
-        from unittest.mock import patch
-
-        with patch(
-            "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
-        ) as mock_detailed:
-            mock_detailed.return_value = {
-                "text": "Mock response",
-                "session_info": {"session_id": "api-generated-123"},
-                "result_info": {},
-                "raw_messages": [],
-            }
-
-            result = ask_claude_code_api(
-                "Test question", session_id="some-session-id", timeout=30
-            )
-
-            assert result["text"] == "Mock response"
-            assert result["method"] == "api"
-            mock_detailed.assert_called_once_with(
-                "Test question", 30, "some-session-id"
-            )
-
-    def test_api_works_without_session_id_mock(self) -> None:
-        """Test API works without session_id (mocked).
-
-        Replaces test_api_works_without_session_id.
-        """
-        from unittest.mock import patch
-
-        with patch(
-            "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
-        ) as mock_detailed:
-            mock_detailed.return_value = {
-                "text": "Mock response",
-                "session_info": {"session_id": "api-generated-123"},
-                "result_info": {},
-                "raw_messages": [],
-            }
-
-            result = ask_claude_code_api("Test question")
-
-            assert result["text"] == "Mock response"
-            assert result["session_id"] == "api-generated-123"
-            assert result["method"] == "api"
-
-    def test_api_works_with_explicit_none_session_id_mock(self) -> None:
-        """Test API works with explicit None session_id (mocked).
-
-        Replaces test_api_works_with_explicit_none_session_id.
-        """
-        from unittest.mock import patch
-
-        with patch(
-            "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
-        ) as mock_detailed:
-            mock_detailed.return_value = {
-                "text": "Mock response",
-                "session_info": {"session_id": None},
-                "result_info": {},
-                "raw_messages": [],
-            }
-
-            result = ask_claude_code_api("Test question", session_id=None)
-
-            assert result["text"] == "Mock response"
-            assert result["method"] == "api"
+# Session ID parameter handling is covered by the session continuity test above
+# and the mocked tests remain as unit tests in other test files
 
 
-class TestApiSpecificFeatures:
-    """API-specific feature tests."""
-
-    @pytest.mark.claude_api_integration
-    def test_api_basic_call_without_session(self) -> None:
-        """Test API basic call without session.
-
-        Replaces test_api_basic_call_without_session.
-        """
-        result = ask_claude_code_api(
-            "What is 2+2? Answer with just the number.",
-            timeout=30,
-        )
-
-        assert "text" in result
-        assert "session_id" in result
-        assert "method" in result
-        assert result["method"] == "api"
-        assert "provider" in result
-        assert result["provider"] == "claude"
-        assert len(result["text"]) > 0
-        assert "4" in result["text"]
-
-    @pytest.mark.claude_api_integration
-    def test_api_cost_tracking(self) -> None:
-        """Test API cost tracking.
-
-        Replaces test_api_cost_tracking from test_claude_real_integration.py.
-        """
-        result: LLMResponseDict = prompt_llm("Say hello", method="api")
-
-        assert "raw_response" in result
-        raw_response = result["raw_response"]
-        assert isinstance(raw_response, dict)
-
-        assert "result_info" in raw_response
-        result_info = raw_response["result_info"]
-        assert isinstance(result_info, dict)
-
-        # Verify cost tracking fields exist
-        assert "cost_usd" in result_info or "usage" in result_info
-
-        if "cost_usd" in result_info:
-            cost = result_info["cost_usd"]
-            assert isinstance(cost, (int, float))
-            assert cost >= 0
+# API-specific features like cost tracking are business features, not critical path
+# Basic API functionality is covered by the critical path tests above

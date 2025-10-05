@@ -12,15 +12,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from mcp_coder.cli.commands.commit import generate_commit_message_with_llm
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.llm.providers.claude.claude_code_api import (
     ask_claude_code_api_detailed_sync,
 )
-from mcp_coder.llm.session import parse_llm_method
+
+# Import removed - using structured parameters instead
 from mcp_coder.prompt_manager import get_prompt
+from mcp_coder.utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.utils.git_operations import (
     commit_all_changes,
     get_full_status,
@@ -96,20 +97,21 @@ def save_conversation(
 
 
 def _call_llm_with_comprehensive_capture(
-    prompt: str, llm_method: str, timeout: int = 300
+    prompt: str, provider: str, method: str, timeout: int = 300
 ) -> tuple[str, dict[Any, Any]]:
     """Call LLM and capture both text response and comprehensive data.
 
     Args:
         prompt: The prompt to send to the LLM
-        llm_method: LLM method ('claude_code_cli' or 'claude_code_api')
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'cli' or 'api')
         timeout: Request timeout in seconds
 
     Returns:
         Tuple of (response_text, comprehensive_data_dict)
         For CLI method, comprehensive_data will be empty dict
     """
-    provider, method = parse_llm_method(llm_method)
+    # Use provided structured parameters
 
     if method == "api":
         # Use detailed API call to get comprehensive data
@@ -146,7 +148,7 @@ def _call_llm_with_comprehensive_capture(
             logger.error(
                 f"Prompt length: {len(prompt)} characters ({len(prompt.split())} words)"
             )
-            logger.error(f"LLM method: {llm_method}")
+            logger.error(f"LLM method: {provider}/{method}")
             logger.error(
                 f"This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout"
             )
@@ -168,7 +170,7 @@ def _call_llm_with_comprehensive_capture(
         except subprocess.TimeoutExpired as e:
             logger.error(f"Claude CLI call timed out after {timeout}s: {e}")
             logger.error(f"Prompt length: {len(prompt)} characters")
-            logger.error(f"LLM method: {llm_method}")
+            logger.error(f"LLM method: {provider}/{method}")
             logger.error(
                 f"This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout"
             )
@@ -179,7 +181,7 @@ def _call_llm_with_comprehensive_capture(
         except Exception as e:
             logger.error(f"Claude CLI call failed: {e}")
             logger.error(f"Prompt length: {len(prompt)} characters")
-            logger.error(f"LLM method: {llm_method}")
+            logger.error(f"LLM method: {provider}/{method}")
             raise Exception(f"LLM request failed: {e}") from e
 
 
@@ -339,8 +341,17 @@ def _run_mypy_check(project_dir: Path) -> Optional[str]:
         raise Exception(f"Failed to run mypy check: {e}")
 
 
-def check_and_fix_mypy(project_dir: Path, step_num: int, llm_method: str) -> bool:
-    """Run mypy check and attempt fixes if issues found. Returns True if clean."""
+def check_and_fix_mypy(
+    project_dir: Path, step_num: int, provider: str, method: str
+) -> bool:
+    """Run mypy check and attempt fixes if issues found. Returns True if clean.
+
+    Args:
+        project_dir: Path to the project directory
+        step_num: Step number for conversation naming
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'cli' or 'api')
+    """
     logger.info("Running mypy type checking...")
 
     max_identical_attempts = 3
@@ -396,7 +407,8 @@ def check_and_fix_mypy(project_dir: Path, step_num: int, llm_method: str) -> boo
                 fix_response, mypy_comprehensive_data = (
                     _call_llm_with_comprehensive_capture(
                         mypy_prompt,
-                        llm_method,
+                        provider,
+                        method,
                         timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
                     )
                 )
@@ -461,8 +473,15 @@ Mypy fix generated on: {datetime.now().isoformat()}
         return False
 
 
-def process_single_task(project_dir: Path, llm_method: str) -> tuple[bool, str]:
+def process_single_task(
+    project_dir: Path, provider: str, method: str
+) -> tuple[bool, str]:
     """Process a single implementation task.
+
+    Args:
+        project_dir: Path to the project directory
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'cli' or 'api')
 
     Returns:
         Tuple of (success, reason) where:
@@ -496,7 +515,7 @@ Current task from TASK_TRACKER.md: {next_task}
 Please implement this task step by step."""
 
         response, comprehensive_data = _call_llm_with_comprehensive_capture(
-            full_prompt, llm_method, timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS
+            full_prompt, provider, method, timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS
         )
 
         if not response or not response.strip():
@@ -560,7 +579,7 @@ Generated on: {datetime.now().isoformat()}"""
         return False, "error"
 
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
-    if not check_and_fix_mypy(project_dir, step_num, llm_method):
+    if not check_and_fix_mypy(project_dir, step_num, provider, method):
         logger.warning(
             "Mypy check failed or found unresolved issues - continuing anyway"
         )

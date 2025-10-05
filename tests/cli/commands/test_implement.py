@@ -39,8 +39,10 @@ class TestExecuteImplement:
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
+    @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
     def test_execute_implement_success(
         self,
+        mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         capsys: pytest.CaptureFixture[str],
@@ -49,6 +51,7 @@ class TestExecuteImplement:
         # Setup mocks
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
+        mock_parse_llm.return_value = ("claude", "api")
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -59,12 +62,15 @@ class TestExecuteImplement:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude_code_api")
+        mock_parse_llm.assert_called_once_with("claude_code_api")
+        mock_run_workflow.assert_called_once_with(project_dir, "claude", "api")
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
+    @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
     def test_execute_implement_workflow_failure(
         self,
+        mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         capsys: pytest.CaptureFixture[str],
@@ -73,6 +79,7 @@ class TestExecuteImplement:
         # Setup mocks
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
+        mock_parse_llm.return_value = ("claude", "api")
         mock_run_workflow.return_value = 1
 
         args = argparse.Namespace(
@@ -83,7 +90,8 @@ class TestExecuteImplement:
 
         assert result == 1
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude_code_api")
+        mock_parse_llm.assert_called_once_with("claude_code_api")
+        mock_run_workflow.assert_called_once_with(project_dir, "claude", "api")
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     def test_execute_implement_resolve_dir_failure(
@@ -105,8 +113,10 @@ class TestExecuteImplement:
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
+    @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
     def test_execute_implement_with_none_project_dir(
         self,
+        mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         capsys: pytest.CaptureFixture[str],
@@ -115,6 +125,7 @@ class TestExecuteImplement:
         # Setup mocks
         project_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
+        mock_parse_llm.return_value = ("claude", "cli")
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(project_dir=None, llm_method="claude_code_cli")
@@ -123,12 +134,15 @@ class TestExecuteImplement:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with(None)
-        mock_run_workflow.assert_called_once_with(project_dir, "claude_code_cli")
+        mock_parse_llm.assert_called_once_with("claude_code_cli")
+        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli")
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
+    @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
     def test_execute_implement_with_different_llm_methods(
         self,
+        mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         capsys: pytest.CaptureFixture[str],
@@ -140,29 +154,36 @@ class TestExecuteImplement:
         mock_run_workflow.return_value = 0
 
         # Test with claude_code_cli
+        mock_parse_llm.return_value = ("claude", "cli")
         args_cli = argparse.Namespace(
             project_dir="/test/project", llm_method="claude_code_cli"
         )
         result = execute_implement(args_cli)
         assert result == 0
-        mock_run_workflow.assert_called_with(project_dir, "claude_code_cli")
+        mock_parse_llm.assert_called_with("claude_code_cli")
+        mock_run_workflow.assert_called_with(project_dir, "claude", "cli")
 
         # Reset mocks
         mock_resolve_dir.reset_mock()
         mock_run_workflow.reset_mock()
+        mock_parse_llm.reset_mock()
 
         # Test with claude_code_api
+        mock_parse_llm.return_value = ("claude", "api")
         args_api = argparse.Namespace(
             project_dir="/test/project", llm_method="claude_code_api"
         )
         result = execute_implement(args_api)
         assert result == 0
-        mock_run_workflow.assert_called_with(project_dir, "claude_code_api")
+        mock_parse_llm.assert_called_with("claude_code_api")
+        mock_run_workflow.assert_called_with(project_dir, "claude", "api")
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
+    @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
     def test_execute_implement_exception_handling(
         self,
+        mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         capsys: pytest.CaptureFixture[str],
@@ -171,6 +192,7 @@ class TestExecuteImplement:
         # Setup mocks
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
+        mock_parse_llm.return_value = ("claude", "api")
         mock_run_workflow.side_effect = Exception("Unexpected error")
 
         args = argparse.Namespace(
@@ -186,8 +208,10 @@ class TestExecuteImplement:
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
+    @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
     def test_execute_implement_keyboard_interrupt(
         self,
+        mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         capsys: pytest.CaptureFixture[str],
@@ -196,6 +220,7 @@ class TestExecuteImplement:
         # Setup mocks
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
+        mock_parse_llm.return_value = ("claude", "api")
         mock_run_workflow.side_effect = KeyboardInterrupt()
 
         args = argparse.Namespace(

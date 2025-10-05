@@ -382,6 +382,7 @@ class TestGitErrorCases:
         # Basic operations should still work
         assert is_git_repository(project_dir) is True
 
+    @pytest.mark.git_integration
     def test_concurrent_access_simulation(
         self, git_repo_with_files: tuple[Repo, Path]
     ) -> None:

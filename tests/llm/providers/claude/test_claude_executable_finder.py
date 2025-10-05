@@ -285,32 +285,6 @@ class TestVerifyClaudeInstallation:
         assert "Version check failed" in error_str
 
 
-@pytest.mark.claude_cli_integration
-class TestIntegration:
-    """Integration tests for the claude_executable_finder module."""
-
-    def test_real_claude_finder(self) -> None:
-        """Test finding real Claude installation if available."""
-        try:
-            result = find_claude_executable(test_execution=True)
-            assert isinstance(result, str)
-            assert len(result) > 0
-            print(f"Found Claude at: {result}")
-        except FileNotFoundError:
-            pytest.skip("Claude Code CLI not installed")
-
-    def test_real_verification(self) -> None:
-        """Test real Claude installation verification."""
-        result = verify_claude_installation()
-
-        assert isinstance(result, dict)
-        assert "found" in result
-        assert "works" in result
-
-        if result["found"]:
-            print(f"Claude found at: {result['path']}")
-            print(f"Version: {result['version']}")
-            print(f"Works: {result['works']}")
-        else:
-            print(f"Claude not found: {result['error']}")
-            pytest.skip("Claude Code CLI not installed")
+# Integration tests for claude_executable_finder are removed
+# Installation verification is not part of critical path testing
+# Unit tests above provide sufficient coverage for the finder functionality

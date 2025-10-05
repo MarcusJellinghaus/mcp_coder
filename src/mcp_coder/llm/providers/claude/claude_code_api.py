@@ -273,7 +273,7 @@ def create_api_response_dict(
 
 
 async def _ask_claude_code_api_async(
-    question: str, timeout: int = 30, session_id: str | None = None
+    question: str, timeout: float = 30.0, session_id: str | None = None
 ) -> str:
     """
     Ask Claude a question via Python SDK asynchronously.
@@ -374,7 +374,7 @@ async def _ask_claude_code_api_async(
 
 
 def ask_claude_code_api(
-    question: str, session_id: str | None = None, timeout: int = 30
+    question: str, session_id: str | None = None, timeout: float = 30.0
 ) -> LLMResponseDict:
     """
     Ask Claude a question via Python SDK with native session support.
@@ -441,7 +441,7 @@ def ask_claude_code_api(
 
 
 async def ask_claude_code_api_detailed(
-    question: str, timeout: int = 30, session_id: str | None = None
+    question: str, timeout: float = 30.0, session_id: str | None = None
 ) -> dict[str, Any]:
     """
     Ask Claude a question via Python SDK and return detailed response information.
@@ -579,7 +579,7 @@ async def ask_claude_code_api_detailed(
 
 
 def ask_claude_code_api_detailed_sync(
-    question: str, timeout: int = 30, session_id: str | None = None
+    question: str, timeout: float = 30.0, session_id: str | None = None
 ) -> dict[str, Any]:
     """
     Synchronous wrapper for ask_claude_code_api_detailed.

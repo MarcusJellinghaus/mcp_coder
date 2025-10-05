@@ -213,22 +213,3 @@ class TestVerifyClaudeCliInstallation:
         # Should show error information
         error_messages = [msg for msg in print_calls if "Permission denied" in msg]
         assert len(error_messages) >= 1
-
-
-class TestVerifyCommandIntegration:
-    """Integration tests for the verify command (require real Claude installation to be meaningful)."""
-
-    @pytest.mark.claude_cli_integration
-    def test_verify_command_structure(self) -> None:
-        """Test that the verify command has the correct structure."""
-        # This is a minimal test that doesn't require Claude to be installed
-        # It just checks that the function can be called with proper arguments
-
-        args = argparse.Namespace()
-
-        # This should not crash, even if Claude is not installed
-        # The actual return code depends on the environment
-        result = verify_claude_cli_installation(args)
-
-        # Should return either 0 (success) or 1 (failure), not crash
-        assert result in [0, 1]

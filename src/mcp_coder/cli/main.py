@@ -5,15 +5,11 @@ import logging
 import sys
 
 from ..utils.log_utils import setup_logging
-from .commands import (
-    execute_commit_auto,
-    execute_commit_clipboard,
-    execute_help,
-    execute_implement,
-    execute_prompt,
-    execute_verify,
-)
-from .commands.help import get_help_text
+from .commands.commit import execute_commit_auto, execute_commit_clipboard
+from .commands.help import execute_help, get_help_text
+from .commands.implement import execute_implement
+from .commands.prompt import execute_prompt
+from .commands.verify import execute_verify
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
@@ -163,8 +159,8 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     implement_parser.add_argument(
         "--llm-method",
         choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_api",
-        help="LLM method to use (default: claude_code_api)",
+        default="claude_code_cli",
+        help="LLM method to use (default: claude_code_cli)",
     )
 
     return parser

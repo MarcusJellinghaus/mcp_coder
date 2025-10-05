@@ -48,12 +48,12 @@ from ...llm.providers.claude.claude_code_api import (
     UserMessage,
     ask_claude_code_api_detailed_sync,
 )
-from ...llm.session import parse_llm_method
 from ...llm.storage import (
     extract_session_id,
     find_latest_session,
     store_session,
 )
+from ..utils import parse_llm_method_from_args
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
             # JSON output mode - return full LLMResponseDict
             from ...llm.interface import prompt_llm
 
-            provider, method = parse_llm_method(llm_method)
+            provider, method = parse_llm_method_from_args(llm_method)
             response_dict = prompt_llm(
                 args.prompt,
                 provider=provider,
@@ -126,7 +126,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
             formatted_output = json.dumps(response_dict, indent=2, default=str)
         elif verbosity == "just-text":
             # Use unified ask_llm interface for simple text output
-            provider, method = parse_llm_method(llm_method)
+            provider, method = parse_llm_method_from_args(llm_method)
             response = ask_llm(
                 args.prompt,
                 provider=provider,
