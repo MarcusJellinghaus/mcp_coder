@@ -8,21 +8,21 @@ This document tracks test performance issues that require human review and actio
 ### PRIORITY 1 - Critical Unit Test Violations (Immediate Action Required)
 
 #### Issue #001: Unit Test Performance Violations
-**Status**: 🔴 Critical  
-**Impact**: High - Unit tests should be fast for development workflow  
-**Tests Affected**: 3 critical violations
+**Status**: 🟡 Low Priority  
+**Impact**: Low - Only one marginally slow unit test remains  
+**Tests Affected**: 1 minor violation
 
 **Specific Test Locations**:
-1. `tests/cli/test_main.py::TestCLIIntegration::test_cli_help_via_python_module` - **10.20s** (10x threshold)
-2. `tests/utils/test_log_utils.py::TestLogFunctionCall::test_log_function_call_with_exception` - **5.76s** (5.7x threshold)  
-3. `tests/llm/providers/claude/test_claude_code_api.py::TestAskClaudeCodeApiAsync::test_timeout_handling` - **1.06s** (1.1x threshold)
+1. `tests/llm/providers/claude/test_claude_code_api.py::TestAskClaudeCodeApiAsync::test_timeout_handling` - **1.06s** (1.1x threshold)
+
+**Analysis**:
+- **File 1**: Test intentionally uses `asyncio.sleep(2)` to simulate slow response, then tests 1-second timeout
+- Performance is expected behavior for timeout testing
+- Two previously reported tests no longer exist in codebase
 
 **Recommended Actions**:
-- **File 1**: `tests/cli/test_main.py` - Investigate CLI help command performance, likely subprocess overhead
-- **File 2**: `tests/utils/test_log_utils.py` - Review exception logging performance, possibly I/O bound
-- **File 3**: `tests/llm/providers/claude/test_claude_code_api.py` - Optimize timeout handling test, may be actually timing out
-- Consider mocking external dependencies in all three locations
-- Split complex test scenarios into smaller units
+- **Optional optimization**: Reduce sleep time from 2s to 0.1s and timeout from 1s to 0.05s for faster test execution
+- **Low priority**: Test serves its purpose and 1.06s is acceptable for timeout testing
 
 ### PRIORITY 2 - Git Integration Test Performance Crisis
 
@@ -95,15 +95,17 @@ This document tracks test performance issues that require human review and actio
 **Impact**: Medium - Network dependent, highly variable
 
 **Primary Files & Critical Tests**:
-- `tests/llm/providers/claude/test_claude_cli_verification.py::TestVerifyCommandIntegration::test_verify_command_structure` - **98.72s**
 - `tests/llm/providers/claude/test_claude_integration.py`:
   - `TestCriticalPathIntegration::test_basic_cli_api_integration` - **~30s**
   - `TestCriticalPathIntegration::test_interface_contracts` - **~30s**
   - `TestCriticalPathIntegration::test_session_continuity` - **~30s**
 
+**Note**: CLI verification tests (`test_verify_command_structure`) may have been removed or relocated.
+
 **Recommended Actions**:
 - Add retry logic with exponential backoff for remaining verification tests
 - Consider running CLI verification tests separately in CI (nightly builds)
+- Verify current test structure matches documentation
 
 #### Issue #005: GitHub Integration Tests
 **Status**: 🟡 Warning  
@@ -123,9 +125,9 @@ This document tracks test performance issues that require human review and actio
 ## Review Queue
 
 ### Tests Requiring Immediate Review
-1. **Unit Tests >1s** - `tests/cli/test_main.py`, `tests/utils/test_log_utils.py`, `tests/llm/providers/claude/test_claude_code_api.py`
-2. **Git workflow tests** - `tests/utils/test_git_workflows.py` (entire TestGitWorkflows class)
-3. **MyPy integration tests** - `tests/test_mcp_code_checker_integration.py` (TestMypyIntegration class)
+1. **Git workflow tests** - `tests/utils/test_git_workflows.py` (entire TestGitWorkflows class) - **HIGHEST PRIORITY**
+2. **MyPy integration tests** - `tests/test_mcp_code_checker_integration.py` (TestMypyIntegration class) - **HIGH PRIORITY**
+3. **~~Unit Tests >1s~~** - ~~Stale data removed, no critical unit test violations remain~~
 
 ### Tests for Future Optimization
 1. GitHub integration tests - `tests/utils/github_operations/test_github_utils.py`
@@ -181,6 +183,7 @@ Based on performance analysis, recommend adding these pytest markers to specific
 - `test_api_cost_tracking` - Removed (business feature, not critical path)
 - `test_real_verification` - Removed (installation verification not critical path)
 - `test_ask_llm_*_paris_question` - Redundant with basic integration tests
+- Various CLI verification tests - May have been removed during optimization
 
 **Tests Added** (streamlined):
 - `test_basic_cli_api_integration` - Both CLI and API paths in one test
@@ -190,10 +193,10 @@ Based on performance analysis, recommend adding these pytest markers to specific
 ## Performance Optimization Strategies
 
 ### Immediate Actions (This Sprint)
-1. **Fix 3 critical unit test violations**:
-   - `tests/cli/test_main.py::TestCLIIntegration::test_cli_help_via_python_module`
-   - `tests/utils/test_log_utils.py::TestLogFunctionCall::test_log_function_call_with_exception`
-   - `tests/llm/providers/claude/test_claude_code_api.py::TestAskClaudeCodeApiAsync::test_timeout_handling`
+1. **Focus on real performance bottlenecks**:
+   - Git workflow tests (60-135s each) in `tests/utils/test_git_workflows.py`
+   - MyPy integration tests (26-37s each) in `tests/test_mcp_code_checker_integration.py`
+   - ~~Unit test violations resolved~~ (stale data removed)
 
 2. **Add pytest markers** to slow tests in:
    - `tests/utils/test_git_workflows.py` (entire TestGitWorkflows class)
