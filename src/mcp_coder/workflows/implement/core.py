@@ -206,7 +206,7 @@ def run_implement_workflow(project_dir: Path, provider: str, method: str) -> int
         Coordinates the full workflow from prerequisites through task completion.
         Handles errors gracefully and provides comprehensive progress tracking.
     """
-    logger.info("Starting implement workflow...")
+    logger.info(f"Starting implement workflow for project: {project_dir}")
 
     # Step 1: Check git status and prerequisites
     if not check_git_clean(project_dir):
