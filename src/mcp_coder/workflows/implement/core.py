@@ -251,7 +251,7 @@ def run_implement_workflow(project_dir: Path, provider: str, method: str) -> int
     # Step 5: Show final progress summary with appropriate messaging
     if error_occurred:
         logger.info(
-            f"Workflow stopped due to error after processing {completed_tasks} task(s)."
+            f"Workflow stopped due to error after processing {completed_tasks} task(s)"
         )
         if completed_tasks > 0:
             logger.info("\nProgress before error:")

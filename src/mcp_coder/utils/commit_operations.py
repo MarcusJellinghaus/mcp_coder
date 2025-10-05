@@ -155,28 +155,49 @@ def parse_llm_commit_response(response: Optional[str]) -> Tuple[str, Optional[st
     if not response or not response.strip():
         return "", None
 
-    # Split response into lines
+    # Split response into lines and strip surrounding whitespace from the entire response
     lines = response.strip().split("\n")
-
-    # Find the first non-empty line as the commit summary
-    summary = ""
-    body_lines = []
-    found_summary = False
-
-    for line in lines:
+    
+    # Find the first non-empty line as the summary
+    summary_line = ""
+    body_start_index = -1
+    
+    for i, line in enumerate(lines):
         stripped_line = line.strip()
-
-        if not found_summary and stripped_line:
-            summary = stripped_line
-            found_summary = True
-        elif found_summary and stripped_line:
-            body_lines.append(stripped_line)
-
-    # Join body lines if any exist
+        if stripped_line:
+            summary_line = stripped_line
+            body_start_index = i + 1
+            break
+    
+    if not summary_line:
+        return "", None
+    
+    # Collect body lines starting from after the summary
+    body_lines = []
+    if body_start_index < len(lines):
+        # Skip any immediate empty lines after summary
+        body_start = body_start_index
+        while body_start < len(lines) and not lines[body_start].strip():
+            body_start += 1
+        
+        # Collect all remaining lines, preserving single empty lines between content
+        for i in range(body_start, len(lines)):
+            line = lines[i].strip()
+            if line:  # Non-empty line
+                body_lines.append(line)
+            elif body_lines:  # Empty line, but only if we already have content
+                # Check if there's more non-empty content after this empty line
+                has_more_content = any(lines[j].strip() for j in range(i + 1, len(lines)))
+                if has_more_content:
+                    # Only add one empty line, even if there are multiple consecutive empty lines
+                    if not body_lines or body_lines[-1] != "":
+                        body_lines.append("")  # Preserve single empty line between content
+    
+    # Create body string if we have content
     body = "\n".join(body_lines) if body_lines else None
-
+    
     # If we have a body, combine summary and body with blank line
     if body:
-        return f"{summary}\n\n{body}", body
+        return f"{summary_line}\n\n{body}", body
     else:
-        return summary, None
+        return summary_line, None
