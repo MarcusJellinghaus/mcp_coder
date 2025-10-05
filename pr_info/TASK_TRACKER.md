@@ -19,7 +19,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ---
 
-## Tasks1
+## Tasks
 
 ### Step 1: Create CLI Utility Module
 - [x] Create `src/mcp_coder/cli/utils.py` with `parse_llm_method_from_args()` function
