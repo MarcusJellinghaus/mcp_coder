@@ -341,6 +341,7 @@ class TestGitWorkflows:
         assert len(commits) == 1
         assert commits[0].message == "Initial project setup with all files"
 
+    @pytest.mark.git_integration
     def test_commit_workflows(self, git_repo: tuple[Repo, Path]) -> None:
         """Test various commit scenarios with different message formats."""
         repo, project_dir = git_repo
@@ -715,6 +716,7 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
+    @pytest.mark.git_integration
     def test_empty_to_populated_repository_workflow(
         self, git_repo: tuple[Repo, Path]
     ) -> None:
@@ -846,6 +848,7 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
+    @pytest.mark.git_integration
     def test_commit_message_variations_workflow(
         self, git_repo: tuple[Repo, Path]
     ) -> None:
@@ -962,6 +965,7 @@ class TestGitWorkflows:
         final_status = get_full_status(project_dir)
         assert final_status == {"staged": [], "modified": [], "untracked": []}
 
+    @pytest.mark.git_integration
     def test_git_status_consistency_workflow(
         self, git_repo_with_files: tuple[Repo, Path]
     ) -> None:

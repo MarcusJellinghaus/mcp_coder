@@ -154,6 +154,28 @@ Based on performance analysis, recommend adding these pytest markers to specific
 
 ## Completed Actions
 
+### ✅ CRITICAL: Git Integration Test Markers Added (October 2025)
+**Issue**: Issue #002 - Git Workflow Tests Extremely Slow  
+**Action Taken**: Added `@pytest.mark.git_integration` markers to all slow git workflow tests  
+**Files Modified**:
+- `tests/utils/test_git_workflows.py` - Added markers to 5 critical slow tests in TestGitWorkflows class
+- `tests/utils/test_git_error_cases.py` - Added marker to concurrent access simulation test
+
+**Tests Marked** (all >60 seconds):
+- `test_commit_message_variations_workflow` - **135.89s**
+- `test_git_status_consistency_workflow` - **129.30s**  
+- `test_commit_workflows` - **107.08s**
+- `test_get_git_diff_integration_with_existing_functions` - **106.81s**
+- `test_empty_to_populated_repository_workflow` - **106.46s**
+- `test_concurrent_access_simulation` - **59.91s**
+
+**Usage Impact**:
+- **Fast CI runs**: Use `-m "not git_integration"` to exclude these slow tests
+- **Git-specific testing**: Use `-m "git_integration"` to run only git integration tests
+- **Development workflow**: Developers can now easily skip slow git tests during rapid iteration
+
+**Performance Benefit**: Allows CI and development workflows to exclude ~30 minutes of git integration tests when not needed.
+
 ### ✅ MAJOR: Claude Integration Test Streamlining (October 2025)
 **Issue**: Issue #004 - Claude CLI/API Integration Tests  
 **Action Taken**: Consolidated 12+ redundant integration tests into 3 critical path tests  
