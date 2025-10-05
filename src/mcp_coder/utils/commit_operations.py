@@ -10,7 +10,7 @@ from typing import Optional, Tuple
 from ..constants import PROMPTS_FILE_PATH
 from ..llm.interface import ask_llm
 from ..llm.providers.claude.claude_code_api import ClaudeAPIError
-from ..llm.session import parse_llm_method
+
 from ..prompt_manager import get_prompt
 from .git_operations import get_git_diff_for_commit, stage_all_changes
 
@@ -21,9 +21,18 @@ logger = logging.getLogger(__name__)
 
 
 def generate_commit_message_with_llm(
-    project_dir: Path, llm_method: str = "claude_code_api"
+    project_dir: Path, provider: str = "claude", method: str = "api"
 ) -> Tuple[bool, str, Optional[str]]:
-    """Generate commit message using LLM. Returns (success, message, error)."""
+    """Generate commit message using LLM. Returns (success, message, error).
+    
+    Args:
+        project_dir: Path to the project directory
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'cli' or 'api')
+        
+    Returns:
+        Tuple of (success, commit_message, error_message)
+    """
     logger.debug("Generating commit message with LLM for %s", project_dir)
 
     # Step 1: Stage all changes
@@ -90,7 +99,6 @@ def generate_commit_message_with_llm(
 
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
         logger.debug("Calling LLM for auto generated commit message...")
-        provider, method = parse_llm_method(llm_method)
         response = ask_llm(
             full_prompt,
             provider=provider,

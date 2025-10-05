@@ -21,10 +21,8 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
     def test_generate_commit_message_success(
         self,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
@@ -36,11 +34,10 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
         mock_get_prompt.return_value = "Generate commit message"
         mock_ask_llm.return_value = "feat: add new feature"
-        mock_parse_llm_method.return_value = ("claude", "code_api")
 
         project_dir = Path("/test/repo")
 
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is True
         assert message == "feat: add new feature"
@@ -50,41 +47,40 @@ class TestGenerateCommitMessageWithLLM:
         mock_stage.assert_called_once_with(project_dir)
         mock_get_diff.assert_called_once_with(project_dir)
         mock_ask_llm.assert_called_once()
-        mock_parse_llm_method.assert_called_once_with("claude_code_api")
 
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
-    def test_generate_commit_message_with_custom_llm_method(
+    def test_generate_commit_message_with_custom_provider_method(
         self,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
     ) -> None:
-        """Test LLM commit message generation with custom LLM method."""
+        """Test LLM commit message generation with custom provider and method."""
         # Setup mocks
         mock_stage.return_value = True
         mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
         mock_get_prompt.return_value = "Generate commit message"
         mock_ask_llm.return_value = "feat: add new feature"
-        mock_parse_llm_method.return_value = ("claude", "cli")
 
         project_dir = Path("/test/repo")
 
         success, message, error = generate_commit_message_with_llm(
-            project_dir, llm_method="claude_cli"
+            project_dir, provider="claude", method="cli"
         )
 
         assert success is True
         assert message == "feat: add new feature"
         assert error is None
 
-        # Verify parse_llm_method was called with correct parameter
-        mock_parse_llm_method.assert_called_once_with("claude_cli")
+        # Verify ask_llm was called with correct provider and method
+        mock_ask_llm.assert_called_once()
+        call_args = mock_ask_llm.call_args
+        assert call_args[1]["provider"] == "claude"
+        assert call_args[1]["method"] == "cli"
 
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     def test_generate_commit_message_stage_failure(self, mock_stage: Mock) -> None:
@@ -93,7 +89,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
 
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -107,7 +103,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_stage.side_effect = Exception("Permission denied")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -127,7 +123,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
 
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -145,7 +141,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = None
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -163,7 +159,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.side_effect = Exception("Git command failed")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -183,7 +179,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt.side_effect = FileNotFoundError("prompts.md not found")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -203,7 +199,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt.side_effect = Exception("Permission denied")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -215,10 +211,8 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
     def test_generate_commit_message_empty_llm_response(
         self,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
@@ -229,10 +223,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
         mock_ask_llm.return_value = ""
-        mock_parse_llm_method.return_value = ("claude", "code_api")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -244,10 +237,8 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
     def test_generate_commit_message_claude_api_error(
         self,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
@@ -258,10 +249,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
         mock_ask_llm.side_effect = ClaudeAPIError("API rate limit exceeded")
-        mock_parse_llm_method.return_value = ("claude", "code_api")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -272,10 +262,8 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
     def test_generate_commit_message_llm_exception(
         self,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
@@ -286,10 +274,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
         mock_ask_llm.side_effect = Exception("Network error")
-        mock_parse_llm_method.return_value = ("claude", "code_api")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -302,12 +289,10 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
     @patch("mcp_coder.utils.commit_operations.parse_llm_commit_response")
     def test_generate_commit_message_empty_parsed_message(
         self,
         mock_parse_response: Mock,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
@@ -318,11 +303,10 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
         mock_ask_llm.return_value = "some response"
-        mock_parse_llm_method.return_value = ("claude", "code_api")
         mock_parse_response.return_value = ("", None)
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -334,12 +318,10 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
     @patch("mcp_coder.utils.commit_operations.parse_llm_commit_response")
     def test_generate_commit_message_empty_first_line(
         self,
         mock_parse_response: Mock,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
@@ -350,12 +332,11 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
         mock_ask_llm.return_value = "some response"
-        mock_parse_llm_method.return_value = ("claude", "code_api")
         # Simulate a commit message that starts with empty line (invalid)
         mock_parse_response.return_value = ("\n\nActual content here", None)
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -367,12 +348,10 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
     @patch("mcp_coder.utils.commit_operations.parse_llm_commit_response")
     def test_generate_commit_message_parsing_exception(
         self,
         mock_parse_response: Mock,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
@@ -383,11 +362,10 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
         mock_ask_llm.return_value = "some response"
-        mock_parse_llm_method.return_value = ("claude", "code_api")
         mock_parse_response.side_effect = Exception("Parsing error")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir)
+        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is False
         assert message == ""
@@ -400,10 +378,8 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
     def test_generate_commit_message_large_diff_warning(
         self,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
@@ -417,12 +393,11 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = large_diff
         mock_get_prompt.return_value = "prompt text"
         mock_ask_llm.return_value = "feat: add feature"
-        mock_parse_llm_method.return_value = ("claude", "code_api")
 
         project_dir = Path("/test/repo")
 
         with caplog.at_level(logging.WARNING):
-            success, message, error = generate_commit_message_with_llm(project_dir)
+            success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is True
         assert message == "feat: add feature"
@@ -438,10 +413,8 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     @patch("mcp_coder.utils.commit_operations.ask_llm")
-    @patch("mcp_coder.utils.commit_operations.parse_llm_method")
     def test_generate_commit_message_long_summary_warning(
         self,
-        mock_parse_llm_method: Mock,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
@@ -455,12 +428,11 @@ class TestGenerateCommitMessageWithLLM:
         # Create a very long commit message (>100 chars)
         long_message = "feat: " + "x" * 200
         mock_ask_llm.return_value = long_message
-        mock_parse_llm_method.return_value = ("claude", "code_api")
 
         project_dir = Path("/test/repo")
 
         with caplog.at_level(logging.WARNING):
-            success, message, error = generate_commit_message_with_llm(project_dir)
+            success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
 
         assert success is True
         assert message == long_message
