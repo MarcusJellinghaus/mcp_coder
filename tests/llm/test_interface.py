@@ -289,60 +289,9 @@ class TestIntegration:
         assert result == "Full chain response with session"
 
 
-@pytest.mark.claude_cli_integration
-class TestLLMInterfaceCLIRealIntegration:
-    """Real integration tests for LLM interface using CLI method."""
-
-    def test_ask_llm_cli_paris_question(self) -> None:
-        """Test that ask_llm with CLI method can answer the Paris question."""
-        try:
-            response = ask_llm(
-                "What is the capital of France? Answer with just the city name.",
-                provider="claude",
-                method="cli",
-                timeout=30,
-            )
-
-            assert response, "CLI method returned empty response"
-            assert isinstance(
-                response, str
-            ), f"Expected string response, got {type(response)}"
-
-            response_lower = response.strip().lower()
-            assert (
-                "paris" in response_lower
-            ), f"Expected 'paris' in response, got: {response}"
-
-        except Exception as e:
-            pytest.skip(f"Claude CLI integration test failed (expected): {str(e)}")
-
-
-@pytest.mark.claude_api_integration
-class TestLLMInterfaceAPIRealIntegration:
-    """Real integration tests for LLM interface using API method."""
-
-    def test_ask_llm_api_paris_question(self) -> None:
-        """Test that ask_llm with API method can answer the Paris question."""
-        try:
-            response = ask_llm(
-                "What is the capital of France? Answer with just the city name.",
-                provider="claude",
-                method="api",
-                timeout=30,
-            )
-
-            assert response, "API method returned empty response"
-            assert isinstance(
-                response, str
-            ), f"Expected string response, got {type(response)}"
-
-            response_lower = response.strip().lower()
-            assert (
-                "paris" in response_lower
-            ), f"Expected 'paris' in response, got: {response}"
-
-        except Exception as e:
-            pytest.skip(f"Claude API integration test failed (expected): {str(e)}")
+# Real integration tests for LLM interface are removed
+# These are redundant with the critical path tests in test_claude_integration.py
+# The interface routing and functionality is covered by the streamlined integration tests
 
 
 class TestPromptLLM:
