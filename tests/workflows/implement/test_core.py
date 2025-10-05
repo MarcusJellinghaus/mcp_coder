@@ -680,7 +680,9 @@ class TestIntegration:
         all_logs = " ".join(log_messages)
         assert any("Starting implement workflow" in msg for msg in log_messages)
         assert any("TASK TRACKER PROGRESS SUMMARY" in msg for msg in log_messages)
-        assert any("Implement workflow completed successfully" in msg for msg in log_messages)
+        assert any(
+            "Implement workflow completed successfully" in msg for msg in log_messages
+        )
 
     def test_resolve_project_dir_real_filesystem(self, tmp_path: Path) -> None:
         """Test resolve_project_dir with real filesystem operations."""
