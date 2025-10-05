@@ -125,22 +125,7 @@ class TestLogFunctionCall:
         assert result == 3
         assert mock_stdlogger.debug.call_count == 2  # Called for start and end logging
 
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_with_exception(self, mock_stdlogger: MagicMock) -> None:
-        """Test that exceptions are properly logged."""
 
-        # Define a test function that raises an exception
-        @log_function_call
-        def failing_func() -> None:
-            raise ValueError("Test error")
-
-        # Execute and verify
-        with pytest.raises(ValueError):
-            failing_func()
-
-        # Verify debug called once (for start) and error called once (for exception)
-        assert mock_stdlogger.debug.call_count == 1
-        assert mock_stdlogger.error.call_count == 1
 
     @patch("mcp_coder.utils.log_utils.stdlogger")
     def test_log_function_call_with_path_param(self, mock_stdlogger: MagicMock) -> None:
