@@ -24,7 +24,7 @@ class TestExecuteCommitAuto:
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     def test_execute_commit_auto_success(
         self,
@@ -62,7 +62,7 @@ class TestExecuteCommitAuto:
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_with_preview_confirmed(
@@ -102,7 +102,7 @@ class TestExecuteCommitAuto:
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_preview_empty_input_proceeds(
@@ -140,7 +140,7 @@ class TestExecuteCommitAuto:
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("builtins.input")
     def test_execute_commit_auto_with_preview_cancelled(
         self,
@@ -169,7 +169,7 @@ class TestExecuteCommitAuto:
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_preview_various_cancel_inputs(
@@ -246,7 +246,7 @@ class TestExecuteCommitAuto:
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     def test_execute_commit_auto_no_changes(
         self,
         mock_generate: Mock,
@@ -278,7 +278,7 @@ class TestPreviewModeLogic:
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_preview_mode_cancel_variations(
@@ -306,7 +306,7 @@ class TestPreviewModeLogic:
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
-    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_preview_mode_proceed_variations(
