@@ -1,76 +1,140 @@
 # Runtime Statistics Review Process
 
 ## Overview
-This document defines the automated process for managing test performance and detecting slow tests in the MCP Coder project.
+Automated process for managing test performance and maintaining accurate slow test registry.
+
+## Execution
+```bash
+claude -p "Please execute the runtime statistics review process based on the latest performance data in docs/tests/performance_data/"
+```
 
 ## Prerequisites
-- `tools/get_pytest_performance_stats.bat` has been executed
 - Performance data exists in `docs/tests/performance_data/`
-- LLM has access to project files via MCP tools
+- LLM has MCP tools access
 
 ## Process Steps
 
-### Step 1: Data Collection
-1. **Read Latest Performance Data**
-   - Find the newest timestamped file in `docs/tests/performance_data/`
-   - Parse performance statistics for all test categories
-   - Extract git branch information from the report
+### 1. Data Collection
+- Find latest timestamped file in `docs/tests/performance_data/`
+- Extract performance data and metadata (timestamp, branch, test counts)
+- Validate data integrity
 
-### Step 2: Baseline Comparison
-1. **Load Current Baselines**
-   - Read `docs/tests/runtime_statistics.md` for known slow tests and thresholds
-   - If file doesn't exist, initialize with default thresholds
+### 2. Performance Analysis
+- Load current registry from `docs/tests/runtime_statistics.md`
+- Compare against previous runs if available
+- Classify each test:
+  - **RESOLVED**: Previously slow, now acceptable
+  - **NEW_SLOW**: Now exceeds thresholds
+  - **REGRESSION**: >50% slower
+  - **IMPROVEMENT**: >25% faster
+  - **STABLE_SLOW**: Consistently slow
 
-2. **Analyze Performance Changes**
-   - Identify new tests exceeding thresholds
-   - Detect tests that became significantly slower/faster
-   - Flag unusual patterns or outliers
+### 3. File Updates
 
-### Step 3: Classification and Decision Making
-For each flagged test, categorize as:
-- **NEW_SLOW**: Previously fast test now exceeds threshold
-- **REGRESSION**: Known test became significantly slower
-- **IMPROVEMENT**: Previously slow test became faster
-- **NEW_TEST**: First-time measurement of a test
+#### Update `runtime_statistics.md` (Current State Registry)
+**Purpose**: Maintain accurate baseline of currently slow tests
 
-### Step 4: Update Documentation
-1. **Update Runtime Statistics**
-   - Add new slow tests to known registry with **COMPLETE TEST IDENTIFIERS**
-   - Include full file path, class name, and test method name
-   - Format: `file_path::ClassName::test_method_name` for easy navigation
-   - Update performance trends
-   - Record analysis timestamp and branch
+**Add to Registry:**
+- Tests currently exceeding thresholds
+- Current timing and severity level
+- Category context (external API, resource-intensive, etc.)
 
-2. **Update Issues Queue**
-   - Add new review items to `docs/tests/issues.md` with complete test paths
-   - Include file locations for immediate developer action
-   - Prioritize by impact and test execution frequency
+**Remove from Registry:**
+- Tests no longer slow (now within thresholds)
+- Tests that no longer exist in codebase
+- Outdated entries with incorrect timings
 
-### Step 5: Generate Recommendations
-Provide actionable recommendations:
-- Tests to split or optimize
-- Marker reassignments (e.g., promote to integration test)
+**Update in Registry:**
+- Existing slow tests with significantly changed timings
+- Performance trends summary
+- Analysis timestamp and metadata
+
+#### Update `issues.md` (Action Queue)
+**Purpose**: Track items requiring human review and action
+
+**Add to Issues:**
+- NEW_SLOW tests requiring investigation
+- REGRESSION tests needing optimization
+- Tests exceeding critical thresholds by >2x
+- Recommended category reassignments
+- Process improvement suggestions
+
+**Remove from Issues:**
+- Items that have been addressed/resolved
+- Tests that were optimized and no longer slow
+- Completed action items
+
+**Update in Issues:**
+- Priority levels based on impact and frequency
+- Action item status and progress notes
+
+### 4. Documentation Standards
+
+#### Registry Format (`runtime_statistics.md`)
+```markdown
+## Known Slow Tests Registry
+### [Category] (Exceeding Xs threshold)
+- `file_path::ClassName::test_method_name` - **XXs** 🚨 SEVERITY
+```
+
+#### Issues Format (`issues.md`)
+```markdown
+## Performance Issues Requiring Review
+### High Priority
+- [ ] **NEW_SLOW**: `test_path` - XXs (investigate cause)
+- [ ] **REGRESSION**: `test_path` - XXs → XXs (50% slower)
+```
+
+### 5. Cleanup Criteria
+
+#### Registry Cleanup (Aggressive)
+- Remove ALL tests not currently slow
+- Keep only verified current violations
+- Target: >95% accuracy of listed tests
+
+#### Issues Cleanup (Completion-Based)
+- Remove completed action items
+- Archive resolved performance problems
+- Keep open investigations and recommendations
+
+### 6. Recommendations
+- Tests requiring optimization or splitting
+- Category reassignments
 - Infrastructure improvements
 - Process adjustments
 
-## Thresholds (Default)
-- **Unit Tests**: 0.5s warning, 1.0s critical
-- **Integration Tests**: 5.0s warning, 10.0s critical
-- **External API Tests**: 10.0s warning, 30.0s critical
+## File Responsibilities
 
-## Output Format
-The process should update:
-1. `docs/tests/runtime_statistics.md` - Current state and baselines
-2. `docs/tests/issues.md` - Action items requiring human review
+| File | Purpose | Content | Update Frequency |
+|------|---------|---------|------------------|
+| `runtime_statistics.md` | Current baseline | Currently slow tests only | Every run (aggressive cleanup) |
+| `issues.md` | Action queue | New problems + recommendations | As needed (completion-based) |
 
-## Execution Command
-```bash
-# Run this process after executing performance stats
-claude-code "Please execute the runtime statistics review process based on the latest performance data in docs/tests/performance_data/"
-```
+## Thresholds
+
+| Category | Warning | Critical | Context |
+|----------|---------|----------|---------|
+| Unit Tests | 0.5s | 1.0s | Fast feedback |
+| Claude CLI Integration | 5.0s | 10.0s | Network/CLI overhead |
+| Claude API Integration | 10.0s | 30.0s | API latency |
+| Git Integration | 5.0s | 10.0s | File I/O |
+| Formatter Integration | 3.0s | 8.0s | Code analysis tools |
+| GitHub Integration | 10.0s | 30.0s | External API |
+
+## Severity Levels
+- 🚨 **EXTREME**: >3x threshold
+- ⚠️ **CRITICAL**: >1x threshold, <3x
+- ⚠️ **WARNING**: Above warning, below critical
+- ✅ **ACCEPTABLE**: Within range
 
 ## Success Criteria
-- All performance data processed without errors
-- New slow tests identified and documented
-- Actionable recommendations provided
-- Documentation updated with current analysis
+- Registry reflects current reality (>95% accuracy)
+- All threshold violations documented
+- Action items clearly prioritized
+- Performance trends updated
+
+## Key Principles
+- **Registry**: Current state only, aggressive cleanup
+- **Issues**: Action queue, completion-based cleanup
+- **Accuracy over history**: Remove resolved problems
+- **Actionable focus**: Clear next steps with priorities
