@@ -198,9 +198,9 @@ class TestAskClaudeCodeApiAsync:
 
         # Execute & Verify
         with pytest.raises(subprocess.TimeoutExpired) as exc_info:
-            await _ask_claude_code_api_async("test question", timeout=0.3)
+            await _ask_claude_code_api_async("test question", timeout=1)
 
-        assert "timed out after 0.3 seconds" in str(exc_info.value)
+        assert "timed out after 1 seconds" in str(exc_info.value)
 
     @pytest.mark.asyncio
     @patch("mcp_coder.llm.providers.claude.claude_code_api.query")
