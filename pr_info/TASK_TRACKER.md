@@ -27,7 +27,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues
 - [x] Run pytest check and fix all issues
 - [x] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Create Commit Operations Module
 - [x] Create `src/mcp_coder/utils/commit_operations.py` with moved `generate_commit_message_with_llm()` function
@@ -35,7 +35,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues
 - [x] Run pytest check and fix all issues
 - [x] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Update CLI Commit Command
 - [x] Remove `generate_commit_message_with_llm()` function from `src/mcp_coder/cli/commands/commit.py`
@@ -45,7 +45,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues
 - [x] Run pytest check and fix all issues
 - [x] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Update CLI Prompt Command
 - [x] Add import for shared CLI utility in `src/mcp_coder/cli/commands/prompt.py`
@@ -66,7 +66,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues
 - [x] Run pytest check and fix all issues
 - [x] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 5
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: Final Integration Testing
 - [x] Run comprehensive test suite for all modified modules
@@ -78,7 +78,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues
 - [x] Run pytest check and fix all issues
 - [x] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 6
+- [x] Prepare git commit message for Step 6
 
 ## Pull Request
 - [ ] Review all implementation steps completed
