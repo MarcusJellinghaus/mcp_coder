@@ -116,4 +116,4 @@ call :echo_both "Output saved to: %output_file%"
 call :echo_both "========================================"
 echo.
 echo Performance statistics saved to: %output_file%
-pause
+
