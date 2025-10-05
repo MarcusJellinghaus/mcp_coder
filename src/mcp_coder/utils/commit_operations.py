@@ -10,7 +10,6 @@ from typing import Optional, Tuple
 from ..constants import PROMPTS_FILE_PATH
 from ..llm.interface import ask_llm
 from ..llm.providers.claude.claude_code_api import ClaudeAPIError
-
 from ..prompt_manager import get_prompt
 from .git_operations import get_git_diff_for_commit, stage_all_changes
 
@@ -24,12 +23,12 @@ def generate_commit_message_with_llm(
     project_dir: Path, provider: str = "claude", method: str = "api"
 ) -> Tuple[bool, str, Optional[str]]:
     """Generate commit message using LLM. Returns (success, message, error).
-    
+
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
-        
+
     Returns:
         Tuple of (success, commit_message, error_message)
     """

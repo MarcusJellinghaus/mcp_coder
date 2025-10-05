@@ -37,7 +37,9 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
 
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is True
         assert message == "feat: add new feature"
@@ -89,7 +91,9 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
 
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -103,7 +107,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_stage.side_effect = Exception("Permission denied")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -123,7 +129,9 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
 
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -141,7 +149,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.return_value = None
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -159,7 +169,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_diff.side_effect = Exception("Git command failed")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -179,7 +191,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt.side_effect = FileNotFoundError("prompts.md not found")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -199,7 +213,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt.side_effect = Exception("Permission denied")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -225,7 +241,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_ask_llm.return_value = ""
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -251,7 +269,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_ask_llm.side_effect = ClaudeAPIError("API rate limit exceeded")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -276,7 +296,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_ask_llm.side_effect = Exception("Network error")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -306,7 +328,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_parse_response.return_value = ("", None)
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -336,7 +360,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_parse_response.return_value = ("\n\nActual content here", None)
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -365,7 +391,9 @@ class TestGenerateCommitMessageWithLLM:
         mock_parse_response.side_effect = Exception("Parsing error")
 
         project_dir = Path("/test/repo")
-        success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+        success, message, error = generate_commit_message_with_llm(
+            project_dir, "claude", "api"
+        )
 
         assert success is False
         assert message == ""
@@ -397,7 +425,9 @@ class TestGenerateCommitMessageWithLLM:
         project_dir = Path("/test/repo")
 
         with caplog.at_level(logging.WARNING):
-            success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+            success, message, error = generate_commit_message_with_llm(
+                project_dir, "claude", "api"
+            )
 
         assert success is True
         assert message == "feat: add feature"
@@ -432,7 +462,9 @@ class TestGenerateCommitMessageWithLLM:
         project_dir = Path("/test/repo")
 
         with caplog.at_level(logging.WARNING):
-            success, message, error = generate_commit_message_with_llm(project_dir, "claude", "api")
+            success, message, error = generate_commit_message_with_llm(
+                project_dir, "claude", "api"
+            )
 
         assert success is True
         assert message == long_message

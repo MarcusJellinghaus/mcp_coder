@@ -213,6 +213,3 @@ class TestVerifyClaudeCliInstallation:
         # Should show error information
         error_messages = [msg for msg in print_calls if "Permission denied" in msg]
         assert len(error_messages) >= 1
-
-
-

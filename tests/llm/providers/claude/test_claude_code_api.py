@@ -196,11 +196,11 @@ class TestAskClaudeCodeApiAsync:
 
         mock_query.side_effect = slow_query_response
 
-        # Execute & Verify
+        # Execute & Verify - timeout must be less than sleep time to trigger
         with pytest.raises(subprocess.TimeoutExpired) as exc_info:
-            await _ask_claude_code_api_async("test question", timeout=1)
+            await _ask_claude_code_api_async("test question", timeout=0.3)
 
-        assert "timed out after 1 seconds" in str(exc_info.value)
+        assert "timed out after 0.3 seconds" in str(exc_info.value)
 
     @pytest.mark.asyncio
     @patch("mcp_coder.llm.providers.claude.claude_code_api.query")

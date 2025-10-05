@@ -323,9 +323,10 @@ class TestLogProgressSummary:
 
         with caplog.at_level("INFO"):
             log_progress_summary(Path("/test/project"))
+            # Capture log text inside context manager for pytest-xdist compatibility
+            log_text = caplog.text
 
         # Check that progress information was logged
-        log_text = caplog.text
         assert "TASK TRACKER PROGRESS SUMMARY" in log_text
         assert "Step 1:" in log_text
         assert "Step 2:" in log_text
@@ -349,8 +350,9 @@ class TestLogProgressSummary:
 
         with caplog.at_level("INFO"):
             log_progress_summary(Path("/test/project"))
+            # Capture log text inside context manager for pytest-xdist compatibility
+            log_text = caplog.text
 
-        log_text = caplog.text
         assert "Task 1, Task 2, Task 3..." in log_text  # Truncated at 3 tasks
 
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
@@ -369,8 +371,9 @@ class TestLogProgressSummary:
 
         with caplog.at_level("INFO"):
             log_progress_summary(Path("/test/project"))
+            # Capture log text inside context manager for pytest-xdist compatibility
+            log_text = caplog.text
 
-        log_text = caplog.text
         assert "0%" in log_text  # 0/0 should show 0%
 
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
@@ -577,11 +580,13 @@ class TestRunImplementWorkflow:
 
         with caplog.at_level("INFO"):
             result = run_implement_workflow(Path("/test/project"), "claude", "cli")
+            # Capture log text inside context manager for pytest-xdist compatibility
+            log_text = caplog.text
 
         assert result == 1
         assert mock_process_task.call_count == 3
         # Check that it logged progress after completing tasks
-        assert "Workflow stopped due to error after processing 2 task(s)" in caplog.text
+        assert "Workflow stopped due to error after processing 2 task(s)" in log_text
 
 
 class TestIntegration:
@@ -648,6 +653,8 @@ class TestIntegration:
 
         with caplog.at_level("INFO"):
             result = run_implement_workflow(tmp_path, "claude", "cli")
+            # Capture log text inside context manager for pytest-xdist compatibility
+            log_text = caplog.text
 
         # Verify successful completion
         assert result == 0
@@ -667,7 +674,6 @@ class TestIntegration:
         assert mock_process_task.call_count == 2
 
         # Verify logging
-        log_text = caplog.text
         assert "Starting implement workflow..." in log_text
         assert "TASK TRACKER PROGRESS SUMMARY" in log_text
         assert "Implement workflow completed successfully" in log_text

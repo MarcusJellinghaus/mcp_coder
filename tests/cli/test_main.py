@@ -269,6 +269,3 @@ class TestCLIEntryPoint:
         from mcp_coder.cli.main import main
 
         assert callable(main)
-
-
-

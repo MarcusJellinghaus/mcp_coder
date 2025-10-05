@@ -39,24 +39,28 @@ class TestCriticalPathIntegration:
 
     @pytest.mark.claude_cli_integration
     def test_basic_cli_api_integration(self) -> None:
-        """Test both CLI and API paths work end-to-end."""
+        """Test both CLI and API paths work end-to-end.
+
+        Note: This is a real integration test that makes actual API calls.
+        Uses longer timeouts to accommodate real API response times.
+        """
         # Test CLI path: ask_llm → ask_claude_code → ask_claude_code_cli
         cli_result = ask_llm(
             "Yes or no: Is 1+1=2?",
             provider="claude",
             method="cli",
-            timeout=20,
+            timeout=60,  # Increased for real API calls
         )
         assert isinstance(cli_result, str)
         assert len(cli_result) > 0
         assert "yes" in cli_result.lower()
-        
+
         # Test API path: ask_llm → ask_claude_code → ask_claude_code_api
         api_result = ask_llm(
             "Yes or no: Is 2+2=4?",
             provider="claude",
             method="api",
-            timeout=20,
+            timeout=60,  # Increased for real API calls
         )
         assert isinstance(api_result, str)
         assert len(api_result) > 0
@@ -66,34 +70,33 @@ class TestCriticalPathIntegration:
     def test_interface_contracts(self) -> None:
         """Test ask_llm vs prompt_llm return different types correctly."""
         # ask_llm should return string
-        text_result = ask_llm("Say hello", method="api", timeout=20)
+        text_result = ask_llm("Say hello", method="api", timeout=60)
         assert isinstance(text_result, str)
-        
+
         # prompt_llm should return dict with metadata
-        dict_result = prompt_llm("Say hello", method="api", timeout=20)
+        dict_result = prompt_llm("Say hello", method="api", timeout=60)
         assert isinstance(dict_result, dict)
         assert "text" in dict_result
         assert "session_id" in dict_result
         # Contract: same underlying response
         assert dict_result["text"] == text_result
 
-
     @pytest.mark.claude_cli_integration
     def test_session_continuity(self) -> None:
         """Test session management through the full stack."""
         # Use prompt_llm to test full response structure
-        result1 = prompt_llm("Remember this: elephant", method="cli", timeout=30)
+        result1 = prompt_llm("Remember this: elephant", method="cli", timeout=60)
         assert "session_id" in result1
         assert result1["session_id"] is not None
         assert "text" in result1
         session_id = result1["session_id"]
-        
+
         # Test session continuity
         result2 = prompt_llm(
             "What did I tell you to remember?",
             method="cli",
             session_id=session_id,
-            timeout=30,
+            timeout=60,
         )
         assert "elephant" in result2["text"].lower()
         assert result2["session_id"] == session_id

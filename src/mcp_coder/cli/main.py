@@ -5,7 +5,11 @@ import logging
 import sys
 
 from ..utils.log_utils import setup_logging
-from .commands.help import get_help_text
+from .commands.commit import execute_commit_auto, execute_commit_clipboard
+from .commands.help import execute_help, get_help_text
+from .commands.implement import execute_implement
+from .commands.prompt import execute_prompt
+from .commands.verify import execute_verify
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
@@ -193,20 +197,15 @@ def main() -> int:
 
         # Route to appropriate command handler
         if args.command == "help":
-            from .commands.help import execute_help
             return execute_help(args)
         elif args.command == "verify":
-            from .commands.verify import execute_verify
             return execute_verify(args)
         elif args.command == "prompt":
-            from .commands.prompt import execute_prompt
             return execute_prompt(args)
         elif args.command == "commit" and hasattr(args, "commit_mode"):
             if args.commit_mode == "auto":
-                from .commands.commit import execute_commit_auto
                 return execute_commit_auto(args)
             elif args.commit_mode == "clipboard":
-                from .commands.commit import execute_commit_clipboard
                 return execute_commit_clipboard(args)
             else:
                 logger.error(f"Commit mode '{args.commit_mode}' not yet implemented")
@@ -215,7 +214,6 @@ def main() -> int:
                 )
                 return 1
         elif args.command == "implement":
-            from .commands.implement import execute_implement
             return execute_implement(args)
 
         # Other commands will be implemented in later steps
