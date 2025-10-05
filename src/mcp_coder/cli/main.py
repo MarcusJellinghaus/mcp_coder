@@ -39,6 +39,7 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     parser.add_argument(
         "--log-level",
+        type=str.upper,
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default="WARNING",
         help="Set the logging level (default: WARNING)",
