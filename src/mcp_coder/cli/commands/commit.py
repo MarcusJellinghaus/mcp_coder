@@ -35,9 +35,10 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         print(f"Error: {error}", file=sys.stderr)
         return 1
 
-    # 2. Stage changes and generate commit message
+    # 2. Parse LLM method and generate commit message
+    provider, method = parse_llm_method_from_args(args.llm_method)
     success, commit_message, error = generate_commit_message_with_llm(
-        project_dir, args.llm_method
+        project_dir, provider, method
     )
     if not success:
         print(f"Error: {error}", file=sys.stderr)

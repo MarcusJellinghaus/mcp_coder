@@ -23,18 +23,21 @@ class TestExecuteCommitAuto:
     """Tests for execute_commit_auto function."""
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     def test_execute_commit_auto_success(
         self,
         mock_commit: Mock,
         mock_generate: Mock,
+        mock_parse_llm: Mock,
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test successful commit auto execution."""
         # Setup mocks
         mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -53,11 +56,13 @@ class TestExecuteCommitAuto:
 
         # Verify function calls
         mock_validate.assert_called_once()
-        mock_generate.assert_called_once()
+        mock_parse_llm.assert_called_once_with("claude_code_api")
+        mock_generate.assert_called_once_with(Path.cwd(), "claude", "api")
         mock_commit.assert_called_once_with("feat: add new feature", Path.cwd())
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_with_preview_confirmed(
@@ -65,12 +70,14 @@ class TestExecuteCommitAuto:
         mock_input: Mock,
         mock_commit: Mock,
         mock_generate: Mock,
+        mock_parse_llm: Mock,
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test commit auto with preview mode - user confirms."""
         # Setup mocks
         mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -94,7 +101,8 @@ class TestExecuteCommitAuto:
         mock_input.assert_called_once_with("\nProceed with commit? (Y/n): ")
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_preview_empty_input_proceeds(
@@ -102,12 +110,14 @@ class TestExecuteCommitAuto:
         mock_input: Mock,
         mock_commit: Mock,
         mock_generate: Mock,
+        mock_parse_llm: Mock,
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test commit auto with preview mode - empty input proceeds as default."""
         # Setup mocks
         mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -129,18 +139,21 @@ class TestExecuteCommitAuto:
         assert "Commit cancelled" not in captured_out
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
     @patch("builtins.input")
     def test_execute_commit_auto_with_preview_cancelled(
         self,
         mock_input: Mock,
         mock_generate: Mock,
+        mock_parse_llm: Mock,
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test commit auto with preview mode - user cancels."""
         # Setup mocks
         mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_input.return_value = "n"
 
@@ -155,7 +168,8 @@ class TestExecuteCommitAuto:
         assert "Commit cancelled." in captured_out
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_execute_commit_auto_preview_various_cancel_inputs(
@@ -163,12 +177,14 @@ class TestExecuteCommitAuto:
         mock_input: Mock,
         mock_commit: Mock,
         mock_generate: Mock,
+        mock_parse_llm: Mock,
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test commit auto with preview mode - various cancel inputs."""
         # Setup mocks
         mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -229,15 +245,18 @@ class TestExecuteCommitAuto:
         assert "Error: Not a git repository" in captured_err
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
     def test_execute_commit_auto_no_changes(
         self,
         mock_generate: Mock,
+        mock_parse_llm: Mock,
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test commit auto with no staged changes."""
         mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
         mock_generate.return_value = (
             False,
             "",
@@ -258,7 +277,8 @@ class TestPreviewModeLogic:
     """Tests specifically for preview mode user input logic."""
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_preview_mode_cancel_variations(
@@ -266,10 +286,12 @@ class TestPreviewModeLogic:
         mock_input: Mock,
         mock_commit: Mock,
         mock_generate: Mock,
+        mock_parse_llm: Mock,
         mock_validate: Mock,
     ) -> None:
         """Test various ways to cancel in preview mode."""
         mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
         mock_generate.return_value = (True, "feat: test", None)
         args = argparse.Namespace(preview=True, llm_method="claude_code_api")
 
@@ -283,7 +305,8 @@ class TestPreviewModeLogic:
             mock_commit.reset_mock()
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.utils.commit_operations.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
     def test_preview_mode_proceed_variations(
@@ -291,10 +314,12 @@ class TestPreviewModeLogic:
         mock_input: Mock,
         mock_commit: Mock,
         mock_generate: Mock,
+        mock_parse_llm: Mock,
         mock_validate: Mock,
     ) -> None:
         """Test various ways to proceed in preview mode."""
         mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
         mock_generate.return_value = (True, "feat: test", None)
         mock_commit.return_value = {
             "success": True,
