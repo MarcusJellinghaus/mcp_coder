@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
-from ..utils import parse_llm_method_from_args
 from ...utils.clipboard import (
     get_clipboard_text,
     parse_commit_message,
@@ -19,6 +18,7 @@ from ...utils.git_operations import (
     is_git_repository,
     stage_all_changes,
 )
+from ..utils import parse_llm_method_from_args
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +74,6 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     else:
         print(f"Message: {first_line} ({total_lines} lines)")
     return 0
-
-
-
 
 
 def validate_git_repository(project_dir: Path) -> Tuple[bool, Optional[str]]:

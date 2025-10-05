@@ -10,7 +10,6 @@ from .clipboard import (
     validate_commit_message,
 )
 
-
 # Import all git operations for easy access
 from .git_operations import (
     CommitResult,
@@ -47,7 +46,6 @@ __all__ = [
     "get_clipboard_text",
     "parse_commit_message",
     "validate_commit_message",
-
     # Git operations
     "CommitResult",
     "branch_exists",

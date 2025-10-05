@@ -646,7 +646,9 @@ class TestIntegration:
 Current task from TASK_TRACKER.md: Step 2: Implement feature X
 
 Please implement this task step by step."""
-        mock_llm_call.assert_called_once_with(expected_prompt, "claude", "api", timeout=1800)
+        mock_llm_call.assert_called_once_with(
+            expected_prompt, "claude", "api", timeout=1800
+        )
 
         # Verify conversation saved with comprehensive data
         mock_save_conversation.assert_called_once()

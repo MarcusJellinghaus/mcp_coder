@@ -12,15 +12,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from mcp_coder.utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.llm.providers.claude.claude_code_api import (
     ask_claude_code_api_detailed_sync,
 )
+
 # Import removed - using structured parameters instead
 from mcp_coder.prompt_manager import get_prompt
+from mcp_coder.utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.utils.git_operations import (
     commit_all_changes,
     get_full_status,
@@ -340,9 +341,11 @@ def _run_mypy_check(project_dir: Path) -> Optional[str]:
         raise Exception(f"Failed to run mypy check: {e}")
 
 
-def check_and_fix_mypy(project_dir: Path, step_num: int, provider: str, method: str) -> bool:
+def check_and_fix_mypy(
+    project_dir: Path, step_num: int, provider: str, method: str
+) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean.
-    
+
     Args:
         project_dir: Path to the project directory
         step_num: Step number for conversation naming
@@ -470,14 +473,16 @@ Mypy fix generated on: {datetime.now().isoformat()}
         return False
 
 
-def process_single_task(project_dir: Path, provider: str, method: str) -> tuple[bool, str]:
+def process_single_task(
+    project_dir: Path, provider: str, method: str
+) -> tuple[bool, str]:
     """Process a single implementation task.
 
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
-        
+
     Returns:
         Tuple of (success, reason) where:
         - success: True if task completed successfully
