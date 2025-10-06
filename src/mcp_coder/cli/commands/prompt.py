@@ -74,7 +74,20 @@ def execute_prompt(args: argparse.Namespace) -> int:
     try:
         # Prepare environment variables for LLM subprocess
         try:
-            project_dir = Path.cwd()
+            # Get project directory from args or use current directory
+            project_dir_arg = getattr(args, "project_dir", None)
+            if project_dir_arg:
+                project_dir = Path(project_dir_arg).resolve()
+                # Validate it exists and is accessible (no git requirement)
+                if not project_dir.exists():
+                    print(f"Error: Project directory does not exist: {project_dir}", file=sys.stderr)
+                    return 1
+                if not project_dir.is_dir():
+                    print(f"Error: Project path is not a directory: {project_dir}", file=sys.stderr)
+                    return 1
+            else:
+                project_dir = Path.cwd()
+
             env_vars = prepare_llm_environment(project_dir)
         except RuntimeError as e:
             # No venv found - continue without env vars for backward compat

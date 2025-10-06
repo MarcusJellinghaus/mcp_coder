@@ -67,6 +67,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     )
     prompt_parser.add_argument("prompt", help="The prompt to send to Claude")
     prompt_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    prompt_parser.add_argument(
         "--verbosity",
         choices=["just-text", "verbose", "raw"],
         default="just-text",
