@@ -64,6 +64,12 @@ src/mcp_coder/llm/env.py (NEW)
 tests/llm/test_env.py (NEW)
 ```
 
+## Documentation Updates
+
+```
+README.md (add Environment Variables section)
+```
+
 ## Files Modified
 
 ### Core Implementation

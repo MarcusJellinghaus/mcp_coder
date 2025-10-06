@@ -89,12 +89,7 @@ Read `pr_info/steps/summary.md` for full context. Replace hardcoded paths with e
 
 ## Test Coverage
 
-**Manual verification:**
-1. Run `mcp-coder implement` 
-2. Verify MCP servers connect successfully
-3. Verify tools work (read_file, run_pylint_check, etc.)
-
-**No automated test** - this is a configuration file.
+**No automated test** - this is a configuration file. Functionality will be verified by integration test in Step 8.
 
 ## LLM Prompt
 

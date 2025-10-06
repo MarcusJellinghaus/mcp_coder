@@ -1,7 +1,9 @@
 # Step 8: Testing Strategy
 
 ## Context
-Read `pr_info/steps/summary.md` for full context. Unit tests for env_vars threading and integration test extension.
+Read `pr_info/steps/summary.md` for full context.
+
+**Note:** Unit tests with mocking are already included in Steps 1-6. This step focuses only on adding one integration test with real Claude Code calls.
 
 ## WHERE
 
@@ -10,20 +12,17 @@ Read `pr_info/steps/summary.md` for full context. Unit tests for env_vars thread
 
 ## WHAT
 
-### Unit Tests (with mocking)
-
-Add unit tests to existing test files to verify env_vars threading:
-
-**In existing test files (Steps 1-6):**
-- `tests/llm/test_env.py` - Test `prepare_llm_environment()` function
-- `tests/llm/test_interface.py` - Mock env_vars passed to providers
-- `tests/llm/providers/claude/test_claude_code_cli.py` - Mock env_vars passed to subprocess
-- `tests/llm/providers/claude/test_claude_code_api.py` - Mock env_vars passed to SDK
-- `tests/workflows/implement/test_core.py` - Mock env preparation in workflow
-- `tests/utils/test_commit_operations.py` - Mock env preparation in commit
-- `tests/cli/commands/test_prompt.py` - Mock graceful error handling
-
 ### Integration Test (real Claude Code calls)
+
+**Unit tests with mocking were already added in Steps 1-6:**
+- Step 1: `tests/llm/test_env.py` - Test `prepare_llm_environment()` function
+- Step 2: `tests/llm/providers/claude/test_claude_code_cli.py` - Mock env_vars passed to subprocess
+- Step 3: `tests/llm/providers/claude/test_claude_code_api.py` - Mock env_vars passed to SDK
+- Step 4: `tests/llm/test_interface.py` - Mock env_vars passed to providers
+- Step 5: `tests/workflows/implement/test_core.py` and `tests/utils/test_commit_operations.py` - Mock env preparation
+- Step 6: `tests/cli/commands/test_prompt.py` - Mock graceful error handling
+
+**This step adds only:**
 
 **In `test_claude_integration.py`:**
 

@@ -31,8 +31,11 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
 
 **Imports:**
 ```python
+import logging
 from pathlib import Path
 from ..utils.detection import detect_python_environment
+
+logger = logging.getLogger(__name__)
 ```
 
 **Integration:**
@@ -42,11 +45,13 @@ from ..utils.detection import detect_python_environment
 ## ALGORITHM
 
 ```
-1. Call detect_python_environment(project_dir)
-2. If venv_path is None: raise RuntimeError with clear message
-3. Convert project_dir to absolute string via Path.resolve()
-4. Convert venv_path to absolute string via Path.resolve()
-5. Return dict with both environment variables
+1. Log debug message: preparing environment for project_dir
+2. Call detect_python_environment(project_dir)
+3. If venv_path is None: raise RuntimeError with clear message
+4. Convert project_dir to absolute string via Path.resolve()
+5. Convert venv_path to absolute string via Path.resolve()
+6. Log debug message with prepared environment variables
+7. Return dict with both environment variables
 ```
 
 ## DATA
@@ -60,7 +65,7 @@ from ..utils.detection import detect_python_environment
 ```
 
 **Error cases:**
-- Raises `RuntimeError("No virtual environment found in {project_dir}. MCP Coder requires a venv to set MCP_CODER_VENV_DIR.")`
+- Raises `RuntimeError(f"No virtual environment found in {project_dir} and not running from a virtual environment.\nMCP Coder requires a venv to set MCP_CODER_VENV_DIR.\nCreate one with: python -m venv .venv")`
 
 ## Test Coverage
 
