@@ -110,8 +110,10 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_success(
         self,
+        mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
@@ -129,6 +131,10 @@ class TestPrepareTaskTracker:
             False,
             True,
         ]  # First call: no tasks, second: has tasks
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
         mock_get_prompt.return_value = "Task tracker update prompt"
         mock_ask_llm.return_value = "LLM updated the task tracker"
         mock_get_status.return_value = {
@@ -152,8 +158,10 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_empty_llm_response(
         self,
+        mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
@@ -166,6 +174,10 @@ class TestPrepareTaskTracker:
         steps_dir.mkdir(parents=True)
 
         mock_has_tasks.return_value = False
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
         mock_get_prompt.return_value = "Task tracker update prompt"
         mock_ask_llm.return_value = ""  # Empty response
 
@@ -177,8 +189,10 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_unexpected_files_changed(
         self,
+        mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
@@ -191,6 +205,10 @@ class TestPrepareTaskTracker:
         steps_dir.mkdir(parents=True)
 
         mock_has_tasks.return_value = False
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
         mock_get_prompt.return_value = "Task tracker update prompt"
         mock_ask_llm.return_value = "LLM response"
         mock_get_status.return_value = {
@@ -208,8 +226,10 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_still_no_tasks_after_update(
         self,
+        mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
@@ -223,6 +243,10 @@ class TestPrepareTaskTracker:
         steps_dir.mkdir(parents=True)
 
         mock_has_tasks.return_value = False  # Always returns False
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
         mock_get_prompt.return_value = "Task tracker update prompt"
         mock_ask_llm.return_value = "LLM response"
         mock_get_status.return_value = {
@@ -240,8 +264,10 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_commit_fails(
         self,
+        mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
@@ -255,6 +281,10 @@ class TestPrepareTaskTracker:
         steps_dir.mkdir(parents=True)
 
         mock_has_tasks.side_effect = [False, True]
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
         mock_get_prompt.return_value = "Task tracker update prompt"
         mock_ask_llm.return_value = "LLM response"
         mock_get_status.return_value = {
@@ -603,6 +633,7 @@ class TestIntegration:
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
@@ -611,6 +642,7 @@ class TestIntegration:
         mock_check_git: MagicMock,
         mock_check_branch: MagicMock,
         mock_check_prereq: MagicMock,
+        mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
@@ -633,6 +665,10 @@ class TestIntegration:
 
         # Setup task tracker preparation
         mock_has_tasks.side_effect = [False, True]  # First no tasks, then has tasks
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
         mock_get_prompt.return_value = "Task tracker update prompt"
         mock_ask_llm.return_value = "LLM updated task tracker"
         mock_get_status.return_value = {

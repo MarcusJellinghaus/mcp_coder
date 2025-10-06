@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status
@@ -67,10 +68,17 @@ def prepare_task_tracker(project_dir: Path, provider: str, method: str) -> bool:
             str(PROMPTS_FILE_PATH), "Task Tracker Update Prompt"
         )
 
+        # Prepare environment variables for LLM subprocess
+        env_vars = prepare_llm_environment(project_dir)
+
         # Call LLM with the prompt
 
         response = ask_llm(
-            prompt_template, provider=provider, method=method, timeout=300
+            prompt_template,
+            provider=provider,
+            method=method,
+            timeout=300,
+            env_vars=env_vars,
         )
 
         if not response or not response.strip():
