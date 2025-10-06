@@ -72,9 +72,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [pr_info/steps/step_6.md](./steps/step_6.md)
 
 ### Step 7: Update .mcp.json Template
-- [ ] Replace hardcoded paths with `${MCP_CODER_PROJECT_DIR}` and `${MCP_CODER_VENV_DIR}` in `.mcp.json`
-- [ ] Manual testing: Verify MCP servers work with environment variables
-- [ ] Prepare git commit message for Step 7
+- [x] Replace hardcoded paths with `${MCP_CODER_PROJECT_DIR}` and `${MCP_CODER_VENV_DIR}` in `.mcp.json`
+- [x] Manual testing: Verify MCP servers work with environment variables
+- [x] Prepare git commit message for Step 7
 
 **Details:** [pr_info/steps/step_7.md](./steps/step_7.md)
 
