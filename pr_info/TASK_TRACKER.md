@@ -46,10 +46,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [pr_info/steps/step_3.md](./steps/step_3.md)
 
 ### Step 4: Update Interface Layer with Environment Variables
-- [ ] Add `env_vars` parameter to `ask_llm()` and `prompt_llm()` in `src/mcp_coder/llm/interface.py`
-- [ ] Add `env_vars` parameter to `ask_claude_code()` in `src/mcp_coder/llm/providers/claude/claude_code_interface.py`
-- [ ] Update tests in `tests/llm/test_interface.py` and `tests/llm/providers/claude/test_claude_code_interface.py`
-- [ ] Run pylint, pytest, mypy - fix all issues
+- [x] Add `env_vars` parameter to `ask_llm()` and `prompt_llm()` in `src/mcp_coder/llm/interface.py`
+- [x] Add `env_vars` parameter to `ask_claude_code()` in `src/mcp_coder/llm/providers/claude/claude_code_interface.py`
+- [x] Update tests in `tests/llm/test_interface.py` and `tests/llm/providers/claude/test_claude_code_interface.py`
+- [x] Run pylint, pytest, mypy - fix all issues
 - [ ] Prepare git commit message for Step 4
 
 **Details:** [pr_info/steps/step_4.md](./steps/step_4.md)

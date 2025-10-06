@@ -9,6 +9,7 @@ def ask_claude_code(
     method: str = "cli",
     session_id: str | None = None,
     timeout: int = 30,
+    env_vars: dict[str, str] | None = None,
 ) -> str:
     """
     Ask Claude a question using the specified implementation method.
@@ -24,6 +25,7 @@ def ask_claude_code(
         method: The implementation method to use ("cli" or "api")
         session_id: Optional session ID to resume previous conversation
         timeout: Timeout in seconds for the request (default: 30)
+        env_vars: Optional environment variables to pass to the LLM subprocess
 
     Returns:
         Claude's response text as a string
@@ -50,10 +52,14 @@ def ask_claude_code(
         raise ValueError("Timeout must be a positive number")
 
     if method == "cli":
-        result = ask_claude_code_cli(question, session_id=session_id, timeout=timeout)
+        result = ask_claude_code_cli(
+            question, session_id=session_id, timeout=timeout, env_vars=env_vars
+        )
         return result["text"]  # Extract text from LLMResponseDict
     elif method == "api":
-        result = ask_claude_code_api(question, session_id=session_id, timeout=timeout)
+        result = ask_claude_code_api(
+            question, session_id=session_id, timeout=timeout, env_vars=env_vars
+        )
         return result["text"]  # Extract text from LLMResponseDict
     else:
         raise ValueError(
