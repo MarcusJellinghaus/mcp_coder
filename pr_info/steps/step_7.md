@@ -36,10 +36,10 @@ Read `pr_info/steps/summary.md` for full context. Replace hardcoded paths with e
 {
   "mcpServers": {
     "code-checker": {
-      "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-code-checker.exe",
+      "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-code-checker.exe",
       "args": [
         "--project-dir", "${MCP_CODER_PROJECT_DIR}",
-        "--python-executable", "${MCP_CODER_VENV_DIR}/Scripts/python.exe",
+        "--python-executable", "${MCP_CODER_VENV_DIR}\\Scripts\\python.exe",
         "--venv-path", "${MCP_CODER_VENV_DIR}"
       ],
       "env": {
@@ -47,7 +47,7 @@ Read `pr_info/steps/summary.md` for full context. Replace hardcoded paths with e
       }
     },
     "filesystem": {
-      "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-server-filesystem.exe",
+      "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-server-filesystem.exe",
       "args": [
         "--project-dir", "${MCP_CODER_PROJECT_DIR}",
         "--log-level", "INFO",
@@ -56,7 +56,7 @@ Read `pr_info/steps/summary.md` for full context. Replace hardcoded paths with e
         "--reference-project", "p_checker=${USERPROFILE}\\Documents\\GitHub\\mcp-code-checker"
       ],
       "env": {
-        "PYTHONPATH": "${MCP_CODER_VENV_DIR}/Lib/"
+        "PYTHONPATH": "${MCP_CODER_VENV_DIR}\\Lib\\"
       }
     }
   }
@@ -68,7 +68,7 @@ Read `pr_info/steps/summary.md` for full context. Replace hardcoded paths with e
 **Replacements:**
 1. `${USERPROFILE}\\Documents\\GitHub\\mcp_coder` → `${MCP_CODER_PROJECT_DIR}`
 2. `${USERPROFILE}\\Documents\\GitHub\\mcp_coder\\.venv` → `${MCP_CODER_VENV_DIR}`
-3. Use forward slashes (works on both Windows and Unix in Claude Code)
+3. Use backslashes for Windows compatibility
 
 **Note:** Reference projects still use `${USERPROFILE}` - they're external to this project.
 
@@ -77,7 +77,7 @@ Read `pr_info/steps/summary.md` for full context. Replace hardcoded paths with e
 ```
 1. Replace all project dir references with ${MCP_CODER_PROJECT_DIR}
 2. Replace all venv dir references with ${MCP_CODER_VENV_DIR}
-3. Convert backslashes to forward slashes
+3. Keep backslashes for Windows paths
 4. Keep reference-project paths unchanged (external)
 ```
 
@@ -106,7 +106,7 @@ Task: Update .mcp.json to use environment variables.
 Changes:
 1. Replace ${USERPROFILE}\\Documents\\GitHub\\mcp_coder with ${MCP_CODER_PROJECT_DIR}
 2. Replace ${USERPROFILE}\\Documents\\GitHub\\mcp_coder\\.venv with ${MCP_CODER_VENV_DIR}
-3. Use forward slashes (/) instead of backslashes (\\) for paths
+3. Keep backslashes (\\) for Windows compatibility
 4. Keep reference-project paths unchanged (they're external)
 
 Verify both code-checker and filesystem server configs are updated.
