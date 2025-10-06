@@ -30,10 +30,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [pr_info/steps/step_1.md](./steps/step_1.md)
 
 ### Step 2: Update CLI Provider with Environment Variables
-- [ ] Add `env_vars` parameter to `ask_claude_code_cli()` in `src/mcp_coder/llm/providers/claude/claude_code_cli.py`
-- [ ] Update tests in `tests/llm/providers/claude/test_claude_code_cli.py`
-- [ ] Run pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Add `env_vars` parameter to `ask_claude_code_cli()` in `src/mcp_coder/llm/providers/claude/claude_code_cli.py`
+- [x] Update tests in `tests/llm/providers/claude/test_claude_code_cli.py`
+- [x] Run pylint, pytest, mypy - fix all issues
+- [x] Prepare git commit message for Step 2
 
 **Details:** [pr_info/steps/step_2.md](./steps/step_2.md)
 
