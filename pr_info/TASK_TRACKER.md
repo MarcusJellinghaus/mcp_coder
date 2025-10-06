@@ -22,10 +22,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Create Environment Variable Preparation Module
-- [ ] Implement `src/mcp_coder/llm/env.py` with `prepare_llm_environment()` function
-- [ ] Create `tests/llm/test_env.py` with 4 test cases
-- [ ] Run pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement `src/mcp_coder/llm/env.py` with `prepare_llm_environment()` function
+- [x] Create `tests/llm/test_env.py` with 4 test cases
+- [x] Run pylint, pytest, mypy - fix all issues
+- [x] Prepare git commit message for Step 1
 
 **Details:** [pr_info/steps/step_1.md](./steps/step_1.md)
 

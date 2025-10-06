@@ -335,12 +335,12 @@ def get_project_dependencies(project_dir: Path) -> list[str]:
     if pyproject_path.exists():
         tomllib: Any = None
         try:
-            import tomllib  # type: ignore[assignment]  # Python 3.11+
+            import tomllib  # Python 3.11+
         except ImportError:
             try:
-                import tomli  # type: ignore[import-not-found]  # Fallback for older Python
+                import tomli  # Fallback for older Python
 
-                tomllib = tomli  # type: ignore[assignment]
+                tomllib = tomli
             except ImportError:
                 pass
 
