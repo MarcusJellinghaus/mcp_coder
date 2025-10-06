@@ -56,9 +56,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 5: Update Workflows with Environment Preparation
 - [x] Add environment preparation to `prepare_task_tracker()` in `src/mcp_coder/workflows/implement/core.py`
-- [ ] Add environment preparation to `generate_commit_message_with_llm()` in `src/mcp_coder/utils/commit_operations.py`
-- [ ] Update tests in `tests/workflows/implement/test_core.py` and `tests/utils/test_commit_operations.py`
-- [ ] Run pylint, pytest, mypy - fix all issues
+- [x] Add environment preparation to `generate_commit_message_with_llm()` in `src/mcp_coder/utils/commit_operations.py`
+- [x] Update tests in `tests/workflows/implement/test_core.py` and `tests/utils/test_commit_operations.py`
+- [x] Run pylint, pytest, mypy - fix all issues
 - [ ] Prepare git commit message for Step 5
 
 **Details:** [pr_info/steps/step_5.md](./steps/step_5.md)
