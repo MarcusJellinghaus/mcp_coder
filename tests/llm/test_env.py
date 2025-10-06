@@ -42,11 +42,16 @@ def test_prepare_llm_environment_success(tmp_path: Path) -> None:
 
 
 def test_prepare_llm_environment_no_venv(tmp_path: Path) -> None:
-    """Test environment preparation fails when no venv is found."""
+    """Test environment preparation fails when no venv is found.
+
+    This test ensures that when neither a project venv nor an active venv
+    is detected, the function raises a RuntimeError with helpful guidance.
+    """
     project_dir = tmp_path / "project"
     project_dir.mkdir()
 
     # Mock detect_python_environment to return None for venv_path
+    # This simulates running outside any virtual environment
     with patch("mcp_coder.llm.env.detect_python_environment") as mock_detect:
         mock_detect.return_value = ("/usr/bin/python3", None)
 

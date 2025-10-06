@@ -21,6 +21,29 @@ from typing import Any, Optional
 #   PWD stands for "Present Working Directory" - it's the current directory path where commands are executed.
 
 
+def _detect_active_venv() -> Optional[str]:
+    """Detect if Python is running from a virtual environment.
+
+    Returns:
+        Path to the active virtual environment, or None if not in a venv
+    """
+    # Check VIRTUAL_ENV environment variable (most reliable)
+    venv_path = os.environ.get("VIRTUAL_ENV")
+    if venv_path:
+        venv_path_obj = Path(venv_path)
+        if is_valid_venv(venv_path_obj):
+            return str(venv_path_obj)
+
+    # Check if sys.prefix != sys.base_prefix (Python 3.3+)
+    if hasattr(sys, "base_prefix") and sys.prefix != sys.base_prefix:
+        # We're in a venv, sys.prefix points to the venv directory
+        venv_path_obj = Path(sys.prefix)
+        if is_valid_venv(venv_path_obj):
+            return str(venv_path_obj)
+
+    return None
+
+
 def detect_python_environment(
     project_dir: Path,
 ) -> tuple[Optional[str], Optional[str]]:
@@ -45,7 +68,9 @@ def detect_python_environment(
     # If no venv found or venv Python is invalid, use current Python
     current_python = sys.executable
     if validate_python_executable(current_python):
-        return current_python, None
+        # Check if current Python is running from a virtual environment
+        current_venv = _detect_active_venv()
+        return current_python, current_venv
 
     # As a last resort, try to find Python in PATH
     python_cmd = "python3" if sys.platform != "win32" else "python"
@@ -69,7 +94,9 @@ def detect_python_environment(
             if result.returncode == 0:
                 python_path = result.stdout.strip()
                 if validate_python_executable(python_path):
-                    return python_path, None
+                    # Check if this Python is in a venv
+                    current_venv = _detect_active_venv()
+                    return python_path, current_venv
     except (subprocess.SubprocessError, OSError):
         pass
 
