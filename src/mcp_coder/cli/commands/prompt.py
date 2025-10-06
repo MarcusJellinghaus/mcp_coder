@@ -25,8 +25,10 @@ import os.path
 import re
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from ...llm.env import prepare_llm_environment
 from ...llm.formatting.formatters import (
     format_raw_response,
     format_text_response,
@@ -70,6 +72,15 @@ def execute_prompt(args: argparse.Namespace) -> int:
     logger.info("Executing prompt command")
 
     try:
+        # Prepare environment variables for LLM subprocess
+        try:
+            project_dir = Path.cwd()
+            env_vars = prepare_llm_environment(project_dir)
+        except RuntimeError as e:
+            # No venv found - continue without env vars for backward compat
+            logger.warning(f"Could not prepare environment: {e}")
+            env_vars = None
+
         # Handle continuation from previous session if requested
         # Priority: --session-id > --continue-session-from > --continue-session
         resume_session_id = getattr(args, "session_id", None)
@@ -121,6 +132,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
                 method=method,
                 timeout=timeout,
                 session_id=resume_session_id,
+                env_vars=env_vars,
             )
             # Output complete response as JSON (includes session_id)
             formatted_output = json.dumps(response_dict, indent=2, default=str)
@@ -133,6 +145,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
                 method=method,
                 timeout=timeout,
                 session_id=resume_session_id,
+                env_vars=env_vars,
             )
 
             # Simple text output with tool summary
@@ -151,7 +164,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
         else:
             # Use detailed API for verbose/raw modes that need metadata
             response_data = ask_claude_code_api_detailed_sync(
-                args.prompt, timeout, resume_session_id
+                args.prompt, timeout, resume_session_id, env_vars
             )
 
             # Store response if requested

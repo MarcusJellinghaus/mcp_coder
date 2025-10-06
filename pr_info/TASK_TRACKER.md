@@ -64,9 +64,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [pr_info/steps/step_5.md](./steps/step_5.md)
 
 ### Step 6: Update CLI Commands (Minimal Changes)
-- [ ] Add environment preparation to `execute_prompt()` in `src/mcp_coder/cli/commands/prompt.py`
-- [ ] Update tests in `tests/cli/commands/test_prompt.py`
-- [ ] Run pylint, pytest, mypy - fix all issues
+- [x] Add environment preparation to `execute_prompt()` in `src/mcp_coder/cli/commands/prompt.py`
+- [x] Update tests in `tests/cli/commands/test_prompt.py`
+- [x] Run pylint, pytest, mypy - fix all issues
 - [ ] Prepare git commit message for Step 6
 
 **Details:** [pr_info/steps/step_6.md](./steps/step_6.md)
