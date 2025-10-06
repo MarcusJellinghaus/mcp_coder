@@ -1,0 +1,40 @@
+# Implementation Task: Add integration test `test_env_vars_propagation()` in `tests/llm/providers/claude/test_claude_integration.py`
+
+## Prompt Sent to LLM:
+Please look at `pr_info/TASK_TRACKER.md` and pick the next task that should be done.
+Please let me know on which task you are working on.
+Please implement!
+Please verify your implementation running the various checks of the MCP server and by solving potential issues (and repeat).
+Please do not invent extra complexity not mentioned in the project plan.
+Please let me know in case you encounter any issues or need a decision.
+Please provide a short concise commit message stating the step name in the title. Do NOT perform a commit!
+
+Once you are done, please check again that task description on `pr_info/TASK_TRACKER.md` to ensure that everything is done.
+Once everything is done, please mark the task as done.
+Please work only on one task. Do not pick further tasks.
+
+Please also take a look at the tests\readme.md and only run those tests that are required in your context -i.e. avoid slow integration tests.
+
+Current task from TASK_TRACKER.md: Add integration test `test_env_vars_propagation()` in `tests/llm/providers/claude/test_claude_integration.py`
+
+Please implement this task step by step.
+
+## LLM Response:
+I need permission to edit the test file. Let me wait for approval to proceed with implementing the integration test.
+
+**Working on:** Step 8 - Add integration test `test_env_vars_propagation()` in `tests/llm/providers/claude/test_claude_integration.py`
+
+**Implementation plan:**
+1. Add new test class `TestEnvironmentVariablesPropagation` to the existing test file
+2. Implement `test_env_vars_propagation()` method that:
+   - Tests CLI method with real API call
+   - Tests API method with real API call
+   - Verifies environment variables are properly propagated
+3. Run tests to verify implementation
+4. Run code quality checks (pylint, mypy)
+5. Update TASK_TRACKER.md
+
+I'm ready to proceed once file write permissions are granted.
+
+---
+Generated on: 2025-10-06T09:00:07.985603
