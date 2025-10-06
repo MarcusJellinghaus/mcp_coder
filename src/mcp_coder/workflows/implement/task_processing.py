@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
+from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.llm.providers.claude.claude_code_api import (
     ask_claude_code_api_detailed_sync,
@@ -97,7 +98,11 @@ def save_conversation(
 
 
 def _call_llm_with_comprehensive_capture(
-    prompt: str, provider: str, method: str, timeout: int = 300
+    prompt: str,
+    provider: str,
+    method: str,
+    timeout: int = 300,
+    env_vars: dict[str, str] | None = None,
 ) -> tuple[str, dict[Any, Any]]:
     """Call LLM and capture both text response and comprehensive data.
 
@@ -106,6 +111,7 @@ def _call_llm_with_comprehensive_capture(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         timeout: Request timeout in seconds
+        env_vars: Optional environment variables for the subprocess
 
     Returns:
         Tuple of (response_text, comprehensive_data_dict)
@@ -122,7 +128,7 @@ def _call_llm_with_comprehensive_capture(
             )
             start_time = datetime.now()
             detailed_response = ask_claude_code_api_detailed_sync(
-                prompt, timeout=timeout
+                prompt, timeout=timeout, env_vars=env_vars
             )
             duration = (datetime.now() - start_time).total_seconds()
             logger.info(f"Claude API call completed in {duration:.1f}s")
@@ -164,7 +170,7 @@ def _call_llm_with_comprehensive_capture(
         try:
             logger.info(f"Calling Claude CLI with {timeout}s timeout...")
             response_text = ask_llm(
-                prompt, provider=provider, method=method, timeout=timeout
+                prompt, provider=provider, method=method, timeout=timeout, env_vars=env_vars
             )
             return response_text, {}
         except subprocess.TimeoutExpired as e:
@@ -342,7 +348,11 @@ def _run_mypy_check(project_dir: Path) -> Optional[str]:
 
 
 def check_and_fix_mypy(
-    project_dir: Path, step_num: int, provider: str, method: str
+    project_dir: Path,
+    step_num: int,
+    provider: str,
+    method: str,
+    env_vars: dict[str, str] | None = None,
 ) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean.
 
@@ -351,6 +361,7 @@ def check_and_fix_mypy(
         step_num: Step number for conversation naming
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
+        env_vars: Optional environment variables for the subprocess
     """
     logger.info("Running mypy type checking...")
 
@@ -410,6 +421,7 @@ def check_and_fix_mypy(
                         provider,
                         method,
                         timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+                        env_vars=env_vars,
                     )
                 )
 
@@ -488,6 +500,9 @@ def process_single_task(
         - success: True if task completed successfully
         - reason: 'completed' | 'no_tasks' | 'error'
     """
+    # Prepare environment variables for LLM subprocess
+    env_vars = prepare_llm_environment(project_dir)
+
     # Get next incomplete task
     next_task = get_next_task(project_dir)
     if not next_task:
@@ -515,7 +530,11 @@ Current task from TASK_TRACKER.md: {next_task}
 Please implement this task step by step."""
 
         response, comprehensive_data = _call_llm_with_comprehensive_capture(
-            full_prompt, provider, method, timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS
+            full_prompt,
+            provider,
+            method,
+            timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+            env_vars=env_vars,
         )
 
         if not response or not response.strip():
@@ -579,7 +598,7 @@ Generated on: {datetime.now().isoformat()}"""
         return False, "error"
 
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
-    if not check_and_fix_mypy(project_dir, step_num, provider, method):
+    if not check_and_fix_mypy(project_dir, step_num, provider, method, env_vars):
         logger.warning(
             "Mypy check failed or found unresolved issues - continuing anyway"
         )
