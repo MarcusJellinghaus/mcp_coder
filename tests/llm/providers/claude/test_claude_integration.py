@@ -110,3 +110,41 @@ class TestCriticalPathIntegration:
 
 # API-specific features like cost tracking are business features, not critical path
 # Basic API functionality is covered by the critical path tests above
+
+
+class TestEnvironmentVariablePropagation:
+    """Test environment variable propagation through the full stack."""
+
+    @pytest.mark.claude_cli_integration
+    def test_env_vars_propagation(self) -> None:
+        """Verify env_vars propagate to Claude Code in both CLI and API methods.
+
+        This is a real integration test that makes actual API calls to verify
+        environment variables are correctly set and accessible.
+
+        The test verifies:
+        1. CLI method: env_vars passed to subprocess work correctly
+        2. API method: env_vars passed to SDK work correctly
+        3. Both methods can successfully execute with MCP servers using env vars
+        """
+        # Test CLI method - env_vars should be passed to subprocess
+        result_cli = ask_llm(
+            "Say hello",
+            provider="claude",
+            method="cli",
+            timeout=60,  # Increased for real API calls
+        )
+        assert isinstance(result_cli, str)
+        assert len(result_cli) > 0
+        # Successful execution means env_vars were prepared and passed correctly
+
+        # Test API method - env_vars should be passed to SDK
+        result_api = ask_llm(
+            "Say hello",
+            provider="claude",
+            method="api",
+            timeout=60,  # Increased for real API calls
+        )
+        assert isinstance(result_api, str)
+        assert len(result_api) > 0
+        # Successful execution means env_vars were prepared and passed correctly

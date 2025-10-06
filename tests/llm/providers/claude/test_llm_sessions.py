@@ -52,6 +52,7 @@ class MockClaudeCLI:
         session_id: Optional[str] = None,
         timeout: int = 30,
         cwd: Optional[str] = None,
+        env_vars: Optional[Dict[str, str]] = None,
     ) -> LLMResponseDict:
         """Simulate CLI call."""
         self.call_count += 1
@@ -98,7 +99,11 @@ class MockClaudeAPI:
         self.response_text = text
 
     def __call__(
-        self, question: str, session_id: Optional[str] = None, timeout: int = 30
+        self,
+        question: str,
+        session_id: Optional[str] = None,
+        timeout: int = 30,
+        env_vars: Optional[Dict[str, str]] = None,
     ) -> LLMResponseDict:
         """Simulate API call."""
         self.call_count += 1

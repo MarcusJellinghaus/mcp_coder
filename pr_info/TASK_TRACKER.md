@@ -79,9 +79,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [pr_info/steps/step_7.md](./steps/step_7.md)
 
 ### Step 8: Integration Testing
-- [ ] Add integration test `test_env_vars_propagation()` in `tests/llm/providers/claude/test_claude_integration.py`
-- [ ] Run full test suite (all unit tests + integration test)
-- [ ] Run pylint, pytest, mypy - fix all issues
+- [x] Add integration test `test_env_vars_propagation()` in `tests/llm/providers/claude/test_claude_integration.py`
+- [x] Run full test suite (all unit tests + integration test)
+- [x] Run pylint, pytest, mypy - fix all issues
 - [ ] Prepare git commit message for Step 8
 
 **Details:** [pr_info/steps/step_8.md](./steps/step_8.md)
