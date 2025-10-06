@@ -13,6 +13,13 @@ from typing import Any, Optional
 
 # TODO - copied from mcp_config, to be moved to a separate mcp_utils project.
 
+# TODO
+# Could also use environment variables, eg
+# VIRTUAL_ENV = C:\Users\Marcus\Documents\GitHub\mcp_coder\.venv
+# VIRTUAL_ENV_PROMPT =.venv
+# PWD = C:/Users/Marcus/Documents/GitHub/mcp_coder
+#   PWD stands for "Present Working Directory" - it's the current directory path where commands are executed.
+
 
 def detect_python_environment(
     project_dir: Path,
