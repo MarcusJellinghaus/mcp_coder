@@ -80,7 +80,9 @@ class TestCriticalPathIntegration:
         env_vars = prepare_llm_environment(Path.cwd())
 
         # prompt_llm should return dict with metadata
-        dict_result = prompt_llm("Say hello", method="api", timeout=60, env_vars=env_vars)
+        dict_result = prompt_llm(
+            "Say hello", method="api", timeout=60, env_vars=env_vars
+        )
         assert isinstance(dict_result, dict)
         assert "text" in dict_result
         assert "session_id" in dict_result
@@ -100,7 +102,9 @@ class TestCriticalPathIntegration:
         env_vars = prepare_llm_environment(Path.cwd())
 
         # Use prompt_llm to test full response structure
-        result1 = prompt_llm("Remember this: elephant", method="cli", timeout=60, env_vars=env_vars)
+        result1 = prompt_llm(
+            "Remember this: elephant", method="cli", timeout=60, env_vars=env_vars
+        )
         assert "session_id" in result1
         assert result1["session_id"] is not None
         assert "text" in result1
