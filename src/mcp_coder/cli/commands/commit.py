@@ -27,7 +27,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     """Execute commit auto command with optional preview. Returns exit code."""
     logger.info("Starting commit auto with preview=%s", args.preview)
 
-    project_dir = Path.cwd()
+    project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
 
     # 1. Validate git repository
     success, error = validate_git_repository(project_dir)
@@ -110,7 +110,7 @@ def execute_commit_clipboard(args: argparse.Namespace) -> int:
     """Execute commit clipboard command. Returns exit code."""
     logger.info("Starting commit clipboard")
 
-    project_dir = Path.cwd()
+    project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
 
     # 1. Validate git repository
     success, error = validate_git_repository(project_dir)

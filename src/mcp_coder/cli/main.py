@@ -147,10 +147,22 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         default="claude_code_api",
         help="LLM method to use (default: claude_code_api)",
     )
+    auto_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
 
     # commit clipboard command - Step 6
     clipboard_parser = commit_subparsers.add_parser(
         "clipboard", help="Use commit message from clipboard"
+    )
+    clipboard_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
     )
 
     # Implement command - Step 5
