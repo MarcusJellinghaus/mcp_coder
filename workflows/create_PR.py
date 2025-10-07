@@ -18,7 +18,7 @@ from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_operations import (
+from mcp_coder.utils import (
     commit_all_changes,
     get_branch_diff,
     get_current_branch_name,

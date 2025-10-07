@@ -1,9 +1,9 @@
-"""Git operations utilities for file system operations."""
+"""Core utilities and shared infrastructure for git operations."""
 
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, Optional, TypedDict
+from typing import Any, Iterator, Optional, TypedDict
 
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError

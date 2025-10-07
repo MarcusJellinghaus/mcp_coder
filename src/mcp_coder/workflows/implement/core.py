@@ -11,7 +11,7 @@ from typing import Optional
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_operations import commit_all_changes, get_full_status
+from mcp_coder.utils import commit_all_changes, get_full_status
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
 
 from .prerequisites import (

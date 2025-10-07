@@ -26,7 +26,8 @@ dependencies = [
     "black>=23.0.0",
     "isort>=5.12.0",
     "mcp-code-checker @ git+https://github.com/MarcusJellinghaus/mcp-code-checker.git",
-    "PyGithub>=1.59.0"
+    "PyGithub>=1.59.0",
+    "types-GitPython"
 ]
 
 [project.optional-dependencies]
@@ -34,6 +35,7 @@ dev = [
     "pytest-asyncio",
     "pytest-xdist",   # for parallelisation "-n" on CI bots
     "types-pyperclip",
+    "types-GitPython",
     "mcp-server-filesystem @ git+https://github.com/MarcusJellinghaus/mcp_server_filesystem.git",
 ]
 

@@ -15,6 +15,7 @@ from typing import Optional
 
 from mcp_coder.utils.github_operations.labels_manager import LabelsManager
 from mcp_coder.utils.log_utils import setup_logging
+from mcp_coder.utils import get_github_repository_url
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -327,7 +328,6 @@ def main() -> None:
     
     # Get repository name for context logging
     try:
-        from mcp_coder.utils.git_operations import get_github_repository_url
         repo_url = get_github_repository_url(project_dir)
         repo_name = repo_url.split('/')[-1] if repo_url else str(project_dir.name)
         logger.info(f"Repository: {repo_name}")
