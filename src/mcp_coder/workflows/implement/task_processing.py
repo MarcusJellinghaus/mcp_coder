@@ -279,12 +279,20 @@ def run_formatters(project_dir: Path) -> bool:
         return False
 
 
-def commit_changes(project_dir: Path) -> bool:
-    """Commit changes using existing git operations and return success status."""
+def commit_changes(project_dir: Path, provider: str = "claude", method: str = "api") -> bool:
+    """Commit changes using existing git operations and return success status.
+
+    Args:
+        project_dir: Path to the project directory
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'cli' or 'api')
+    """
     logger.info("Committing changes...")
 
     try:
-        success, commit_message, error = generate_commit_message_with_llm(project_dir)
+        success, commit_message, error = generate_commit_message_with_llm(
+            project_dir, provider, method
+        )
 
         if not success:
             logger.error(f"Error generating commit message: {error}")
@@ -608,7 +616,7 @@ Generated on: {datetime.now().isoformat()}"""
         return False, "error"
 
     # Step 9: Commit changes
-    if not commit_changes(project_dir):
+    if not commit_changes(project_dir, provider, method):
         return False, "error"
 
     # Step 10: Push changes to remote
