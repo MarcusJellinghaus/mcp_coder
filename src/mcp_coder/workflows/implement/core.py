@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status
@@ -20,7 +21,14 @@ from .prerequisites import (
     check_prerequisites,
     has_implementation_tasks,
 )
-from .task_processing import process_single_task
+from .task_processing import (
+    RUN_MYPY_AFTER_EACH_TASK,
+    check_and_fix_mypy,
+    commit_changes,
+    process_single_task,
+    push_changes,
+    run_formatters,
+)
 
 # Constants
 PR_INFO_DIR = "pr_info"
@@ -67,10 +75,17 @@ def prepare_task_tracker(project_dir: Path, provider: str, method: str) -> bool:
             str(PROMPTS_FILE_PATH), "Task Tracker Update Prompt"
         )
 
+        # Prepare environment variables for LLM subprocess
+        env_vars = prepare_llm_environment(project_dir)
+
         # Call LLM with the prompt
 
         response = ask_llm(
-            prompt_template, provider=provider, method=method, timeout=300
+            prompt_template,
+            provider=provider,
+            method=method,
+            timeout=300,
+            env_vars=env_vars,
         )
 
         if not response or not response.strip():
@@ -206,7 +221,7 @@ def run_implement_workflow(project_dir: Path, provider: str, method: str) -> int
         Coordinates the full workflow from prerequisites through task completion.
         Handles errors gracefully and provides comprehensive progress tracking.
     """
-    logger.info("Starting implement workflow...")
+    logger.info(f"Starting implement workflow for project: {project_dir}")
 
     # Step 1: Check git status and prerequisites
     if not check_git_clean(project_dir):
@@ -248,7 +263,39 @@ def run_implement_workflow(project_dir: Path, provider: str, method: str) -> int
         # Show updated progress after each task
         log_progress_summary(project_dir)
 
-    # Step 5: Show final progress summary with appropriate messaging
+    # Step 5: Run final mypy check if not running after each task
+    if not RUN_MYPY_AFTER_EACH_TASK and completed_tasks > 0 and not error_occurred:
+        logger.info("Running final mypy check after all tasks...")
+        env_vars = prepare_llm_environment(project_dir)
+
+        # Use step number 0 for final mypy check conversation
+        if not check_and_fix_mypy(project_dir, 0, provider, method, env_vars):
+            logger.warning(
+                "Final mypy check found unresolved issues - continuing anyway"
+            )
+
+        # Format code after mypy fixes
+        if not run_formatters(project_dir):
+            logger.error("Formatting failed after final mypy check")
+            return 1
+
+        # Commit mypy fixes if any changes were made
+        status = get_full_status(project_dir)
+        all_changes = status["staged"] + status["modified"] + status["untracked"]
+
+        if all_changes:
+            logger.info("Committing final mypy fixes...")
+            if not commit_changes(project_dir, provider, method):
+                logger.error("Failed to commit final mypy fixes")
+                return 1
+
+            if not push_changes(project_dir):
+                logger.error("Failed to push final mypy fixes")
+                return 1
+        else:
+            logger.info("No changes from final mypy check - skipping commit")
+
+    # Step 6: Show final progress summary with appropriate messaging
     if error_occurred:
         logger.info(
             f"Workflow stopped due to error after processing {completed_tasks} task(s)"

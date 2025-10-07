@@ -209,11 +209,14 @@ def _retry_with_backoff(
         raise RuntimeError("All retry attempts failed with no exception recorded")
 
 
-def _create_claude_client(session_id: str | None = None) -> ClaudeCodeOptions:
+def _create_claude_client(
+    session_id: str | None = None, env: dict[str, str] | None = None
+) -> ClaudeCodeOptions:
     """Create a Claude Code SDK client with optional session resumption.
 
     Args:
         session_id: Optional Claude session ID to resume conversation
+        env: Optional environment variables to pass to Claude Code SDK
 
     Returns:
         ClaudeCodeOptions object configured for basic usage or session resumption
@@ -239,9 +242,9 @@ def _create_claude_client(session_id: str | None = None) -> ClaudeCodeOptions:
     # Use basic configuration with optional session resumption
     if session_id:
         logger.debug(f"Resuming session: {session_id}")
-        return ClaudeCodeOptions(resume=session_id)
+        return ClaudeCodeOptions(resume=session_id, env=env or {})
     else:
-        return ClaudeCodeOptions()
+        return ClaudeCodeOptions(env=env or {})
 
 
 def create_api_response_dict(
@@ -273,7 +276,10 @@ def create_api_response_dict(
 
 
 async def _ask_claude_code_api_async(
-    question: str, timeout: float = 30.0, session_id: str | None = None
+    question: str,
+    timeout: float = 30.0,
+    session_id: str | None = None,
+    env_vars: dict[str, str] | None = None,
 ) -> str:
     """
     Ask Claude a question via Python SDK asynchronously.
@@ -292,6 +298,7 @@ async def _ask_claude_code_api_async(
         question: The question to ask Claude
         timeout: Timeout in seconds for the request (default: 30)
         session_id: Optional Claude session ID to resume conversation
+        env_vars: Optional environment variables to pass to Claude Code SDK
 
     Returns:
         Claude's response as a string (concatenated text from all TextBlocks)
@@ -308,7 +315,7 @@ async def _ask_claude_code_api_async(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    options = _create_claude_client(session_id)
+    options = _create_claude_client(session_id, env=env_vars)
 
     # Message types are now available at module level
 
@@ -374,7 +381,10 @@ async def _ask_claude_code_api_async(
 
 
 def ask_claude_code_api(
-    question: str, session_id: str | None = None, timeout: float = 30.0
+    question: str,
+    session_id: str | None = None,
+    timeout: float = 30.0,
+    env_vars: dict[str, str] | None = None,
 ) -> LLMResponseDict:
     """
     Ask Claude a question via Python SDK with native session support.
@@ -386,6 +396,7 @@ def ask_claude_code_api(
         question: The question to ask Claude
         session_id: Optional Claude session ID to resume conversation
         timeout: Timeout in seconds for the request (default: 30)
+        env_vars: Optional environment variables to pass to Claude Code SDK
 
     Returns:
         LLMResponseDict with complete response data including session_id
@@ -411,7 +422,9 @@ def ask_claude_code_api(
 
     try:
         # Call detailed function with session_id for native resumption
-        detailed = ask_claude_code_api_detailed_sync(question, timeout, session_id)
+        detailed = ask_claude_code_api_detailed_sync(
+            question, timeout, session_id, env_vars
+        )
 
         # Extract session_id from Claude's response
         actual_session_id = detailed["session_info"].get("session_id")
@@ -441,7 +454,10 @@ def ask_claude_code_api(
 
 
 async def ask_claude_code_api_detailed(
-    question: str, timeout: float = 30.0, session_id: str | None = None
+    question: str,
+    timeout: float = 30.0,
+    session_id: str | None = None,
+    env_vars: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Ask Claude a question via Python SDK and return detailed response information.
@@ -453,6 +469,7 @@ async def ask_claude_code_api_detailed(
         question: The question to ask Claude
         timeout: Timeout in seconds for the request (default: 30)
         session_id: Optional Claude session ID to resume conversation
+        env_vars: Optional environment variables to pass to Claude Code SDK
 
     Returns:
         Dictionary containing:
@@ -490,7 +507,7 @@ async def ask_claude_code_api_detailed(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    options = _create_claude_client(session_id)
+    options = _create_claude_client(session_id, env=env_vars)
 
     # Message types are now available at module level
 
@@ -579,7 +596,10 @@ async def ask_claude_code_api_detailed(
 
 
 def ask_claude_code_api_detailed_sync(
-    question: str, timeout: float = 30.0, session_id: str | None = None
+    question: str,
+    timeout: float = 30.0,
+    session_id: str | None = None,
+    env_vars: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Synchronous wrapper for ask_claude_code_api_detailed.
@@ -590,6 +610,7 @@ def ask_claude_code_api_detailed_sync(
         question: The question to ask Claude
         timeout: Timeout in seconds for the request (default: 30)
         session_id: Optional Claude session ID to resume conversation
+        env_vars: Optional environment variables to pass to Claude Code SDK
 
     Returns:
         Dictionary with detailed response information
@@ -602,7 +623,7 @@ def ask_claude_code_api_detailed_sync(
     # Input validation is handled by ask_claude_code_api_detailed
     try:
         result = asyncio.run(
-            ask_claude_code_api_detailed(question, timeout, session_id)
+            ask_claude_code_api_detailed(question, timeout, session_id, env_vars)
         )
         return result
 

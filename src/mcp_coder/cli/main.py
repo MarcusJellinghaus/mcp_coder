@@ -39,6 +39,7 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     parser.add_argument(
         "--log-level",
+        type=str.upper,
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default="WARNING",
         help="Set the logging level (default: WARNING)",
@@ -65,6 +66,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         "prompt", help="Execute prompt via Claude API with configurable debug output"
     )
     prompt_parser.add_argument("prompt", help="The prompt to send to Claude")
+    prompt_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
     prompt_parser.add_argument(
         "--verbosity",
         choices=["just-text", "verbose", "raw"],
@@ -107,9 +114,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     prompt_parser.add_argument(
         "--llm-method",
         choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_api",
+        default="claude_code_cli",
         metavar="METHOD",
-        help="Communication method: claude_code_api (default) or claude_code_cli",
+        help="Communication method: claude_code_cli (default) or claude_code_api",
     )
     prompt_parser.add_argument(
         "--output-format",
@@ -137,13 +144,25 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     auto_parser.add_argument(
         "--llm-method",
         choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_api",
-        help="LLM method to use (default: claude_code_api)",
+        default="claude_code_cli",
+        help="LLM method to use (default: claude_code_cli)",
+    )
+    auto_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
     )
 
     # commit clipboard command - Step 6
     clipboard_parser = commit_subparsers.add_parser(
         "clipboard", help="Use commit message from clipboard"
+    )
+    clipboard_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
     )
 
     # Implement command - Step 5

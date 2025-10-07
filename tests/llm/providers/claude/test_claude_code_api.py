@@ -41,7 +41,7 @@ class TestCreateClaudeClient:
             result = _create_claude_client()
 
             mock_verify.assert_called_once()
-            mock_options_class.assert_called_once_with()
+            mock_options_class.assert_called_once_with(env={})
             assert result == mock_options
 
     @patch("mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use")
@@ -58,6 +58,30 @@ class TestCreateClaudeClient:
             _create_claude_client()
 
         mock_verify.assert_called_once()
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions")
+    def test_create_claude_client_with_env(self, mock_options_class: MagicMock) -> None:
+        """Test that _create_claude_client passes env to ClaudeCodeOptions."""
+        # Mock verification function
+        with patch(
+            "mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use"
+        ) as mock_verify:
+            if platform.system() == "Windows":
+                mock_path = "C:\\Users\\user\\.local\\bin\\claude.exe"
+            else:
+                mock_path = "/usr/local/bin/claude"
+
+            mock_verify.return_value = (True, mock_path, None)
+
+            mock_options = MagicMock()
+            mock_options_class.return_value = mock_options
+
+            env_vars = {"MCP_CODER_PROJECT_DIR": "/test/project"}
+            result = _create_claude_client(env=env_vars)
+
+            mock_verify.assert_called_once()
+            mock_options_class.assert_called_once_with(env=env_vars)
+            assert result == mock_options
 
 
 class TestAskClaudeCodeApiAsync:
@@ -259,7 +283,7 @@ class TestAskClaudeCodeApi:
         # Verify - now returns dict, not string
         assert isinstance(result, dict)
         assert result["text"] == "Test response"
-        mock_detailed_sync.assert_called_once_with("test question", 60, None)
+        mock_detailed_sync.assert_called_once_with("test question", 60, None, None)
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
@@ -292,6 +316,32 @@ class TestAskClaudeCodeApi:
         error_msg = str(exc_info.value)
         assert "Claude API Error" in error_msg
         assert exc_info.value.__cause__ == original_error
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    def test_ask_claude_code_api_with_env_vars(
+        self, mock_detailed_sync: MagicMock
+    ) -> None:
+        """Test that env_vars are passed through to detailed_sync."""
+        # Setup
+        mock_detailed_sync.return_value = {
+            "text": "Response with env",
+            "session_info": {"session_id": "env-test"},
+            "result_info": {},
+            "raw_messages": [],
+        }
+
+        env_vars = {"MCP_CODER_PROJECT_DIR": "/test/project"}
+
+        # Execute
+        result = ask_claude_code_api("test question", env_vars=env_vars)
+
+        # Verify
+        assert result["text"] == "Response with env"
+        mock_detailed_sync.assert_called_once_with(
+            "test question", 30.0, None, env_vars
+        )
 
 
 # Note: ImportError tests removed since claude-code-sdk is now a required dependency
@@ -398,6 +448,48 @@ class TestAskClaudeCodeApiTypedDict:
             result["raw_response"]["session_info"]["session_id"]  # type: ignore[index]
             == "extracted-session"
         )
+
+
+class TestAskClaudeCodeApiDetailed:
+    """Test ask_claude_code_api_detailed and detailed_sync with env_vars."""
+
+    @pytest.mark.asyncio
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.query")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api._create_claude_client")
+    async def test_ask_claude_code_api_detailed_with_env_vars(
+        self, mock_create_client: MagicMock, mock_query: AsyncMock
+    ) -> None:
+        """Test that env_vars are passed to _create_claude_client in detailed."""
+        # Setup
+        mock_options = MagicMock()
+        mock_create_client.return_value = mock_options
+
+        from mcp_coder.llm.providers.claude.claude_code_api import (
+            AssistantMessage,
+            TextBlock,
+            ask_claude_code_api_detailed,
+        )
+
+        mock_text_block = MagicMock(spec=TextBlock)
+        mock_text_block.text = "Response"
+        mock_message = MagicMock(spec=AssistantMessage)
+        mock_message.content = [mock_text_block]
+
+        async def mock_query_response(*_args: object, **_kwargs: object) -> object:
+            yield mock_message
+
+        mock_query.side_effect = mock_query_response
+
+        env_vars = {"MCP_CODER_PROJECT_DIR": "/test/project"}
+
+        # Execute
+        result = await ask_claude_code_api_detailed(
+            "test question", timeout=30.0, env_vars=env_vars
+        )
+
+        # Verify
+        assert result["text"] == "Response"
+        mock_create_client.assert_called_once_with(None, env=env_vars)
 
 
 @pytest.mark.claude_api_integration

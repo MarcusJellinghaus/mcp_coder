@@ -17,6 +17,7 @@ from mcp_coder.utils.commit_operations import (
 class TestGenerateCommitMessageWithLLM:
     """Tests for generate_commit_message_with_llm function."""
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -27,9 +28,11 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test successful LLM commit message generation."""
         # Setup mocks
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
         mock_get_prompt.return_value = "Generate commit message"
@@ -46,10 +49,15 @@ class TestGenerateCommitMessageWithLLM:
         assert error is None
 
         # Verify calls
+        mock_prepare_env.assert_called_once_with(project_dir)
         mock_stage.assert_called_once_with(project_dir)
         mock_get_diff.assert_called_once_with(project_dir)
         mock_ask_llm.assert_called_once()
+        # Verify env_vars was passed to ask_llm
+        call_kwargs = mock_ask_llm.call_args[1]
+        assert call_kwargs["env_vars"] == {"MCP_CODER_PROJECT_DIR": "/test/repo"}
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -60,9 +68,11 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test LLM commit message generation with custom provider and method."""
         # Setup mocks
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
         mock_get_prompt.return_value = "Generate commit message"
@@ -84,9 +94,13 @@ class TestGenerateCommitMessageWithLLM:
         assert call_args[1]["provider"] == "claude"
         assert call_args[1]["method"] == "cli"
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
-    def test_generate_commit_message_stage_failure(self, mock_stage: Mock) -> None:
+    def test_generate_commit_message_stage_failure(
+        self, mock_stage: Mock, mock_prepare_env: Mock
+    ) -> None:
         """Test LLM generation with staging failure."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = False
 
         project_dir = Path("/test/repo")
@@ -101,9 +115,13 @@ class TestGenerateCommitMessageWithLLM:
         assert "Failed to stage changes in repository" in error_str
         assert "write permissions" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
-    def test_generate_commit_message_stage_exception(self, mock_stage: Mock) -> None:
+    def test_generate_commit_message_stage_exception(
+        self, mock_stage: Mock, mock_prepare_env: Mock
+    ) -> None:
         """Test staging operation exception handling."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.side_effect = Exception("Permission denied")
 
         project_dir = Path("/test/repo")
@@ -118,12 +136,14 @@ class TestGenerateCommitMessageWithLLM:
         assert "Permission denied" in error_str
         assert "git repository is accessible" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     def test_generate_commit_message_no_changes(
-        self, mock_get_diff: Mock, mock_stage: Mock
+        self, mock_get_diff: Mock, mock_stage: Mock, mock_prepare_env: Mock
     ) -> None:
         """Test LLM generation with no changes."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = ""
 
@@ -139,12 +159,14 @@ class TestGenerateCommitMessageWithLLM:
         assert "No changes to commit" in error_str
         assert "modified, added, or deleted files" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     def test_generate_commit_message_git_diff_none(
-        self, mock_get_diff: Mock, mock_stage: Mock
+        self, mock_get_diff: Mock, mock_stage: Mock, mock_prepare_env: Mock
     ) -> None:
         """Test git diff returning None."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = None
 
@@ -159,12 +181,14 @@ class TestGenerateCommitMessageWithLLM:
         assert "Failed to retrieve git diff" in error_str
         assert "invalid state" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     def test_generate_commit_message_git_diff_exception(
-        self, mock_get_diff: Mock, mock_stage: Mock
+        self, mock_get_diff: Mock, mock_stage: Mock, mock_prepare_env: Mock
     ) -> None:
         """Test git diff operation exception handling."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.side_effect = Exception("Git command failed")
 
@@ -179,13 +203,19 @@ class TestGenerateCommitMessageWithLLM:
         assert "Error retrieving git diff" in error_str
         assert "Git command failed" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     def test_generate_commit_message_prompt_file_not_found(
-        self, mock_get_prompt: Mock, mock_get_diff: Mock, mock_stage: Mock
+        self,
+        mock_get_prompt: Mock,
+        mock_get_diff: Mock,
+        mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test prompt file not found error."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.side_effect = FileNotFoundError("prompts.md not found")
@@ -201,13 +231,19 @@ class TestGenerateCommitMessageWithLLM:
         assert "Commit prompt template not found" in error_str
         assert "prompts.md not found" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
     def test_generate_commit_message_prompt_exception(
-        self, mock_get_prompt: Mock, mock_get_diff: Mock, mock_stage: Mock
+        self,
+        mock_get_prompt: Mock,
+        mock_get_diff: Mock,
+        mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test prompt loading exception handling."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.side_effect = Exception("Permission denied")
@@ -223,6 +259,7 @@ class TestGenerateCommitMessageWithLLM:
         assert "Failed to load commit prompt template" in error_str
         assert "Permission denied" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -233,8 +270,10 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test empty LLM response handling."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
@@ -251,6 +290,7 @@ class TestGenerateCommitMessageWithLLM:
         assert "LLM returned empty or null response" in error_str
         assert "AI service may be unavailable" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -261,8 +301,10 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test Claude API error handling."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
@@ -278,6 +320,7 @@ class TestGenerateCommitMessageWithLLM:
         error_str: str = error or ""
         assert "API rate limit exceeded" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -288,8 +331,10 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test LLM communication exception handling."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
@@ -307,6 +352,7 @@ class TestGenerateCommitMessageWithLLM:
         assert "Network error" in error_str
         assert "internet connection" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -319,8 +365,10 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test empty parsed commit message handling."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
@@ -338,6 +386,7 @@ class TestGenerateCommitMessageWithLLM:
         assert "LLM generated an empty commit message" in error_str
         assert "AI may not have understood" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -350,8 +399,10 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test invalid commit message format handling."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
@@ -370,6 +421,7 @@ class TestGenerateCommitMessageWithLLM:
         assert "LLM generated a commit message with empty first line" in error_str
         assert "invalid for git commits" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -382,8 +434,10 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
     ) -> None:
         """Test parsing exception handling."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
@@ -402,6 +456,7 @@ class TestGenerateCommitMessageWithLLM:
         assert "Parsing error" in error_str
         assert "unexpected format" in error_str
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -412,9 +467,11 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test warning for very large git diff."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         # Create a very large diff (>100KB)
         large_diff = "diff --git a/file.py b/file.py\n" + "+" + "x" * 100000
@@ -439,6 +496,7 @@ class TestGenerateCommitMessageWithLLM:
         ]
         assert any("Git diff is very large" in msg for msg in warning_messages)
 
+    @patch("mcp_coder.utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.utils.commit_operations.get_prompt")
@@ -449,9 +507,11 @@ class TestGenerateCommitMessageWithLLM:
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
+        mock_prepare_env: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test warning for very long commit summary."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"

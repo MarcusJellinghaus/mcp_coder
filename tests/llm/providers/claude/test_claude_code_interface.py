@@ -28,7 +28,7 @@ class TestAskClaudeCodeSessionSupport:
 
         assert response == "CLI response"
         mock_cli.assert_called_once_with(
-            "Test", session_id="cli-session-123", timeout=30
+            "Test", session_id="cli-session-123", timeout=30, env_vars=None
         )
 
     @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_api")
@@ -48,7 +48,7 @@ class TestAskClaudeCodeSessionSupport:
 
         assert response == "API response"
         mock_api.assert_called_once_with(
-            "Test", session_id="api-session-456", timeout=30
+            "Test", session_id="api-session-456", timeout=30, env_vars=None
         )
 
     @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
@@ -103,7 +103,9 @@ class TestAskClaudeCodeSessionSupport:
         response = ask_claude_code("Test", method="cli")
 
         # Should pass None as session_id to underlying function
-        mock_cli.assert_called_once_with("Test", session_id=None, timeout=30)
+        mock_cli.assert_called_once_with(
+            "Test", session_id=None, timeout=30, env_vars=None
+        )
         assert response == "Default behavior"
 
     @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_api")
@@ -121,7 +123,9 @@ class TestAskClaudeCodeSessionSupport:
 
         response = ask_claude_code("Test", method="api")
 
-        mock_api.assert_called_once_with("Test", session_id=None, timeout=30)
+        mock_api.assert_called_once_with(
+            "Test", session_id=None, timeout=30, env_vars=None
+        )
         assert response == "API default"
 
     @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
@@ -139,7 +143,30 @@ class TestAskClaudeCodeSessionSupport:
 
         ask_claude_code("Test", method="cli", timeout=60)
 
-        mock_cli.assert_called_once_with("Test", session_id=None, timeout=60)
+        mock_cli.assert_called_once_with(
+            "Test", session_id=None, timeout=60, env_vars=None
+        )
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
+    def test_cli_with_env_vars(self, mock_cli: MagicMock) -> None:
+        """Test that env_vars is passed through to CLI method."""
+        test_env_vars = {"VAR1": "value1", "VAR2": "value2"}
+        mock_cli.return_value = {
+            "text": "CLI response with env vars",
+            "session_id": "env-test",
+            "version": "1.0",
+            "timestamp": "2025-01-01T00:00:00Z",
+            "method": "cli",
+            "provider": "claude",
+            "raw_response": {},
+        }
+
+        response = ask_claude_code("Test", method="cli", env_vars=test_env_vars)
+
+        assert response == "CLI response with env vars"
+        mock_cli.assert_called_once_with(
+            "Test", session_id=None, timeout=30, env_vars=test_env_vars
+        )
 
 
 class TestAskClaudeCodeValidation:

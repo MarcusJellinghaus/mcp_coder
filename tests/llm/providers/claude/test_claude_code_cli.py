@@ -199,6 +199,57 @@ class TestPureFunctions:
         assert "timestamp" in result
 
 
+class TestEnvVarsParameter:
+    """Tests for env_vars parameter support."""
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    def test_ask_claude_code_cli_with_env_vars(
+        self, mock_execute: MagicMock, mock_find: MagicMock
+    ) -> None:
+        """Test that env_vars are passed to subprocess."""
+        mock_find.return_value = "claude"
+        mock_result = CommandResult(
+            return_code=0,
+            stdout=json.dumps({"result": "Test response", "session_id": "test-123"}),
+            stderr="",
+            timed_out=False,
+        )
+        mock_execute.return_value = mock_result
+
+        env_vars = {"MCP_CODER_PROJECT_DIR": "/test/path"}
+        result = ask_claude_code_cli("Test question", env_vars=env_vars)
+
+        # Verify env_vars were passed to CommandOptions
+        call_args = mock_execute.call_args
+        options = call_args[0][1]
+        assert options.env == env_vars
+        assert result["text"] == "Test response"
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    def test_ask_claude_code_cli_without_env_vars(
+        self, mock_execute: MagicMock, mock_find: MagicMock
+    ) -> None:
+        """Test backward compatibility when env_vars is not provided."""
+        mock_find.return_value = "claude"
+        mock_result = CommandResult(
+            return_code=0,
+            stdout=json.dumps({"result": "Test response"}),
+            stderr="",
+            timed_out=False,
+        )
+        mock_execute.return_value = mock_result
+
+        result = ask_claude_code_cli("Test question")
+
+        # Verify env is None when not provided
+        call_args = mock_execute.call_args
+        options = call_args[0][1]
+        assert options.env is None
+        assert result["text"] == "Test response"
+
+
 class TestIOWrappers:
     """Tests for I/O wrapper integration."""
 

@@ -45,7 +45,9 @@ class TestExecuteCommitAuto:
             "error": None,
         }
 
-        args = argparse.Namespace(preview=False, llm_method="claude_code_api")
+        args = argparse.Namespace(
+            preview=False, llm_method="claude_code_api", project_dir=None
+        )
 
         result = execute_commit_auto(args)
 
@@ -86,7 +88,9 @@ class TestExecuteCommitAuto:
         }
         mock_input.return_value = "y"
 
-        args = argparse.Namespace(preview=True, llm_method="claude_code_api")
+        args = argparse.Namespace(
+            preview=True, llm_method="claude_code_api", project_dir=None
+        )
 
         result = execute_commit_auto(args)
 
@@ -126,7 +130,9 @@ class TestExecuteCommitAuto:
         }
         mock_input.return_value = ""  # Empty input (just pressed Enter)
 
-        args = argparse.Namespace(preview=True, llm_method="claude_code_api")
+        args = argparse.Namespace(
+            preview=True, llm_method="claude_code_api", project_dir=None
+        )
 
         result = execute_commit_auto(args)
 
@@ -157,7 +163,9 @@ class TestExecuteCommitAuto:
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_input.return_value = "n"
 
-        args = argparse.Namespace(preview=True, llm_method="claude_code_api")
+        args = argparse.Namespace(
+            preview=True, llm_method="claude_code_api", project_dir=None
+        )
 
         result = execute_commit_auto(args)
 
@@ -192,7 +200,9 @@ class TestExecuteCommitAuto:
             "error": None,
         }
 
-        args = argparse.Namespace(preview=True, llm_method="claude_code_api")
+        args = argparse.Namespace(
+            preview=True, llm_method="claude_code_api", project_dir=None
+        )
 
         # Test various ways to cancel
         cancel_inputs = ["n", "N", "no", "No", "NO", "nope", "Nope"]
@@ -235,7 +245,9 @@ class TestExecuteCommitAuto:
         """Test commit auto in non-git directory."""
         mock_validate.return_value = (False, "Not a git repository")
 
-        args = argparse.Namespace(preview=False, llm_method="claude_code_api")
+        args = argparse.Namespace(
+            preview=False, llm_method="claude_code_api", project_dir=None
+        )
 
         result = execute_commit_auto(args)
 
@@ -263,7 +275,9 @@ class TestExecuteCommitAuto:
             "No changes to commit. Ensure you have modified, added, or deleted files before running commit auto.",
         )
 
-        args = argparse.Namespace(preview=False, llm_method="claude_code_api")
+        args = argparse.Namespace(
+            preview=False, llm_method="claude_code_api", project_dir=None
+        )
 
         result = execute_commit_auto(args)
 
@@ -293,7 +307,9 @@ class TestPreviewModeLogic:
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = ("claude", "api")
         mock_generate.return_value = (True, "feat: test", None)
-        args = argparse.Namespace(preview=True, llm_method="claude_code_api")
+        args = argparse.Namespace(
+            preview=True, llm_method="claude_code_api", project_dir=None
+        )
 
         cancel_inputs = ["n", "N", "no", "No", "NO", "nope", "never", "nah"]
         for cancel_input in cancel_inputs:
@@ -326,7 +342,9 @@ class TestPreviewModeLogic:
             "commit_hash": "abc123",
             "error": None,
         }
-        args = argparse.Namespace(preview=True, llm_method="claude_code_api")
+        args = argparse.Namespace(
+            preview=True, llm_method="claude_code_api", project_dir=None
+        )
 
         proceed_inputs = [
             "",

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from ..constants import PROMPTS_FILE_PATH
+from ..llm.env import prepare_llm_environment
 from ..llm.interface import ask_llm
 from ..llm.providers.claude.claude_code_api import ClaudeAPIError
 from ..prompt_manager import get_prompt
@@ -33,6 +34,9 @@ def generate_commit_message_with_llm(
         Tuple of (success, commit_message, error_message)
     """
     logger.debug("Generating commit message with LLM for %s", project_dir)
+
+    # Prepare environment variables for LLM
+    env_vars = prepare_llm_environment(project_dir)
 
     # Step 1: Stage all changes
     logger.debug("Staging all changes in repository")
@@ -103,6 +107,7 @@ def generate_commit_message_with_llm(
             provider=provider,
             method=method,
             timeout=LLM_COMMIT_TIMEOUT_SECONDS,
+            env_vars=env_vars,
         )
 
         if not response or not response.strip():

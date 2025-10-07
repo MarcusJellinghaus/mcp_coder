@@ -67,8 +67,13 @@ class TestFormatVerboseResponse:
         # Assert successful execution
         assert result == 0
 
-        # Verify Claude API was called with correct prompt and session_id=None
-        mock_ask_claude.assert_called_once_with("How do I create a file?", 30, None)
+        # Verify Claude API was called with correct prompt, timeout, session_id=None, and env_vars
+        # env_vars will be a dict with MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR
+        call_args = mock_ask_claude.call_args
+        assert call_args[0][0] == "How do I create a file?"  # prompt
+        assert call_args[0][1] == 30  # timeout
+        assert call_args[0][2] is None  # session_id
+        assert isinstance(call_args[0][3], (dict, type(None)))  # env_vars
 
         # Capture output for verbose format verification
         captured = capsys.readouterr()
@@ -165,8 +170,13 @@ class TestFormatRawResponse:
         # Assert successful execution
         assert result == 0
 
-        # Verify Claude API was called with correct prompt and session_id=None
-        mock_ask_claude.assert_called_once_with("Debug this system", 30, None)
+        # Verify Claude API was called with correct prompt, timeout, session_id=None, and env_vars
+        # env_vars will be a dict with MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR
+        call_args = mock_ask_claude.call_args
+        assert call_args[0][0] == "Debug this system"  # prompt
+        assert call_args[0][1] == 30  # timeout
+        assert call_args[0][2] is None  # session_id
+        assert isinstance(call_args[0][3], (dict, type(None)))  # env_vars
 
         # Capture output for raw format verification
         captured = capsys.readouterr()

@@ -166,6 +166,7 @@ def ask_claude_code_cli(
     question: str,
     session_id: str | None = None,
     timeout: int = 30,
+    env_vars: dict[str, str] | None = None,
 ) -> LLMResponseDict:
     """Ask Claude via CLI with native session support.
 
@@ -176,6 +177,7 @@ def ask_claude_code_cli(
         question: The question to ask Claude
         session_id: Optional Claude session ID to resume previous conversation
         timeout: Timeout in seconds (default: 30)
+        env_vars: Optional environment variables for the subprocess
 
     Returns:
         LLMResponseDict with complete response data including session_id
@@ -211,7 +213,9 @@ def ask_claude_code_cli(
         f"Executing CLI command with stdin (prompt_len={len(question)}, session_id={session_id})"
     )
     options = CommandOptions(
-        timeout_seconds=timeout, input_data=question  # Pass question via stdin
+        timeout_seconds=timeout,
+        input_data=question,  # Pass question via stdin
+        env=env_vars,
     )
     result = execute_subprocess(command, options)
 
