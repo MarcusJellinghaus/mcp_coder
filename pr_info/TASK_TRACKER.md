@@ -50,11 +50,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 4
 
 ### Step 5: Create Commits Module
-- [ ] Implement commits.py with commit functions
-- [ ] Run pylint check on git_operations package
-- [ ] Run pytest check with commit workflow tests
-- [ ] Run mypy check on git_operations package
-- [ ] Prepare git commit message for Step 5
+- [x] Implement commits.py with commit functions
+- [x] Run pylint check on git_operations package
+- [x] Run pytest check with commit workflow tests
+- [x] Run mypy check on git_operations package
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: Create Branches Module
 - [ ] Implement branches.py with branch operations
