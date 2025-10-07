@@ -59,11 +59,11 @@ def test_prepare_llm_environment_no_venv(tmp_path: Path) -> None:
         if sys.platform.startswith("linux"):
             # On Linux, should use system Python without error
             result = prepare_llm_environment(project_dir)
-            
+
             # Verify result contains expected keys
             assert "MCP_CODER_PROJECT_DIR" in result
             assert "MCP_CODER_VENV_DIR" in result
-            
+
             # On Linux, should use sys.prefix as fallback
             assert result["MCP_CODER_VENV_DIR"] == str(Path(sys.prefix).resolve())
         else:

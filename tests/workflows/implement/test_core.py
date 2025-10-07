@@ -331,7 +331,10 @@ class TestLogProgressSummary:
             str(Path("/test/project") / "pr_info")
         )
 
-    @pytest.mark.skipif(sys.platform.startswith("linux"), reason="Log capture behaves differently on Linux")
+    @pytest.mark.skipif(
+        sys.platform.startswith("linux"),
+        reason="Log capture behaves differently on Linux",
+    )
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     def test_log_progress_summary_with_progress(
         self, mock_get_progress: MagicMock, caplog: pytest.LogCaptureFixture
@@ -627,7 +630,10 @@ class TestRunImplementWorkflow:
 class TestIntegration:
     """Integration tests for core workflow orchestration."""
 
-    @pytest.mark.skipif(sys.platform.startswith("linux"), reason="Log capture behaves differently on Linux")
+    @pytest.mark.skipif(
+        sys.platform.startswith("linux"),
+        reason="Log capture behaves differently on Linux",
+    )
     @patch("mcp_coder.workflows.implement.core.RUN_MYPY_AFTER_EACH_TASK", True)
     @patch("mcp_coder.workflows.implement.core.process_single_task")
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
