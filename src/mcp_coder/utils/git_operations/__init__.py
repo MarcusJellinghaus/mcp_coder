@@ -1,8 +1,5 @@
 """Git operations package - modular git utilities."""
 
-# Core types and utilities
-from .core import CommitResult, PushResult
-
 # Branch operations
 from .branches import (
     branch_exists,
@@ -15,6 +12,9 @@ from .branches import (
 
 # Commit operations
 from .commits import commit_all_changes, commit_staged_files
+
+# Core types and utilities
+from .core import CommitResult, PushResult
 
 # Diff operations
 from .diffs import get_branch_diff, get_git_diff_for_commit

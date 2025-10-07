@@ -13,9 +13,9 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from mcp_coder.utils import get_github_repository_url
 from mcp_coder.utils.github_operations.labels_manager import LabelsManager
 from mcp_coder.utils.log_utils import setup_logging
-from mcp_coder.utils import get_github_repository_url
 
 # Setup logger
 logger = logging.getLogger(__name__)
