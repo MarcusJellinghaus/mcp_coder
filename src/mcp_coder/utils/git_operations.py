@@ -15,6 +15,35 @@ logger = logging.getLogger(__name__)
 PLACEHOLDER_HASH = "0" * 7
 GIT_SHORT_HASH_LENGTH = 7
 
+# Explicit exports for mypy - must be before class/function definitions
+__all__ = [
+    "CommitResult",
+    "PushResult",
+    "branch_exists",
+    "checkout_branch",
+    "commit_all_changes",
+    "commit_staged_files",
+    "create_branch",
+    "fetch_remote",
+    "get_branch_diff",
+    "get_current_branch_name",
+    "get_default_branch_name",
+    "get_full_status",
+    "get_git_diff_for_commit",
+    "get_github_repository_url",
+    "get_parent_branch_name",
+    "get_staged_changes",
+    "get_unstaged_changes",
+    "git_move",
+    "git_push",
+    "is_file_tracked",
+    "is_git_repository",
+    "is_working_directory_clean",
+    "push_branch",
+    "stage_all_changes",
+    "stage_specific_files",
+]
+
 
 def _close_repo_safely(repo: Repo) -> None:
     """Safely close a GitPython repository to prevent handle leaks on Windows."""
@@ -1515,31 +1544,4 @@ def _parse_github_url(git_url: str) -> Optional[str]:
     return f"https://github.com/{owner}/{repo_name}"
 
 
-# Explicit exports for mypy
-__all__ = [
-    "CommitResult",
-    "PushResult",
-    "branch_exists",
-    "checkout_branch",
-    "commit_all_changes",
-    "commit_staged_files",
-    "create_branch",
-    "fetch_remote",
-    "get_branch_diff",
-    "get_current_branch_name",
-    "get_default_branch_name",
-    "get_full_status",
-    "get_git_diff_for_commit",
-    "get_github_repository_url",
-    "get_parent_branch_name",
-    "get_staged_changes",
-    "get_unstaged_changes",
-    "git_move",
-    "git_push",
-    "is_file_tracked",
-    "is_git_repository",
-    "is_working_directory_clean",
-    "push_branch",
-    "stage_all_changes",
-    "stage_specific_files",
-]
+

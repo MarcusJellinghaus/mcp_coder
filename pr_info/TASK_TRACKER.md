@@ -36,11 +36,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2
 
 ### Step 3: Create File Tracking Module
-- [ ] Implement file_tracking.py with tracking and move functions
-- [ ] Run pylint check on git_operations package
-- [ ] Run pytest check with integration tests
-- [ ] Run mypy check on git_operations package
-- [ ] Prepare git commit message for Step 3
+- [x] Implement file_tracking.py with tracking and move functions
+- [x] Run pylint check on git_operations package
+- [x] Run pytest check with integration tests
+- [x] Run mypy check on git_operations package
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Create Staging Module
 - [ ] Implement staging.py with file staging functions
