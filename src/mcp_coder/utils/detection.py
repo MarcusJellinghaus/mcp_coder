@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any, Optional
 
@@ -367,32 +368,20 @@ def get_project_dependencies(project_dir: Path) -> list[str]:
     # Check for pyproject.toml
     pyproject_path = project_dir / "pyproject.toml"
     if pyproject_path.exists():
-        tomllib: Any = None
         try:
-            import tomllib  # Python 3.11+
-        except ImportError:
-            try:
-                import tomli  # Fallback for older Python
-
-                tomllib = tomli
-            except ImportError:
-                pass
-
-        if tomllib:
-            try:
-                with open(pyproject_path, "rb") as f:
-                    data = tomllib.load(f)
-                    # Get dependencies from various sections
-                    if "project" in data:
-                        if "dependencies" in data["project"]:
-                            dependencies.extend(data["project"]["dependencies"])
-                        if "optional-dependencies" in data["project"]:
-                            for group in data["project"][
-                                "optional-dependencies"
-                            ].values():
-                                dependencies.extend(group)
-            except (IOError, KeyError, tomllib.TOMLDecodeError):
-                pass
+            with open(pyproject_path, "rb") as f:
+                data = tomllib.load(f)
+                # Get dependencies from various sections
+                if "project" in data:
+                    if "dependencies" in data["project"]:
+                        dependencies.extend(data["project"]["dependencies"])
+                    if "optional-dependencies" in data["project"]:
+                        for group in data["project"][
+                            "optional-dependencies"
+                        ].values():
+                            dependencies.extend(group)
+        except (IOError, KeyError, tomllib.TOMLDecodeError):
+            pass
 
     # Check for setup.py (basic parsing)
     setup_py = project_dir / "setup.py"
