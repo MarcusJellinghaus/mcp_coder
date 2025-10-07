@@ -43,11 +43,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 3
 
 ### Step 4: Create Staging Module
-- [ ] Implement staging.py with file staging functions
-- [ ] Run pylint check on git_operations package
-- [ ] Run pytest check with staging workflow tests
-- [ ] Run mypy check on git_operations package
-- [ ] Prepare git commit message for Step 4
+- [x] Implement staging.py with file staging functions
+- [x] Run pylint check on git_operations package
+- [x] Run pytest check with staging workflow tests
+- [x] Run mypy check on git_operations package
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Create Commits Module
 - [ ] Implement commits.py with commit functions

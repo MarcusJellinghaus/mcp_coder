@@ -1542,6 +1542,3 @@ def _parse_github_url(git_url: str) -> Optional[str]:
 
     owner, repo_name = match.groups()
     return f"https://github.com/{owner}/{repo_name}"
-
-
-
