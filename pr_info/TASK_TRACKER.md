@@ -57,11 +57,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 5
 
 ### Step 6: Create Branches Module
-- [ ] Implement branches.py with branch operations
-- [ ] Run pylint check on git_operations package
-- [ ] Run pytest check with branch operation tests
-- [ ] Run mypy check on git_operations package
-- [ ] Prepare git commit message for Step 6
+- [x] Implement branches.py with branch operations
+- [x] Run pylint check on git_operations package
+- [x] Run pytest check with branch operation tests
+- [x] Run mypy check on git_operations package
+- [x] Prepare git commit message for Step 6
 
 ### Step 7: Create Diff Module
 - [ ] Implement diff.py with diff generation functions
