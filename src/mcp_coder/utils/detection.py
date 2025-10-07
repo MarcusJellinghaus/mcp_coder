@@ -376,9 +376,7 @@ def get_project_dependencies(project_dir: Path) -> list[str]:
                     if "dependencies" in data["project"]:
                         dependencies.extend(data["project"]["dependencies"])
                     if "optional-dependencies" in data["project"]:
-                        for group in data["project"][
-                            "optional-dependencies"
-                        ].values():
+                        for group in data["project"]["optional-dependencies"].values():
                             dependencies.extend(group)
         except (IOError, KeyError, tomllib.TOMLDecodeError):
             pass

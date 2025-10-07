@@ -370,7 +370,10 @@ class TestLogProgressSummary:
         assert "100%" in all_logs  # 3/3 = 100%
         assert "Task 1, Task 2" in all_logs  # Incomplete tasks listed
 
-    @pytest.mark.skipif(sys.platform.startswith("linux"), reason="Log capture behaves differently on Linux")
+    @pytest.mark.skipif(
+        sys.platform.startswith("linux"),
+        reason="Log capture behaves differently on Linux",
+    )
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     def test_log_progress_summary_with_many_incomplete_tasks(
         self, mock_get_progress: MagicMock, caplog: pytest.LogCaptureFixture
@@ -393,7 +396,10 @@ class TestLogProgressSummary:
 
         assert "Task 1, Task 2, Task 3..." in all_logs  # Truncated at 3 tasks
 
-    @pytest.mark.skipif(sys.platform.startswith("linux"), reason="Log capture behaves differently on Linux")
+    @pytest.mark.skipif(
+        sys.platform.startswith("linux"),
+        reason="Log capture behaves differently on Linux",
+    )
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     def test_log_progress_summary_zero_total_tasks(
         self, mock_get_progress: MagicMock, caplog: pytest.LogCaptureFixture
