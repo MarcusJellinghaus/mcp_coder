@@ -5,6 +5,7 @@ enable portable .mcp.json configuration files across different machines.
 """
 
 import logging
+import sys
 from pathlib import Path
 
 from ..utils.detection import detect_python_environment
@@ -33,14 +34,23 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
     # Detect Python environment and virtual environment
     python_exe, venv_path = detect_python_environment(project_dir)
 
-    # Strict requirement: venv must be found
+    # Handle venv requirement based on platform
     if venv_path is None:
-        raise RuntimeError(
-            f"No virtual environment found in {project_dir} and not running "
-            "from a virtual environment.\n"
-            "MCP Coder requires a venv to set MCP_CODER_VENV_DIR.\n"
-            "Create one with: python -m venv .venv"
-        )
+        # On Linux (including containers/CI), we can use system Python
+        # The container/system itself provides isolation
+        if sys.platform.startswith("linux"):
+            logger.debug(
+                "No venv found on Linux, using system Python at: %s", sys.prefix
+            )
+            venv_path = sys.prefix
+        else:
+            # On Windows/Mac, require a venv for proper isolation
+            raise RuntimeError(
+                f"No virtual environment found in {project_dir} and not running "
+                "from a virtual environment.\n"
+                "MCP Coder requires a venv to set MCP_CODER_VENV_DIR.\n"
+                "Create one with: python -m venv .venv"
+            )
 
     # Convert paths to absolute OS-native strings
     project_dir_absolute = str(Path(project_dir).resolve())
