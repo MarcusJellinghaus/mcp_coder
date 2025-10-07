@@ -114,9 +114,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     prompt_parser.add_argument(
         "--llm-method",
         choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_api",
+        default="claude_code_cli",
         metavar="METHOD",
-        help="Communication method: claude_code_api (default) or claude_code_cli",
+        help="Communication method: claude_code_cli (default) or claude_code_api",
     )
     prompt_parser.add_argument(
         "--output-format",
@@ -144,8 +144,8 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     auto_parser.add_argument(
         "--llm-method",
         choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_api",
-        help="LLM method to use (default: claude_code_api)",
+        default="claude_code_cli",
+        help="LLM method to use (default: claude_code_cli)",
     )
     auto_parser.add_argument(
         "--project-dir",
