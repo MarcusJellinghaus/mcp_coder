@@ -12,6 +12,10 @@ from github.GithubException import GithubException
 from github.PullRequest import PullRequest
 from github.Repository import Repository
 
+from mcp_coder.utils import (
+    get_default_branch_name,
+    get_github_repository_url,
+)
 from mcp_coder.utils.log_utils import log_function_call
 
 from .base_manager import BaseGitHubManager, _handle_github_errors
@@ -68,8 +72,6 @@ class PullRequestManager(BaseGitHubManager):
 
         # Store repository URL for compatibility with existing code
         # At this point, project_dir is guaranteed to be valid (checked by super().__init__)
-        from mcp_coder.utils.git_operations import get_github_repository_url
-
         self.repository_url = get_github_repository_url(self.project_dir)
         if self.repository_url is None:
             raise ValueError(
@@ -388,8 +390,6 @@ class PullRequestManager(BaseGitHubManager):
         Returns:
             Default branch name (typically "main" or "master") or empty string on failure
         """
-        from mcp_coder.utils.git_operations import get_default_branch_name
-
         try:
             default_branch = get_default_branch_name(self.project_dir)
             return default_branch or ""

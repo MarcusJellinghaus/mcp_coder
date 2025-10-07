@@ -423,6 +423,26 @@ class TestPullRequestManagerIntegration:
             # Verify branch has commits (optional verification)
             print(f"Current active branch: {repo.active_branch.name}")
 
+            # Create a unique commit on the test branch to avoid GitHub's 100 PR limit per SHA
+            print(
+                "[DEBUG] Creating unique commit on test branch to avoid SHA collision..."
+            )
+            test_file_path = pr_manager.project_dir / "test_commit_marker.txt"
+            unique_timestamp = datetime.datetime.now().isoformat()
+            test_file_path.write_text(f"Test commit at {unique_timestamp}\n")
+            repo.index.add([str(test_file_path)])
+            commit_msg = f"Test commit for PR lifecycle test at {unique_timestamp}"
+            repo.index.commit(commit_msg)
+            print(f"[DEBUG] Created commit: {commit_msg}")
+
+            # Push the new commit to remote
+            try:
+                repo.git.push("origin", test_branch)
+                print(f"[DEBUG] Pushed unique commit to remote {test_branch}")
+            except Exception as push_error:
+                print(f"[WARN] Failed to push commit: {push_error}")
+                # Continue anyway - PR creation might still work with local commit
+
             # Create pull request with debug logging
             print(f"Creating PR: {pr_title} from {test_branch} to main")
             try:

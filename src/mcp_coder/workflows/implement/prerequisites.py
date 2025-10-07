@@ -7,7 +7,7 @@ for the automated implementation workflow.
 import logging
 from pathlib import Path
 
-from mcp_coder.utils.git_operations import (
+from mcp_coder.utils import (
     get_current_branch_name,
     get_default_branch_name,
     get_full_status,
