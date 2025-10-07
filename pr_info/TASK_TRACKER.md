@@ -50,7 +50,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add `env_vars` parameter to `ask_claude_code()` in `src/mcp_coder/llm/providers/claude/claude_code_interface.py`
 - [x] Update tests in `tests/llm/test_interface.py` and `tests/llm/providers/claude/test_claude_code_interface.py`
 - [x] Run pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 4
+- [x] Prepare git commit message for Step 4
 
 **Details:** [pr_info/steps/step_4.md](./steps/step_4.md)
 
@@ -59,7 +59,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add environment preparation to `generate_commit_message_with_llm()` in `src/mcp_coder/utils/commit_operations.py`
 - [x] Update tests in `tests/workflows/implement/test_core.py` and `tests/utils/test_commit_operations.py`
 - [x] Run pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 5
+- [x] Prepare git commit message for Step 5
 
 **Details:** [pr_info/steps/step_5.md](./steps/step_5.md)
 
@@ -67,7 +67,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add environment preparation to `execute_prompt()` in `src/mcp_coder/cli/commands/prompt.py`
 - [x] Update tests in `tests/cli/commands/test_prompt.py`
 - [x] Run pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 6
+- [x] Prepare git commit message for Step 6
 
 **Details:** [pr_info/steps/step_6.md](./steps/step_6.md)
 
@@ -82,7 +82,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add integration test `test_env_vars_propagation()` in `tests/llm/providers/claude/test_claude_integration.py`
 - [x] Run full test suite (all unit tests + integration test)
 - [x] Run pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 8
+- [x] Prepare git commit message for Step 8
 
 **Details:** [pr_info/steps/step_8.md](./steps/step_8.md)
 
