@@ -33,7 +33,7 @@ dependencies = [
 dev = [
     "pytest-asyncio",
     "pytest-xdist",   # for parallelisation "-n" on CI bots
-    "types-pyperclip"
+    "types-pyperclip",
     "mcp-server-filesystem @ git+https://github.com/MarcusJellinghaus/mcp_server_filesystem.git",
 ]
 
