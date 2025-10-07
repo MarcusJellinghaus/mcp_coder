@@ -10,7 +10,7 @@ from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from .branches import branch_exists, get_current_branch_name, get_parent_branch_name
 from .core import GIT_SHORT_HASH_LENGTH, PLACEHOLDER_HASH, _safe_repo_context, logger
-from .repository import get_staged_changes, get_unstaged_changes, is_git_repository
+from .repository import is_git_repository
 
 
 def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
