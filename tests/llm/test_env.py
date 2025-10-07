@@ -1,6 +1,7 @@
 """Tests for LLM environment variable preparation module."""
 
 import logging
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -42,10 +43,10 @@ def test_prepare_llm_environment_success(tmp_path: Path) -> None:
 
 
 def test_prepare_llm_environment_no_venv(tmp_path: Path) -> None:
-    """Test environment preparation fails when no venv is found.
+    """Test environment preparation behavior when no venv is found.
 
-    This test ensures that when neither a project venv nor an active venv
-    is detected, the function raises a RuntimeError with helpful guidance.
+    On Linux: Uses system Python (sys.prefix) without raising error.
+    On Windows/Mac: Raises RuntimeError with helpful guidance.
     """
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -55,14 +56,26 @@ def test_prepare_llm_environment_no_venv(tmp_path: Path) -> None:
     with patch("mcp_coder.llm.env.detect_python_environment") as mock_detect:
         mock_detect.return_value = ("/usr/bin/python3", None)
 
-        with pytest.raises(RuntimeError) as exc_info:
-            prepare_llm_environment(project_dir)
+        if sys.platform.startswith("linux"):
+            # On Linux, should use system Python without error
+            result = prepare_llm_environment(project_dir)
+            
+            # Verify result contains expected keys
+            assert "MCP_CODER_PROJECT_DIR" in result
+            assert "MCP_CODER_VENV_DIR" in result
+            
+            # On Linux, should use sys.prefix as fallback
+            assert result["MCP_CODER_VENV_DIR"] == str(Path(sys.prefix).resolve())
+        else:
+            # On Windows/Mac, should raise RuntimeError
+            with pytest.raises(RuntimeError) as exc_info:
+                prepare_llm_environment(project_dir)
 
-        # Verify error message contains helpful information
-        error_msg = str(exc_info.value)
-        assert "No virtual environment found" in error_msg
-        assert str(project_dir) in error_msg
-        assert "python -m venv .venv" in error_msg
+            # Verify error message contains helpful information
+            error_msg = str(exc_info.value)
+            assert "No virtual environment found" in error_msg
+            assert str(project_dir) in error_msg
+            assert "python -m venv .venv" in error_msg
 
 
 def test_prepare_llm_environment_paths_absolute(tmp_path: Path) -> None:
