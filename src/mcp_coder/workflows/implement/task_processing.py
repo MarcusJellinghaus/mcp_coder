@@ -35,6 +35,9 @@ PR_INFO_DIR = "pr_info"
 CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
 LLM_IMPLEMENTATION_TIMEOUT_SECONDS = 1800  # 30 minutes
 
+# Mypy checking behavior
+RUN_MYPY_AFTER_EACH_TASK = False  # If False, mypy runs once after all tasks complete
+
 # Setup logger
 logger = logging.getLogger(__name__)
 
@@ -606,10 +609,13 @@ Generated on: {datetime.now().isoformat()}"""
         return False, "error"
 
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
-    if not check_and_fix_mypy(project_dir, step_num, provider, method, env_vars):
-        logger.warning(
-            "Mypy check failed or found unresolved issues - continuing anyway"
-        )
+    if RUN_MYPY_AFTER_EACH_TASK:
+        if not check_and_fix_mypy(project_dir, step_num, provider, method, env_vars):
+            logger.warning(
+                "Mypy check failed or found unresolved issues - continuing anyway"
+            )
+    else:
+        logger.info("Skipping mypy check (will run after all tasks complete)")
 
     # Step 8: Run formatters
     if not run_formatters(project_dir):
