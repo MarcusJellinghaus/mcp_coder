@@ -267,28 +267,28 @@ def run_implement_workflow(project_dir: Path, provider: str, method: str) -> int
     if not RUN_MYPY_AFTER_EACH_TASK and completed_tasks > 0 and not error_occurred:
         logger.info("Running final mypy check after all tasks...")
         env_vars = prepare_llm_environment(project_dir)
-        
+
         # Use step number 0 for final mypy check conversation
         if not check_and_fix_mypy(project_dir, 0, provider, method, env_vars):
             logger.warning(
                 "Final mypy check found unresolved issues - continuing anyway"
             )
-        
+
         # Format code after mypy fixes
         if not run_formatters(project_dir):
             logger.error("Formatting failed after final mypy check")
             return 1
-        
+
         # Commit mypy fixes if any changes were made
         status = get_full_status(project_dir)
         all_changes = status["staged"] + status["modified"] + status["untracked"]
-        
+
         if all_changes:
             logger.info("Committing final mypy fixes...")
             if not commit_changes(project_dir, provider, method):
                 logger.error("Failed to commit final mypy fixes")
                 return 1
-            
+
             if not push_changes(project_dir):
                 logger.error("Failed to push final mypy fixes")
                 return 1

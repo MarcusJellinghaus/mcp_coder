@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -239,7 +239,9 @@ class TestCommitChanges:
         result = commit_changes(Path("/test/project"))
 
         assert result is True
-        mock_generate_message.assert_called_once_with(Path("/test/project"))
+        mock_generate_message.assert_called_once_with(
+            Path("/test/project"), "claude", "api"
+        )
         mock_commit.assert_called_once_with(
             "feat: add new feature", Path("/test/project")
         )
@@ -256,7 +258,9 @@ class TestCommitChanges:
         result = commit_changes(Path("/test/project"))
 
         assert result is False
-        mock_generate_message.assert_called_once_with(Path("/test/project"))
+        mock_generate_message.assert_called_once_with(
+            Path("/test/project"), "claude", "api"
+        )
 
     @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
     @patch(
@@ -407,6 +411,9 @@ class TestCheckAndFixMypy:
 class TestProcessSingleTask:
     """Test process_single_task function."""
 
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.RUN_MYPY_AFTER_EACH_TASK", True
+    )
     @patch("mcp_coder.workflows.implement.task_processing.push_changes")
     @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
@@ -537,6 +544,9 @@ class TestProcessSingleTask:
         assert reason == "completed"
         # Should not continue to formatting/commit/push when no changes
 
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.RUN_MYPY_AFTER_EACH_TASK", True
+    )
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
     @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
@@ -579,6 +589,9 @@ class TestProcessSingleTask:
 class TestIntegration:
     """Integration tests for task processing workflow."""
 
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.RUN_MYPY_AFTER_EACH_TASK", True
+    )
     @patch("mcp_coder.workflows.implement.task_processing.push_changes")
     @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
@@ -647,7 +660,7 @@ Current task from TASK_TRACKER.md: Step 2: Implement feature X
 
 Please implement this task step by step."""
         mock_llm_call.assert_called_once_with(
-            expected_prompt, "claude", "api", timeout=1800
+            expected_prompt, "claude", "api", timeout=1800, env_vars=ANY
         )
 
         # Verify conversation saved with comprehensive data
@@ -662,9 +675,9 @@ Please implement this task step by step."""
 
         # Verify processing steps
         mock_get_status.assert_called_once_with(project_dir)
-        mock_check_mypy.assert_called_once_with(project_dir, 2, "claude", "api")
+        mock_check_mypy.assert_called_once_with(project_dir, 2, "claude", "api", ANY)
         mock_run_formatters.assert_called_once_with(project_dir)
-        mock_commit.assert_called_once_with(project_dir)
+        mock_commit.assert_called_once_with(project_dir, "claude", "api")
         mock_push.assert_called_once_with(project_dir)
 
     def test_error_recovery_patterns(self) -> None:

@@ -80,10 +80,16 @@ def execute_prompt(args: argparse.Namespace) -> int:
                 project_dir = Path(project_dir_arg).resolve()
                 # Validate it exists and is accessible (no git requirement)
                 if not project_dir.exists():
-                    print(f"Error: Project directory does not exist: {project_dir}", file=sys.stderr)
+                    print(
+                        f"Error: Project directory does not exist: {project_dir}",
+                        file=sys.stderr,
+                    )
                     return 1
                 if not project_dir.is_dir():
-                    print(f"Error: Project path is not a directory: {project_dir}", file=sys.stderr)
+                    print(
+                        f"Error: Project path is not a directory: {project_dir}",
+                        file=sys.stderr,
+                    )
                     return 1
             else:
                 project_dir = Path.cwd()

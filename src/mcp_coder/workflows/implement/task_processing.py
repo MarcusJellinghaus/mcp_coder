@@ -173,7 +173,11 @@ def _call_llm_with_comprehensive_capture(
         try:
             logger.info(f"Calling Claude CLI with {timeout}s timeout...")
             response_text = ask_llm(
-                prompt, provider=provider, method=method, timeout=timeout, env_vars=env_vars
+                prompt,
+                provider=provider,
+                method=method,
+                timeout=timeout,
+                env_vars=env_vars,
             )
             return response_text, {}
         except subprocess.TimeoutExpired as e:
@@ -282,7 +286,9 @@ def run_formatters(project_dir: Path) -> bool:
         return False
 
 
-def commit_changes(project_dir: Path, provider: str = "claude", method: str = "api") -> bool:
+def commit_changes(
+    project_dir: Path, provider: str = "claude", method: str = "api"
+) -> bool:
     """Commit changes using existing git operations and return success status.
 
     Args:

@@ -626,6 +626,7 @@ class TestRunImplementWorkflow:
 class TestIntegration:
     """Integration tests for core workflow orchestration."""
 
+    @patch("mcp_coder.workflows.implement.core.RUN_MYPY_AFTER_EACH_TASK", True)
     @patch("mcp_coder.workflows.implement.core.process_single_task")
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
