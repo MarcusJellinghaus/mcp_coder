@@ -15,34 +15,21 @@ logger = logging.getLogger(__name__)
 PLACEHOLDER_HASH = "0" * 7
 GIT_SHORT_HASH_LENGTH = 7
 
-# Explicit exports for mypy - must be before class/function definitions
-__all__ = [
-    "CommitResult",
-    "PushResult",
-    "branch_exists",
-    "checkout_branch",
-    "commit_all_changes",
-    "commit_staged_files",
-    "create_branch",
-    "fetch_remote",
-    "get_branch_diff",
-    "get_current_branch_name",
-    "get_default_branch_name",
-    "get_full_status",
-    "get_git_diff_for_commit",
-    "get_github_repository_url",
-    "get_parent_branch_name",
-    "get_staged_changes",
-    "get_unstaged_changes",
-    "git_move",
-    "git_push",
-    "is_file_tracked",
-    "is_git_repository",
-    "is_working_directory_clean",
-    "push_branch",
-    "stage_all_changes",
-    "stage_specific_files",
-]
+
+# Type aliases defined early for proper type checking
+class CommitResult(TypedDict):
+    """Result of a git commit operation."""
+
+    success: bool
+    commit_hash: Optional[str]
+    error: Optional[str]
+
+
+class PushResult(TypedDict):
+    """Result of a git push operation."""
+
+    success: bool
+    error: Optional[str]
 
 
 def _close_repo_safely(repo: Repo) -> None:
@@ -109,23 +96,6 @@ def _normalize_git_path(path: Path, base_dir: Path) -> str:
     """
     relative_path = path.relative_to(base_dir)
     return str(relative_path).replace("\\", "/")
-
-
-# Type alias for commit result structure
-class CommitResult(TypedDict):
-    """Result of a git commit operation."""
-
-    success: bool
-    commit_hash: Optional[str]
-    error: Optional[str]
-
-
-# Type alias for git push result structure
-class PushResult(TypedDict):
-    """Result of a git push operation."""
-
-    success: bool
-    error: Optional[str]
 
 
 def is_git_repository(project_dir: Path) -> bool:
@@ -1542,3 +1512,123 @@ def _parse_github_url(git_url: str) -> Optional[str]:
 
     owner, repo_name = match.groups()
     return f"https://github.com/{owner}/{repo_name}"
+
+
+# Explicit exports for mypy
+__all__ = [
+    "CommitResult",
+    "PushResult",
+    "branch_exists",
+    "checkout_branch",
+    "commit_all_changes",
+    "commit_staged_files",
+    "create_branch",
+    "fetch_remote",
+    "get_branch_diff",
+    "get_current_branch_name",
+    "get_default_branch_name",
+    "get_full_status",
+    "get_git_diff_for_commit",
+    "get_github_repository_url",
+    "get_parent_branch_name",
+    "get_staged_changes",
+    "get_unstaged_changes",
+    "git_move",
+    "git_push",
+    "is_file_tracked",
+    "is_git_repository",
+    "is_working_directory_clean",
+    "push_branch",
+    "stage_all_changes",
+    "stage_specific_files",
+]
+
+
+# Explicit exports for mypy
+__all__ = [
+    "CommitResult",
+    "PushResult",
+    "branch_exists",
+    "checkout_branch",
+    "commit_all_changes",
+    "commit_staged_files",
+    "create_branch",
+    "fetch_remote",
+    "get_branch_diff",
+    "get_current_branch_name",
+    "get_default_branch_name",
+    "get_full_status",
+    "get_git_diff_for_commit",
+    "get_github_repository_url",
+    "get_parent_branch_name",
+    "get_staged_changes",
+    "get_unstaged_changes",
+    "git_move",
+    "git_push",
+    "is_file_tracked",
+    "is_git_repository",
+    "is_working_directory_clean",
+    "push_branch",
+    "stage_all_changes",
+    "stage_specific_files",
+]
+
+
+# Explicit exports for mypy - declared at end after all definitions
+__all__: list[str] = [
+    "CommitResult",
+    "PushResult",
+    "branch_exists",
+    "checkout_branch",
+    "commit_all_changes",
+    "commit_staged_files",
+    "create_branch",
+    "fetch_remote",
+    "get_branch_diff",
+    "get_current_branch_name",
+    "get_default_branch_name",
+    "get_full_status",
+    "get_git_diff_for_commit",
+    "get_github_repository_url",
+    "get_parent_branch_name",
+    "get_staged_changes",
+    "get_unstaged_changes",
+    "git_move",
+    "git_push",
+    "is_file_tracked",
+    "is_git_repository",
+    "is_working_directory_clean",
+    "push_branch",
+    "stage_all_changes",
+    "stage_specific_files",
+]
+
+
+# Explicit exports for mypy
+__all__ = [
+    "CommitResult",
+    "PushResult",
+    "branch_exists",
+    "checkout_branch",
+    "commit_all_changes",
+    "commit_staged_files",
+    "create_branch",
+    "fetch_remote",
+    "get_branch_diff",
+    "get_current_branch_name",
+    "get_default_branch_name",
+    "get_full_status",
+    "get_git_diff_for_commit",
+    "get_github_repository_url",
+    "get_parent_branch_name",
+    "get_staged_changes",
+    "get_unstaged_changes",
+    "git_move",
+    "git_push",
+    "is_file_tracked",
+    "is_git_repository",
+    "is_working_directory_clean",
+    "push_branch",
+    "stage_all_changes",
+    "stage_specific_files",
+]
