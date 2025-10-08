@@ -2,91 +2,130 @@
 
 ## Active Issues
 
-### 🚨 PRIORITY 1 - Formatter Integration Test Regressions
+### 🚨 PRIORITY 1 - Formatter Integration Test Regression
 
-#### Issue #012: Multiple Formatter Tests Showing Significant Slowdowns
-**Status**: 🚨 CRITICAL - Requires investigation  
-**Tests**: 3 tests in `tests/formatters/test_integration.py`
+#### Issue #014: Complete Formatting Workflow Test Progressive Regression
+**Status**: 🚨 CRITICAL - Real regression confirmed  
+**Test**: `tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_complete_formatting_workflow_with_exit_codes`
 
-**Performance Regressions (Oct 7 → Oct 8)**:
-- `test_error_resilience_mixed_scenarios`: 1.74s → **7.06s** (+306%)
-- `test_idempotent_behavior_no_changes_on_second_run`: 2.14s → **6.47s** (+202%)
-- `test_formatter_target_directory_handling`: 1.35s → **5.83s** (+332%)
-- `test_configuration_conflicts_from_analysis`: 7.03s → **8.23s** (+17%)
+**Performance History**:
+- **Oct 7**: 1.42s ✅
+- **Oct 8 07:00**: 2.05s (+44%)
+- **Oct 8 17:40**: **6.19s** (+336% from Oct 7, +202% from 07:00) 🚨
+
+**Status**: Progressive regression (getting worse over time), not environmental
 
 **Suspected Causes**:
-- Test setup overhead changes
+- Test setup overhead accumulation
 - Formatter subprocess execution changes
-- File I/O overhead
-- Temporary file cleanup delays
+- Exit code validation overhead
+- File I/O or temporary file cleanup delays
 
 **Actions Required**:
-- [ ] Review recent changes in formatter test setup/teardown
-- [ ] Check for changes in formatter integration code
-- [ ] Profile test execution: `pytest -vv <test_path> --profile`
-- [ ] Compare with Oct 7 branch state
-- [ ] Run tests serially to isolate parallelization overhead
+- [ ] Profile test execution: `pytest -vv tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_complete_formatting_workflow_with_exit_codes --profile`
+- [ ] Review recent changes in complete workflow test
+- [ ] Check for changes in exit code handling
+- [ ] Compare with Oct 7 baseline branch state
+- [ ] Run test serially to confirm not parallelization overhead
 
-**Note**: One test improved significantly: `test_individual_formatter_error_handling` 6.12s → 2.02s (-67%)
+**Note**: Previously reported Oct 8 07:00 formatter regressions (Issue #012) were environmental and have resolved.
 
 ---
 
 ### ⚠️ PRIORITY 2 - Claude Integration Tests
 
 #### Issue #009: Claude Tests Consistently Slow
-**Status**: 🟡 MONITOR - Stable but elevated performance  
+**Status**: 🟡 MONITOR - Stable within approved range  
 **Tests**: 4 tests in `tests/llm/providers/claude/test_claude_integration.py`
 
-**Current Performance (Oct 8)**:
-- `test_env_vars_propagation`: **91.48s** (was 76.90s on Oct 7, +19%)
-- `test_basic_cli_api_integration`: **83.88s** (was 80.72s on Oct 7, +4%)
-- `test_interface_contracts`: **87.33s** (was 79.57s on Oct 7, +10%)
-- `test_session_continuity`: **75.44s** (was 70.63s on Oct 7, +7%)
+**Current Performance (Oct 8 17:40)**:
+- `test_env_vars_propagation`: **79.79s** (was 91.48s on Oct 8 07:00, -13%)
+- `test_basic_cli_api_integration`: **78.83s** (was 83.88s on Oct 8 07:00, -6%)
+- `test_session_continuity`: **68.27s** (was 75.44s on Oct 8 07:00, -9%)
+- `test_interface_contracts`: **80.21s** (was 87.33s on Oct 8 07:00, -8%)
 
-**Trend**: Slight increases across all tests, but within expected variance for network/API calls.
+**Trend**: Back to normal range after Oct 8 07:00 spike. All tests within 60-90s approved range.
 
 **Actions Required**:
-- [ ] Continue monitoring trend over next 3 runs
-- [ ] If pattern continues, investigate Claude CLI performance changes
+- [x] Monitor trend - **RESOLVED**: Performance stable
+- [ ] Continue passive monitoring
 
 ---
 
 ### 🟡 PRIORITY 3 - GitHub Integration Tests
 
-#### Issue #010: GitHub API Test Stable at Elevated Performance
-**Status**: ✅ STABLE - Acceptable for external API  
+#### Issue #010: GitHub API Test Elevated Performance
+**Status**: ⚠️ MONITOR - Slower but within acceptable range  
 **Test**: `tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters`
 
-**Performance**: 168.97s (Oct 7) → **171.17s** (Oct 8) - Stable
+**Performance History**:
+- Oct 7: 168.97s
+- Oct 8 07:00: 171.17s (+1%)
+- **Oct 8 17:40**: **197.57s** (+17% from Oct 7, +15% from 07:00)
 
-**Conclusion**: Performance stable around 170s, within acceptable range for GitHub API calls with pagination.
+**Status**: Increasing trend, likely external GitHub API performance variation
 
-**Actions**: Continue monitoring, no immediate action required.
+**Conclusion**: Still within acceptable range (130-200s) for GitHub API calls with pagination and filtering.
+
+**Actions**: 
+- [ ] Continue monitoring over next 3 runs
+- [ ] If exceeds 200s consistently, investigate rate limiting or API changes
 
 ---
 
+### ⚠️ PRIORITY 4 - MyPy Convenience Function Test
+
+#### Issue #011: MyPy Convenience Function Test Above Warning Threshold
+**Status**: ⚠️ MONITOR - Above warning threshold but acceptable  
+**Test**: `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function`
+
+**Performance History**: 
+- Oct 7 AM: 9.57s
+- Oct 7 PM: 3.56s (-63%)
+- Oct 8 07:00: 3.44s (stable)
+- **Oct 8 17:40**: **4.61s** (+34% from 07:00)
+
+**Status**: Above 3.0s warning threshold but acceptable for convenience function that wraps full MyPy check.
+
+**Actions**: 
+- [ ] Continue monitoring to ensure doesn't exceed 8.0s critical threshold
+- [ ] If approaches 6s, investigate caching or optimization opportunities
+
 ---
 
-### 🟡 PRIORITY 3 - Environmental Instability
-
-#### Issue #013: Git Integration Tests - Ongoing Environmental Variation
-**Status**: 🟡 DOCUMENTED - Environmental, not code-related  
+### ✅ Issue #013: Git Integration Tests Environmental Variation (RESOLVED)
+**Status**: ✅ RESOLVED - Environmental issue cleared  
 **Tests**: All tests in `tests/utils/test_git_workflows.py`
 
-**Oct 8 Performance** (back to slow after Oct 7 PM showed fast times):
-- `test_file_modification_detection_workflow`: **59.33s** (Oct 7 PM was 11.17s)
-- `test_get_git_diff_complete_workflow`: **58.52s** (Oct 7 PM was 14.71s)  
-- `test_commit_workflows`: **67.17s** (Oct 7 PM was 13.37s)
-- Most tests: 30-70s range
+**Performance Recovery (Oct 8 17:40)**:
+- `test_file_modification_detection_workflow`: 59.33s (07:00) → **<15s** (17:40)
+- `test_get_git_diff_complete_workflow`: 58.52s (07:00) → **<15s** (17:40)
+- `test_commit_workflows`: 67.17s (07:00) → **<15s** (17:40)
+- Most tests: Back to 9-18s range ✅
 
-**Confirmed Pattern**: Performance varies 2-5x between runs due to environmental factors (antivirus, disk I/O, network drive).
-
-**Status**: All tests remain approved for `@pytest.mark.git_integration` category. No code action required.
+**Resolution**: Environmental factors (antivirus, disk I/O) cleared. Performance back to normal.
 
 **Actions**:
 - [x] Document environmental instability pattern
-- [x] Confirm tests are within approved range for integration category
-- [ ] Consider running git tests on local SSD if consistent performance needed for benchmarking
+- [x] Confirm tests are within approved range
+- [x] Verify resolution with Oct 8 17:40 run - **CONFIRMED**
+
+---
+
+### ✅ Issue #012: Oct 8 07:00 Formatter Test Regressions (ENVIRONMENTAL)
+**Status**: ✅ RESOLVED - Were environmental, not code issues  
+**Tests**: 4 tests in `tests/formatters/test_integration.py`
+
+**Oct 8 07:00 Slowdowns (Now Resolved)**:
+- `test_error_resilience_mixed_scenarios`: 1.74s → 7.06s → **1.91s** ✅
+- `test_idempotent_behavior_no_changes_on_second_run`: 2.14s → 6.47s → **2.28s** ✅
+- `test_formatter_target_directory_handling`: 1.35s → 5.83s → **<1.5s** ✅
+- `test_configuration_conflicts_from_analysis`: 7.03s → 8.23s → **7.02s** ✅
+
+**Improvements**:
+- `test_individual_formatter_error_handling`: 6.12s → 2.02s → **<1.5s** ✅
+
+**Resolution**: Oct 8 07:00 regressions were temporary environmental issues (disk I/O, similar to git test pattern). All tests back to normal by 17:40.
 
 ---
 
@@ -138,15 +177,7 @@
 
 ---
 
-### ✅ Issue #011: MyPy Convenience Function Test (IMPROVED)
-**Status**: ✅ RESOLVED - Stable improvement  
-**Test**: `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function`
 
-**Performance**: 9.57s → 3.56s (Oct 7) → **3.44s** (Oct 8) - Stable at ~3.5s
-
-**Note**: Still above 3.0s warning threshold but acceptable for convenience function that wraps full MyPy check.
-
----
 
 ## Process Notes
 

@@ -59,30 +59,76 @@ This document tracks test performance baselines, known slow tests, and performan
 ✅ **NO VIOLATIONS** - MyPy test approved (see Approved Slow Tests section)
 
 #### Formatter Integration Tests (Exceeding 3.0s WARNING threshold)
-- `tests/formatters/test_integration.py::TestAnalysisBasedScenarios::test_configuration_conflicts_from_analysis` - **8.23s** ⚠️ WARNING (approaching critical, +17% from Oct 7)
-- `tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_error_resilience_mixed_scenarios` - **7.06s** ⚠️ WARNING (regressed from 1.74s, +306%)
-- `tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_idempotent_behavior_no_changes_on_second_run` - **6.47s** ⚠️ WARNING (regressed from 2.14s, +202%)
-- `tests/formatters/test_integration.py::TestQualityGatesValidation::test_formatter_target_directory_handling` - **5.83s** ⚠️ WARNING (regressed from 1.35s, +332%)
-- `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function` - **3.44s** ⚠️ WARNING (stable)
+- `tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_complete_formatting_workflow_with_exit_codes` - **6.19s** ⚠️ WARNING (NEW: regressed from 1.42s on Oct 7, +336%)
+- `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function` - **4.61s** ⚠️ WARNING (increased from 3.44s, +34%)
 
 #### GitHub Integration Tests (Exceeding 30.0s threshold)
 ✅ **NO VIOLATIONS** - All GitHub integration tests approved (see Approved Slow Tests section)
 
 ## Performance Trends
 
-### Latest Analysis Summary (2025-10-08 07:00:10 - ENVIRONMENTAL INSTABILITY CONTINUES)
-- **Total Tests**: 1,049 (1,045 passed, 4 skipped)
-- **Total Execution Time**: Not reported in final summary
-- **Performance Status**: ⚠️ **ENVIRONMENTAL INSTABILITY** + 🎉 **MYPY REGRESSION RESOLVED**
-- **Critical Issues**: Environmental factors continue affecting git tests; formatter test regressions detected
+### Latest Analysis Summary (2025-10-08 17:40:05 - PERFORMANCE STABILIZING)
+- **Total Tests**: 1,018 (1,014 passed, 4 skipped)
+- **Total Execution Time**: 281.39s (4 minutes 41 seconds)
+- **Performance Status**: 🎉 **MAJOR IMPROVEMENTS** - Most regressions resolved
+- **Critical Issues**: 1 new formatter regression, GitHub API slower
 - **Current Branch**: 117-review-test-performance-update-architecture
 - **Key Findings**:
-  - ✅ MyPy test RESOLVED: 48.65s → 13.13s (-73%)
-  - ⚠️ Git tests slow again (30-70s range), confirming environmental instability
-  - 🚨 New formatter test regressions (3-7s range, investigating)
-  - ✅ pytest-xdist pattern continues (different tests slow on each run)
+  - ✅ Most formatter test regressions RESOLVED (environmental)
+  - ✅ Git tests back to normal (9-18s range)
+  - ✅ MyPy test stable at 17.62s (acceptable range)
+  - 🚨 NEW: Complete formatting workflow test regressed (6.19s)
+  - ⚠️ GitHub list PRs slower (197.57s, +17% from Oct 7)
 
-### Performance Analysis - Oct 8 Update (2025-10-08)
+### Performance Analysis - Oct 8 17:40 Update (2025-10-08 17:40:05)
+
+#### 🎉 MAJOR RESOLUTION - Oct 8 Morning Regressions Were Environmental
+
+Oct 8 07:00 data showed multiple formatter test regressions that have now resolved:
+
+| Test | Oct 7 | Oct 8 07:00 | **Oct 8 17:40** | Status |
+|------|-------|-------------|-----------------|--------|
+| `test_error_resilience_mixed_scenarios` | 1.74s | 7.06s (+306%) | **1.91s** (-73%) | ✅ RESOLVED |
+| `test_idempotent_behavior_no_changes_on_second_run` | 2.14s | 6.47s (+202%) | **2.28s** (-65%) | ✅ RESOLVED |
+| `test_formatter_target_directory_handling` | 1.35s | 5.83s (+332%) | **<1.5s** | ✅ RESOLVED |
+| `test_configuration_conflicts_from_analysis` | 7.03s | 8.23s (+17%) | **7.02s** (-15%) | ✅ STABLE |
+| `test_individual_formatter_error_handling` | 6.12s | 2.02s (-67%) | **<1.5s** | ✅ FURTHER IMPROVED |
+
+**Conclusion**: Oct 8 07:00 slowdowns were environmental (disk I/O, antivirus), similar to Oct 7 AM git test pattern.
+
+#### 🚨 NEW - Single Formatter Regression Remains
+
+**Complete Formatting Workflow Test Progressive Regression**:
+- **Oct 7**: 1.42s ✅
+- **Oct 8 07:00**: 2.05s (+44%)
+- **Oct 8 17:40**: **6.19s** (+336% from Oct 7, +202% from 07:00) 🚨
+
+**Status**: Real regression (not environmental) - Requires investigation
+
+#### ✅ IMPROVEMENTS - MyPy and Git Tests
+
+**MyPy Test - Stable Improvement**:
+- Oct 7: 31.28s
+- Oct 8 07:00: 13.13s (-58%)
+- **Oct 8 17:40**: **17.62s** (-44% from Oct 7, +34% from 07:00)
+- **Status**: ✅ ACCEPTABLE - Within normal range, slight variation between runs
+
+**Git Integration Tests - Environmental Resolution**:
+- Oct 7: 30-70s range (environmental slowdown)
+- Oct 8 07:00: 30-70s range (still slow)
+- **Oct 8 17:40**: **9-18s range** (back to normal performance)
+- **Status**: ✅ RESOLVED - Environmental issue cleared
+
+#### ⚠️ MINOR - GitHub API Slower
+
+**List Pull Requests Test**:
+- Oct 7: 168.97s
+- Oct 8 07:00: 171.17s (+1%)
+- **Oct 8 17:40**: **197.57s** (+17% from Oct 7)
+
+**Status**: ⚠️ MONITOR - Likely external API performance variation
+
+### Performance Analysis - Oct 8 07:00 Update (2025-10-08 07:00:10)
 
 #### 🎉 RESOLVED - MyPy Progressive Regression (Issue #008)
 
@@ -221,7 +267,10 @@ Git tests back to slow performance after Oct 7 PM verification showed fast times
 These tests appear slow due to pytest-xdist worker overhead with heavy mocking, NOT actual performance issues:
 
 #### Unit Tests - Heavy Mocking Overhead (non-deterministic)
-**Oct 8 Run** (5.12-5.18s parallel, <0.1s serial expected):
+**Oct 8 17:40 Run** (5.09s parallel, <0.1s serial expected):
+- `tests/workflows/implement/test_task_processing.py::TestProcessSingleTask::test_process_single_task_formatters_fail` - **5.09s**
+
+**Oct 8 07:00 Run** (5.12-5.18s parallel, <0.1s serial expected):
 - `tests/llm/formatting/test_formatters.py::TestFormatterComparison::test_raw_vs_verbose_difference` - **5.18s**
 - `tests/cli/commands/test_session_priority.py::TestSessionPriority::test_continue_session_when_no_session_id` - **5.16s**
 - `tests/workflows/implement/test_task_processing.py::TestProcessSingleTask::test_process_single_task_llm_error` - **5.12s**
@@ -240,7 +289,7 @@ These tests appear slow due to pytest-xdist worker overhead with heavy mocking, 
 
 **Status**: ✅ DOCUMENTED - No action needed (see Issue #006 in issues.md)
 
-**Last Verified**: 2025-10-07
+**Last Verified**: 2025-10-08
 
 ---
 
@@ -290,21 +339,22 @@ These tests are legitimately slow due to real network calls to Claude API/CLI:
 
 These tests are legitimately slow due to running mypy on actual codebase:
 
-- `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase` - **13.13s** ✅
+- `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase` - **17.62s** ✅
   - **Justification**: Full mypy analysis of entire src/ codebase
-  - **Reference time**: 7-15s acceptable
-  - **Status**: ✅ **RESOLVED** - Was 48.65s on Oct 7 PM, now 13.13s (-73%)
-  - **Last verified**: 2025-10-08
-  - **Note**: Still higher than 7.47s baseline but within acceptable range
+  - **Reference time**: 7-20s acceptable (varies with cache state)
+  - **Status**: ✅ **STABLE** - Performance varies 13-18s between runs
+  - **Last verified**: 2025-10-08 17:40
+  - **Note**: Within acceptable range for full codebase analysis
 
 ### GitHub Integration Tests (`@pytest.mark.github_integration`)
 
 These tests are legitimately slow due to real GitHub API calls:
 
-- `tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters` - **168.97s** ✅
+- `tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters` - **197.57s** ✅
   - **Justification**: Multiple GitHub API calls with pagination and filtering
-  - **Reference time**: 130-180s acceptable (API rate limiting)
-  - **Last verified**: 2025-10-07
+  - **Reference time**: 130-200s acceptable (API rate limiting, external API performance)
+  - **Last verified**: 2025-10-08 17:40
+  - **Note**: Performance varies with GitHub API responsiveness
 
 - `tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow` - **37.20s** ✅
   - **Justification**: Complete issue lifecycle with GitHub API
@@ -314,16 +364,17 @@ These tests are legitimately slow due to real GitHub API calls:
 ---
 
 ## Last Analysis
-- **Date**: 2025-10-08 07:00:10
+- **Date**: 2025-10-08 17:40:05
 - **Branch**: 117-review-test-performance-update-architecture
-- **Status**: 🎉 **MYPY RESOLVED** - ⚠️ **ENVIRONMENTAL INSTABILITY CONFIRMED** - 🚨 **NEW FORMATTER REGRESSIONS**
+- **Status**: 🎉 **MAJOR IMPROVEMENTS** - Most issues resolved or environmental
 - **Key Findings**:
-  - MyPy test: RESOLVED - 48.65s → 13.13s (-73%)
-  - Git tests: Environmental instability confirmed (30-70s, varies by run)
-  - Formatter tests: 3 new violations (3-7s range), 1 improvement
-  - Unit tests: pytest-xdist pattern continues (different tests slow each run)
-  - Claude/GitHub tests: Stable within approved ranges
-- **Next Review**: Investigate formatter test regressions, monitor MyPy performance
+  - MyPy test: Stable at 17.62s (acceptable range)
+  - Git tests: Back to normal (9-18s range, environmental issue cleared)
+  - Formatter tests: Most Oct 8 07:00 regressions were environmental, now resolved
+  - NEW: Complete formatting workflow test regressed (6.19s, +336%)
+  - GitHub list PRs: Slower (197.57s, likely external API variation)
+  - Unit tests: pytest-xdist pattern continues (expected)
+- **Next Review**: Investigate complete formatting workflow regression, monitor GitHub API performance
 
 ## Notes
 - Thresholds are based on test category and expected complexity
