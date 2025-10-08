@@ -237,7 +237,9 @@ class TestPullRequestManagerUnit:
             mock_config.return_value = "dummy-token"
             manager = PullRequestManager(git_dir)
 
-            result = manager.create_pull_request("Valid Title", "invalid~branch", "main")
+            result = manager.create_pull_request(
+                "Valid Title", "invalid~branch", "main"
+            )
             assert not result
 
     def test_create_pull_request_invalid_base_branch(self, tmp_path: Path) -> None:
@@ -251,7 +253,9 @@ class TestPullRequestManagerUnit:
             mock_config.return_value = "dummy-token"
             manager = PullRequestManager(git_dir)
 
-            result = manager.create_pull_request("Valid Title", "feature", "invalid^branch")
+            result = manager.create_pull_request(
+                "Valid Title", "feature", "invalid^branch"
+            )
             assert not result
 
     # ========================================

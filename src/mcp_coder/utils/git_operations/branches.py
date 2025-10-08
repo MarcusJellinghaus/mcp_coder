@@ -358,7 +358,12 @@ def branch_exists(project_dir: Path, branch_name: str) -> bool:
         return False
 
 
-def delete_branch(branch_name: str, project_dir: Path, force: bool = False, delete_remote: bool = False) -> bool:
+def delete_branch(
+    branch_name: str,
+    project_dir: Path,
+    force: bool = False,
+    delete_remote: bool = False,
+) -> bool:
     """Delete a git branch locally and optionally from remote.
 
     Args:
@@ -375,8 +380,13 @@ def delete_branch(branch_name: str, project_dir: Path, force: bool = False, dele
         - With force=False, deletion fails if branch has unmerged changes
         - With delete_remote=True, will attempt to delete from origin remote
     """
-    logger.debug("Deleting branch '%s' in %s (force=%s, remote=%s)", 
-                 branch_name, project_dir, force, delete_remote)
+    logger.debug(
+        "Deleting branch '%s' in %s (force=%s, remote=%s)",
+        branch_name,
+        project_dir,
+        force,
+        delete_remote,
+    )
 
     if not is_git_repository(project_dir):
         logger.debug("Not a git repository: %s", project_dir)
@@ -399,7 +409,9 @@ def delete_branch(branch_name: str, project_dir: Path, force: bool = False, dele
             try:
                 current_branch = repo.active_branch.name
                 if current_branch == branch_name:
-                    logger.error("Cannot delete currently active branch '%s'", branch_name)
+                    logger.error(
+                        "Cannot delete currently active branch '%s'", branch_name
+                    )
                     return False
             except TypeError:
                 # In detached HEAD state, can proceed

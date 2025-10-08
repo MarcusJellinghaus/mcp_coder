@@ -130,7 +130,10 @@ class TestPullRequestManagerSmoke:
 
             # Create PR
             created_pr = pr_manager.create_pull_request(
-                title=pr_title, head_branch=test_branch, base_branch="main", body=pr_body
+                title=pr_title,
+                head_branch=test_branch,
+                base_branch="main",
+                body=pr_body,
             )
             assert created_pr, "Expected PR creation to return data"
             assert created_pr["number"] > 0, "Expected valid PR number"
@@ -146,7 +149,9 @@ class TestPullRequestManagerSmoke:
             # Close PR
             closed_pr = pr_manager.close_pull_request(pr_number)
             assert closed_pr["state"] == "closed"
-            print(f"[OK] Closed PR #{pr_number} - Check closed PRs in your repo to verify!")
+            print(
+                f"[OK] Closed PR #{pr_number} - Check closed PRs in your repo to verify!"
+            )
 
         finally:
             # Cleanup
@@ -160,7 +165,9 @@ class TestPullRequestManagerSmoke:
             try:
                 repo.git.checkout(original_branch)
                 # Delete the test branch locally and remotely
-                delete_branch(test_branch, pr_manager.project_dir, force=True, delete_remote=True)
+                delete_branch(
+                    test_branch, pr_manager.project_dir, force=True, delete_remote=True
+                )
                 print(f"[OK] Cleaned up test branch: {test_branch}")
             except Exception as e:
                 print(f"[WARN] Branch cleanup failed: {e}")
@@ -203,9 +210,7 @@ class TestLabelsManagerSmoke:
             assert retrieved_label["name"] == label_name
 
             # Update
-            updated_label = labels_manager.update_label(
-                name=label_name, color="00FF00"
-            )
+            updated_label = labels_manager.update_label(name=label_name, color="00FF00")
             assert updated_label["color"] == "00FF00"
 
             # Delete

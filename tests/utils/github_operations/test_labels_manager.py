@@ -149,9 +149,7 @@ class TestLabelsManagerUnit:
             mock_config.return_value = "dummy-token"
             manager = LabelsManager(git_dir)
 
-            result = manager.create_label(
-                "bug", "d73a4a", "Something isn't working"
-            )
+            result = manager.create_label("bug", "d73a4a", "Something isn't working")
 
             assert result["name"] == "bug"
             assert result["color"] == "d73a4a"
