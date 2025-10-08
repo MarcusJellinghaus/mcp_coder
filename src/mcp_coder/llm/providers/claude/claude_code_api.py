@@ -214,6 +214,9 @@ def _create_claude_client(
 ) -> ClaudeCodeOptions:
     """Create a Claude Code SDK client with optional session resumption.
 
+    Uses lazy verification - Claude installation is only verified if SDK raises CLINotFoundError.
+    This improves performance by avoiding preemptive checks when Claude is already available.
+
     Args:
         session_id: Optional Claude session ID to resume conversation
         env: Optional environment variables to pass to Claude Code SDK
@@ -223,28 +226,36 @@ def _create_claude_client(
 
     Note:
         The SDK will use existing CLI subscription authentication automatically.
-        Attempts to setup PATH if Claude CLI is not accessible.
+        If SDK raises CLINotFoundError, verification is performed for diagnostics.
 
     Raises:
-        RuntimeError: If Claude CLI cannot be found or verified
+        RuntimeError: If Claude CLI cannot be found or verified (only after SDK failure)
     """
     logger.debug("Creating Claude Code SDK client")
 
-    # Verify Claude installation before creating client
-    success, claude_path, error_msg = _verify_claude_before_use()
+    try:
+        # Use basic configuration with optional session resumption
+        if session_id:
+            logger.debug(f"Resuming session: {session_id}")
+            return ClaudeCodeOptions(resume=session_id, env=env or {})
+        else:
+            return ClaudeCodeOptions(env=env or {})
+    except CLINotFoundError as e:
+        # SDK couldn't find Claude - run verification for diagnostics
+        logger.warning("SDK raised CLINotFoundError, running verification: %s", e)
+        success, claude_path, error_msg = _verify_claude_before_use()
 
-    if not success:
-        logger.error("Claude verification failed: %s", error_msg)
-        raise RuntimeError(f"Claude CLI verification failed: {error_msg}")
+        if not success:
+            logger.error("Claude verification failed: %s", error_msg)
+            raise RuntimeError(f"Claude CLI verification failed: {error_msg}") from e
 
-    logger.debug("Claude CLI verified successfully at: %s", claude_path)
-
-    # Use basic configuration with optional session resumption
-    if session_id:
-        logger.debug(f"Resuming session: {session_id}")
-        return ClaudeCodeOptions(resume=session_id, env=env or {})
-    else:
-        return ClaudeCodeOptions(env=env or {})
+        # Verification passed but SDK still failed - shouldn't happen
+        logger.error(
+            "Claude verified at %s but SDK still raised CLINotFoundError", claude_path
+        )
+        raise RuntimeError(
+            f"Claude CLI found at {claude_path} but SDK cannot access it: {str(e)}"
+        ) from e
 
 
 def create_api_response_dict(
