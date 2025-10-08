@@ -92,7 +92,13 @@ float_to_top = true
 
 [tool.pylint.messages_control]
 # W1203: Disable lazy % formatting requirement - prefer f-strings for readability
-disable = ["W1203"]
+# R0903: Disable too-few-public-methods for test classes (tests often have single methods)
+# R0917: Disable too-many-positional-arguments for test mocks (mocks mirror real signatures)
+# R0913: Disable too-many-arguments for test mocks (mocks mirror real signatures)
+# W0621: Disable redefined-outer-name for pytest fixtures (standard pytest pattern)
+# C0415: Disable import-outside-toplevel for test files (common for testing optional dependencies)
+# R0801: Disable duplicate-code for test files (similar test patterns are expected)
+disable = ["W1203", "R0903", "R0917", "R0913", "W0621", "C0415", "R0801"]
 
 [tool.mypy]
 python_version = "3.11"
