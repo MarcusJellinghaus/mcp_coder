@@ -35,6 +35,38 @@ jobs:
           fi
         }
         
+        # Function to check if folder is empty (or doesn't exist)
+        check_empty_folder() {
+          local pattern="$1"
+          local description="$2"
+          
+          # Find matching folders
+          local folders=$(find . -type d -path "*${pattern}*" 2>/dev/null)
+          
+          if [ -z "$folders" ]; then
+            echo "✅ Folder not found (acceptable): ${pattern}"
+            return 0
+          fi
+          
+          # Check if any found folder is not empty
+          local has_content=0
+          while IFS= read -r folder; do
+            if [ -n "$(find "$folder" -mindepth 1 -print -quit)" ]; then
+              echo "❌ ERROR: Folder should be empty: ${folder}"
+              echo "Description: ${description}"
+              find "$folder" -mindepth 1 -maxdepth 1 | sed 's/^/ Contains: /'
+              has_content=1
+            fi
+          done <<< "$folders"
+          
+          if [ $has_content -eq 1 ]; then
+            return 1
+          else
+            echo "✅ Folder exists and is empty: ${pattern}"
+            return 0
+          fi
+        }
+        
         # Check for forbidden folders
         ERROR=0
         
