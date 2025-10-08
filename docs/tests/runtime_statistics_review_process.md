@@ -1,4 +1,4 @@
-# Runtime Statistics Review Process
+read f# Runtime Statistics Review Process
 
 ## Quick Start
 ```bash
@@ -6,6 +6,91 @@ claude -p "Please execute the runtime statistics review process based on the lat
 ```
 
 **Prerequisites**: Performance data in `docs/tests/performance_data/`, MCP tools access
+
+## Generating Profiler Data
+
+Before analyzing performance issues, you may want to generate detailed profiler data to understand where time is being spent in slow tests.
+
+### Running the Test Profiler
+
+**Full profiling run** (profiles all tests, generates reports for tests >1s):
+```batch
+tools\test_profiler.bat
+```
+
+This will:
+1. Clean the profiling output directory
+2. Run all tests with profiling enabled (serial execution, no `-n auto`)
+3. Generate detailed text reports for tests taking >1 second
+4. Create a summary of all slow tests
+
+**Regenerate reports only** (if pytest already ran but you want new reports):
+```batch
+tools\test_profiler_generate_only.bat
+```
+
+### Profiler Output Location
+
+All profiler data is saved to:
+```
+docs\tests\performance_data\prof\
+```
+
+**Files generated:**
+- `*.prof` - Binary profile data for ALL tests (can be analyzed with Python profiler tools)
+- `*_report.txt` - Human-readable text reports for tests >1 second only
+- `summary.txt` - Overview of all slow tests with durations
+- `durations.json` - Machine-readable JSON with all test timings
+
+### Analyzing Profiler Reports
+
+**Step 1: Check the summary**
+```
+type docs\tests\performance_data\prof\summary.txt
+```
+
+This shows all slow tests sorted by duration.
+
+**Step 2: Read individual test reports**
+
+For a specific slow test, open its report file:
+```
+type docs\tests\performance_data\prof\<test_name>_report.txt
+```
+
+Each report contains:
+- **Summary**: Total function calls and execution time
+- **Top functions by cumulative time**: Where total time is spent (including subcalls)
+- **Top functions by internal time**: Where time is spent in the function itself
+- **Caller information**: What called these slow functions
+
+**Step 3: Identify bottlenecks**
+
+Look for:
+- Functions with high `cumtime` (cumulative time) - total time including subcalls
+- Functions with high `tottime` (total time) - time in function itself
+- Network I/O operations (socket reads, SSL operations)
+- `time.sleep()` calls (rate limiting, retries)
+- Database or file system operations
+
+### Example Analysis
+
+For the slowest test (175 seconds), the profiler shows:
+- **103 seconds** - SSL socket reads (network I/O)
+- **66 seconds** - `time.sleep()` calls (rate limiting)
+- **6 seconds** - actual processing
+
+This indicates the test is slow due to real API calls and rate limiting, not code inefficiency.
+
+### Configuration
+
+To change the threshold for "slow" tests (default: 1 second), edit:
+```python
+# In tools\test_profiler_plugin\__init__.py
+DURATION_THRESHOLD_SECONDS = 1.0  # Change this value
+```
+
+Then run `tools\test_profiler_generate_only.bat` to regenerate reports with the new threshold.
 
 ## Process Overview
 
