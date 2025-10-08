@@ -7,10 +7,10 @@ This script:
 3. Creates a summary report of all profiling results
 """
 
+import io
 import json
 import pstats
 import sys
-import io
 from pathlib import Path
 from typing import Dict, List, Tuple
 
