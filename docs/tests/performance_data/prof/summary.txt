@@ -1,0 +1,138 @@
+================================================================================
+PYTEST PROFILING SUMMARY
+================================================================================
+
+STATISTICS
+--------------------------------------------------------------------------------
+Total tests profiled: 1049
+Slow test threshold: >1.0 seconds
+Slow tests found: 105
+Reports generated: 105
+
+SLOW TESTS (sorted by duration)
+--------------------------------------------------------------------------------
+Duration     Test
+--------------------------------------------------------------------------------
+ 175.058s    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+  66.507s    tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_interface_contracts
+  59.029s    tests/llm/providers/claude/test_claude_integration.py::TestEnvironmentVariablePropagation::test_env_vars_propagation
+  58.388s    tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_basic_cli_api_integration
+  50.410s    tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity
+  41.059s    tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+  19.128s    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+  17.625s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_git_status_consistency_workflow
+  15.909s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_commit_message_variations_workflow
+  15.390s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_complete_workflow
+  13.348s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_commit_workflows
+  13.282s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_multiple_commit_cycles
+  13.177s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_file_modification_detection_workflow
+  12.759s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_integration_with_existing_functions
+  12.240s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_real_world_development_workflow
+  12.021s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_file_tracking_status_workflow
+  11.843s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_empty_to_populated_repository_workflow
+  11.446s    tests/utils/github_operations/test_github_utils.py::TestLabelsManagerIntegration::test_labels_manager_lifecycle
+  10.457s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_performance_basic
+  10.422s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_complete_project_lifecycle_workflow
+  10.395s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_unicode_and_binary_files
+   9.470s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_staged_vs_unstaged_changes_workflow
+   8.524s    tests/utils/test_git_error_cases.py::TestGitErrorCases::test_concurrent_access_simulation
+   8.357s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_staging_specific_files_workflow
+   8.350s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_is_working_directory_clean
+   8.192s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_modify_existing_files_workflow
+   8.134s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_incremental_staging_workflow
+   8.089s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_cross_platform_paths
+   8.064s    tests/utils/test_git_error_cases.py::TestGitErrorCases::test_unicode_edge_cases
+   8.042s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_mixed_file_operations_workflow
+   8.012s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_staging_all_changes_workflow
+   7.466s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_for_commit_with_untracked_files
+   7.154s    tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_error_handling_without_creating_issues
+   7.110s    tests/utils/test_git_error_cases.py::TestGitErrorCases::test_file_deletion_handling
+   7.081s    tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_with_complete_project_structure
+   6.748s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_new_project_to_first_commit
+   6.719s    tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_git_operations_integration
+   6.348s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_directory_structure_workflow
+   5.787s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_branch_exists_multiple_branches
+   5.320s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_for_commit_git_command_errors
+   5.293s    tests/utils/test_git_error_cases.py::TestGitErrorCases::test_platform_compatibility
+   5.033s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_push_branch_success
+   5.013s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_push_branch_without_upstream
+   5.003s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_get_current_branch_name_success
+   4.899s    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_manager_properties
+   4.653s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_for_commit_basic_functionality
+   4.412s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_get_parent_branch_name_returns_main
+   4.319s    tests/utils/test_git_error_cases.py::TestGitErrorCases::test_invalid_file_operations
+   3.898s    tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_prerequisite_validation
+   3.833s    tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_pr_summary_generation_with_diff
+   3.722s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_get_current_branch_name_detached_head
+   3.707s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_get_parent_branch_name_no_main_branch
+   3.611s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_get_default_branch_name_main_branch
+   3.524s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_get_default_branch_name_master_branch
+   3.340s    tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function
+   3.167s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_branch_exists_after_checkout
+   3.109s    tests/utils/test_git_error_cases.py::TestGitErrorCases::test_git_command_failures
+   3.071s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_git_push_basic_workflow
+   2.963s    tests/utils/test_git_error_cases.py::TestGitErrorCases::test_invalid_commit_scenarios
+   2.931s    tests/utils/test_git_workflows.py::TestGetBranchDiff::test_get_branch_diff_valid_diff
+   2.921s    tests/utils/test_git_workflows.py::TestGetBranchDiff::test_get_branch_diff_auto_detect_base
+   2.857s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_checkout_branch_from_detached_head
+   2.840s    tests/utils/test_git_workflows.py::TestGetBranchDiff::test_get_branch_diff_path_exclusion
+   2.835s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_checkout_branch_success
+   2.769s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_create_branch_invalid_name
+   2.649s    tests/utils/test_git_error_cases.py::TestGitErrorCases::test_gitignore_behavior
+   2.563s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_branch_exists_true
+   2.452s    tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_10k_special_characters
+   2.439s    tests/utils/test_git_workflows.py::TestGetBranchDiff::test_get_branch_diff_no_changes
+   2.431s    tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_binary_and_text_mix
+   2.412s    tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[10000]
+   2.410s    tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[5000]
+   2.403s    tests/utils/test_git_workflows.py::TestGetBranchDiff::test_get_branch_diff_on_base_branch
+   2.385s    tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_mixed_line_endings
+   2.382s    tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[1000]
+   2.243s    tests/utils/test_git_workflows.py::TestGetBranchDiff::test_get_branch_diff_missing_base_branch
+   2.111s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_push_branch_no_origin_remote
+   2.108s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_push_branch_git_command_error
+   2.007s    tests/utils/test_git_workflows.py::TestGitWorkflows::test_git_push_nothing_to_push
+   1.967s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_create_branch_already_exists
+   1.965s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_checkout_branch_already_on_branch
+   1.892s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_create_branch_from_specific_branch
+   1.859s    tests/formatters/test_integration.py::TestAnalysisBasedScenarios::test_configuration_conflicts_from_analysis
+   1.730s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_create_branch_success
+   1.527s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_push_branch_nonexistent_branch
+   1.525s    tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_clean_code
+   1.518s    tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_type_errors
+   1.504s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_checkout_branch_nonexistent_branch
+   1.490s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_branch_exists_false
+   1.266s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_create_branch_invalid_base_branch
+   1.239s    tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_idempotent_behavior_no_changes_on_second_run
+   1.178s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_fetch_remote_custom_remote
+   1.166s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_fetch_remote_success
+   1.072s    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerUnit::test_repository_name_property
+   1.065s    tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase
+   1.061s    tests/utils/github_operations/test_issue_manager.py::TestIssueManagerUnit::test_set_labels_auth_error_raises
+   1.046s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_branch_exists_invalid_name
+   1.038s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_fetch_remote_git_command_error
+   1.037s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_checkout_branch_invalid_name
+   1.036s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_push_branch_invalid_name
+   1.035s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_fetch_remote_nonexistent_remote
+   1.026s    tests/utils/github_operations/test_issue_manager.py::TestIssueManagerUnit::test_remove_labels_auth_error_raises
+   1.017s    tests/utils/test_git_workflows.py::TestGitBranchOperations::test_fetch_remote_invalid_name
+   1.006s    tests/utils/github_operations/test_issue_manager.py::TestIssueManagerUnit::test_add_labels_auth_error_raises
+   1.003s    tests/utils/github_operations/test_issue_manager.py::TestIssueManagerUnit::test_reopen_issue_auth_error_raises
+
+OUTPUT FILES
+--------------------------------------------------------------------------------
+Profile data directory: docs\tests\performance_data\prof
+
+Generated files:
+  - *.prof files: Binary profile data for ALL tests
+  - *_report.txt: Detailed text reports for slow tests only
+  - durations.json: Machine-readable test timing data
+  - summary.txt: This file
+
+ANALYZING RESULTS
+--------------------------------------------------------------------------------
+1. Check this summary for an overview of slow tests
+2. Read individual *_report.txt files for detailed analysis
+3. Look for functions with high 'cumtime' or 'tottime' values
+4. Use the caller information to understand the call chain
+

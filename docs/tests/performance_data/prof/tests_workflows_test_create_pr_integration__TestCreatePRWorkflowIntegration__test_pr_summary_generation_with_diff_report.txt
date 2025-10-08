@@ -1,0 +1,205 @@
+================================================================================
+PYTEST PROFILE REPORT
+================================================================================
+
+Test: tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_pr_summary_generation_with_diff
+Duration: 3.833 seconds
+Profile file: tests_workflows_test_create_pr_integration__TestCreatePRWorkflowIntegration__test_pr_summary_generation_with_diff.prof
+
+SUMMARY
+--------------------------------------------------------------------------------
+Wed Oct  8 08:00:52 2025    docs\tests\performance_data\prof\tests_workflows_test_create_pr_integration__TestCreatePRWorkflowIntegration__test_pr_summary_generation_with_diff.prof
+
+         52559 function calls (52099 primitive calls) in 3.833 seconds
+
+
+TOP FUNCTIONS BY CUMULATIVE TIME
+--------------------------------------------------------------------------------
+This shows functions sorted by total time spent, including time in called functions.
+
+Wed Oct  8 08:00:52 2025    docs\tests\performance_data\prof\tests_workflows_test_create_pr_integration__TestCreatePRWorkflowIntegration__test_pr_summary_generation_with_diff.prof
+
+         52559 function calls (52099 primitive calls) in 3.833 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1067 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    3.832    3.832 runner.py:114(pytest_runtest_protocol)
+        1    0.000    0.000    3.832    3.832 runner.py:122(runtestprotocol)
+        3    0.000    0.000    3.694    1.231 runner.py:230(call_and_report)
+    24/11    0.000    0.000    3.694    0.336 _hooks.py:497(__call__)
+    24/11    0.000    0.000    3.694    0.336 _manager.py:111(_hookexec)
+    24/11    0.000    0.000    3.694    0.336 _callers.py:76(_multicall)
+        3    0.000    0.000    3.694    1.231 runner.py:323(from_call)
+        3    0.000    0.000    3.694    1.231 runner.py:246(<lambda>)
+        1    0.000    0.000    3.531    3.531 runner.py:167(pytest_runtest_call)
+        1    0.000    0.000    3.531    3.531 python.py:1669(runtest)
+        1    0.000    0.000    3.531    3.531 python.py:150(pytest_pyfunc_call)
+        1    0.000    0.000    3.531    3.531 test_create_pr_integration.py:195(test_pr_summary_generation_with_diff)
+        1    0.000    0.000    2.083    2.083 create_PR.py:266(generate_pr_summary)
+       17    0.000    0.000    2.071    0.122 base.py:333(close)
+       34    2.066    0.061    2.066    0.061 {built-in method gc.collect}
+        1    0.000    0.000    1.945    1.945 diffs.py:92(get_branch_diff)
+  164/151    0.000    0.000    1.461    0.010 {built-in method builtins.next}
+       37    0.000    0.000    1.447    0.039 contextlib.py:145(__exit__)
+        1    0.000    0.000    1.252    1.252 test_create_pr_integration.py:273(_setup_complete_project)
+       11    0.000    0.000    1.113    0.101 cmd.py:1540(_call_process)
+       11    0.000    0.000    1.112    0.101 cmd.py:1096(execute)
+        9    0.000    0.000    1.106    0.123 cmd.py:1003(<lambda>)
+        9    0.000    0.000    1.097    0.122 base.py:327(__del__)
+        8    0.000    0.000    1.074    0.134 subprocess.py:1175(communicate)
+        8    0.000    0.000    1.070    0.134 subprocess.py:1613(_communicate)
+       16    0.000    0.000    1.070    0.067 threading.py:1056(join)
+       16    0.002    0.000    1.069    0.067 {method 'join' of '_thread._ThreadHandle' objects}
+     16/8    0.000    0.000    1.068    0.133 threading.py:998(_bootstrap)
+     16/8    0.002    0.000    1.068    0.133 threading.py:1025(_bootstrap_inner)
+     16/8    0.000    0.000    1.066    0.133 threading.py:981(run)
+     16/8    0.000    0.000    1.066    0.133 subprocess.py:1608(_readerthread)
+    54/46    0.000    0.000    1.065    0.023 {method 'close' of '_io.BufferedReader' objects}
+       16    0.000    0.000    0.982    0.061 core.py:61(_safe_repo_context)
+        8    0.000    0.000    0.974    0.122 core.py:36(_close_repo_safely)
+        4    0.000    0.000    0.966    0.242 repository.py:11(is_git_repository)
+        1    0.000    0.000    0.477    0.477 branches.py:159(get_parent_branch_name)
+        3    0.000    0.000    0.425    0.142 head.py:241(checkout)
+        3    0.000    0.000    0.388    0.129 base.py:1126(commit)
+        1    0.000    0.000    0.368    0.368 branches.py:319(branch_exists)
+        1    0.000    0.000    0.359    0.359 branches.py:14(get_current_branch_name)
+        1    0.000    0.000    0.358    0.358 branches.py:57(get_default_branch_name)
+        3    0.000    0.000    0.340    0.113 commit.py:561(create_from_tree)
+        4    0.000    0.000    0.299    0.075 symbolic.py:724(create)
+        4    0.000    0.000    0.299    0.075 symbolic.py:680(_create)
+       29    0.000    0.000    0.273    0.009 cmd.py:1676(__get_object_header)
+      249    0.273    0.001    0.273    0.001 {method 'readline' of '_io.BufferedReader' objects}
+        2    0.000    0.000    0.261    0.130 base.py:940(is_dirty)
+        7    0.000    0.000    0.187    0.027 symbolic.py:421(set_reference)
+        6    0.000    0.000    0.183    0.031 symbolic.py:552(log_append)
+       12    0.000    0.000    0.178    0.015 util.py:248(__getattr__)
+
+
+
+TOP FUNCTIONS BY INTERNAL TIME (TIME)
+--------------------------------------------------------------------------------
+This shows functions sorted by time spent in the function itself (excluding subcalls).
+
+Wed Oct  8 08:00:52 2025    docs\tests\performance_data\prof\tests_workflows_test_create_pr_integration__TestCreatePRWorkflowIntegration__test_pr_summary_generation_with_diff.prof
+
+         52559 function calls (52099 primitive calls) in 3.833 seconds
+
+   Ordered by: internal time
+   List reduced from 1067 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       34    2.066    0.061    2.066    0.061 {built-in method gc.collect}
+    53/45    1.064    0.020    0.001    0.000 {method 'read' of '_io.BufferedReader' objects}
+      249    0.273    0.001    0.273    0.001 {method 'readline' of '_io.BufferedReader' objects}
+        1    0.138    0.138    0.141    0.141 base.py:999(_get_untracked_files)
+      174    0.094    0.001    0.095    0.001 {built-in method _io.open}
+       61    0.048    0.001    0.048    0.001 {built-in method nt.open}
+       11    0.029    0.003    0.029    0.003 {built-in method _winapi.CreateProcess}
+       46    0.011    0.000    0.011    0.000 {built-in method nt.rename}
+       13    0.008    0.001    0.008    0.001 {built-in method _winapi.WaitForSingleObject}
+       47    0.006    0.000    0.006    0.000 {built-in method nt.mkdir}
+      242    0.005    0.000    0.005    0.000 {built-in method nt.write}
+       86    0.004    0.000    0.004    0.000 {built-in method nt._path_exists}
+       53    0.004    0.000    0.004    0.000 {built-in method nt.chmod}
+       60    0.003    0.000    0.003    0.000 {built-in method nt.close}
+      123    0.003    0.000    0.003    0.000 {method '__exit__' of '_io._IOBase' objects}
+       93    0.003    0.000    0.003    0.000 {built-in method nt._path_isfile}
+       87    0.002    0.000    0.002    0.000 {built-in method nt._path_isdir}
+       65    0.002    0.000    0.002    0.000 {method 'read' of '_io.TextIOWrapper' objects}
+     16/8    0.002    0.000    1.068    0.133 threading.py:1025(_bootstrap_inner)
+       59    0.002    0.000    0.002    0.000 {built-in method nt.stat}
+       60    0.002    0.000    0.002    0.000 {built-in method nt.scandir}
+       44    0.002    0.000    0.002    0.000 {built-in method nt.lstat}
+       15    0.002    0.000    0.002    0.000 {built-in method nt.remove}
+       16    0.002    0.000    1.069    0.067 {method 'join' of '_thread._ThreadHandle' objects}
+       54    0.001    0.000    0.039    0.001 loose.py:177(store)
+       20    0.001    0.000    0.003    0.000 config.py:439(_read)
+        1    0.001    0.001    0.001    0.001 pathlib.py:173(find_prefixed)
+      393    0.001    0.000    0.002    0.000 <frozen ntpath>:99(join)
+       14    0.001    0.000    0.001    0.000 {built-in method builtins.dir}
+     2533    0.001    0.000    0.001    0.000 {method 'match' of 're.Pattern' objects}
+       20    0.001    0.000    0.001    0.000 {built-in method nt.access}
+     4221    0.001    0.000    0.001    0.000 {built-in method builtins.isinstance}
+       43    0.001    0.000    0.001    0.000 {method 'flush' of 'zlib.Compress' objects}
+        8    0.001    0.000    0.001    0.000 {method 'close' of '_io.BufferedWriter' objects}
+       10    0.001    0.000    0.001    0.000 {built-in method nt._getfinalpathname}
+       49    0.001    0.000    0.002    0.000 __init__.py:298(__init__)
+       16    0.001    0.000    0.001    0.000 {built-in method _thread.start_joinable_thread}
+      841    0.001    0.000    0.001    0.000 <frozen os>:711(__getitem__)
+      373    0.001    0.000    0.001    0.000 cmd.py:989(__getattribute__)
+     1078    0.001    0.000    0.001    0.000 {built-in method nt._path_splitroot_ex}
+       16    0.001    0.000    0.001    0.000 {built-in method nt.putenv}
+       61    0.001    0.000    0.001    0.000 symbolic.py:172(_check_ref_name_valid)
+       61    0.001    0.000    0.051    0.001 symbolic.py:220(_get_ref_info_helper)
+      138    0.001    0.000    0.001    0.000 <frozen ntpath>:222(split)
+       53    0.000    0.000    0.001    0.000 glob.py:424(select_wildcard)
+       22    0.000    0.000    0.053    0.002 base.py:688(_store_path)
+      871    0.000    0.000    0.001    0.000 <frozen os>:785(encodekey)
+       11    0.000    0.000    1.113    0.101 cmd.py:1540(_call_process)
+       43    0.000    0.000    0.000    0.000 {built-in method zlib.compressobj}
+       86    0.000    0.000    0.000    0.000 {method 'compress' of 'zlib.Compress' objects}
+
+
+
+CALLER INFORMATION (Top 20)
+--------------------------------------------------------------------------------
+This shows which functions called the top functions.
+
+   Ordered by: cumulative time
+   List reduced from 1067 to 20 due to restriction <20>
+
+Function                                                                 was called by...
+                                                                             ncalls  tottime  cumtime
+runner.py:114(pytest_runtest_protocol)                                   <- 
+runner.py:122(runtestprotocol)                                           <-       1    0.000    3.832  runner.py:114(pytest_runtest_protocol)
+runner.py:230(call_and_report)                                           <-       3    0.000    3.694  runner.py:122(runtestprotocol)
+_hooks.py:497(__call__)                                                  <-       5    0.000    0.000  fixtures.py:1053(finish)
+                                                                                  4    0.000    0.159  fixtures.py:1074(execute)
+                                                                                  1    0.000    3.531  python.py:1669(runtest)
+                                                                                  2    0.000    0.000  runner.py:114(pytest_runtest_protocol)
+                                                                                  6    0.000    0.001  runner.py:230(call_and_report)
+                                                                                  3    0.000    3.694  runner.py:246(<lambda>)
+                                                                                  3    0.000    0.000  terminal.py:605(pytest_runtest_logreport)
+_manager.py:111(_hookexec)                                               <-   24/11    0.000    3.694  _hooks.py:497(__call__)
+_callers.py:76(_multicall)                                               <-   24/11    0.000    3.694  _manager.py:111(_hookexec)
+runner.py:323(from_call)                                                 <-       3    0.000    3.694  runner.py:230(call_and_report)
+runner.py:246(<lambda>)                                                  <-       3    0.000    3.694  runner.py:323(from_call)
+runner.py:167(pytest_runtest_call)                                       <-       1    0.000    3.531  _callers.py:76(_multicall)
+python.py:1669(runtest)                                                  <-       1    0.000    3.531  runner.py:167(pytest_runtest_call)
+python.py:150(pytest_pyfunc_call)                                        <-       1    0.000    3.531  _callers.py:76(_multicall)
+test_create_pr_integration.py:195(test_pr_summary_generation_with_diff)  <-       1    0.000    3.531  python.py:150(pytest_pyfunc_call)
+create_PR.py:266(generate_pr_summary)                                    <-       1    0.000    2.083  test_create_pr_integration.py:195(test_pr_summary_generation_with_diff)
+base.py:333(close)                                                       <-       9    0.000    1.097  base.py:327(__del__)
+                                                                                  8    0.000    0.974  core.py:36(_close_repo_safely)
+{built-in method gc.collect}                                             <-      34    2.066    2.066  base.py:333(close)
+diffs.py:92(get_branch_diff)                                             <-       1    0.000    1.945  create_PR.py:266(generate_pr_summary)
+{built-in method builtins.next}                                          <-      12    0.000    0.000  <frozen os>:288(walk)
+                                                                                  5    0.000    0.000  _callers.py:25(run_old_style_hookwrapper)
+                                                                                 26    0.000    0.000  _callers.py:76(_multicall)
+                                                                                 37    0.000    0.009  contextlib.py:136(__enter__)
+                                                                                 37    0.000    1.447  contextlib.py:145(__exit__)
+                                                                                  3    0.000    0.002  fixtures.py:916(call_fixture_func)
+                                                                                  3    0.000    0.002  fixtures.py:934(_teardown_yield_fixture)
+                                                                                  1    0.000    0.000  nodes.py:365(get_closest_marker)
+                                                                                 36    0.000    0.001  tempfile.py:243(_mkstemp_inner)
+contextlib.py:145(__exit__)                                              <-       1    0.000    0.119  branches.py:14(get_current_branch_name)
+                                                                                  1    0.000    0.118  branches.py:57(get_default_branch_name)
+                                                                                  1    0.000    0.119  branches.py:319(branch_exists)
+                                                                                  1    0.000    0.000  capture.py:892(pytest_runtest_setup)
+                                                                                  1    0.000    0.000  capture.py:897(pytest_runtest_call)
+                                                                                  1    0.000    0.000  capture.py:902(pytest_runtest_teardown)
+                                                                                 11    0.000    0.000  cmd.py:233(_safer_popen_windows)
+                                                                                  1    0.000    0.128  diffs.py:92(get_branch_diff)
+                                                                                  1    0.000    0.000  logging.py:836(pytest_runtest_setup)
+                                                                                  1    0.000    0.000  logging.py:845(pytest_runtest_call)
+                                                                                  1    0.000    0.000  logging.py:852(pytest_runtest_teardown)
+                                                                                  4    0.000    0.962  repository.py:11(is_git_repository)
+                                                                                 11    0.000    0.000  subprocess.py:1345(_get_handles)
+                                                                                  1    0.000    0.000  warnings.py:85(pytest_runtest_protocol)
+test_create_pr_integration.py:273(_setup_complete_project)               <-       1    0.000    1.252  test_create_pr_integration.py:195(test_pr_summary_generation_with_diff)
+cmd.py:1540(_call_process)                                               <-       9    0.000    1.106  cmd.py:1003(<lambda>)
+                                                                                  2    0.000    0.007  cmd.py:1663(_get_persistent_cmd)
+
+

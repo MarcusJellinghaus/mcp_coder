@@ -1,0 +1,183 @@
+================================================================================
+PYTEST PROFILE REPORT
+================================================================================
+
+Test: tests/utils/github_operations/test_issue_manager.py::TestIssueManagerUnit::test_remove_labels_auth_error_raises
+Duration: 1.026 seconds
+Profile file: tests_utils_github_operations_test_issue_manager__TestIssueManagerUnit__test_remove_labels_auth_error_raises.prof
+
+SUMMARY
+--------------------------------------------------------------------------------
+Wed Oct  8 07:52:23 2025    docs\tests\performance_data\prof\tests_utils_github_operations_test_issue_manager__TestIssueManagerUnit__test_remove_labels_auth_error_raises.prof
+
+         1993880 function calls (1967592 primitive calls) in 1.023 seconds
+
+
+TOP FUNCTIONS BY CUMULATIVE TIME
+--------------------------------------------------------------------------------
+This shows functions sorted by total time spent, including time in called functions.
+
+Wed Oct  8 07:52:23 2025    docs\tests\performance_data\prof\tests_utils_github_operations_test_issue_manager__TestIssueManagerUnit__test_remove_labels_auth_error_raises.prof
+
+         1993880 function calls (1967592 primitive calls) in 1.023 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1166 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    1.026    1.026 runner.py:114(pytest_runtest_protocol)
+    21/11    0.000    0.000    1.026    0.093 _hooks.py:497(__call__)
+        1    0.000    0.000    1.026    1.026 runner.py:122(runtestprotocol)
+    21/11    0.000    0.000    1.026    0.093 _manager.py:111(_hookexec)
+        3    0.000    0.000    1.026    0.342 runner.py:230(call_and_report)
+    21/11    0.000    0.000    1.026    0.093 _callers.py:76(_multicall)
+        3    0.000    0.000    1.025    0.342 runner.py:323(from_call)
+        3    0.000    0.000    1.025    0.342 runner.py:246(<lambda>)
+        1    0.000    0.000    1.021    1.021 runner.py:167(pytest_runtest_call)
+        1    0.000    0.000    1.021    1.021 python.py:1669(runtest)
+        1    0.000    0.000    1.021    1.021 python.py:150(pytest_pyfunc_call)
+        1    0.000    0.000    1.021    1.021 mock.py:1418(patched)
+        1    0.000    0.000    1.020    1.020 test_issue_manager.py:732(test_remove_labels_auth_error_raises)
+      2/1    0.000    0.000    0.738    0.738 log_utils.py:154(wrapper)
+        4    0.000    0.000    0.735    0.184 _native.py:142(meth)
+        4    0.000    0.000    0.735    0.184 _base.py:192(_proxy_to_logger)
+        4    0.000    0.000    0.734    0.184 _base.py:122(_process_event)
+        4    0.000    0.000    0.734    0.184 dev.py:713(__call__)
+        1    0.000    0.000    0.734    0.734 dev.py:373(__call__)
+        1    0.000    0.000    0.731    0.731 console.py:1648(print)
+ 1196/173    0.001    0.000    0.727    0.004 {method 'extend' of 'list' objects}
+17958/1822    0.006    0.000    0.726    0.000 console.py:1300(render)
+ 1131/283    0.004    0.000    0.723    0.003 segment.py:278(split_and_crop_lines)
+     1813    0.000    0.000    0.722    0.000 constrain.py:22(__rich_console__)
+2661/1813    0.000    0.000    0.721    0.000 panel.py:141(__rich_console__)
+    170/1    0.001    0.000    0.720    0.720 console.py:1351(render_lines)
+4003/1524    0.001    0.000    0.717    0.000 padding.py:79(__rich_console__)
+1733/1173    0.000    0.000    0.700    0.001 table.py:476(__rich_console__)
+1733/1173    0.001    0.000    0.689    0.001 table.py:747(_render)
+       12    0.000    0.000    0.633    0.053 syntax.py:640(__rich_console__)
+        6    0.000    0.000    0.633    0.105 segment.py:680(__init__)
+      277    0.001    0.000    0.633    0.002 syntax.py:649(_get_syntax)
+        6    0.000    0.000    0.587    0.098 syntax.py:467(highlight)
+        6    0.026    0.004    0.583    0.097 text.py:1031(append_tokens)
+    36009    0.017    0.000    0.518    0.000 syntax.py:514(tokens_to_spans)
+36493/36481    0.009    0.000    0.495    0.000 {built-in method builtins.next}
+    36003    0.017    0.000    0.488    0.000 syntax.py:505(line_tokenize)
+    35582    0.009    0.000    0.463    0.000 lexer.py:269(streamer)
+    35582    0.182    0.000    0.455    0.000 lexer.py:700(get_tokens_unprocessed)
+        2    0.000    0.000    0.276    0.138 cmd.py:1003(<lambda>)
+        2    0.000    0.000    0.276    0.138 cmd.py:1540(_call_process)
+        2    0.000    0.000    0.275    0.138 cmd.py:1096(execute)
+        2    0.000    0.000    0.270    0.135 subprocess.py:1175(communicate)
+        2    0.000    0.000    0.269    0.134 subprocess.py:1613(_communicate)
+        4    0.000    0.000    0.269    0.067 threading.py:1056(join)
+        4    0.000    0.000    0.269    0.067 {method 'join' of '_thread._ThreadHandle' objects}
+      4/2    0.000    0.000    0.268    0.134 threading.py:998(_bootstrap)
+      4/2    0.001    0.000    0.268    0.134 threading.py:1025(_bootstrap_inner)
+      4/2    0.000    0.000    0.268    0.134 threading.py:981(run)
+      4/2    0.000    0.000    0.267    0.134 subprocess.py:1608(_readerthread)
+
+
+
+TOP FUNCTIONS BY INTERNAL TIME (TIME)
+--------------------------------------------------------------------------------
+This shows functions sorted by time spent in the function itself (excluding subcalls).
+
+Wed Oct  8 07:52:23 2025    docs\tests\performance_data\prof\tests_utils_github_operations_test_issue_manager__TestIssueManagerUnit__test_remove_labels_auth_error_raises.prof
+
+         1993880 function calls (1967592 primitive calls) in 1.023 seconds
+
+   Ordered by: internal time
+   List reduced from 1166 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      4/2    0.267    0.067    0.000    0.000 {method 'read' of '_io.BufferedReader' objects}
+  1147325    0.257    0.000    0.257    0.000 {method 'match' of 're.Pattern' objects}
+    35582    0.182    0.000    0.455    0.000 lexer.py:700(get_tokens_unprocessed)
+    46855    0.034    0.000    0.034    0.000 {method 'translate' of 'str' objects}
+        6    0.026    0.004    0.583    0.097 text.py:1031(append_tokens)
+    36003    0.017    0.000    0.488    0.000 syntax.py:505(line_tokenize)
+    36009    0.017    0.000    0.518    0.000 syntax.py:514(tokens_to_spans)
+    46831    0.011    0.000    0.045    0.000 control.py:181(strip_control_codes)
+    35582    0.009    0.000    0.463    0.000 lexer.py:269(streamer)
+36493/36481    0.009    0.000    0.495    0.000 {built-in method builtins.next}
+    80628    0.008    0.000    0.008    0.000 {built-in method builtins.len}
+    10573    0.007    0.000    0.022    0.000 text.py:144(__init__)
+     9824    0.007    0.000    0.027    0.000 text.py:1130(<genexpr>)
+    36977    0.007    0.000    0.007    0.000 {method 'partition' of 'str' objects}
+    36733    0.007    0.000    0.007    0.000 {method 'group' of 're.Match' objects}
+    52867    0.006    0.000    0.006    0.000 {method 'append' of 'list' objects}
+17958/1822    0.006    0.000    0.726    0.000 console.py:1300(render)
+    35147    0.005    0.000    0.005    0.000 {method 'end' of 're.Match' objects}
+    36017    0.005    0.000    0.005    0.000 {method 'endswith' of 'str' objects}
+    13258    0.005    0.000    0.006    0.000 cells.py:51(cell_len)
+      127    0.004    0.000    0.037    0.000 text.py:1107(divide)
+        2    0.004    0.002    0.004    0.002 {built-in method _winapi.CreateProcess}
+ 1131/283    0.004    0.000    0.723    0.003 segment.py:278(split_and_crop_lines)
+       10    0.003    0.000    0.004    0.000 {built-in method _io.open}
+ 1524/162    0.003    0.000    0.036    0.000 measure.py:78(get)
+     3048    0.003    0.000    0.006    0.000 measure.py:24(normalize)
+     9893    0.003    0.000    0.008    0.000 segment.py:81(cell_length)
+    23858    0.003    0.000    0.003    0.000 {built-in method builtins.isinstance}
+    12210    0.003    0.000    0.005    0.000 text.py:402(plain)
+      899    0.002    0.000    0.009    0.000 text.py:720(render)
+      966    0.002    0.000    0.006    0.000 table.py:626(_get_cells)
+    15430    0.002    0.000    0.004    0.000 {built-in method builtins.max}
+    11135    0.002    0.000    0.010    0.000 segment.py:344(<genexpr>)
+    12122    0.002    0.000    0.002    0.000 {built-in method __new__ of type object at 0x00007FFCDBA908A0}
+     2852    0.002    0.000    0.003    0.000 lexer.py:389(callback)
+     9772    0.002    0.000    0.003    0.000 text.py:1092(flatten_spans)
+     4922    0.002    0.000    0.005    0.000 text.py:1098(<genexpr>)
+      142    0.002    0.000    0.003    0.000 text.py:593(highlight_regex)
+      367    0.002    0.000    0.034    0.000 containers.py:69(__init__)
+     1891    0.002    0.000    0.012    0.000 {built-in method builtins.sum}
+ 1288/736    0.002    0.000    0.003    0.000 {method 'join' of 'str' objects}
+     2406    0.002    0.000    0.003    0.000 measure.py:34(with_maximum)
+     1775    0.002    0.000    0.002    0.000 protocol.py:19(rich_cast)
+        6    0.001    0.000    0.003    0.000 syntax.py:787(_apply_stylized_ranges)
+      671    0.001    0.000    0.004    0.000 text.py:759(get_current_style)
+  138/102    0.001    0.000    0.035    0.000 table.py:707(_measure_column)
+1733/1173    0.001    0.000    0.689    0.001 table.py:747(_render)
+      396    0.001    0.000    0.006    0.000 pretty.py:467(render)
+     6533    0.001    0.000    0.001    0.000 {method 'span' of 're.Match' objects}
+       30    0.001    0.000    0.001    0.000 {method 'count' of 'str' objects}
+
+
+
+CALLER INFORMATION (Top 20)
+--------------------------------------------------------------------------------
+This shows which functions called the top functions.
+
+   Ordered by: cumulative time
+   List reduced from 1166 to 20 due to restriction <20>
+
+Function                                                         was called by...
+                                                                     ncalls  tottime  cumtime
+runner.py:114(pytest_runtest_protocol)                           <- 
+_hooks.py:497(__call__)                                          <-       3    0.000    0.000  fixtures.py:1053(finish)
+                                                                          3    0.000    0.001  fixtures.py:1074(execute)
+                                                                          1    0.000    1.021  python.py:1669(runtest)
+                                                                          2    0.000    0.000  runner.py:114(pytest_runtest_protocol)
+                                                                          6    0.000    0.001  runner.py:230(call_and_report)
+                                                                          3    0.000    1.025  runner.py:246(<lambda>)
+                                                                          3    0.000    0.000  terminal.py:605(pytest_runtest_logreport)
+runner.py:122(runtestprotocol)                                   <-       1    0.000    1.026  runner.py:114(pytest_runtest_protocol)
+_manager.py:111(_hookexec)                                       <-   21/11    0.000    1.026  _hooks.py:497(__call__)
+runner.py:230(call_and_report)                                   <-       3    0.000    1.026  runner.py:122(runtestprotocol)
+_callers.py:76(_multicall)                                       <-   21/11    0.000    1.026  _manager.py:111(_hookexec)
+runner.py:323(from_call)                                         <-       3    0.000    1.025  runner.py:230(call_and_report)
+runner.py:246(<lambda>)                                          <-       3    0.000    1.025  runner.py:323(from_call)
+runner.py:167(pytest_runtest_call)                               <-       1    0.000    1.021  _callers.py:76(_multicall)
+python.py:1669(runtest)                                          <-       1    0.000    1.021  runner.py:167(pytest_runtest_call)
+python.py:150(pytest_pyfunc_call)                                <-       1    0.000    1.021  _callers.py:76(_multicall)
+mock.py:1418(patched)                                            <-       1    0.000    1.021  python.py:150(pytest_pyfunc_call)
+test_issue_manager.py:732(test_remove_labels_auth_error_raises)  <-       1    0.000    1.020  mock.py:1418(patched)
+log_utils.py:154(wrapper)                                        <-       1    0.000    0.001  issue_manager.py:828(remove_labels)
+                                                                          1    0.000    0.738  test_issue_manager.py:732(test_remove_labels_auth_error_raises)
+_native.py:142(meth)                                             <-       4    0.000    0.735  log_utils.py:154(wrapper)
+_base.py:192(_proxy_to_logger)                                   <-       4    0.000    0.735  _native.py:142(meth)
+_base.py:122(_process_event)                                     <-       4    0.000    0.734  _base.py:192(_proxy_to_logger)
+dev.py:713(__call__)                                             <-       4    0.000    0.734  _base.py:122(_process_event)
+dev.py:373(__call__)                                             <-       1    0.000    0.734  dev.py:713(__call__)
+console.py:1648(print)                                           <-       1    0.000    0.731  dev.py:373(__call__)
+
+

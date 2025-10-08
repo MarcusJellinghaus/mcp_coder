@@ -1,0 +1,185 @@
+================================================================================
+PYTEST PROFILE REPORT
+================================================================================
+
+Test: tests/llm/providers/claude/test_claude_integration.py::TestEnvironmentVariablePropagation::test_env_vars_propagation
+Duration: 59.029 seconds
+Profile file: tests_llm_providers_claude_test_claude_integration__TestEnvironmentVariablePropagation__test_env_vars_propagation.prof
+
+SUMMARY
+--------------------------------------------------------------------------------
+Wed Oct  8 07:48:22 2025    docs\tests\performance_data\prof\tests_llm_providers_claude_test_claude_integration__TestEnvironmentVariablePropagation__test_env_vars_propagation.prof
+
+         28165 function calls (27935 primitive calls) in 59.028 seconds
+
+
+TOP FUNCTIONS BY CUMULATIVE TIME
+--------------------------------------------------------------------------------
+This shows functions sorted by total time spent, including time in called functions.
+
+Wed Oct  8 07:48:22 2025    docs\tests\performance_data\prof\tests_llm_providers_claude_test_claude_integration__TestEnvironmentVariablePropagation__test_env_vars_propagation.prof
+
+         28165 function calls (27935 primitive calls) in 59.028 seconds
+
+   Ordered by: cumulative time
+   List reduced from 927 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   59.028   59.028 runner.py:114(pytest_runtest_protocol)
+        1    0.000    0.000   59.028   59.028 runner.py:122(runtestprotocol)
+        3    0.000    0.000   59.028   19.676 runner.py:230(call_and_report)
+    19/11    0.000    0.000   59.028    5.366 _hooks.py:497(__call__)
+    19/11    0.000    0.000   59.028    5.366 _manager.py:111(_hookexec)
+    19/11    0.000    0.000   59.028    5.366 _callers.py:76(_multicall)
+        3    0.000    0.000   59.027   19.676 runner.py:323(from_call)
+        3    0.000    0.000   59.027   19.676 runner.py:246(<lambda>)
+        1    0.000    0.000   59.024   59.024 runner.py:167(pytest_runtest_call)
+        1    0.000    0.000   59.024   59.024 python.py:1669(runtest)
+        1    0.000    0.000   59.024   59.024 python.py:150(pytest_pyfunc_call)
+        1    0.000    0.000   59.024   59.024 test_claude_integration.py:136(test_env_vars_propagation)
+        2    0.000    0.000   58.931   29.465 interface.py:19(ask_llm)
+        2    0.000    0.000   58.931   29.465 claude_code_interface.py:7(ask_claude_code)
+        5    0.000    0.000   40.924    8.185 subprocess.py:1175(communicate)
+        4    0.000    0.000   40.852   10.213 subprocess_runner.py:478(execute_subprocess)
+        4    0.000    0.000   40.852   10.213 subprocess_runner.py:133(_run_subprocess)
+        5    0.000    0.000   40.765    8.153 subprocess.py:1613(_communicate)
+       10    0.000    0.000   40.765    4.076 threading.py:1056(join)
+       10    0.001    0.000   40.765    4.076 {method 'join' of '_thread._ThreadHandle' objects}
+     10/5    0.000    0.000   40.764    8.153 threading.py:998(_bootstrap)
+     10/5    0.001    0.000   40.764    8.153 threading.py:1025(_bootstrap_inner)
+     10/5    0.000    0.000   40.763    8.153 threading.py:981(run)
+     10/5    0.000    0.000   40.762    8.152 subprocess.py:1608(_readerthread)
+        1    0.000    0.000   33.545   33.545 claude_code_api.py:383(ask_claude_code_api)
+        1    0.000    0.000   33.545   33.545 claude_code_api.py:598(ask_claude_code_api_detailed_sync)
+        1    0.000    0.000   33.545   33.545 runners.py:160(run)
+        3    0.000    0.000   33.544   11.181 base_events.py:685(run_until_complete)
+        3    0.000    0.000   33.544   11.181 base_events.py:674(run_forever)
+        1    0.000    0.000   33.544   33.544 runners.py:86(run)
+       44    0.000    0.000   33.544    0.762 base_events.py:1947(_run_once)
+    23/19    0.000    0.000   33.144    1.744 {method 'close' of '_io.TextIOWrapper' objects}
+        1    0.000    0.000   25.386   25.386 claude_code_cli.py:165(ask_claude_code_cli)
+        3    0.000    0.000   23.134    7.711 subprocess_runner.py:571(execute_command)
+       44    0.000    0.000   18.034    0.410 windows_events.py:444(select)
+       45    0.000    0.000   18.034    0.401 windows_events.py:762(_poll)
+       55   18.033    0.328   18.033    0.328 {built-in method _overlapped.GetQueuedCompletionStatus}
+       61    0.000    0.000   15.509    0.254 events.py:87(_run)
+       61    0.000    0.000   15.509    0.254 {method 'run' of '_contextvars.Context' objects}
+       14    0.000    0.000   15.508    1.108 claude_code_api.py:456(ask_claude_code_api_detailed)
+        1    0.000    0.000   15.495   15.495 claude_code_api.py:212(_create_claude_client)
+        1    0.000    0.000   15.495   15.495 claude_code_api.py:118(_verify_claude_before_use)
+        2    0.000    0.000   15.484    7.742 claude_executable_finder.py:48(find_claude_executable)
+        1    0.000    0.000   15.481   15.481 claude_executable_finder.py:145(verify_claude_installation)
+        1    0.000    0.000    7.667    7.667 claude_code_cli.py:145(_find_claude_executable)
+    16/11   40.760    2.548    7.618    0.693 {method 'read' of '_io.TextIOWrapper' objects}
+        6    0.000    0.000    0.159    0.026 subprocess.py:1269(wait)
+        6    0.000    0.000    0.159    0.026 subprocess.py:1590(_wait)
+        8    0.158    0.020    0.158    0.020 {built-in method _winapi.WaitForSingleObject}
+        1    0.000    0.000    0.093    0.093 env.py:16(prepare_llm_environment)
+
+
+
+TOP FUNCTIONS BY INTERNAL TIME (TIME)
+--------------------------------------------------------------------------------
+This shows functions sorted by time spent in the function itself (excluding subcalls).
+
+Wed Oct  8 07:48:22 2025    docs\tests\performance_data\prof\tests_llm_providers_claude_test_claude_integration__TestEnvironmentVariablePropagation__test_env_vars_propagation.prof
+
+         28165 function calls (27935 primitive calls) in 59.028 seconds
+
+   Ordered by: internal time
+   List reduced from 927 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    16/11   40.760    2.548    7.618    0.693 {method 'read' of '_io.TextIOWrapper' objects}
+       55   18.033    0.328   18.033    0.328 {built-in method _overlapped.GetQueuedCompletionStatus}
+        8    0.158    0.020    0.158    0.020 {built-in method _winapi.WaitForSingleObject}
+     2110    0.028    0.000    0.028    0.000 {built-in method nt._path_exists}
+        6    0.020    0.003    0.020    0.003 {built-in method _winapi.CreateProcess}
+     2123    0.002    0.000    0.004    0.000 <frozen ntpath>:99(join)
+        5    0.001    0.000    0.035    0.007 shutil.py:1503(which)
+     10/5    0.001    0.000   40.764    8.153 threading.py:1025(_bootstrap_inner)
+       38    0.001    0.000    0.002    0.000 {built-in method nt.stat}
+     4302    0.001    0.000    0.001    0.000 {built-in method nt._path_splitroot_ex}
+       10    0.001    0.000   40.765    4.076 {method 'join' of '_thread._ThreadHandle' objects}
+     2110    0.001    0.000    0.029    0.000 shutil.py:1488(_access_check)
+       45    0.000    0.000    0.000    0.000 {built-in method _winapi.CloseHandle}
+     3253    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+       10    0.000    0.000    0.000    0.000 {built-in method _thread.start_joinable_thread}
+    23/19    0.000    0.000   33.144    1.744 {method 'close' of '_io.TextIOWrapper' objects}
+     2388    0.000    0.000    0.000    0.000 {built-in method nt.fspath}
+        4    0.000    0.000    0.000    0.000 {built-in method nt._getfinalpathname}
+       44    0.000    0.000   33.544    0.762 base_events.py:1947(_run_once)
+        4    0.000    0.000   40.852   10.213 subprocess_runner.py:478(execute_subprocess)
+       45    0.000    0.000   18.034    0.401 windows_events.py:762(_poll)
+        6    0.000    0.000    0.000    0.000 {built-in method nt.scandir}
+      384    0.000    0.000    0.001    0.000 <frozen os>:711(__getitem__)
+        1    0.000    0.000    0.000    0.000 {method 'connect' of '_socket.socket' objects}
+        6    0.000    0.000    0.022    0.004 subprocess.py:814(__init__)
+        5    0.000    0.000    0.000    0.000 glob.py:424(select_wildcard)
+       11    0.000    0.000    0.000    0.000 {built-in method _winapi.CreatePipe}
+        7    0.000    0.000    0.000    0.000 {method 'flush' of '_io.TextIOWrapper' objects}
+    19/11    0.000    0.000   59.028    5.366 _callers.py:76(_multicall)
+      389    0.000    0.000    0.000    0.000 <frozen os>:785(encodekey)
+     10/5    0.000    0.000   40.763    8.153 threading.py:981(run)
+       45    0.000    0.000    0.000    0.000 _local.py:257(_parse_path)
+      152    0.000    0.000    0.000    0.000 <frozen ntpath>:50(normcase)
+    50/40    0.000    0.000    0.000    0.000 {method 'acquire' of '_thread.lock' objects}
+        6    0.000    0.000    0.000    0.000 {method 'read' of '_io.FileIO' objects}
+        4    0.000    0.000    0.001    0.000 <frozen os>:750(copy)
+      152    0.000    0.000    0.000    0.000 {built-in method _winapi.LCMapStringEx}
+        4    0.000    0.000    0.000    0.000 {built-in method nt.putenv}
+       10    0.000    0.000    0.000    0.000 threading.py:869(__init__)
+       61    0.000    0.000   15.509    0.254 {method 'run' of '_contextvars.Context' objects}
+        4    0.000    0.000   40.852   10.213 subprocess_runner.py:133(_run_subprocess)
+        6    0.000    0.000    0.021    0.004 subprocess.py:1446(_execute_child)
+        6    0.000    0.000    0.000    0.000 subprocess.py:582(list2cmdline)
+        5    0.000    0.000   40.765    8.153 subprocess.py:1613(_communicate)
+        6    0.000    0.000    0.001    0.000 subprocess.py:1345(_get_handles)
+      532    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+       11    0.000    0.000    0.000    0.000 {built-in method _io.open}
+        3    0.000    0.000    0.000    0.000 {function socket.close at 0x0000016C7D7AA5C0}
+        5    0.000    0.000    0.000    0.000 {built-in method nt.access}
+      198    0.000    0.000    0.000    0.000 {built-in method sys.intern}
+
+
+
+CALLER INFORMATION (Top 20)
+--------------------------------------------------------------------------------
+This shows which functions called the top functions.
+
+   Ordered by: cumulative time
+   List reduced from 927 to 20 due to restriction <20>
+
+Function                                                   was called by...
+                                                               ncalls  tottime  cumtime
+runner.py:114(pytest_runtest_protocol)                     <- 
+runner.py:122(runtestprotocol)                             <-       1    0.000   59.028  runner.py:114(pytest_runtest_protocol)
+runner.py:230(call_and_report)                             <-       3    0.000   59.028  runner.py:122(runtestprotocol)
+_hooks.py:497(__call__)                                    <-       2    0.000    0.000  fixtures.py:1053(finish)
+                                                                    2    0.000    0.000  fixtures.py:1074(execute)
+                                                                    1    0.000   59.024  python.py:1669(runtest)
+                                                                    2    0.000    0.000  runner.py:114(pytest_runtest_protocol)
+                                                                    6    0.000    0.001  runner.py:230(call_and_report)
+                                                                    3    0.000   59.027  runner.py:246(<lambda>)
+                                                                    3    0.000    0.000  terminal.py:605(pytest_runtest_logreport)
+_manager.py:111(_hookexec)                                 <-   19/11    0.000   59.028  _hooks.py:497(__call__)
+_callers.py:76(_multicall)                                 <-   19/11    0.000   59.028  _manager.py:111(_hookexec)
+runner.py:323(from_call)                                   <-       3    0.000   59.027  runner.py:230(call_and_report)
+runner.py:246(<lambda>)                                    <-       3    0.000   59.027  runner.py:323(from_call)
+runner.py:167(pytest_runtest_call)                         <-       1    0.000   59.024  _callers.py:76(_multicall)
+python.py:1669(runtest)                                    <-       1    0.000   59.024  runner.py:167(pytest_runtest_call)
+python.py:150(pytest_pyfunc_call)                          <-       1    0.000   59.024  _callers.py:76(_multicall)
+test_claude_integration.py:136(test_env_vars_propagation)  <-       1    0.000   59.024  python.py:150(pytest_pyfunc_call)
+interface.py:19(ask_llm)                                   <-       2    0.000   58.931  test_claude_integration.py:136(test_env_vars_propagation)
+claude_code_interface.py:7(ask_claude_code)                <-       2    0.000   58.931  interface.py:19(ask_llm)
+subprocess.py:1175(communicate)                            <-       1    0.000    0.089  subprocess.py:512(run)
+                                                                    4    0.000   40.835  subprocess_runner.py:133(_run_subprocess)
+subprocess_runner.py:478(execute_subprocess)               <-       1    0.000   17.719  claude_code_cli.py:165(ask_claude_code_cli)
+                                                                    3    0.000   23.134  subprocess_runner.py:571(execute_command)
+subprocess_runner.py:133(_run_subprocess)                  <-       4    0.000   40.852  subprocess_runner.py:478(execute_subprocess)
+subprocess.py:1613(_communicate)                           <-       5    0.000   40.765  subprocess.py:1175(communicate)
+threading.py:1056(join)                                    <-     9/1    0.000    0.000  subprocess.py:1613(_communicate)
+                                                                    0    0.000    0.000  threading.py:998(_bootstrap)
+{method 'join' of '_thread._ThreadHandle' objects}         <-     5/0    0.000    0.000  threading.py:1056(join)
+
+

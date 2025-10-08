@@ -1,0 +1,207 @@
+================================================================================
+PYTEST PROFILE REPORT
+================================================================================
+
+Test: tests/utils/test_git_workflows.py::TestGetBranchDiff::test_get_branch_diff_path_exclusion
+Duration: 2.840 seconds
+Profile file: tests_utils_test_git_workflows__TestGetBranchDiff__test_get_branch_diff_path_exclusion.prof
+
+SUMMARY
+--------------------------------------------------------------------------------
+Wed Oct  8 08:00:27 2025    docs\tests\performance_data\prof\tests_utils_test_git_workflows__TestGetBranchDiff__test_get_branch_diff_path_exclusion.prof
+
+         25110 function calls (24867 primitive calls) in 2.840 seconds
+
+
+TOP FUNCTIONS BY CUMULATIVE TIME
+--------------------------------------------------------------------------------
+This shows functions sorted by total time spent, including time in called functions.
+
+Wed Oct  8 08:00:27 2025    docs\tests\performance_data\prof\tests_utils_test_git_workflows__TestGetBranchDiff__test_get_branch_diff_path_exclusion.prof
+
+         25110 function calls (24867 primitive calls) in 2.840 seconds
+
+   Ordered by: cumulative time
+   List reduced from 932 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    2.840    2.840 runner.py:114(pytest_runtest_protocol)
+        1    0.000    0.000    2.839    2.839 runner.py:122(runtestprotocol)
+    24/11    0.000    0.000    2.715    0.247 _hooks.py:497(__call__)
+        3    0.000    0.000    2.715    0.905 runner.py:230(call_and_report)
+    24/11    0.000    0.000    2.715    0.247 _manager.py:111(_hookexec)
+    24/11    0.000    0.000    2.715    0.247 _callers.py:76(_multicall)
+        3    0.000    0.000    2.715    0.905 runner.py:323(from_call)
+        3    0.000    0.000    2.715    0.905 runner.py:246(<lambda>)
+        1    0.000    0.000    2.271    2.271 runner.py:167(pytest_runtest_call)
+        1    0.000    0.000    2.271    2.271 python.py:1669(runtest)
+        1    0.000    0.000    2.271    2.271 python.py:150(pytest_pyfunc_call)
+        1    0.000    0.000    2.271    2.271 test_git_workflows.py:2566(test_get_branch_diff_path_exclusion)
+       17    0.000    0.000    2.038    0.120 base.py:333(close)
+       34    2.033    0.060    2.033    0.060 {built-in method gc.collect}
+        1    0.000    0.000    1.465    1.465 diffs.py:92(get_branch_diff)
+  114/101    0.000    0.000    1.451    0.014 {built-in method builtins.next}
+       25    0.000    0.000    1.438    0.058 contextlib.py:145(__exit__)
+        9    0.000    0.000    1.060    0.118 base.py:327(__del__)
+       16    0.000    0.000    0.986    0.062 core.py:61(_safe_repo_context)
+        8    0.000    0.000    0.978    0.122 core.py:36(_close_repo_safely)
+        4    0.000    0.000    0.940    0.235 repository.py:11(is_git_repository)
+        1    0.000    0.000    0.440    0.440 runner.py:162(pytest_runtest_setup)
+        1    0.000    0.000    0.440    0.440 runner.py:498(setup)
+        1    0.000    0.000    0.440    0.440 python.py:1673(setup)
+        1    0.000    0.000    0.440    0.440 fixtures.py:716(_fillfixtures)
+     10/7    0.000    0.000    0.440    0.063 fixtures.py:527(getfixturevalue)
+     14/7    0.000    0.000    0.440    0.063 fixtures.py:566(_get_active_fixturedef)
+      6/5    0.000    0.000    0.440    0.088 fixtures.py:1074(execute)
+        4    0.000    0.000    0.440    0.110 fixtures.py:1166(pytest_fixture_setup)
+        4    0.000    0.000    0.440    0.110 fixtures.py:916(call_fixture_func)
+        1    0.000    0.000    0.438    0.438 conftest.py:32(git_repo_with_files)
+        5    0.000    0.000    0.418    0.084 cmd.py:1540(_call_process)
+        5    0.000    0.000    0.418    0.084 cmd.py:1096(execute)
+        3    0.000    0.000    0.412    0.137 cmd.py:1003(<lambda>)
+        3    0.000    0.000    0.400    0.133 subprocess.py:1175(communicate)
+        3    0.000    0.000    0.399    0.133 subprocess.py:1613(_communicate)
+        6    0.000    0.000    0.399    0.066 threading.py:1056(join)
+        6    0.001    0.000    0.399    0.066 {method 'join' of '_thread._ThreadHandle' objects}
+      6/3    0.000    0.000    0.398    0.133 threading.py:998(_bootstrap)
+      6/3    0.001    0.000    0.398    0.133 threading.py:1025(_bootstrap_inner)
+      6/3    0.000    0.000    0.397    0.132 threading.py:981(run)
+      6/3    0.000    0.000    0.397    0.132 subprocess.py:1608(_readerthread)
+    22/19    0.000    0.000    0.397    0.021 {method 'close' of '_io.BufferedReader' objects}
+        1    0.000    0.000    0.372    0.372 branches.py:14(get_current_branch_name)
+        1    0.000    0.000    0.369    0.369 branches.py:319(branch_exists)
+        1    0.000    0.000    0.354    0.354 branches.py:57(get_default_branch_name)
+        2    0.000    0.000    0.316    0.158 base.py:1126(commit)
+        2    0.000    0.000    0.295    0.148 commit.py:561(create_from_tree)
+        2    0.000    0.000    0.269    0.135 symbolic.py:724(create)
+        2    0.000    0.000    0.269    0.135 symbolic.py:680(_create)
+
+
+
+TOP FUNCTIONS BY INTERNAL TIME (TIME)
+--------------------------------------------------------------------------------
+This shows functions sorted by time spent in the function itself (excluding subcalls).
+
+Wed Oct  8 08:00:27 2025    docs\tests\performance_data\prof\tests_utils_test_git_workflows__TestGetBranchDiff__test_get_branch_diff_path_exclusion.prof
+
+         25110 function calls (24867 primitive calls) in 2.840 seconds
+
+   Ordered by: internal time
+   List reduced from 932 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       34    2.033    0.060    2.033    0.060 {built-in method gc.collect}
+    21/18    0.397    0.019    0.000    0.000 {method 'read' of '_io.BufferedReader' objects}
+      203    0.250    0.001    0.250    0.001 {method 'readline' of '_io.BufferedReader' objects}
+      111    0.071    0.001    0.071    0.001 {built-in method _io.open}
+       23    0.018    0.001    0.018    0.001 {built-in method nt.open}
+        5    0.014    0.003    0.014    0.003 {built-in method _winapi.CreateProcess}
+        7    0.006    0.001    0.006    0.001 {built-in method _winapi.WaitForSingleObject}
+       16    0.003    0.000    0.003    0.000 {built-in method nt.rename}
+       21    0.003    0.000    0.003    0.000 {built-in method nt.mkdir}
+       75    0.002    0.000    0.002    0.000 {method '__exit__' of '_io._IOBase' objects}
+       80    0.002    0.000    0.002    0.000 {built-in method nt._path_isdir}
+       33    0.002    0.000    0.002    0.000 {built-in method nt._path_exists}
+       74    0.001    0.000    0.001    0.000 {built-in method nt.write}
+       55    0.001    0.000    0.001    0.000 {built-in method nt._path_isfile}
+       21    0.001    0.000    0.001    0.000 {built-in method nt.chmod}
+       40    0.001    0.000    0.001    0.000 {method 'read' of '_io.TextIOWrapper' objects}
+       10    0.001    0.000    0.001    0.000 {built-in method nt.remove}
+       22    0.001    0.000    0.001    0.000 {built-in method nt.close}
+       17    0.001    0.000    0.002    0.000 config.py:439(_read)
+       24    0.001    0.000    0.001    0.000 {built-in method nt.stat}
+       13    0.001    0.000    0.001    0.000 {built-in method builtins.dir}
+        1    0.001    0.001    0.001    0.001 pathlib.py:173(find_prefixed)
+      6/3    0.001    0.000    0.398    0.133 threading.py:1025(_bootstrap_inner)
+     2105    0.001    0.000    0.001    0.000 {method 'match' of 're.Pattern' objects}
+       17    0.001    0.000    0.001    0.000 {built-in method nt.scandir}
+        6    0.001    0.000    0.399    0.066 {method 'join' of '_thread._ThreadHandle' objects}
+      233    0.001    0.000    0.001    0.000 <frozen ntpath>:99(join)
+        6    0.000    0.000    0.000    0.000 {method 'close' of '_io.BufferedWriter' objects}
+       11    0.000    0.000    0.000    0.000 {built-in method nt.access}
+        8    0.000    0.000    0.000    0.000 {built-in method nt._getfinalpathname}
+       10    0.000    0.000    0.000    0.000 {built-in method nt.lstat}
+     1902    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+      231    0.000    0.000    0.000    0.000 cmd.py:989(__getattribute__)
+       13    0.000    0.000    0.002    0.000 configparser.py:1343(__init__)
+  114/101    0.000    0.000    1.451    0.014 {built-in method builtins.next}
+       37    0.000    0.000    0.001    0.000 symbolic.py:172(_check_ref_name_valid)
+       37    0.000    0.000    0.038    0.001 symbolic.py:220(_get_ref_info_helper)
+       10    0.000    0.000    0.000    0.000 {built-in method nt.putenv}
+       13    0.000    0.000    0.010    0.001 loose.py:177(store)
+      401    0.000    0.000    0.001    0.000 <frozen os>:711(__getitem__)
+        9    0.000    0.000    0.011    0.001 base.py:172(__init__)
+       17    0.000    0.000    2.038    0.120 base.py:333(close)
+      591    0.000    0.000    0.000    0.000 {built-in method nt._path_splitroot_ex}
+        6    0.000    0.000    0.000    0.000 {built-in method _thread.start_joinable_thread}
+        1    0.000    0.000    0.000    0.000 {built-in method nt.symlink}
+        7    0.000    0.000    0.000    0.000 {method 'flush' of '_io.TextIOWrapper' objects}
+    24/11    0.000    0.000    2.715    0.247 _callers.py:76(_multicall)
+        4    0.000    0.000    0.000    0.000 {built-in method nt.chdir}
+      419    0.000    0.000    0.000    0.000 <frozen os>:785(encodekey)
+        8    0.000    0.000    0.000    0.000 {built-in method nt.unsetenv}
+
+
+
+CALLER INFORMATION (Top 20)
+--------------------------------------------------------------------------------
+This shows which functions called the top functions.
+
+   Ordered by: cumulative time
+   List reduced from 932 to 20 due to restriction <20>
+
+Function                                                         was called by...
+                                                                     ncalls  tottime  cumtime
+runner.py:114(pytest_runtest_protocol)                           <- 
+runner.py:122(runtestprotocol)                                   <-       1    0.000    2.839  runner.py:114(pytest_runtest_protocol)
+_hooks.py:497(__call__)                                          <-       5    0.000    0.000  fixtures.py:1053(finish)
+                                                                          4    0.000    0.440  fixtures.py:1074(execute)
+                                                                          1    0.000    2.271  python.py:1669(runtest)
+                                                                          2    0.000    0.000  runner.py:114(pytest_runtest_protocol)
+                                                                          6    0.000    0.001  runner.py:230(call_and_report)
+                                                                          3    0.000    2.715  runner.py:246(<lambda>)
+                                                                          3    0.000    0.000  terminal.py:605(pytest_runtest_logreport)
+runner.py:230(call_and_report)                                   <-       3    0.000    2.715  runner.py:122(runtestprotocol)
+_manager.py:111(_hookexec)                                       <-   24/11    0.000    2.715  _hooks.py:497(__call__)
+_callers.py:76(_multicall)                                       <-   24/11    0.000    2.715  _manager.py:111(_hookexec)
+runner.py:323(from_call)                                         <-       3    0.000    2.715  runner.py:230(call_and_report)
+runner.py:246(<lambda>)                                          <-       3    0.000    2.715  runner.py:323(from_call)
+runner.py:167(pytest_runtest_call)                               <-       1    0.000    2.271  _callers.py:76(_multicall)
+python.py:1669(runtest)                                          <-       1    0.000    2.271  runner.py:167(pytest_runtest_call)
+python.py:150(pytest_pyfunc_call)                                <-       1    0.000    2.271  _callers.py:76(_multicall)
+test_git_workflows.py:2566(test_get_branch_diff_path_exclusion)  <-       1    0.000    2.271  python.py:150(pytest_pyfunc_call)
+base.py:333(close)                                               <-       9    0.000    1.060  base.py:327(__del__)
+                                                                          8    0.000    0.978  core.py:36(_close_repo_safely)
+{built-in method gc.collect}                                     <-      34    2.033    2.033  base.py:333(close)
+diffs.py:92(get_branch_diff)                                     <-       1    0.000    1.465  test_git_workflows.py:2566(test_get_branch_diff_path_exclusion)
+{built-in method builtins.next}                                  <-      12    0.000    0.000  <frozen os>:288(walk)
+                                                                          5    0.000    0.000  _callers.py:25(run_old_style_hookwrapper)
+                                                                         26    0.000    0.000  _callers.py:76(_multicall)
+                                                                         25    0.000    0.008  contextlib.py:136(__enter__)
+                                                                         25    0.000    1.438  contextlib.py:145(__exit__)
+                                                                          3    0.000    0.002  fixtures.py:916(call_fixture_func)
+                                                                          3    0.000    0.002  fixtures.py:934(_teardown_yield_fixture)
+                                                                          1    0.000    0.000  nodes.py:365(get_closest_marker)
+                                                                         10    0.000    0.000  tempfile.py:243(_mkstemp_inner)
+contextlib.py:145(__exit__)                                      <-       1    0.000    0.145  branches.py:14(get_current_branch_name)
+                                                                          1    0.000    0.120  branches.py:57(get_default_branch_name)
+                                                                          1    0.000    0.117  branches.py:319(branch_exists)
+                                                                          1    0.000    0.000  capture.py:892(pytest_runtest_setup)
+                                                                          1    0.000    0.000  capture.py:897(pytest_runtest_call)
+                                                                          1    0.000    0.000  capture.py:902(pytest_runtest_teardown)
+                                                                          5    0.000    0.000  cmd.py:233(_safer_popen_windows)
+                                                                          1    0.000    0.119  diffs.py:92(get_branch_diff)
+                                                                          1    0.000    0.000  logging.py:836(pytest_runtest_setup)
+                                                                          1    0.000    0.000  logging.py:845(pytest_runtest_call)
+                                                                          1    0.000    0.000  logging.py:852(pytest_runtest_teardown)
+                                                                          4    0.000    0.936  repository.py:11(is_git_repository)
+                                                                          5    0.000    0.000  subprocess.py:1345(_get_handles)
+                                                                          1    0.000    0.000  warnings.py:85(pytest_runtest_protocol)
+base.py:327(__del__)                                             <-       2    0.000    0.239  diffs.py:92(get_branch_diff)
+                                                                          1    0.000    0.124  runner.py:122(runtestprotocol)
+                                                                          2    0.000    0.238  test_git_workflows.py:2566(test_get_branch_diff_path_exclusion)
+                                                                          4    0.000    0.459  {built-in method builtins.next}
+core.py:61(_safe_repo_context)                                   <-      16    0.000    0.986  {built-in method builtins.next}
+core.py:36(_close_repo_safely)                                   <-       8    0.000    0.978  core.py:61(_safe_repo_context)
+
+

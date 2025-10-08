@@ -1,0 +1,203 @@
+================================================================================
+PYTEST PROFILE REPORT
+================================================================================
+
+Test: tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+Duration: 175.058 seconds
+Profile file: tests_utils_github_operations_test_github_utils__TestPullRequestManagerIntegration__test_list_pull_requests_with_filters.prof
+
+SUMMARY
+--------------------------------------------------------------------------------
+Wed Oct  8 07:51:57 2025    docs\tests\performance_data\prof\tests_utils_github_operations_test_github_utils__TestPullRequestManagerIntegration__test_list_pull_requests_with_filters.prof
+
+         1735626 function calls (1709114 primitive calls) in 175.054 seconds
+
+
+TOP FUNCTIONS BY CUMULATIVE TIME
+--------------------------------------------------------------------------------
+This shows functions sorted by total time spent, including time in called functions.
+
+Wed Oct  8 07:51:57 2025    docs\tests\performance_data\prof\tests_utils_github_operations_test_github_utils__TestPullRequestManagerIntegration__test_list_pull_requests_with_filters.prof
+
+         1735626 function calls (1709114 primitive calls) in 175.054 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1339 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000  175.057  175.057 runner.py:114(pytest_runtest_protocol)
+        1    0.000    0.000  175.057  175.057 runner.py:122(runtestprotocol)
+        3    0.000    0.000  174.949   58.316 runner.py:230(call_and_report)
+    27/11    0.000    0.000  174.949   15.904 _hooks.py:497(__call__)
+    28/12    0.000    0.000  174.949   14.579 _manager.py:111(_hookexec)
+    28/12    0.000    0.000  174.949   14.579 _callers.py:76(_multicall)
+        3    0.000    0.000  174.948   58.316 runner.py:323(from_call)
+        3    0.000    0.000  174.948   58.316 runner.py:246(<lambda>)
+     13/7    0.002    0.000  170.789   24.398 log_utils.py:154(wrapper)
+        1    0.000    0.000  170.786  170.786 runner.py:167(pytest_runtest_call)
+        1    0.000    0.000  170.786  170.786 python.py:1669(runtest)
+        1    0.000    0.000  170.786  170.786 python.py:150(pytest_pyfunc_call)
+        1    0.000    0.000  170.786  170.786 test_github_utils.py:548(test_list_pull_requests_with_filters)
+        3    0.011    0.004  170.783   56.928 base_manager.py:51(wrapper)
+        3    0.005    0.002  170.772   56.924 pr_manager.py:247(list_pull_requests)
+      266    0.001    0.000  170.443    0.641 Requester.py:605(requestJsonAndCheck)
+      266    0.001    0.000  170.380    0.641 Requester.py:1025(requestJson)
+      266    0.007    0.000  170.379    0.641 Requester.py:1154(__requestEncode)
+      266    0.010    0.000  170.361    0.640 Requester.py:1206(__requestRaw)
+     4321    0.001    0.000  162.650    0.038 GithubObject.py:604(_completeIfNotSet)
+      254    0.000    0.000  162.642    0.640 PullRequest.py:345(mergeable)
+      254    0.000    0.000  162.641    0.640 GithubObject.py:608(_completeIfNeeded)
+      254    0.001    0.000  162.641    0.640 GithubObject.py:612(__complete)
+      266    0.004    0.000  104.278    0.392 Requester.py:210(getresponse)
+      266    0.003    0.000  104.273    0.392 sessions.py:593(get)
+      266    0.005    0.000  104.269    0.392 sessions.py:500(request)
+      266    0.007    0.000  104.052    0.391 sessions.py:673(send)
+      266    0.005    0.000  103.434    0.389 adapters.py:590(send)
+      266    0.006    0.000  103.310    0.388 connectionpool.py:592(urlopen)
+      266    0.004    0.000  103.250    0.388 connectionpool.py:377(_make_request)
+     1085    0.003    0.000  103.231    0.095 socket.py:706(readinto)
+     1085    0.004    0.000  103.225    0.095 ssl.py:1289(recv_into)
+     1085    0.002    0.000  103.220    0.095 ssl.py:1129(read)
+     1085  103.218    0.095  103.218    0.095 {method 'read' of '_ssl._SSLSocket' objects}
+      266    0.007    0.000  102.892    0.387 connection.py:534(getresponse)
+      266    0.002    0.000  102.831    0.387 client.py:1384(getresponse)
+      266    0.005    0.000  102.822    0.387 client.py:324(begin)
+     8437    0.008    0.000  102.695    0.012 {method 'readline' of '_io.BufferedReader' objects}
+      266    0.005    0.000  102.688    0.386 client.py:291(_read_status)
+      266    0.004    0.000   65.955    0.248 Requester.py:1283(__deferRequest)
+      265   65.920    0.249   65.920    0.249 {built-in method time.sleep}
+      257    0.000    0.000    7.548    0.029 PaginatedList.py:95(__iter__)
+       11    0.000    0.000    7.547    0.686 PaginatedList.py:108(_grow)
+       11    0.000    0.000    7.547    0.686 PaginatedList.py:335(_fetchNextPage)
+1413/1383    0.002    0.000    4.167    0.003 {built-in method builtins.next}
+        1    0.000    0.000    4.010    4.010 runner.py:162(pytest_runtest_setup)
+        1    0.000    0.000    4.010    4.010 runner.py:498(setup)
+        1    0.000    0.000    4.010    4.010 python.py:1673(setup)
+        1    0.000    0.000    4.010    4.010 fixtures.py:716(_fillfixtures)
+     12/8    0.000    0.000    4.010    0.501 fixtures.py:527(getfixturevalue)
+
+
+
+TOP FUNCTIONS BY INTERNAL TIME (TIME)
+--------------------------------------------------------------------------------
+This shows functions sorted by time spent in the function itself (excluding subcalls).
+
+Wed Oct  8 07:51:57 2025    docs\tests\performance_data\prof\tests_utils_github_operations_test_github_utils__TestPullRequestManagerIntegration__test_list_pull_requests_with_filters.prof
+
+         1735626 function calls (1709114 primitive calls) in 175.054 seconds
+
+   Ordered by: internal time
+   List reduced from 1339 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     1085  103.218    0.095  103.218    0.095 {method 'read' of '_ssl._SSLSocket' objects}
+      265   65.920    0.249   65.920    0.249 {built-in method time.sleep}
+  554/552    1.777    0.003    0.546    0.001 {method 'read' of '_io.BufferedReader' objects}
+      8/7    1.752    0.219    0.008    0.001 {method 'read' of '_io.TextIOWrapper' objects}
+       12    0.688    0.057    0.689    0.057 {built-in method gc.collect}
+        1    0.233    0.233    0.233    0.233 {method 'load_verify_locations' of '_ssl._SSLContext' objects}
+   140064    0.082    0.000    0.106    0.000 GithubObject.py:299(__makeSimpleAttribute)
+      266    0.042    0.000    0.042    0.000 decoder.py:350(raw_decode)
+     1017    0.036    0.000    0.165    0.000 Repository.py:4534(_useAttributes)
+        1    0.031    0.031    0.031    0.031 {method 'connect' of '_socket.socket' objects}
+      831    0.030    0.000    0.045    0.000 url.py:227(_encode_invalid_chars)
+223676/222612    0.029    0.000    0.045    0.000 {built-in method builtins.isinstance}
+   107006    0.028    0.000    0.109    0.000 GithubObject.py:325(_makeStringAttribute)
+      536    0.027    0.000    0.027    0.000 {built-in method nt._path_exists}
+      508    0.027    0.000    0.300    0.001 PullRequest.py:1060(_useAttributes)
+   118565    0.021    0.000    0.021    0.000 {method 'lower' of 'str' objects}
+     2541    0.021    0.000    0.070    0.000 NamedUser.py:584(_useAttributes)
+      266    0.020    0.000    0.020    0.000 {method 'write' of '_ssl._SSLSocket' objects}
+      281    0.018    0.000    0.018    0.000 {method 'decompress' of 'zlib.Decompress' objects}
+        1    0.018    0.018    0.018    0.018 {method 'do_handshake' of '_ssl._SSLSocket' objects}
+      585    0.016    0.000    0.016    0.000 {method 'write' of '_io.FileIO' objects}
+     2420    0.015    0.000    0.015    0.000 {method 'write' of '_io.StringIO' objects}
+     1593    0.014    0.000    0.014    0.000 __init__.py:391(getMessage)
+      532    0.013    0.000    0.028    0.000 request.py:2480(getproxies_environment)
+     3456    0.013    0.000    0.036    0.000 parse.py:374(urlparse)
+    14485    0.013    0.000    0.013    0.000 {method 'match' of 're.Pattern' objects}
+   155057    0.013    0.000    0.013    0.000 GithubObject.py:205(__init__)
+      266    0.012    0.000    0.034    0.000 feedparser.py:472(_parse_headers)
+     1051    0.011    0.000    0.021    0.000 parse.py:452(urlsplit)
+        3    0.011    0.004  170.783   56.928 base_manager.py:51(wrapper)
+11944/4832    0.010    0.000    0.252    0.000 GithubObject.py:313(__makeTransformedAttribute)
+      266    0.010    0.000  170.361    0.640 Requester.py:1206(__requestRaw)
+      532    0.009    0.000    0.069    0.000 feedparser.py:218(_parsegen)
+        3    0.009    0.003    0.009    0.003 {built-in method _winapi.CreateProcess}
+     1017    0.009    0.000    0.009    0.000 Repository.py:356(_initAttributes)
+      798    0.009    0.000    0.009    0.000 {built-in method winreg.QueryValueEx}
+      532    0.009    0.000    0.009    0.000 {built-in method winreg.OpenKey}
+    37985    0.009    0.000    0.009    0.000 <frozen os>:734(__iter__)
+     1863    0.008    0.000    0.028    0.000 <frozen _collections_abc>:979(update)
+    49877    0.008    0.000    0.008    0.000 {method 'decode' of 'bytes' objects}
+     1593    0.008    0.000    0.079    0.000 __init__.py:1138(emit)
+     8437    0.008    0.000  102.695    0.012 {method 'readline' of '_io.BufferedReader' objects}
+     6914    0.008    0.000    0.015    0.000 _policybase.py:301(header_source_parse)
+      531    0.008    0.000    0.019    0.000 __init__.py:298(__init__)
+    13298    0.008    0.000    0.021    0.000 <frozen _collections_abc>:897(__iter__)
+58895/58629    0.007    0.000    0.008    0.000 {built-in method builtins.len}
+      266    0.007    0.000  102.892    0.387 connection.py:534(getresponse)
+     2128    0.007    0.000    0.015    0.000 message.py:494(get)
+4574/1526    0.007    0.000    0.246    0.000 GithubObject.py:369(<lambda>)
+      532    0.007    0.000    0.058    0.000 url.py:367(parse_url)
+
+
+
+CALLER INFORMATION (Top 20)
+--------------------------------------------------------------------------------
+This shows which functions called the top functions.
+
+   Ordered by: cumulative time
+   List reduced from 1339 to 20 due to restriction <20>
+
+Function                                                        was called by...
+                                                                    ncalls  tottime  cumtime
+runner.py:114(pytest_runtest_protocol)                          <- 
+runner.py:122(runtestprotocol)                                  <-       1    0.000  175.057  runner.py:114(pytest_runtest_protocol)
+runner.py:230(call_and_report)                                  <-       3    0.000  174.949  runner.py:122(runtestprotocol)
+_hooks.py:497(__call__)                                         <-       7    0.000    0.000  fixtures.py:1053(finish)
+                                                                         5    0.000    4.010  fixtures.py:1074(execute)
+                                                                         1    0.000  170.786  python.py:1669(runtest)
+                                                                         2    0.000    0.000  runner.py:114(pytest_runtest_protocol)
+                                                                         6    0.000    0.001  runner.py:230(call_and_report)
+                                                                         3    0.000  174.948  runner.py:246(<lambda>)
+                                                                         3    0.000    0.000  terminal.py:605(pytest_runtest_logreport)
+_manager.py:111(_hookexec)                                      <-   27/11    0.000  174.949  _hooks.py:497(__call__)
+                                                                         1    0.000    0.000  _hooks.py:514(call_historic)
+_callers.py:76(_multicall)                                      <-   28/12    0.000  174.949  _manager.py:111(_hookexec)
+runner.py:323(from_call)                                        <-       3    0.000  174.948  runner.py:230(call_and_report)
+runner.py:246(<lambda>)                                         <-       3    0.000  174.948  runner.py:323(from_call)
+log_utils.py:154(wrapper)                                       <-       1    0.000    0.001  base_manager.py:97(__init__)
+                                                                         3    0.000    0.002  conftest.py:176(github_test_setup)
+                                                                         3    0.000    0.562  pr_manager.py:247(list_pull_requests)
+                                                                         3    0.002  170.786  test_github_utils.py:548(test_list_pull_requests_with_filters)
+                                                                         3    0.000    0.001  user_config.py:24(get_config_value)
+runner.py:167(pytest_runtest_call)                              <-       1    0.000  170.786  _callers.py:76(_multicall)
+python.py:1669(runtest)                                         <-       1    0.000  170.786  runner.py:167(pytest_runtest_call)
+python.py:150(pytest_pyfunc_call)                               <-       1    0.000  170.786  _callers.py:76(_multicall)
+test_github_utils.py:548(test_list_pull_requests_with_filters)  <-       1    0.000  170.786  python.py:150(pytest_pyfunc_call)
+base_manager.py:51(wrapper)                                     <-       3    0.011  170.783  log_utils.py:154(wrapper)
+pr_manager.py:247(list_pull_requests)                           <-       3    0.005  170.772  base_manager.py:51(wrapper)
+Requester.py:605(requestJsonAndCheck)                           <-     254    0.001  162.474  GithubObject.py:612(__complete)
+                                                                         1    0.000    0.560  MainClass.py:470(get_repo)
+                                                                        11    0.000    7.409  PaginatedList.py:335(_fetchNextPage)
+Requester.py:1025(requestJson)                                  <-     266    0.001  170.380  Requester.py:605(requestJsonAndCheck)
+Requester.py:1154(__requestEncode)                              <-     266    0.007  170.379  Requester.py:1025(requestJson)
+Requester.py:1206(__requestRaw)                                 <-     266    0.010  170.361  Requester.py:1154(__requestEncode)
+GithubObject.py:604(_completeIfNotSet)                          <-     254    0.000    0.000  NamedUser.py:284(login)
+                                                                       254    0.000    0.000  PullRequest.py:245(base)
+                                                                       254    0.000    0.000  PullRequest.py:250(body)
+                                                                       508    0.000    0.001  PullRequest.py:285(created_at)
+                                                                       254    0.000    0.000  PullRequest.py:300(draft)
+                                                                       254    0.000    0.000  PullRequest.py:305(head)
+                                                                       254    0.000    0.000  PullRequest.py:310(html_url)
+                                                                       254    0.000  162.642  PullRequest.py:345(mergeable)
+                                                                       254    0.000    0.001  PullRequest.py:355(merged)
+                                                                       254    0.000    0.001  PullRequest.py:380(number)
+                                                                       254    0.000    0.000  PullRequest.py:420(state)
+                                                                       254    0.000    0.000  PullRequest.py:430(title)
+                                                                       508    0.000    0.001  PullRequest.py:435(updated_at)
+                                                                       508    0.000    0.001  PullRequest.py:445(user)
+                                                                         3    0.000    0.000  Repository.py:1232(url)
+
+

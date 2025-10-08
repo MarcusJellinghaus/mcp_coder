@@ -1,0 +1,185 @@
+================================================================================
+PYTEST PROFILE REPORT
+================================================================================
+
+Test: tests/utils/test_git_workflows.py::TestGitBranchOperations::test_fetch_remote_custom_remote
+Duration: 1.178 seconds
+Profile file: tests_utils_test_git_workflows__TestGitBranchOperations__test_fetch_remote_custom_remote.prof
+
+SUMMARY
+--------------------------------------------------------------------------------
+Wed Oct  8 08:00:14 2025    docs\tests\performance_data\prof\tests_utils_test_git_workflows__TestGitBranchOperations__test_fetch_remote_custom_remote.prof
+
+         15784 function calls (15577 primitive calls) in 1.178 seconds
+
+
+TOP FUNCTIONS BY CUMULATIVE TIME
+--------------------------------------------------------------------------------
+This shows functions sorted by total time spent, including time in called functions.
+
+Wed Oct  8 08:00:14 2025    docs\tests\performance_data\prof\tests_utils_test_git_workflows__TestGitBranchOperations__test_fetch_remote_custom_remote.prof
+
+         15784 function calls (15577 primitive calls) in 1.178 seconds
+
+   Ordered by: cumulative time
+   List reduced from 989 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    1.178    1.178 runner.py:114(pytest_runtest_protocol)
+        1    0.000    0.000    1.178    1.178 runner.py:122(runtestprotocol)
+    24/11    0.000    0.000    1.051    0.096 _hooks.py:497(__call__)
+        3    0.000    0.000    1.051    0.350 runner.py:230(call_and_report)
+    24/11    0.000    0.000    1.051    0.096 _manager.py:111(_hookexec)
+    24/11    0.000    0.000    1.051    0.096 _callers.py:76(_multicall)
+        3    0.000    0.000    1.050    0.350 runner.py:323(from_call)
+        3    0.000    0.000    1.050    0.350 runner.py:246(<lambda>)
+        1    0.000    0.000    0.612    0.612 runner.py:167(pytest_runtest_call)
+        1    0.000    0.000    0.612    0.612 python.py:1669(runtest)
+        1    0.000    0.000    0.612    0.612 python.py:150(pytest_pyfunc_call)
+        1    0.000    0.000    0.612    0.612 test_git_workflows.py:2427(test_fetch_remote_custom_remote)
+        5    0.000    0.000    0.588    0.118 base.py:333(close)
+       10    0.583    0.058    0.583    0.058 {built-in method gc.collect}
+        1    0.000    0.000    0.435    0.435 runner.py:162(pytest_runtest_setup)
+        1    0.000    0.000    0.435    0.435 runner.py:498(setup)
+        1    0.000    0.000    0.435    0.435 python.py:1673(setup)
+        1    0.000    0.000    0.435    0.435 fixtures.py:716(_fillfixtures)
+     10/7    0.000    0.000    0.435    0.062 fixtures.py:527(getfixturevalue)
+     14/7    0.000    0.000    0.435    0.062 fixtures.py:566(_get_active_fixturedef)
+      6/5    0.000    0.000    0.435    0.087 fixtures.py:1074(execute)
+        4    0.000    0.000    0.435    0.109 fixtures.py:1166(pytest_fixture_setup)
+        4    0.000    0.000    0.434    0.109 fixtures.py:916(call_fixture_func)
+        1    0.000    0.000    0.433    0.433 conftest.py:32(git_repo_with_files)
+    81/68    0.000    0.000    0.367    0.005 {built-in method builtins.next}
+        1    0.000    0.000    0.363    0.363 remotes.py:118(fetch_remote)
+        3    0.000    0.000    0.354    0.118 base.py:327(__del__)
+       17    0.000    0.000    0.349    0.021 contextlib.py:145(__exit__)
+        5    0.000    0.000    0.284    0.057 cmd.py:1540(_call_process)
+        4    0.000    0.000    0.284    0.071 cmd.py:1096(execute)
+        3    0.000    0.000    0.279    0.093 cmd.py:1003(<lambda>)
+        1    0.000    0.000    0.274    0.274 base.py:1126(commit)
+        2    0.000    0.000    0.271    0.136 subprocess.py:1175(communicate)
+        2    0.000    0.000    0.270    0.135 subprocess.py:1613(_communicate)
+        4    0.000    0.000    0.270    0.067 threading.py:1056(join)
+        4    0.000    0.000    0.270    0.067 {method 'join' of '_thread._ThreadHandle' objects}
+      4/2    0.000    0.000    0.269    0.135 threading.py:998(_bootstrap)
+      4/2    0.001    0.000    0.269    0.135 threading.py:1025(_bootstrap_inner)
+      4/2    0.000    0.000    0.269    0.135 threading.py:981(run)
+        1    0.000    0.000    0.269    0.269 commit.py:561(create_from_tree)
+      4/2    0.000    0.000    0.269    0.134 subprocess.py:1608(_readerthread)
+    16/14    0.000    0.000    0.269    0.019 {method 'close' of '_io.BufferedReader' objects}
+        1    0.000    0.000    0.260    0.260 symbolic.py:724(create)
+        1    0.000    0.000    0.260    0.260 symbolic.py:680(_create)
+        4    0.000    0.000    0.248    0.062 core.py:61(_safe_repo_context)
+        1    0.000    0.000    0.247    0.247 repository.py:11(is_git_repository)
+        8    0.000    0.000    0.242    0.030 cmd.py:1676(__get_object_header)
+      101    0.242    0.002    0.242    0.002 {method 'readline' of '_io.BufferedReader' objects}
+        2    0.000    0.000    0.234    0.117 core.py:36(_close_repo_safely)
+        1    0.000    0.000    0.146    0.146 base.py:1301(init)
+
+
+
+TOP FUNCTIONS BY INTERNAL TIME (TIME)
+--------------------------------------------------------------------------------
+This shows functions sorted by time spent in the function itself (excluding subcalls).
+
+Wed Oct  8 08:00:14 2025    docs\tests\performance_data\prof\tests_utils_test_git_workflows__TestGitBranchOperations__test_fetch_remote_custom_remote.prof
+
+         15784 function calls (15577 primitive calls) in 1.178 seconds
+
+   Ordered by: internal time
+   List reduced from 989 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       10    0.583    0.058    0.583    0.058 {built-in method gc.collect}
+    12/10    0.268    0.022    0.000    0.000 {method 'read' of '_io.BufferedReader' objects}
+      101    0.242    0.002    0.242    0.002 {method 'readline' of '_io.BufferedReader' objects}
+       60    0.034    0.001    0.034    0.001 {built-in method _io.open}
+        4    0.010    0.003    0.010    0.003 {built-in method _winapi.CreateProcess}
+        6    0.005    0.001    0.005    0.001 {built-in method _winapi.WaitForSingleObject}
+       12    0.003    0.000    0.003    0.000 {built-in method nt.open}
+        8    0.002    0.000    0.002    0.000 {built-in method nt.rename}
+       13    0.002    0.000    0.002    0.000 {built-in method nt.mkdir}
+       38    0.001    0.000    0.001    0.000 {method '__exit__' of '_io._IOBase' objects}
+       24    0.001    0.000    0.001    0.000 {built-in method nt.stat}
+       28    0.001    0.000    0.001    0.000 {built-in method nt._path_isdir}
+        1    0.001    0.001    0.001    0.001 pathlib.py:173(find_prefixed)
+       16    0.001    0.000    0.001    0.000 {built-in method nt._path_exists}
+       11    0.001    0.000    0.001    0.000 {built-in method nt.chmod}
+       33    0.001    0.000    0.001    0.000 {built-in method nt.write}
+       24    0.001    0.000    0.001    0.000 {built-in method nt._path_isfile}
+      4/2    0.001    0.000    0.269    0.135 threading.py:1025(_bootstrap_inner)
+        5    0.001    0.000    0.001    0.000 {built-in method nt.remove}
+        8    0.000    0.000    0.001    0.000 config.py:439(_read)
+       20    0.000    0.000    0.001    0.000 {method 'read' of '_io.TextIOWrapper' objects}
+       11    0.000    0.000    0.000    0.000 {built-in method nt.close}
+        4    0.000    0.000    0.270    0.067 {method 'join' of '_thread._ThreadHandle' objects}
+        8    0.000    0.000    0.000    0.000 {built-in method nt._getfinalpathname}
+       10    0.000    0.000    0.000    0.000 {built-in method nt.scandir}
+        6    0.000    0.000    0.000    0.000 {built-in method builtins.dir}
+     1047    0.000    0.000    0.000    0.000 {method 'match' of 're.Pattern' objects}
+       99    0.000    0.000    0.000    0.000 <frozen ntpath>:99(join)
+        7    0.000    0.000    0.000    0.000 {built-in method nt.access}
+        4    0.000    0.000    0.000    0.000 {method 'close' of '_io.BufferedWriter' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method nt.symlink}
+     1303    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+        6    0.000    0.000    0.000    0.000 {built-in method nt.lstat}
+        7    0.000    0.000    0.000    0.000 {built-in method nt.putenv}
+    24/11    0.000    0.000    1.051    0.096 _callers.py:76(_multicall)
+        4    0.000    0.000    0.000    0.000 {built-in method _thread.start_joinable_thread}
+      304    0.000    0.000    0.000    0.000 <frozen os>:711(__getitem__)
+        5    0.000    0.000    0.000    0.000 glob.py:424(select_wildcard)
+        7    0.000    0.000    0.000    0.000 {method 'flush' of '_io.TextIOWrapper' objects}
+      123    0.000    0.000    0.000    0.000 cmd.py:989(__getattribute__)
+        2    0.000    0.000    0.000    0.000 {built-in method _winapi.TerminateProcess}
+        6    0.000    0.000    0.001    0.000 configparser.py:1343(__init__)
+       17    0.000    0.000    0.014    0.001 symbolic.py:220(_get_ref_info_helper)
+        6    0.000    0.000    0.005    0.001 loose.py:177(store)
+        6    0.000    0.000    0.000    0.000 {method 'read' of '_io.FileIO' objects}
+      316    0.000    0.000    0.000    0.000 <frozen os>:785(encodekey)
+        5    0.000    0.000    0.284    0.057 cmd.py:1540(_call_process)
+        4    0.000    0.000    0.001    0.000 <frozen os>:750(copy)
+       10    0.000    0.000    0.000    0.000 {built-in method _winapi.CreatePipe}
+       17    0.000    0.000    0.000    0.000 symbolic.py:172(_check_ref_name_valid)
+
+
+
+CALLER INFORMATION (Top 20)
+--------------------------------------------------------------------------------
+This shows which functions called the top functions.
+
+   Ordered by: cumulative time
+   List reduced from 989 to 20 due to restriction <20>
+
+Function                                                     was called by...
+                                                                 ncalls  tottime  cumtime
+runner.py:114(pytest_runtest_protocol)                       <- 
+runner.py:122(runtestprotocol)                               <-       1    0.000    1.178  runner.py:114(pytest_runtest_protocol)
+_hooks.py:497(__call__)                                      <-       5    0.000    0.000  fixtures.py:1053(finish)
+                                                                      4    0.000    0.435  fixtures.py:1074(execute)
+                                                                      1    0.000    0.612  python.py:1669(runtest)
+                                                                      2    0.000    0.000  runner.py:114(pytest_runtest_protocol)
+                                                                      6    0.000    0.001  runner.py:230(call_and_report)
+                                                                      3    0.000    1.050  runner.py:246(<lambda>)
+                                                                      3    0.000    0.000  terminal.py:605(pytest_runtest_logreport)
+runner.py:230(call_and_report)                               <-       3    0.000    1.051  runner.py:122(runtestprotocol)
+_manager.py:111(_hookexec)                                   <-   24/11    0.000    1.051  _hooks.py:497(__call__)
+_callers.py:76(_multicall)                                   <-   24/11    0.000    1.051  _manager.py:111(_hookexec)
+runner.py:323(from_call)                                     <-       3    0.000    1.050  runner.py:230(call_and_report)
+runner.py:246(<lambda>)                                      <-       3    0.000    1.050  runner.py:323(from_call)
+runner.py:167(pytest_runtest_call)                           <-       1    0.000    0.612  _callers.py:76(_multicall)
+python.py:1669(runtest)                                      <-       1    0.000    0.612  runner.py:167(pytest_runtest_call)
+python.py:150(pytest_pyfunc_call)                            <-       1    0.000    0.612  _callers.py:76(_multicall)
+test_git_workflows.py:2427(test_fetch_remote_custom_remote)  <-       1    0.000    0.612  python.py:150(pytest_pyfunc_call)
+base.py:333(close)                                           <-       3    0.000    0.354  base.py:327(__del__)
+                                                                      2    0.000    0.234  core.py:36(_close_repo_safely)
+{built-in method gc.collect}                                 <-      10    0.583    0.583  base.py:333(close)
+runner.py:162(pytest_runtest_setup)                          <-       1    0.000    0.435  _callers.py:76(_multicall)
+runner.py:498(setup)                                         <-       1    0.000    0.435  runner.py:162(pytest_runtest_setup)
+python.py:1673(setup)                                        <-       1    0.000    0.435  runner.py:498(setup)
+fixtures.py:716(_fillfixtures)                               <-       1    0.000    0.435  python.py:1673(setup)
+fixtures.py:527(getfixturevalue)                             <-       7    0.000    0.435  fixtures.py:716(_fillfixtures)
+                                                                      3    0.000    0.000  fixtures.py:1166(pytest_fixture_setup)
+fixtures.py:566(_get_active_fixturedef)                      <-    10/7    0.000    0.435  fixtures.py:527(getfixturevalue)
+                                                                    4/2    0.000    0.002  fixtures.py:1074(execute)
+
+

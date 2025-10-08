@@ -1,0 +1,183 @@
+================================================================================
+PYTEST PROFILE REPORT
+================================================================================
+
+Test: tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_idempotent_behavior_no_changes_on_second_run
+Duration: 1.239 seconds
+Profile file: tests_formatters_test_integration__TestCompleteFormattingWorkflow__test_idempotent_behavior_no_changes_on_second_run.prof
+
+SUMMARY
+--------------------------------------------------------------------------------
+Wed Oct  8 07:44:20 2025    docs\tests\performance_data\prof\tests_formatters_test_integration__TestCompleteFormattingWorkflow__test_idempotent_behavior_no_changes_on_second_run.prof
+
+         9188 function calls (9019 primitive calls) in 1.239 seconds
+
+
+TOP FUNCTIONS BY CUMULATIVE TIME
+--------------------------------------------------------------------------------
+This shows functions sorted by total time spent, including time in called functions.
+
+Wed Oct  8 07:44:20 2025    docs\tests\performance_data\prof\tests_formatters_test_integration__TestCompleteFormattingWorkflow__test_idempotent_behavior_no_changes_on_second_run.prof
+
+         9188 function calls (9019 primitive calls) in 1.239 seconds
+
+   Ordered by: cumulative time
+   List reduced from 563 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        8    0.000    0.000    2.417    0.302 threading.py:1056(join)
+        8    0.001    0.000    2.416    0.302 {method 'join' of '_thread._ThreadHandle' objects}
+        1    0.000    0.000    1.239    1.239 runner.py:114(pytest_runtest_protocol)
+        1    0.000    0.000    1.239    1.239 runner.py:122(runtestprotocol)
+    19/11    0.000    0.000    1.239    0.113 _hooks.py:497(__call__)
+        3    0.000    0.000    1.239    0.413 runner.py:230(call_and_report)
+    19/11    0.000    0.000    1.239    0.113 _manager.py:111(_hookexec)
+    19/11    0.000    0.000    1.239    0.113 _callers.py:76(_multicall)
+        3    0.000    0.000    1.238    0.413 runner.py:323(from_call)
+        3    0.000    0.000    1.238    0.413 runner.py:246(<lambda>)
+        1    0.000    0.000    1.234    1.234 runner.py:167(pytest_runtest_call)
+        1    0.000    0.000    1.234    1.234 python.py:1669(runtest)
+        1    0.000    0.000    1.234    1.234 python.py:150(pytest_pyfunc_call)
+        1    0.000    0.000    1.234    1.234 test_integration.py:141(test_idempotent_behavior_no_changes_on_second_run)
+        2    0.000    0.000    1.233    0.616 __init__.py:13(format_code)
+        4    0.000    0.000    1.229    0.307 subprocess_runner.py:571(execute_command)
+        4    0.000    0.000    1.228    0.307 subprocess_runner.py:478(execute_subprocess)
+        4    0.000    0.000    1.228    0.307 subprocess_runner.py:133(_run_subprocess)
+        4    0.000    0.000    1.216    0.304 subprocess.py:1175(communicate)
+        4    0.000    0.000    1.214    0.303 subprocess.py:1613(_communicate)
+      8/4    0.000    0.000    1.213    0.303 threading.py:998(_bootstrap)
+      8/4    0.001    0.000    1.213    0.303 threading.py:1025(_bootstrap_inner)
+      8/4    0.000    0.000    1.212    0.303 threading.py:981(run)
+        2    0.000    0.000    0.660    0.330 black_formatter.py:19(format_with_black)
+        2    0.000    0.000    0.659    0.330 black_formatter.py:81(_format_black_directory)
+        2    0.000    0.000    0.570    0.285 isort_formatter.py:19(format_with_isort)
+        2    0.000    0.000    0.569    0.285 isort_formatter.py:81(_format_isort_directory)
+        4    0.000    0.000    0.011    0.003 subprocess.py:814(__init__)
+        4    0.000    0.000    0.011    0.003 subprocess.py:1446(_execute_child)
+        4    0.010    0.003    0.010    0.003 {built-in method _winapi.CreateProcess}
+    14/10    1.210    0.086    0.008    0.001 {method 'read' of '_io.TextIOWrapper' objects}
+      8/4    0.000    0.000    0.008    0.002 subprocess.py:1608(_readerthread)
+    59/48    0.000    0.000    0.003    0.000 {built-in method builtins.next}
+        4    0.000    0.000    0.002    0.001 subprocess.py:1269(wait)
+        4    0.000    0.000    0.002    0.001 subprocess.py:1590(_wait)
+        4    0.002    0.001    0.002    0.001 {built-in method _winapi.WaitForSingleObject}
+       16    0.002    0.000    0.002    0.000 {built-in method _io.open}
+        1    0.000    0.000    0.002    0.002 runner.py:191(pytest_runtest_teardown)
+        1    0.000    0.000    0.002    0.002 runner.py:529(teardown_exact)
+        2    0.000    0.000    0.002    0.001 fixtures.py:1053(finish)
+        2    0.000    0.000    0.002    0.001 __init__.py:48(_check_line_length_conflict)
+       37    0.000    0.000    0.002    0.000 _local.py:510(stat)
+       37    0.001    0.000    0.002    0.000 {built-in method nt.stat}
+        2    0.000    0.000    0.002    0.001 fixtures.py:934(_teardown_yield_fixture)
+        2    0.000    0.000    0.002    0.001 conftest.py:47(cleanup_test_artifacts)
+        4    0.000    0.000    0.001    0.000 utils.py:34(read_tool_config)
+       17    0.000    0.000    0.001    0.000 _abc.py:442(exists)
+        6    0.000    0.000    0.001    0.000 _parser.py:57(load)
+        2    0.000    0.000    0.001    0.000 isort_formatter.py:68(_get_isort_config)
+       20    0.000    0.000    0.001    0.000 _abc.py:460(is_dir)
+
+
+
+TOP FUNCTIONS BY INTERNAL TIME (TIME)
+--------------------------------------------------------------------------------
+This shows functions sorted by time spent in the function itself (excluding subcalls).
+
+Wed Oct  8 07:44:20 2025    docs\tests\performance_data\prof\tests_formatters_test_integration__TestCompleteFormattingWorkflow__test_idempotent_behavior_no_changes_on_second_run.prof
+
+         9188 function calls (9019 primitive calls) in 1.239 seconds
+
+   Ordered by: internal time
+   List reduced from 563 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    14/10    1.210    0.086    0.008    0.001 {method 'read' of '_io.TextIOWrapper' objects}
+        4    0.010    0.003    0.010    0.003 {built-in method _winapi.CreateProcess}
+        4    0.002    0.001    0.002    0.001 {built-in method _winapi.WaitForSingleObject}
+       16    0.002    0.000    0.002    0.000 {built-in method _io.open}
+       37    0.001    0.000    0.002    0.000 {built-in method nt.stat}
+        8    0.001    0.000    2.416    0.302 {method 'join' of '_thread._ThreadHandle' objects}
+      8/4    0.001    0.000    1.213    0.303 threading.py:1025(_bootstrap_inner)
+        2    0.000    0.000    0.000    0.000 {built-in method nt.unlink}
+        8    0.000    0.000    0.000    0.000 {method '__exit__' of '_io._IOBase' objects}
+        8    0.000    0.000    0.000    0.000 {built-in method _thread.start_joinable_thread}
+        6    0.000    0.000    0.000    0.000 {method 'read' of '_io.BufferedReader' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method nt.mkdir}
+        7    0.000    0.000    0.000    0.000 {built-in method nt.scandir}
+        5    0.000    0.000    0.000    0.000 glob.py:424(select_wildcard)
+    19/11    0.000    0.000    1.239    0.113 _callers.py:76(_multicall)
+        7    0.000    0.000    0.000    0.000 {method 'flush' of '_io.TextIOWrapper' objects}
+       46    0.000    0.000    0.000    0.000 _local.py:257(_parse_path)
+        4    0.000    0.000    1.228    0.307 subprocess_runner.py:478(execute_subprocess)
+      279    0.000    0.000    0.000    0.000 <frozen os>:711(__getitem__)
+       16    0.000    0.000    0.000    0.000 {method 'close' of '_io.TextIOWrapper' objects}
+      936    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+        6    0.000    0.000    0.001    0.000 _parser.py:69(loads)
+        4    0.000    0.000    0.001    0.000 <frozen os>:750(copy)
+      8/4    0.000    0.000    1.212    0.303 threading.py:981(run)
+        8    0.000    0.000    0.000    0.000 {built-in method _winapi.CreatePipe}
+        6    0.000    0.000    0.000    0.000 {method 'read' of '_io.FileIO' objects}
+      283    0.000    0.000    0.000    0.000 <frozen os>:785(encodekey)
+        1    0.000    0.000    0.000    0.000 {built-in method nt.lstat}
+       57    0.000    0.000    0.001    0.000 _local.py:227(__str__)
+        4    0.000    0.000    0.011    0.003 subprocess.py:814(__init__)
+        4    0.000    0.000    0.000    0.000 subprocess.py:582(list2cmdline)
+       57    0.000    0.000    0.000    0.000 _local.py:117(__init__)
+      525    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 {built-in method nt.rmdir}
+       57    0.000    0.000    0.000    0.000 _local.py:498(__init__)
+        4    0.000    0.000    1.228    0.307 subprocess_runner.py:133(_run_subprocess)
+      186    0.000    0.000    0.000    0.000 {built-in method sys.intern}
+    59/48    0.000    0.000    0.003    0.000 {built-in method builtins.next}
+        8    0.000    0.000    0.000    0.000 threading.py:869(__init__)
+        4    0.000    0.000    0.011    0.003 subprocess.py:1446(_execute_child)
+      136    0.000    0.000    0.000    0.000 {method 'match' of 're.Pattern' objects}
+        1    0.000    0.000    0.000    0.000 __init__.py:1446(_clear_cache)
+       28    0.000    0.000    0.000    0.000 _local.py:289(drive)
+        2    0.000    0.000    0.002    0.001 conftest.py:47(cleanup_test_artifacts)
+    40/32    0.000    0.000    0.000    0.000 {method 'acquire' of '_thread.lock' objects}
+       45    0.000    0.000    0.000    0.000 _abc.py:130(with_segments)
+       18    0.000    0.000    0.000    0.000 _parser.py:323(key_value_rule)
+        3    0.000    0.000    0.000    0.000 {built-in method nt.putenv}
+        4    0.000    0.000    1.214    0.303 subprocess.py:1613(_communicate)
+      8/4    0.000    0.000    0.008    0.002 subprocess.py:1608(_readerthread)
+
+
+
+CALLER INFORMATION (Top 20)
+--------------------------------------------------------------------------------
+This shows which functions called the top functions.
+
+   Ordered by: cumulative time
+   List reduced from 563 to 20 due to restriction <20>
+
+Function                                                                    was called by...
+                                                                                ncalls  tottime  cumtime
+threading.py:1056(join)                                                     <-     4/1    0.000    0.330  threading.py:998(_bootstrap)
+{method 'join' of '_thread._ThreadHandle' objects}                          <-       0    0.000    0.000  threading.py:1056(join)
+runner.py:114(pytest_runtest_protocol)                                      <- 
+runner.py:122(runtestprotocol)                                              <-       1    0.000    1.239  runner.py:114(pytest_runtest_protocol)
+_hooks.py:497(__call__)                                                     <-       2    0.000    0.000  fixtures.py:1053(finish)
+                                                                                     2    0.000    0.000  fixtures.py:1074(execute)
+                                                                                     1    0.000    1.234  python.py:1669(runtest)
+                                                                                     2    0.000    0.000  runner.py:114(pytest_runtest_protocol)
+                                                                                     6    0.000    0.001  runner.py:230(call_and_report)
+                                                                                     3    0.000    1.238  runner.py:246(<lambda>)
+                                                                                     3    0.000    0.000  terminal.py:605(pytest_runtest_logreport)
+runner.py:230(call_and_report)                                              <-       3    0.000    1.239  runner.py:122(runtestprotocol)
+_manager.py:111(_hookexec)                                                  <-   19/11    0.000    1.239  _hooks.py:497(__call__)
+_callers.py:76(_multicall)                                                  <-   19/11    0.000    1.239  _manager.py:111(_hookexec)
+runner.py:323(from_call)                                                    <-       3    0.000    1.238  runner.py:230(call_and_report)
+runner.py:246(<lambda>)                                                     <-       3    0.000    1.238  runner.py:323(from_call)
+runner.py:167(pytest_runtest_call)                                          <-       1    0.000    1.234  _callers.py:76(_multicall)
+python.py:1669(runtest)                                                     <-       1    0.000    1.234  runner.py:167(pytest_runtest_call)
+python.py:150(pytest_pyfunc_call)                                           <-       1    0.000    1.234  _callers.py:76(_multicall)
+test_integration.py:141(test_idempotent_behavior_no_changes_on_second_run)  <-       1    0.000    1.234  python.py:150(pytest_pyfunc_call)
+__init__.py:13(format_code)                                                 <-       2    0.000    1.233  test_integration.py:141(test_idempotent_behavior_no_changes_on_second_run)
+subprocess_runner.py:571(execute_command)                                   <-       2    0.000    0.659  black_formatter.py:81(_format_black_directory)
+                                                                                     2    0.000    0.569  isort_formatter.py:81(_format_isort_directory)
+subprocess_runner.py:478(execute_subprocess)                                <-       4    0.000    1.228  subprocess_runner.py:571(execute_command)
+subprocess_runner.py:133(_run_subprocess)                                   <-       4    0.000    1.228  subprocess_runner.py:478(execute_subprocess)
+subprocess.py:1175(communicate)                                             <-       4    0.000    1.216  subprocess_runner.py:133(_run_subprocess)
+subprocess.py:1613(_communicate)                                            <-       4    0.000    1.214  subprocess.py:1175(communicate)
+
+
