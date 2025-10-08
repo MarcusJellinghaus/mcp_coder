@@ -67,6 +67,48 @@ def delete_steps_directory(project_dir: Path) -> bool:
         return False
 
 
+def clean_profiler_output(project_dir: Path) -> bool:
+    """
+    Clean up profiler output files from docs/tests/performance_data/prof/ directory.
+    
+    Removes all files from the profiler output directory while keeping the directory itself.
+    This prevents temporary profiler output from being included in pull requests.
+    
+    Args:
+        project_dir: Path to the project root directory
+        
+    Returns:
+        True if successful or directory doesn't exist, False on error
+    """
+    prof_dir = project_dir / "docs" / "tests" / "performance_data" / "prof"
+    
+    # If directory doesn't exist, consider it success (no-op)
+    if not prof_dir.exists():
+        logger.info(f"Directory {prof_dir} does not exist - nothing to clean")
+        return True
+    
+    try:
+        # Remove all files in the directory
+        file_count = 0
+        for file_path in prof_dir.iterdir():
+            if file_path.is_file():
+                file_path.unlink()
+                file_count += 1
+        
+        if file_count > 0:
+            logger.info(f"Successfully deleted {file_count} file(s) from {prof_dir}")
+        else:
+            logger.info(f"Directory {prof_dir} is already empty")
+        return True
+        
+    except PermissionError as e:
+        logger.error(f"Permission error cleaning {prof_dir}: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Error cleaning {prof_dir}: {e}")
+        return False
+
+
 def truncate_task_tracker(project_dir: Path) -> bool:
     """
     Truncate TASK_TRACKER.md file, keeping only content before '## Tasks' section.
@@ -313,7 +355,7 @@ def generate_pr_summary(project_dir: Path, llm_method: str = "claude_code_api") 
 
 def cleanup_repository(project_dir: Path) -> bool:
     """
-    Clean up repository by deleting steps directory and truncating task tracker.
+    Clean up repository by deleting steps directory, truncating task tracker, and cleaning profiler output.
     
     Args:
         project_dir: Path to project directory
@@ -335,6 +377,12 @@ def cleanup_repository(project_dir: Path) -> bool:
     logger.info("Truncating TASK_TRACKER.md...")
     if not truncate_task_tracker(project_dir):
         logger.error("Failed to truncate task tracker")
+        success = False
+    
+    # Clean profiler output
+    logger.info("Cleaning profiler output files...")
+    if not clean_profiler_output(project_dir):
+        logger.error("Failed to clean profiler output")
         success = False
     
     if success:

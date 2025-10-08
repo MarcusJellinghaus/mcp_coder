@@ -1,6 +1,7 @@
 @echo off
 REM Pytest Performance Statistics Batch Script
-REM Runs pytest for each marker category and shows ONLY duration stats for 20 slowest tests
+REM Runs pytest for each marker category with -n0 (no parallelization) and shows ONLY duration stats for 20 slowest tests
+REM Combined ALL TESTS run uses -n auto and shows 50 slowest tests
 REM Outputs to timestamped file in docs/tests/performance_data/
 
 REM Create timestamp for filename
@@ -39,12 +40,15 @@ call :echo_both "========================================"
 call :echo_both "Pytest Performance Statistics (Durations Only)"
 call :echo_both "========================================"
 call :echo_both " "
+call :echo_both "EXECUTION MODE: Single-threaded (-n0) for marker tests"
+call :echo_both "PURPOSE: Accurate timing per test without parallel overhead"
+call :echo_both " "
 
 REM Unit tests (no markers - fast, mocked tests)
 call :echo_both "[1/6] UNIT TESTS (no integration markers)"
 call :echo_both "----------------------------------------"
 set "temp_file=%temp%\pytest_output_%random%.txt"
-pytest -m "not claude_cli_integration and not claude_api_integration and not git_integration and not formatter_integration and not github_integration" --durations=20 -n auto -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
+pytest -m "not claude_cli_integration and not claude_api_integration and not git_integration and not formatter_integration and not github_integration" --durations=20 -n0 -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
@@ -55,7 +59,7 @@ REM Claude CLI Integration Tests
 call :echo_both "[2/6] CLAUDE CLI INTEGRATION tests"
 call :echo_both "----------------------------------------"
 set "temp_file=%temp%\pytest_output_%random%.txt"
-pytest -m "claude_cli_integration" --durations=20 -n auto -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
+pytest -m "claude_cli_integration" --durations=20 -n0 -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
@@ -66,7 +70,7 @@ REM Claude API Integration Tests
 call :echo_both "[3/6] CLAUDE API INTEGRATION tests"
 call :echo_both "----------------------------------------"
 set "temp_file=%temp%\pytest_output_%random%.txt"
-pytest -m "claude_api_integration" --durations=20 -n auto -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
+pytest -m "claude_api_integration" --durations=20 -n0 -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
@@ -77,7 +81,7 @@ REM Git Integration Tests
 call :echo_both "[4/6] GIT INTEGRATION tests"
 call :echo_both "----------------------------------------"
 set "temp_file=%temp%\pytest_output_%random%.txt"
-pytest -m "git_integration" --durations=20 -n auto -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
+pytest -m "git_integration" --durations=20 -n0 -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
@@ -88,7 +92,7 @@ REM Formatter Integration Tests
 call :echo_both "[5/6] FORMATTER INTEGRATION tests"
 call :echo_both "----------------------------------------"
 set "temp_file=%temp%\pytest_output_%random%.txt"
-pytest -m "formatter_integration" --durations=20 -n auto -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
+pytest -m "formatter_integration" --durations=20 -n0 -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
@@ -99,7 +103,7 @@ REM GitHub Integration Tests
 call :echo_both "[6/6] GITHUB INTEGRATION tests"
 call :echo_both "----------------------------------------"
 set "temp_file=%temp%\pytest_output_%random%.txt"
-pytest -m "github_integration" --durations=20 -n auto -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
+pytest -m "github_integration" --durations=20 -n0 -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul
@@ -110,8 +114,11 @@ REM All tests combined
 call :echo_both "========================================"
 call :echo_both "[FINAL] ALL TESTS (complete suite)"
 call :echo_both "========================================"
+call :echo_both "EXECUTION MODE: Parallel (-n auto) for full suite"
+call :echo_both "PURPOSE: Fast execution, showing 50 slowest tests"
+call :echo_both " "
 set "temp_file=%temp%\pytest_output_%random%.txt"
-pytest --durations=20 -n auto -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
+pytest --durations=50 -n auto -q --tb=no --no-header -p no:warnings 2>nul | findstr /R "[0-9].*s" > "%temp_file%"
 type "%temp_file%"
 type "%temp_file%" >> "%output_file%"
 del "%temp_file%" 2>nul

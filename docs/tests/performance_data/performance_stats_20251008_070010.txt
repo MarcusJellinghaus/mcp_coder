@@ -1,0 +1,197 @@
+=== PYTEST PERFORMANCE REPORT === 
+=== PYTEST PERFORMANCE REPORT === 
+Timestamp: 2025-10-08 07:00:10 
+Git Branch: 117-review-test-performance-update-architecture 
+Command: .\tools\get_pytest_performance_stats.bat 
+ECHO is off.
+======================================== 
+Pytest Performance Statistics (Durations Only) 
+======================================== 
+ECHO is off.
+[1/6] UNIT TESTS (no integration markers) 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+5.18s call     tests/llm/formatting/test_formatters.py::TestFormatterComparison::test_raw_vs_verbose_difference
+5.16s call     tests/cli/commands/test_session_priority.py::TestSessionPriority::test_continue_session_when_no_session_id
+5.12s call     tests/workflows/implement/test_task_processing.py::TestProcessSingleTask::test_process_single_task_llm_error
+0.44s call     tests/llm/formatting/test_formatters.py::TestFormatterComparison::test_verbose_vs_just_text_difference
+0.36s call     tests/workflows/implement/test_core.py::TestRunImplementWorkflow::test_run_implement_workflow_success
+0.30s call     tests/llm/providers/claude/test_claude_code_api.py::TestAskClaudeCodeApiAsync::test_timeout_handling
+0.27s call     tests/workflows/implement/test_task_processing.py::TestProcessSingleTask::test_process_single_task_prompt_error
+0.26s call     tests/workflows/implement/test_task_processing.py::TestProcessSingleTask::test_process_single_task_success
+0.25s call     tests/workflows/implement/test_task_processing.py::TestIntegration::test_full_task_processing_workflow
+0.24s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLM::test_generate_commit_message_with_llm_failure
+0.23s call     tests/workflows/implement/test_task_processing.py::TestProcessSingleTask::test_process_single_task_no_tasks
+0.23s call     tests/workflows/implement/test_task_processing.py::TestProcessSingleTask::test_process_single_task_no_changes
+0.23s call     tests/workflows/implement/test_task_processing.py::TestProcessSingleTask::test_process_single_task_formatters_fail
+0.21s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLM::test_generate_commit_message_with_llm_no_changes
+0.21s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_empty_llm_response
+0.20s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_prompt_file_not_found
+0.19s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLM::test_generate_commit_message_with_llm_stage_failure
+0.19s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_git_diff_none_handling
+0.19s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_invalid_commit_message_format
+0.18s call     tests/cli/commands/test_session_priority.py::TestSessionPriority::test_session_id_overrides_continue_session
+789 passed, 4 skipped in 14.61s
+ECHO is off.
+ECHO is off.
+[2/6] CLAUDE CLI INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+91.48s call     tests/llm/providers/claude/test_claude_integration.py::TestEnvironmentVariablePropagation::test_env_vars_propagation
+83.88s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_basic_cli_api_integration
+75.44s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity
+0.02s call     tests/llm/providers/claude/test_llm_sessions.py::TestErrorHandling::test_missing_fields_in_serialized_data
+0.02s call     tests/llm/providers/claude/test_llm_sessions.py::TestSerialization::test_serialization_roundtrip
+0.02s call     tests/llm/providers/claude/test_llm_sessions.py::TestMetadataTracking::test_metadata_preserved_through_workflow
+0.02s call     tests/llm/providers/claude/test_llm_sessions.py::TestSerialization::test_session_from_saved_file
+0.01s setup    tests/llm/providers/claude/test_llm_sessions.py::TestSerialization::test_session_from_saved_file
+0.01s setup    tests/llm/providers/claude/test_llm_sessions.py::TestMetadataTracking::test_metadata_preserved_through_workflow
+0.01s setup    tests/llm/providers/claude/test_llm_sessions.py::TestSerialization::test_serialization_roundtrip
+0.01s setup    tests/llm/providers/claude/test_llm_sessions.py::TestErrorHandling::test_missing_fields_in_serialized_data
+0.01s setup    tests/llm/providers/claude/test_llm_sessions.py::TestParallelSafety::test_parallel_sessions_different_methods
+0.01s setup    tests/llm/providers/claude/test_llm_sessions.py::TestSessionContinuity::test_session_continuity_api
+0.01s teardown tests/llm/providers/claude/test_llm_sessions.py::TestBackwardCompatibility::test_ask_llm_still_works
+0.01s setup    tests/llm/providers/claude/test_llm_sessions.py::TestBackwardCompatibility::test_ask_llm_still_works
+0.01s setup    tests/llm/providers/claude/test_llm_sessions.py::TestBackwardCompatibility::test_ask_llm_without_session_id
+0.01s teardown tests/llm/providers/claude/test_llm_sessions.py::TestSessionContinuity::test_session_continuity_api
+0.01s teardown tests/llm/providers/claude/test_llm_sessions.py::TestParallelSafety::test_parallel_sessions_different_methods
+0.01s teardown tests/llm/providers/claude/test_llm_sessions.py::TestBackwardCompatibility::test_ask_llm_without_session_id
+0.01s setup    tests/llm/providers/claude/test_llm_sessions.py::TestErrorHandling::test_invalid_session_id_handled
+16 passed in 100.33s (0:01:40)
+ECHO is off.
+ECHO is off.
+[3/6] CLAUDE API INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+87.33s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_interface_contracts
+0.03s call     tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_all_attempts_fail
+0.03s call     tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_success_after_retries
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_success_on_first_attempt
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestAskClaudeCodeApiErrorHandling::test_value_error_passthrough
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestAskClaudeCodeApiErrorHandling::test_permission_error_handling
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestAskClaudeCodeApiErrorHandling::test_timeout_error_passthrough
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestVerifyClaudeBeforeUse::test_successful_verification
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestAskClaudeCodeApiErrorHandling::test_windows_path_length_error_handling
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestVerifyClaudeBeforeUse::test_setup_path_exception
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestAskClaudeCodeApiErrorHandling::test_cli_not_found_error_without_path_found
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_all_attempts_fail
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestAskClaudeCodeApiErrorHandling::test_cli_not_found_error_with_path_found
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestExtractRealErrorMessage::test_cli_not_found_error
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestAskClaudeCodeApiErrorHandling::test_file_not_found_error_handling
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_zero_retries
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_success_after_retries
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestExtractRealErrorMessage::test_file_not_found_error
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestExtractRealErrorMessage::test_simple_error_no_nesting
+0.01s setup    tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestVerifyClaudeBeforeUse::test_failed_verification
+24 passed in 96.38s (0:01:36)
+ECHO is off.
+ECHO is off.
+[4/6] GIT INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+67.17s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_commit_workflows
+59.33s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_file_modification_detection_workflow
+59.06s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_multiple_commit_cycles
+58.82s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_commit_message_variations_workflow
+58.52s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_complete_workflow
+48.44s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_integration_with_existing_functions
+46.99s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_empty_to_populated_repository_workflow
+46.72s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_file_tracking_status_workflow
+46.62s call     tests/utils/test_git_error_cases.py::TestGitErrorCases::test_concurrent_access_simulation
+43.54s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_staged_vs_unstaged_changes_workflow
+39.13s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_complete_project_lifecycle_workflow
+38.64s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_unicode_and_binary_files
+37.30s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_performance_basic
+35.28s call     tests/utils/test_git_workflows.py::TestGitBranchOperations::test_branch_exists_multiple_branches
+32.99s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_cross_platform_paths
+31.67s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_mixed_file_operations_workflow
+30.62s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_staging_specific_files_workflow
+30.51s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_is_working_directory_clean
+30.04s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_modify_existing_files_workflow
+29.76s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_incremental_staging_workflow
+170 passed in 108.52s (0:01:48)
+ECHO is off.
+ECHO is off.
+[5/6] FORMATTER INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+13.13s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase
+8.23s call     tests/formatters/test_integration.py::TestAnalysisBasedScenarios::test_configuration_conflicts_from_analysis
+7.06s call     tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_error_resilience_mixed_scenarios
+6.47s call     tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_idempotent_behavior_no_changes_on_second_run
+5.83s call     tests/formatters/test_integration.py::TestQualityGatesValidation::test_formatter_target_directory_handling
+3.44s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function
+2.33s call     tests/formatters/test_integration.py::TestAnalysisBasedScenarios::test_step0_code_samples_from_analysis
+2.05s call     tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_complete_formatting_workflow_with_exit_codes
+2.02s call     tests/formatters/test_integration.py::TestQualityGatesValidation::test_individual_formatter_error_handling
+2.01s call     tests/formatters/test_main_api.py::TestAPIExportsAndImports::test_re_exports_work_from_init
+2.01s call     tests/formatters/test_integration.py::TestQualityGatesValidation::test_complete_tool_integration_workflow
+1.64s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_clean_code
+1.60s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_type_errors
+0.57s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_empty_directory
+0.08s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_invalid_directory
+0.03s call     tests/formatters/test_main_api.py::TestLineLengthConflictIntegration::test_format_code_shows_line_length_conflict_warning
+0.02s call     tests/formatters/test_config_reader.py::TestConfigReader::test_read_missing_configuration
+0.02s call     tests/formatters/test_config_reader.py::TestConfigReader::test_read_existing_configuration
+0.02s call     tests/formatters/test_utils.py::TestConfigReading::test_read_tool_config_with_missing_tool_section
+0.02s call     tests/formatters/test_utils.py::TestConfigReading::test_read_tool_config_with_existing_config
+38 passed in 28.09s
+ECHO is off.
+ECHO is off.
+[6/6] GITHUB INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+171.17s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+36.20s call     tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+15.50s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+11.78s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+11.67s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+11.34s setup    tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+11.21s setup    tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_error_handling_without_creating_issues
+9.79s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_manager_properties
+6.73s call     tests/utils/github_operations/test_github_utils.py::TestLabelsManagerIntegration::test_labels_manager_lifecycle
+6.10s setup    tests/utils/github_operations/test_github_utils.py::TestLabelsManagerIntegration::test_labels_manager_lifecycle
+3.60s call     tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_error_handling_without_creating_issues
+1.89s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_direct_instantiation
+1.89s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_validation_failures
+0.64s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_manager_properties
+0.15s teardown tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+0.14s teardown tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_manager_properties
+0.11s teardown tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+0.10s teardown tests/utils/github_operations/test_github_utils.py::TestLabelsManagerIntegration::test_labels_manager_lifecycle
+0.01s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_direct_instantiation
+0.01s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_validation_failures
+8 passed in 191.72s (0:03:11)
+ECHO is off.
+ECHO is off.
+======================================== 
+[FINAL] ALL TESTS (complete suite) 
+======================================== 
+============================ slowest 20 durations =============================
+167.28s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+94.62s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_interface_contracts
+76.75s call     tests/llm/providers/claude/test_claude_integration.py::TestEnvironmentVariablePropagation::test_env_vars_propagation
+70.60s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_basic_cli_api_integration
+63.53s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity
+42.61s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_staged_vs_unstaged_changes_workflow
+42.32s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_complete_project_lifecycle_workflow
+40.18s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_commit_message_variations_workflow
+39.55s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_integration_with_existing_functions
+37.54s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_is_working_directory_clean
+37.10s call     tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+35.03s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_cross_platform_paths
+32.49s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_complete_workflow
+31.06s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_get_git_diff_for_commit_with_untracked_files
+30.76s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_unicode_and_binary_files
+29.49s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_real_world_development_workflow
+28.02s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+27.28s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_staging_specific_files_workflow
+27.24s call     tests/utils/test_git_error_cases.py::TestGitErrorCases::test_concurrent_access_simulation
+27.19s call     tests/utils/test_git_workflows.py::TestGitWorkflows::test_mixed_file_operations_workflow
+1045 passed, 4 skipped in 319.55s (0:05:19)
+ECHO is off.
+ECHO is off.
+======================================== 
+Performance statistics collection complete! 
+Output saved to: docs\tests\performance_data\performance_stats_20251008_070010.txt 
+======================================== 

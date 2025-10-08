@@ -73,31 +73,9 @@ class TestCriticalPathIntegration:
         assert len(api_result) > 0
         assert "yes" in api_result.lower()
 
-    @pytest.mark.claude_api_integration
-    def test_interface_contracts(self) -> None:
-        """Test ask_llm vs prompt_llm return different types correctly."""
-        # Prepare environment variables for MCP servers
-        env_vars = prepare_llm_environment(Path.cwd())
-
-        # prompt_llm should return dict with metadata
-        dict_result = prompt_llm(
-            "Say hello", method="api", timeout=60, env_vars=env_vars
-        )
-        assert isinstance(dict_result, dict)
-        assert "text" in dict_result
-        assert "session_id" in dict_result
-        assert isinstance(dict_result["text"], str)
-        assert len(dict_result["text"]) > 0
-
-        # ask_llm should return string (just the text, no metadata)
-        text_result = ask_llm("Say hello", method="api", timeout=60, env_vars=env_vars)
-        assert isinstance(text_result, str)
-        assert len(text_result) > 0
-        # Note: Don't assert equality - these are separate API calls with non-deterministic responses
-
     @pytest.mark.claude_cli_integration
     def test_session_continuity(self) -> None:
-        """Test session management through the full stack."""
+        """Test session management through the full stack (CLI method)."""
         # Prepare environment variables for MCP servers
         env_vars = prepare_llm_environment(Path.cwd())
 
@@ -121,8 +99,34 @@ class TestCriticalPathIntegration:
         assert "elephant" in result2["text"].lower()
         assert result2["session_id"] == session_id
 
+    @pytest.mark.claude_api_integration
+    def test_session_continuity_api(self) -> None:
+        """Test session management through the full stack (API method)."""
+        # Prepare environment variables for MCP servers
+        env_vars = prepare_llm_environment(Path.cwd())
 
-# Session ID parameter handling is covered by the session continuity test above
+        # Use prompt_llm to test full response structure with API method
+        result1 = prompt_llm(
+            "Remember this: giraffe", method="api", timeout=60, env_vars=env_vars
+        )
+        assert "session_id" in result1
+        assert result1["session_id"] is not None
+        assert "text" in result1
+        session_id = result1["session_id"]
+
+        # Test session continuity with API method
+        result2 = prompt_llm(
+            "What animal did I tell you to remember?",
+            method="api",
+            session_id=session_id,
+            timeout=60,
+            env_vars=env_vars,
+        )
+        assert "giraffe" in result2["text"].lower()
+        assert result2["session_id"] == session_id
+
+
+# Session ID parameter handling is covered by the session continuity tests above
 # and the mocked tests remain as unit tests in other test files
 
 

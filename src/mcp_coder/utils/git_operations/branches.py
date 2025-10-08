@@ -356,3 +356,98 @@ def branch_exists(project_dir: Path, branch_name: str) -> bool:
     except Exception as e:
         logger.warning("Unexpected error checking branch existence: %s", e)
         return False
+
+
+def delete_branch(
+    branch_name: str,
+    project_dir: Path,
+    force: bool = False,
+    delete_remote: bool = False,
+) -> bool:
+    """Delete a git branch locally and optionally from remote.
+
+    Args:
+        branch_name: Name of the branch to delete
+        project_dir: Path to the project directory containing git repository
+        force: If True, force delete even if branch is not fully merged (default: False)
+        delete_remote: If True, also delete the branch from remote origin (default: False)
+
+    Returns:
+        True if branch was deleted successfully, False otherwise
+
+    Note:
+        - Cannot delete the currently active branch (will return False)
+        - With force=False, deletion fails if branch has unmerged changes
+        - With delete_remote=True, will attempt to delete from origin remote
+    """
+    logger.debug(
+        "Deleting branch '%s' in %s (force=%s, remote=%s)",
+        branch_name,
+        project_dir,
+        force,
+        delete_remote,
+    )
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    # Validate branch name
+    if not branch_name or not branch_name.strip():
+        logger.error("Branch name cannot be empty")
+        return False
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Check if branch exists
+            existing_branches = [branch.name for branch in repo.branches]
+            if branch_name not in existing_branches:
+                logger.debug("Branch '%s' does not exist locally", branch_name)
+                return False
+
+            # Cannot delete the currently active branch
+            try:
+                current_branch = repo.active_branch.name
+                if current_branch == branch_name:
+                    logger.error(
+                        "Cannot delete currently active branch '%s'", branch_name
+                    )
+                    return False
+            except TypeError:
+                # In detached HEAD state, can proceed
+                pass
+
+            # Delete local branch
+            try:
+                if force:
+                    repo.git.branch("-D", branch_name)
+                    logger.debug("Force deleted local branch '%s'", branch_name)
+                else:
+                    repo.git.branch("-d", branch_name)
+                    logger.debug("Deleted local branch '%s'", branch_name)
+            except GitCommandError as e:
+                logger.error("Failed to delete local branch '%s': %s", branch_name, e)
+                return False
+
+            # Delete remote branch if requested
+            if delete_remote:
+                try:
+                    if "origin" in [remote.name for remote in repo.remotes]:
+                        repo.git.push("origin", "--delete", branch_name)
+                        logger.debug("Deleted remote branch 'origin/%s'", branch_name)
+                    else:
+                        logger.debug("No origin remote found, skipping remote deletion")
+                except GitCommandError as e:
+                    # Remote branch might not exist or already deleted
+                    logger.debug("Could not delete remote branch: %s", e)
+                    # Don't fail the operation if remote deletion fails
+
+            logger.debug("Successfully deleted branch '%s'", branch_name)
+            return True
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error deleting branch: %s", e)
+        return False
+    except Exception as e:
+        logger.error("Unexpected error deleting branch: %s", e)
+        return False
