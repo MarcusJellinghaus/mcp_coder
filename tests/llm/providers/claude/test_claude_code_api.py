@@ -2,11 +2,11 @@
 """Tests for claude_code_api module."""
 
 import asyncio
-import platform
 import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from claude_code_sdk._errors import CLINotFoundError
 
 from mcp_coder.llm.providers.claude.claude_code_api import (
     ClaudeAPIError,
@@ -21,67 +21,60 @@ class TestCreateClaudeClient:
     """Test the _create_claude_client function."""
 
     @patch("mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions")
-    def test_create_claude_client_basic(self, mock_options_class: MagicMock) -> None:
-        """Test that _create_claude_client creates basic options."""
-        # Mock verification function - required on Linux/CI, helpful for isolation on Windows
-        with patch(
-            "mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use"
-        ) as mock_verify:
-            # Use platform-appropriate mock paths
-            if platform.system() == "Windows":
-                mock_path = "C:\\Users\\user\\.local\\bin\\claude.exe"
-            else:
-                mock_path = "/usr/local/bin/claude"
-
-            mock_verify.return_value = (True, mock_path, None)
-
-            mock_options = MagicMock()
-            mock_options_class.return_value = mock_options
-
-            result = _create_claude_client()
-
-            mock_verify.assert_called_once()
-            mock_options_class.assert_called_once_with(env={})
-            assert result == mock_options
-
     @patch("mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use")
-    def test_create_claude_client_verification_fails(
-        self, mock_verify: MagicMock
+    def test_create_claude_client_basic(
+        self, mock_verify: MagicMock, mock_options_class: MagicMock
     ) -> None:
-        """Test that _create_claude_client raises RuntimeError when verification fails."""
-        # Mock failed verification
+        """Test that _create_claude_client creates basic options WITHOUT preemptive verification."""
+        # Setup
+        mock_options = MagicMock()
+        mock_options_class.return_value = mock_options
+
+        # Execute
+        result = _create_claude_client()
+
+        # Verify
+        mock_verify.assert_not_called()
+        mock_options_class.assert_called_once_with(env={})
+        assert result == mock_options
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use")
+    def test_create_claude_client_sdk_failure_triggers_verification(
+        self, mock_verify: MagicMock, mock_options_class: MagicMock
+    ) -> None:
+        """Test that SDK failure triggers verification for diagnostics."""
+        # Setup - SDK raises CLINotFoundError
+        mock_options_class.side_effect = CLINotFoundError("Claude Code not found")
         mock_verify.return_value = (False, None, "Claude CLI not found")
 
+        # Execute & Verify
         with pytest.raises(
             RuntimeError, match="Claude CLI verification failed: Claude CLI not found"
         ):
             _create_claude_client()
 
+        mock_options_class.assert_called_once()
         mock_verify.assert_called_once()
 
     @patch("mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions")
-    def test_create_claude_client_with_env(self, mock_options_class: MagicMock) -> None:
-        """Test that _create_claude_client passes env to ClaudeCodeOptions."""
-        # Mock verification function
-        with patch(
-            "mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use"
-        ) as mock_verify:
-            if platform.system() == "Windows":
-                mock_path = "C:\\Users\\user\\.local\\bin\\claude.exe"
-            else:
-                mock_path = "/usr/local/bin/claude"
+    @patch("mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use")
+    def test_create_claude_client_with_env(
+        self, mock_verify: MagicMock, mock_options_class: MagicMock
+    ) -> None:
+        """Test that _create_claude_client passes env WITHOUT preemptive verification."""
+        # Setup
+        mock_options = MagicMock()
+        mock_options_class.return_value = mock_options
+        env_vars = {"MCP_CODER_PROJECT_DIR": "/test/project"}
 
-            mock_verify.return_value = (True, mock_path, None)
+        # Execute
+        result = _create_claude_client(env=env_vars)
 
-            mock_options = MagicMock()
-            mock_options_class.return_value = mock_options
-
-            env_vars = {"MCP_CODER_PROJECT_DIR": "/test/project"}
-            result = _create_claude_client(env=env_vars)
-
-            mock_verify.assert_called_once()
-            mock_options_class.assert_called_once_with(env=env_vars)
-            assert result == mock_options
+        # Verify
+        mock_verify.assert_not_called()
+        mock_options_class.assert_called_once_with(env=env_vars)
+        assert result == mock_options
 
 
 class TestAskClaudeCodeApiAsync:
