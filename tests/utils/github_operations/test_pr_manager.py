@@ -43,7 +43,9 @@ class TestPullRequestManagerUnit:
 
         with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
             mock_config.return_value = "dummy-token"  # Provide token to pass that check
-            with pytest.raises(ValueError, match="Could not detect GitHub repository URL"):
+            with pytest.raises(
+                ValueError, match="Could not detect GitHub repository URL"
+            ):
                 PullRequestManager(git_dir)
 
     def test_initialization_requires_github_token(self, tmp_path: Path) -> None:
