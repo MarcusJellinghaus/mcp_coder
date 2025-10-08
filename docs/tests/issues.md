@@ -3,248 +3,302 @@
 ## Overview
 This document tracks test performance issues that require human review and action items for test optimization.
 
+## 🚨 CRITICAL ALERTS - IMMEDIATE ACTION REQUIRED
+
+### Performance Regression Alert (2025-10-07 10:39:17)
+**Status**: 🚨 CRITICAL - Major performance degradation detected  
+**Overall Impact**: Test suite 49% slower (198.79s → 295.20s)  
+**Affected Categories**: Git Integration, MyPy, Claude Integration, Unit Tests  
+**Suspected Cause**: Environmental changes, branch differences, or code changes on `various_changes` branch
+
 ## Active Issues
 
-### 🎉 MAJOR PERFORMANCE MILESTONE ACHIEVED
+### PRIORITY 1 - Unit Test Performance (🚨 NEW VIOLATIONS)
 
-**Latest Update (2025-10-05 12:07:21)**: Test suite performance improved by **76%** overall
-- **Total execution time**: 849.10s → 198.79s (saving ~11 minutes)
-- **Test count optimized**: 1,034 → 1,018 tests (eliminated 16 redundant tests)
-- **Failures reduced**: 15 → 7 failures (53% improvement)
-- **Critical violations eliminated**: 47 → 3 tests exceeding critical thresholds (94% reduction)
+#### Issue #006: Unit Test Violations - Task Processing Tests (✅ DOCUMENTED AS FALSE POSITIVE)
+**Status**: ✅ ACCEPTED - pytest-xdist parallelization overhead (Option 3)  
+**Impact**: Low - Tests are actually fast (0.08s), parallel execution causes random artificial slowdown  
+**Tests Affected**: Any test in `tests/workflows/implement/test_task_processing.py::TestProcessSingleTask` (non-deterministic)
 
-### PRIORITY 1 - Unit Test Performance (✅ FULLY RESOLVED)
+**Investigation Results (2025-10-07)**:
+- **With parallelization** (`-n auto`): 0.2-5.2s (random, varies by run)
+- **Without parallelization** (`-n0`): 0.08-0.09s (consistent) ✅
+- **Root Cause**: pytest-xdist worker overhead with 10 nested mock patches
+- **Randomness**: Different test(s) appear slow on each run (non-deterministic worker scheduling)
 
-#### Issue #001: Unit Test Performance Violations
-**Status**: ✅ FULLY RESOLVED  
-**Impact**: Excellent - All unit test violations eliminated, **10.07s total** execution time
-**Tests Affected**: 0 violations (all resolved)
+**Why This Happens**:
+- Tests use 10 nested `@patch` decorators
+- pytest-xdist workers have serialization/contention overhead for heavily mocked tests
+- Module import/reload contention between parallel workers
+- Mock object serialization between workers
+- Worker scheduling determines which test(s) bear the overhead (random)
 
-**Latest Verification (2025-10-05 12:07:21)**:
-- ✅ `test_timeout_handling` now runs in **0.29s** (excellent performance, well under 1.0s threshold)
-- ✅ All 755 unit tests pass in 10.07s total
-- ✅ Only 4 tests failed across entire unit test suite
-- ✅ Test functionality fully preserved
+**Why Slowness Appears Random**:
+- **Run 1**: `test_process_single_task_success` + `_formatters_fail` → 5.15s + 5.12s
+- **Run 2**: `test_process_single_task_llm_error` → 5.18s
+- **Run 3**: All tests moderately slow → 0.2-0.3s each
+- **Pattern**: Overhead distributed randomly across tests based on worker contention
 
-### PRIORITY 2 - Git Integration Test Performance (🟡 SUBSTANTIALLY IMPROVED)
+**Decision: Option 3 - Accept and Document**
 
-#### Issue #002: Git Workflow Tests Performance Optimization
-**Status**: 🟡 Substantially Improved  
-**Impact**: Reduced - Tests now taking 12-32s each (avg 20s), down from 60-135s  
-**Total Impact**: 64.92s for git tests (down from ~30 minutes)  
+**Rationale**:
+- Overhead is **non-deterministic** (can't predict which test will be slow)
+- Tests are **actually fast** (0.08s serially)
+- Fixing adds complexity for minimal benefit
+- **Documentation educates reviewers** about false positives
+
+**Documentation Strategy**:
+- ✅ Added section to `runtime_statistics_review_process.md` explaining pattern
+- ✅ Registry entries note: `- **pytest-xdist overhead, actually 0.08s**`
+- ✅ This issue documents the investigation for future reference
+- No code changes required
+
+**For Future Reviews**:
+- When seeing TestProcessSingleTask tests >1s, verify with `pytest -n0`
+- Document as false positive if serial execution is <0.2s
+- Pattern: Heavy mocking (8+ patches) + parallel execution = random overhead
+
+---
+
+### PRIORITY 2 - Git Integration Test Performance (🚨 MASSIVE REGRESSIONS)
+
+#### Issue #007: Git Integration Tests - Catastrophic Performance Regression
+**Status**: 🚨 CRITICAL EMERGENCY  
+**Impact**: SEVERE - 14 tests regressed >50%, average regression 128%  
+**Total Impact**: Git tests now taking 96.66s (was 64.92s, +49% regression)  
 **Primary File**: `tests/utils/test_git_workflows.py`
 
-**Current Performance (2025-10-05 12:07:21)**:
-1. `test_get_git_diff_complete_workflow` - **32.17s** (was 105.46s) - ✅ 69% improvement
-2. `test_git_status_consistency_workflow` - **29.29s** (was 129.30s) - ✅ 77% improvement
-3. `test_real_world_development_workflow` - **28.22s** (was 99.96s) - ✅ 72% improvement
-4. `test_file_tracking_status_workflow` - **28.16s** (was 88.13s) - ✅ 68% improvement
-5. `test_commit_workflows` - **24.77s** (was 107.08s) - ✅ 77% improvement
+**EXTREME Regressions (>150% slower)**:
+1. `test_file_modification_detection_workflow` - **52.49s** (was 17.26s) - 🚨 +204% CATASTROPHIC
+2. `test_empty_to_populated_repository_workflow` - **52.30s** (was 17.32s) - 🚨 +202% CATASTROPHIC
+3. `test_complete_project_lifecycle_workflow` - **42.46s** (was 14.62s) - 🚨 +190% CATASTROPHIC
+4. `test_staged_vs_unstaged_changes_workflow` - **38.76s** (was 13.52s) - 🚨 +187% CATASTROPHIC
 
-**Additional Optimized Tests**:
-- `tests/utils/test_git_error_cases.py::TestGitErrorCases::test_unicode_edge_cases` - **16.52s** (was 59.91s) - ✅ 72% improvement
+**CRITICAL Regressions (>50% slower)**:
+5. `test_git_status_consistency_workflow` - **61.44s** (was 29.29s) - +110%
+6. `test_get_git_diff_performance_basic` - **32.58s** (was 15.72s) - +107%
+7. `test_get_git_diff_complete_workflow` - **65.51s** (was 32.17s) - +104%
+8. `test_commit_workflows` - **50.10s** (was 24.77s) - +102%
+9. `test_get_git_diff_integration_with_existing_functions` - **32.04s** (was 23.00s) - +101%
+10. `test_get_git_diff_for_commit_with_untracked_files` - **42.31s** (was 21.31s) - +99%
+11. `test_incremental_staging_workflow` - **34.67s** (was 17.61s) - +97%
+12. `test_commit_message_variations_workflow` - **43.85s** (was 22.50s) - +95%
+13. `test_unicode_and_binary_files` - **38.99s** (was 20.57s) - +90%
+14. `test_real_world_development_workflow` - **48.30s** (was 28.22s) - +71%
 
-**Optimization Analysis**:
-- **Average improvement**: 78% runtime reduction across all git tests
-- **All tests now under 35s** (previously up to 135s)
-- **Total git test time**: 64.92s (down from 30+ minutes)
-- **Root cause addressed**: Likely improved git operation efficiency and reduced I/O overhead
+**Environmental Factors to Investigate**:
+1. **Branch Differences**: Tests run on `various_changes` vs previous `103-commit-auto-review`
+   - Check for code changes in git_operations modules
+   - Review any new git configuration or initialization code
+2. **Disk I/O Performance**:
+   - Network drive vs local SSD
+   - Antivirus real-time scanning interference
+   - Windows Defender exclusions missing
+3. **Git Configuration**:
+   - Git version differences
+   - Global git config changes (core.autocrlf, core.safecrlf, etc.)
+   - Temporary directory location (RAM disk vs HDD)
+4. **Test Infrastructure**:
+   - Temporary file cleanup delays
+   - Git garbage collection running during tests
+   - Parallel execution conflicts
 
-**Remaining Actions**:
-1. **Monitor**: Continue tracking for potential regression
-2. **Optional**: Consider further optimization to get tests under 15s threshold
-3. **Documentation**: Update git integration test markers if not already done
+**IMMEDIATE Actions Required**:
+- [ ] **URGENT**: Compare code on `various_changes` vs `103-commit-auto-review` for git_operations changes
+- [ ] **URGENT**: Run single git test in isolation to verify if regression is consistent or environmental
+- [ ] Check git version: `git --version`
+- [ ] Check disk I/O performance: `winsat disk` or manual file copy test
+- [ ] Review Windows Defender exclusions for project directory
+- [ ] Check if tests are running on network drive vs local drive
+- [ ] Profile a single slow test to identify bottleneck: `pytest -vv --durations=0 tests/utils/test_git_workflows.py::TestGitWorkflows::test_file_modification_detection_workflow`
 
-### PRIORITY 3 - Formatter Integration Optimization (✅ DRAMATICALLY IMPROVED)
+**Medium-term Actions**:
+- [ ] Add performance regression detection to CI
+- [ ] Set up automated alerts for >25% performance degradation
+- [ ] Consider test architecture refactoring if real I/O is bottleneck
 
-#### Issue #003: MyPy Integration Tests Resource Optimization
-**Status**: ✅ Dramatically Improved  
-**Impact**: Minimal - Only 1 test >8s (down from 12 tests)  
-**Total Impact**: 19.13s for formatter tests (down from 200s+)
+---
 
-**Current Performance (2025-10-05 12:07:21)**:
+### PRIORITY 3 - Formatter Integration Regression (🚨 CATASTROPHIC)
 
-**MyPy Integration Tests - MASSIVE IMPROVEMENT**:
-- `tests/test_mcp_code_checker_integration.py::TestMypyIntegration`:
-  - `test_has_mypy_errors_convenience_function` - **9.57s** (was 37.32s) - ✅ 74% improvement
-  - `test_mypy_check_on_actual_codebase` - **7.47s** (was 34.10s) - ✅ 78% improvement
-  - `test_mypy_check_clean_code` - **~2s** (was 26.30s) - ✅ 92% improvement
-  - `test_mypy_check_with_type_errors` - **~2s** (was 23.05s) - ✅ 91% improvement
-
-**Formatter Integration Tests - EXCELLENT OPTIMIZATION**:
-- `tests/formatters/test_integration.py`:
-  - `test_configuration_conflicts_from_analysis` - **2.28s** (was 33.62s) - ✅ 93% improvement
-  - `test_error_resilience_mixed_scenarios` - **5.97s** (was 15.85s) - ✅ 62% improvement
-  - All other tests now <1s (were 8-15s)
-
-**Optimization Analysis**:
-- **Overall improvement**: 92% violation reduction (12 tests >8s → 1 test >8s)
-- **MyPy performance**: 74-92% improvement across all mypy tests
-- **Total formatter time**: 19.13s (down from 200s+ previously)
-- **Root causes addressed**: Likely improved mypy caching and reduced codebase analysis scope
-
-**Current Status**: ✅ **EXCELLENT** - Only minor monitoring needed
-
-### PRIORITY 4 - External Integration Test Optimization (✅ STREAMLINED)
-
-#### Issue #004: Claude CLI/API Integration Tests
-**Status**: ✅ Successfully Streamlined  
-**Impact**: Minimal - Consolidated from 12+ tests to 3 critical path tests  
-**Total Impact**: ~108s for Claude tests (down from 900+ seconds)
-
-**Current Performance (2025-10-05 12:07:21)**:
-- `tests/llm/providers/claude/test_claude_integration.py`:
-  - `TestCriticalPathIntegration::test_session_continuity` - **58.08s** (covers CLI+API session management)
-  - `TestCriticalPathIntegration::test_basic_cli_api_integration` - **49.96s** (covers both CLI and API paths)
-  - `TestCriticalPathIntegration::test_interface_contracts` - **53.98s** (covers interface validation)
-
-**Optimization Analysis**:
-- **Test consolidation**: 12+ redundant tests → 3 critical path tests
-- **Runtime improvement**: 88% reduction (900s → 108s)
-- **Coverage maintained**: All critical paths still tested
-- **Architecture improvement**: Focus on failure modes rather than redundant happy paths
-
-**Eliminated Redundant Tests** (✅ Successfully removed):
-- Multiple CLI/API question tests (consolidated into basic integration)
-- Redundant session management tests (consolidated into session continuity)
-- CLI verification tests (removed from critical path)
-- Cost tracking tests (removed as non-critical business feature)
-
-**Current Status**: ✅ **EXCELLENT** - Streamlined and efficient
-
-#### Issue #005: GitHub Integration Tests (🟡 STABLE)
-**Status**: 🟡 Stable Performance  
-**Impact**: Medium - API rate limiting, but stable timing  
-**Total Impact**: 150.94s for GitHub tests (consistent with previous runs)
-
-**Current Performance (2025-10-05 12:07:21)**:
-- `tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters` - **134.53s** (was 138.35s) - ✅ 3% improvement
-- `tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow` - **37.35s** (was 41.08s) - ✅ 9% improvement
-- `tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle` - **11.94s** (was 38.96s) - ✅ 69% improvement
+#### Issue #008: MyPy Test Catastrophic Performance Regression
+**Status**: 🚨 CRITICAL EMERGENCY  
+**Impact**: EXTREME - Single test regressed 319% (7.47s → 31.28s)  
+**Test Affected**: `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase`
 
 **Performance Analysis**:
-- **Overall improvement**: Modest but consistent (3-69% improvements)
-- **External API dependency**: Performance largely determined by GitHub API response times
-- **No regression**: Stable performance maintained
-- **Total GitHub time**: 150.94s (acceptable for external API tests)
+- **Previous**: 7.47s (acceptable, slightly above warning)
+- **Current**: 31.28s (3.9x critical threshold of 8.0s)
+- **Regression**: +319% (more than 4x slower) 🚨
 
-**Current Status**: 🟡 **ACCEPTABLE** - External API performance within expected range
+**Suspected Causes**:
+1. **Codebase Growth**: New files or modules added on `various_changes` branch
+2. **MyPy Cache Invalidation**: Cache cleared or moved
+3. **Type Stub Changes**: New dependencies with complex type stubs
+4. **MyPy Configuration**: Stricter settings or new checks enabled
+5. **Import Graph Changes**: New circular dependencies or complex imports
+
+**IMMEDIATE Actions Required**:
+- [ ] **URGENT**: Compare file count and LOC between branches: `git diff --stat 103-commit-auto-review...various_changes`
+- [ ] **URGENT**: Check MyPy cache location and validity
+- [ ] Run MyPy manually to see timing breakdown: `mypy --verbose src/`
+- [ ] Check for new dependencies: `git diff pyproject.toml`
+- [ ] Review MyPy configuration changes: `git diff pyproject.toml` (mypy section)
+
+**Medium-term Actions**:
+- [ ] Implement MyPy cache warming in test setup
+- [ ] Consider splitting into smaller MyPy test scopes
+- [ ] Add MyPy performance metrics to CI dashboard
+
+---
+
+### PRIORITY 4 - Claude Integration Test Regressions (⚠️ SIGNIFICANT)
+
+#### Issue #009: Claude Integration Tests Performance Degradation
+**Status**: ⚠️ SIGNIFICANT - 22-62% slower  
+**Impact**: Medium - Tests now taking 70-81s (were 50-58s)  
+**Tests Affected**: 3 tests in `tests/llm/providers/claude/test_claude_integration.py`
+
+**Current Performance (2025-10-07 10:39:17)**:
+- `test_basic_cli_api_integration` - **80.72s** (was 49.96s) - +62% regression
+- `test_interface_contracts` - **79.57s** (was 53.98s) - +47% regression
+- `test_session_continuity` - **70.63s** (was 58.08s) - +22% regression
+
+**Suspected Causes**:
+1. **Network Latency**: Slower API response times
+2. **Timeout Values**: Increased wait times in tests
+3. **Test Scope Expansion**: Additional validations added
+4. **Claude CLI Updates**: Newer version with different performance characteristics
+
+**Recommended Actions**:
+- [ ] Check Claude CLI version: `claude --version`
+- [ ] Monitor API response times during test execution
+- [ ] Review test code for new validations or operations
+- [ ] Consider mocking more API interactions if appropriate
+
+---
+
+### PRIORITY 5 - GitHub Integration Tests (🟡 MINOR REGRESSION)
+
+#### Issue #010: GitHub API Test Performance Degradation
+**Status**: 🟡 MINOR - 26% slower (borderline significant)  
+**Impact**: Low - External API performance, acceptable variation  
+**Test Affected**: `tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters`
+
+**Performance Analysis**:
+- **Previous**: 134.53s
+- **Current**: 168.97s
+- **Regression**: +26% (borderline threshold for action)
+
+**Suspected Causes**:
+1. **GitHub API Rate Limiting**: Slower responses near rate limit
+2. **Network Conditions**: Internet latency variation
+3. **Test Data Growth**: More PRs to filter through
+
+**Current Status**: 🟡 **MONITOR** - External API dependency, acceptable variation for now
+
+**Recommended Actions**:
+- [ ] Monitor trend over next 3 runs to see if regression is consistent
+- [ ] Review GitHub API rate limit status during test runs
+- [ ] Consider adding timeout guards if trend continues
+
+---
+
+## ✅ Recent Improvements
+
+### Issue #011: MyPy Convenience Function Test - IMPROVED
+**Status**: ✅ RESOLVED - 63% faster  
+**Impact**: Positive - Test now 3.56s (was 9.57s)  
+**Test**: `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function`
+
+**Performance Analysis**:
+- **Previous**: 9.57s (above critical threshold)
+- **Current**: 3.56s (above warning, below critical)
+- **Improvement**: -63% faster ✅
+
+**Note**: Still above 3.0s warning threshold for formatters, but significant improvement
+
+---
 
 ## Review Queue
 
-### Tests Requiring Immediate Review
-1. **Git workflow tests** - `tests/utils/test_git_workflows.py` (entire TestGitWorkflows class) - **HIGHEST PRIORITY**
-2. **MyPy integration tests** - `tests/test_mcp_code_checker_integration.py` (TestMypyIntegration class) - **HIGH PRIORITY**
-3. **~~Unit Tests >1s~~** - ~~Stale data removed, no critical unit test violations remain~~
+### Tests Requiring Immediate Investigation (URGENT)
+1. **🚨 PRIORITY 1**: All git workflow tests in `tests/utils/test_git_workflows.py` - CATASTROPHIC REGRESSIONS
+2. **🚨 PRIORITY 2**: `test_mypy_check_on_actual_codebase` - 319% regression
+3. **🚨 PRIORITY 3**: Task processing unit tests - NEW violations (5x threshold)
+4. **⚠️ PRIORITY 4**: Claude integration tests - Significant regressions
 
-### Tests for Future Optimization
-1. GitHub integration tests - `tests/utils/github_operations/test_github_utils.py`
-2. Formatter integration tests - `tests/formatters/test_integration.py`
+### Tests for Future Optimization (Lower Priority)
+1. GitHub integration tests - Monitor for continued regression
+2. Formatter integration tests (other than MyPy) - Stable performance
 
-## Completed Actions
+---
 
-### ✅ MINOR: Unit Test Timeout Optimization (October 2025)
-**Issue**: Issue #001 - Unit Test Performance Violations  
-**Action Taken**: Optimized timeout test by reducing sleep duration and timeout values  
-**File Modified**: `tests/llm/providers/claude/test_claude_code_api.py`
+## Performance Comparison Summary
 
-**Changes Made**:
-- Reduced `asyncio.sleep()` from 2.0s to 0.6s (70% reduction)
-- Reduced timeout from 1.0s to 0.3s (70% reduction)
-- Maintained 2:1 ratio for reliable timeout testing
+### Current Run (2025-10-07 10:39:17)
+- **Total Tests**: 1,049 (1,045 passed, 4 skipped)
+- **Total Time**: 295.20s (4:55)
+- **Branch**: various_changes
+- **Critical Violations**: 48 tests
 
-**Performance Impact**:
-- **Before**: `test_timeout_handling` - **1.06s** (exceeded 1.0s threshold)
-- **After**: `test_timeout_handling` - **~0.4s** (well under 1.0s threshold)
-- **Improvement**: ~62% runtime reduction while preserving test functionality
+### Previous Run (2025-10-05 12:07:21)
+- **Total Tests**: 1,018 (1,007 passed, 4 skipped, 7 failed)
+- **Total Time**: 198.79s (3:19)
+- **Branch**: 103-commit-auto-review
+- **Critical Violations**: 47 tests
 
-**Test Coverage Maintained**:
-- ✅ Timeout behavior verification
-- ✅ Exception handling validation
-- ✅ Error message assertion
-- ✅ Mock interaction testing
+### Performance Delta
+- **Overall Regression**: +49% slower (+96.41s)
+- **New Violations**: +1 test (unit tests)
+- **Test Count Change**: +31 tests (possibly added on various_changes branch)
 
-### ✅ CRITICAL: Git Integration Test Markers Added (October 2025)
-**Issue**: Issue #002 - Git Workflow Tests Extremely Slow  
-**Action Taken**: Added `@pytest.mark.git_integration` markers to all slow git workflow tests  
-**Files Modified**:
-- `tests/utils/test_git_workflows.py` - Added markers to 5 critical slow tests in TestGitWorkflows class
-- `tests/utils/test_git_error_cases.py` - Added marker to concurrent access simulation test
+---
 
-**Tests Marked** (all >60 seconds):
-- `test_commit_message_variations_workflow` - **135.89s**
-- `test_git_status_consistency_workflow` - **129.30s**  
-- `test_commit_workflows` - **107.08s**
-- `test_get_git_diff_integration_with_existing_functions` - **106.81s**
-- `test_empty_to_populated_repository_workflow` - **106.46s**
-- `test_concurrent_access_simulation` - **59.91s**
+## Root Cause Investigation Plan
 
-**Usage Impact**:
-- **Fast CI runs**: Use `-m "not git_integration"` to exclude these slow tests
-- **Git-specific testing**: Use `-m "git_integration"` to run only git integration tests
-- **Development workflow**: Developers can now easily skip slow git tests during rapid iteration
+### Immediate Investigation (Today)
+1. **Compare Branches**:
+   ```bash
+   git diff --stat 103-commit-auto-review...various_changes
+   git log --oneline 103-commit-auto-review...various_changes
+   ```
 
-**Performance Benefit**: Allows CI and development workflows to exclude ~30 minutes of git integration tests when not needed.
+2. **Check Environment**:
+   - Git version: `git --version`
+   - Python version: `python --version`
+   - MyPy version: `mypy --version`
+   - Claude CLI version: `claude --version`
+   - Disk type (SSD vs HDD): Check in File Explorer
 
-### ✅ MAJOR: Claude Integration Test Streamlining (October 2025)
-**Issue**: Issue #004 - Claude CLI/API Integration Tests  
-**Action Taken**: Consolidated 12+ redundant integration tests into 3 critical path tests  
-**Files Modified**:
-- `tests/llm/providers/claude/test_claude_integration.py` - Replaced multiple test classes with `TestCriticalPathIntegration`
-- `tests/llm/providers/claude/test_claude_executable_finder.py` - Removed `TestIntegration` class
-- `tests/llm/test_interface.py` - Removed redundant real integration test classes
+3. **Run Isolated Tests**:
+   ```bash
+   # Single git test to verify regression
+   pytest -vv tests/utils/test_git_workflows.py::TestGitWorkflows::test_file_modification_detection_workflow
+   
+   # Single mypy test with verbose output
+   pytest -vv tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase
+   ```
 
-**Performance Impact**:
-- **Before**: 12+ tests, ~900+ seconds (~15+ minutes)
-- **After**: 3 tests, ~90 seconds (~1.5 minutes)
-- **Improvement**: 87% runtime reduction
+4. **Profile Slowest Test**:
+   ```bash
+   # Add profiling to identify bottleneck
+   pytest --profile tests/utils/test_git_workflows.py::TestGitWorkflows::test_file_modification_detection_workflow
+   ```
 
-**Coverage Maintained**:
-- ✅ CLI integration path testing
-- ✅ API integration path testing  
-- ✅ Session continuity workflow
-- ✅ Interface contract validation
-- ✅ Error propagation through function call tree
+### Short-term Actions (This Week)
+1. Review code changes on `various_changes` branch that might affect performance
+2. Add performance regression detection to CI pipeline
+3. Document environmental differences between test runs
+4. Consider reverting recent changes if no environmental cause found
 
-**Strategy Applied**: Critical path testing - focused on testing different failure modes at each layer instead of redundant happy path testing
+### Long-term Actions (Next Sprint)
+1. Implement automated performance monitoring and alerting
+2. Add performance budgets to CI (fail if >25% regression)
+3. Set up test performance dashboard
+4. Regular performance review cadence (weekly)
 
-**Tests Removed** (no longer needed):
-- `test_simple_cli_question`, `test_simple_api_question` - Consolidated into `test_basic_cli_api_integration`
-- `test_cli_with_session`, `test_api_with_session`, `test_*_session_continuity_real` - Consolidated into `test_session_continuity`
-- `test_api_basic_call_without_session` - Covered by `test_interface_contracts`
-- `test_api_cost_tracking` - Removed (business feature, not critical path)
-- `test_real_verification` - Removed (installation verification not critical path)
-- `test_ask_llm_*_paris_question` - Redundant with basic integration tests
-- Various CLI verification tests - May have been removed during optimization
-
-**Tests Added** (streamlined):
-- `test_basic_cli_api_integration` - Both CLI and API paths in one test
-- `test_interface_contracts` - ask_llm vs prompt_llm return type validation
-- `test_session_continuity` - Session management through full stack
-
-## Performance Optimization Strategies
-
-### Immediate Actions (This Sprint)
-1. **Focus on real performance bottlenecks**:
-   - Git workflow tests (60-135s each) in `tests/utils/test_git_workflows.py`
-   - MyPy integration tests (26-37s each) in `tests/test_mcp_code_checker_integration.py`
-   - ~~Unit test violations resolved~~ (stale data removed)
-
-2. **Add pytest markers** to slow tests in:
-   - `tests/utils/test_git_workflows.py` (entire TestGitWorkflows class)
-   - `tests/test_mcp_code_checker_integration.py`
-
-3. **Implement basic mocking** for git operations in unit tests
-
-### Short-term Actions (Next Sprint)
-1. **Optimize git integration test architecture** in `tests/utils/test_git_workflows.py`
-2. **Implement mypy result caching** for `tests/test_mcp_code_checker_integration.py`
-3. **Add CI configuration** to run slow tests separately
-
-### Long-term Actions (Next Quarter)
-1. **Comprehensive test architecture review** across all test files
-2. **Performance regression testing** in CI
-3. **Automated performance monitoring** and alerting
+---
 
 ## Process Notes
 - Issues are automatically detected and added by the runtime statistics review process
@@ -255,7 +309,9 @@ This document tracks test performance issues that require human review and actio
 - Performance thresholds may need adjustment based on infrastructure capabilities
 
 ## Monitoring Recommendations
-1. Set up automated performance regression detection
-2. Add performance metrics to CI/CD pipeline
-3. Create alerts for tests exceeding 2x normal execution time
-4. Regular review of test execution patterns and bottlenecks
+1. **URGENT**: Set up automated performance regression detection (>25% threshold)
+2. **URGENT**: Add performance alerts to CI/CD pipeline  
+3. **URGENT**: Create performance baseline for each branch
+4. Compare performance between branches before merging
+5. Document environmental factors (disk type, git version, etc.)
+6. Regular review of test execution patterns and bottlenecks
