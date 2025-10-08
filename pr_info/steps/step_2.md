@@ -61,6 +61,7 @@ def _create_claude_client(...) -> ClaudeCodeOptions:
     try:
         # ✅ NEW: Try SDK first (SDK validates internally)
         if session_id:
+            logger.debug(f"Resuming session: {session_id}")
             return ClaudeCodeOptions(resume=session_id, env=env or {})
         else:
             return ClaudeCodeOptions(env=env or {})
@@ -71,10 +72,18 @@ def _create_claude_client(...) -> ClaudeCodeOptions:
         success, claude_path, error_msg = _verify_claude_before_use()
         
         if not success:
-            raise RuntimeError(f"Claude CLI verification failed: {error_msg}") from e
+            # Enhanced error with both SDK and verification messages
+            enhanced_msg = f"Claude CLI verification failed: {error_msg}\nSDK error: {str(e)}"
+            logger.error("Verification failed: %s", error_msg)
+            raise RuntimeError(enhanced_msg) from e
         
-        # If verification passed but SDK still failed, re-raise original error
-        raise
+        # Verification passed but SDK failed - raise with both messages
+        logger.warning(
+            "Unexpected: verification succeeded at %s but SDK failed: %s",
+            claude_path, str(e)
+        )
+        enhanced_msg = f"SDK failed despite verification passing at {claude_path}. SDK error: {str(e)}"
+        raise RuntimeError(enhanced_msg) from e
 ```
 
 ## HOW: Integration Points
@@ -116,31 +125,22 @@ except CLINotFoundError as e:
     raise  # Re-raise if verification unexpectedly passed
 ```
 
-## ALGORITHM: Core Logic Pseudocode
+## Core Logic
 
 ```python
-def _create_claude_client(session_id=None, env=None):
-    # 1. Log start
-    LOG("Creating Claude Code SDK client")
+# Try SDK first (fast path)
+try:
+    return ClaudeCodeOptions(resume=session_id, env=env or {})
+
+# On failure: run verification for diagnostics
+except CLINotFoundError as e:
+    success, path, error = _verify_claude_before_use()
     
-    # 2. Try SDK first (optimistic execution)
-    TRY:
-        IF session_id:
-            RETURN ClaudeCodeOptions(resume=session_id, env=env or {})
-        ELSE:
-            RETURN ClaudeCodeOptions(env=env or {})
-    
-    # 3. On SDK failure, verify for diagnostics
-    CATCH CLINotFoundError as sdk_error:
-        LOG_ERROR("SDK failed to find Claude CLI")
-        success, path, error = _verify_claude_before_use()
-        
-        # 4. Raise helpful error with verification context
-        IF NOT success:
-            RAISE RuntimeError(f"Claude CLI verification failed: {error}") FROM sdk_error
-        
-        # 5. If verification passed but SDK failed, re-raise
-        RAISE sdk_error  # Unexpected: verification passed but SDK failed
+    # Raise enhanced error with both SDK + verification details
+    if not success:
+        raise RuntimeError(f"Verification failed: {error}\nSDK: {e}") from e
+    else:
+        raise RuntimeError(f"Verification passed at {path} but SDK failed: {e}") from e
 ```
 
 ## DATA: Input/Output Specifications
@@ -222,16 +222,18 @@ def _create_claude_client(
         success, claude_path, error_msg = _verify_claude_before_use()
         
         if not success:
-            logger.error("Claude verification failed: %s", error_msg)
-            raise RuntimeError(f"Claude CLI verification failed: {error_msg}") from e
+            # Enhanced error with both SDK and verification messages
+            enhanced_msg = f"Claude CLI verification failed: {error_msg}\nSDK error: {str(e)}"
+            logger.error("Verification failed: %s", error_msg)
+            raise RuntimeError(enhanced_msg) from e
         
-        # Edge case: verification passed but SDK failed
-        # This shouldn't happen, but if it does, re-raise SDK error
+        # Verification passed but SDK failed - raise with both messages
         logger.warning(
-            "Unexpected: verification succeeded at %s but SDK still failed",
-            claude_path
+            "Unexpected: verification succeeded at %s but SDK failed: %s",
+            claude_path, str(e)
         )
-        raise
+        enhanced_msg = f"SDK failed despite verification passing at {claude_path}. SDK error: {str(e)}"
+        raise RuntimeError(enhanced_msg) from e
 ```
 
 ### Detailed Change Summary

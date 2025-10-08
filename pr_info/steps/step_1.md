@@ -57,129 +57,31 @@ def test_create_claude_client_with_env(self, mock_options_class: MagicMock) -> N
     """Test that _create_claude_client passes env WITHOUT preemptive verification."""
 ```
 
-### 4. Add New Test: `test_create_claude_client_lazy_verification`
-**New Test**: Verifies lazy verification behavior explicitly
 
-**Function Signature**:
+
+## Core Test Logic
+
 ```python
-def test_create_claude_client_lazy_verification(
-    self, mock_options_class: MagicMock
-) -> None:
-    """Test that verification only runs when SDK raises CLINotFoundError."""
-```
-
-## HOW: Integration Points
-
-### Imports (no changes needed)
-```python
-from unittest.mock import MagicMock, patch
-from mcp_coder.llm.providers.claude.claude_code_api import _create_claude_client
-from claude_code_sdk._errors import CLINotFoundError
-```
-
-### Mocking Strategy
-```python
-@patch("mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions")
-@patch("mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use")
-```
-
-## ALGORITHM: Test Logic Pseudocode
-
-### Test 1: Happy Path (No Verification)
-```python
-# GIVEN: SDK works fine (no exception)
+# Test 1: Happy Path - No verification in success case
 mock_options_class.return_value = mock_options
-
-# WHEN: Create client
 result = _create_claude_client()
+mock_verify.assert_not_called()  # Key assertion
 
-# THEN: 
-#   - SDK options created
-#   - Verification NOT called
-#   - Returns options object
-mock_options_class.assert_called_once_with(env={})
-mock_verify.assert_not_called()  # ← KEY ASSERTION
-assert result == mock_options
-```
-
-### Test 2: SDK Failure (Lazy Verification)
-```python
-# GIVEN: SDK raises CLINotFoundError
+# Test 2: SDK Failure - Verification only after failure
 mock_options_class.side_effect = CLINotFoundError("CLI not found")
 mock_verify.return_value = (False, None, "Detailed error")
-
-# WHEN: Create client (expect exception)
-with pytest.raises(RuntimeError, match="Detailed error"):
-    _create_claude_client()
-
-# THEN:
-#   - SDK attempted first
-#   - Verification called ONLY after SDK failure
-#   - Helpful error message provided
-mock_options_class.assert_called_once()
-mock_verify.assert_called_once()  # ← Called for diagnostics
-```
-
-### Test 3: With Environment Variables
-```python
-# GIVEN: SDK works fine with env vars
-env_vars = {"MCP_CODER_PROJECT_DIR": "/test/project"}
-mock_options_class.return_value = mock_options
-
-# WHEN: Create client with env
-result = _create_claude_client(env=env_vars)
-
-# THEN:
-#   - SDK created with env vars
-#   - Verification NOT called
-mock_options_class.assert_called_once_with(env=env_vars)
-mock_verify.assert_not_called()  # ← No preemptive verification
-```
-
-### Test 4: Explicit Lazy Verification Test
-```python
-# GIVEN: SDK works on first call, fails on second
-mock_options_class.side_effect = [
-    mock_options,  # First call: success
-    CLINotFoundError("CLI not found")  # Second call: failure
-]
-mock_verify.return_value = (False, None, "CLI not found")
-
-# WHEN: First call succeeds, second fails
-result1 = _create_claude_client()
 with pytest.raises(RuntimeError):
     _create_claude_client()
+mock_verify.assert_called_once()  # Called for diagnostics
 
-# THEN: Verification only called on second (failed) call
-assert mock_verify.call_count == 1  # ← Only once, on failure
+# Test 3: With Environment - No verification in success case
+env_vars = {"MCP_CODER_PROJECT_DIR": "/test/project"}
+mock_options_class.return_value = mock_options
+result = _create_claude_client(env=env_vars)
+mock_verify.assert_not_called()
 ```
 
-## DATA: Test Expectations
-
-### Mock Return Values
-```python
-# Successful SDK creation
-mock_options = MagicMock(spec=ClaudeCodeOptions)
-
-# Verification result (only used on failure)
-verification_result = (
-    False,  # success: bool
-    None,   # path: Optional[str]
-    "Claude CLI verification failed: CLI not found"  # error: Optional[str]
-)
-```
-
-### Expected Assertions
-```python
-# Happy path
-mock_verify.assert_not_called()  # No verification in success case
-mock_options_class.assert_called_once_with(env={})
-
-# Error path  
-mock_verify.assert_called_once()  # Verification only on SDK failure
-# Error message includes verification details
-with pytest.raises(RuntimeError, match="Claude CLI verification failed"):
-```
+**Note:** Verify that test file structure matches code structure during implementation.
 
 ## Implementation Details
 
@@ -249,39 +151,7 @@ def test_create_claude_client_with_env(
     assert result == mock_options
 ```
 
-### Test 4: Add New Lazy Verification Test
 
-```python
-@patch("mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions")
-@patch("mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use")
-def test_create_claude_client_lazy_verification(
-    self, mock_verify: MagicMock, mock_options_class: MagicMock
-) -> None:
-    """Test that verification only runs when SDK raises CLINotFoundError."""
-    # Setup - First call succeeds, second fails
-    mock_options = MagicMock()
-    mock_options_class.side_effect = [
-        mock_options,  # First call: success
-        CLINotFoundError("CLI not found")  # Second call: failure
-    ]
-    mock_verify.return_value = (False, None, "CLI not found in PATH")
-
-    # Execute first call (success)
-    result1 = _create_claude_client()
-    assert result1 == mock_options
-    assert mock_verify.call_count == 0  # No verification on success
-
-    # Execute second call (failure)
-    with pytest.raises(RuntimeError, match="CLI not found in PATH"):
-        _create_claude_client()
-    
-    # Verify - verification called only once (on failure)
-    assert mock_verify.call_count == 1
-    mock_options_class.assert_has_calls([
-        unittest.mock.call(env={}),
-        unittest.mock.call(env={})
-    ])
-```
 
 ## Expected Test Results
 
@@ -291,7 +161,6 @@ tests/llm/providers/claude/test_claude_code_api.py::TestCreateClaudeClient
   ✗ test_create_claude_client_basic - FAILED (expects no verification)
   ✗ test_create_claude_client_sdk_failure_triggers_verification - FAILED (new behavior)
   ✗ test_create_claude_client_with_env - FAILED (expects no verification)
-  ✗ test_create_claude_client_lazy_verification - FAILED (new test)
 ```
 
 ### After Implementation (Step 2 Complete)
@@ -300,7 +169,6 @@ tests/llm/providers/claude/test_claude_code_api.py::TestCreateClaudeClient
   ✓ test_create_claude_client_basic - PASSED
   ✓ test_create_claude_client_sdk_failure_triggers_verification - PASSED
   ✓ test_create_claude_client_with_env - PASSED
-  ✓ test_create_claude_client_lazy_verification - PASSED
 ```
 
 ## Validation

@@ -80,16 +80,7 @@ ask_claude_code_api()
    - New Tests: Add test for lazy verification behavior
    - Impact: ~60 lines modified/added
 
-### Documentation (Optional)
-3. **`docs/architecture/ARCHITECTURE.md`**
-   - Section: Cross-cutting Concepts (Section 8)
-   - Change: Document lazy verification pattern
-   - Impact: ~10 lines added
 
-4. **`docs/tests/issues.md`**
-   - Section: Active Issues - Performance
-   - Change: Mark issue as resolved, document optimization
-   - Impact: ~20 lines modified
 
 ## Files Structure
 
@@ -103,18 +94,11 @@ mcp-coder/
 │   ├── test_claude_code_api.py     ← MODIFIED (unit tests)
 │   └── test_claude_integration.py   (unchanged - validates performance)
 │
-├── docs/
-│   ├── architecture/
-│   │   └── ARCHITECTURE.md          ← MODIFIED (optional - documentation)
-│   └── tests/
-│       └── issues.md                ← MODIFIED (optional - tracking)
-│
 └── pr_info/steps/
     ├── summary.md                   (this file)
     ├── step_1.md                    (TDD: Update unit tests)
     ├── step_2.md                    (Implementation: Lazy verification)
-    ├── step_3.md                    (Validation: Integration tests)
-    └── step_4.md                    (Documentation: Update docs)
+    └── step_3.md                    (Validation: Integration tests)
 ```
 
 ## Expected Outcomes
@@ -148,13 +132,8 @@ mcp-coder/
 
 ### Phase 3: Validation (Step 3)
 - Run integration tests
-- Measure performance improvements
 - Verify error handling still works
-
-### Phase 4: Documentation (Step 4)
-- Update architecture documentation
-- Update performance tracking
-- Document optimization pattern
+- Confirm no regressions
 
 ## Risk Assessment
 
@@ -174,16 +153,14 @@ mcp-coder/
 
 1. ✅ All unit tests pass
 2. ✅ All integration tests pass
-3. ✅ Performance improvement measured: 25-40% reduction in integration test time
-4. ✅ Error messages remain helpful when Claude CLI is missing
-5. ✅ No breaking changes to public API
-6. ✅ Code quality checks pass (pylint, mypy, pytest)
+3. ✅ Error messages remain helpful when Claude CLI is missing
+4. ✅ No breaking changes to public API
+5. ✅ Code quality checks pass (pylint, mypy, pytest)
 
 ## Implementation Timeline
 
 - **Step 1** (TDD): 15-20 minutes - Update unit tests
 - **Step 2** (Implementation): 15-20 minutes - Implement lazy verification
-- **Step 3** (Validation): 10-15 minutes - Run tests and measure performance
-- **Step 4** (Documentation): 10-15 minutes - Update docs
+- **Step 3** (Validation): 10-15 minutes - Run tests and verify
 
-**Total Estimated Time**: 50-70 minutes
+**Total Estimated Time**: 40-55 minutes
