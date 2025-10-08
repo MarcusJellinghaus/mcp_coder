@@ -32,4 +32,6 @@ bash.exe.stackdump
 /.mcp-coder/responses
 /.mcp-coder-tmp/
 *.isorted
-/docs/tests/performance_data/prof/*.prof  # profiler data
+
+# profiler data
+docs/tests/performance_data/prof/*.prof
