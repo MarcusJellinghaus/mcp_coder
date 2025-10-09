@@ -26,7 +26,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Run pylint on test file and fix all issues
 [x] Run pytest on test file and verify tests fail as expected (TDD)
 [x] Run mypy on test file and fix all issues
-[ ] Prepare git commit message for Step 1
+[x] Prepare git commit message for Step 1
 
 ### Step 2: Implementation - Lazy Verification
 [x] Implement lazy verification in `_create_claude_client()` function
@@ -43,7 +43,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [x] Run pylint on all modified files and fix any issues
 [x] Run pytest on all provider tests and verify all pass
 [x] Run mypy on all modified files and fix any issues
-[ ] Prepare git commit message for Step 3
+[x] Prepare git commit message for Step 3
 
 ### Pull Request
 [ ] Review all code changes for quality and completeness
