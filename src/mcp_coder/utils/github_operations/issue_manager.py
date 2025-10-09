@@ -29,6 +29,7 @@ class IssueData(TypedDict):
     body: str
     state: str
     labels: List[str]
+    assignees: List[str]
     user: Optional[str]
     created_at: Optional[str]
     updated_at: Optional[str]
@@ -128,6 +129,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -168,6 +170,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -185,6 +188,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -204,6 +208,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -514,6 +519,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -545,6 +551,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -562,6 +569,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -583,6 +591,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -602,6 +611,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -633,6 +643,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -650,6 +661,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -671,6 +683,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -728,6 +741,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -760,6 +774,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -776,6 +791,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -793,6 +809,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -814,6 +831,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -833,6 +851,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -865,6 +884,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -881,6 +901,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -898,6 +919,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -920,6 +942,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -939,6 +962,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -974,6 +998,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -991,6 +1016,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -1012,6 +1038,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None

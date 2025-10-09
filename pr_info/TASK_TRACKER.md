@@ -22,11 +22,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Modify IssueData TypedDict ([details](./steps/step_1.md))
-- [ ] Add `assignees: List[str]` field to IssueData TypedDict
-- [ ] Run pylint check and fix any issues
-- [ ] Run pytest check and fix any issues
-- [ ] Run mypy check and fix any issues
-- [ ] Prepare git commit message
+- [x] Add `assignees: List[str]` field to IssueData TypedDict
+- [x] Run pylint check and fix any issues
+- [x] Run pytest check and fix any issues
+- [x] Run mypy check and fix any issues
+- [x] Prepare git commit message
 
 ### Step 2: Implement get_issue() Method ([details](./steps/step_2.md))
 - [ ] Write unit test: test_get_issue_success()
