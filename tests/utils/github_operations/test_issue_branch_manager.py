@@ -1,6 +1,7 @@
 """Unit tests for IssueBranchManager and branch name generation utilities."""
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -177,8 +178,8 @@ class TestGetLinkedBranches:
                 }
             }
         }
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -205,9 +206,9 @@ class TestGetLinkedBranches:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL response with null issue
-        mock_response = {"data": {"repository": {"issue": None}}}
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_response: dict[str, Any] = {"data": {"repository": {"issue": None}}}
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -224,11 +225,11 @@ class TestGetLinkedBranches:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL response with empty nodes
-        mock_response = {
+        mock_response: dict[str, Any] = {
             "data": {"repository": {"issue": {"linkedBranches": {"nodes": []}}}}
         }
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -260,8 +261,8 @@ class TestGetLinkedBranches:
                 }
             }
         }
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -279,9 +280,9 @@ class TestGetLinkedBranches:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL response with malformed data
-        mock_response = {"data": None}  # Malformed response
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_response: dict[str, Any] = {"data": None}  # Malformed response
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -293,7 +294,7 @@ class TestGetLinkedBranches:
         """Test get_linked_branches when repository cannot be accessed."""
         # Mock _get_repository to return None
         mock_manager._repository = None
-        mock_manager._get_repository = Mock(return_value=None)
+        mock_manager._get_repository = Mock(return_value=None)  # type: ignore[method-assign]
 
         # Test
         result = mock_manager.get_linked_branches(123)
@@ -323,8 +324,8 @@ class TestGetLinkedBranches:
                 }
             }
         }
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -372,7 +373,7 @@ class TestCreateLinkedBranch:
         mock_repo.get_branch = Mock(return_value=mock_branch)
 
         # Mock get_linked_branches to return empty (no existing branches)
-        mock_manager.get_linked_branches = Mock(return_value=[])
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
         # Mock GraphQL mutation response
         mock_response = {
@@ -388,8 +389,8 @@ class TestCreateLinkedBranch:
                 }
             }
         }
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -406,7 +407,7 @@ class TestCreateLinkedBranch:
         mock_repo.get_issue.assert_called_once_with(123)
 
         # Verify GraphQL mutation was called
-        mock_manager._github_client._Github__requester.graphql_named_mutation.assert_called_once()
+        mock_manager._github_client._Github__requester.graphql_named_mutation.assert_called_once()  # type: ignore[attr-defined]
 
     def test_create_with_custom_name(self, mock_manager: IssueBranchManager) -> None:
         """Test creating branch with custom branch name."""
@@ -430,7 +431,7 @@ class TestCreateLinkedBranch:
         mock_repo.get_branch = Mock(return_value=mock_branch)
 
         # Mock get_linked_branches to return empty
-        mock_manager.get_linked_branches = Mock(return_value=[])
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
         # Mock GraphQL mutation response
         mock_response = {
@@ -446,8 +447,8 @@ class TestCreateLinkedBranch:
                 }
             }
         }
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -484,7 +485,7 @@ class TestCreateLinkedBranch:
         mock_repo.get_branch = Mock(return_value=mock_branch)
 
         # Mock get_linked_branches to return empty
-        mock_manager.get_linked_branches = Mock(return_value=[])
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
         # Mock GraphQL mutation response
         mock_response = {
@@ -500,8 +501,8 @@ class TestCreateLinkedBranch:
                 }
             }
         }
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -527,7 +528,7 @@ class TestCreateLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock get_linked_branches to return existing branches
-        mock_manager.get_linked_branches = Mock(
+        mock_manager.get_linked_branches = Mock(  # type: ignore[method-assign]
             return_value=["123-feature-branch", "123-hotfix"]
         )
 
@@ -566,7 +567,7 @@ class TestCreateLinkedBranch:
         mock_repo.get_branch = Mock(return_value=mock_branch)
 
         # Mock get_linked_branches to return existing branch
-        mock_manager.get_linked_branches = Mock(return_value=["123-existing-branch"])
+        mock_manager.get_linked_branches = Mock(return_value=["123-existing-branch"])  # type: ignore[method-assign]
 
         # Mock GraphQL mutation response
         mock_response = {
@@ -582,8 +583,8 @@ class TestCreateLinkedBranch:
                 }
             }
         }
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -621,7 +622,7 @@ class TestCreateLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock get_linked_branches to return empty
-        mock_manager.get_linked_branches = Mock(return_value=[])
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
         # Mock get_issue to raise exception
         from github import GithubException
@@ -658,13 +659,13 @@ class TestCreateLinkedBranch:
         mock_repo.get_branch = Mock(return_value=mock_branch)
 
         # Mock get_linked_branches to return empty
-        mock_manager.get_linked_branches = Mock(return_value=[])
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
         # Mock GraphQL mutation to raise permission error
         from github import GithubException
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             side_effect=GithubException(403, {"message": "Forbidden"}, None)
         )
 
@@ -690,7 +691,7 @@ class TestCreateLinkedBranch:
         mock_repo.get_issue = Mock(return_value=mock_issue)
 
         # Mock get_linked_branches to return empty
-        mock_manager.get_linked_branches = Mock(return_value=[])
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
         # Mock get_branch to raise exception for non-existent branch
         from github import GithubException
@@ -711,7 +712,7 @@ class TestCreateLinkedBranch:
         """Test creating branch when repository cannot be accessed."""
         # Mock _get_repository to return None
         mock_manager._repository = None
-        mock_manager._get_repository = Mock(return_value=None)
+        mock_manager._get_repository = Mock(return_value=None)  # type: ignore[method-assign]
 
         # Test
         result = mock_manager.create_remote_branch_for_issue(123)
@@ -744,12 +745,12 @@ class TestCreateLinkedBranch:
         mock_repo.get_branch = Mock(return_value=mock_branch)
 
         # Mock get_linked_branches to return empty
-        mock_manager.get_linked_branches = Mock(return_value=[])
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
         # Mock GraphQL mutation response with malformed data
         mock_response = {"data": None}  # Malformed response
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             return_value=mock_response
         )
 
@@ -787,7 +788,7 @@ class TestDeleteLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL query response with linked branches including IDs
-        query_response = {
+        query_response: dict[str, Any] = {
             "data": {
                 "repository": {
                     "issue": {
@@ -811,11 +812,11 @@ class TestDeleteLinkedBranch:
         # Mock GraphQL mutation response
         mutation_response = {"data": {"deleteLinkedBranch": {"clientMutationId": None}}}
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=query_response
         )
-        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             return_value=mutation_response
         )
 
@@ -826,12 +827,12 @@ class TestDeleteLinkedBranch:
         assert result is True
 
         # Verify GraphQL query was called
-        mock_manager._github_client._Github__requester.graphql_query.assert_called_once()
+        mock_manager._github_client._Github__requester.graphql_query.assert_called_once()  # type: ignore[attr-defined]
 
         # Verify GraphQL mutation was called with correct linkedBranchId
-        mock_manager._github_client._Github__requester.graphql_named_mutation.assert_called_once()
+        mock_manager._github_client._Github__requester.graphql_named_mutation.assert_called_once()  # type: ignore[attr-defined]
         call_args = (
-            mock_manager._github_client._Github__requester.graphql_named_mutation.call_args
+            mock_manager._github_client._Github__requester.graphql_named_mutation.call_args  # type: ignore[attr-defined]
         )
         assert call_args[1]["mutation_input"]["linkedBranchId"] == "LB_kwDOABCDEF123"
 
@@ -844,7 +845,7 @@ class TestDeleteLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL query response with different linked branches
-        query_response = {
+        query_response: dict[str, Any] = {
             "data": {
                 "repository": {
                     "issue": {
@@ -865,8 +866,8 @@ class TestDeleteLinkedBranch:
             }
         }
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=query_response
         )
 
@@ -877,14 +878,14 @@ class TestDeleteLinkedBranch:
         assert result is False
 
         # Verify GraphQL query was called
-        mock_manager._github_client._Github__requester.graphql_query.assert_called_once()
+        mock_manager._github_client._Github__requester.graphql_query.assert_called_once()  # type: ignore[attr-defined]
 
         # Verify mutation was NOT called (branch not found)
         assert (
             not hasattr(
-                mock_manager._github_client._Github__requester, "graphql_named_mutation"
+                mock_manager._github_client._Github__requester, "graphql_named_mutation"  # type: ignore[attr-defined]
             )
-            or not mock_manager._github_client._Github__requester.graphql_named_mutation.called
+            or not mock_manager._github_client._Github__requester.graphql_named_mutation.called  # type: ignore[attr-defined]
         )
 
     def test_invalid_issue_number(self, mock_manager: IssueBranchManager) -> None:
@@ -920,10 +921,10 @@ class TestDeleteLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL query response with null issue
-        query_response = {"data": {"repository": {"issue": None}}}
+        query_response: dict[str, Any] = {"data": {"repository": {"issue": None}}}
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=query_response
         )
 
@@ -934,7 +935,7 @@ class TestDeleteLinkedBranch:
         assert result is False
 
         # Verify GraphQL query was called
-        mock_manager._github_client._Github__requester.graphql_query.assert_called_once()
+        mock_manager._github_client._Github__requester.graphql_query.assert_called_once()  # type: ignore[attr-defined]
 
     def test_no_linked_branches(self, mock_manager: IssueBranchManager) -> None:
         """Test delete_linked_branch when issue has no linked branches."""
@@ -945,12 +946,12 @@ class TestDeleteLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL query response with empty nodes
-        query_response = {
+        query_response: dict[str, Any] = {
             "data": {"repository": {"issue": {"linkedBranches": {"nodes": []}}}}
         }
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=query_response
         )
 
@@ -964,7 +965,7 @@ class TestDeleteLinkedBranch:
         """Test delete_linked_branch when repository cannot be accessed."""
         # Mock _get_repository to return None
         mock_manager._repository = None
-        mock_manager._get_repository = Mock(return_value=None)
+        mock_manager._get_repository = Mock(return_value=None)  # type: ignore[method-assign]
 
         # Test
         result = mock_manager.delete_linked_branch(123, "123-feature-branch")
@@ -983,8 +984,8 @@ class TestDeleteLinkedBranch:
         # Mock GraphQL query to raise exception
         from github import GithubException
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             side_effect=GithubException(500, {"message": "Internal Server Error"}, None)
         )
 
@@ -1003,7 +1004,7 @@ class TestDeleteLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL query response with linked branch
-        query_response = {
+        query_response: dict[str, Any] = {
             "data": {
                 "repository": {
                     "issue": {
@@ -1023,11 +1024,11 @@ class TestDeleteLinkedBranch:
         # Mock GraphQL mutation to raise exception
         from github import GithubException
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=query_response
         )
-        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             side_effect=GithubException(403, {"message": "Forbidden"}, None)
         )
 
@@ -1046,10 +1047,10 @@ class TestDeleteLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL query response with malformed data
-        query_response = {"data": None}
+        query_response: dict[str, Any] = {"data": None}
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=query_response
         )
 
@@ -1068,7 +1069,7 @@ class TestDeleteLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL query response with null ref and valid branch
-        query_response = {
+        query_response: dict[str, Any] = {
             "data": {
                 "repository": {
                     "issue": {
@@ -1090,11 +1091,11 @@ class TestDeleteLinkedBranch:
         # Mock GraphQL mutation response
         mutation_response = {"data": {"deleteLinkedBranch": {"clientMutationId": None}}}
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=query_response
         )
-        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             return_value=mutation_response
         )
 
@@ -1115,7 +1116,7 @@ class TestDeleteLinkedBranch:
         mock_manager._repository = mock_repo
 
         # Mock GraphQL query response with lowercase branch name
-        query_response = {
+        query_response: dict[str, Any] = {
             "data": {
                 "repository": {
                     "issue": {
@@ -1132,8 +1133,8 @@ class TestDeleteLinkedBranch:
             }
         }
 
-        mock_manager._github_client._Github__requester = Mock()
-        mock_manager._github_client._Github__requester.graphql_query = Mock(
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
             return_value=query_response
         )
 
