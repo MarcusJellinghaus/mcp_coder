@@ -247,7 +247,9 @@ def _create_claude_client(
 
         if not success:
             logger.error("Claude verification failed: %s", error_msg)
-            raise RuntimeError(f"Claude CLI not found during verification: {error_msg}") from e
+            raise RuntimeError(
+                f"Claude CLI not found during verification: {error_msg}"
+            ) from e
 
         # Verification passed but SDK still failed - shouldn't happen
         logger.error(
