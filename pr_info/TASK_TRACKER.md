@@ -51,7 +51,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 3
 
 ### Step 4: Delete Linked Branch ([details](steps/step_4.md))
-- [ ] Write test cases for `delete_linked_branch()` method
+- [x] Write test cases for `delete_linked_branch()` method
 - [ ] Implement `delete_linked_branch()` method (unlink only)
 - [ ] Handle branch not found scenarios
 - [ ] Run pylint check and fix all issues

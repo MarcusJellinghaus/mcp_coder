@@ -759,3 +759,386 @@ class TestCreateLinkedBranch:
         # Verify result - should fail gracefully
         assert result["success"] is False
         assert result["error"] is not None
+
+
+class TestDeleteLinkedBranch:
+    """Test suite for IssueBranchManager.delete_linked_branch() method."""
+
+    @pytest.fixture
+    def mock_manager(self) -> IssueBranchManager:
+        """Create a mock IssueBranchManager for testing."""
+        with (
+            patch("mcp_coder.utils.github_operations.issue_branch_manager.git.Repo"),
+            patch(
+                "mcp_coder.utils.github_operations.issue_branch_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch("mcp_coder.utils.github_operations.issue_branch_manager.Github"),
+        ):
+            manager = IssueBranchManager(Path("/fake/path"))
+            return manager
+
+    def test_successful_unlink(self, mock_manager: IssueBranchManager) -> None:
+        """Test successfully unlinking a branch from an issue."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock GraphQL query response with linked branches including IDs
+        query_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "linkedBranches": {
+                            "nodes": [
+                                {
+                                    "id": "LB_kwDOABCDEF123",
+                                    "ref": {"name": "123-feature-branch"},
+                                },
+                                {
+                                    "id": "LB_kwDOABCDEF456",
+                                    "ref": {"name": "123-hotfix"},
+                                },
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        # Mock GraphQL mutation response
+        mutation_response = {"data": {"deleteLinkedBranch": {"clientMutationId": None}}}
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = Mock(
+            return_value=query_response
+        )
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+            return_value=mutation_response
+        )
+
+        # Test - delete the first branch
+        result = mock_manager.delete_linked_branch(123, "123-feature-branch")
+
+        # Verify result
+        assert result is True
+
+        # Verify GraphQL query was called
+        mock_manager._github_client._Github__requester.graphql_query.assert_called_once()
+
+        # Verify GraphQL mutation was called with correct linkedBranchId
+        mock_manager._github_client._Github__requester.graphql_named_mutation.assert_called_once()
+        call_args = (
+            mock_manager._github_client._Github__requester.graphql_named_mutation.call_args
+        )
+        assert call_args[1]["mutation_input"]["linkedBranchId"] == "LB_kwDOABCDEF123"
+
+    def test_branch_not_linked(self, mock_manager: IssueBranchManager) -> None:
+        """Test attempting to unlink a branch that is not linked to the issue."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock GraphQL query response with different linked branches
+        query_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "linkedBranches": {
+                            "nodes": [
+                                {
+                                    "id": "LB_kwDOABCDEF123",
+                                    "ref": {"name": "123-feature-branch"},
+                                },
+                                {
+                                    "id": "LB_kwDOABCDEF456",
+                                    "ref": {"name": "123-hotfix"},
+                                },
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = Mock(
+            return_value=query_response
+        )
+
+        # Test - try to delete a branch that doesn't exist
+        result = mock_manager.delete_linked_branch(123, "123-nonexistent-branch")
+
+        # Verify result - should return False
+        assert result is False
+
+        # Verify GraphQL query was called
+        mock_manager._github_client._Github__requester.graphql_query.assert_called_once()
+
+        # Verify mutation was NOT called (branch not found)
+        assert (
+            not hasattr(
+                mock_manager._github_client._Github__requester, "graphql_named_mutation"
+            )
+            or not mock_manager._github_client._Github__requester.graphql_named_mutation.called
+        )
+
+    def test_invalid_issue_number(self, mock_manager: IssueBranchManager) -> None:
+        """Test delete_linked_branch with invalid issue numbers."""
+        # Test with negative number
+        result = mock_manager.delete_linked_branch(-1, "branch-name")
+        assert result is False
+
+        # Test with zero
+        result = mock_manager.delete_linked_branch(0, "branch-name")
+        assert result is False
+
+    def test_empty_branch_name(self, mock_manager: IssueBranchManager) -> None:
+        """Test delete_linked_branch with empty or whitespace branch name."""
+        # Test with empty string
+        result = mock_manager.delete_linked_branch(123, "")
+        assert result is False
+
+        # Test with whitespace only
+        result = mock_manager.delete_linked_branch(123, "   ")
+        assert result is False
+
+        # Test with None (if type checking allows)
+        result = mock_manager.delete_linked_branch(123, "")
+        assert result is False
+
+    def test_issue_not_found(self, mock_manager: IssueBranchManager) -> None:
+        """Test delete_linked_branch when issue is not found."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock GraphQL query response with null issue
+        query_response = {"data": {"repository": {"issue": None}}}
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = Mock(
+            return_value=query_response
+        )
+
+        # Test
+        result = mock_manager.delete_linked_branch(999, "123-feature-branch")
+
+        # Verify result - should return False
+        assert result is False
+
+        # Verify GraphQL query was called
+        mock_manager._github_client._Github__requester.graphql_query.assert_called_once()
+
+    def test_no_linked_branches(self, mock_manager: IssueBranchManager) -> None:
+        """Test delete_linked_branch when issue has no linked branches."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock GraphQL query response with empty nodes
+        query_response = {
+            "data": {"repository": {"issue": {"linkedBranches": {"nodes": []}}}}
+        }
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = Mock(
+            return_value=query_response
+        )
+
+        # Test
+        result = mock_manager.delete_linked_branch(123, "123-feature-branch")
+
+        # Verify result - should return False (branch not found)
+        assert result is False
+
+    def test_repository_not_found(self, mock_manager: IssueBranchManager) -> None:
+        """Test delete_linked_branch when repository cannot be accessed."""
+        # Mock _get_repository to return None
+        mock_manager._repository = None
+        mock_manager._get_repository = Mock(return_value=None)
+
+        # Test
+        result = mock_manager.delete_linked_branch(123, "123-feature-branch")
+
+        # Verify result
+        assert result is False
+
+    def test_graphql_query_error(self, mock_manager: IssueBranchManager) -> None:
+        """Test delete_linked_branch handles GraphQL query errors gracefully."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock GraphQL query to raise exception
+        from github import GithubException
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = Mock(
+            side_effect=GithubException(500, {"message": "Internal Server Error"}, None)
+        )
+
+        # Test
+        result = mock_manager.delete_linked_branch(123, "123-feature-branch")
+
+        # Verify result - should return False due to decorator
+        assert result is False
+
+    def test_graphql_mutation_error(self, mock_manager: IssueBranchManager) -> None:
+        """Test delete_linked_branch handles GraphQL mutation errors gracefully."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock GraphQL query response with linked branch
+        query_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "linkedBranches": {
+                            "nodes": [
+                                {
+                                    "id": "LB_kwDOABCDEF123",
+                                    "ref": {"name": "123-feature-branch"},
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        # Mock GraphQL mutation to raise exception
+        from github import GithubException
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = Mock(
+            return_value=query_response
+        )
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+            side_effect=GithubException(403, {"message": "Forbidden"}, None)
+        )
+
+        # Test
+        result = mock_manager.delete_linked_branch(123, "123-feature-branch")
+
+        # Verify result - should return False due to decorator
+        assert result is False
+
+    def test_malformed_query_response(self, mock_manager: IssueBranchManager) -> None:
+        """Test delete_linked_branch handles malformed GraphQL query response."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock GraphQL query response with malformed data
+        query_response = {"data": None}
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = Mock(
+            return_value=query_response
+        )
+
+        # Test
+        result = mock_manager.delete_linked_branch(123, "123-feature-branch")
+
+        # Verify result - should return False
+        assert result is False
+
+    def test_null_ref_in_nodes(self, mock_manager: IssueBranchManager) -> None:
+        """Test delete_linked_branch handles null ref values in nodes."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock GraphQL query response with null ref and valid branch
+        query_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "linkedBranches": {
+                            "nodes": [
+                                {"ref": None},  # Null ref
+                                None,  # Null node
+                                {
+                                    "id": "LB_kwDOABCDEF123",
+                                    "ref": {"name": "123-valid-branch"},
+                                },
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        # Mock GraphQL mutation response
+        mutation_response = {"data": {"deleteLinkedBranch": {"clientMutationId": None}}}
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = Mock(
+            return_value=query_response
+        )
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+            return_value=mutation_response
+        )
+
+        # Test - delete the valid branch (should skip null values)
+        result = mock_manager.delete_linked_branch(123, "123-valid-branch")
+
+        # Verify result
+        assert result is True
+
+    def test_case_sensitive_branch_matching(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Test that branch name matching is case-sensitive."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock GraphQL query response with lowercase branch name
+        query_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "linkedBranches": {
+                            "nodes": [
+                                {
+                                    "id": "LB_kwDOABCDEF123",
+                                    "ref": {"name": "123-feature-branch"},
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = Mock(
+            return_value=query_response
+        )
+
+        # Test - try to delete with uppercase (should not match)
+        result = mock_manager.delete_linked_branch(123, "123-FEATURE-BRANCH")
+
+        # Verify result - should return False (case mismatch)
+        assert result is False
