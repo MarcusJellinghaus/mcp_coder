@@ -104,6 +104,23 @@ class TestIssueManagerIntegration:
             print(f"  Labels: {created_issue['labels']}")
 
             # ============================================================
+            # SECTION 1.5: Get Issue Verification
+            # ============================================================
+            print("\n" + "=" * 60)
+            print("SECTION 1.5: Get Issue Verification")
+            print("=" * 60)
+
+            retrieved = issue_manager.get_issue(issue_number)
+            assert retrieved["number"] == issue_number
+            assert retrieved["title"] == issue_title
+            assert retrieved["body"] == issue_body
+            assert retrieved["state"] == "open"
+            assert "assignees" in retrieved
+            assert isinstance(retrieved["assignees"], list)
+            print(f"✓ Retrieved issue #{issue_number} successfully")
+            print(f"  Assignees: {retrieved['assignees']}")
+
+            # ============================================================
             # SECTION 2: Label Operations
             # ============================================================
             print("\n" + "=" * 60)
