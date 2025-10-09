@@ -5,16 +5,24 @@ pull requests, labels, and repository operations.
 """
 
 from .base_manager import BaseGitHubManager
+from .issue_branch_manager import (
+    BranchCreationResult,
+    IssueBranchManager,
+    generate_branch_name_from_issue,
+)
 from .issue_manager import CommentData, IssueData, IssueManager
 from .labels_manager import LabelData, LabelsManager
 from .pr_manager import PullRequestManager
 
 __all__ = [
     "BaseGitHubManager",
-    "PullRequestManager",
-    "LabelsManager",
+    "BranchCreationResult",
+    "CommentData",
+    "IssueBranchManager",
+    "IssueData",
     "IssueManager",
     "LabelData",
-    "IssueData",
-    "CommentData",
+    "LabelsManager",
+    "PullRequestManager",
+    "generate_branch_name_from_issue",
 ]
