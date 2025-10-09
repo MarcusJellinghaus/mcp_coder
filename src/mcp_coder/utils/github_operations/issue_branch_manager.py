@@ -198,3 +198,141 @@ class IssueBranchManager(BaseGitHubManager):
         except (KeyError, TypeError) as e:
             logger.error(f"Error parsing GraphQL response: {e}")
             return []
+
+    @log_function_call
+    @_handle_github_errors(
+        default_return=BranchCreationResult(
+            success=False, branch_name="", error=None, existing_branches=[]
+        )
+    )
+    def create_remote_branch_for_issue(
+        self,
+        issue_number: int,
+        branch_name: Optional[str] = None,
+        base_branch: Optional[str] = None,
+        allow_multiple: bool = False,
+    ) -> BranchCreationResult:
+        """Create and link branch to issue via GraphQL.
+
+        Args:
+            issue_number: Issue number to link branch to
+            branch_name: Custom branch name (optional, auto-generated if not provided)
+            base_branch: Base branch to branch from (optional, uses default branch if not provided)
+            allow_multiple: If False (default), blocks if issue has any linked branches.
+                           If True, allows multiple branches per issue.
+
+        Returns:
+            BranchCreationResult with success status, branch name, error, and existing branches
+
+        Example:
+            >>> manager = IssueBranchManager(Path.cwd())
+            >>> result = manager.create_remote_branch_for_issue(123)
+            >>> if result["success"]:
+            ...     print(f"Created branch: {result['branch_name']}")
+            ... else:
+            ...     print(f"Error: {result['error']}")
+        """
+        # Validate issue number
+        if not self._validate_issue_number(issue_number):
+            return BranchCreationResult(
+                success=False,
+                branch_name="",
+                error="Invalid issue number. Must be a positive integer.",
+                existing_branches=[],
+            )
+
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return BranchCreationResult(
+                success=False,
+                branch_name="",
+                error="Failed to get repository",
+                existing_branches=[],
+            )
+
+        # Step 1: Check for existing branches if allow_multiple=False
+        if not allow_multiple:
+            existing_branches = self.get_linked_branches(issue_number)
+            if existing_branches:
+                error_msg = (
+                    f"Issue #{issue_number} already has linked branches. "
+                    f"Use allow_multiple=True to create additional branches."
+                )
+                logger.warning(error_msg)
+                return BranchCreationResult(
+                    success=False,
+                    branch_name="",
+                    error=error_msg,
+                    existing_branches=existing_branches,
+                )
+
+        # Step 2: Get issue to access node_id and title
+        issue = repo.get_issue(issue_number)
+
+        # Step 3: Generate branch name if not provided
+        if branch_name is None:
+            branch_name = generate_branch_name_from_issue(issue_number, issue.title)
+
+        # Step 4: Get base commit SHA
+        base_branch_name = base_branch if base_branch else repo.default_branch
+        branch = repo.get_branch(base_branch_name)
+        base_commit_sha = branch.commit.sha
+
+        # Step 5: Execute createLinkedBranch mutation
+        mutation_input = {
+            "issueId": issue.node_id,
+            "repositoryId": repo.node_id,
+            "oid": base_commit_sha,
+            "name": branch_name,
+        }
+
+        # Execute GraphQL mutation
+        # Note: Using private attribute is the documented way to access GraphQL in PyGithub
+        result = self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]
+            mutation_name="createLinkedBranch",
+            mutation_input=mutation_input,
+            output_schema="linkedBranch { id ref { name target { oid } } }",
+        )
+
+        # Step 6: Parse response and return result
+        try:
+            linked_branch_data = result.get("data", {}).get("createLinkedBranch")
+            if (
+                linked_branch_data is None
+                or linked_branch_data.get("linkedBranch") is None
+            ):
+                error_msg = (
+                    "Failed to create linked branch: Invalid response from GitHub"
+                )
+                logger.error(error_msg)
+                return BranchCreationResult(
+                    success=False,
+                    branch_name="",
+                    error=error_msg,
+                    existing_branches=[],
+                )
+
+            created_branch = linked_branch_data["linkedBranch"]
+            created_branch_name = created_branch["ref"]["name"]
+
+            logger.info(
+                f"Successfully created and linked branch '{created_branch_name}' to issue #{issue_number}"
+            )
+            return BranchCreationResult(
+                success=True,
+                branch_name=created_branch_name,
+                error=None,
+                existing_branches=[],
+            )
+
+        except (KeyError, TypeError) as e:
+            error_msg = f"Error parsing GraphQL mutation response: {e}"
+            logger.error(error_msg)
+            return BranchCreationResult(
+                success=False,
+                branch_name="",
+                error=error_msg,
+                existing_branches=[],
+            )
