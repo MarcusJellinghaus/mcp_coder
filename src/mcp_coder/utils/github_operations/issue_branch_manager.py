@@ -39,10 +39,11 @@ def generate_branch_name_from_issue(
         Sanitized branch name (e.g., "123-add-new-feature---part-1")
     """
     # Step 1: Protect " - " separator with placeholder (GitHub-specific rule)
-    PROTECTED_SEPARATOR = "\x00SEP\x00"
+    # Use lowercase placeholder to avoid case conversion issues
+    PROTECTED_SEPARATOR = "\x00sep\x00"
     sanitized = issue_title.replace(" - ", PROTECTED_SEPARATOR)
 
-    # Step 2: Convert to lowercase (placeholder is already lowercase-safe)
+    # Step 2: Convert to lowercase
     sanitized = sanitized.lower()
 
     # Step 3: Replace non-alphanumeric (except dash and placeholder) with dash
@@ -51,8 +52,8 @@ def generate_branch_name_from_issue(
     # Step 4: Collapse multiple consecutive dashes to single dash
     sanitized = re.sub(r"-{2,}", "-", sanitized)
 
-    # Step 5: Restore protected separators as "---" (need lowercase version)
-    sanitized = sanitized.replace(PROTECTED_SEPARATOR.lower(), "---")
+    # Step 5: Restore protected separators as "---"
+    sanitized = sanitized.replace(PROTECTED_SEPARATOR, "---")
 
     # Step 6: Strip leading/trailing dashes
     sanitized = sanitized.strip("-")
