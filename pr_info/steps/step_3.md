@@ -21,9 +21,15 @@ def create_remote_branch_for_issue(
     self,
     issue_number: int,
     branch_name: Optional[str] = None,
-    base_branch: Optional[str] = None
+    base_branch: Optional[str] = None,
+    allow_multiple: bool = False
 ) -> BranchCreationResult:
-    """Create and link branch to issue via GraphQL."""
+    """Create and link branch to issue via GraphQL.
+    
+    Args:
+        allow_multiple: If False (default), blocks if issue has any linked branches.
+                       If True, allows multiple branches per issue.
+    """
 ```
 
 ### Test Cases
@@ -32,7 +38,8 @@ class TestCreateLinkedBranch:
     def test_create_with_auto_name()
     def test_create_with_custom_name()
     def test_create_with_base_branch()
-    def test_duplicate_prevention()
+    def test_duplicate_prevention_default()  # allow_multiple=False
+    def test_allow_multiple_branches()  # allow_multiple=True
     def test_invalid_issue_number()
     def test_issue_not_found()
     def test_permission_error()
@@ -62,10 +69,13 @@ self._github_client._Github__requester.graphql_named_mutation(
 ## ALGORITHM
 
 ```
-1. Check existing linked branches (duplicate prevention)
+1. If allow_multiple=False, check existing linked branches
+   - If any found, return error with existing_branches populated
 2. If branch_name not provided, generate using generate_branch_name_from_issue()
 3. Get issue.node_id and repo.node_id via PyGithub
-4. Get base commit SHA (base_branch or default branch)
+4. Get base commit SHA:
+   - If base_branch provided, use that branch
+   - Otherwise use repo.default_branch
 5. Execute createLinkedBranch mutation with input
 6. Return BranchCreationResult with success/error details
 ```
@@ -100,6 +110,7 @@ BranchCreationResult(
 ```
 
 ### Error Cases
-- Duplicate branch → `success=False`, populate `existing_branches`
+- Duplicate branch (when allow_multiple=False) → `success=False`, populate `existing_branches`
 - Invalid issue → `success=False`, set `error` message
 - Permission denied → caught by decorator, returns default
+- Base branch not found → `success=False`, set `error` message

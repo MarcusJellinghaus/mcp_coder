@@ -22,7 +22,10 @@ def generate_branch_name_from_issue(
     issue_title: str,
     max_length: int = 244
 ) -> str:
-    """Generate sanitized branch name matching GitHub's native rules."""
+    """Generate sanitized branch name matching GitHub's native rules.
+    
+    max_length defaults to 244 (GitHub's limit: 255 bytes - 11 bytes for 'refs/heads/').
+    """
 ```
 
 ### Test Cases (implement first)
@@ -70,7 +73,7 @@ import re
 ### Input Parameters
 - `issue_number: int` - Issue number (e.g., 123)
 - `issue_title: str` - Raw issue title (e.g., "Add New Feature - Part 1")
-- `max_length: int` - Max branch name length (default 244)
+- `max_length: int` - Max branch name length in bytes (default 244 = GitHub's limit)
 
 ### Return Value
 - `str` - Sanitized branch name (e.g., "123-add-new-feature---part-1")

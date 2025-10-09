@@ -82,12 +82,20 @@ assert result["success"] is True
 branches = branch_manager.get_linked_branches(issue["number"])
 assert result["branch_name"] in branches
 
-# 4. Test duplicate
+# 4. Test duplicate prevention (default behavior)
 dup_result = branch_manager.create_remote_branch_for_issue(
     issue_number=issue["number"]
 )
 assert dup_result["success"] is False
 assert len(dup_result["existing_branches"]) > 0
+
+# 4b. Test allow_multiple=True
+result2 = branch_manager.create_remote_branch_for_issue(
+    issue_number=issue["number"],
+    branch_name=f"{issue['number']}-second-branch",
+    allow_multiple=True
+)
+assert result2["success"] is True
 
 # 5. Unlink
 unlinked = branch_manager.delete_linked_branch(

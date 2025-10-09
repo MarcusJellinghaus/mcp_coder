@@ -31,7 +31,7 @@ __all__ = [
     "IssueData",
     "CommentData",
     "BranchCreationResult",  # NEW
-    "generate_branch_name_from_issue",  # NEW (optional utility export)
+    "generate_branch_name_from_issue",  # NEW (public utility)
 ]
 ```
 
@@ -104,6 +104,7 @@ result: BranchCreationResult = {
 ✓ Pytest: All unit tests pass (100%)
 ✓ Integration: Workflow test passes (if configured)
 ✓ Import: Module exports accessible
+✓ PyGithub version documented (check `pip show PyGithub`)
 ```
 
 ## Completion Checklist

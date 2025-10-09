@@ -64,24 +64,29 @@ Each step implements tests first, then functionality:
 - **Mutations**: Use `graphql_named_mutation()` for create/delete operations
 - **Node IDs**: Extract from PyGithub objects via `.node_id` property
 - **Error Handling**: Wrap all GraphQL calls with try-catch and logging
+- **Type Safety**: Use `Literal` types for operation names to catch typos
+- **Version**: Document tested PyGithub version for compatibility tracking
 
 ## Key Features
 
 ### Branch Name Generation
 - Follows GitHub's exact sanitization rules
 - Format: `{issue-number}-{sanitized-title}`
-- Max length 244 characters (Git branch name limit)
+- Max length 244 characters (GitHub's limit: 255 bytes for full ref - 11 bytes for "refs/heads/")
+- Limit is BYTES not characters (important for Unicode)
 - Preserves issue number, truncates title if needed
 
 ### Duplicate Prevention
 - Queries existing linked branches before creation
-- Returns existing branches in error response
-- Prevents redundant API calls and conflicts
+- Default: Blocks if issue has ANY linked branches
+- `allow_multiple=True`: Allows multiple branches per issue
+- Returns existing branches in response for caller decision
 
 ### Link Management
 - Creates association without creating Git branch (GraphQL only)
 - Unlinks without deleting Git branch (removes association only)
 - Returns structured data for error handling and UI integration
+- Uses `repo.default_branch` when base branch not specified
 
 ## Testing Strategy
 

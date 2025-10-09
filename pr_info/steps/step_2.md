@@ -22,8 +22,12 @@ class IssueBranchManager(BaseGitHubManager):
         """Query linked branches for an issue via GraphQL."""
 ```
 
-### TypedDict (add to module)
+### TypedDict and Types (add to module)
 ```python
+from typing import Literal
+
+GraphQLOperation = Literal["query", "createLinkedBranch", "deleteLinkedBranch"]
+
 class BranchCreationResult(TypedDict):
     success: bool
     branch_name: str
