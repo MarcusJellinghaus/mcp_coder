@@ -37,17 +37,17 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message
 
 ### Step 3: Update Existing Methods ([details](./steps/step_3.md))
-- [ ] Update create_issue() to populate assignees
-- [ ] Update close_issue() to populate assignees
-- [ ] Update reopen_issue() to populate assignees
-- [ ] Update add_labels() to populate assignees
-- [ ] Update remove_labels() to populate assignees
-- [ ] Update set_labels() to populate assignees
-- [ ] Update all test mocks to include assignees field
-- [ ] Run pylint check and fix any issues
-- [ ] Run pytest check and fix any issues
-- [ ] Run mypy check and fix any issues
-- [ ] Prepare git commit message
+- [x] Update create_issue() to populate assignees
+- [x] Update close_issue() to populate assignees
+- [x] Update reopen_issue() to populate assignees
+- [x] Update add_labels() to populate assignees
+- [x] Update remove_labels() to populate assignees
+- [x] Update set_labels() to populate assignees
+- [x] Update all test mocks to include assignees field
+- [x] Run pylint check and fix any issues
+- [x] Run pytest check and fix any issues
+- [x] Run mypy check and fix any issues
+- [x] Prepare git commit message
 
 ### Step 4: Quality Checks and Integration Test ([details](./steps/step_4.md))
 - [ ] Add Section 1.5 to test_complete_issue_workflow integration test

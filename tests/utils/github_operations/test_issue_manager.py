@@ -143,6 +143,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "open"
         mock_issue.labels = []
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
@@ -192,6 +193,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Bug description"
         mock_issue.state = "open"
         mock_issue.labels = [mock_label1, mock_label2]
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
@@ -254,6 +256,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "closed"
         mock_issue.labels = []
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T01:00:00Z"
@@ -313,6 +316,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "open"
         mock_issue.labels = []
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T02:00:00Z"
@@ -538,6 +542,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "open"
         mock_issue.labels = [mock_label1, mock_label2]
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T01:00:00Z"
@@ -583,6 +588,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "open"
         mock_issue.labels = [mock_label]
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
@@ -686,6 +692,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "open"
         mock_issue.labels = [mock_label]  # Only one label remaining after removal
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T01:00:00Z"
@@ -731,6 +738,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "open"
         mock_issue.labels = []  # All labels removed
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
@@ -836,6 +844,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "open"
         mock_issue.labels = [mock_label1, mock_label2]
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T01:00:00Z"
@@ -879,6 +888,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "open"
         mock_issue.labels = []  # All labels removed
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
@@ -922,6 +932,7 @@ class TestIssueManagerUnit:
         mock_issue.body = "Test description"
         mock_issue.state = "open"
         mock_issue.labels = [mock_label]
+        mock_issue.assignees = []
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
         mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
         mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
