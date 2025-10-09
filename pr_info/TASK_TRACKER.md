@@ -52,11 +52,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 4: Delete Linked Branch ([details](steps/step_4.md))
 - [x] Write test cases for `delete_linked_branch()` method
-- [ ] Implement `delete_linked_branch()` method (unlink only)
-- [ ] Handle branch not found scenarios
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check and fix all failures
-- [ ] Run mypy check and fix all type errors
+- [x] Implement `delete_linked_branch()` method (unlink only)
+- [x] Handle branch not found scenarios
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check and fix all failures
+- [x] Run mypy check and fix all type errors
 - [ ] Prepare git commit message for Step 4
 
 ### Step 5: Integration Test ([details](steps/step_5.md))

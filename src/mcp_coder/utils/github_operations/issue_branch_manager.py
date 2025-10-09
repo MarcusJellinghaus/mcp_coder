@@ -336,3 +336,110 @@ class IssueBranchManager(BaseGitHubManager):
                 error=error_msg,
                 existing_branches=[],
             )
+
+    @log_function_call
+    @_handle_github_errors(default_return=False)
+    def delete_linked_branch(self, issue_number: int, branch_name: str) -> bool:
+        """Unlink branch from issue (doesn't delete Git branch).
+
+        Args:
+            issue_number: Issue number to unlink branch from
+            branch_name: Name of the branch to unlink
+
+        Returns:
+            True if successfully unlinked, False otherwise
+
+        Example:
+            >>> manager = IssueBranchManager(Path.cwd())
+            >>> success = manager.delete_linked_branch(123, "123-feature-branch")
+            >>> if success:
+            ...     print("Branch unlinked successfully")
+            ... else:
+            ...     print("Failed to unlink branch")
+        """
+        # Step 1: Validate inputs
+        if not self._validate_issue_number(issue_number):
+            return False
+
+        if not branch_name or not branch_name.strip():
+            logger.error("Branch name cannot be empty")
+            return False
+
+        # Step 2: Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return False
+
+        # Extract owner and repo name
+        owner, repo_name = repo.owner.login, repo.name
+
+        # Step 3: Query linked branches to get linkedBranch.id
+        query = """
+        query($owner: String!, $repo: String!, $issueNumber: Int!) {
+          repository(owner: $owner, name: $repo) {
+            issue(number: $issueNumber) {
+              linkedBranches(first: 100) {
+                nodes {
+                  id
+                  ref {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+
+        variables = {
+            "owner": owner,
+            "repo": repo_name,
+            "issueNumber": issue_number,
+        }
+
+        # Execute GraphQL query
+        result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]
+            query=query, variables=variables
+        )
+
+        # Step 4: Find matching branch by name and extract its ID
+        try:
+            issue_data = result.get("data", {}).get("repository", {}).get("issue")
+            if issue_data is None:
+                logger.warning(f"Issue #{issue_number} not found")
+                return False
+
+            linked_branches = issue_data.get("linkedBranches", {}).get("nodes", [])
+
+            # Find the branch with matching name
+            linked_branch_id = None
+            for node in linked_branches:
+                if node and node.get("ref") and node["ref"].get("name") == branch_name:
+                    linked_branch_id = node.get("id")
+                    break
+
+            # Step 5: If not found, log warning and return False
+            if linked_branch_id is None:
+                logger.warning(
+                    f"Branch '{branch_name}' is not linked to issue #{issue_number}"
+                )
+                return False
+
+            # Step 6: Execute deleteLinkedBranch mutation
+            mutation_input = {"linkedBranchId": linked_branch_id}
+
+            self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]
+                mutation_name="deleteLinkedBranch",
+                mutation_input=mutation_input,
+                output_schema="clientMutationId",
+            )
+
+            logger.info(
+                f"Successfully unlinked branch '{branch_name}' from issue #{issue_number}"
+            )
+            return True
+
+        except (KeyError, TypeError) as e:
+            logger.error(f"Error parsing GraphQL response: {e}")
+            return False
