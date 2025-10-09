@@ -35,8 +35,6 @@ class TestCreateClaudeClient:
             # Setup
             mock_options = MagicMock()
             mock_options_class.return_value = mock_options
-            # Configure mock to return proper tuple (though it shouldn't be called)
-            mock_verify.return_value = (True, "/path/to/claude", None)
 
             # Execute
             result = _create_claude_client()
@@ -65,7 +63,7 @@ class TestCreateClaudeClient:
             # Execute & Verify
             with pytest.raises(
                 RuntimeError,
-                match="Claude CLI verification failed: Claude CLI not found",
+                match="Claude CLI not found during verification: Claude CLI not found",
             ):
                 _create_claude_client()
 
@@ -87,8 +85,6 @@ class TestCreateClaudeClient:
             # Setup
             mock_options = MagicMock()
             mock_options_class.return_value = mock_options
-            # Configure mock to return proper tuple (though it shouldn't be called)
-            mock_verify.return_value = (True, "/path/to/claude", None)
             env_vars = {"MCP_CODER_PROJECT_DIR": "/test/project"}
 
             # Execute

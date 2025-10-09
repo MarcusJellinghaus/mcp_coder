@@ -214,7 +214,11 @@ def _create_claude_client(
 ) -> ClaudeCodeOptions:
     """Create a Claude Code SDK client with optional session resumption.
 
-    Uses lazy verification - Claude installation is only verified if SDK raises CLINotFoundError.
+    Uses lazy verification pattern:
+    - Attempts SDK client creation first (SDK validates CLI internally)
+    - Only runs verification if SDK raises CLINotFoundError
+    - Provides enhanced diagnostics when Claude CLI is not found
+
     This improves performance by avoiding preemptive checks when Claude is already available.
 
     Args:
@@ -223,10 +227,6 @@ def _create_claude_client(
 
     Returns:
         ClaudeCodeOptions object configured for basic usage or session resumption
-
-    Note:
-        The SDK will use existing CLI subscription authentication automatically.
-        If SDK raises CLINotFoundError, verification is performed for diagnostics.
 
     Raises:
         RuntimeError: If Claude CLI cannot be found or verified (only after SDK failure)
@@ -242,12 +242,12 @@ def _create_claude_client(
             return ClaudeCodeOptions(env=env or {})
     except CLINotFoundError as e:
         # SDK couldn't find Claude - run verification for diagnostics
-        logger.warning("SDK raised CLINotFoundError, running verification: %s", e)
+        logger.error("SDK raised CLINotFoundError, running verification: %s", e)
         success, claude_path, error_msg = _verify_claude_before_use()
 
         if not success:
             logger.error("Claude verification failed: %s", error_msg)
-            raise RuntimeError(f"Claude CLI verification failed: {error_msg}") from e
+            raise RuntimeError(f"Claude CLI not found during verification: {error_msg}") from e
 
         # Verification passed but SDK still failed - shouldn't happen
         logger.error(
