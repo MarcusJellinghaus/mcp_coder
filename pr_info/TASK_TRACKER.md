@@ -57,7 +57,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues
 - [x] Run pytest check and fix all failures
 - [x] Run mypy check and fix all type errors
-- [ ] Prepare git commit message for Step 4
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Integration Test ([details](steps/step_5.md))
 - [x] Create `test_issue_branch_manager_integration.py` file
@@ -69,7 +69,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues
 - [x] Run pytest check (integration marker) and fix all failures
 - [x] Run mypy check and fix all type errors
-- [ ] Prepare git commit message for Step 5
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: Module Integration ([details](steps/step_6.md))
 - [x] Update `__init__.py` with new exports
