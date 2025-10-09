@@ -47,3 +47,28 @@
 **Decision:** Add `Literal` type hints for GraphQL operation names
 **Example:** `OperationType = Literal["createLinkedBranch", "deleteLinkedBranch"]`
 **Rationale:** Stricter typing, catches typos at development time
+
+
+### 11. Branch Name Length Handling
+**Decision:** Use conservative 200 character limit (not byte-based)
+**Rationale:** Simple implementation, avoids complexity of UTF-8 byte truncation while remaining safe for Unicode titles
+
+### 12. Literal Types for Type Safety
+**Decision:** Do not use Literal types for GraphQL operation names
+**Rationale:** KISS principle - only 3 operations used internally, PyGithub validates at runtime, reduces complexity
+
+### 13. PyGithub Version Documentation
+**Decision:** Skip version documentation in code
+**Rationale:** Not critical for MVP, can add later if compatibility issues arise
+
+### 14. Integration Test Git Branch Cleanup
+**Decision:** Clean up Git branches in addition to unlinking
+**Rationale:** Keeps test repository clean, more complete cleanup process
+
+### 15. Base Branch Validation
+**Decision:** No validation before GraphQL mutation - let mutation fail naturally
+**Rationale:** Simpler code, error caught by decorator, GraphQL provides error message
+
+### 16. Error Scenarios Documentation
+**Decision:** No separate error scenarios document
+**Rationale:** Test cases adequately cover error scenarios, integration test validates behavior

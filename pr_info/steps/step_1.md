@@ -20,11 +20,11 @@ Use the existing test patterns from test_issue_manager.py as reference.
 def generate_branch_name_from_issue(
     issue_number: int,
     issue_title: str,
-    max_length: int = 244
+    max_length: int = 200
 ) -> str:
     """Generate sanitized branch name matching GitHub's native rules.
     
-    max_length defaults to 244 (GitHub's limit: 255 bytes - 11 bytes for 'refs/heads/').
+    max_length defaults to 200 (conservative limit to handle Unicode safely).
     """
 ```
 
@@ -42,6 +42,7 @@ class TestBranchNameGeneration:
     def test_special_characters()
     def test_multiple_spaces()
     def test_unicode_characters()
+    def test_emoji_handling()
 ```
 
 ## HOW
@@ -65,7 +66,7 @@ import re
 3. Replace non-alphanumeric (except dash) with dash
 4. Replace multiple consecutive dashes with single dash
 5. Strip leading/trailing dashes
-6. Truncate: f"{issue_number}-{truncated_title}" if needed
+6. Truncate to max_length characters: f"{issue_number}-{truncated_title}" if needed
 ```
 
 ## DATA
@@ -73,7 +74,7 @@ import re
 ### Input Parameters
 - `issue_number: int` - Issue number (e.g., 123)
 - `issue_title: str` - Raw issue title (e.g., "Add New Feature - Part 1")
-- `max_length: int` - Max branch name length in bytes (default 244 = GitHub's limit)
+- `max_length: int` - Max branch name length in characters (default 200)
 
 ### Return Value
 - `str` - Sanitized branch name (e.g., "123-add-new-feature---part-1")
@@ -87,7 +88,7 @@ import re
 # Output: "456-fix-bug-multiple-spaces"
 
 # Input:  (789, "A" * 300)  # Very long title
-# Output: "789-aaaa..." (truncated to max_length)
+# Output: "789-aaaa..." (truncated to 200 characters)
 ```
 
 ## Test-First Implementation Order

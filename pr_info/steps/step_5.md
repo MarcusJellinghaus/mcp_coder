@@ -108,7 +108,12 @@ assert unlinked is True
 branches = branch_manager.get_linked_branches(issue["number"])
 assert result["branch_name"] not in branches
 
-# 7. Cleanup
+# 7. Cleanup Git branches (delete actual branches from repo)
+repo = branch_manager._get_repository()
+repo.get_git_ref(f"heads/{result['branch_name']}").delete()
+repo.get_git_ref(f"heads/{result2['branch_name']}").delete()
+
+# 8. Cleanup issue
 issue_manager.close_issue(issue["number"])
 ```
 
