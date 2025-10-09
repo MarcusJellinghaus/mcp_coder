@@ -86,6 +86,7 @@ def prepare_task_tracker(project_dir: Path, provider: str, method: str) -> bool:
             method=method,
             timeout=300,
             env_vars=env_vars,
+            project_dir=str(project_dir),
         )
 
         if not response or not response.strip():

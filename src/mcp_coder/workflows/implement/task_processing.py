@@ -106,6 +106,7 @@ def _call_llm_with_comprehensive_capture(
     method: str,
     timeout: int = 300,
     env_vars: dict[str, str] | None = None,
+    cwd: str | None = None,
 ) -> tuple[str, dict[Any, Any]]:
     """Call LLM and capture both text response and comprehensive data.
 
@@ -115,6 +116,7 @@ def _call_llm_with_comprehensive_capture(
         method: LLM method (e.g., 'cli' or 'api')
         timeout: Request timeout in seconds
         env_vars: Optional environment variables for the subprocess
+        cwd: Optional working directory for the LLM subprocess
 
     Returns:
         Tuple of (response_text, comprehensive_data_dict)
@@ -131,7 +133,7 @@ def _call_llm_with_comprehensive_capture(
             )
             start_time = datetime.now()
             detailed_response = ask_claude_code_api_detailed_sync(
-                prompt, timeout=timeout, env_vars=env_vars
+                prompt, timeout=timeout, env_vars=env_vars, cwd=cwd
             )
             duration = (datetime.now() - start_time).total_seconds()
             logger.info(f"Claude API call completed in {duration:.1f}s")
@@ -178,6 +180,7 @@ def _call_llm_with_comprehensive_capture(
                 method=method,
                 timeout=timeout,
                 env_vars=env_vars,
+                project_dir=cwd,
             )
             return response_text, {}
         except subprocess.TimeoutExpired as e:
@@ -439,6 +442,7 @@ def check_and_fix_mypy(
                         method,
                         timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
                         env_vars=env_vars,
+                        cwd=str(project_dir),
                     )
                 )
 
@@ -520,6 +524,9 @@ def process_single_task(
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
 
+    # Set working directory for LLM subprocess
+    cwd = str(project_dir)
+
     # Get next incomplete task
     next_task = get_next_task(project_dir)
     if not next_task:
@@ -552,6 +559,7 @@ Please implement this task step by step."""
             method,
             timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
+            cwd=cwd,
         )
 
         if not response or not response.strip():

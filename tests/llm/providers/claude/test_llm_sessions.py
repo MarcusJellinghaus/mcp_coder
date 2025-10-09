@@ -104,6 +104,7 @@ class MockClaudeAPI:
         session_id: Optional[str] = None,
         timeout: int = 30,
         env_vars: Optional[Dict[str, str]] = None,
+        cwd: Optional[str] = None,
     ) -> LLMResponseDict:
         """Simulate API call."""
         self.call_count += 1

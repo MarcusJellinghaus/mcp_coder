@@ -108,6 +108,7 @@ def generate_commit_message_with_llm(
             method=method,
             timeout=LLM_COMMIT_TIMEOUT_SECONDS,
             env_vars=env_vars,
+            project_dir=str(project_dir),
         )
 
         if not response or not response.strip():

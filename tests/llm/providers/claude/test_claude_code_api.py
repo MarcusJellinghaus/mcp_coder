@@ -41,7 +41,7 @@ class TestCreateClaudeClient:
 
             # Verify
             mock_verify.assert_not_called()
-            mock_options_class.assert_called_once_with(env={})
+            mock_options_class.assert_called_once_with(env={}, cwd=None)
             assert result == mock_options
 
     def test_create_claude_client_sdk_failure_triggers_verification(self) -> None:
@@ -92,7 +92,7 @@ class TestCreateClaudeClient:
 
             # Verify
             mock_verify.assert_not_called()
-            mock_options_class.assert_called_once_with(env=env_vars)
+            mock_options_class.assert_called_once_with(env=env_vars, cwd=None)
             assert result == mock_options
 
 
@@ -295,7 +295,9 @@ class TestAskClaudeCodeApi:
         # Verify - now returns dict, not string
         assert isinstance(result, dict)
         assert result["text"] == "Test response"
-        mock_detailed_sync.assert_called_once_with("test question", 60, None, None)
+        mock_detailed_sync.assert_called_once_with(
+            "test question", 60, None, None, None
+        )
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
@@ -352,7 +354,7 @@ class TestAskClaudeCodeApi:
         # Verify
         assert result["text"] == "Response with env"
         mock_detailed_sync.assert_called_once_with(
-            "test question", 30.0, None, env_vars
+            "test question", 30.0, None, env_vars, None
         )
 
 
@@ -501,7 +503,7 @@ class TestAskClaudeCodeApiDetailed:
 
         # Verify
         assert result["text"] == "Response"
-        mock_create_client.assert_called_once_with(None, env=env_vars)
+        mock_create_client.assert_called_once_with(None, env=env_vars, cwd=None)
 
 
 @pytest.mark.claude_api_integration
