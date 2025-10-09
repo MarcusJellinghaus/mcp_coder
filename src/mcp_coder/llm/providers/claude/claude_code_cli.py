@@ -167,6 +167,7 @@ def ask_claude_code_cli(
     session_id: str | None = None,
     timeout: int = 30,
     env_vars: dict[str, str] | None = None,
+    cwd: str | None = None,
 ) -> LLMResponseDict:
     """Ask Claude via CLI with native session support.
 
@@ -178,6 +179,7 @@ def ask_claude_code_cli(
         session_id: Optional Claude session ID to resume previous conversation
         timeout: Timeout in seconds (default: 30)
         env_vars: Optional environment variables for the subprocess
+        cwd: Optional working directory for the subprocess
 
     Returns:
         LLMResponseDict with complete response data including session_id
@@ -216,6 +218,7 @@ def ask_claude_code_cli(
         timeout_seconds=timeout,
         input_data=question,  # Pass question via stdin
         env=env_vars,
+        cwd=cwd,  # Set working directory to match MCP server configuration
     )
     result = execute_subprocess(command, options)
 
