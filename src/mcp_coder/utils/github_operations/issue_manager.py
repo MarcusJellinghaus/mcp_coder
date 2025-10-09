@@ -29,6 +29,7 @@ class IssueData(TypedDict):
     body: str
     state: str
     labels: List[str]
+    assignees: List[str]
     user: Optional[str]
     created_at: Optional[str]
     updated_at: Optional[str]
@@ -128,6 +129,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -146,7 +148,7 @@ class IssueManager(BaseGitHubManager):
             labels: List of label names to apply (optional)
 
         Returns:
-            IssueData with created issue information, or empty dict on error
+            IssueData with created issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -168,6 +170,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -185,6 +188,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -204,6 +208,96 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
+            user=github_issue.user.login if github_issue.user else None,
+            created_at=(
+                github_issue.created_at.isoformat() if github_issue.created_at else None
+            ),
+            updated_at=(
+                github_issue.updated_at.isoformat() if github_issue.updated_at else None
+            ),
+            url=github_issue.html_url,
+            locked=github_issue.locked,
+        )
+
+    @log_function_call
+    @_handle_github_errors(
+        default_return=IssueData(
+            number=0,
+            title="",
+            body="",
+            state="",
+            labels=[],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="",
+            locked=False,
+        )
+    )
+    def get_issue(self, issue_number: int) -> IssueData:
+        """Retrieve issue details by number.
+
+        Args:
+            issue_number: Issue number to retrieve
+
+        Returns:
+            IssueData with issue information, or empty IssueData on error
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> issue = manager.get_issue(123)
+            >>> print(f"Issue: {issue['title']}")
+            >>> print(f"Assignees: {issue['assignees']}")
+        """
+        # Validate issue number
+        if not self._validate_issue_number(issue_number):
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return IssueData(
+                number=0,
+                title="",
+                body="",
+                state="",
+                labels=[],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="",
+                locked=False,
+            )
+
+        # Get issue
+        github_issue = repo.get_issue(issue_number)
+
+        # Convert to IssueData
+        return IssueData(
+            number=github_issue.number,
+            title=github_issue.title,
+            body=github_issue.body or "",
+            state=github_issue.state,
+            labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -514,6 +608,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -528,7 +623,7 @@ class IssueManager(BaseGitHubManager):
             issue_number: Issue number to close
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -545,6 +640,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -562,6 +658,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -583,6 +680,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -602,6 +700,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -616,7 +715,7 @@ class IssueManager(BaseGitHubManager):
             issue_number: Issue number to reopen
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -633,6 +732,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -650,6 +750,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -671,6 +772,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -728,6 +830,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -743,7 +846,7 @@ class IssueManager(BaseGitHubManager):
             *labels: Variable number of label names to add
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -760,6 +863,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -776,6 +880,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -793,6 +898,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -814,6 +920,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -833,6 +940,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -848,7 +956,7 @@ class IssueManager(BaseGitHubManager):
             *labels: Variable number of label names to remove
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -865,6 +973,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -881,6 +990,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -898,6 +1008,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -920,6 +1031,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
@@ -939,6 +1051,7 @@ class IssueManager(BaseGitHubManager):
             body="",
             state="",
             labels=[],
+            assignees=[],
             user=None,
             created_at=None,
             updated_at=None,
@@ -954,7 +1067,7 @@ class IssueManager(BaseGitHubManager):
             *labels: Variable number of label names to set (can be empty to remove all)
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -974,6 +1087,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -991,6 +1105,7 @@ class IssueManager(BaseGitHubManager):
                 body="",
                 state="",
                 labels=[],
+                assignees=[],
                 user=None,
                 created_at=None,
                 updated_at=None,
@@ -1012,6 +1127,7 @@ class IssueManager(BaseGitHubManager):
             body=github_issue.body or "",
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
+            assignees=[assignee.login for assignee in github_issue.assignees],
             user=github_issue.user.login if github_issue.user else None,
             created_at=(
                 github_issue.created_at.isoformat() if github_issue.created_at else None
