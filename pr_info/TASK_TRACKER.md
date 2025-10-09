@@ -30,11 +30,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 2: Implement get_issue() Method ([details](./steps/step_2.md))
 - [x] Write unit test: test_get_issue_success()
-- [ ] Implement get_issue() method in IssueManager
-- [ ] Run pylint check and fix any issues
-- [ ] Run pytest check and fix any issues
-- [ ] Run mypy check and fix any issues
-- [ ] Prepare git commit message
+- [x] Implement get_issue() method in IssueManager
+- [x] Run pylint check and fix any issues
+- [x] Run pytest check and fix any issues
+- [x] Run mypy check and fix any issues
+- [x] Prepare git commit message
 
 ### Step 3: Update Existing Methods ([details](./steps/step_3.md))
 - [ ] Update create_issue() to populate assignees
