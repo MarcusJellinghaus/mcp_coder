@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Branch Name Sanitization ([details](steps/step_1.md))
-- [ ] Write test cases for `generate_branch_name_from_issue()` function
+- [x] Write test cases for `generate_branch_name_from_issue()` function
 - [ ] Implement `generate_branch_name_from_issue()` utility function
 - [ ] Run pylint check and fix all issues
 - [ ] Run pytest check and fix all failures
