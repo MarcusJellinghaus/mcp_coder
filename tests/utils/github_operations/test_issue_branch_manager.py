@@ -646,7 +646,11 @@ class TestCreateLinkedBranch:
         assert result["success"] is False
 
     def test_permission_error(self, mock_manager: IssueBranchManager) -> None:
-        """Test creating branch when user lacks permissions."""
+        """Test creating branch when user lacks permissions.
+
+        Permission errors (403) are re-raised by the decorator to allow
+        calling code to handle authentication issues appropriately.
+        """
         # Mock repository
         mock_repo = Mock()
         mock_repo.node_id = "R_kgDOABCDEF"
@@ -677,11 +681,12 @@ class TestCreateLinkedBranch:
             side_effect=GithubException(403, {"message": "Forbidden"}, None)
         )
 
-        # Test
-        result = mock_manager.create_remote_branch_for_issue(123)
+        # Test - should re-raise the GithubException
+        with pytest.raises(GithubException) as exc_info:
+            mock_manager.create_remote_branch_for_issue(123)
 
-        # Verify result - should return default error result due to decorator
-        assert result["success"] is False
+        # Verify it's a 403 error
+        assert exc_info.value.status == 403
 
     def test_base_branch_not_found(self, mock_manager: IssueBranchManager) -> None:
         """Test creating branch when specified base branch doesn't exist."""
@@ -1008,7 +1013,11 @@ class TestDeleteLinkedBranch:
         assert result is False
 
     def test_graphql_mutation_error(self, mock_manager: IssueBranchManager) -> None:
-        """Test delete_linked_branch handles GraphQL mutation errors gracefully."""
+        """Test delete_linked_branch handles GraphQL mutation errors.
+
+        Permission errors (403) are re-raised by the decorator to allow
+        calling code to handle authentication issues appropriately.
+        """
         # Mock repository
         mock_repo = Mock()
         mock_repo.owner.login = "test-owner"
@@ -1044,11 +1053,12 @@ class TestDeleteLinkedBranch:
             side_effect=GithubException(403, {"message": "Forbidden"}, None)
         )
 
-        # Test
-        result = mock_manager.delete_linked_branch(123, "123-feature-branch")
+        # Test - should re-raise the GithubException
+        with pytest.raises(GithubException) as exc_info:
+            mock_manager.delete_linked_branch(123, "123-feature-branch")
 
-        # Verify result - should return False due to decorator
-        assert result is False
+        # Verify it's a 403 error
+        assert exc_info.value.status == 403
 
     def test_malformed_query_response(self, mock_manager: IssueBranchManager) -> None:
         """Test delete_linked_branch handles malformed GraphQL query response."""
