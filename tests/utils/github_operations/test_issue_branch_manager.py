@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from mcp_coder.utils.github_operations.issue_branch_manager import (
+    BranchCreationResult,
     IssueBranchManager,
     generate_branch_name_from_issue,
 )
@@ -330,3 +331,431 @@ class TestGetLinkedBranches:
         # Test - should skip null values and return only valid branch
         result = mock_manager.get_linked_branches(123)
         assert result == ["123-valid-branch"]
+
+
+class TestCreateLinkedBranch:
+    """Test suite for IssueBranchManager.create_remote_branch_for_issue() method."""
+
+    @pytest.fixture
+    def mock_manager(self) -> IssueBranchManager:
+        """Create a mock IssueBranchManager for testing."""
+        with (
+            patch("mcp_coder.utils.github_operations.issue_branch_manager.git.Repo"),
+            patch(
+                "mcp_coder.utils.github_operations.issue_branch_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch("mcp_coder.utils.github_operations.issue_branch_manager.Github"),
+        ):
+            manager = IssueBranchManager(Path("/fake/path"))
+            return manager
+
+    def test_create_with_auto_name(self, mock_manager: IssueBranchManager) -> None:
+        """Test creating branch with auto-generated name from issue title."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.node_id = "R_kgDOABCDEF"
+        mock_repo.default_branch = "main"
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock issue
+        mock_issue = Mock()
+        mock_issue.node_id = "I_kwDOABCDEF123"
+        mock_issue.title = "Add New Feature"
+        mock_repo.get_issue = Mock(return_value=mock_issue)
+
+        # Mock branch for getting base SHA
+        mock_branch = Mock()
+        mock_branch.commit.sha = "abc123def456"
+        mock_repo.get_branch = Mock(return_value=mock_branch)
+
+        # Mock get_linked_branches to return empty (no existing branches)
+        mock_manager.get_linked_branches = Mock(return_value=[])
+
+        # Mock GraphQL mutation response
+        mock_response = {
+            "data": {
+                "createLinkedBranch": {
+                    "linkedBranch": {
+                        "id": "LB_kwDOABCDEF",
+                        "ref": {
+                            "name": "123-add-new-feature",
+                            "target": {"oid": "abc123def456"},
+                        },
+                    }
+                }
+            }
+        }
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+            return_value=mock_response
+        )
+
+        # Test
+        result = mock_manager.create_remote_branch_for_issue(123)
+
+        # Verify result
+        assert result["success"] is True
+        assert result["branch_name"] == "123-add-new-feature"
+        assert result["error"] is None
+        assert result["existing_branches"] == []
+
+        # Verify issue was fetched
+        mock_repo.get_issue.assert_called_once_with(123)
+
+        # Verify GraphQL mutation was called
+        mock_manager._github_client._Github__requester.graphql_named_mutation.assert_called_once()
+
+    def test_create_with_custom_name(self, mock_manager: IssueBranchManager) -> None:
+        """Test creating branch with custom branch name."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.node_id = "R_kgDOABCDEF"
+        mock_repo.default_branch = "main"
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock issue
+        mock_issue = Mock()
+        mock_issue.node_id = "I_kwDOABCDEF123"
+        mock_issue.title = "Add New Feature"
+        mock_repo.get_issue = Mock(return_value=mock_issue)
+
+        # Mock branch for getting base SHA
+        mock_branch = Mock()
+        mock_branch.commit.sha = "abc123def456"
+        mock_repo.get_branch = Mock(return_value=mock_branch)
+
+        # Mock get_linked_branches to return empty
+        mock_manager.get_linked_branches = Mock(return_value=[])
+
+        # Mock GraphQL mutation response
+        mock_response = {
+            "data": {
+                "createLinkedBranch": {
+                    "linkedBranch": {
+                        "id": "LB_kwDOABCDEF",
+                        "ref": {
+                            "name": "custom-branch-name",
+                            "target": {"oid": "abc123def456"},
+                        },
+                    }
+                }
+            }
+        }
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+            return_value=mock_response
+        )
+
+        # Test with custom branch name
+        result = mock_manager.create_remote_branch_for_issue(
+            123, branch_name="custom-branch-name"
+        )
+
+        # Verify result
+        assert result["success"] is True
+        assert result["branch_name"] == "custom-branch-name"
+        assert result["error"] is None
+        assert result["existing_branches"] == []
+
+    def test_create_with_base_branch(self, mock_manager: IssueBranchManager) -> None:
+        """Test creating branch with custom base branch."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.node_id = "R_kgDOABCDEF"
+        mock_repo.default_branch = "main"
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock issue
+        mock_issue = Mock()
+        mock_issue.node_id = "I_kwDOABCDEF123"
+        mock_issue.title = "Add New Feature"
+        mock_repo.get_issue = Mock(return_value=mock_issue)
+
+        # Mock branch for getting base SHA (custom develop branch)
+        mock_branch = Mock()
+        mock_branch.commit.sha = "xyz789abc123"
+        mock_repo.get_branch = Mock(return_value=mock_branch)
+
+        # Mock get_linked_branches to return empty
+        mock_manager.get_linked_branches = Mock(return_value=[])
+
+        # Mock GraphQL mutation response
+        mock_response = {
+            "data": {
+                "createLinkedBranch": {
+                    "linkedBranch": {
+                        "id": "LB_kwDOABCDEF",
+                        "ref": {
+                            "name": "123-add-new-feature",
+                            "target": {"oid": "xyz789abc123"},
+                        },
+                    }
+                }
+            }
+        }
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+            return_value=mock_response
+        )
+
+        # Test with custom base branch
+        result = mock_manager.create_remote_branch_for_issue(123, base_branch="develop")
+
+        # Verify result
+        assert result["success"] is True
+        assert result["branch_name"] == "123-add-new-feature"
+        assert result["error"] is None
+
+        # Verify base branch was used
+        mock_repo.get_branch.assert_called_once_with("develop")
+
+    def test_duplicate_prevention_default(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Test that duplicate branch creation is prevented by default (allow_multiple=False)."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock get_linked_branches to return existing branches
+        mock_manager.get_linked_branches = Mock(
+            return_value=["123-feature-branch", "123-hotfix"]
+        )
+
+        # Test - should fail due to existing branches
+        result = mock_manager.create_remote_branch_for_issue(123)
+
+        # Verify result
+        assert result["success"] is False
+        assert result["branch_name"] == ""
+        assert result["error"] is not None
+        assert "already linked" in result["error"].lower()
+        assert result["existing_branches"] == ["123-feature-branch", "123-hotfix"]
+
+        # Verify get_linked_branches was called
+        mock_manager.get_linked_branches.assert_called_once_with(123)
+
+    def test_allow_multiple_branches(self, mock_manager: IssueBranchManager) -> None:
+        """Test that multiple branches can be created when allow_multiple=True."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.node_id = "R_kgDOABCDEF"
+        mock_repo.default_branch = "main"
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock issue
+        mock_issue = Mock()
+        mock_issue.node_id = "I_kwDOABCDEF123"
+        mock_issue.title = "Add New Feature"
+        mock_repo.get_issue = Mock(return_value=mock_issue)
+
+        # Mock branch for getting base SHA
+        mock_branch = Mock()
+        mock_branch.commit.sha = "abc123def456"
+        mock_repo.get_branch = Mock(return_value=mock_branch)
+
+        # Mock get_linked_branches to return existing branch
+        mock_manager.get_linked_branches = Mock(return_value=["123-existing-branch"])
+
+        # Mock GraphQL mutation response
+        mock_response = {
+            "data": {
+                "createLinkedBranch": {
+                    "linkedBranch": {
+                        "id": "LB_kwDOABCDEF",
+                        "ref": {
+                            "name": "123-second-branch",
+                            "target": {"oid": "abc123def456"},
+                        },
+                    }
+                }
+            }
+        }
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+            return_value=mock_response
+        )
+
+        # Test with allow_multiple=True
+        result = mock_manager.create_remote_branch_for_issue(
+            123, branch_name="123-second-branch", allow_multiple=True
+        )
+
+        # Verify result - should succeed despite existing branch
+        assert result["success"] is True
+        assert result["branch_name"] == "123-second-branch"
+        assert result["error"] is None
+
+        # Verify get_linked_branches was NOT called (skipped when allow_multiple=True)
+        mock_manager.get_linked_branches.assert_not_called()
+
+    def test_invalid_issue_number(self, mock_manager: IssueBranchManager) -> None:
+        """Test creating branch with invalid issue number."""
+        # Test with negative number
+        result = mock_manager.create_remote_branch_for_issue(-1)
+        assert result["success"] is False
+        assert result["error"] is not None
+
+        # Test with zero
+        result = mock_manager.create_remote_branch_for_issue(0)
+        assert result["success"] is False
+        assert result["error"] is not None
+
+    def test_issue_not_found(self, mock_manager: IssueBranchManager) -> None:
+        """Test creating branch when issue is not found."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock get_linked_branches to return empty
+        mock_manager.get_linked_branches = Mock(return_value=[])
+
+        # Mock get_issue to raise exception
+        from github import GithubException
+
+        mock_repo.get_issue = Mock(
+            side_effect=GithubException(404, {"message": "Not Found"}, None)
+        )
+
+        # Test
+        result = mock_manager.create_remote_branch_for_issue(999)
+
+        # Verify result - should return default error result due to decorator
+        assert result["success"] is False
+
+    def test_permission_error(self, mock_manager: IssueBranchManager) -> None:
+        """Test creating branch when user lacks permissions."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.node_id = "R_kgDOABCDEF"
+        mock_repo.default_branch = "main"
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock issue
+        mock_issue = Mock()
+        mock_issue.node_id = "I_kwDOABCDEF123"
+        mock_issue.title = "Add New Feature"
+        mock_repo.get_issue = Mock(return_value=mock_issue)
+
+        # Mock branch for getting base SHA
+        mock_branch = Mock()
+        mock_branch.commit.sha = "abc123def456"
+        mock_repo.get_branch = Mock(return_value=mock_branch)
+
+        # Mock get_linked_branches to return empty
+        mock_manager.get_linked_branches = Mock(return_value=[])
+
+        # Mock GraphQL mutation to raise permission error
+        from github import GithubException
+
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+            side_effect=GithubException(403, {"message": "Forbidden"}, None)
+        )
+
+        # Test
+        result = mock_manager.create_remote_branch_for_issue(123)
+
+        # Verify result - should return default error result due to decorator
+        assert result["success"] is False
+
+    def test_base_branch_not_found(self, mock_manager: IssueBranchManager) -> None:
+        """Test creating branch when specified base branch doesn't exist."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.node_id = "R_kgDOABCDEF"
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock issue
+        mock_issue = Mock()
+        mock_issue.node_id = "I_kwDOABCDEF123"
+        mock_issue.title = "Add New Feature"
+        mock_repo.get_issue = Mock(return_value=mock_issue)
+
+        # Mock get_linked_branches to return empty
+        mock_manager.get_linked_branches = Mock(return_value=[])
+
+        # Mock get_branch to raise exception for non-existent branch
+        from github import GithubException
+
+        mock_repo.get_branch = Mock(
+            side_effect=GithubException(404, {"message": "Branch not found"}, None)
+        )
+
+        # Test
+        result = mock_manager.create_remote_branch_for_issue(
+            123, base_branch="nonexistent"
+        )
+
+        # Verify result - should return default error result due to decorator
+        assert result["success"] is False
+
+    def test_repository_not_found(self, mock_manager: IssueBranchManager) -> None:
+        """Test creating branch when repository cannot be accessed."""
+        # Mock _get_repository to return None
+        mock_manager._repository = None
+        mock_manager._get_repository = Mock(return_value=None)
+
+        # Test
+        result = mock_manager.create_remote_branch_for_issue(123)
+
+        # Verify result
+        assert result["success"] is False
+        assert result["error"] is not None
+
+    def test_graphql_mutation_malformed_response(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Test handling of malformed GraphQL mutation response."""
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.node_id = "R_kgDOABCDEF"
+        mock_repo.default_branch = "main"
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock issue
+        mock_issue = Mock()
+        mock_issue.node_id = "I_kwDOABCDEF123"
+        mock_issue.title = "Add New Feature"
+        mock_repo.get_issue = Mock(return_value=mock_issue)
+
+        # Mock branch for getting base SHA
+        mock_branch = Mock()
+        mock_branch.commit.sha = "abc123def456"
+        mock_repo.get_branch = Mock(return_value=mock_branch)
+
+        # Mock get_linked_branches to return empty
+        mock_manager.get_linked_branches = Mock(return_value=[])
+
+        # Mock GraphQL mutation response with malformed data
+        mock_response = {"data": None}  # Malformed response
+        mock_manager._github_client._Github__requester = Mock()
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(
+            return_value=mock_response
+        )
+
+        # Test
+        result = mock_manager.create_remote_branch_for_issue(123)
+
+        # Verify result - should fail gracefully
+        assert result["success"] is False
+        assert result["error"] is not None
