@@ -72,15 +72,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 5
 
 ### Step 6: Module Integration ([details](steps/step_6.md))
-- [ ] Update `__init__.py` with new exports
-- [ ] Add `IssueBranchManager` to `__all__`
-- [ ] Add `BranchCreationResult` to `__all__`
-- [ ] Add `generate_branch_name_from_issue` to `__all__`
-- [ ] Verify imports work correctly
-- [ ] Run pylint check on entire module and fix all issues
-- [ ] Run pytest check on entire module and fix all failures
-- [ ] Run mypy check on entire module and fix all type errors
-- [ ] Prepare git commit message for Step 6
+- [x] Update `__init__.py` with new exports
+- [x] Add `IssueBranchManager` to `__all__`
+- [x] Add `BranchCreationResult` to `__all__`
+- [x] Add `generate_branch_name_from_issue` to `__all__`
+- [x] Verify imports work correctly
+- [x] Run pylint check on entire module and fix all issues
+- [x] Run pytest check on entire module and fix all failures
+- [x] Run mypy check on entire module and fix all type errors
+- [x] Prepare git commit message for Step 6
 
 ---
 
