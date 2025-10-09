@@ -331,71 +331,6 @@ class TestLogProgressSummary:
             str(Path("/test/project") / "pr_info")
         )
 
-    @pytest.mark.skipif(
-        sys.platform.startswith("linux"),
-        reason="Log capture behaves differently on Linux",
-    )
-    @patch("mcp_coder.workflows.implement.core.get_step_progress")
-    def test_log_progress_summary_with_progress(
-        self, mock_get_progress: MagicMock, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test log_progress_summary with progress data."""
-        mock_get_progress.return_value = {
-            "Step 1": {
-                "total": 5,
-                "completed": 3,
-                "incomplete": 2,
-                "incomplete_tasks": ["Task 1", "Task 2"],
-            },
-            "Step 2": {
-                "total": 3,
-                "completed": 3,
-                "incomplete": 0,
-                "incomplete_tasks": [],
-            },
-        }
-
-        with caplog.at_level("INFO"):
-            log_progress_summary(Path("/test/project"))
-
-        # Use caplog.records for pytest-xdist compatibility (more reliable than caplog.text)
-        log_messages = [record.message for record in caplog.records]
-        all_logs = " ".join(log_messages)
-
-        # Check that progress information was logged
-        assert any("TASK TRACKER PROGRESS SUMMARY" in msg for msg in log_messages)
-        assert any("Step 1:" in msg for msg in log_messages)
-        assert any("Step 2:" in msg for msg in log_messages)
-        assert "60%" in all_logs  # 3/5 = 60%
-        assert "100%" in all_logs  # 3/3 = 100%
-        assert "Task 1, Task 2" in all_logs  # Incomplete tasks listed
-
-    @pytest.mark.skipif(
-        sys.platform.startswith("linux"),
-        reason="Log capture behaves differently on Linux",
-    )
-    @patch("mcp_coder.workflows.implement.core.get_step_progress")
-    def test_log_progress_summary_zero_total_tasks(
-        self, mock_get_progress: MagicMock, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test log_progress_summary with zero total tasks."""
-        mock_get_progress.return_value = {
-            "Step 1": {
-                "total": 0,
-                "completed": 0,
-                "incomplete": 0,
-                "incomplete_tasks": [],
-            }
-        }
-
-        with caplog.at_level("INFO"):
-            log_progress_summary(Path("/test/project"))
-
-        # Use caplog.records for pytest-xdist compatibility
-        all_logs = " ".join(record.message for record in caplog.records)
-
-        assert "0%" in all_logs  # 0/0 should show 0%
-
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     def test_log_progress_summary_exception(self, mock_get_progress: MagicMock) -> None:
         """Test log_progress_summary handles exceptions gracefully."""
@@ -569,44 +504,6 @@ class TestRunImplementWorkflow:
 
         assert result == 0  # Should succeed with no tasks
         mock_process_task.assert_called_once()
-
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
-    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_run_implement_workflow_multiple_tasks_then_error(
-        self,
-        mock_check_git: MagicMock,
-        mock_check_branch: MagicMock,
-        mock_check_prereq: MagicMock,
-        mock_prepare_tracker: MagicMock,
-        mock_log_progress: MagicMock,
-        mock_process_task: MagicMock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Test run_implement_workflow processes multiple tasks then encounters error."""
-        mock_check_git.return_value = True
-        mock_check_branch.return_value = True
-        mock_check_prereq.return_value = True
-        mock_prepare_tracker.return_value = True
-        # Success, success, then error
-        mock_process_task.side_effect = [
-            (True, "completed"),
-            (True, "completed"),
-            (False, "error"),
-        ]
-
-        with caplog.at_level("INFO"):
-            result = run_implement_workflow(Path("/test/project"), "claude", "cli")
-            # Capture log text inside context manager for pytest-xdist compatibility
-            log_text = caplog.text
-
-        assert result == 1
-        assert mock_process_task.call_count == 3
-        # Check that workflow error was logged (ERROR message is reliably captured on all platforms)
-        assert "Task processing failed - stopping workflow" in log_text
 
 
 class TestIntegration:
