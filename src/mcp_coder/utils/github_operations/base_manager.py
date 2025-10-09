@@ -29,11 +29,13 @@ def _handle_github_errors(
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """Decorator to handle GitHub API errors consistently.
 
-    This decorator handles GithubException and general Exception errors by
-    logging them and returning the default_return value.
+    This decorator handles GithubException and general Exception errors:
+    - Authentication/permission errors (401, 403): Re-raised to caller
+    - Other GithubException errors: Logged and return default_return
+    - Other exceptions: Logged and return default_return
 
     Args:
-        default_return: Value to return when handling errors
+        default_return: Value to return when handling non-auth errors
 
     Returns:
         Decorator function that wraps the original function with error handling
@@ -51,7 +53,13 @@ def _handle_github_errors(
             try:
                 return func(*args, **kwargs)
             except GithubException as e:
-                # Log and return default for GitHub errors
+                # Re-raise authentication/permission errors
+                if e.status in (401, 403):
+                    logger.error(
+                        f"Authentication/permission error in {func.__name__}: {e}"
+                    )
+                    raise
+                # Log and return default for other GitHub errors
                 logger.error(f"GitHub API error in {func.__name__}: {e}")
                 return cast(T, default_return)
             except Exception as e:
