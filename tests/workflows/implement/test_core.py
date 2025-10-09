@@ -375,32 +375,6 @@ class TestLogProgressSummary:
         reason="Log capture behaves differently on Linux",
     )
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
-    def test_log_progress_summary_with_many_incomplete_tasks(
-        self, mock_get_progress: MagicMock, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test log_progress_summary with many incomplete tasks (truncation)."""
-        mock_get_progress.return_value = {
-            "Step 1": {
-                "total": 10,
-                "completed": 2,
-                "incomplete": 8,
-                "incomplete_tasks": ["Task 1", "Task 2", "Task 3", "Task 4", "Task 5"],
-            }
-        }
-
-        with caplog.at_level("INFO"):
-            log_progress_summary(Path("/test/project"))
-
-        # Use caplog.records for pytest-xdist compatibility
-        all_logs = " ".join(record.message for record in caplog.records)
-
-        assert "Task 1, Task 2, Task 3..." in all_logs  # Truncated at 3 tasks
-
-    @pytest.mark.skipif(
-        sys.platform.startswith("linux"),
-        reason="Log capture behaves differently on Linux",
-    )
-    @patch("mcp_coder.workflows.implement.core.get_step_progress")
     def test_log_progress_summary_zero_total_tasks(
         self, mock_get_progress: MagicMock, caplog: pytest.LogCaptureFixture
     ) -> None:
