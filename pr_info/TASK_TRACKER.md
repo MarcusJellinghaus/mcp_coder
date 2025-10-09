@@ -23,11 +23,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 1: Branch Name Sanitization ([details](steps/step_1.md))
 - [x] Write test cases for `generate_branch_name_from_issue()` function
-- [ ] Implement `generate_branch_name_from_issue()` utility function
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check and fix all failures
-- [ ] Run mypy check and fix all type errors
-- [ ] Prepare git commit message for Step 1
+- [x] Implement `generate_branch_name_from_issue()` utility function
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check and fix all failures
+- [x] Run mypy check and fix all type errors
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Query Linked Branches ([details](steps/step_2.md))
 - [ ] Create `IssueBranchManager` class inheriting from `BaseGitHubManager`
