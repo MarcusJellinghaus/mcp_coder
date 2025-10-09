@@ -29,7 +29,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message
 
 ### Step 2: Implement get_issue() Method ([details](./steps/step_2.md))
-- [ ] Write unit test: test_get_issue_success()
+- [x] Write unit test: test_get_issue_success()
 - [ ] Implement get_issue() method in IssueManager
 - [ ] Run pylint check and fix any issues
 - [ ] Run pytest check and fix any issues
