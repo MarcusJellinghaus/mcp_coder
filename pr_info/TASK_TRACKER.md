@@ -30,14 +30,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 1
 
 ### Step 2: Query Linked Branches ([details](steps/step_2.md))
-- [ ] Create `IssueBranchManager` class inheriting from `BaseGitHubManager`
-- [ ] Write test cases for `get_linked_branches()` method
-- [ ] Implement `get_linked_branches()` method with GraphQL query
-- [ ] Add `BranchCreationResult` TypedDict to module
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check and fix all failures
-- [ ] Run mypy check and fix all type errors
-- [ ] Prepare git commit message for Step 2
+- [x] Create `IssueBranchManager` class inheriting from `BaseGitHubManager`
+- [x] Write test cases for `get_linked_branches()` method
+- [x] Implement `get_linked_branches()` method with GraphQL query
+- [x] Add `BranchCreationResult` TypedDict to module
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check and fix all failures
+- [x] Run mypy check and fix all type errors
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Create Linked Branch ([details](steps/step_3.md))
 - [ ] Write test cases for `create_remote_branch_for_issue()` method
