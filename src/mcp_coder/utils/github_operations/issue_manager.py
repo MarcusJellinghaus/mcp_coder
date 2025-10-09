@@ -148,7 +148,7 @@ class IssueManager(BaseGitHubManager):
             labels: List of label names to apply (optional)
 
         Returns:
-            IssueData with created issue information, or empty dict on error
+            IssueData with created issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -243,7 +243,7 @@ class IssueManager(BaseGitHubManager):
             issue_number: Issue number to retrieve
 
         Returns:
-            IssueData with issue information, or empty dict on error
+            IssueData with issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -623,7 +623,7 @@ class IssueManager(BaseGitHubManager):
             issue_number: Issue number to close
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -715,7 +715,7 @@ class IssueManager(BaseGitHubManager):
             issue_number: Issue number to reopen
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -846,7 +846,7 @@ class IssueManager(BaseGitHubManager):
             *labels: Variable number of label names to add
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -956,7 +956,7 @@ class IssueManager(BaseGitHubManager):
             *labels: Variable number of label names to remove
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
@@ -1067,7 +1067,7 @@ class IssueManager(BaseGitHubManager):
             *labels: Variable number of label names to set (can be empty to remove all)
 
         Returns:
-            IssueData with updated issue information, or empty dict on error
+            IssueData with updated issue information, or empty IssueData on error
 
         Raises:
             GithubException: For authentication or permission errors
