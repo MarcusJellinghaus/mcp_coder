@@ -21,10 +21,10 @@ Add read-only `get_issue()` method to retrieve issue details by number, extendin
 ## Design Decisions
 
 1. **TypedDict Extension**: Add `assignees` field to support team collaboration use cases
-2. **Backward Compatibility**: Accept breaking changes to existing methods for consistency
-3. **Error Handling**: 404 (not found) returns empty IssueData via decorator (consistent with existing pattern)
-4. **Defensive Programming**: Handle optional datetime fields with conditional checks
-5. **Test Strategy**: Unit tests with mocked GitHub API (TDD approach)
+2. **All Methods Return Assignees**: GitHub API returns assignees in all responses, so all methods map them
+3. **Backward Compatibility**: Accept breaking changes to existing methods for consistency
+4. **Error Handling**: 404 (not found) returns empty IssueData via decorator (consistent with existing pattern)
+5. **Test Strategy**: Unit tests with mocked GitHub API, update existing mocks to include assignees field
 
 ## Files to Modify
 
@@ -32,7 +32,7 @@ Add read-only `get_issue()` method to retrieve issue details by number, extendin
 1. **`src/mcp_coder/utils/github_operations/issue_manager.py`**
    - Modify `IssueData` TypedDict (add `assignees` field)
    - Add `get_issue()` method after `create_issue()`
-   - Update 6 existing methods to include `assignees=[]` in their returns:
+   - Update 6 existing methods to populate `assignees` from GitHub API response:
      - `create_issue()`
      - `close_issue()`
      - `reopen_issue()`
@@ -44,15 +44,17 @@ Add read-only `get_issue()` method to retrieve issue details by number, extendin
 2. **`tests/utils/github_operations/test_issue_manager.py`**
    - Add 1 unit test for `get_issue()`:
      - `test_get_issue_success()`
+   - Update existing test mocks to include `assignees` field
 
 3. **`tests/utils/github_operations/test_issue_manager_integration.py`**
-   - Extend one existing test to call `get_issue()` and verify round-trip
+   - Add Section 1.5 to `test_complete_issue_workflow` after issue creation to verify `get_issue()`
 
 ## Implementation Steps
 
 **Step 1**: Modify `IssueData` TypedDict
-**Step 2**: Implement `get_issue()` method, unit test, and update existing methods to include `assignees=[]`
-**Step 3**: Run quality checks and extend integration test
+**Step 2**: Implement `get_issue()` method and unit test
+**Step 3**: Update 6 existing methods to populate assignees and update test mocks
+**Step 4**: Run quality checks and extend integration test
 
 ## Success Criteria
 

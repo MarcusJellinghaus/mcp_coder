@@ -3,50 +3,50 @@
 ## Decision Log
 
 ### 1. Assignees Field Scope
-**Decision**: Only `get_issue()` needs to populate assignees; all other methods return `assignees=[]`
+**Decision**: All methods returning `IssueData` populate assignees from GitHub API response
 
 **Rationale**: 
-- Only retrieval operation needs complete assignee data
-- Other operations (create, close, label management) don't require returning assignee information
-- Reduces implementation complexity by ~60%
+- GitHub API already returns assignees in all responses (create, close, reopen, labels)
+- No additional API calls needed
+- Simpler than hardcoding `assignees=[]` - just map what's already there
+- More useful for callers who want assignee info after any operation
 
 ### 2. TypedDict Field Definition
 **Decision**: Add `assignees: List[str]` (not `Optional[List[str]]`)
 
 **Rationale**:
-- Always returning a list (even if empty) is cleaner than nullable field
+- Always returning a list is cleaner than nullable field
 - No null checks needed in consuming code
-- Empty list `[]` is semantically clearer than `None` for "no assignees"
 - Consistent with existing `labels` field pattern
 
 ### 3. Test Coverage Strategy
-**Decision**: Minimal test updates - no test changes for 6 existing methods returning `assignees=[]`
+**Decision**: Update all existing test mocks to include `assignees` field
 
 **Rationale**:
-- KISS principle: empty list assignment is trivial
-- MyPy will catch missing field errors at type-check time
-- Only test `get_issue()` which has actual logic for assignees
+- TypedDict requires all fields to be present
+- Mock return values must match the updated `IssueData` structure
+- Add `assignees=[]` to existing test mocks for 6 methods
 
 ### 4. Unit Test Scope for get_issue()
-**Decision**: Only `test_get_issue_success()` - remove invalid_number and auth_error tests
+**Decision**: Only `test_get_issue_success()` - no error case tests
 
 **Rationale**:
-- KISS principle: avoid redundant tests
-- Decorator `@_handle_github_errors` already handles both error cases consistently
+- Decorator `@_handle_github_errors` already handles error cases
 - Testing decorator behavior once is sufficient (not per method)
 
 ### 5. Implementation Approach
-**Decision**: Merge Steps 2 & 3 into single implementation step
+**Decision**: Split into separate steps - Step 2 adds `get_issue()`, Step 3 updates existing methods
 
 **Rationale**:
-- More efficient: update all IssueData returns while file is open
-- Better context: less chance of missing updates
-- Single cohesive commit instead of fragmented changes
+- Cleaner separation: new feature vs. refactoring existing code
+- Better git history and easier rollback if needed
+- Step 2: Add `get_issue()` + unit test
+- Step 3: Update 6 existing methods to populate assignees
 
 ### 6. Integration Test
-**Decision**: Keep simple integration test extension
+**Decision**: Add Section 1.5 to `test_complete_issue_workflow` right after issue creation
 
 **Rationale**:
-- Verifies real GitHub API behavior for assignees field
-- Round-trip validation (create → retrieve → verify)
-- Minimal addition to existing test
+- Natural place to validate `get_issue()` works correctly
+- Verifies round-trip: create issue → get issue → verify fields match
+- Tests assignees field with real GitHub API

@@ -40,47 +40,11 @@ class IssueData(TypedDict):
 
 ## HOW
 
-### Integration Points
-- Import: `from typing import List, Optional, TypedDict` (already exists)
-- Used by: All methods returning `IssueData` in `IssueManager` class
-
 ### Field Ordering
 Place `assignees` after `labels` to maintain logical grouping:
 - Issue metadata (number, title, body, state)
 - Categorization (labels, assignees)
 - Audit trail (user, timestamps, url, locked)
-
-## ALGORITHM
-```
-1. Locate IssueData TypedDict definition (line ~25)
-2. Add field: assignees: List[str]
-3. Position after labels field, before user field
-4. Add docstring comment if needed
-5. Verify syntax is valid TypedDict
-```
-
-## DATA
-
-### Input
-N/A (type definition only)
-
-### Output
-Modified TypedDict structure:
-```python
-IssueData = {
-    "number": int,
-    "title": str,
-    "body": str,
-    "state": str,
-    "labels": List[str],
-    "assignees": List[str],  # NEW
-    "user": Optional[str],
-    "created_at": Optional[str],
-    "updated_at": Optional[str],
-    "url": str,
-    "locked": bool
-}
-```
 
 ## Verification
 - Run mypy to verify TypedDict is valid
