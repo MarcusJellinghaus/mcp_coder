@@ -9,7 +9,7 @@ Implement Step 1: Modify the IssueData TypedDict to add the assignees field.
 Requirements:
 - Add assignees: List[str] field to IssueData TypedDict
 - Field represents list of GitHub usernames assigned to work on the issue
-- Maintain alphabetical field ordering in TypedDict
+- Place after labels field, before user field
 - No implementation code changes yet (only type definition)
 
 Follow the summary document for architectural context.
@@ -84,4 +84,3 @@ IssueData = {
 
 ## Verification
 - Run mypy to verify TypedDict is valid
-- No runtime tests yet (only type definition change)

@@ -32,7 +32,7 @@ Add read-only `get_issue()` method to retrieve issue details by number, extendin
 1. **`src/mcp_coder/utils/github_operations/issue_manager.py`**
    - Modify `IssueData` TypedDict (add `assignees` field)
    - Add `get_issue()` method after `create_issue()`
-   - Update 8 existing methods to include `assignees=[]` in their returns:
+   - Update 6 existing methods to include `assignees=[]` in their returns:
      - `create_issue()`
      - `close_issue()`
      - `reopen_issue()`
@@ -42,21 +42,17 @@ Add read-only `get_issue()` method to retrieve issue details by number, extendin
 
 ### Tests
 2. **`tests/utils/github_operations/test_issue_manager.py`**
-   - Add 3 new unit tests for `get_issue()`:
+   - Add 1 unit test for `get_issue()`:
      - `test_get_issue_success()`
-     - `test_get_issue_invalid_number()`
-     - `test_get_issue_auth_error_raises()`
-   - Update 6 existing unit tests to verify `assignees` field
 
 3. **`tests/utils/github_operations/test_issue_manager_integration.py`**
    - Extend one existing test to call `get_issue()` and verify round-trip
 
 ## Implementation Steps
 
-**Step 1**: Modify `IssueData` TypedDict + write tests for validation
-**Step 2**: Implement `get_issue()` method + unit tests (TDD)
-**Step 3**: Update existing methods to include `assignees` field + update tests
-**Step 4**: Run quality checks (pylint, pytest, mypy)
+**Step 1**: Modify `IssueData` TypedDict
+**Step 2**: Implement `get_issue()` method, unit test, and update existing methods to include `assignees=[]`
+**Step 3**: Run quality checks and extend integration test
 
 ## Success Criteria
 

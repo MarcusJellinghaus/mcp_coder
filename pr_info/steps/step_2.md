@@ -1,49 +1,52 @@
-# Step 2: Implement get_issue() Method (TDD)
+# Step 2: Implement get_issue() Method and Update Existing Methods
 
 ## LLM Prompt
 ```
 Reference: pr_info/steps/summary.md
 
-Implement Step 2: Add get_issue() method to IssueManager using Test-Driven Development.
+Implement Step 2: Add get_issue() method and update existing methods to include assignees field.
 
-Part A - Write Unit Tests First:
-1. test_get_issue_success() - Mock successful retrieval with assignees
-2. test_get_issue_invalid_number() - Test validation (0, -1)
-3. test_get_issue_auth_error_raises() - Test auth errors (401, 403)
+Part A - Write Unit Test:
+- test_get_issue_success() - Mock successful retrieval with assignees
 
-Part B - Implement Method:
-1. Add get_issue() method after create_issue() in IssueManager
-2. Follow existing patterns (decorators, validation, error handling)
-3. Map GitHub Issue object to IssueData with assignees
+Part B - Implement get_issue() Method:
+- Add get_issue() method after create_issue() in IssueManager
+- Follow existing patterns (decorators, validation, error handling)
+- Map GitHub Issue object to IssueData with assignees
+
+Part C - Update Existing Methods:
+- Add assignees=[] to IssueData returns in 6 existing methods:
+  - create_issue()
+  - close_issue()
+  - reopen_issue()
+  - add_labels()
+  - remove_labels()
+  - set_labels()
 
 Follow the summary document for architectural context.
 ```
 
 ## WHERE
 
-### Tests
+### Test
 **File**: `tests/utils/github_operations/test_issue_manager.py`
 **Location**: After existing test methods, before end of TestIssueManagerUnit class
 
 ### Implementation
 **File**: `src/mcp_coder/utils/github_operations/issue_manager.py`
-**Location**: After `create_issue()` method (line ~150)
+**Locations**: 
+- New method after `create_issue()` (line ~150)
+- Updates to 6 existing methods throughout file
 
 ## WHAT
 
-### Part A: Unit Tests
+### Part A: Unit Test
 ```python
 def test_get_issue_success(self, mock_github: Mock, tmp_path: Path) -> None:
     """Test successful issue retrieval with assignees."""
-
-def test_get_issue_invalid_number(self, tmp_path: Path) -> None:
-    """Test getting issue with invalid number."""
-
-def test_get_issue_auth_error_raises(self, mock_github: Mock, tmp_path: Path) -> None:
-    """Test that auth errors are raised for get_issue."""
 ```
 
-### Part B: Implementation
+### Part B: get_issue() Implementation
 ```python
 @log_function_call
 @_handle_github_errors(
@@ -65,18 +68,22 @@ def get_issue(self, issue_number: int) -> IssueData:
     """Retrieve issue details by number."""
 ```
 
+### Part C: Update Existing Methods
+Add to all IssueData returns:
+```python
+assignees=[assignee.login for assignee in github_issue.assignees],
+```
+
 ## HOW
 
-### Integration Points - Tests
+### Integration Points - Test
 - Mock decorators: `@patch("mcp_coder.utils.github_operations.base_manager.Github")`
 - Mock GitHub API responses for Issue object
 - Mock assignees as list of user objects with `.login` attribute
 
 ### Integration Points - Implementation
-- Decorators: `@log_function_call`, `@_handle_github_errors`
-- Validation: Use existing `_validate_issue_number()`
-- Repository: Use existing `_get_repository()`
-- API call: `repo.get_issue(issue_number)`
+- **get_issue()**: Use `@log_function_call`, `@_handle_github_errors`, `_validate_issue_number()`, `_get_repository()`
+- **Existing methods**: Add assignees list comprehension after labels (follow same pattern)
 
 ## ALGORITHM
 
@@ -89,13 +96,21 @@ def get_issue(self, issue_number: int) -> IssueData:
 5. Assert all fields including assignees list
 ```
 
-### Implementation Logic
+### get_issue() Implementation
 ```
 1. Validate issue_number (return empty if invalid)
 2. Get repository (return empty if None)
 3. Call repo.get_issue(issue_number)
 4. Map issue.assignees to list of usernames
 5. Return IssueData with all fields including assignees
+```
+
+### Existing Methods Update
+```
+For each of 6 methods:
+1. Locate the IssueData return statement
+2. Add assignees line after labels
+3. Use same list comprehension pattern
 ```
 
 ## DATA
@@ -107,7 +122,7 @@ mock_assignee2.login = "user2"
 mock_issue.assignees = [mock_assignee1, mock_assignee2]
 ```
 
-### Method Return
+### get_issue() Return
 ```python
 IssueData(
     number=123,
@@ -115,7 +130,7 @@ IssueData(
     body="Description",
     state="open",
     labels=["bug"],
-    assignees=["user1", "user2"],  # NEW
+    assignees=["user1", "user2"],
     user="creator",
     created_at="2023-01-01T00:00:00Z",
     updated_at="2023-01-01T00:00:00Z",
@@ -124,14 +139,28 @@ IssueData(
 )
 ```
 
-### Error Cases
-- Invalid number (0, -1): Returns empty IssueData with number=0
-- Auth error (401, 403): Raises GithubException
-- Not found (404): Returns empty IssueData with number=0
+### Updated Pattern for Existing Methods
+```python
+return IssueData(
+    number=github_issue.number,
+    title=github_issue.title,
+    body=github_issue.body or "",
+    state=github_issue.state,
+    labels=[label.name for label in github_issue.labels],
+    assignees=[assignee.login for assignee in github_issue.assignees],  # ADD
+    user=github_issue.user.login if github_issue.user else None,
+    created_at=(
+        github_issue.created_at.isoformat() if github_issue.created_at else None
+    ),
+    updated_at=(
+        github_issue.updated_at.isoformat() if github_issue.updated_at else None
+    ),
+    url=github_issue.html_url,
+    locked=github_issue.locked,
+)
+```
 
-## TDD Verification Steps
-1. Write all 3 unit tests first
-2. Run tests - they should FAIL (method doesn't exist yet)
-3. Implement get_issue() method
-4. Run tests - they should PASS
-5. Verify with pytest: `-k test_get_issue`
+## Verification
+1. Run pytest: test_get_issue_success should pass
+2. Verify mypy type checking passes
+3. Check existing method tests still pass
