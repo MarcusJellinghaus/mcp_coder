@@ -144,15 +144,19 @@ class TestGetLinkedBranches:
     @pytest.fixture
     def mock_manager(self) -> IssueBranchManager:
         """Create a mock IssueBranchManager for testing."""
+        mock_path = Mock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_dir.return_value = True
+
         with (
-            patch("mcp_coder.utils.github_operations.issue_branch_manager.git.Repo"),
+            patch("mcp_coder.utils.github_operations.base_manager.git.Repo"),
             patch(
-                "mcp_coder.utils.github_operations.issue_branch_manager.user_config.get_config_value",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
             ),
-            patch("mcp_coder.utils.github_operations.issue_branch_manager.Github"),
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
-            manager = IssueBranchManager(Path("/fake/path"))
+            manager = IssueBranchManager(mock_path)
             return manager
 
     def test_valid_issue_number(self, mock_manager: IssueBranchManager) -> None:
@@ -340,15 +344,19 @@ class TestCreateLinkedBranch:
     @pytest.fixture
     def mock_manager(self) -> IssueBranchManager:
         """Create a mock IssueBranchManager for testing."""
+        mock_path = Mock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_dir.return_value = True
+
         with (
-            patch("mcp_coder.utils.github_operations.issue_branch_manager.git.Repo"),
+            patch("mcp_coder.utils.github_operations.base_manager.git.Repo"),
             patch(
-                "mcp_coder.utils.github_operations.issue_branch_manager.user_config.get_config_value",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
             ),
-            patch("mcp_coder.utils.github_operations.issue_branch_manager.Github"),
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
-            manager = IssueBranchManager(Path("/fake/path"))
+            manager = IssueBranchManager(mock_path)
             return manager
 
     def test_create_with_auto_name(self, mock_manager: IssueBranchManager) -> None:
@@ -539,7 +547,7 @@ class TestCreateLinkedBranch:
         assert result["success"] is False
         assert result["branch_name"] == ""
         assert result["error"] is not None
-        assert "already linked" in result["error"].lower()
+        assert "linked branches" in result["error"].lower()
         assert result["existing_branches"] == ["123-feature-branch", "123-hotfix"]
 
         # Verify get_linked_branches was called
@@ -768,15 +776,19 @@ class TestDeleteLinkedBranch:
     @pytest.fixture
     def mock_manager(self) -> IssueBranchManager:
         """Create a mock IssueBranchManager for testing."""
+        mock_path = Mock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_dir.return_value = True
+
         with (
-            patch("mcp_coder.utils.github_operations.issue_branch_manager.git.Repo"),
+            patch("mcp_coder.utils.github_operations.base_manager.git.Repo"),
             patch(
-                "mcp_coder.utils.github_operations.issue_branch_manager.user_config.get_config_value",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
             ),
-            patch("mcp_coder.utils.github_operations.issue_branch_manager.Github"),
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
-            manager = IssueBranchManager(Path("/fake/path"))
+            manager = IssueBranchManager(mock_path)
             return manager
 
     def test_successful_unlink(self, mock_manager: IssueBranchManager) -> None:

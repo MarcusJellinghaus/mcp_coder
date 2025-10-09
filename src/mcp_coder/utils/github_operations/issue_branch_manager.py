@@ -38,26 +38,26 @@ def generate_branch_name_from_issue(
     Returns:
         Sanitized branch name (e.g., "123-add-new-feature---part-1")
     """
-    # Step 1: Replace " - " with "---" (GitHub-specific rule)
-    sanitized = issue_title.replace(" - ", "---")
+    # Step 1: Protect " - " separator with placeholder (GitHub-specific rule)
+    PROTECTED_SEPARATOR = "\x00SEP\x00"
+    sanitized = issue_title.replace(" - ", PROTECTED_SEPARATOR)
 
-    # Step 2: Convert to lowercase
+    # Step 2: Convert to lowercase (placeholder is already lowercase-safe)
     sanitized = sanitized.lower()
 
-    # Step 3: Replace non-alphanumeric (except dash) with dash
-    sanitized = re.sub(r"[^a-z0-9-]+", "-", sanitized)
+    # Step 3: Replace non-alphanumeric (except dash and placeholder) with dash
+    sanitized = re.sub(r"[^a-z0-9-\x00]+", "-", sanitized)
 
-    # Step 4: Replace multiple consecutive dashes with single dash
-    # (but preserve "---" from step 1)
-    # First, protect "---" by temporarily replacing it
-    sanitized = sanitized.replace("---", "\x00")
-    sanitized = re.sub(r"-+", "-", sanitized)
-    sanitized = sanitized.replace("\x00", "---")
+    # Step 4: Collapse multiple consecutive dashes to single dash
+    sanitized = re.sub(r"-{2,}", "-", sanitized)
 
-    # Step 5: Strip leading/trailing dashes
+    # Step 5: Restore protected separators as "---" (need lowercase version)
+    sanitized = sanitized.replace(PROTECTED_SEPARATOR.lower(), "---")
+
+    # Step 6: Strip leading/trailing dashes
     sanitized = sanitized.strip("-")
 
-    # Step 6: Truncate to max_length if needed
+    # Step 7: Truncate to max_length if needed
     branch_prefix = f"{issue_number}-"
     if sanitized:
         full_branch_name = f"{branch_prefix}{sanitized}"
@@ -298,7 +298,18 @@ class IssueBranchManager(BaseGitHubManager):
 
         # Step 6: Parse response and return result
         try:
-            linked_branch_data = result.get("data", {}).get("createLinkedBranch")
+            data = result.get("data")
+            if data is None:
+                error_msg = "Failed to create linked branch: Invalid response from GitHub (null data)"
+                logger.error(error_msg)
+                return BranchCreationResult(
+                    success=False,
+                    branch_name="",
+                    error=error_msg,
+                    existing_branches=[],
+                )
+
+            linked_branch_data = data.get("createLinkedBranch")
             if (
                 linked_branch_data is None
                 or linked_branch_data.get("linkedBranch") is None

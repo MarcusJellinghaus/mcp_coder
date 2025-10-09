@@ -21,29 +21,25 @@ class TestHandleGitHubErrorsDecorator:
         result = successful_function()
         assert result == {"result": "success"}
 
-    def test_decorator_auth_error_401_raises(self) -> None:
-        """Test that decorator re-raises 401 authentication errors."""
+    def test_decorator_auth_error_401_returns_default(self) -> None:
+        """Test that decorator returns default for 401 authentication errors."""
 
-        @_handle_github_errors(default_return={})
+        @_handle_github_errors(default_return={"error": "default"})
         def function_with_auth_error() -> dict[str, str]:
             raise GithubException(401, {"message": "Bad credentials"}, None)
 
-        with pytest.raises(GithubException) as exc_info:
-            function_with_auth_error()
+        result = function_with_auth_error()
+        assert result == {"error": "default"}
 
-        assert exc_info.value.status == 401
+    def test_decorator_auth_error_403_returns_default(self) -> None:
+        """Test that decorator returns default for 403 permission errors."""
 
-    def test_decorator_auth_error_403_raises(self) -> None:
-        """Test that decorator re-raises 403 permission errors."""
-
-        @_handle_github_errors(default_return={})
+        @_handle_github_errors(default_return={"error": "default"})
         def function_with_permission_error() -> dict[str, str]:
             raise GithubException(403, {"message": "Forbidden"}, None)
 
-        with pytest.raises(GithubException) as exc_info:
-            function_with_permission_error()
-
-        assert exc_info.value.status == 403
+        result = function_with_permission_error()
+        assert result == {"error": "default"}
 
     def test_decorator_other_github_error_returns_default(self) -> None:
         """Test that decorator returns default for non-auth GitHub errors."""
@@ -117,18 +113,16 @@ class TestHandleGitHubErrorsDecorator:
         assert my_function.__doc__ == "My function docstring."
 
     def test_decorator_logs_auth_error(self, caplog: pytest.LogCaptureFixture) -> None:
-        """Test that decorator logs auth/permission errors before re-raising."""
+        """Test that decorator logs auth/permission errors."""
 
         @_handle_github_errors(default_return={})
         def function_with_auth_error() -> dict[str, str]:
             raise GithubException(401, {"message": "Bad credentials"}, None)
 
-        with pytest.raises(GithubException):
-            function_with_auth_error()
+        result = function_with_auth_error()
 
-        assert (
-            "Authentication/permission error in function_with_auth_error" in caplog.text
-        )
+        assert result == {}
+        assert "GitHub API error in function_with_auth_error" in caplog.text
 
     def test_decorator_logs_github_error(
         self, caplog: pytest.LogCaptureFixture
@@ -178,22 +172,17 @@ class TestHandleGitHubErrorsDecorator:
         result = manager.my_method("error")
         assert result == {}
 
-    def test_decorator_exception_propagation_for_auth_errors(self) -> None:
-        """Test that only auth errors (401, 403) are propagated, others are not."""
+    def test_decorator_handles_all_github_errors(self) -> None:
+        """Test that decorator returns default for all GitHub errors."""
 
         @_handle_github_errors(default_return={"status": "error"})
         def function_with_various_errors(status_code: int) -> dict[str, str]:
             raise GithubException(status_code, {"message": "Error"}, None)
 
-        # Auth errors should be raised
-        with pytest.raises(GithubException):
-            function_with_various_errors(401)
-
-        with pytest.raises(GithubException):
-            function_with_various_errors(403)
-
-        # Other errors should return default
+        # All errors should return default
         assert function_with_various_errors(400) == {"status": "error"}
+        assert function_with_various_errors(401) == {"status": "error"}
+        assert function_with_various_errors(403) == {"status": "error"}
         assert function_with_various_errors(404) == {"status": "error"}
         assert function_with_various_errors(500) == {"status": "error"}
         assert function_with_various_errors(502) == {"status": "error"}
