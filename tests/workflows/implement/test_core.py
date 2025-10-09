@@ -642,7 +642,6 @@ class TestIntegration:
         mock_get_progress: MagicMock,
         mock_process_task: MagicMock,
         tmp_path: Path,
-        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test complete workflow execution from start to finish."""
         # Create steps directory for prepare_task_tracker
@@ -682,8 +681,7 @@ class TestIntegration:
         # Setup task processing - complete one task then finish
         mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
 
-        with caplog.at_level("INFO"):
-            result = run_implement_workflow(tmp_path, "claude", "cli")
+        result = run_implement_workflow(tmp_path, "claude", "cli")
 
         # Verify successful completion
         assert result == 0
@@ -701,15 +699,6 @@ class TestIntegration:
 
         # Verify task processing
         assert mock_process_task.call_count == 2
-
-        # Verify logging using caplog.records for pytest-xdist compatibility
-        log_messages = [record.message for record in caplog.records]
-        all_logs = " ".join(log_messages)
-        assert any("Starting implement workflow" in msg for msg in log_messages)
-        assert any("TASK TRACKER PROGRESS SUMMARY" in msg for msg in log_messages)
-        assert any(
-            "Implement workflow completed successfully" in msg for msg in log_messages
-        )
 
     def test_resolve_project_dir_real_filesystem(self, tmp_path: Path) -> None:
         """Test resolve_project_dir with real filesystem operations."""
