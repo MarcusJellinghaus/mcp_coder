@@ -505,47 +505,47 @@ def main() -> None:
     logger.info(f"Using project directory: {project_dir}")
     logger.info(f"GitHub issue number: {args.issue_number}")
     logger.info(f"LLM method: {args.llm_method}")
-    
+
     # Step 1: Validate prerequisites
     logger.info("Step 1/7: Validating prerequisites...")
     success, issue_data = check_prerequisites(project_dir, args.issue_number)
     if not success:
         logger.error("Prerequisites validation failed")
         sys.exit(1)
-    
+
     # Step 2: Manage branch
     logger.info("Step 2/7: Managing branch...")
     branch_name = manage_branch(project_dir, args.issue_number, issue_data["title"])
     if branch_name is None:
         logger.error("Branch management failed")
         sys.exit(1)
-    
+
     # Step 3: Verify pr_info/steps/ is empty
     logger.info("Step 3/7: Verifying pr_info/steps/ is empty...")
     if not verify_steps_directory(project_dir):
         logger.error("Steps directory verification failed")
         sys.exit(1)
-    
+
     # Step 4: Run initial analysis
     logger.info(
         f"Step 4/7: Running initial analysis for issue #{args.issue_number} '{issue_data['title']}'..."
     )
-    
+
     # Step 5: Run simplification review
     logger.info("Step 5/7: Running simplification review...")
-    
+
     # Step 6: Generate implementation plan
     logger.info("Step 6/7: Generating implementation plan...")
     if not run_planning_prompts(project_dir, issue_data, args.llm_method):
         logger.error("Planning prompts execution failed")
         sys.exit(1)
-    
+
     # Step 7: Validate output files
     logger.info("Step 7/7: Validating output files...")
     if not validate_output_files(project_dir):
         logger.error("Output files validation failed")
         sys.exit(1)
-    
+
     # Commit changes
     logger.info("Committing generated plan...")
     commit_message = f"Initial plan generated for issue #{args.issue_number}"
@@ -554,7 +554,7 @@ def main() -> None:
         logger.warning(f"Commit failed: {commit_result.get('error')}")
     else:
         logger.info(f"Committed with hash: {commit_result['commit_hash']}")
-    
+
     # Push changes
     logger.info("Pushing changes to remote...")
     push_result = git_push(project_dir)
@@ -562,7 +562,7 @@ def main() -> None:
         logger.warning(f"Push failed: {push_result.get('error')}")
     else:
         logger.info("Successfully pushed changes to remote")
-    
+
     logger.info("Create plan workflow completed successfully!")
     sys.exit(0)
 
