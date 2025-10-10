@@ -263,11 +263,14 @@ def run_planning_prompts(
     
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
+<<<<<<< HEAD
     logger.debug(f"Environment variables prepared: {list(env_vars.keys())}")
     
     # Prepare session storage path (relative to project directory)
     session_storage_path = str(project_dir / ".mcp-coder" / "create_plan_sessions")
     logger.info(f"Conversation logs will be stored in: {session_storage_path}")
+=======
+>>>>>>> 3c80926 (set environment variables)
     
     # Load all three prompts
     logger.info("Loading prompt templates...")
@@ -301,7 +304,11 @@ def run_planning_prompts(
             provider=provider,
             method=method,
             session_id=None,
+<<<<<<< HEAD
             timeout=600,
+=======
+            timeout=300,
+>>>>>>> 3c80926 (set environment variables)
             env_vars=env_vars,
             project_dir=str(project_dir)
         )
@@ -348,7 +355,11 @@ def run_planning_prompts(
             provider=provider,
             method=method,
             session_id=session_id,
+<<<<<<< HEAD
             timeout=600,
+=======
+            timeout=300,
+>>>>>>> 3c80926 (set environment variables)
             env_vars=env_vars,
             project_dir=str(project_dir)
         )
@@ -389,7 +400,11 @@ def run_planning_prompts(
             provider=provider,
             method=method,
             session_id=session_id,
+<<<<<<< HEAD
             timeout=600,
+=======
+            timeout=300,
+>>>>>>> 3c80926 (set environment variables)
             env_vars=env_vars,
             project_dir=str(project_dir)
         )
