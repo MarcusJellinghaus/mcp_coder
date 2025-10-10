@@ -330,7 +330,8 @@ def run_planning_prompts(
             }
             stored_path = store_session(response_data, "Initial Analysis", 
                                        store_path=session_storage_path)
-            logger.info(f"Prompt 1 conversation stored to: {stored_path}")
+            logger.info(f"Prompt 1 conversation logged to file: {stored_path}")
+            logger.debug(f"  Response length: {len(response_1['text'])} chars")
         except Exception as storage_error:
             logger.warning(f"Failed to store prompt 1 conversation: {storage_error}")
         
@@ -370,7 +371,8 @@ def run_planning_prompts(
             }
             stored_path = store_session(response_data, "Simplification Review", 
                                        store_path=session_storage_path)
-            logger.info(f"Prompt 2 conversation stored to: {stored_path}")
+            logger.info(f"Prompt 2 conversation logged to file: {stored_path}")
+            logger.debug(f"  Response length: {len(response_2['text'])} chars")
         except Exception as storage_error:
             logger.warning(f"Failed to store prompt 2 conversation: {storage_error}")
         
@@ -410,7 +412,8 @@ def run_planning_prompts(
             }
             stored_path = store_session(response_data, "Implementation Plan Creation", 
                                        store_path=session_storage_path)
-            logger.info(f"Prompt 3 conversation stored to: {stored_path}")
+            logger.info(f"Prompt 3 conversation logged to file: {stored_path}")
+            logger.debug(f"  Response length: {len(response_3['text'])} chars")
         except Exception as storage_error:
             logger.warning(f"Failed to store prompt 3 conversation: {storage_error}")
         
