@@ -16,6 +16,7 @@ from typing import Optional
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.session import parse_llm_method
+from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations.branches import checkout_branch
 from mcp_coder.utils.git_operations.commits import commit_all_changes
@@ -298,6 +299,23 @@ def run_planning_prompts(
         
         logger.info(f"Prompt 1 completed (session: {session_id})")
         
+        # Store conversation for logging/debugging
+        try:
+            # Convert LLMResponseDict to format expected by store_session
+            response_data = {
+                "text": response_1["text"],
+                "session_info": {
+                    "session_id": session_id,
+                    "model": response_1.get("provider", "claude"),
+                },
+                "result_info": response_1.get("raw_response", {}),
+            }
+            stored_path = store_session(response_data, "Initial Analysis", 
+                                       store_path=".mcp-coder/create_plan_sessions")
+            logger.info(f"Prompt 1 conversation stored to: {stored_path}")
+        except Exception as storage_error:
+            logger.warning(f"Failed to store prompt 1 conversation: {storage_error}")
+        
     except Exception as e:
         logger.error(f"Error executing prompt 1: {e}")
         return False
@@ -319,6 +337,22 @@ def run_planning_prompts(
             return False
         
         logger.info("Prompt 2 completed")
+        
+        # Store conversation for logging/debugging
+        try:
+            response_data = {
+                "text": response_2["text"],
+                "session_info": {
+                    "session_id": session_id,
+                    "model": response_2.get("provider", "claude"),
+                },
+                "result_info": response_2.get("raw_response", {}),
+            }
+            stored_path = store_session(response_data, "Simplification Review", 
+                                       store_path=".mcp-coder/create_plan_sessions")
+            logger.info(f"Prompt 2 conversation stored to: {stored_path}")
+        except Exception as storage_error:
+            logger.warning(f"Failed to store prompt 2 conversation: {storage_error}")
         
     except Exception as e:
         logger.error(f"Error executing prompt 2: {e}")
@@ -342,11 +376,29 @@ def run_planning_prompts(
         
         logger.info("Prompt 3 completed")
         
+        # Store conversation for logging/debugging
+        try:
+            response_data = {
+                "text": response_3["text"],
+                "session_info": {
+                    "session_id": session_id,
+                    "model": response_3.get("provider", "claude"),
+                },
+                "result_info": response_3.get("raw_response", {}),
+            }
+            stored_path = store_session(response_data, "Implementation Plan Creation", 
+                                       store_path=".mcp-coder/create_plan_sessions")
+            logger.info(f"Prompt 3 conversation stored to: {stored_path}")
+        except Exception as storage_error:
+            logger.warning(f"Failed to store prompt 3 conversation: {storage_error}")
+        
     except Exception as e:
         logger.error(f"Error executing prompt 3: {e}")
         return False
     
     logger.info("All planning prompts executed successfully")
+    logger.info(f"Full conversation session ID: {session_id}")
+    logger.info("Conversation logs stored in: .mcp-coder/create_plan_sessions/")
     return True
 
 
