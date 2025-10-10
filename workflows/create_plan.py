@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.llm.storage.session_storage import store_session
@@ -260,6 +261,9 @@ def run_planning_prompts(
     """
     logger.info("Starting planning prompt execution...")
     
+    # Prepare environment variables for LLM subprocess
+    env_vars = prepare_llm_environment(project_dir)
+    
     # Load all three prompts
     logger.info("Loading prompt templates...")
     prompt_1 = _load_prompt_or_exit("Initial Analysis")
@@ -285,6 +289,7 @@ def run_planning_prompts(
             method=method,
             session_id=None,
             timeout=300,
+            env_vars=env_vars,
             project_dir=str(project_dir)
         )
         
@@ -329,6 +334,7 @@ def run_planning_prompts(
             method=method,
             session_id=session_id,
             timeout=300,
+            env_vars=env_vars,
             project_dir=str(project_dir)
         )
         
@@ -367,6 +373,7 @@ def run_planning_prompts(
             method=method,
             session_id=session_id,
             timeout=300,
+            env_vars=env_vars,
             project_dir=str(project_dir)
         )
         
