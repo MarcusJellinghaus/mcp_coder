@@ -288,7 +288,7 @@ def run_planning_prompts(
             provider=provider,
             method=method,
             session_id=None,
-            timeout=300,
+            timeout=600,
             env_vars=env_vars,
             project_dir=str(project_dir)
         )
@@ -333,7 +333,7 @@ def run_planning_prompts(
             provider=provider,
             method=method,
             session_id=session_id,
-            timeout=300,
+            timeout=600,
             env_vars=env_vars,
             project_dir=str(project_dir)
         )
@@ -372,7 +372,7 @@ def run_planning_prompts(
             provider=provider,
             method=method,
             session_id=session_id,
-            timeout=300,
+            timeout=600,
             env_vars=env_vars,
             project_dir=str(project_dir)
         )
