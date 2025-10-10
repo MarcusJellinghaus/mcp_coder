@@ -13,7 +13,9 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from mcp_coder.utils.git_operations.branches import checkout_branch
 from mcp_coder.utils.git_operations.repository import is_working_directory_clean
+from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
 from mcp_coder.utils.log_utils import setup_logging
 
@@ -118,6 +120,82 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
     
     logger.info("All prerequisites passed")
     return (True, issue_data)
+
+
+def manage_branch(project_dir: Path, issue_number: int, issue_title: str) -> Optional[str]:
+    """Get existing linked branch or create new one.
+    
+    Args:
+        project_dir: Path to the project directory containing git repository
+        issue_number: GitHub issue number to link branch to
+        issue_title: GitHub issue title for branch name generation
+    
+    Returns:
+        Branch name if successful, None on error
+    """
+    logger.info("Managing branch for issue #%d...", issue_number)
+    
+    try:
+        # Create IssueBranchManager instance
+        manager = IssueBranchManager(project_dir)
+        
+        # Get linked branches
+        linked_branches = manager.get_linked_branches(issue_number)
+        
+        # If linked branches exist, use the first one
+        if linked_branches:
+            branch_name = linked_branches[0]
+            logger.info("Using existing linked branch: %s", branch_name)
+        else:
+            # Create new branch on GitHub
+            result = manager.create_remote_branch_for_issue(issue_number)
+            if not result["success"]:
+                logger.error("Failed to create branch: %s", result.get("error", "Unknown error"))
+                return None
+            branch_name = result["branch_name"]
+            logger.info("Created new branch: %s", branch_name)
+        
+        # Checkout the branch locally
+        if not checkout_branch(branch_name, project_dir):
+            logger.error("Failed to checkout branch: %s", branch_name)
+            return None
+        
+        logger.info("Switched to branch: %s", branch_name)
+        return branch_name
+        
+    except Exception as e:
+        logger.error("Error managing branch: %s", e)
+        return None
+
+
+def verify_steps_directory(project_dir: Path) -> bool:
+    """Verify pr_info/steps/ directory is empty or doesn't exist.
+    
+    Args:
+        project_dir: Path to the project directory
+    
+    Returns:
+        True if empty/non-existent, False if contains files
+    """
+    steps_dir = project_dir / "pr_info" / "steps"
+    
+    # If directory doesn't exist, that's fine
+    if not steps_dir.exists():
+        logger.debug("Directory pr_info/steps/ does not exist (OK)")
+        return True
+    
+    # Check if directory is empty
+    files = list(steps_dir.iterdir())
+    if len(files) == 0:
+        logger.debug("Directory pr_info/steps/ is empty (OK)")
+        return True
+    
+    # Directory contains files - this is an error
+    logger.error("Directory pr_info/steps/ contains files. Please clean manually.")
+    for file in files:
+        logger.error("  - %s", file.name)
+    
+    return False
 
 
 def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:

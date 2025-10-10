@@ -39,10 +39,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2
 
 ### Step 3: Branch Management and Directory Verification
-- [ ] Implement `manage_branch()` function - Get existing or create new linked branch
-- [ ] Implement `verify_steps_directory()` function - Verify pr_info/steps/ is empty
-- [ ] Create `tests/workflows/create_plan/test_branch_management.py` with all test cases
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
+- [x] Implement `manage_branch()` function - Get existing or create new linked branch
+- [x] Implement `verify_steps_directory()` function - Verify pr_info/steps/ is empty
+- [x] Create `tests/workflows/create_plan/test_branch_management.py` with all test cases
+- [x] Run quality checks: pylint, pytest, mypy - fix all issues
 - [ ] Prepare git commit message for Step 3
 
 ### Step 4: Prompt Execution and Session Management
