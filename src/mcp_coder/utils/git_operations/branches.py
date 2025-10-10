@@ -261,7 +261,7 @@ def create_branch(
 
 
 def checkout_branch(branch_name: str, project_dir: Path) -> bool:
-    """Checkout an existing git branch.
+    """Checkout an existing git branch, creating from remote if needed.
 
     Args:
         branch_name: Name of the branch to checkout
@@ -269,6 +269,10 @@ def checkout_branch(branch_name: str, project_dir: Path) -> bool:
 
     Returns:
         True if branch was checked out successfully, False otherwise
+        
+    Note:
+        If branch doesn't exist locally but exists on origin remote,
+        will create a local tracking branch and check it out.
     """
     logger.debug("Checking out branch '%s' in %s", branch_name, project_dir)
 
@@ -283,12 +287,6 @@ def checkout_branch(branch_name: str, project_dir: Path) -> bool:
 
     try:
         with _safe_repo_context(project_dir) as repo:
-            # Check if branch exists locally
-            existing_branches = [branch.name for branch in repo.branches]
-            if branch_name not in existing_branches:
-                logger.error("Branch '%s' does not exist locally", branch_name)
-                return False
-
             # Check if we're already on the target branch
             try:
                 current_branch = repo.active_branch.name
@@ -299,7 +297,51 @@ def checkout_branch(branch_name: str, project_dir: Path) -> bool:
                 # In detached HEAD state, continue with checkout
                 pass
 
-            # Checkout the branch
+            # Check if branch exists locally
+            existing_branches = [branch.name for branch in repo.branches]
+            branch_exists_locally = branch_name in existing_branches
+            
+            if not branch_exists_locally:
+                # Check if branch exists on remote
+                logger.debug("Branch '%s' not found locally, checking remote...", branch_name)
+                
+                # Fetch remote branches to ensure we have latest
+                try:
+                    if "origin" in [remote.name for remote in repo.remotes]:
+                        repo.remotes.origin.fetch()
+                        logger.debug("Fetched latest from origin")
+                    else:
+                        logger.error("No origin remote found")
+                        return False
+                except GitCommandError as e:
+                    logger.error("Failed to fetch from origin: %s", e)
+                    return False
+                
+                # Check remote branches
+                remote_branches = [ref.name for ref in repo.remotes.origin.refs]
+                remote_branch_name = f"origin/{branch_name}"
+                
+                if remote_branch_name in remote_branches:
+                    logger.debug("Found branch on remote: %s", remote_branch_name)
+                    # Create local tracking branch and checkout
+                    try:
+                        repo.git.checkout("-b", branch_name, remote_branch_name)
+                        logger.debug(
+                            "Created local tracking branch '%s' from '%s'", 
+                            branch_name, 
+                            remote_branch_name
+                        )
+                        return True
+                    except GitCommandError as e:
+                        logger.error("Failed to create tracking branch: %s", e)
+                        return False
+                else:
+                    logger.error(
+                        "Branch '%s' does not exist locally or on remote", branch_name
+                    )
+                    return False
+
+            # Branch exists locally, checkout directly
             try:
                 repo.git.checkout(branch_name)
                 logger.debug("Successfully checked out branch '%s'", branch_name)
