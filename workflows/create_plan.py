@@ -13,6 +13,10 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.session import parse_llm_method
+from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations.branches import checkout_branch
 from mcp_coder.utils.git_operations.repository import is_working_directory_clean
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
@@ -105,7 +109,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
     # Fetch and validate GitHub issue
     try:
         issue_manager = IssueManager(project_dir)
-        issue_data = issue_manager.get_issue(issue_number)
+        issue_data = issue_manager.get_issue(issue_number)  # pylint: disable=no-member
         
         # Check if issue was found (number == 0 indicates not found)
         if issue_data["number"] == 0:
@@ -196,6 +200,176 @@ def verify_steps_directory(project_dir: Path) -> bool:
         logger.error("  - %s", file.name)
     
     return False
+
+
+def _load_prompt_or_exit(header: str) -> str:
+    """Load prompt template or exit with clear error message."""
+    try:
+        return get_prompt(str(PROMPTS_FILE_PATH), header)
+    except (FileNotFoundError, ValueError) as e:
+        logger.error(f"Critical error: Cannot load prompt '{header}': {e}")
+        logger.error(f"Expected prompt file: {PROMPTS_FILE_PATH}")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Unexpected error loading prompt '{header}': {e}")
+        sys.exit(1)
+
+
+def format_initial_prompt(prompt_template: str, issue_data: IssueData) -> str:
+    """Format initial analysis prompt with issue content.
+    
+    Args:
+        prompt_template: The prompt template string
+        issue_data: IssueData object with issue details
+        
+    Returns:
+        Combined prompt text with issue data appended
+    """
+    # Create issue section
+    issue_section = (
+        "---\n"
+        "## Issue to Implement:\n"
+        f"**Title:** {issue_data['title']}\n"
+        f"**Number:** #{issue_data['number']}\n"
+        "**Description:**\n"
+        f"{issue_data['body']}"
+    )
+    
+    # Append to prompt template
+    return prompt_template + "\n\n" + issue_section
+
+
+def run_planning_prompts(
+    project_dir: Path,
+    issue_data: IssueData,
+    llm_method: str
+) -> bool:
+    """Execute three planning prompts with session continuation.
+    
+    Args:
+        project_dir: Path to the project directory
+        issue_data: IssueData object with issue details
+        llm_method: LLM method string (e.g., "claude_code_cli")
+    
+    Returns:
+        True if all prompts succeed, False on error
+    """
+    logger.info("Starting planning prompt execution...")
+    
+    # Load all three prompts
+    logger.info("Loading prompt templates...")
+    prompt_1 = _load_prompt_or_exit("Initial Analysis")
+    prompt_2 = _load_prompt_or_exit("Simplification Review")
+    prompt_3 = _load_prompt_or_exit("Implementation Plan Creation")
+    
+    # Format initial prompt with issue data
+    formatted_prompt_1 = format_initial_prompt(prompt_1, issue_data)
+    
+    # Parse llm_method
+    try:
+        provider, method = parse_llm_method(llm_method)
+    except ValueError as e:
+        logger.error(f"Invalid LLM method: {e}")
+        return False
+    
+    # Execute first prompt
+    logger.info("Executing prompt 1: Initial Analysis...")
+    try:
+        response_1 = prompt_llm(
+            formatted_prompt_1,
+            provider=provider,
+            method=method,
+            timeout=300,
+            project_dir=str(project_dir)
+        )
+        
+        if not response_1 or not response_1.get("text"):
+            logger.error("Prompt 1 returned empty response")
+            return False
+        
+        session_id = response_1.get("session_id")
+        if not session_id:
+            logger.error("Prompt 1 did not return session_id")
+            return False
+        
+        logger.info(f"Prompt 1 completed (session: {session_id})")
+        
+    except Exception as e:
+        logger.error(f"Error executing prompt 1: {e}")
+        return False
+    
+    # Execute second prompt with session continuation
+    logger.info("Executing prompt 2: Simplification Review...")
+    try:
+        response_2 = prompt_llm(
+            prompt_2,
+            provider=provider,
+            method=method,
+            session_id=session_id,
+            timeout=300,
+            project_dir=str(project_dir)
+        )
+        
+        if not response_2 or not response_2.get("text"):
+            logger.error("Prompt 2 returned empty response")
+            return False
+        
+        logger.info("Prompt 2 completed")
+        
+    except Exception as e:
+        logger.error(f"Error executing prompt 2: {e}")
+        return False
+    
+    # Execute third prompt with session continuation
+    logger.info("Executing prompt 3: Implementation Plan Creation...")
+    try:
+        response_3 = prompt_llm(
+            prompt_3,
+            provider=provider,
+            method=method,
+            session_id=session_id,
+            timeout=300,
+            project_dir=str(project_dir)
+        )
+        
+        if not response_3 or not response_3.get("text"):
+            logger.error("Prompt 3 returned empty response")
+            return False
+        
+        logger.info("Prompt 3 completed")
+        
+    except Exception as e:
+        logger.error(f"Error executing prompt 3: {e}")
+        return False
+    
+    logger.info("All planning prompts executed successfully")
+    return True
+
+
+def validate_output_files(project_dir: Path) -> bool:
+    """Validate required output files exist.
+    
+    Args:
+        project_dir: Path to the project directory
+    
+    Returns:
+        True if files exist, False otherwise
+    """
+    logger.info("Validating output files...")
+    
+    summary_path = project_dir / "pr_info" / "steps" / "summary.md"
+    step_1_path = project_dir / "pr_info" / "steps" / "step_1.md"
+    
+    if not summary_path.exists():
+        logger.error(f"Required file not found: {summary_path}")
+        return False
+    
+    if not step_1_path.exists():
+        logger.error(f"Required file not found: {step_1_path}")
+        return False
+    
+    logger.info("✓ Required output files exist")
+    return True
 
 
 def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
