@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from mcp_coder.utils.git_operations.repository import is_working_directory_clean
+from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
 from mcp_coder.utils.log_utils import setup_logging
 
 # Setup logger
@@ -48,6 +50,74 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     return parser.parse_args()
+
+
+def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, IssueData]:
+    """Validate prerequisites for plan creation workflow.
+    
+    Validates that the git working directory is clean and that the specified
+    GitHub issue exists and is accessible.
+    
+    Args:
+        project_dir: Path to the project directory containing git repository
+        issue_number: GitHub issue number to validate
+        
+    Returns:
+        Tuple of (success: bool, issue_data: IssueData)
+        - success: True if all prerequisites pass, False otherwise
+        - issue_data: IssueData object with issue details, or empty IssueData on failure
+    """
+    logger.info("Checking prerequisites for plan creation...")
+    
+    # Create empty IssueData for failure cases
+    empty_issue_data = IssueData(
+        number=0,
+        title="",
+        body="",
+        state="",
+        labels=[],
+        assignees=[],
+        user=None,
+        created_at=None,
+        updated_at=None,
+        url="",
+        locked=False,
+    )
+    
+    # Check if git working directory is clean
+    try:
+        if not is_working_directory_clean(project_dir):
+            logger.error(
+                "✗ Git working directory is not clean. "
+                "Please commit or stash your changes before creating a plan."
+            )
+            return (False, empty_issue_data)
+        logger.info("✓ Git working directory is clean")
+    except ValueError as e:
+        logger.error(f"✗ Error checking git status: {e}")
+        return (False, empty_issue_data)
+    except Exception as e:
+        logger.error(f"✗ Unexpected error checking git status: {e}")
+        return (False, empty_issue_data)
+    
+    # Fetch and validate GitHub issue
+    try:
+        issue_manager = IssueManager(project_dir)
+        issue_data = issue_manager.get_issue(issue_number)
+        
+        # Check if issue was found (number == 0 indicates not found)
+        if issue_data["number"] == 0:
+            logger.error(f"✗ Issue #{issue_number} not found or not accessible")
+            return (False, empty_issue_data)
+        
+        logger.info(f"✓ Issue #{issue_data['number']} exists: '{issue_data['title']}'")
+        
+    except Exception as e:
+        logger.error(f"✗ Error fetching issue #{issue_number}: {e}")
+        return (False, empty_issue_data)
+    
+    logger.info("All prerequisites passed")
+    return (True, issue_data)
 
 
 def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
