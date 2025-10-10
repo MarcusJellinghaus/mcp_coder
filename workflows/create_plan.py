@@ -281,6 +281,7 @@ def run_planning_prompts(
             formatted_prompt_1,
             provider=provider,
             method=method,
+            session_id=None,
             timeout=300,
             project_dir=str(project_dir)
         )
