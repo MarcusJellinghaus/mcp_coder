@@ -25,8 +25,6 @@ from mcp_coder.utils.git_operations.remotes import git_push
 from mcp_coder.utils.git_operations.repository import is_working_directory_clean
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
-from mcp_coder.utils.git_operations.commits import commit_all_changes
-from mcp_coder.utils.git_operations.remotes import git_push
 from mcp_coder.utils.log_utils import setup_logging
 
 # Setup logger
