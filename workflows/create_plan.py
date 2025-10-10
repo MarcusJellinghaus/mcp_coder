@@ -264,6 +264,9 @@ def run_planning_prompts(
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
     
+    # Prepare session storage path (relative to project directory)
+    session_storage_path = str(project_dir / ".mcp-coder" / "create_plan_sessions")
+    
     # Load all three prompts
     logger.info("Loading prompt templates...")
     prompt_1 = _load_prompt_or_exit("Initial Analysis")
@@ -316,7 +319,7 @@ def run_planning_prompts(
                 "result_info": response_1.get("raw_response", {}),
             }
             stored_path = store_session(response_data, "Initial Analysis", 
-                                       store_path=".mcp-coder/create_plan_sessions")
+                                       store_path=session_storage_path)
             logger.info(f"Prompt 1 conversation stored to: {stored_path}")
         except Exception as storage_error:
             logger.warning(f"Failed to store prompt 1 conversation: {storage_error}")
@@ -355,7 +358,7 @@ def run_planning_prompts(
                 "result_info": response_2.get("raw_response", {}),
             }
             stored_path = store_session(response_data, "Simplification Review", 
-                                       store_path=".mcp-coder/create_plan_sessions")
+                                       store_path=session_storage_path)
             logger.info(f"Prompt 2 conversation stored to: {stored_path}")
         except Exception as storage_error:
             logger.warning(f"Failed to store prompt 2 conversation: {storage_error}")
@@ -394,7 +397,7 @@ def run_planning_prompts(
                 "result_info": response_3.get("raw_response", {}),
             }
             stored_path = store_session(response_data, "Implementation Plan Creation", 
-                                       store_path=".mcp-coder/create_plan_sessions")
+                                       store_path=session_storage_path)
             logger.info(f"Prompt 3 conversation stored to: {stored_path}")
         except Exception as storage_error:
             logger.warning(f"Failed to store prompt 3 conversation: {storage_error}")
@@ -405,7 +408,7 @@ def run_planning_prompts(
     
     logger.info("All planning prompts executed successfully")
     logger.info(f"Full conversation session ID: {session_id}")
-    logger.info("Conversation logs stored in: .mcp-coder/create_plan_sessions/")
+    logger.info(f"Conversation logs stored in: {session_storage_path}/")
     return True
 
 
