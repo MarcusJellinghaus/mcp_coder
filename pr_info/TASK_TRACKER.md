@@ -46,13 +46,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 3
 
 ### Step 4: Prompt Execution and Session Management
-- [ ] Implement `_load_prompt_or_exit()` function - Load prompt template with error handling
-- [ ] Implement `format_initial_prompt()` function - Format initial prompt with issue content
-- [ ] Implement `run_planning_prompts()` function - Execute three prompts with session continuation
-- [ ] Implement `validate_output_files()` function - Validate required output files exist
-- [ ] Create `tests/workflows/create_plan/test_prompt_execution.py` with all test cases
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 4
+- [x] Implement `_load_prompt_or_exit()` function - Load prompt template with error handling
+- [x] Implement `format_initial_prompt()` function - Format initial prompt with issue content
+- [x] Implement `run_planning_prompts()` function - Execute three prompts with session continuation
+- [x] Implement `validate_output_files()` function - Validate required output files exist
+- [x] Create `tests/workflows/create_plan/test_prompt_execution.py` with all test cases
+- [x] Run quality checks: pylint, pytest, mypy - fix all issues
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Finalization and Prompt File Updates
 - [ ] Implement `main()` function - Complete workflow orchestration
