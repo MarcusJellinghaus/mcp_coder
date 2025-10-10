@@ -177,7 +177,8 @@ class IssueBranchManager(BaseGitHubManager):
 
         # Execute GraphQL query
         # Note: Using private attribute is the documented way to access GraphQL in PyGithub
-        result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]
+        # graphql_query returns (headers, data) tuple - we only need data
+        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]
             query=query, variables=variables
         )
 
@@ -291,7 +292,8 @@ class IssueBranchManager(BaseGitHubManager):
 
         # Execute GraphQL mutation
         # Note: Using private attribute is the documented way to access GraphQL in PyGithub
-        result = self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]
+        # graphql_named_mutation returns (headers, data) tuple - we only need data
+        _, result = self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]
             mutation_name="createLinkedBranch",
             mutation_input=mutation_input,
             output_schema="linkedBranch { id ref { name target { oid } } }",
@@ -411,7 +413,8 @@ class IssueBranchManager(BaseGitHubManager):
         }
 
         # Execute GraphQL query
-        result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]
+        # graphql_query returns (headers, data) tuple - we only need data
+        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]
             query=query, variables=variables
         )
 
@@ -441,7 +444,8 @@ class IssueBranchManager(BaseGitHubManager):
             # Step 6: Execute deleteLinkedBranch mutation
             mutation_input = {"linkedBranchId": linked_branch_id}
 
-            self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]
+            # graphql_named_mutation returns (headers, data) tuple - we don't need either
+            _, _ = self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]
                 mutation_name="deleteLinkedBranch",
                 mutation_input=mutation_input,
                 output_schema="clientMutationId",
