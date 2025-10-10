@@ -18,11 +18,11 @@ from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations.branches import checkout_branch
+from mcp_coder.utils.git_operations.commits import commit_all_changes
+from mcp_coder.utils.git_operations.remotes import git_push
 from mcp_coder.utils.git_operations.repository import is_working_directory_clean
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
-from mcp_coder.utils.git_operations.commits import commit_all_changes
-from mcp_coder.utils.git_operations.remotes import git_push
 from mcp_coder.utils.log_utils import setup_logging
 
 # Setup logger
