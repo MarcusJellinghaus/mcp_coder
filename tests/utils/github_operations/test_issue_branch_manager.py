@@ -184,7 +184,7 @@ class TestGetLinkedBranches:
         }
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test
@@ -213,7 +213,7 @@ class TestGetLinkedBranches:
         mock_response: dict[str, Any] = {"data": {"repository": {"issue": None}}}
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test
@@ -234,7 +234,7 @@ class TestGetLinkedBranches:
         }
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test
@@ -267,7 +267,7 @@ class TestGetLinkedBranches:
         }
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test
@@ -287,7 +287,7 @@ class TestGetLinkedBranches:
         mock_response: dict[str, Any] = {"data": None}  # Malformed response
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test
@@ -330,7 +330,7 @@ class TestGetLinkedBranches:
         }
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test - should skip null values and return only valid branch
@@ -399,7 +399,7 @@ class TestCreateLinkedBranch:
         }
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test
@@ -457,7 +457,7 @@ class TestCreateLinkedBranch:
         }
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test with custom branch name
@@ -511,7 +511,7 @@ class TestCreateLinkedBranch:
         }
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test with custom base branch
@@ -593,7 +593,7 @@ class TestCreateLinkedBranch:
         }
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test with allow_multiple=True
@@ -764,7 +764,7 @@ class TestCreateLinkedBranch:
         mock_response = {"data": None}  # Malformed response
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
-            return_value=mock_response
+            return_value=({}, mock_response)
         )
 
         # Test
@@ -831,10 +831,10 @@ class TestDeleteLinkedBranch:
 
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=query_response
+            return_value=({}, query_response)
         )
         mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
-            return_value=mutation_response
+            return_value=({}, mutation_response)
         )
 
         # Test - delete the first branch
@@ -885,7 +885,7 @@ class TestDeleteLinkedBranch:
 
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=query_response
+            return_value=({}, query_response)
         )
 
         # Test - try to delete a branch that doesn't exist
@@ -942,7 +942,7 @@ class TestDeleteLinkedBranch:
 
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=query_response
+            return_value=({}, query_response)
         )
 
         # Test
@@ -969,7 +969,7 @@ class TestDeleteLinkedBranch:
 
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=query_response
+            return_value=({}, query_response)
         )
 
         # Test
@@ -1047,7 +1047,7 @@ class TestDeleteLinkedBranch:
 
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=query_response
+            return_value=({}, query_response)
         )
         mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
             side_effect=GithubException(403, {"message": "Forbidden"}, None)
@@ -1073,7 +1073,7 @@ class TestDeleteLinkedBranch:
 
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=query_response
+            return_value=({}, query_response)
         )
 
         # Test
@@ -1115,10 +1115,10 @@ class TestDeleteLinkedBranch:
 
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=query_response
+            return_value=({}, query_response)
         )
         mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
-            return_value=mutation_response
+            return_value=({}, mutation_response)
         )
 
         # Test - delete the valid branch (should skip null values)
@@ -1157,7 +1157,7 @@ class TestDeleteLinkedBranch:
 
         mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
-            return_value=query_response
+            return_value=({}, query_response)
         )
 
         # Test - try to delete with uppercase (should not match)
