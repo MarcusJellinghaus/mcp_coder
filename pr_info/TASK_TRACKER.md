@@ -24,11 +24,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Setup and Argument Parsing
 - [x] Implement `workflows/create_plan.bat` - Batch wrapper with UTF-8 encoding
 - [x] Implement `workflows/create_plan.py` - Main workflow script with argument parsing
-- [ ] Implement `parse_arguments()` function - Parse CLI arguments (issue_number, project_dir, log_level, llm_method)
-- [ ] Implement `resolve_project_dir()` function - Validate and resolve project directory
-- [ ] Create `tests/workflows/create_plan/test_argument_parsing.py` with all test cases
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement `parse_arguments()` function - Parse CLI arguments (issue_number, project_dir, log_level, llm_method)
+- [x] Implement `resolve_project_dir()` function - Validate and resolve project directory
+- [x] Create `tests/workflows/create_plan/test_argument_parsing.py` with all test cases
+- [x] Run quality checks: pylint, pytest, mypy - fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Prerequisites Validation
 - [ ] Implement `check_prerequisites()` function in `workflows/create_plan.py`
