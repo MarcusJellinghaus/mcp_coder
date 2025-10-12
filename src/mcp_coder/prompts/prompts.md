@@ -214,11 +214,6 @@ Three-prompt sequence for generating implementation plans from GitHub issues.
 ### Initial Analysis
 
 ```
-## Debug info
-Please tell me: 
--  Which mcp servers do you see?
-- What is your current directory?
-
 ## Discuss implementation steps
 Please take a look at the existing solution, its files and its architecture documentation.
 Do you understand the task below?
