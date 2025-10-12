@@ -206,3 +206,46 @@ Git diff to analyze:
 
 OUTPUT THE TITLE AND BODY EXACTLY AS SHOWN ABOVE - NO OTHER TEXT!
 ```
+
+## Plan Generation Workflow
+
+Three-prompt sequence for generating implementation plans from GitHub issues.
+
+### Initial Analysis
+
+```
+## Discuss implementation steps
+Please take a look at the existing solution, its files and its architecture documentation.
+Do you understand the task below?
+What are the implementation steps?
+Do not yet modify any code!
+```
+
+### Simplification Review
+
+```
+Let's review the plan with simplicity in mind. Can we achieve the same goals with a simpler approach? Consider KISS principle and maintainability while preserving the issue's core requirements.
+```
+
+### Implementation Plan Creation
+
+```
+## Python Project Implementation Plan Request
+Create a **summary** (`pr_info/steps/summary.md`) and **implementation plan** with self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
+Can you also give a summary of the architectural / design changes in the summary document?
+Also list the folders \ modules \ files that should be created or modified by this implementation.
+
+### Requirements:
+- Follow **Test-Driven Development** where applicable. 
+  Each step should have its own test implementation followed by related functionality implementation.  
+- Each step must include a **clear LLM prompt** that references the summary and that specific step
+- Apply **KISS principle** - minimize complexity, maximize maintainability
+- Keep code changes minimal and follow best practices
+
+### Each Step Must Specify:
+- **WHERE**: File paths and module structure
+- **WHAT**: Main functions with signatures
+- **HOW**: Integration points (decorators, imports, etc.)
+- **ALGORITHM**: 5-6 line pseudocode for core logic (if any)
+- **DATA**: Return values and data structures
+```
