@@ -263,28 +263,38 @@ def run_planning_prompts(
     
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
+    logger.debug(f"Environment variables prepared: {list(env_vars.keys())}")
     
     # Prepare session storage path (relative to project directory)
     session_storage_path = str(project_dir / ".mcp-coder" / "create_plan_sessions")
+    logger.info(f"Conversation logs will be stored in: {session_storage_path}")
     
     # Load all three prompts
     logger.info("Loading prompt templates...")
     prompt_1 = _load_prompt_or_exit("Initial Analysis")
+    logger.debug(f"Prompt 1 loaded: {len(prompt_1)} chars, preview: {prompt_1[:200]}...")
+    
     prompt_2 = _load_prompt_or_exit("Simplification Review")
+    logger.debug(f"Prompt 2 loaded: {len(prompt_2)} chars, preview: {prompt_2[:200]}...")
+    
     prompt_3 = _load_prompt_or_exit("Implementation Plan Creation")
+    logger.debug(f"Prompt 3 loaded: {len(prompt_3)} chars, preview: {prompt_3[:200]}...")
     
     # Format initial prompt with issue data
     formatted_prompt_1 = format_initial_prompt(prompt_1, issue_data)
+    logger.debug(f"Formatted prompt 1: {len(formatted_prompt_1)} chars (includes issue data)")
     
     # Parse llm_method
     try:
         provider, method = parse_llm_method(llm_method)
+        logger.debug(f"LLM method: provider={provider}, method={method}")
     except ValueError as e:
         logger.error(f"Invalid LLM method: {e}")
         return False
     
     # Execute first prompt
     logger.info("Executing prompt 1: Initial Analysis...")
+    logger.debug(f"Sending {len(formatted_prompt_1)} chars to LLM with timeout=600s")
     try:
         response_1 = prompt_llm(
             formatted_prompt_1,
@@ -330,6 +340,7 @@ def run_planning_prompts(
     
     # Execute second prompt with session continuation
     logger.info("Executing prompt 2: Simplification Review...")
+    logger.debug(f"Sending {len(prompt_2)} chars to LLM with session_id={session_id[:16]}... timeout=600s")
     try:
         response_2 = prompt_llm(
             prompt_2,
@@ -369,6 +380,7 @@ def run_planning_prompts(
     
     # Execute third prompt with session continuation
     logger.info("Executing prompt 3: Implementation Plan Creation...")
+    logger.debug(f"Sending {len(prompt_3)} chars to LLM with session_id={session_id[:16]}... timeout=600s")
     try:
         response_3 = prompt_llm(
             prompt_3,
