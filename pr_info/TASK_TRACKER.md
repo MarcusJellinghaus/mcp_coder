@@ -66,7 +66,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Create workflows/issue_stats.bat batch launcher
 - [x] Configure UTF-8 encoding setup in batch script
 - [x] Configure PYTHONPATH setup in batch script
-- [ ] Test batch launcher without arguments
+- [x] Test batch launcher without arguments
 - [ ] Test batch launcher with --filter flag
 - [ ] Test batch launcher with --details flag
 - [ ] Test batch launcher with --ignore-labels flag
