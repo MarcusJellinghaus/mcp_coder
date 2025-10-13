@@ -129,7 +129,7 @@ def test_prepare_llm_environment_logging(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that environment preparation logs debug messages.
-    
+
     Note: This test uses caplog which doesn't work well with pytest-xdist.
     The xdist_group marker ensures it runs in isolation.
     """

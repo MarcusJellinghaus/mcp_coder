@@ -396,7 +396,7 @@ def main() -> None:
     
     # Load configuration
     logger.info("Loading label configuration...")
-    config_path = project_dir.parent / "workflows" / "config" / "labels.json"
+    config_path = project_dir / "workflows" / "config" / "labels.json"
     try:
         labels_config = load_labels_config(config_path)
         logger.debug(f"Loaded {len(labels_config['workflow_labels'])} workflow labels")

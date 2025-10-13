@@ -306,7 +306,9 @@ class IssueBranchManager(BaseGitHubManager):
             # Extract data from GraphQL response
             data = result.get("data", {})
             if not isinstance(data, dict):
-                error_msg = "Failed to create linked branch: Malformed response from GitHub"
+                error_msg = (
+                    "Failed to create linked branch: Malformed response from GitHub"
+                )
                 logger.error(error_msg)
                 logger.debug(f"GraphQL mutation response: {result}")
                 return BranchCreationResult(
@@ -315,12 +317,14 @@ class IssueBranchManager(BaseGitHubManager):
                     error=error_msg,
                     existing_branches=[],
                 )
-            
+
             mutation_result = data.get("createLinkedBranch", {})
-            
+
             # Check if result has the expected linkedBranch field
             if mutation_result is None or "linkedBranch" not in mutation_result:
-                error_msg = "Failed to create linked branch: Invalid response from GitHub"
+                error_msg = (
+                    "Failed to create linked branch: Invalid response from GitHub"
+                )
                 logger.error(error_msg)
                 logger.debug(f"GraphQL mutation response: {result}")
                 return BranchCreationResult(
