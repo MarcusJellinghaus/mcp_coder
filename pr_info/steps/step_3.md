@@ -2,13 +2,13 @@
 
 ## LLM Prompt
 ```
-Implement Step 3 from pr_info/steps/summary.md: Create the core issue_stats.py script with statistics calculation and display logic.
+Implement Step 3 from pr_info/steps/summary.md: Create the core issue_stats.py script with statistics calculation, ignore labels feature, and display logic.
 
 Follow Test-Driven Development:
-1. Write tests for core functions (load config, validate issues, group by category)
+1. Write tests for core functions (load config, validate issues, filter ignored labels, group by category)
 2. Implement main script following define_labels.py pattern
-3. Add command-line argument parsing (--filter, --details, --log-level)
-4. Implement statistics display with ANSI colors
+3. Add command-line argument parsing (--filter, --details, --ignore-labels, --log-level)
+4. Implement statistics display with simple text formatting (including validation errors in details mode)
 5. Run all code quality checks using MCP tools
 
 Use ONLY MCP filesystem tools for all file operations (mcp__filesystem__*).
@@ -62,7 +62,24 @@ def validate_issue_labels(
     """
 ```
 
-### 3. group_issues_by_category()
+### 3. filter_ignored_issues()
+```python
+def filter_ignored_issues(
+    issues: List[IssueData],
+    ignore_labels: List[str]
+) -> List[IssueData]:
+    """Filter out issues that have any of the ignored labels.
+    
+    Args:
+        issues: List of IssueData dictionaries
+        ignore_labels: List of label names to ignore
+        
+    Returns:
+        Filtered list of issues without any ignored labels
+    """
+```
+
+### 4. group_issues_by_category()
 ```python
 def group_issues_by_category(
     issues: List[IssueData],
@@ -91,7 +108,7 @@ def group_issues_by_category(
     """
 ```
 
-### 4. display_statistics()
+### 5. display_statistics()
 ```python
 def display_statistics(
     grouped_issues: dict,
@@ -109,17 +126,17 @@ def display_statistics(
     """
 ```
 
-### 5. parse_arguments()
+### 6. parse_arguments()
 ```python
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments.
     
     Returns:
-        Namespace with: project_dir, log_level, filter, details
+        Namespace with: project_dir, log_level, filter, details, ignore_labels
     """
 ```
 
-### 6. main()
+### 7. main()
 ```python
 def main() -> None:
     """Main entry point for issue statistics workflow."""
@@ -134,7 +151,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from mcp_coder.utils import get_github_repository_url
 from mcp_coder.utils.github_operations.issue_manager import IssueManager, IssueData
@@ -142,19 +159,19 @@ from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflows.utils import resolve_project_dir
 ```
 
-### ANSI Terminal Links (Clickable URLs)
+### Simple URL Formatting
 ```python
-def format_clickable_link(text: str, url: str) -> str:
-    """Format text as ANSI clickable terminal link.
+def format_issue_url(issue: IssueData, repo_url: str) -> str:
+    """Format plain text URL for an issue.
     
     Args:
-        text: Display text
-        url: Target URL
+        issue: IssueData dictionary
+        repo_url: Repository URL
         
     Returns:
-        ANSI escape sequence for clickable link
+        Full issue URL as string
     """
-    return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
+    return f"{repo_url}/issues/{issue['number']}"
 ```
 
 ### Title Truncation
@@ -186,15 +203,42 @@ FUNCTION main():
     config_path = project_dir.parent / "workflows" / "config" / "labels.json"
     labels_config = load_labels_config(config_path)
     
-    # Fetch issues
+    # Fetch issues (open only)
     issue_manager = IssueManager(project_dir)
-    issues = issue_manager.list_issues(state="all", include_pull_requests=False)
+    issues = issue_manager.list_issues(state="open", include_pull_requests=False)
+    
+    # Build ignore list (JSON defaults + CLI additions)
+    ignore_labels = labels_config.get('ignore_labels', []) + (args.ignore_labels or [])
+    
+    # Filter out ignored issues
+    filtered_issues = filter_ignored_issues(issues, ignore_labels)
     
     # Group by category and validate
-    grouped = group_issues_by_category(issues, labels_config)
+    grouped = group_issues_by_category(filtered_issues, labels_config)
     
     # Display statistics
     display_statistics(grouped, labels_config, args.filter, args.details)
+```
+
+## ALGORITHM: Filter Ignored Issues
+
+```
+FUNCTION filter_ignored_issues(issues, ignore_labels):
+    IF ignore_labels IS EMPTY:
+        RETURN issues  # No filtering needed
+    
+    filtered = []
+    FOR EACH issue IN issues:
+        has_ignored_label = FALSE
+        FOR EACH label IN issue.labels:
+            IF label IN ignore_labels:
+                has_ignored_label = TRUE
+                BREAK
+        
+        IF NOT has_ignored_label:
+            APPEND issue TO filtered
+    
+    RETURN filtered
 ```
 
 ## ALGORITHM: Issue Grouping
@@ -237,6 +281,8 @@ FUNCTION group_issues_by_category(issues, labels_config):
 
 ### Summary Display (--details not set)
 ```
+Ignored 5 issues with labels: wontfix, duplicate
+
 === Human Action Required ===
   status-01:created           3 issues
   status-04:plan-review       1 issue
@@ -257,21 +303,38 @@ FUNCTION group_issues_by_category(issues, labels_config):
   No status label: 2 issues
   Multiple status labels: 1 issue
 
-Total: 25 issues (22 valid, 3 errors)
+Total: 20 issues (17 valid, 3 errors, 5 ignored)
 ```
 
 ### Details Display (--details flag)
 ```
+Ignored 5 issues with labels: wontfix, duplicate
+
 === Human Action Required ===
   status-01:created           3 issues
-    - #123: Fix login bug (https://github.com/owner/repo/issues/123)
-    - #145: Add new feature with a very long title that gets truncated with... (https://github.com/...)
-    - #167: Update documentation (https://github.com/owner/repo/issues/167)
+    - #123: Fix login bug
+      https://github.com/owner/repo/issues/123
+    - #145: Add new feature with a very long title that gets truncated with...
+      https://github.com/owner/repo/issues/145
+    - #167: Update documentation
+      https://github.com/owner/repo/issues/167
   
   status-04:plan-review       1 issue
-    - #200: Refactor authentication module (https://github.com/owner/repo/issues/200)
+    - #200: Refactor authentication module
+      https://github.com/owner/repo/issues/200
 
 ...
+
+=== Validation Errors ===
+  No status label: 2 issues
+    - #201: Some issue without labels
+      https://github.com/owner/repo/issues/201
+    - #202: Another unlabeled issue
+      https://github.com/owner/repo/issues/202
+  
+  Multiple status labels: 1 issue
+    - #203: Issue with too many status labels
+      https://github.com/owner/repo/issues/203
 ```
 
 ### Filter Modes
@@ -279,16 +342,23 @@ Total: 25 issues (22 valid, 3 errors)
 - `--filter human`: Show only human_action category
 - `--filter bot`: Show only bot_pickup and bot_busy categories
 
+### Ignore Labels
+- JSON config: `"ignore_labels": ["wontfix", "duplicate"]` - default ignored labels
+- CLI: `--ignore-labels "wontfix" --ignore-labels "on hold"` - add more ignored labels
+- Combined: JSON defaults + CLI additions = full ignore list
+- Multiple flags supported for labels with spaces
+
 ## Implementation Checklist
 - [ ] Implement load_labels_config() with error handling
 - [ ] Implement validate_issue_labels() for single status check
+- [ ] Implement filter_ignored_issues() to remove ignored labels
 - [ ] Implement group_issues_by_category() with proper structure
-- [ ] Implement display_statistics() with formatting
-- [ ] Implement format_clickable_link() for terminal links
+- [ ] Implement display_statistics() with simple formatting and validation errors in details mode
+- [ ] Implement format_issue_url() for plain URLs
 - [ ] Implement truncate_title() for long titles
-- [ ] Implement parse_arguments() with all flags
-- [ ] Implement main() orchestrator function
-- [ ] Write comprehensive unit tests (10+ test functions)
+- [ ] Implement parse_arguments() with all flags (--filter, --details, --ignore-labels)
+- [ ] Implement main() orchestrator function with ignore labels support
+- [ ] Write comprehensive unit tests (12+ test functions)
 - [ ] Test with test_labels.json fixture
 - [ ] Run all code quality checks
 
@@ -299,6 +369,7 @@ Total: 25 issues (22 valid, 3 errors)
 def test_load_labels_config_valid()
 def test_load_labels_config_missing_file()
 def test_load_labels_config_invalid_json()
+def test_load_labels_config_with_ignore_labels()
 ```
 
 ### Validation Tests
@@ -306,6 +377,13 @@ def test_load_labels_config_invalid_json()
 def test_validate_issue_labels_single_valid()
 def test_validate_issue_labels_no_status()
 def test_validate_issue_labels_multiple_status()
+```
+
+### Filtering Tests
+```python
+def test_filter_ignored_issues_no_ignore_list()
+def test_filter_ignored_issues_with_ignored_labels()
+def test_filter_ignored_issues_labels_with_spaces()
 ```
 
 ### Grouping Tests
@@ -318,9 +396,15 @@ def test_group_issues_by_category_zero_counts_included()
 
 ### Formatting Tests
 ```python
-def test_format_clickable_link()
+def test_format_issue_url()
 def test_truncate_title_short()
 def test_truncate_title_long()
+```
+
+### Display Tests
+```python
+def test_display_statistics_summary_mode()
+def test_display_statistics_details_mode_with_errors()
 ```
 
 ### Integration Tests
@@ -328,6 +412,7 @@ def test_truncate_title_long()
 def test_main_workflow_with_mocked_data()
 def test_parse_arguments_default_values()
 def test_parse_arguments_all_flags()
+def test_parse_arguments_multiple_ignore_labels()
 ```
 
 ## Quality Checks
@@ -349,7 +434,7 @@ mcp__code-checker__run_pylint_check()
 tests/workflows/test_issue_stats.py::test_load_labels_config_valid PASSED
 tests/workflows/test_issue_stats.py::test_validate_issue_labels_single_valid PASSED
 tests/workflows/test_issue_stats.py::test_group_issues_by_category_all_valid PASSED
-tests/workflows/test_issue_stats.py::test_format_clickable_link PASSED
+tests/workflows/test_issue_stats.py::test_format_issue_url PASSED
 tests/workflows/test_issue_stats.py::test_truncate_title_long PASSED
 ... (10+ tests total)
 ```
@@ -358,6 +443,6 @@ tests/workflows/test_issue_stats.py::test_truncate_title_long PASSED
 - Follow exact same code structure as define_labels.py
 - Use INFO level logging for workflow progress
 - Fail fast with sys.exit(1) on errors
-- Keep display logic simple (no fancy colors, just clear formatting)
-- ANSI escape codes for clickable links work in most modern terminals
-- Title truncation at 80 chars is standard for readable console output
+- Keep display logic simple (plain text formatting)
+- Plain URLs on separate lines for easy copying
+- Title truncation at 80 chars for readable console output

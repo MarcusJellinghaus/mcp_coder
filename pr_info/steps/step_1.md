@@ -48,7 +48,8 @@ tests/
       "description": "Fresh issue, may need refinement",
       "category": "human_action"
     }
-  ]
+  ],
+  "ignore_labels": []
 }
 ```
 
@@ -58,6 +59,7 @@ tests/
 - `color` (string): 6-character hex code (no # prefix)
 - `description` (string): Human-readable label purpose
 - `category` (string): One of: human_action, bot_pickup, bot_busy
+- `ignore_labels` (array): List of label names to ignore when fetching issues (default: empty)
 
 ### 2. Test Fixture (test_labels.json)
 Minimal subset for testing:
@@ -137,7 +139,7 @@ FUNCTION validate_label_config(config):
 
 ## DATA: Label Configuration Content
 
-### Complete labels.json (10 workflow statuses)
+### Complete labels.json (10 workflow statuses + ignore_labels)
 ```json
 {
   "workflow_labels": [
@@ -211,7 +213,8 @@ FUNCTION validate_label_config(config):
       "description": "Pull request created, awaiting approval/merge",
       "category": "human_action"
     }
-  ]
+  ],
+  "ignore_labels": []
 }
 ```
 
@@ -247,7 +250,8 @@ FUNCTION validate_label_config(config):
       "description": "Coding in progress",
       "category": "bot_busy"
     }
-  ]
+  ],
+  "ignore_labels": []
 }
 ```
 

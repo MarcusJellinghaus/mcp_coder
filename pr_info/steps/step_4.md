@@ -141,9 +141,10 @@ workflows\issue_stats.bat --project-dir . --log-level INFO --filter human --deta
 ### Expected Behaviors
 1. **UTF-8 Support**: Handles Unicode characters in issue titles
 2. **Error Propagation**: Python errors cause batch script to exit with non-zero
-3. **Argument Forwarding**: All flags passed correctly to Python
+3. **Argument Forwarding**: All flags passed correctly to Python (including multiple --ignore-labels)
 4. **Path Resolution**: PYTHONPATH allows imports from src/mcp_coder
 5. **Success Message**: Shows on successful completion
+6. **Open Issues Only**: Fetches and displays only open issues, not closed
 
 ## Implementation Checklist
 - [ ] Create issue_stats.bat in workflows/ directory

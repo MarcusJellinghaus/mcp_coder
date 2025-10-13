@@ -31,13 +31,13 @@ tests/utils/github_operations/test_issue_manager.py       # Add unit tests
 @_handle_github_errors(default_return=[])
 def list_issues(
     self,
-    state: str = "all",
+    state: str = "open",
     include_pull_requests: bool = False
 ) -> List[IssueData]:
     """List all issues in the repository with pagination support.
     
     Args:
-        state: Issue state filter - 'open', 'closed', or 'all' (default: 'all')
+        state: Issue state filter - 'open', 'closed', or 'all' (default: 'open')
         include_pull_requests: Whether to include PRs in results (default: False)
     
     Returns:
@@ -121,9 +121,9 @@ FUNCTION list_issues(state, include_pull_requests):
 ### Unit Tests (test_issue_manager.py)
 ```python
 def test_list_issues_default_parameters(mock_repo):
-    """Test list_issues with default parameters (all, no PRs)"""
+    """Test list_issues with default parameters (open, no PRs)"""
     # Mock repo.get_issues() to return issues without PRs
-    # Verify: state='all', PRs filtered out
+    # Verify: state='open', PRs filtered out
     pass
 
 def test_list_issues_open_only(mock_repo):
@@ -154,16 +154,6 @@ def test_list_issues_github_error_handling(mock_repo):
     """Test list_issues handles GitHub API errors gracefully"""
     # Mock repo.get_issues() raising GithubException
     # Verify: empty list returned, error logged
-    pass
-```
-
-### Integration Test (Optional, marked with github_integration)
-```python
-@pytest.mark.github_integration
-def test_list_issues_real_repository():
-    """Integration test with real GitHub API (slow, requires auth)"""
-    # Uses real IssueManager with test repository
-    # Verifies actual pagination and filtering
     pass
 ```
 
@@ -205,11 +195,11 @@ def get_issue(self, issue_number: int) -> IssueData:
 
 ## Implementation Checklist
 - [ ] Add list_issues() method to IssueManager class
+- [ ] Set default state to 'open' (not 'all')
 - [ ] Follow existing code patterns (decorators, error handling)
 - [ ] Implement pagination (iterate through PaginatedList)
 - [ ] Filter pull requests based on flag
 - [ ] Write 6 unit tests with mocked GitHub API
-- [ ] Optional: Write 1 integration test marked with github_integration
 - [ ] Run fast unit tests: `mcp__code-checker__run_pytest_check` with exclusions
 - [ ] Verify all tests pass
 
