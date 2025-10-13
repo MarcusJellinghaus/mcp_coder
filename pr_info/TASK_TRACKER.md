@@ -87,7 +87,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add test for missing config file error
 - [x] Add test for invalid JSON error
 - [x] Verify backward compatibility (same labels created)
-- [ ] Manual test: workflows\define_labels.bat --dry-run
+- [x] Manual test: workflows\define_labels.bat --dry-run
 - [x] Run pylint check and fix all issues found
 - [x] Run pytest check (fast unit tests) and fix all issues found
 - [x] Run mypy check and fix all issues found
