@@ -26,11 +26,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Create workflows/label_config.py with load_labels_config() function
 - [x] Create tests/workflows/config/test_labels.json test fixture
 - [x] Create tests/workflows/test_label_config.py with validation tests
-- [ ] Create tests/workflows/test_issue_stats.py skeleton
+- [x] Create tests/workflows/test_issue_stats.py skeleton
 - [ ] Run pylint check and fix all issues found
 - [ ] Run pytest check (fast unit tests) and fix all issues found
 - [ ] Run mypy check and fix all issues found
-- [ ] Prepare git commit message for label configuration setup
+- [x] Prepare git commit message for label configuration setup
 
 ### Step 2: IssueManager.list_issues() Method ([details](steps/step_2.md))
 - [ ] Add list_issues() method to src/mcp_coder/utils/github_operations/issue_manager.py
