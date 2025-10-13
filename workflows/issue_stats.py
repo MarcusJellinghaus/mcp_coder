@@ -317,7 +317,7 @@ def parse_arguments() -> argparse.Namespace:
         "--ignore-labels",
         action="append",
         dest="ignore_labels",
-        help="Additional labels to ignore (can be used multiple times)"
+        help="Additional labels to ignore beyond JSON config defaults (can be used multiple times)"
     )
     
     return parser.parse_args()
