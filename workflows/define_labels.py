@@ -286,7 +286,7 @@ def main() -> None:
         pass
     
     # Load labels from JSON config using shared module
-    config_path = project_dir.parent / "workflows" / "config" / "labels.json"
+    config_path = project_dir / "workflows" / "config" / "labels.json"
     try:
         labels_config = load_labels_config(config_path)
     except FileNotFoundError:
