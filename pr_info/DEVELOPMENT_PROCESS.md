@@ -67,7 +67,10 @@ flowchart TD
     classDef statusPrCreated fill:#8b5cf6,stroke:#7c3aed,stroke-width:3px,color:#ffffff
     classDef done fill:#10b981,stroke:#059669,stroke-width:3px,color:#ffffff
     
-    classDef humanAction fill:#fff9e6,stroke:#ff9800,stroke-width:3px,color:#f57c00
+    classDef humanActionCreated fill:#fff9e6,stroke:#10b981,stroke-width:3px,color:#059669
+    classDef humanActionPlanReview fill:#fff9e6,stroke:#3b82f6,stroke-width:3px,color:#2563eb
+    classDef humanActionCodeReview fill:#fff9e6,stroke:#f59e0b,stroke-width:3px,color:#d97706
+    classDef humanActionPrCreated fill:#fff9e6,stroke:#8b5cf6,stroke-width:3px,color:#7c3aed
     
     classDef statusAwaitingPlanning fill:#6ee7b7,stroke:#34d399,stroke-width:2px,color:#065f46
     classDef statusPlanReady fill:#93c5fd,stroke:#60a5fa,stroke-width:2px,color:#1e3a8a
@@ -86,7 +89,10 @@ flowchart TD
     class S10 statusPrCreated
     class S11 done
     
-    class H1,H2,H3,H4 humanAction
+    class H1 humanActionCreated
+    class H2 humanActionPlanReview
+    class H3 humanActionCodeReview
+    class H4 humanActionPrCreated
     
     class S2 statusAwaitingPlanning
     class S5 statusPlanReady
