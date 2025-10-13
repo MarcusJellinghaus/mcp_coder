@@ -100,3 +100,71 @@
 - Format: "Ignored {count} issues with labels: {label1, label2}"
 - Not shown when ignore list is empty
 - Shown even if count is 0 (confirms feature is active)
+
+## Decisions Made During Code Review
+
+### 17. Config Path Bug Fix (CRITICAL)
+**Decision:** Fix incorrect config path in both workflow scripts
+- **Bug**: `config_path = project_dir.parent / "workflows" / "config" / "labels.json"`
+- **Fix**: `config_path = project_dir / "workflows" / "config" / "labels.json"`
+- **Files affected**: `workflows/issue_stats.py:403` and `workflows/define_labels.py:290`
+- **Impact**: Critical - workflows will fail if not fixed
+
+### 18. Batch Launcher Test File Deletion
+**Decision:** Delete `test_batch_different_dir.py` from project root
+- Batch files contain minimal logic (8 lines)
+- Test file is 154 lines (much larger than what it tests)
+- Manual testing documented in `pr_info/steps/step_4_batch_test_verification.md` is sufficient
+- Unit tests for minimal wrapper scripts are not needed
+
+### 19. Skipped Test Functions for Future Features
+**Decision:** Created separate issue for cleanup (not part of this PR)
+- File: `ISSUE_DRAFT_implement_command_tests.md`
+- Skipped tests in `test_implement.py` are for future "implement" command
+- Not related to issue #109 (task list statistics)
+- Will be addressed separately when feature is implemented
+
+### 20. Type Hint Consistency
+**Decision:** No consistency requirement - allow mixed styles
+- Built-in generics (`list[str]`, `dict[str, str]`) for Python 3.9+
+- Typing module (`List[str]`, `Dict[str, str]`) for older versions
+- Mixed usage is acceptable
+- No action needed
+
+### 21. GraphQL Response Parsing Test Coverage
+**Decision:** Existing test coverage is sufficient
+- Integration test exercises actual code path
+- Unit test covers malformed response scenarios
+- Refactored code is more defensive (better error handling)
+- No additional tests needed
+
+### 22. Module Docstrings
+**Decision:** Keep minimal docstrings in label_config.py
+- Current docstring is sufficient
+- No need for expanded usage examples
+- Code is self-documenting
+
+### 23. Python Package Structure for Config Directory
+**Decision:** Add `workflows/config/__init__.py`
+- Empty file follows Python package conventions
+- Improves project structure consistency
+- Standard practice even for data-only directories
+
+### 24. Help Text Clarity for --ignore-labels Flag
+**Decision:** Update help text to clarify additive behavior
+- **Current**: "Additional labels to ignore (can be used multiple times)"
+- **Updated**: "Additional labels to ignore beyond JSON config defaults (can be used multiple times)"
+- Makes explicit that CLI flags add to (not replace) JSON defaults
+
+### 25. Logging Changes in create_plan.py
+**Decision:** Keep minor logging improvements
+- Changed "stored to:" to "logged to file:"
+- Added debug logging for response lengths
+- Minor improvements in log clarity
+- Not strictly related to issue #109 but acceptable
+
+### 26. Title Truncation Algorithm
+**Decision:** Keep simple character truncation
+- No word-aware truncation needed
+- Simple implementation is sufficient
+- Code clarity over marginal UX improvement

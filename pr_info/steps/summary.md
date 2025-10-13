@@ -60,6 +60,7 @@ Build a workflow script that displays GitHub issue statistics, grouped by workfl
 ### Files to CREATE
 ```
 workflows/config/labels.json              # Label configuration (new)
+workflows/config/__init__.py              # Python package file (new)
 workflows/label_config.py                 # Shared label config loader (new)
 workflows/issue_stats.py                  # Main statistics script (new)
 workflows/issue_stats.bat                 # Windows launcher (new)
@@ -72,6 +73,7 @@ pr_info/steps/step_2.md                   # Step 2 implementation plan
 pr_info/steps/step_3.md                   # Step 3 implementation plan
 pr_info/steps/step_4.md                   # Step 4 implementation plan
 pr_info/steps/step_5.md                   # Step 5 implementation plan
+pr_info/steps/step_6.md                   # Step 6 implementation plan (code review fixes)
 pr_info/steps/decisions.md                # Implementation decisions
 ```
 
@@ -80,6 +82,13 @@ pr_info/steps/decisions.md                # Implementation decisions
 src/mcp_coder/utils/github_operations/issue_manager.py    # Add list_issues()
 tests/utils/github_operations/test_issue_manager.py       # Add list_issues tests
 workflows/define_labels.py                                # Refactor to use shared label_config (Step 5)
+workflows/issue_stats.py                                  # Fix config path bug (Step 6)
+workflows/define_labels.py                                # Fix config path bug (Step 6)
+```
+
+### Files to DELETE
+```
+test_batch_different_dir.py               # Remove from project root (Step 6)
 ```
 
 ## Implementation Strategy
@@ -97,6 +106,7 @@ Each step follows TDD pattern:
 3. **Step 3**: Core statistics logic + ignore labels + comprehensive tests
 4. **Step 4**: CLI integration + batch launcher
 5. **Step 5**: Refactor define_labels.py to use JSON config
+6. **Step 6**: Code review fixes (config path bug, test cleanup, help text)
 
 ## Success Criteria
 - ✅ All tests pass (unit only, no integration tests)
@@ -112,3 +122,7 @@ Each step follows TDD pattern:
 - ✅ Zero-count statuses shown
 - ✅ Follows existing code patterns
 - ✅ define_labels.py refactored to use JSON config
+- ✅ Critical config path bug fixed in both workflows
+- ✅ Unnecessary test file removed
+- ✅ Help text clarified for --ignore-labels flag
+- ✅ Python package structure improved (workflows/config/__init__.py)
