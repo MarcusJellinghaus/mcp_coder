@@ -85,7 +85,7 @@ def issue_manager(
 class TestIssueBranchManagerIntegration:
     """Integration tests for IssueBranchManager with GitHub API."""
 
-    def test_complete_branch_linking_workflow(
+    def test_complete_branch_linking_workflow(  # pylint: disable=too-many-statements
         self,
         issue_branch_manager: IssueBranchManager,
         issue_manager: IssueManager,
@@ -186,7 +186,7 @@ class TestIssueBranchManagerIntegration:
                 result["branch_name"] in dup_result["existing_branches"]
             ), "Existing branches should include first branch"
             assert dup_result["error"] is not None, "Error message should be present"
-            print(f"✓ Duplicate prevention works")
+            print("✓ Duplicate prevention works")
             print(f"  Error: {dup_result['error']}")
             print(f"  Existing branches: {dup_result['existing_branches']}")
 
@@ -211,7 +211,7 @@ class TestIssueBranchManagerIntegration:
                 result2["branch_name"] == second_branch_name
             ), "Branch name should match requested name"
             created_branches.append(result2["branch_name"])
-            print(f"✓ Created second branch with allow_multiple=True")
+            print("✓ Created second branch with allow_multiple=True")
             print(f"  Branch name: {result2['branch_name']}")
 
             # Verify both branches are linked

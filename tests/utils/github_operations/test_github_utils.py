@@ -260,7 +260,9 @@ class TestPullRequestManagerUnit:
 class TestPullRequestManagerIntegration:
     """Integration tests for PullRequestManager with GitHub API."""
 
-    def test_pr_manager_lifecycle(self, pr_manager: PullRequestManager) -> None:
+    def test_pr_manager_lifecycle(  # pylint: disable=too-many-statements
+        self, pr_manager: PullRequestManager
+    ) -> None:
         """Test complete PR lifecycle: create, get, list, close.
 
         This test creates a test branch, creates a PR, retrieves it, lists PRs, and closes it.
@@ -318,8 +320,7 @@ class TestPullRequestManagerIntegration:
             print(f"Fetch result: {fetch_result}")
 
             # Check if the test branch exists remotely by checking git ls-remote
-            import git
-
+            # git already imported at module level
             repo = git.Repo(pr_manager.project_dir)
             try:
                 # List all remote branches

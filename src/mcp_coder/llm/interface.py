@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-def ask_llm(
+def ask_llm(  # pylint: disable=too-many-positional-arguments
     question: str,
     provider: str = "claude",
     method: str = "cli",
@@ -92,7 +92,7 @@ def ask_llm(
         )
 
 
-def prompt_llm(
+def prompt_llm(  # pylint: disable=too-many-positional-arguments
     question: str,
     provider: str = "claude",
     method: str = "cli",

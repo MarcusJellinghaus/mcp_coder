@@ -20,7 +20,7 @@ LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes for commit message generation
 logger = logging.getLogger(__name__)
 
 
-def generate_commit_message_with_llm(
+def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
     project_dir: Path, provider: str = "claude", method: str = "api"
 ) -> Tuple[bool, str, Optional[str]]:
     """Generate commit message using LLM. Returns (success, message, error).

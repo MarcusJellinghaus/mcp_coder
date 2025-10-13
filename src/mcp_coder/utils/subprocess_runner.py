@@ -130,7 +130,7 @@ def get_utf8_env() -> dict[str, str]:
     return env
 
 
-def _run_subprocess(
+def _run_subprocess(  # pylint: disable=too-many-statements
     command: list[str], options: CommandOptions, use_stdio_isolation: bool = False
 ) -> subprocess.CompletedProcess[str]:
     """

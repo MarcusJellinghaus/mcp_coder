@@ -60,7 +60,9 @@ from ..utils import parse_llm_method_from_args
 logger = logging.getLogger(__name__)
 
 
-def execute_prompt(args: argparse.Namespace) -> int:
+def execute_prompt(
+    args: argparse.Namespace,
+) -> int:  # pylint: disable=too-many-statements
     """Execute prompt command to ask Claude a question.
 
     Args:
@@ -131,7 +133,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
             if getattr(args, "continue_session_from", None) or getattr(
                 args, "continue_session", False
             ):
-                print(f"Using explicit session ID (ignoring file-based continuation)")
+                print("Using explicit session ID (ignoring file-based continuation)")
 
         # Get user-specified timeout, llm_method, and output_format
         timeout = getattr(args, "timeout", 30)
