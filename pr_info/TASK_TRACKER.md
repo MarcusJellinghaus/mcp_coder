@@ -79,18 +79,18 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 5: Refactor define_labels.py ([details](steps/step_5.md))
 - [x] Add import for load_labels_config from workflows.label_config
-- [ ] Remove WORKFLOW_LABELS constant from define_labels.py
-- [ ] Update main() to load from JSON config
-- [ ] Add error handling for missing/invalid JSON
-- [ ] Extract only needed fields (name, color, description) from JSON
-- [ ] Update tests in tests/workflows/test_define_labels.py
-- [ ] Add test for missing config file error
-- [ ] Add test for invalid JSON error
-- [ ] Verify backward compatibility (same labels created)
+- [x] Remove WORKFLOW_LABELS constant from define_labels.py
+- [x] Update main() to load from JSON config
+- [x] Add error handling for missing/invalid JSON
+- [x] Extract only needed fields (name, color, description) from JSON
+- [x] Update tests in tests/workflows/test_define_labels.py
+- [x] Add test for missing config file error
+- [x] Add test for invalid JSON error
+- [x] Verify backward compatibility (same labels created)
 - [ ] Manual test: workflows\define_labels.bat --dry-run
-- [ ] Run pylint check and fix all issues found
-- [ ] Run pytest check (fast unit tests) and fix all issues found
-- [ ] Run mypy check and fix all issues found
+- [x] Run pylint check and fix all issues found
+- [x] Run pytest check (fast unit tests) and fix all issues found
+- [x] Run mypy check and fix all issues found
 - [ ] Prepare git commit message for define_labels refactoring
 
 ### Pull Request

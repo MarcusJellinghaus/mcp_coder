@@ -7,8 +7,8 @@ to a GitHub repository, ensuring consistent label definitions across projects.
 """
 
 import argparse
+import json
 import logging
-import re
 import sys
 from pathlib import Path
 from typing import Optional
@@ -20,62 +20,6 @@ from workflows.label_config import load_labels_config
 
 # Setup logger
 logger = logging.getLogger(__name__)
-
-
-# Workflow status labels definition
-# Format: (name, color, description)
-# Colors are 6-character hex codes WITHOUT '#' prefix (GitHub API format)
-WORKFLOW_LABELS = [
-    ("status-01:created", "10b981", "Fresh issue, may need refinement"),
-    ("status-02:awaiting-planning", "6ee7b7", "Issue is refined and ready for implementation planning"),
-    ("status-03:planning", "a7f3d0", "Implementation plan being drafted (auto/in-progress)"),
-    ("status-04:plan-review", "3b82f6", "First implementation plan available for review/discussion"),
-    ("status-05:plan-ready", "93c5fd", "Implementation plan approved, ready to code"),
-    ("status-06:implementing", "bfdbfe", "Code being written (auto/in-progress)"),
-    ("status-07:code-review", "f59e0b", "Implementation complete, needs code review"),
-    ("status-08:ready-pr", "fbbf24", "Approved for pull request creation"),
-    ("status-09:pr-creating", "fed7aa", "Bot is creating the pull request (auto/in-progress)"),
-    ("status-10:pr-created", "8b5cf6", "Pull request created, awaiting approval/merge"),
-]
-
-
-def _validate_color_format(color: str) -> bool:
-    """Validate that color is a 6-character hex code.
-    
-    Args:
-        color: Color string to validate
-        
-    Returns:
-        True if valid 6-character hex code, False otherwise
-    """
-    return isinstance(color, str) and bool(re.match(r'^[0-9A-Fa-f]{6}$', color))
-
-
-# Validate all colors at module load time
-def _validate_workflow_labels() -> None:
-    """Validate WORKFLOW_LABELS structure and color formats at module load.
-    
-    Raises:
-        ValueError: If any label has invalid structure or color format
-    """
-    for label in WORKFLOW_LABELS:
-        if not isinstance(label, tuple) or len(label) != 3:
-            raise ValueError(f"Invalid label structure: {label}. Expected (name, color, description) tuple.")
-        
-        name, color, description = label
-        
-        if not isinstance(name, str) or not name:
-            raise ValueError(f"Invalid label name: {name}. Must be non-empty string.")
-        
-        if not _validate_color_format(color):
-            raise ValueError(f"Invalid color format for label '{name}': {color}. Expected 6-character hex code.")
-        
-        if not isinstance(description, str):
-            raise ValueError(f"Invalid description for label '{name}': {description}. Must be string.")
-
-
-# Perform validation at module load
-_validate_workflow_labels()
 
 
 def calculate_label_changes(
@@ -145,7 +89,11 @@ def calculate_label_changes(
     return result
 
 
-def apply_labels(project_dir: Path, dry_run: bool = False) -> dict[str, list[str]]:
+def apply_labels(
+    project_dir: Path,
+    workflow_labels: list[tuple[str, str, str]],
+    dry_run: bool = False
+) -> dict[str, list[str]]:
     """Apply workflow labels to repository.
     
     Orchestrator function that:
@@ -157,6 +105,7 @@ def apply_labels(project_dir: Path, dry_run: bool = False) -> dict[str, list[str
     
     Args:
         project_dir: Path to project directory (must be git repo)
+        workflow_labels: List of (name, color, description) tuples for target labels
         dry_run: If True, only preview changes without applying
     
     Returns:
@@ -188,7 +137,7 @@ def apply_labels(project_dir: Path, dry_run: bool = False) -> dict[str, list[str
     ]
     
     # Calculate required changes
-    changes = calculate_label_changes(existing_labels, WORKFLOW_LABELS)
+    changes = calculate_label_changes(existing_labels, workflow_labels)
     
     # Preview mode - log and return without applying
     if dry_run:
@@ -206,7 +155,7 @@ def apply_labels(project_dir: Path, dry_run: bool = False) -> dict[str, list[str
     # Build lookup map for target label details
     target_map = {
         name: (color, description)
-        for name, color, description in WORKFLOW_LABELS
+        for name, color, description in workflow_labels
     }
     
     # Apply changes - CREATE new labels
@@ -336,13 +285,33 @@ def main() -> None:
         # If we can't get repo name, just skip it
         pass
     
+    # Load labels from JSON config using shared module
+    config_path = project_dir.parent / "workflows" / "config" / "labels.json"
+    try:
+        labels_config = load_labels_config(config_path)
+    except FileNotFoundError:
+        logger.error(f"Configuration file not found: {config_path}")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in configuration file: {e}")
+        sys.exit(1)
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)
+    
+    # Extract workflow labels and convert to tuple format for GitHub API
+    workflow_labels = [
+        (label['name'], label['color'], label['description'])
+        for label in labels_config['workflow_labels']
+    ]
+    
     # Log dry-run mode status
     if args.dry_run:
         logger.info("DRY RUN MODE: Changes will be previewed only")
     
     # Apply labels to repository
     try:
-        results = apply_labels(project_dir, dry_run=args.dry_run)
+        results = apply_labels(project_dir, workflow_labels, dry_run=args.dry_run)
         
         # Log summary of results
         logger.info("Label operation completed successfully")
