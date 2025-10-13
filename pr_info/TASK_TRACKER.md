@@ -67,7 +67,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Configure UTF-8 encoding setup in batch script
 - [x] Configure PYTHONPATH setup in batch script
 - [x] Test batch launcher without arguments
-- [ ] Test batch launcher with --filter flag
+- [x] Test batch launcher with --filter flag
 - [ ] Test batch launcher with --details flag
 - [ ] Test batch launcher with --ignore-labels flag
 - [ ] Test batch launcher with invalid arguments
