@@ -63,3 +63,40 @@
 - Placed after Step 4 (batch launcher)
 - Ensures single source of truth for label definitions
 - Part of the main implementation plan
+- Uses shared `workflows/label_config.py` module to avoid code duplication
+
+### 12. Shared Label Config Module
+**Decision:** Create `workflows/label_config.py` with shared `load_labels_config()` function
+- Single implementation used by both `issue_stats.py` and `define_labels.py`
+- Avoids code duplication
+- Centralized error handling and validation
+- Created in Step 1 alongside JSON config
+
+### 13. Display Format - Compact Single-Line
+**Decision:** Use compact single-line format for all issues in details mode
+- Format: `- #{number}: {title} ({url})` on one line
+- Applies to both valid issues and validation errors
+- More scannable, fits more issues on screen
+- URLs still clickable in modern terminals
+
+### 14. Logging Strategy
+**Decision:** Define clear logging levels for workflow execution
+- DEBUG: Detailed operations (API calls, filtering logic)
+- INFO: Workflow progress and results (starting, counts, completion)
+- WARNING: Validation issues (no status, multiple status labels)
+- ERROR: Fatal errors (missing config, API failures)
+- Documented in Step 3 implementation plan
+
+### 15. Validation Errors Display
+**Decision:** Always show Validation Errors section in output
+- Display even when 0 errors for consistency
+- Shows "No status label: 0 issues" and "Multiple status labels: 0 issues"
+- Provides consistent output structure
+- Users know validation ran successfully
+
+### 16. Ignored Issues Message
+**Decision:** Show ignored message only when ignore_labels list is non-empty
+- Appears in logs (INFO level), not in main statistics display
+- Format: "Ignored {count} issues with labels: {label1, label2}"
+- Not shown when ignore list is empty
+- Shown even if count is 0 (confirms feature is active)

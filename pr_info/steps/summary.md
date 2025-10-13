@@ -22,28 +22,32 @@ Build a workflow script that displays GitHub issue statistics, grouped by workfl
    - Schema: `{internal_id, name, color, description, category}`
    - Categories: human_action, bot_pickup, bot_busy
 
-2. **Issue Listing API** (`src/mcp_coder/utils/github_operations/issue_manager.py`)
-   - New method: `list_issues(state="all", include_pull_requests=False)`
+2. **Shared Label Config Module** (`workflows/label_config.py`)
+   - Shared `load_labels_config()` function
+   - Used by both `issue_stats.py` and `define_labels.py`
+   - Avoids code duplication
+
+3. **Issue Listing API** (`src/mcp_coder/utils/github_operations/issue_manager.py`)
+   - New method: `list_issues(state="open", include_pull_requests=False)`
    - Handles GitHub API pagination automatically
    - Returns list of IssueData dictionaries
 
-3. **Statistics Workflow** (`workflows/issue_stats.py`)
+4. **Statistics Workflow** (`workflows/issue_stats.py`)
    - Standalone script following `define_labels.py` pattern
    - Load JSON → Fetch open issues → Filter ignored labels → Validate → Group → Display
    - Support for filtering, details mode, and ignore labels
-   - Simple console output with basic formatting
-   - Details mode shows validation errors with issue links
+   - Simple console output with compact single-line formatting
+   - Details mode shows all issues (valid + errors) with clickable links
 
-4. **Batch Launcher** (`workflows/issue_stats.bat`)
+5. **Batch Launcher** (`workflows/issue_stats.bat`)
    - Windows wrapper with UTF-8 encoding setup
    - Pass-through arguments to Python script
 
 ### Design Principles Applied
-- **KISS**: Keep labels.json as documentation/reference only
-- **No premature abstraction**: Don't modify working `define_labels.py`
-- **Acceptable duplication**: Two separate label definitions (for now)
-- **Minimal changes**: Only add new functionality, don't refactor existing
-- **Console-first**: Simple text output for readability
+- **Single Source of Truth**: JSON config used by both workflows via shared module
+- **DRY**: Shared `load_labels_config()` function avoids duplication
+- **Backward Compatibility**: `define_labels.py` refactored to use JSON without behavior changes
+- **Console-first**: Simple text output with compact formatting for readability
 
 ### Integration Points
 - Uses existing `IssueManager` class (extends with new method)
@@ -56,9 +60,11 @@ Build a workflow script that displays GitHub issue statistics, grouped by workfl
 ### Files to CREATE
 ```
 workflows/config/labels.json              # Label configuration (new)
+workflows/label_config.py                 # Shared label config loader (new)
 workflows/issue_stats.py                  # Main statistics script (new)
 workflows/issue_stats.bat                 # Windows launcher (new)
 tests/workflows/test_issue_stats.py       # Unit tests (new)
+tests/workflows/test_label_config.py      # Tests for shared module (new)
 tests/workflows/config/test_labels.json   # Test fixture (new)
 pr_info/steps/summary.md                  # This file
 pr_info/steps/step_1.md                   # Step 1 implementation plan
@@ -73,13 +79,7 @@ pr_info/steps/decisions.md                # Implementation decisions
 ```
 src/mcp_coder/utils/github_operations/issue_manager.py    # Add list_issues()
 tests/utils/github_operations/test_issue_manager.py       # Add list_issues tests
-workflows/define_labels.py                                # Refactor to use JSON config (Step 5)
-```
-
-### Files NOT Modified (Intentional)
-```
-workflows/define_labels.py                # Keep as-is (working code)
-src/mcp_coder/workflows/utils.py          # No constants added (KISS)
+workflows/define_labels.py                                # Refactor to use shared label_config (Step 5)
 ```
 
 ## Implementation Strategy

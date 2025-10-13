@@ -2,17 +2,17 @@
 
 ## LLM Prompt
 ```
-Implement Step 5 from pr_info/steps/summary.md: Refactor define_labels.py to read label definitions from the JSON config file.
+Implement Step 5 from pr_info/steps/summary.md: Refactor define_labels.py to use the shared label_config module.
 
 Follow Test-Driven Development:
-1. Write tests for JSON config loading in define_labels workflow
-2. Refactor define_labels.py to use load_labels_config() from issue_stats.py
-3. Remove hard-coded label definitions
+1. Update tests for JSON config loading in define_labels workflow
+2. Refactor define_labels.py to import load_labels_config() from workflows.label_config
+3. Remove hard-coded WORKFLOW_LABELS constant
 4. Ensure backward compatibility (same behavior, different data source)
 5. Run all code quality checks using MCP tools
 
 Use ONLY MCP filesystem tools for all file operations (mcp__filesystem__*).
-Ensure define_labels.py continues to work exactly as before, just reading from JSON.
+Ensure define_labels.py continues to work exactly as before, just reading from JSON via shared module.
 ```
 
 ## WHERE: File Paths
@@ -24,9 +24,9 @@ tests/workflows/test_define_labels.py       # Update tests for JSON config
 ```
 
 ### Shared Code
-Both `define_labels.py` and `issue_stats.py` will use:
+Both `define_labels.py` and `issue_stats.py` use:
 - Same JSON config file: `workflows/config/labels.json`
-- Same loading function pattern (can be shared or duplicated)
+- Same loading function: `load_labels_config()` from `workflows/label_config.py`
 
 ## WHAT: Main Changes
 
@@ -76,31 +76,9 @@ for label_config in labels_config['workflow_labels']:
 
 ### Imports
 ```python
-import json
 from pathlib import Path
+from workflows.label_config import load_labels_config
 # ... existing imports
-```
-
-### Loading Pattern (Same as issue_stats.py)
-```python
-def load_labels_config(config_path: Path) -> dict:
-    """Load label configuration from JSON file.
-    
-    Args:
-        config_path: Path to labels.json
-        
-    Returns:
-        Dict with 'workflow_labels' and 'ignore_labels' keys
-        
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        json.JSONDecodeError: If file is not valid JSON
-    """
-    if not config_path.exists():
-        raise FileNotFoundError(f"Label configuration not found: {config_path}")
-    
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
 ```
 
 ### Usage in main()
@@ -111,12 +89,12 @@ def main() -> None:
     setup_logging(args.log_level)
     project_dir = resolve_project_dir(args.project_dir)
     
-    # Load labels from JSON config
+    # Load labels from JSON config using shared module
     config_path = project_dir.parent / "workflows" / "config" / "labels.json"
     try:
-        labels_config = load_labels_config(config_path)
-    except FileNotFoundError as e:
-        logger.error(f"Configuration file not found: {e}")
+        labels_config = load_labels_config(config_path)  # From workflows.label_config
+    except (FileNotFoundError, ValueError) as e:
+        logger.error(f"Configuration error: {e}")
         sys.exit(1)
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON in configuration file: {e}")
@@ -177,8 +155,9 @@ workflow_labels = config['workflow_labels']
 - JSON has extra fields (internal_id, category) that define_labels.py ignores
 
 ## Implementation Checklist
-- [ ] Add load_labels_config() function to define_labels.py
+- [ ] Add import: `from workflows.label_config import load_labels_config`
 - [ ] Remove WORKFLOW_LABELS constant
+- [ ] Add `import json` for JSONDecodeError handling
 - [ ] Update main() to load from JSON config
 - [ ] Add error handling for missing/invalid JSON
 - [ ] Extract only needed fields (name, color, description) from JSON
@@ -190,41 +169,32 @@ workflow_labels = config['workflow_labels']
 
 ## Test Functions (test_define_labels.py)
 
-### New Tests
+### Updated Tests
 ```python
-def test_load_labels_config_valid():
-    """Test loading valid labels.json"""
-    # Verify config loads correctly
-    # Verify workflow_labels key exists
-    # Verify all required fields present
-    pass
-
-def test_load_labels_config_missing_file():
-    """Test error handling for missing config file"""
-    # Verify FileNotFoundError raised
-    # Verify helpful error message
-    pass
-
-def test_load_labels_config_invalid_json():
-    """Test error handling for invalid JSON"""
-    # Create invalid JSON file
-    # Verify json.JSONDecodeError raised
+def test_main_uses_shared_label_config():
+    """Test that main() uses load_labels_config from shared module"""
+    # Mock workflows.label_config.load_labels_config
+    # Verify it's called with correct path
+    # Verify workflow_labels extracted correctly
     pass
 
 def test_workflow_labels_extraction():
     """Test extracting workflow labels from config"""
-    # Load config
+    # Load config using shared module
     # Extract workflow_labels
     # Verify correct fields present for GitHub API
     pass
 ```
 
-### Updated Tests
+**Note:** Tests for `load_labels_config()` itself are in `tests/workflows/test_label_config.py` (created in Step 1)
+
+### Integration Test
 ```python
 def test_main_workflow_with_json_config():
-    """Test main workflow reads from JSON config"""
-    # Mock JSON config loading
+    """Test main workflow reads from JSON config via shared module"""
+    # Mock workflows.label_config.load_labels_config
     # Verify labels created from JSON, not hard-coded constant
+    # Verify behavior identical to before refactoring
     pass
 ```
 

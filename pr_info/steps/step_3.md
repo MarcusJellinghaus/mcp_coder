@@ -142,17 +142,57 @@ def main() -> None:
     """Main entry point for issue statistics workflow."""
 ```
 
+## LOGGING STRATEGY
+
+### Log Levels
+- **DEBUG**: Detailed operations for troubleshooting
+  - GitHub API calls and responses
+  - JSON loading and parsing details
+  - Filtering and grouping logic details
+  - Individual issue processing
+
+- **INFO**: Workflow progress and results
+  - Workflow starting/completion
+  - Fetching issues from GitHub (with count)
+  - Ignored issues count (when applicable)
+  - Statistics summary (total issues, valid, errors)
+
+- **WARNING**: Validation issues detected
+  - Issues with no status label
+  - Issues with multiple status labels
+  - Unusual conditions (e.g., all issues ignored)
+
+- **ERROR**: Fatal errors that stop execution
+  - Missing configuration file
+  - Invalid JSON in config
+  - GitHub API failures
+  - Repository not found
+
+### Example Log Output (INFO level)
+```
+INFO: Starting issue statistics workflow...
+INFO: Project directory: C:\Users\Marcus\Documents\GitHub\mcp_coder
+INFO: Repository: MarcusJellinghaus/mcp_coder
+INFO: Fetching open issues from GitHub...
+INFO: Found 25 open issues
+INFO: Ignored 3 issues with labels: wontfix, duplicate
+WARNING: Found 2 issues without status labels
+WARNING: Found 1 issue with multiple status labels
+INFO: Statistics: 25 total (22 valid, 3 errors, 3 ignored)
+INFO: Issue statistics workflow completed successfully
+```
+
 ## HOW: Integration Points
 
 ### Imports
 ```python
 import argparse
-import json
 import logging
 import sys
 from pathlib import Path
 from typing import List
 
+from workflows.label_config import load_labels_config
 from mcp_coder.utils import get_github_repository_url
 from mcp_coder.utils.github_operations.issue_manager import IssueManager, IssueData
 from mcp_coder.utils.log_utils import setup_logging
@@ -161,17 +201,20 @@ from mcp_coder.workflows.utils import resolve_project_dir
 
 ### Simple URL Formatting
 ```python
-def format_issue_url(issue: IssueData, repo_url: str) -> str:
-    """Format plain text URL for an issue.
+def format_issue_line(issue: IssueData, repo_url: str, max_title_length: int = 80) -> str:
+    """Format a single-line display for an issue.
     
     Args:
         issue: IssueData dictionary
         repo_url: Repository URL
+        max_title_length: Maximum title length before truncation
         
     Returns:
-        Full issue URL as string
+        Formatted string: "- #{number}: {title} ({url})"
     """
-    return f"{repo_url}/issues/{issue['number']}"
+    title = truncate_title(issue['title'], max_title_length)
+    url = f"{repo_url}/issues/{issue['number']}"
+    return f"    - #{issue['number']}: {title} ({url})"
 ```
 
 ### Title Truncation
@@ -200,24 +243,44 @@ FUNCTION main():
     project_dir = resolve_project_dir(args.project_dir)
     
     # Load configuration
+    logger.info("Loading label configuration...")
     config_path = project_dir.parent / "workflows" / "config" / "labels.json"
     labels_config = load_labels_config(config_path)
+    logger.debug(f"Loaded {len(labels_config['workflow_labels'])} workflow labels")
     
     # Fetch issues (open only)
+    logger.info(f"Fetching open issues from {get_github_repository_url(project_dir)}...")
     issue_manager = IssueManager(project_dir)
     issues = issue_manager.list_issues(state="open", include_pull_requests=False)
+    logger.info(f"Found {len(issues)} open issues")
     
     # Build ignore list (JSON defaults + CLI additions)
     ignore_labels = labels_config.get('ignore_labels', []) + (args.ignore_labels or [])
+    if ignore_labels:
+        logger.debug(f"Ignore list: {ignore_labels}")
     
     # Filter out ignored issues
     filtered_issues = filter_ignored_issues(issues, ignore_labels)
+    ignored_count = len(issues) - len(filtered_issues)
+    if ignored_count > 0:
+        logger.info(f"Ignored {ignored_count} issues with labels: {', '.join(ignore_labels)}")
     
     # Group by category and validate
+    logger.debug("Grouping issues by category and validating labels...")
     grouped = group_issues_by_category(filtered_issues, labels_config)
     
+    # Log validation warnings
+    error_count = len(grouped['errors']['no_status']) + len(grouped['errors']['multiple_status'])
+    if grouped['errors']['no_status']:
+        logger.warning(f"Found {len(grouped['errors']['no_status'])} issues without status labels")
+    if grouped['errors']['multiple_status']:
+        logger.warning(f"Found {len(grouped['errors']['multiple_status'])} issues with multiple status labels")
+    
     # Display statistics
+    logger.debug(f"Displaying statistics (filter={args.filter}, details={args.details})")
     display_statistics(grouped, labels_config, args.filter, args.details)
+    
+    logger.info("Issue statistics workflow completed successfully")
 ```
 
 ## ALGORITHM: Filter Ignored Issues
@@ -281,8 +344,6 @@ FUNCTION group_issues_by_category(issues, labels_config):
 
 ### Summary Display (--details not set)
 ```
-Ignored 5 issues with labels: wontfix, duplicate
-
 === Human Action Required ===
   status-01:created           3 issues
   status-04:plan-review       1 issue
@@ -303,39 +364,61 @@ Ignored 5 issues with labels: wontfix, duplicate
   No status label: 2 issues
   Multiple status labels: 1 issue
 
-Total: 20 issues (17 valid, 3 errors, 5 ignored)
+Total: 25 open issues (22 valid, 3 errors)
 ```
+
+**Notes:**
+- Ignored issues message only shown when ignore_labels list is non-empty (logged, not in display)
+- Validation Errors section always shown (even if 0 errors)
 
 ### Details Display (--details flag)
 ```
-Ignored 5 issues with labels: wontfix, duplicate
-
 === Human Action Required ===
   status-01:created           3 issues
-    - #123: Fix login bug
-      https://github.com/owner/repo/issues/123
-    - #145: Add new feature with a very long title that gets truncated with...
-      https://github.com/owner/repo/issues/145
-    - #167: Update documentation
-      https://github.com/owner/repo/issues/167
+    - #123: Fix login bug (https://github.com/owner/repo/issues/123)
+    - #145: Add new feature with a very long title that gets truncated with... (https://github.com/owner/repo/issues/145)
+    - #167: Update documentation (https://github.com/owner/repo/issues/167)
   
   status-04:plan-review       1 issue
-    - #200: Refactor authentication module
-      https://github.com/owner/repo/issues/200
+    - #200: Refactor authentication module (https://github.com/owner/repo/issues/200)
+  
+  status-07:code-review       0 issues
+  
+  status-10:pr-created        0 issues
 
-...
+=== Bot Should Pickup ===
+  status-02:awaiting-planning 2 issues
+    - #150: Add caching layer (https://github.com/owner/repo/issues/150)
+    - #151: Optimize queries (https://github.com/owner/repo/issues/151)
+  
+  status-05:plan-ready        1 issue
+    - #175: Add metrics dashboard (https://github.com/owner/repo/issues/175)
+  
+  status-08:ready-pr          0 issues
+
+=== Bot Busy ===
+  status-03:planning          0 issues
+  
+  status-06:implementing      1 issue
+    - #180: User preferences feature (https://github.com/owner/repo/issues/180)
+  
+  status-09:pr-creating       0 issues
 
 === Validation Errors ===
   No status label: 2 issues
-    - #201: Some issue without labels
-      https://github.com/owner/repo/issues/201
-    - #202: Another unlabeled issue
-      https://github.com/owner/repo/issues/202
+    - #201: Some issue without labels (https://github.com/owner/repo/issues/201)
+    - #202: Another unlabeled issue (https://github.com/owner/repo/issues/202)
   
   Multiple status labels: 1 issue
-    - #203: Issue with too many status labels
-      https://github.com/owner/repo/issues/203
+    - #203: Issue with too many status labels (https://github.com/owner/repo/issues/203)
+
+Total: 25 open issues (22 valid, 3 errors)
 ```
+
+**Format Changes:**
+- **Compact single-line format**: Each issue on one line with title and URL
+- **Zero-count statuses**: Always shown in details mode for completeness
+- **Consistent format**: Same format for valid issues and validation errors
 
 ### Filter Modes
 - `--filter all` (default): Show all categories
@@ -349,12 +432,12 @@ Ignored 5 issues with labels: wontfix, duplicate
 - Multiple flags supported for labels with spaces
 
 ## Implementation Checklist
-- [ ] Implement load_labels_config() with error handling
+- [ ] Import load_labels_config from workflows.label_config
 - [ ] Implement validate_issue_labels() for single status check
 - [ ] Implement filter_ignored_issues() to remove ignored labels
 - [ ] Implement group_issues_by_category() with proper structure
 - [ ] Implement display_statistics() with simple formatting and validation errors in details mode
-- [ ] Implement format_issue_url() for plain URLs
+- [ ] Implement format_issue_line() for compact single-line display
 - [ ] Implement truncate_title() for long titles
 - [ ] Implement parse_arguments() with all flags (--filter, --details, --ignore-labels)
 - [ ] Implement main() orchestrator function with ignore labels support
@@ -396,7 +479,8 @@ def test_group_issues_by_category_zero_counts_included()
 
 ### Formatting Tests
 ```python
-def test_format_issue_url()
+def test_format_issue_line_normal()
+def test_format_issue_line_long_title()
 def test_truncate_title_short()
 def test_truncate_title_long()
 ```

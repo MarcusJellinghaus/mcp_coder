@@ -2,14 +2,16 @@
 
 ## LLM Prompt
 ```
-Implement Step 1 from pr_info/steps/summary.md: Create the label configuration JSON file and validation tests.
+Implement Step 1 from pr_info/steps/summary.md: Create the label configuration JSON file, shared label_config module, and validation tests.
 
 Follow Test-Driven Development:
 1. Create test fixture with sample labels
-2. Write tests for JSON schema validation
-3. Create the actual labels.json configuration
-4. Verify all tests pass
-5. Run code quality checks using MCP tools
+2. Create shared workflows/label_config.py module with load_labels_config() function
+3. Write tests for the shared module
+4. Write skeleton tests for issue_stats.py (to be implemented in Step 3)
+5. Create the actual labels.json configuration
+6. Verify all tests pass
+7. Run code quality checks using MCP tools
 
 Use ONLY MCP filesystem tools for all file operations (mcp__filesystem__*).
 ```
@@ -19,8 +21,10 @@ Use ONLY MCP filesystem tools for all file operations (mcp__filesystem__*).
 ### Files to CREATE
 ```
 workflows/config/labels.json                    # Main label configuration
+workflows/label_config.py                       # Shared config loader module
 tests/workflows/config/test_labels.json         # Test fixture
-tests/workflows/test_issue_stats.py            # Test file (skeleton for now)
+tests/workflows/test_label_config.py            # Tests for shared module
+tests/workflows/test_issue_stats.py             # Test file (skeleton for now)
 ```
 
 ### Directory Structure
@@ -28,16 +32,53 @@ tests/workflows/test_issue_stats.py            # Test file (skeleton for now)
 workflows/
   config/
     labels.json
+  label_config.py
 tests/
   workflows/
     config/
       test_labels.json
+    test_label_config.py
     test_issue_stats.py
 ```
 
 ## WHAT: Main Components
 
-### 1. Label Configuration Schema (labels.json)
+### 1. Shared Label Config Module (label_config.py)
+```python
+"""Shared label configuration loading utilities."""
+import json
+from pathlib import Path
+from typing import Dict, Any
+
+
+def load_labels_config(config_path: Path) -> Dict[str, Any]:
+    """Load label configuration from JSON file.
+    
+    Args:
+        config_path: Path to labels.json
+        
+    Returns:
+        Dict with 'workflow_labels' and 'ignore_labels' keys
+        
+    Raises:
+        FileNotFoundError: If config file doesn't exist
+        json.JSONDecodeError: If file is not valid JSON
+        ValueError: If required keys are missing
+    """
+    if not config_path.exists():
+        raise FileNotFoundError(f"Label configuration not found: {config_path}")
+    
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    
+    # Validate required keys
+    if 'workflow_labels' not in config:
+        raise ValueError("Configuration missing required key: 'workflow_labels'")
+    
+    return config
+```
+
+### 2. Label Configuration Schema (labels.json)
 ```json
 {
   "workflow_labels": [
@@ -61,13 +102,32 @@ tests/
 - `category` (string): One of: human_action, bot_pickup, bot_busy
 - `ignore_labels` (array): List of label names to ignore when fetching issues (default: empty)
 
-### 2. Test Fixture (test_labels.json)
+### 3. Test Fixture (test_labels.json)
 Minimal subset for testing:
 - 2 human_action labels
 - 1 bot_pickup label
 - 1 bot_busy label
 
-### 3. Test Functions (test_issue_stats.py - skeleton)
+### 4. Test Functions for Shared Module (test_label_config.py)
+```python
+def test_load_labels_config_valid():
+    """Test loading valid labels.json"""
+    pass
+
+def test_load_labels_config_missing_file():
+    """Test error handling for missing config file"""
+    pass
+
+def test_load_labels_config_invalid_json():
+    """Test error handling for invalid JSON"""
+    pass
+
+def test_load_labels_config_missing_workflow_labels_key():
+    """Test error handling for missing workflow_labels key"""
+    pass
+```
+
+### 5. Test Functions (test_issue_stats.py - skeleton)
 ```python
 def test_load_labels_json():
     """Test loading and parsing labels.json"""
@@ -84,26 +144,16 @@ def test_category_values_valid():
 
 ## HOW: Integration Points
 
-### JSON Loading Pattern
+### Using the Shared Module
 ```python
-import json
+from workflows.label_config import load_labels_config
 from pathlib import Path
 
-def load_labels_config(config_path: Path) -> dict:
-    """Load label configuration from JSON file.
-    
-    Args:
-        config_path: Path to labels.json
-        
-    Returns:
-        Dict with 'workflow_labels' key containing list of label configs
-        
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        json.JSONDecodeError: If file is not valid JSON
-    """
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+# In any workflow script:
+config_path = Path("workflows/config/labels.json")
+config = load_labels_config(config_path)
+workflow_labels = config['workflow_labels']
+ignore_labels = config.get('ignore_labels', [])
 ```
 
 ### Validation Pattern
@@ -260,6 +310,8 @@ FUNCTION validate_label_config(config):
 - [ ] Create tests/workflows/config/ directory
 - [ ] Write labels.json with all 10 workflow statuses
 - [ ] Write test_labels.json fixture with 4 minimal statuses
+- [ ] Create workflows/label_config.py with load_labels_config() function
+- [ ] Create tests/workflows/test_label_config.py with 4 test functions
 - [ ] Create test_issue_stats.py skeleton with 3 test functions
 - [ ] Run tests: `mcp__code-checker__run_pytest_check` with fast unit test exclusions
 - [ ] Verify JSON files are valid and parseable
