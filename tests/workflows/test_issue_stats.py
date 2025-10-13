@@ -765,3 +765,110 @@ def test_ignore_labels_with_labels_containing_special_characters() -> None:
     filtered = filter_ignored_issues(issues, ["priority: low"])
     assert len(filtered) == 1
     assert filtered[0]["number"] == 1
+
+
+# Invalid Arguments Tests (Batch Launcher Error Handling)
+def test_parse_arguments_invalid_flag() -> None:
+    """Test parse_arguments with invalid flag exits with error.
+
+    This verifies the batch launcher will fail gracefully when passed invalid
+    flags, which is important for user feedback and CI/CD pipelines.
+    """
+    from workflows.issue_stats import parse_arguments
+
+    # Simulate: issue_stats.bat --invalid-flag
+    with patch("sys.argv", ["issue_stats.py", "--invalid-flag"]):
+        with pytest.raises(SystemExit) as exc_info:
+            parse_arguments()
+        # argparse exits with code 2 for invalid arguments
+        assert exc_info.value.code == 2
+
+
+def test_parse_arguments_invalid_filter_value() -> None:
+    """Test parse_arguments with invalid filter value exits with error.
+
+    Valid filter values are: all, human, bot. Any other value should fail.
+    This ensures the batch launcher properly validates arguments.
+    """
+    from workflows.issue_stats import parse_arguments
+
+    # Simulate: issue_stats.bat --filter invalid_value
+    with patch("sys.argv", ["issue_stats.py", "--filter", "invalid_value"]):
+        with pytest.raises(SystemExit) as exc_info:
+            parse_arguments()
+        assert exc_info.value.code == 2
+
+
+def test_parse_arguments_invalid_log_level() -> None:
+    """Test parse_arguments with invalid log level exits with error.
+
+    Valid log levels are: DEBUG, INFO, WARNING, ERROR, CRITICAL (case insensitive).
+    Any other value should fail. This ensures proper error handling.
+    """
+    from workflows.issue_stats import parse_arguments
+
+    # Simulate: issue_stats.bat --log-level INVALID
+    with patch("sys.argv", ["issue_stats.py", "--log-level", "INVALID"]):
+        with pytest.raises(SystemExit) as exc_info:
+            parse_arguments()
+        assert exc_info.value.code == 2
+
+
+def test_parse_arguments_missing_required_value() -> None:
+    """Test parse_arguments with missing required value for flag.
+
+    When a flag requires a value (like --filter or --project-dir) but none is
+    provided, argparse should exit with an error. This ensures the batch launcher
+    validates argument completeness.
+    """
+    from workflows.issue_stats import parse_arguments
+
+    # Simulate: issue_stats.bat --filter (missing value)
+    with patch("sys.argv", ["issue_stats.py", "--filter"]):
+        with pytest.raises(SystemExit) as exc_info:
+            parse_arguments()
+        assert exc_info.value.code == 2
+
+    # Simulate: issue_stats.bat --project-dir (missing value)
+    with patch("sys.argv", ["issue_stats.py", "--project-dir"]):
+        with pytest.raises(SystemExit) as exc_info:
+            parse_arguments()
+        assert exc_info.value.code == 2
+
+
+def test_parse_arguments_case_insensitive_log_level() -> None:
+    """Test that log level is case insensitive (valid behavior).
+
+    The batch launcher should accept log levels in any case (debug, DEBUG, Debug, etc.).
+    This test verifies the type=str.upper conversion works correctly.
+    """
+    from workflows.issue_stats import parse_arguments
+
+    # Test lowercase
+    with patch("sys.argv", ["issue_stats.py", "--log-level", "debug"]):
+        args = parse_arguments()
+        assert args.log_level == "DEBUG"
+
+    # Test mixed case
+    with patch("sys.argv", ["issue_stats.py", "--log-level", "WaRnInG"]):
+        args = parse_arguments()
+        assert args.log_level == "WARNING"
+
+
+def test_parse_arguments_case_insensitive_filter() -> None:
+    """Test that filter is case insensitive (valid behavior).
+
+    The batch launcher should accept filter values in any case (all, ALL, All, etc.).
+    This test verifies the type=str.lower conversion works correctly.
+    """
+    from workflows.issue_stats import parse_arguments
+
+    # Test uppercase
+    with patch("sys.argv", ["issue_stats.py", "--filter", "HUMAN"]):
+        args = parse_arguments()
+        assert args.filter == "human"
+
+    # Test mixed case
+    with patch("sys.argv", ["issue_stats.py", "--filter", "BoT"]):
+        args = parse_arguments()
+        assert args.filter == "bot"
