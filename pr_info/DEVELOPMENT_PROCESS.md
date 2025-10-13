@@ -614,18 +614,62 @@ flowchart LR
 ```
 
 **Tools:** `pr_review.bat`, checks2clipboard.bat  
+
+**Review the result of the pull request review**
+- use the ABC prompt
+  <details>
+  <summary>📋 ABC Discussion Prompt (click to expand and copy)</summary>
+  
+  ```
+  Can we go through all open suggested changes and questions step by step?
+  You explain, ask and I answer until we discussed all topics?
+  Please offer, whenever possible, simple options like 
+  - A
+  - B
+  - C
+  
+  We will use the discussion later to add more tasks to the implementation plan files under pr_info\steps
+  ```
+  </details>
+
+
 **Key Steps:**
 - Review implementation completeness
 - Check code quality and tests
 - Run additional validation
 - Address feedback and fix issues
 
-**See detailed prompts below in section 3.2**
+**See detailed prompts below in section 5.2**
 
 **🔄 Alternative Paths:**
-- **Minor Fixes Needed:** Return to `status:plan-ready` to resume implementation for bug fixes and adjustments
-- **Major Issues Found:** Return to `status:plan-review` if approach needs significant revision
-- **Fundamental Problems:** Return to `status:awaiting-planning` for complete redesign
+- **Minor Fixes Needed:** Review the suggestion and do a few one-shot additional implementations - with adhoc prompting
+- **Major Issues Found:** Ask the LLM to draft additional implementation steps, change then to `status:plan-ready`
+  <details>
+  <summary>📋 Create further implementation tasks (click to expand and copy)</summary>
+  
+  ```
+  ## Request to append new implementation tasks to Python Project Implementation Plan
+  Please expand the the **implementation plan** stored under `pr_info/steps`
+  Update the `PR_Info\steps\Decisions.md` with the decisions we took.
+  Please create additional self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
+  Please update the **summary** (`pr_info/steps/summary.md`).
+  
+  ### Requirements for the new implementation steps:
+  - Follow **Test-Driven Development** where applicable.
+    Each step should have its own test implementation followed by related functionality implementation.
+  - Each step must include a **clear LLM prompt** that references the summary and that specific step
+  - Apply **KISS principle** - minimize complexity, maximize maintainability
+  - Keep code changes minimal and follow best practices
+  
+  ### Each Step Must Specify:
+  - **WHERE**: File paths and module structure
+  - **WHAT**: Main functions with signatures
+  - **HOW**: Integration points (decorators, imports, etc.)
+  - **ALGORITHM**: 5-6 line pseudocode for core logic (if any)
+  - **DATA**: Return values and data structures
+  ```
+  </details>
+- **Fundamental Problems:** Return to `status:plan-review` or `status:created` for complete redesign
 
 #### Detailed Code Review Process
 
@@ -633,13 +677,14 @@ flowchart LR
 
 After all implementation steps are complete:
 
-##### 5.1 Run more detailed checks
+##### 5.1 Run more detailed checks / additional checks and update tasks
 
 Run certain checks in an automated way and deal with possibly highlighted issues:
 - Pylint warnings
 - (custom checks - to be developed)
 - Check pytest runtime
-
+- Update architecture document
+  ( to be further extended )
 
 ##### 5.2 PR Review
 
@@ -648,43 +693,7 @@ Run certain checks in an automated way and deal with possibly highlighted issues
   - `tools/pr_review.bat` - Generate detailed PR review prompt with git diff
 - Review of of LLM review output, possible further implementation steps (see above).
 
-**Tools:**
-
-
-**Discussion prompt**
-```
-Can we go through all open suggested changes and questions step by step?
-You explain, ask and I answer until we discussed all topics?
-Please offer, whenever possible, simple options like 
-- A
-- B
-- C
-
-We will use the discussion later to add more tasks to the implementation plan files under pr_info\steps
-```
-
-**Create further implementation tasks**
-```
-## Request to append new implementation tasks to Python Project Implementation Plan
-Please expand the the **implementation plan** stored under `pr_info/steps`
-Update the `PR_Info\steps\Decisions.md` with the decisions we took.
-Please create additional self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
-Please update the **summary** (`pr_info/steps/summary.md`).  
-
-### Requirements for the new implementation steps:
-- Follow **Test-Driven Development** where applicable. 
-  Each step should have its own test implementation followed by related functionality implementation.  
-- Each step must include a **clear LLM prompt** that references the summary and that specific step
-- Apply **KISS principle** - minimize complexity, maximize maintainability
-- Keep code changes minimal and follow best practices
-
-### Each Step Must Specify:
-- **WHERE**: File paths and module structure
-- **WHAT**: Main functions with signatures
-- **HOW**: Integration points (decorators, imports, etc.)
-- **ALGORITHM**: 5-6 line pseudocode for core logic (if any)
-- **DATA**: Return values and data structures
-```
+TODO - to be further reviewed
 
 ---
 
