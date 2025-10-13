@@ -8,9 +8,6 @@ Structured LLM-assisted development workflow orchestrated by a human developer. 
 flowchart TD
     %% Status Labels
     S1["📋 status:created<br/>Fresh issue"]
-    S4["📋 status:plan-review<br/>Plan ready"]
-    S7["📋 status:code-review<br/>Code complete"]
-    S10["📋 status:pr-created<br/>Ready to merge"]
     S11["✅ Merged & Closed"]
     
     %% Human Action Boxes
@@ -21,43 +18,46 @@ flowchart TD
     
     %% Bot Workflow Boxes
     subgraph BOT1[" "]
-        direction TB
+        direction LR
         B1_TITLE["🤖 create_plan"]
         S2["⏳ status:awaiting-planning<br/>Issue refined"]
         S3["⚡ status:planning<br/>Drafting plan"]
+        S4["📋 status:plan-review<br/>Plan ready"]
         B1_TITLE ~~~ S2
         S2 --> S3
+        S3 --> S4
     end
     
     subgraph BOT2[" "]
-        direction TB
+        direction LR
         B2_TITLE["🤖 implement"]
         S5["⏳ status:plan-ready<br/>Plan approved"]
         S6["⚡ status:implementing<br/>Writing code"]
+        S7["📋 status:code-review<br/>Code complete"]
         B2_TITLE ~~~ S5
         S5 --> S6
+        S6 --> S7
     end
     
     subgraph BOT3[" "]
-        direction TB
+        direction LR
         B3_TITLE["🤖 create_pr"]
         S8["⏳ status:ready-pr<br/>Code approved"]
         S9["⚡ status:pr-creating<br/>Creating PR"]
+        S10["📋 status:pr-created<br/>Ready to merge"]
         B3_TITLE ~~~ S8
         S8 --> S9
+        S9 --> S10
     end
     
     %% Workflows between statuses
     S1 ==> H1
     H1 ==> BOT1
-    BOT1 ==> S4
-    S4 ==> H2
+    BOT1 ==> H2
     H2 ==> BOT2
-    BOT2 ==> S7
-    S7 ==> H3
+    BOT2 ==> H3
     H3 ==> BOT3
-    BOT3 ==> S10
-    S10 ==> H4
+    BOT3 ==> H4
     H4 ==> S11
     
     %% Styling - matching HTML colors
