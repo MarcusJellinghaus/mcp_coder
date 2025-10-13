@@ -261,6 +261,10 @@ flowchart LR
 **Prompts:**
 - 🔗 [Plan Review prompts](#plan-review) (detailed section below)
 
+**🔄 Alternative Paths:**
+- **Minor Revisions:** Loop back within the review process - refine and re-discuss plan details
+- **Major Restart:** Return to `status:awaiting-planning` if fundamental approach needs reconsideration
+
 #### Detailed Plan Review Process
 
 **Objective:** Break down feature into manageable implementation steps
@@ -443,6 +447,10 @@ flowchart LR
 - 🔗 [Task Tracker Update Prompt](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt)
 - 🔗 [Implementation Prompt Template](../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker)
 - 🔗 [Mypy Fix Prompt](../src/mcp_coder/prompts/prompts.md#mypy-fix-prompt)
+
+**🔄 Alternative Paths:**
+- **Plan Issues Discovered:** Return to `status:plan-review` if implementation reveals plan needs adjustment
+- **Critical Blocker:** Return to `status:awaiting-planning` if fundamental redesign required
 
 #### Detailed Implementation Process
 
@@ -652,6 +660,11 @@ flowchart LR
 **Prompts:**
 - 🔗 [Code Review prompts](#32-pr-review) (detailed section below)
 
+**🔄 Alternative Paths:**
+- **Minor Fixes Needed:** Return to `status:plan-ready` to resume implementation for bug fixes and adjustments
+- **Major Issues Found:** Return to `status:plan-review` if approach needs significant revision
+- **Fundamental Problems:** Return to `status:awaiting-planning` for complete redesign
+
 #### Detailed Code Review Process
 
 **Objective:** Review and document the completed feature
@@ -856,4 +869,9 @@ flowchart LR
 **Prompts:**
 - This is a manual review process using GitHub's web interface
 - No specific prompts needed - human judgment and approval
+
+**🔄 Alternative Paths:**
+- **Minor Changes Requested:** Address feedback directly in the PR with additional commits
+- **Significant Rework Needed:** Return to `status:plan-ready` to resume implementation workflow
+- **Approach Rejected:** Return to `status:plan-review` or `status:awaiting-planning` for redesign
 
