@@ -1,178 +1,425 @@
 # Development Process
 
-## High-Level Overview
+> **📝 Note:** Cross-file anchor links (e.g., `[text](file.md#section)`) work in PyCharm 2024.3.5+ but not in PyCharm 2025.2.x.
 
-Structured development workflow for **Feature Implementation** consisting of multiple **Implementation Steps** (tasks).
+## 🎯 High-Level Overview
 
-**Process Flow:**
-1. **Feature Planning** - Discuss with LLM, create implementation steps
-2. **Implementation Steps** - Code + validate + prepare commits (repeat per step)
-3. **Feature Completion** - Review + summarize entire feature
+Structured LLM-assisted development workflow orchestrated by a human developer. The process breaks down features into manageable steps with automated quality checks and git operations.
 
-**Key Principles:**
-- Each implementation step includes code, quality validation, and commit preparation
-- Context length limitations may require splitting validation checks
-- Tools automate git operations and provide LLM-ready prompts
-- All validation must pass before proceeding
+```mermaid
+flowchart TD
+    %% Status Labels
+    S1["📋 status:created<br/>Fresh issue"]
+    S11["✅ Merged & Closed"]
+    
+    %% Human Action Boxes
+    H1["👤 Issue Discussion<br/><br/>"]
+    H2["👤 Plan Review<br/><br/>"]
+    H3["👤 Code Review<br/><br/>"]
+    H4["👤 Approve & Merge<br/><br/>"]
+    
+    %% Bot Workflow Boxes
+    subgraph BOT1[" "]
+        direction LR
+        B1_TITLE["🤖 create_plan"]
+        S2["⏳ status:awaiting-planning<br/>Issue refined"]
+        S3["⚡ status:planning<br/>Drafting plan"]
+        S4["📋 status:plan-review<br/>Plan ready"]
+        B1_TITLE ~~~ S2
+        S2 --> S3
+        S3 --> S4
+    end
+    
+    subgraph BOT2[" "]
+        direction LR
+        B2_TITLE["🤖 implement"]
+        S5["⏳ status:plan-ready<br/>Plan approved"]
+        S6["⚡ status:implementing<br/>Writing code"]
+        S7["📋 status:code-review<br/>Code complete"]
+        B2_TITLE ~~~ S5
+        S5 --> S6
+        S6 --> S7
+    end
+    
+    subgraph BOT3[" "]
+        direction LR
+        B3_TITLE["🤖 create_pr"]
+        S8["⏳ status:ready-pr<br/>Code approved"]
+        S9["⚡ status:pr-creating<br/>Creating PR"]
+        S10["📋 status:pr-created<br/>Ready to merge"]
+        B3_TITLE ~~~ S8
+        S8 --> S9
+        S9 --> S10
+    end
+    
+    %% Workflows between statuses
+    S1 ==> H1
+    H1 ==> BOT1
+    BOT1 ==> H2
+    H2 ==> BOT2
+    BOT2 ==> H3
+    H3 ==> BOT3
+    BOT3 ==> H4
+    H4 ==> S11
+    
+    %% Styling - matching HTML colors
+    classDef statusCreated fill:#10b981,stroke:#059669,stroke-width:3px,color:#ffffff
+    classDef statusPlanReview fill:#3b82f6,stroke:#2563eb,stroke-width:3px,color:#ffffff
+    classDef statusCodeReview fill:#f59e0b,stroke:#d97706,stroke-width:3px,color:#ffffff
+    classDef statusPrCreated fill:#8b5cf6,stroke:#7c3aed,stroke-width:3px,color:#ffffff
+    classDef done fill:#10b981,stroke:#059669,stroke-width:3px,color:#ffffff
+    
+    classDef humanActionCreated fill:#fff9e6,stroke:#10b981,stroke-width:3px,color:#059669
+    classDef humanActionPlanReview fill:#fff9e6,stroke:#3b82f6,stroke-width:3px,color:#2563eb
+    classDef humanActionCodeReview fill:#fff9e6,stroke:#f59e0b,stroke-width:3px,color:#d97706
+    classDef humanActionPrCreated fill:#fff9e6,stroke:#8b5cf6,stroke-width:3px,color:#7c3aed
+    
+    classDef statusAwaitingPlanning fill:#6ee7b7,stroke:#34d399,stroke-width:2px,color:#065f46
+    classDef statusPlanReady fill:#93c5fd,stroke:#60a5fa,stroke-width:2px,color:#1e3a8a
+    classDef statusReadyPr fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#78350f
+    
+    classDef statusPlanning fill:#a7f3d0,stroke:#6ee7b7,stroke-width:2px,color:#065f46
+    classDef statusImplementing fill:#bfdbfe,stroke:#93c5fd,stroke-width:2px,color:#1e3a8a
+    classDef statusPrCreating fill:#fed7aa,stroke:#fdba74,stroke-width:2px,color:#78350f
+    
+    classDef botBox fill:#f8f9fa,stroke:#7b1fa2,stroke-width:2px
+    classDef botTitle fill:#e9ecef,stroke:#6c757d,stroke-width:1px,color:#495057
+    
+    class S1 statusCreated
+    class S4 statusPlanReview
+    class S7 statusCodeReview
+    class S10 statusPrCreated
+    class S11 done
+    
+    class H1 humanActionCreated
+    class H2 humanActionPlanReview
+    class H3 humanActionCodeReview
+    class H4 humanActionPrCreated
+    
+    class S2 statusAwaitingPlanning
+    class S5 statusPlanReady
+    class S8 statusReadyPr
+    
+    class S3 statusPlanning
+    class S6 statusImplementing
+    class S9 statusPrCreating
+    
+    class BOT1,BOT2,BOT3 botBox
+    class B1_TITLE,B2_TITLE,B3_TITLE botTitle
+```
+
+**Note:** *Workflow supports iteration - plans can be revised during review, code can be reworked during review, and PRs may require returning to implementation for major changes.*
+
+**Detailed Workflows:** See sections below for step-by-step details: 
+- [1. Issue Discussion](#1-issue-discussion-workflow) 
+- [2. Plan Creation](#2-plan-creation-workflow) 
+- [3. Plan Review](#3-plan-review-workflow)
+- [4. Implementation](#4-implementation-workflow)
+- [5. Code Review](#5-code-review-workflow)
+- [6. PR Creation](#6-pr-creation-workflow)
+- [7. PR Review & Merge](#7-pr-review--merge-workflow)
+
+### Key Characteristics
+
+**🎭 Roles:**
+- **Human Orchestrator** - Guides process, makes decisions, reviews outputs
+- **LLM Assistant** - Generates code, plans, documentation via structured prompts
+- **Automated Tools** - Quality checks (pylint, mypy, pytest), formatting, git operations
 
 ---
 
-## Detailed Process Steps
+## Detailed Workflows
 
+**Purpose:** Ensure clear objectives, technical feasibility, and resolve unknowns (new libraries, APIs) before implementation.
 
-### 0. Issue discussion
+Each workflow shows status transitions, artifacts, and tools used.
+
+### 1. Issue Discussion Workflow
+
+**📍 Position in Flow:** `status:created` → **👤 Issue Discussion** → `status:awaiting-planning`
+
+```mermaid
+flowchart LR
+    Input[📥 GitHub Issue<br/>status:created]
+    Process[👤 Issue Discussion<br/>Human + LLM]
+    Output1[📄 Refined GitHub Issue]
+    Output2[🏷️ status:awaiting-planning]
+    
+    Input --> Process
+    Process --> Output1
+    Process --> Output2
+    
+    classDef statusCreated fill:#10b981,stroke:#059669,stroke-width:3px,color:#ffffff
+    classDef statusAwaitingPlanning fill:#6ee7b7,stroke:#34d399,stroke-width:2px,color:#065f46
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
+    
+    class Input statusCreated
+    class Output2 statusAwaitingPlanning
+    class Output1 artifact
+    class Process process
+```
+
+**Tools:** Claude Desktop/Chat  
+**Key Steps:**
+- Discuss requirements and feasibility
+- Refine issue description
+- Add implementation hints (without detailed plan)
+
+**Prompts:**
+
+<details>
+<summary>📋 Issue Discussion - Initial (click to expand and copy)</summary>
 
 ```
 Can we discuss a requirement / implementation idea and its feasability?
 Do not provide code yet!
 At the end of our discussion, I want to have an even better issue description
 ```
+</details>
+
+<details>
+<summary>📋 Issue Discussion - Draft Issue Text (click to expand and copy)</summary>
 
 ```
 Let's draft the issue text, with some very limited, concise implementation ideas.
 The implementation plan should be developed later. Focus on the issue.
 Please provide the issue text (with issue header!) as markdown artifact, so that I can easily update the issue on GitHub.
 ```
+</details>
 
-### 1. Feature Planning
+---
 
-**Objective:** Break down feature into manageable implementation steps
+### 2. Plan Creation Workflow
+
+**📍 Position in Flow:** `status:awaiting-planning` → **🤖 create_plan** (`status:planning`) → `status:plan-review`
+
+```mermaid
+flowchart LR
+    Input[🏷️ status:awaiting-planning]
+    Process[🤖 Create Plan<br/>Bot]
+    Working[🏷️ status:planning]
+    Output1[📋 Implementation Plan<br/>in pr_info/]
+    Output2[🏷️ status:plan-review]
+    
+    Input --> Process
+    Process --> Working
+    Working --> Output1
+    Working --> Output2
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Input,Working,Output2 status
+    class Output1 artifact
+    class Process process
+```
+
+#### Tool: `workflows\create_plan` (fully automated)
+
+**Output:** Implementation plan files with summary and steps (summary.md, step_*.md)
 
 **Process:**
-1. **Create separate branch** for the feature development
-2. **Initial analysis** - Understand existing solution and requirements
-3. **Create implementation plan** - Generate summary and step-by-step breakdown
-4. **Review and refine** - Discuss and optimize the plan
-5. **Finalize plan** - Update all planning documents
+- Creates feature branch
+- Analyzes requirements
+- Generates plan using three prompts (🔗 [prompts.md](../src/mcp_coder/prompts/prompts.md#plan-generation-workflow)):
+  - 🔗 [Initial Analysis](../src/mcp_coder/prompts/prompts.md#initial-analysis)
+  - 🔗 [Simplification Review](../src/mcp_coder/prompts/prompts.md#simplification-review)
+  - 🔗 [Implementation Plan Creation](../src/mcp_coder/prompts/prompts.md#implementation-plan-creation)
 
-**Implementation Flow:**
-- Use **Implementation Task Coordinator** to manage n implementation prompts
-- Execute all implementation steps through coordinated prompts
-- Each step references summary and specific step details
+---
 
-**Outputs:**
-- New feature branch
-- Updated `TASK_TRACKER.md` with new tasks
-- Individual step detail files (`steps/step_N.md`)
-- Background documentation (`summary.md`)
-- ( Future: Updated `Task_Tracker.md` )
+### 3. Plan Review Workflow
 
-**Tools & Prompts:**
+**📍 Position in Flow:** `status:plan-review` → **👤 Plan Review** → `status:plan-ready`
 
-#### First plan
-
-To work on an open issue, a branch should be generated and switched.
-The branch should be checked out.
-The requirements and dev requirements should be installed.
-The MCP server should be configured.
-The Claude Code system prompt should be configured.
-
-Based on three prompts, an initial plan can be generated.
-
-See: [Plan Generation Workflow](../src/mcp_coder/prompts/prompts.md#plan-generation-workflow) in `src/mcp_coder/prompts/prompts.md`
-
-**Commit** the initial plan with 
-```
-Initial plan generated for issue #<number>
-``` 
-
-#### Plan Review
-
-The plan should be interactively reviewed, eg using Claude Desktop.
-Claude Desktop should be configured for that.
-
-```
-Please review the project plan for a new feature in folder PR_Info\steps.
-Please revise the project plan with a balanced level of detail.
-Please let me know if any complexity could be reduced.
-Please let me know any questions / comments or suggestions you might have.
-
-Please consider the already discussed and decided decisions (if any) under decisions.
-We do not need to challenge them again unless absolutely necessary.
+```mermaid
+flowchart LR
+    Input1[🏷️ status:plan-review]
+    Input2[📋 Plan in pr_info/]
+    Process[👤 Review Plan<br/>Human + Bot]
+    Decision{Approved?}
+    Revise[🔄 Revise Plan]
+    Output[🏷️ status:plan-ready]
+    
+    Input1 --> Process
+    Input2 --> Process
+    Process --> Decision
+    Decision -->|Yes| Output
+    Decision -->|No| Revise
+    Revise --> Process
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    
+    class Input1,Output status
+    class Input2 artifact
+    class Process process
+    class Decision,Revise decision
 ```
 
-**Issue Pyproject.toml requirements updates**:
+**Interactive Review Process:**
+1. **Review the project plan**
+   <details>
+   <summary>📋 Review the implementation plan</summary>
+   
+   ```
+   Please review the project plan for a new feature in folder PR_Info\steps.
+   Please revise the project plan with a balanced level of detail.
+   Please let me know if any complexity could be reduced.
+   Please let me know any questions / comments or suggestions you might have.
+   
+   Please consider the already discussed and decided decisions (if any) under decisions.
+   We do not need to challenge them again unless absolutely necessary.
+   ```
+   </details>
+
+2. **Step-by-step discussion**
+   <details>
+   <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
+   
+   ```
+   Can we go through all open suggested changes and questions step by step?
+   You explain, ask and I answer until we discussed all topics?
+   Please offer, whenever possible, simple options like 
+   - A
+   - B
+   - C
+   Always just ask ONE question
+   ```
+   </details>
+
+3. **Update plan files**
+   <details>
+   <summary>📋 Update Plan Files</summary>
+   
+   ```
+   Can you update the plan by updating the different files in folder `pr_info\steps`
+   Please do targeted changes.
+   
+   Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`.
+   Only put those decisions that we discussed, no invented decisions 
+   ( For each decision that you log, consider whether you discussed it with me and when I said so )
+   ```
+   </details>
+
+4. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
+
+**Additional Prompts (for special cases):**
+
+
+<details>
+<summary>📋 Requirements Update Note</summary>
+
 ```
 In case of after updating the pyproject.toml requirements, 
 put something in the project plan to stop and tell me, 
-so that I can install the requiremetns. 
+so that I can install the requirements. 
 This is important so that unit tests can work.
 ```
+Alternatively, update the pyproject.toml already at this stage, and install the dependencies (if required).
+</details>
 
-Wait for presentation of overall plan
-```
-Can we go through all open suggested changes and questions step by step?
-You explain, ask and I answer until we discussed all topics?
-Please offer, whenever possible, simple options like 
-- A
-- B
-- C
-Always just ask ONE question
-```
 
-If there are inconsistencies in the project plan (eg due to previous revisions with incomplete adjustments):
+<details>
+<summary>📋 Consistency Review</summary>
+
 ```
 Please clean up the project plan. Ensure that it is consistent.
 ```
+
+or
+
 ```
 Please review the project plan for a new feature in the folder PR_Info\steps.
 Please review for consistency.
 Please tell me all inconsistencies you find and how you want to fix them.
 ```
+</details>
 
-**typical questions and answers**:
-- reduce number of steps: actually, constant/more steps are better
-- number of test cases:
-  - possible options eg 
-    - comprehensive
-    - with several edge cases
-    - essentials
-- possible answer
-  - essentials
-- data model
-  - do we need all fields
-  - do we need the data model at all?
-  - stay type safe / explicit (often yet)
-- performance
-  - the question is even asked when processing small amounts of data
-- generic extensions like config files, logging, e  
+<details>
+<summary>📋 Change Summary Request</summary>
 
-
-**Possible issues to double-check**:
-- Are the tests following the folder structure similar to the implemented features?
-- Do you implement something related to backwards compatibility?
-
-
-Wait for end of discussion - in case of unclarity
 ```
 Please summarise the changes you want to do to the project plan for confirmation as 
-( one liner bullet points)
+(one-liner bullet points)
+```
+Use in case of uncertainty.
+</details>
+
+
+**🔄 Alternative Paths:**
+- **Minor Revisions:** Loop back within the review process - refine and re-discuss plan details, e.g., until no more changes required.
+- **Major Restart:** Return to `status:awaiting-planning` if fundamental approach needs reconsideration. In this case, delete the files for the implementation plan.
+
+---
+
+### 4. Implementation Workflow
+
+**📍 Position in Flow:** `status:plan-ready` → **🤖 implement** (`status:implementing`) → `status:code-review`
+
+```mermaid
+flowchart LR
+    Input[🏷️ status:plan-ready]
+    Process[🤖 Implementation<br/>Bot]
+    Working[🏷️ status:implementing]
+    Output1[💻 Code on Branch]
+    Output2[🏷️ status:code-review]
+    
+    Input --> Process
+    Process --> Working
+    Working --> Output1
+    Working --> Output2
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Input,Working,Output2 status
+    class Output1 artifact
+    class Process process
 ```
 
-After the agreement:
-```
-Can you update the plan by updating the different files in folder `pr_info\steps`
-Please do targeted changes.
+#### Tool: `mcp-coder implement` (fully automated)
 
-Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`.
-Only put those decisions that we discussed, no invented decisions 
-( For each decision that you log, consider whether you discussed it with me and when I said so )
+**✨ Quality Gates:**
+- All code changes validated through: **pylint** → **pytest** → **mypy**, by llm and by routine when implementation is done
+- Automated formatting with **black** and **isort**
+- Git commits only after all checks pass
 
-```
+**🔄 Iteration Support:**
+- Project plan contains several steps, implementation loops over the steps
+- Each step starts with a fresh context
+- Step-by-step approach prevents overwhelming changes
 
-Commit with
-```
-Updated project plan
-```
+**Output:** Implemented code with all quality checks passed
 
-Possibly review the project plan one more time (see above) or continue with the next step.
+**Process:**
+- Updates TASK_TRACKER.md with implementation steps
+- Implements each step from the tracker
+- Runs quality checks (pylint → pytest → mypy) after each step
+- Formats code (black, isort, ruff)
+- Commits changes with descriptive messages
+- Uses prompts (🔗 [prompts.md](../src/mcp_coder/prompts/prompts.md)):
+  - 🔗 [Implementation Prompt Template](../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker)
+  - 🔗 [Task Tracker Update](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt)
+  - 🔗 [Mypy Fix](../src/mcp_coder/prompts/prompts.md#mypy-fix-prompt)
 
+**🔄 Alternative Paths:**
+- (WIP)
+- **Plan Issues Discovered:** Return to `status:plan-review` if implementation reveals plan needs adjustment
+- **Critical Blocker:** Return to `status:awaiting-planning` if fundamental redesign required
 
-### 2. Implementation Steps
+#### Detailed Implementation Process
+
+( TODO - TO BE REVIEWED )
 
 **Preparing for implementation:**
 
-#### Task Tracker Update Prompt:
+##### 4.1 Task Tracker Update Prompt:
 
 See: [Task Tracker Update Prompt](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt) in `src/mcp_coder/prompts/prompts.md`
 
@@ -185,7 +432,7 @@ See: [Task Tracker Update Prompt](../src/mcp_coder/prompts/prompts.md#task-track
 
 Each step consists of two main phases:
 
-#### 2.1 Code Implementation and Quality Validation
+##### 4.2 Code Implementation and Quality Validation
 
 **Process:**
 - Implement the required functionality
@@ -288,12 +535,12 @@ And tell me what needs to be done
 Please tell me whether this is feasible, how complicated it is, whether it could be simplified or whether it needs to broken down in several sub tasks.
 ```
 
-#### One shot tasks
+##### 4.3 One shot tasks
 
 ( still to be done)
 
 
-#### Working with Todos
+##### 4.4 Working with Todos
 
 Put some todos in your code and work on them using 
 
@@ -307,7 +554,7 @@ Tell me what needs to be done, do not yet modify any code!
 
 
 
-#### 2.4 Commit Preparation
+##### 4.5 Commit Preparation
 
 **Process:**
 - format
@@ -333,67 +580,203 @@ This could benefit from `format_and_commit` tool.
 - `mcp-coder commit clipboard` - to commit all changes with a commit message from the clipboard
 - `mcp-coder commit auto` - to commit all changes with a commit message generated via LLM from the git diff
 
-### 3. Feature Completion
+---
+
+### 5. Code Review Workflow
+
+**📍 Position in Flow:** `status:code-review` → **👤 Code Review** → `status:ready-pr`
+
+```mermaid
+flowchart TD
+    Input1["🏷️ status:code-review"]
+    Input2["💻 Code on Branch"]
+    Process["👤 Review Code<br/>Human + Bot"]
+    Decision{"Approved?"}
+    
+    %% Three decision paths
+    MinorFix["🔧 Minor Fixes<br/>Ad-hoc impl"]
+    MajorIssue["📝 Major Issues<br/>Draft new steps"]
+    Fundamental["⚠️ Fundamental<br/>Problems"]
+    
+    %% Target statuses
+    StayReview["🏷️ status:code-review<br/>loop back"]
+    ToPlanReady["🏷️ status:plan-ready<br/>re-implement"]
+    ToPlanReview["🏷️ status:plan-review<br/>revise plan"]
+    ToCreated["🏷️ status:created<br/>redesign"]
+    Output["🏷️ status:ready-pr"]
+    
+    Input1 --> Process
+    Input2 --> Process
+    Process --> Decision
+    
+    %% Approved path
+    Decision -->|"Yes"| Output
+    
+    %% Not approved - three paths
+    Decision -->|"No"| MinorFix
+    Decision -->|"No"| MajorIssue
+    Decision -->|"No"| Fundamental
+    
+    %% Minor fixes loop back to code review
+    MinorFix --> StayReview
+    StayReview -.->|"Re-review"| Process
+    
+    %% Major issues go to plan-ready
+    MajorIssue --> ToPlanReady
+    
+    %% Fundamental problems go to plan-review or created
+    Fundamental --> ToPlanReview
+    Fundamental --> ToCreated
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef pathMinor fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef pathMajor fill:#fff3e0,stroke:#ff6f00,stroke-width:2px
+    classDef pathFundamental fill:#ffebee,stroke:#c62828,stroke-width:2px
+    
+    class Input1,StayReview,ToPlanReady,ToPlanReview,ToCreated,Output status
+    class Input2 artifact
+    class Process process
+    class Decision decision
+    class MinorFix pathMinor
+    class MajorIssue pathMajor
+    class Fundamental pathFundamental
+```
+
+**Tools:** `pr_review.bat`, checks2clipboard.bat  
+
+**Review the result of the pull request review**
+- use the ABC prompt
+  <details>
+  <summary>📋 ABC Discussion Prompt (click to expand and copy)</summary>
+  
+  ```
+  Can we go through all open suggested changes and questions step by step?
+  You explain, ask and I answer until we discussed all topics?
+  Please offer, whenever possible, simple options like 
+  - A
+  - B
+  - C
+  
+  We will use the discussion later to add more tasks to the implementation plan files under pr_info\steps
+  ```
+  </details>
+
+
+**Key Steps:**
+- Review implementation completeness
+- Check code quality and tests
+- Run additional validation
+- Address feedback and fix issues
+
+**See detailed prompts below in section 5.2**
+
+**🔄 Alternative Paths:**
+- **Minor Fixes Needed:** Review the suggestion and do a few one-shot additional implementations - with adhoc prompting (stay in `status:code-review`)
+- **Major Issues Found:** Ask the LLM to draft additional implementation steps, then change to `status:plan-ready` to implement them
+  <details>
+  <summary>📋 Create further implementation tasks (click to expand and copy)</summary>
+  
+  ```
+  ## Request to append new implementation tasks to Python Project Implementation Plan
+  Please expand the the **implementation plan** stored under `pr_info/steps`
+  Update the `PR_Info\steps\Decisions.md` with the decisions we took.
+  Please create additional self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
+  Please update the **summary** (`pr_info/steps/summary.md`).
+  
+  ### Requirements for the new implementation steps:
+  - Follow **Test-Driven Development** where applicable.
+    Each step should have its own test implementation followed by related functionality implementation.
+  - Each step must include a **clear LLM prompt** that references the summary and that specific step
+  - Apply **KISS principle** - minimize complexity, maximize maintainability
+  - Keep code changes minimal and follow best practices
+  
+  ### Each Step Must Specify:
+  - **WHERE**: File paths and module structure
+  - **WHAT**: Main functions with signatures
+  - **HOW**: Integration points (decorators, imports, etc.)
+  - **ALGORITHM**: 5-6 line pseudocode for core logic (if any)
+  - **DATA**: Return values and data structures
+  ```
+  </details>
+- **Fundamental Problems:** Return to `status:plan-review` or `status:created` for complete redesign
+
+#### Detailed Code Review Process
 
 **Objective:** Review and document the completed feature
 
 After all implementation steps are complete:
 
-#### 3.1 Run more detailed checks
+##### 5.1 Run more detailed checks / additional checks and update tasks
 
 Run certain checks in an automated way and deal with possibly highlighted issues:
 - Pylint warnings
 - (custom checks - to be developed)
 - Check pytest runtime
+- Update architecture document
+  ( to be further extended )
+- double-check also results of CI pipeline
 
-
-#### 3.2 PR Review
+##### 5.2 PR Review
 
 **Process:**
 - Review the entire pull request for the feature via an LLM prompt
   - `tools/pr_review.bat` - Generate detailed PR review prompt with git diff
-- Review of of LLM review output, possible further implementation steps (see above).
+- Review of LLM review output, decide on next steps based on findings
 
 **Tools:**
 
+---
 
-**Discussion prompt**
-```
-Can we go through all open suggested changes and questions step by step?
-You explain, ask and I answer until we discussed all topics?
-Please offer, whenever possible, simple options like 
-- A
-- B
-- C
+### 6. PR Creation Workflow
 
-We will use the discussion later to add more tasks to the implementation plan files under pr_info\steps
-```
+**📍 Position in Flow:** `status:ready-pr` → **🤖 create_pr** (`status:pr-creating`) → `status:pr-created`
 
-**Create further implementation tasks**
-```
-## Request to append new implementation tasks to Python Project Implementation Plan
-Please expand the the **implementation plan** stored under `pr_info/steps`
-Update the `PR_Info\steps\Decisions.md` with the decisions we took.
-Please create additional self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
-Please update the **summary** (`pr_info/steps/summary.md`).  
-
-### Requirements for the new implementation steps:
-- Follow **Test-Driven Development** where applicable. 
-  Each step should have its own test implementation followed by related functionality implementation.  
-- Each step must include a **clear LLM prompt** that references the summary and that specific step
-- Apply **KISS principle** - minimize complexity, maximize maintainability
-- Keep code changes minimal and follow best practices
-
-### Each Step Must Specify:
-- **WHERE**: File paths and module structure
-- **WHAT**: Main functions with signatures
-- **HOW**: Integration points (decorators, imports, etc.)
-- **ALGORITHM**: 5-6 line pseudocode for core logic (if any)
-- **DATA**: Return values and data structures
+```mermaid
+flowchart LR
+    Input[🏷️ status:ready-pr]
+    Process[🤖 Create PR<br/>Bot]
+    Working[🏷️ status:pr-creating]
+    Output1[✅ Pull Request]
+    Output2[📄 PR Summary]
+    Output3[🏷️ status:pr-created]
+    
+    Input --> Process
+    Process --> Working
+    Working --> Output1
+    Working --> Output2
+    Working --> Output3
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Input,Working,Output3 status
+    class Output1,Output2 artifact
+    class Process process
 ```
 
+**Tool:** `workflows\create_pr` (fully automated)
 
-#### 3.3 Create Summary
+**Output:** Pull request created on GitHub with summary
+
+**Process:**
+- Generates PR summary from git diff using LLM
+- Cleans up pr_info folder (deletes steps/, clears TASK_TRACKER.md tasks)
+- Commits cleanup changes
+- Pushes branch to remote
+- Creates pull request on GitHub with generated summary
+- Uses prompt 🔗 [PR Summary Generation](../src/mcp_coder/prompts/prompts.md#pr-summary-generation)
+
+**See detailed manual process below in section 6.1 for reference**
+
+#### Detailed PR Creation Process (Manual Reference)
+
+**Note:** This section documents the manual process for reference. The `workflows/create_pr` tool now automates all these steps.
+
+##### 6.1 Create Summary (Manual Process - Now Automated)
 
 **Process:**
 - Generate comprehensive feature summary
@@ -422,8 +805,15 @@ Please update the **summary** (`pr_info/steps/summary.md`).
   - create PR
   - split pr_summary in header and text
 
+TODO - compare against implemented function
+
 **Final Clean State:**
+
+<details>
+<summary>📋 Expected TASK_TRACKER.md Template After Cleanup (click to expand)</summary>
+
 After feature completion, the cleaned `TASK_TRACKER.md` should contain only the template structure:
+
 ```markdown
 # Task Status Tracker
 
@@ -449,3 +839,48 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ```
+
+</details>
+
+---
+
+### 7. PR Review & Merge Workflow
+
+**📍 Position in Flow:** `status:pr-created` → **👤 Approve & Merge** → ✅ Merged & Closed
+
+```mermaid
+flowchart LR
+    Input1[🏷️ status:pr-created]
+    Input2[✅ Pull Request]
+    Process[👤 Review PR<br/>Human]
+    Decision{Approved?}
+    Rework[🔄 Major Rework]
+    Output[🎉 Merged & Closed]
+    
+    Input1 --> Process
+    Input2 --> Process
+    Process --> Decision
+    Decision -->|Yes| Output
+    Decision -->|No| Rework
+    Rework -.-> |Back to Implementation| Input1
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef done fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
+    
+    class Input1 status
+    class Input2 artifact
+    class Process process
+    class Decision,Rework decision
+    class Output done
+```
+
+**Tools:** GitHub PR interface  
+**Key Steps:**
+- Final review of changes
+- Check CI/CD passes
+- Approve and merge PR
+- Close related issue (automatically done by GitHub)
+
