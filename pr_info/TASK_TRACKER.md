@@ -41,7 +41,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues found
 - [x] Run pytest check (fast unit tests) and fix all issues found
 - [x] Run mypy check and fix all issues found
-- [ ] Prepare git commit message for IssueManager.list_issues() method
+- [x] Prepare git commit message for IssueManager.list_issues() method
 
 ### Step 3: Core Statistics Script ([details](steps/step_3.md))
 - [x] Create workflows/issue_stats.py main script
@@ -91,7 +91,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues found
 - [x] Run pytest check (fast unit tests) and fix all issues found
 - [x] Run mypy check and fix all issues found
-- [ ] Prepare git commit message for define_labels refactoring
+- [x] Prepare git commit message for define_labels refactoring
 
 ### Pull Request
 - [ ] Review all changes across all steps
