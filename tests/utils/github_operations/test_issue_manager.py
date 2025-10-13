@@ -1728,5 +1728,6 @@ class TestIssueManagerUnit:
             mock_config.return_value = "dummy-token"
             manager = IssueManager(git_dir)
 
-            with pytest.raises(GithubException):
-                manager.list_issues()
+            # Non-auth errors should be handled gracefully and return empty list
+            result = manager.list_issues()
+            assert result == []
