@@ -587,30 +587,62 @@ This could benefit from `format_and_commit` tool.
 **📍 Position in Flow:** `status:code-review` → **👤 Code Review** → `status:ready-pr`
 
 ```mermaid
-flowchart LR
-    Input1[🏷️ status:code-review]
-    Input2[💻 Code on Branch]
-    Process[👤 Review Code<br/>Human + Bot]
-    Decision{Approved?}
-    Fix[🔧 Fix Issues]
-    Output[🏷️ status:ready-pr]
+flowchart TD
+    Input1["🏷️ status:code-review"]
+    Input2["💻 Code on Branch"]
+    Process["👤 Review Code<br/>Human + Bot"]
+    Decision{"Approved?"}
+    
+    %% Three decision paths
+    MinorFix["🔧 Minor Fixes<br/>Ad-hoc impl"]
+    MajorIssue["📝 Major Issues<br/>Draft new steps"]
+    Fundamental["⚠️ Fundamental<br/>Problems"]
+    
+    %% Target statuses
+    StayReview["🏷️ status:code-review<br/>loop back"]
+    ToPlanReady["🏷️ status:plan-ready<br/>re-implement"]
+    ToPlanReview["🏷️ status:plan-review<br/>revise plan"]
+    ToCreated["🏷️ status:created<br/>redesign"]
+    Output["🏷️ status:ready-pr"]
     
     Input1 --> Process
     Input2 --> Process
     Process --> Decision
-    Decision -->|Yes| Output
-    Decision -->|No| Fix
-    Fix --> Process
+    
+    %% Approved path
+    Decision -->|"Yes"| Output
+    
+    %% Not approved - three paths
+    Decision -->|"No"| MinorFix
+    Decision -->|"No"| MajorIssue
+    Decision -->|"No"| Fundamental
+    
+    %% Minor fixes loop back to code review
+    MinorFix --> StayReview
+    StayReview -.->|"Re-review"| Process
+    
+    %% Major issues go to plan-ready
+    MajorIssue --> ToPlanReady
+    
+    %% Fundamental problems go to plan-review or created
+    Fundamental --> ToPlanReview
+    Fundamental --> ToCreated
     
     classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
     classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
     classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef pathMinor fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef pathMajor fill:#fff3e0,stroke:#ff6f00,stroke-width:2px
+    classDef pathFundamental fill:#ffebee,stroke:#c62828,stroke-width:2px
     
-    class Input1,Output status
+    class Input1,StayReview,ToPlanReady,ToPlanReview,ToCreated,Output status
     class Input2 artifact
     class Process process
-    class Decision,Fix decision
+    class Decision decision
+    class MinorFix pathMinor
+    class MajorIssue pathMajor
+    class Fundamental pathFundamental
 ```
 
 **Tools:** `pr_review.bat`, checks2clipboard.bat  
@@ -642,8 +674,8 @@ flowchart LR
 **See detailed prompts below in section 5.2**
 
 **🔄 Alternative Paths:**
-- **Minor Fixes Needed:** Review the suggestion and do a few one-shot additional implementations - with adhoc prompting
-- **Major Issues Found:** Ask the LLM to draft additional implementation steps, change then to `status:plan-ready`
+- **Minor Fixes Needed:** Review the suggestion and do a few one-shot additional implementations - with adhoc prompting (stay in `status:code-review`)
+- **Major Issues Found:** Ask the LLM to draft additional implementation steps, then change to `status:plan-ready` to implement them
   <details>
   <summary>📋 Create further implementation tasks (click to expand and copy)</summary>
   
@@ -692,9 +724,9 @@ Run certain checks in an automated way and deal with possibly highlighted issues
 **Process:**
 - Review the entire pull request for the feature via an LLM prompt
   - `tools/pr_review.bat` - Generate detailed PR review prompt with git diff
-- Review of of LLM review output, possible further implementation steps (see above).
+- Review of LLM review output, decide on next steps based on findings
 
-TODO - to be further reviewed
+**Tools:**
 
 ---
 
