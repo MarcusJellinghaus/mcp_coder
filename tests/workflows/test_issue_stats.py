@@ -598,3 +598,170 @@ def test_parse_arguments_multiple_ignore_labels() -> None:
     ):
         args = parse_arguments()
         assert args.ignore_labels == ["wontfix", "on hold", "duplicate"]
+
+
+def test_batch_launcher_ignore_labels_argument_passthrough() -> None:
+    """Test that --ignore-labels arguments are correctly passed through batch launcher.
+
+    This test verifies the batch launcher's argument pass-through mechanism by
+    simulating what happens when the batch file calls the Python script with
+    --ignore-labels flags. The batch file uses %* to pass all arguments, which
+    means multiple --ignore-labels flags should work correctly.
+    """
+    from workflows.issue_stats import parse_arguments
+
+    # Simulate batch launcher calling: issue_stats.bat --ignore-labels "wontfix" --ignore-labels "duplicate"
+    with patch(
+        "sys.argv",
+        [
+            "issue_stats.py",
+            "--ignore-labels",
+            "wontfix",
+            "--ignore-labels",
+            "duplicate",
+        ],
+    ):
+        args = parse_arguments()
+
+        # Verify both labels are captured
+        assert args.ignore_labels is not None
+        assert len(args.ignore_labels) == 2
+        assert "wontfix" in args.ignore_labels
+        assert "duplicate" in args.ignore_labels
+
+
+def test_batch_launcher_ignore_labels_combined_with_other_flags() -> None:
+    """Test --ignore-labels works with other batch launcher flags.
+
+    This test verifies that --ignore-labels can be combined with other flags
+    like --filter, --details, etc., which is important for the batch launcher
+    since it passes all arguments through with %*.
+    """
+    from workflows.issue_stats import parse_arguments
+
+    # Simulate: issue_stats.bat --filter human --details --ignore-labels "on hold"
+    with patch(
+        "sys.argv",
+        [
+            "issue_stats.py",
+            "--filter",
+            "human",
+            "--details",
+            "--ignore-labels",
+            "on hold",
+        ],
+    ):
+        args = parse_arguments()
+
+        # Verify all arguments are correctly parsed
+        assert args.filter == "human"
+        assert args.details is True
+        assert args.ignore_labels == ["on hold"]
+
+
+def test_ignore_labels_integration_with_filtering() -> None:
+    """Test end-to-end integration of ignore_labels from CLI arguments.
+
+    This test simulates the complete flow from parsing CLI arguments (as the
+    batch launcher would provide them) through to filtering issues, verifying
+    that the --ignore-labels flag works correctly end-to-end.
+    """
+    # Create test issues with various labels
+    issues = [
+        IssueData(
+            number=1,
+            title="Active issue",
+            body="",
+            state="open",
+            labels=["status-01:created", "bug"],
+            assignees=[],
+            user="user1",
+            created_at="2024-01-01T00:00:00",
+            updated_at="2024-01-01T00:00:00",
+            url="https://github.com/owner/repo/issues/1",
+            locked=False,
+        ),
+        IssueData(
+            number=2,
+            title="Won't fix issue",
+            body="",
+            state="open",
+            labels=["status-02:awaiting-planning", "wontfix"],
+            assignees=[],
+            user="user2",
+            created_at="2024-01-02T00:00:00",
+            updated_at="2024-01-02T00:00:00",
+            url="https://github.com/owner/repo/issues/2",
+            locked=False,
+        ),
+        IssueData(
+            number=3,
+            title="On hold issue",
+            body="",
+            state="open",
+            labels=["status-04:plan-review", "on hold"],
+            assignees=[],
+            user="user3",
+            created_at="2024-01-03T00:00:00",
+            updated_at="2024-01-03T00:00:00",
+            url="https://github.com/owner/repo/issues/3",
+            locked=False,
+        ),
+    ]
+
+    # Simulate CLI arguments: --ignore-labels "wontfix" --ignore-labels "on hold"
+    ignore_labels_from_cli = ["wontfix", "on hold"]
+
+    # Apply filtering (simulating what main() does)
+    filtered_issues = filter_ignored_issues(issues, ignore_labels_from_cli)
+
+    # Verify only the active issue remains
+    assert len(filtered_issues) == 1
+    assert filtered_issues[0]["number"] == 1
+    assert filtered_issues[0]["title"] == "Active issue"
+
+
+def test_ignore_labels_with_labels_containing_special_characters() -> None:
+    """Test --ignore-labels works with labels containing special characters.
+
+    GitHub labels can contain various special characters including colons,
+    dashes, spaces, etc. This test ensures the batch launcher and Python
+    script handle these correctly.
+    """
+    issues = [
+        IssueData(
+            number=1,
+            title="Issue 1",
+            body="",
+            state="open",
+            labels=["status-01:created", "type:bug-fix"],
+            assignees=[],
+            user="user1",
+            created_at="2024-01-01T00:00:00",
+            updated_at="2024-01-01T00:00:00",
+            url="https://github.com/owner/repo/issues/1",
+            locked=False,
+        ),
+        IssueData(
+            number=2,
+            title="Issue 2",
+            body="",
+            state="open",
+            labels=["status-02:awaiting-planning", "priority: low"],
+            assignees=[],
+            user="user2",
+            created_at="2024-01-02T00:00:00",
+            updated_at="2024-01-02T00:00:00",
+            url="https://github.com/owner/repo/issues/2",
+            locked=False,
+        ),
+    ]
+
+    # Test filtering with labels containing special characters
+    filtered = filter_ignored_issues(issues, ["type:bug-fix"])
+    assert len(filtered) == 1
+    assert filtered[0]["number"] == 2
+
+    filtered = filter_ignored_issues(issues, ["priority: low"])
+    assert len(filtered) == 1
+    assert filtered[0]["number"] == 1

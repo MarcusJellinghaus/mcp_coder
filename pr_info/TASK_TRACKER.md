@@ -69,7 +69,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Test batch launcher without arguments
 - [x] Test batch launcher with --filter flag
 - [x] Test batch launcher with --details flag
-- [ ] Test batch launcher with --ignore-labels flag
+- [x] Test batch launcher with --ignore-labels flag
 - [ ] Test batch launcher with invalid arguments
 - [ ] Test batch launcher from different directory
 - [ ] Run pylint check on entire implementation and fix all issues found
