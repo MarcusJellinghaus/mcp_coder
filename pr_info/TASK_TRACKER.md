@@ -78,7 +78,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for CLI integration
 
 ### Step 5: Refactor define_labels.py ([details](steps/step_5.md))
-- [ ] Add import for load_labels_config from workflows.label_config
+- [x] Add import for load_labels_config from workflows.label_config
 - [ ] Remove WORKFLOW_LABELS constant from define_labels.py
 - [ ] Update main() to load from JSON config
 - [ ] Add error handling for missing/invalid JSON
