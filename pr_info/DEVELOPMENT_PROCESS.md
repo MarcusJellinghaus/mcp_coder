@@ -725,20 +725,25 @@ flowchart LR
     class Process process
 ```
 
-**Tool:** `workflows\create_pr`  
-**Key Steps:**
-- Generate PR summary from git diff
-- Clean up pr_info folder
-- Push branch to remote
-- Create pull request on GitHub
+**Tool:** `workflows\create_pr` (fully automated)
 
-**Uses prompt 🔗 [PR Summary Generation](../src/mcp_coder/prompts/prompts.md#pr-summary-generation)**
+**Output:** Pull request created on GitHub with summary
 
-**See detailed process below in section 3.3**
+**Process:**
+- Generates PR summary from git diff using LLM
+- Cleans up pr_info folder (deletes steps/, clears TASK_TRACKER.md tasks)
+- Commits cleanup changes
+- Pushes branch to remote
+- Creates pull request on GitHub with generated summary
+- Uses prompt 🔗 [PR Summary Generation](../src/mcp_coder/prompts/prompts.md#pr-summary-generation)
 
-#### Detailed PR Creation Process
+**See detailed manual process below in section 6.1 for reference**
 
-##### 6.1 Create Summary
+#### Detailed PR Creation Process (Manual Reference)
+
+**Note:** This section documents the manual process for reference. The `workflows/create_pr` tool now automates all these steps.
+
+##### 6.1 Create Summary (Manual Process - Now Automated)
 
 **Process:**
 - Generate comprehensive feature summary
@@ -768,7 +773,12 @@ flowchart LR
   - split pr_summary in header and text
 
 **Final Clean State:**
+
+<details>
+<summary>📋 Expected TASK_TRACKER.md Template After Cleanup (click to expand)</summary>
+
 After feature completion, the cleaned `TASK_TRACKER.md` should contain only the template structure:
+
 ```markdown
 # Task Status Tracker
 
@@ -794,6 +804,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ```
+
+</details>
 
 ---
 
@@ -835,14 +847,5 @@ flowchart LR
 - Final review of changes
 - Check CI/CD passes
 - Approve and merge PR
-- Close related issue
-
-**Prompts:**
-- This is a manual review process using GitHub's web interface
-- No specific prompts needed - human judgment and approval
-
-**🔄 Alternative Paths:**
-- **Minor Changes Requested:** Address feedback directly in the PR with additional commits
-- **Significant Rework Needed:** Return to `status:plan-ready` to resume implementation workflow
-- **Approach Rejected:** Return to `status:plan-review` or `status:awaiting-planning` for redesign
+- Close related issue (automatically done by GitHub)
 
