@@ -126,9 +126,11 @@ flowchart TD
 
 ---
 
-## Detailed Workflow Diagrams
+## Detailed Workflows
 
-Each workflow shows the transition between status labels, the artifacts produced, and the tools used.
+**Purpose:** Ensure clear objectives, technical feasibility, and resolve unknowns (new libraries, APIs) before implementation.
+
+Each workflow shows status transitions, artifacts, and tools used.
 
 ### 1. Issue Discussion Workflow
 
@@ -212,17 +214,17 @@ flowchart LR
     class Process process
 ```
 
-**Tool:** `workflows\create_plan`  
-**Key Steps:**
-- Create feature branch
-- Analyze requirements
-- Generate implementation steps
-- Create summary.md, step_*.md, TASK_TRACKER.md
+#### Tool: `workflows\create_plan` (fully automated)
 
-**Prompts:**
-- 🔗 [Initial Analysis](../src/mcp_coder/prompts/prompts.md#initial-analysis)
-- 🔗 [Simplification Review](../src/mcp_coder/prompts/prompts.md#simplification-review)
-- 🔗 [Implementation Plan Creation](../src/mcp_coder/prompts/prompts.md#implementation-plan-creation)
+**Output:** Implementation plan files with summary and steps (summary.md, step_*.md)
+
+**Process:**
+- Creates feature branch
+- Analyzes requirements
+- Generates plan using prompts:
+  - 🔗 [Initial Analysis](../src/mcp_coder/prompts/prompts.md#initial-analysis)
+  - 🔗 [Simplification Review](../src/mcp_coder/prompts/prompts.md#simplification-review)
+  - 🔗 [Implementation Plan Creation](../src/mcp_coder/prompts/prompts.md#implementation-plan-creation)
 
 ---
 
