@@ -419,7 +419,7 @@ flowchart LR
 
 **Preparing for implementation:**
 
-##### Task Tracker Update Prompt:
+##### 4.1 Task Tracker Update Prompt:
 
 See: [Task Tracker Update Prompt](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt) in `src/mcp_coder/prompts/prompts.md`
 
@@ -432,7 +432,7 @@ See: [Task Tracker Update Prompt](../src/mcp_coder/prompts/prompts.md#task-track
 
 Each step consists of two main phases:
 
-##### 2.1 Code Implementation and Quality Validation
+##### 4.2 Code Implementation and Quality Validation
 
 **Process:**
 - Implement the required functionality
@@ -535,12 +535,12 @@ And tell me what needs to be done
 Please tell me whether this is feasible, how complicated it is, whether it could be simplified or whether it needs to broken down in several sub tasks.
 ```
 
-##### One shot tasks
+##### 4.3 One shot tasks
 
 ( still to be done)
 
 
-##### Working with Todos
+##### 4.4 Working with Todos
 
 Put some todos in your code and work on them using 
 
@@ -554,7 +554,7 @@ Tell me what needs to be done, do not yet modify any code!
 
 
 
-##### 2.4 Commit Preparation
+##### 4.5 Commit Preparation
 
 **Process:**
 - format
@@ -633,7 +633,7 @@ flowchart LR
 
 After all implementation steps are complete:
 
-##### 3.1 Run more detailed checks
+##### 5.1 Run more detailed checks
 
 Run certain checks in an automated way and deal with possibly highlighted issues:
 - Pylint warnings
@@ -641,7 +641,7 @@ Run certain checks in an automated way and deal with possibly highlighted issues
 - Check pytest runtime
 
 
-##### 3.2 PR Review
+##### 5.2 PR Review
 
 **Process:**
 - Review the entire pull request for the feature via an LLM prompt
@@ -729,7 +729,7 @@ flowchart LR
 
 #### Detailed PR Creation Process
 
-##### 3.3 Create Summary
+##### 6.1 Create Summary
 
 **Process:**
 - Generate comprehensive feature summary
