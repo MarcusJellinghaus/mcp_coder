@@ -259,70 +259,71 @@ flowchart LR
     class Decision,Revise decision
 ```
 
-**Tools:** Claude Desktop, interactive prompts  
-**Key Steps:**
-- Review the project plan 
-  <details>
-  <summary>📋 Review the implementation plan (click to expand and copy)</summary>
-  
-  ```
-  Please review the project plan for a new feature in folder PR_Info\steps.
-  Please revise the project plan with a balanced level of detail.
-  Please let me know if any complexity could be reduced.
-  Please let me know any questions / comments or suggestions you might have.
-  
-  Please consider the already discussed and decided decisions (if any) under decisions.
-  We do not need to challenge them again unless absolutely necessary.
-  ```
-  </details>
+**Interactive Review Process:**
+1. **Review the project plan**
+   <details>
+   <summary>📋 Review the implementation plan</summary>
+   
+   ```
+   Please review the project plan for a new feature in folder PR_Info\steps.
+   Please revise the project plan with a balanced level of detail.
+   Please let me know if any complexity could be reduced.
+   Please let me know any questions / comments or suggestions you might have.
+   
+   Please consider the already discussed and decided decisions (if any) under decisions.
+   We do not need to challenge them again unless absolutely necessary.
+   ```
+   </details>
 
-  <details>
-  <summary>📋 For simplicity, go for a simple Step-by-Step discussion (click to expand and copy)</summary>
-  
-  ```
-  Can we go through all open suggested changes and questions step by step?
-  You explain, ask and I answer until we discussed all topics?
-  Please offer, whenever possible, simple options like 
-  - A
-  - B
-  - C
-  Always just ask ONE question
-  ```
-  </details>
+2. **Step-by-step discussion**
+   <details>
+   <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
+   
+   ```
+   Can we go through all open suggested changes and questions step by step?
+   You explain, ask and I answer until we discussed all topics?
+   Please offer, whenever possible, simple options like 
+   - A
+   - B
+   - C
+   Always just ask ONE question
+   ```
+   </details>
 
-  <details>
-  <summary>📋 Update Plan Files (click to expand and copy)</summary>
-  
-  ```
-  Can you update the plan by updating the different files in folder `pr_info\steps`
-  Please do targeted changes.
-  
-  Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`.
-  Only put those decisions that we discussed, no invented decisions 
-  ( For each decision that you log, consider whether you discussed it with me and when I said so )
-  ```
-  </details>
+3. **Update plan files**
+   <details>
+   <summary>📋 Update Plan Files</summary>
+   
+   ```
+   Can you update the plan by updating the different files in folder `pr_info\steps`
+   Please do targeted changes.
+   
+   Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`.
+   Only put those decisions that we discussed, no invented decisions 
+   ( For each decision that you log, consider whether you discussed it with me and when I said so )
+   ```
+   </details>
 
-  - Review the plan with the help of the LLM several times, until no more changes are required.
+4. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
 
-**Further prompts for special cases:**
+**Additional Prompts (for special cases):**
 
 
 <details>
-<summary>📋 Requirements Update Note (click to expand and copy)</summary>
+<summary>📋 Requirements Update Note</summary>
 
 ```
 In case of after updating the pyproject.toml requirements, 
 put something in the project plan to stop and tell me, 
-so that I can install the requiremetns. 
+so that I can install the requirements. 
 This is important so that unit tests can work.
 ```
-Alternatively, update the pyproject.toml already at this stage, and install the dependencies (if required)
+Alternatively, update the pyproject.toml already at this stage, and install the dependencies (if required).
 </details>
 
 
 <details>
-<summary>📋 Consistency Review (click to expand and copy)</summary>
+<summary>📋 Consistency Review</summary>
 
 ```
 Please clean up the project plan. Ensure that it is consistent.
@@ -338,19 +339,19 @@ Please tell me all inconsistencies you find and how you want to fix them.
 </details>
 
 <details>
-<summary>📋 Change Summary Request (click to expand and copy)</summary>
+<summary>📋 Change Summary Request</summary>
 
 ```
 Please summarise the changes you want to do to the project plan for confirmation as 
-( one liner bullet points)
+(one-liner bullet points)
 ```
-In case of uncertainty.
+Use in case of uncertainty.
 </details>
 
 
 **🔄 Alternative Paths:**
-- **Minor Revisions:** Loop back within the review process - refine and re-discuss plan details, e.g. until no more changes required.
-- **Major Restart:** Return to `status:awaiting-planning` if fundamental approach needs reconsideration. In thi s case, delete the files for the implementation plan.
+- **Minor Revisions:** Loop back within the review process - refine and re-discuss plan details, e.g., until no more changes required.
+- **Major Restart:** Return to `status:awaiting-planning` if fundamental approach needs reconsideration. In this case, delete the files for the implementation plan.
 
 ---
 
