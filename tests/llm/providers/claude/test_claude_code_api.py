@@ -2,11 +2,11 @@
 """Tests for claude_code_api module."""
 
 import asyncio
-import platform
 import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from claude_code_sdk._errors import CLINotFoundError
 
 from mcp_coder.llm.providers.claude.claude_code_api import (
     ClaudeAPIError,
@@ -20,67 +20,79 @@ from mcp_coder.llm.providers.claude.claude_code_api import (
 class TestCreateClaudeClient:
     """Test the _create_claude_client function."""
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions")
-    def test_create_claude_client_basic(self, mock_options_class: MagicMock) -> None:
-        """Test that _create_claude_client creates basic options."""
-        # Mock verification function - required on Linux/CI, helpful for isolation on Windows
-        with patch(
-            "mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use"
-        ) as mock_verify:
-            # Use platform-appropriate mock paths
-            if platform.system() == "Windows":
-                mock_path = "C:\\Users\\user\\.local\\bin\\claude.exe"
-            else:
-                mock_path = "/usr/local/bin/claude"
+    def test_create_claude_client_basic(self) -> None:
+        """Test that _create_claude_client creates basic options WITHOUT preemptive verification."""
+        # Use context managers for clearer mock control
+        with (
+            patch(
+                "mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions"
+            ) as mock_options_class,
+            patch(
+                "mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use"
+            ) as mock_verify,
+        ):
 
-            mock_verify.return_value = (True, mock_path, None)
-
+            # Setup
             mock_options = MagicMock()
             mock_options_class.return_value = mock_options
 
+            # Execute
             result = _create_claude_client()
 
-            mock_verify.assert_called_once()
-            mock_options_class.assert_called_once_with(env={})
+            # Verify
+            mock_verify.assert_not_called()
+            mock_options_class.assert_called_once_with(env={}, cwd=None)
             assert result == mock_options
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use")
-    def test_create_claude_client_verification_fails(
-        self, mock_verify: MagicMock
-    ) -> None:
-        """Test that _create_claude_client raises RuntimeError when verification fails."""
-        # Mock failed verification
-        mock_verify.return_value = (False, None, "Claude CLI not found")
-
-        with pytest.raises(
-            RuntimeError, match="Claude CLI verification failed: Claude CLI not found"
+    def test_create_claude_client_sdk_failure_triggers_verification(self) -> None:
+        """Test that SDK failure triggers verification for diagnostics."""
+        # Use context managers for clearer mock control
+        with (
+            patch(
+                "mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions"
+            ) as mock_options_class,
+            patch(
+                "mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use"
+            ) as mock_verify,
         ):
-            _create_claude_client()
 
-        mock_verify.assert_called_once()
+            # Setup - SDK raises CLINotFoundError
+            mock_options_class.side_effect = CLINotFoundError("Claude Code not found")
+            mock_verify.return_value = (False, None, "Claude CLI not found")
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions")
-    def test_create_claude_client_with_env(self, mock_options_class: MagicMock) -> None:
-        """Test that _create_claude_client passes env to ClaudeCodeOptions."""
-        # Mock verification function
-        with patch(
-            "mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use"
-        ) as mock_verify:
-            if platform.system() == "Windows":
-                mock_path = "C:\\Users\\user\\.local\\bin\\claude.exe"
-            else:
-                mock_path = "/usr/local/bin/claude"
+            # Execute & Verify
+            with pytest.raises(
+                RuntimeError,
+                match="Claude CLI not found during verification: Claude CLI not found",
+            ):
+                _create_claude_client()
 
-            mock_verify.return_value = (True, mock_path, None)
+            mock_options_class.assert_called_once()
+            mock_verify.assert_called_once()
 
+    def test_create_claude_client_with_env(self) -> None:
+        """Test that _create_claude_client passes env WITHOUT preemptive verification."""
+        # Use context managers for clearer mock control
+        with (
+            patch(
+                "mcp_coder.llm.providers.claude.claude_code_api.ClaudeCodeOptions"
+            ) as mock_options_class,
+            patch(
+                "mcp_coder.llm.providers.claude.claude_code_api._verify_claude_before_use"
+            ) as mock_verify,
+        ):
+
+            # Setup
             mock_options = MagicMock()
             mock_options_class.return_value = mock_options
-
             env_vars = {"MCP_CODER_PROJECT_DIR": "/test/project"}
+
+            # Execute
             result = _create_claude_client(env=env_vars)
 
-            mock_verify.assert_called_once()
-            mock_options_class.assert_called_once_with(env=env_vars)
+            # Verify
+            mock_verify.assert_not_called()
+            mock_options_class.assert_called_once_with(env=env_vars, cwd=None)
             assert result == mock_options
 
 
@@ -283,7 +295,9 @@ class TestAskClaudeCodeApi:
         # Verify - now returns dict, not string
         assert isinstance(result, dict)
         assert result["text"] == "Test response"
-        mock_detailed_sync.assert_called_once_with("test question", 60, None, None)
+        mock_detailed_sync.assert_called_once_with(
+            "test question", 60, None, None, None
+        )
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
@@ -340,7 +354,7 @@ class TestAskClaudeCodeApi:
         # Verify
         assert result["text"] == "Response with env"
         mock_detailed_sync.assert_called_once_with(
-            "test question", 30.0, None, env_vars
+            "test question", 30.0, None, env_vars, None
         )
 
 
@@ -489,7 +503,7 @@ class TestAskClaudeCodeApiDetailed:
 
         # Verify
         assert result["text"] == "Response"
-        mock_create_client.assert_called_once_with(None, env=env_vars)
+        mock_create_client.assert_called_once_with(None, env=env_vars, cwd=None)
 
 
 @pytest.mark.claude_api_integration

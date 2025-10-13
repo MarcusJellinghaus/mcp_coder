@@ -3,6 +3,7 @@
 import argparse
 import json
 from pathlib import Path
+from unittest import mock
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -36,6 +37,7 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
+            project_dir=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "The capital of France is Paris." in captured.out
@@ -97,6 +99,7 @@ class TestExecutePrompt:
             timeout=30,
             session_id="previous-session-456",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
+            project_dir=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Adding error handling." in captured.out
@@ -132,6 +135,7 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
+            project_dir=mock.ANY,
         )
         captured = capsys.readouterr()
         assert (
@@ -172,6 +176,7 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
+            project_dir=mock.ANY,
         )
         captured = capsys.readouterr()
         assert (
@@ -214,6 +219,7 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
+            project_dir=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Warning: No session_id found" in captured.out
@@ -262,6 +268,7 @@ class TestExecutePrompt:
             30,
             "verbose-continuation-123",
             {"MCP_CODER_PROJECT_DIR": "/test"},
+            mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Here are some advanced Python features." in captured.out
@@ -301,6 +308,7 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars=mock_env_vars,
+            project_dir=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Response with env vars." in captured.out
@@ -334,6 +342,7 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars=None,
+            project_dir=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Response without env vars." in captured.out

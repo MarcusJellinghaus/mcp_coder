@@ -210,41 +210,57 @@ def _retry_with_backoff(
 
 
 def _create_claude_client(
-    session_id: str | None = None, env: dict[str, str] | None = None
+    session_id: str | None = None,
+    env: dict[str, str] | None = None,
+    cwd: str | None = None,
 ) -> ClaudeCodeOptions:
     """Create a Claude Code SDK client with optional session resumption.
+
+    Uses lazy verification pattern:
+    - Attempts SDK client creation first (SDK validates CLI internally)
+    - Only runs verification if SDK raises CLINotFoundError
+    - Provides enhanced diagnostics when Claude CLI is not found
+
+    This improves performance by avoiding preemptive checks when Claude is already available.
 
     Args:
         session_id: Optional Claude session ID to resume conversation
         env: Optional environment variables to pass to Claude Code SDK
+        cwd: Optional working directory for Claude Code SDK subprocess
 
     Returns:
         ClaudeCodeOptions object configured for basic usage or session resumption
 
-    Note:
-        The SDK will use existing CLI subscription authentication automatically.
-        Attempts to setup PATH if Claude CLI is not accessible.
-
     Raises:
-        RuntimeError: If Claude CLI cannot be found or verified
+        RuntimeError: If Claude CLI cannot be found or verified (only after SDK failure)
     """
     logger.debug("Creating Claude Code SDK client")
 
-    # Verify Claude installation before creating client
-    success, claude_path, error_msg = _verify_claude_before_use()
+    try:
+        # Use basic configuration with optional session resumption
+        if session_id:
+            logger.debug(f"Resuming session: {session_id}")
+            return ClaudeCodeOptions(resume=session_id, env=env or {}, cwd=cwd)
+        else:
+            return ClaudeCodeOptions(env=env or {}, cwd=cwd)
+    except CLINotFoundError as e:
+        # SDK couldn't find Claude - run verification for diagnostics
+        logger.error("SDK raised CLINotFoundError, running verification: %s", e)
+        success, claude_path, error_msg = _verify_claude_before_use()
 
-    if not success:
-        logger.error("Claude verification failed: %s", error_msg)
-        raise RuntimeError(f"Claude CLI verification failed: {error_msg}")
+        if not success:
+            logger.error("Claude verification failed: %s", error_msg)
+            raise RuntimeError(
+                f"Claude CLI not found during verification: {error_msg}"
+            ) from e
 
-    logger.debug("Claude CLI verified successfully at: %s", claude_path)
-
-    # Use basic configuration with optional session resumption
-    if session_id:
-        logger.debug(f"Resuming session: {session_id}")
-        return ClaudeCodeOptions(resume=session_id, env=env or {})
-    else:
-        return ClaudeCodeOptions(env=env or {})
+        # Verification passed but SDK still failed - shouldn't happen
+        logger.error(
+            "Claude verified at %s but SDK still raised CLINotFoundError", claude_path
+        )
+        raise RuntimeError(
+            f"Claude CLI found at {claude_path} but SDK cannot access it: {str(e)}"
+        ) from e
 
 
 def create_api_response_dict(
@@ -280,6 +296,7 @@ async def _ask_claude_code_api_async(
     timeout: float = 30.0,
     session_id: str | None = None,
     env_vars: dict[str, str] | None = None,
+    cwd: str | None = None,
 ) -> str:
     """
     Ask Claude a question via Python SDK asynchronously.
@@ -299,6 +316,7 @@ async def _ask_claude_code_api_async(
         timeout: Timeout in seconds for the request (default: 30)
         session_id: Optional Claude session ID to resume conversation
         env_vars: Optional environment variables to pass to Claude Code SDK
+        cwd: Optional working directory for Claude Code SDK subprocess
 
     Returns:
         Claude's response as a string (concatenated text from all TextBlocks)
@@ -315,7 +333,7 @@ async def _ask_claude_code_api_async(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    options = _create_claude_client(session_id, env=env_vars)
+    options = _create_claude_client(session_id, env=env_vars, cwd=cwd)
 
     # Message types are now available at module level
 
@@ -385,6 +403,7 @@ def ask_claude_code_api(
     session_id: str | None = None,
     timeout: float = 30.0,
     env_vars: dict[str, str] | None = None,
+    cwd: str | None = None,
 ) -> LLMResponseDict:
     """
     Ask Claude a question via Python SDK with native session support.
@@ -397,6 +416,7 @@ def ask_claude_code_api(
         session_id: Optional Claude session ID to resume conversation
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to Claude Code SDK
+        cwd: Optional working directory for Claude Code SDK subprocess
 
     Returns:
         LLMResponseDict with complete response data including session_id
@@ -423,7 +443,7 @@ def ask_claude_code_api(
     try:
         # Call detailed function with session_id for native resumption
         detailed = ask_claude_code_api_detailed_sync(
-            question, timeout, session_id, env_vars
+            question, timeout, session_id, env_vars, cwd
         )
 
         # Extract session_id from Claude's response
@@ -458,6 +478,7 @@ async def ask_claude_code_api_detailed(
     timeout: float = 30.0,
     session_id: str | None = None,
     env_vars: dict[str, str] | None = None,
+    cwd: str | None = None,
 ) -> dict[str, Any]:
     """
     Ask Claude a question via Python SDK and return detailed response information.
@@ -470,6 +491,7 @@ async def ask_claude_code_api_detailed(
         timeout: Timeout in seconds for the request (default: 30)
         session_id: Optional Claude session ID to resume conversation
         env_vars: Optional environment variables to pass to Claude Code SDK
+        cwd: Optional working directory for Claude Code SDK subprocess
 
     Returns:
         Dictionary containing:
@@ -507,7 +529,7 @@ async def ask_claude_code_api_detailed(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    options = _create_claude_client(session_id, env=env_vars)
+    options = _create_claude_client(session_id, env=env_vars, cwd=cwd)
 
     # Message types are now available at module level
 
@@ -600,6 +622,7 @@ def ask_claude_code_api_detailed_sync(
     timeout: float = 30.0,
     session_id: str | None = None,
     env_vars: dict[str, str] | None = None,
+    cwd: str | None = None,
 ) -> dict[str, Any]:
     """
     Synchronous wrapper for ask_claude_code_api_detailed.
@@ -611,6 +634,7 @@ def ask_claude_code_api_detailed_sync(
         timeout: Timeout in seconds for the request (default: 30)
         session_id: Optional Claude session ID to resume conversation
         env_vars: Optional environment variables to pass to Claude Code SDK
+        cwd: Optional working directory for Claude Code SDK subprocess
 
     Returns:
         Dictionary with detailed response information
@@ -621,9 +645,10 @@ def ask_claude_code_api_detailed_sync(
         subprocess.CalledProcessError: If the SDK request fails
     """
     # Input validation is handled by ask_claude_code_api_detailed
+    # Working directory is handled by SDK's cwd parameter (no need for os.chdir)
     try:
         result = asyncio.run(
-            ask_claude_code_api_detailed(question, timeout, session_id, env_vars)
+            ask_claude_code_api_detailed(question, timeout, session_id, env_vars, cwd)
         )
         return result
 

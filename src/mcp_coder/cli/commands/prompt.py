@@ -152,6 +152,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
+                project_dir=str(project_dir),
             )
             # Output complete response as JSON (includes session_id)
             formatted_output = json.dumps(response_dict, indent=2, default=str)
@@ -165,6 +166,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
+                project_dir=str(project_dir),
             )
 
             # Simple text output with tool summary
@@ -183,7 +185,7 @@ def execute_prompt(args: argparse.Namespace) -> int:
         else:
             # Use detailed API for verbose/raw modes that need metadata
             response_data = ask_claude_code_api_detailed_sync(
-                args.prompt, timeout, resume_session_id, env_vars
+                args.prompt, timeout, resume_session_id, env_vars, str(project_dir)
             )
 
             # Store response if requested

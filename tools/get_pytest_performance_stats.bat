@@ -24,8 +24,19 @@ REM Function to echo to both console and file
 REM Usage: call :echo_both "message"
 goto :start
 :echo_both
-echo %~1
-echo %~1 >> "%output_file%"
+setlocal enabledelayedexpansion
+set "msg=%~1"
+if "!msg!"=="" (
+    echo.
+    echo. >> "%output_file%"
+) else if "!msg!"==" " (
+    echo.
+    echo. >> "%output_file%"
+) else (
+    echo !msg!
+    echo !msg! >> "%output_file%"
+)
+endlocal
 exit /b
 :start
 

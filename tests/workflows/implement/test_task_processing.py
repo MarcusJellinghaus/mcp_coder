@@ -605,8 +605,10 @@ class TestIntegration:
     )
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.prepare_llm_environment")
     def test_full_task_processing_workflow(
         self,
+        mock_prepare_env: MagicMock,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
         mock_llm_call: MagicMock,
@@ -622,6 +624,10 @@ class TestIntegration:
         llm_method = "claude_code_api"
 
         # Setup successful workflow
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": "C:\\test\\project",
+            "MCP_CODER_VENV_DIR": "C:\\Users\\Marcus\\Documents\\GitHub\\mcp_coder\\.venv",
+        }
         mock_get_next_task.return_value = "Step 2: Implement feature X"
         mock_get_prompt.return_value = "Implementation Prompt: [task_info]"
         mock_llm_call.return_value = (
@@ -660,7 +666,7 @@ Current task from TASK_TRACKER.md: Step 2: Implement feature X
 
 Please implement this task step by step."""
         mock_llm_call.assert_called_once_with(
-            expected_prompt, "claude", "api", timeout=1800, env_vars=ANY
+            expected_prompt, "claude", "api", timeout=1800, env_vars=ANY, cwd=ANY
         )
 
         # Verify conversation saved with comprehensive data

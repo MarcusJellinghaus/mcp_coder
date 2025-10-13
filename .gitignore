@@ -35,3 +35,4 @@ bash.exe.stackdump
 
 # profiler data
 docs/tests/performance_data/prof/*.prof
+/.mcp-coder/create_plan_sessions
