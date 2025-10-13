@@ -5,27 +5,102 @@
 Structured LLM-assisted development workflow orchestrated by a human developer. The process breaks down features into manageable steps with automated quality checks and git operations.
 
 ```mermaid
-flowchart LR
-    Issue[📥 GitHub Issue] --> P0[👤 Issue Discussion]
-    P0 --> P1[🤖 Feature Planning]
-    P1 --> Plan[📋 Plan in pr_info/]
-    Plan --> P2[🤖 Implementation]
-    P2 --> Code[💻 Code on Branch]
-    Code --> P3[🤖 Create PR]
-    P3 --> PR[✅ Pull Request]
+flowchart TD
+    %% Status Labels
+    S1["📋 status:created<br/>Fresh issue"]
+    S4["📋 status:plan-review<br/>Plan ready"]
+    S7["📋 status:code-review<br/>Code complete"]
+    S10["📋 status:pr-created<br/>Ready to merge"]
+    S11["✅ Merged & Closed"]
     
-    Plan -.-> P1
-    Code -.-> P2
-    PR -.-> P2
+    %% Human Action Boxes
+    H1["👤 Issue Discussion<br/><br/>"]
+    H2["👤 Plan Review<br/><br/>"]
+    H3["👤 Code Review<br/><br/>"]
+    H4["👤 Approve & Merge<br/><br/>"]
     
-    classDef io fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef human fill:#fff9e6,stroke:#ff9800,stroke-width:2px
-    classDef bot fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    %% Bot Workflow Boxes
+    subgraph BOT1[" "]
+        direction TB
+        B1_TITLE["🤖 create_plan"]
+        S2["⏳ status:awaiting-planning<br/>Issue refined"]
+        S3["⚡ status:planning<br/>Drafting plan"]
+        B1_TITLE ~~~ S2
+        S2 --> S3
+    end
     
-    class Issue,Plan,Code,PR io
-    class P0 human
-    class P1,P2,P3 bot
+    subgraph BOT2[" "]
+        direction TB
+        B2_TITLE["🤖 implement"]
+        S5["⏳ status:plan-ready<br/>Plan approved"]
+        S6["⚡ status:implementing<br/>Writing code"]
+        B2_TITLE ~~~ S5
+        S5 --> S6
+    end
+    
+    subgraph BOT3[" "]
+        direction TB
+        B3_TITLE["🤖 create_pr"]
+        S8["⏳ status:ready-pr<br/>Code approved"]
+        S9["⚡ status:pr-creating<br/>Creating PR"]
+        B3_TITLE ~~~ S8
+        S8 --> S9
+    end
+    
+    %% Workflows between statuses
+    S1 ==> H1
+    H1 ==> BOT1
+    BOT1 ==> S4
+    S4 ==> H2
+    H2 ==> BOT2
+    BOT2 ==> S7
+    S7 ==> H3
+    H3 ==> BOT3
+    BOT3 ==> S10
+    S10 ==> H4
+    H4 ==> S11
+    
+    %% Styling - matching HTML colors
+    classDef statusCreated fill:#10b981,stroke:#059669,stroke-width:3px,color:#ffffff
+    classDef statusPlanReview fill:#3b82f6,stroke:#2563eb,stroke-width:3px,color:#ffffff
+    classDef statusCodeReview fill:#f59e0b,stroke:#d97706,stroke-width:3px,color:#ffffff
+    classDef statusPrCreated fill:#8b5cf6,stroke:#7c3aed,stroke-width:3px,color:#ffffff
+    classDef done fill:#10b981,stroke:#059669,stroke-width:3px,color:#ffffff
+    
+    classDef humanAction fill:#fff9e6,stroke:#ff9800,stroke-width:3px,color:#f57c00
+    
+    classDef statusAwaitingPlanning fill:#6ee7b7,stroke:#34d399,stroke-width:2px,color:#065f46
+    classDef statusPlanReady fill:#93c5fd,stroke:#60a5fa,stroke-width:2px,color:#1e3a8a
+    classDef statusReadyPr fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#78350f
+    
+    classDef statusPlanning fill:#a7f3d0,stroke:#6ee7b7,stroke-width:2px,color:#065f46
+    classDef statusImplementing fill:#bfdbfe,stroke:#93c5fd,stroke-width:2px,color:#1e3a8a
+    classDef statusPrCreating fill:#fed7aa,stroke:#fdba74,stroke-width:2px,color:#78350f
+    
+    classDef botBox fill:#f8f9fa,stroke:#7b1fa2,stroke-width:2px
+    classDef botTitle fill:#e9ecef,stroke:#6c757d,stroke-width:1px,color:#495057
+    
+    class S1 statusCreated
+    class S4 statusPlanReview
+    class S7 statusCodeReview
+    class S10 statusPrCreated
+    class S11 done
+    
+    class H1,H2,H3,H4 humanAction
+    
+    class S2 statusAwaitingPlanning
+    class S5 statusPlanReady
+    class S8 statusReadyPr
+    
+    class S3 statusPlanning
+    class S6 statusImplementing
+    class S9 statusPrCreating
+    
+    class BOT1,BOT2,BOT3 botBox
+    class B1_TITLE,B2_TITLE,B3_TITLE botTitle
 ```
+
+**Note:** *Workflow supports iteration - plans can be revised during review, code can be reworked during review, and PRs may require returning to implementation for major changes.*
 
 ### Key Characteristics
 
