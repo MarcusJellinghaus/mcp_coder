@@ -261,150 +261,96 @@ flowchart LR
 
 **Tools:** Claude Desktop, interactive prompts  
 **Key Steps:**
-- Review step breakdown and complexity
-- Discuss and refine approach
-- Update plan files with decisions
-- Log decisions in Decisions.md
+- Review the project plan 
+  <details>
+  <summary>📋 Review the implementation plan (click to expand and copy)</summary>
+  
+  ```
+  Please review the project plan for a new feature in folder PR_Info\steps.
+  Please revise the project plan with a balanced level of detail.
+  Please let me know if any complexity could be reduced.
+  Please let me know any questions / comments or suggestions you might have.
+  
+  Please consider the already discussed and decided decisions (if any) under decisions.
+  We do not need to challenge them again unless absolutely necessary.
+  ```
+  </details>
 
-**Prompts:**
-- 🔗 [Plan Review prompts](#plan-review) (detailed section below)
+  <details>
+  <summary>📋 For simplicity, go for a simple Step-by-Step discussion (click to expand and copy)</summary>
+  
+  ```
+  Can we go through all open suggested changes and questions step by step?
+  You explain, ask and I answer until we discussed all topics?
+  Please offer, whenever possible, simple options like 
+  - A
+  - B
+  - C
+  Always just ask ONE question
+  ```
+  </details>
 
-**🔄 Alternative Paths:**
-- **Minor Revisions:** Loop back within the review process - refine and re-discuss plan details
-- **Major Restart:** Return to `status:awaiting-planning` if fundamental approach needs reconsideration
+  <details>
+  <summary>📋 Update Plan Files (click to expand and copy)</summary>
+  
+  ```
+  Can you update the plan by updating the different files in folder `pr_info\steps`
+  Please do targeted changes.
+  
+  Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`.
+  Only put those decisions that we discussed, no invented decisions 
+  ( For each decision that you log, consider whether you discussed it with me and when I said so )
+  ```
+  </details>
 
-#### Detailed Plan Review Process
+  - Review the plan with the help of the LLM several times, until no more changes are required.
 
-**Objective:** Break down feature into manageable implementation steps
+**Further prompts for special cases:**
 
-**Process:**
-1. **Create separate branch** for the feature development
-2. **Initial analysis** - Understand existing solution and requirements
-3. **Create implementation plan** - Generate summary and step-by-step breakdown
-4. **Review and refine** - Discuss and optimize the plan
-5. **Finalize plan** - Update all planning documents
 
-**Implementation Flow:**
-- Use **Implementation Task Coordinator** to manage n implementation prompts
-- Execute all implementation steps through coordinated prompts
-- Each step references summary and specific step details
+<details>
+<summary>📋 Requirements Update Note (click to expand and copy)</summary>
 
-**Outputs:**
-- New feature branch
-- Updated `TASK_TRACKER.md` with new tasks
-- Individual step detail files (`steps/step_N.md`)
-- Background documentation (`summary.md`)
-- ( Future: Updated `Task_Tracker.md` )
-
-**Tools & Prompts:**
-
-##### First plan
-
-To work on an open issue, a branch should be generated and switched.
-The branch should be checked out.
-The requirements and dev requirements should be installed.
-The MCP server should be configured.
-The Claude Code system prompt should be configured.
-
-Based on three prompts, an initial plan can be generated.
-
-See: [Plan Generation Workflow](../src/mcp_coder/prompts/prompts.md#plan-generation-workflow) in `src/mcp_coder/prompts/prompts.md`
-
-**Commit** the initial plan with 
-```
-Initial plan generated for issue #<number>
-``` 
-
-##### Plan Review
-
-The plan should be interactively reviewed, eg using Claude Desktop.
-Claude Desktop should be configured for that.
-
-```
-Please review the project plan for a new feature in folder PR_Info\steps.
-Please revise the project plan with a balanced level of detail.
-Please let me know if any complexity could be reduced.
-Please let me know any questions / comments or suggestions you might have.
-
-Please consider the already discussed and decided decisions (if any) under decisions.
-We do not need to challenge them again unless absolutely necessary.
-```
-
-**Issue Pyproject.toml requirements updates**:
 ```
 In case of after updating the pyproject.toml requirements, 
 put something in the project plan to stop and tell me, 
 so that I can install the requiremetns. 
 This is important so that unit tests can work.
 ```
+Alternatively, update the pyproject.toml already at this stage, and install the dependencies (if required)
+</details>
 
-Wait for presentation of overall plan
-```
-Can we go through all open suggested changes and questions step by step?
-You explain, ask and I answer until we discussed all topics?
-Please offer, whenever possible, simple options like 
-- A
-- B
-- C
-Always just ask ONE question
-```
 
-If there are inconsistencies in the project plan (eg due to previous revisions with incomplete adjustments):
+<details>
+<summary>📋 Consistency Review (click to expand and copy)</summary>
+
 ```
 Please clean up the project plan. Ensure that it is consistent.
 ```
+
+or
+
 ```
 Please review the project plan for a new feature in the folder PR_Info\steps.
 Please review for consistency.
 Please tell me all inconsistencies you find and how you want to fix them.
 ```
+</details>
 
-**typical questions and answers**:
-- reduce number of steps: actually, constant/more steps are better
-- number of test cases:
-  - possible options eg 
-    - comprehensive
-    - with several edge cases
-    - essentials
-- possible answer
-  - essentials
-- data model
-  - do we need all fields
-  - do we need the data model at all?
-  - stay type safe / explicit (often yet)
-- performance
-  - the question is even asked when processing small amounts of data
-- generic extensions like config files, logging, e  
+<details>
+<summary>📋 Change Summary Request (click to expand and copy)</summary>
 
-
-**Possible issues to double-check**:
-- Are the tests following the folder structure similar to the implemented features?
-- Do you implement something related to backwards compatibility?
-
-
-Wait for end of discussion - in case of unclarity
 ```
 Please summarise the changes you want to do to the project plan for confirmation as 
 ( one liner bullet points)
 ```
+In case of uncertainty.
+</details>
 
-After the agreement:
-```
-Can you update the plan by updating the different files in folder `pr_info\steps`
-Please do targeted changes.
 
-Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`.
-Only put those decisions that we discussed, no invented decisions 
-( For each decision that you log, consider whether you discussed it with me and when I said so )
-
-```
-
-Commit with
-```
-Updated project plan
-```
-
-Possibly review the project plan one more time (see above) or continue with the next step.
+**🔄 Alternative Paths:**
+- **Minor Revisions:** Loop back within the review process - refine and re-discuss plan details, e.g. until no more changes required.
+- **Major Restart:** Return to `status:awaiting-planning` if fundamental approach needs reconsideration. In thi s case, delete the files for the implementation plan.
 
 ---
 
