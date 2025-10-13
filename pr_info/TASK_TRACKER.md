@@ -74,8 +74,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Test batch launcher from different directory
 - [x] Run pylint check on entire implementation and fix all issues found
 - [x] Run pytest check (fast unit tests) on entire implementation and fix all issues found
-- [ ] Run mypy check on entire implementation and fix all issues found
-- [ ] Prepare git commit message for CLI integration
+- [x] Run mypy check on entire implementation and fix all issues found
+- [x] Prepare git commit message for CLI integration
 
 ### Step 5: Refactor define_labels.py ([details](steps/step_5.md))
 - [ ] Add import for load_labels_config from workflows.label_config
