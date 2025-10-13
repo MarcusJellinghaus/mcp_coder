@@ -33,14 +33,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for label configuration setup
 
 ### Step 2: IssueManager.list_issues() Method ([details](steps/step_2.md))
-- [ ] Add list_issues() method to src/mcp_coder/utils/github_operations/issue_manager.py
-- [ ] Implement GitHub API pagination support
-- [ ] Add unit tests to tests/utils/github_operations/test_issue_manager.py
-- [ ] Test pagination handling with mocked data
-- [ ] Test pull request filtering
-- [ ] Run pylint check and fix all issues found
-- [ ] Run pytest check (fast unit tests) and fix all issues found
-- [ ] Run mypy check and fix all issues found
+- [x] Add list_issues() method to src/mcp_coder/utils/github_operations/issue_manager.py
+- [x] Implement GitHub API pagination support
+- [x] Add unit tests to tests/utils/github_operations/test_issue_manager.py
+- [x] Test pagination handling with mocked data
+- [x] Test pull request filtering
+- [x] Run pylint check and fix all issues found
+- [x] Run pytest check (fast unit tests) and fix all issues found
+- [x] Run mypy check and fix all issues found
 - [ ] Prepare git commit message for IssueManager.list_issues() method
 
 ### Step 3: Core Statistics Script ([details](steps/step_3.md))

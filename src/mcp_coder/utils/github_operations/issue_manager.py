@@ -310,6 +310,60 @@ class IssueManager(BaseGitHubManager):
         )
 
     @log_function_call
+    @_handle_github_errors(default_return=[])
+    def list_issues(
+        self, state: str = "open", include_pull_requests: bool = False
+    ) -> List[IssueData]:
+        """List all issues in the repository with pagination support.
+
+        Args:
+            state: Issue state filter - 'open', 'closed', or 'all' (default: 'open')
+            include_pull_requests: Whether to include PRs in results (default: False)
+
+        Returns:
+            List of IssueData dictionaries with issue information, or empty list on error
+
+        Raises:
+            GithubException: For authentication or permission errors
+
+        Example:
+            >>> issues = manager.list_issues(state='open', include_pull_requests=False)
+            >>> print(f"Found {len(issues)} open issues")
+            >>> for issue in issues:
+            ...     print(f"#{issue['number']}: {issue['title']}")
+        """
+        # Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.error("Failed to get repository")
+            return []
+
+        # Get issues with pagination support (PyGithub handles this automatically)
+        issues_list: List[IssueData] = []
+        for issue in repo.get_issues(state=state):
+            # Filter out pull requests if not requested
+            if not include_pull_requests and issue.pull_request is not None:
+                continue
+
+            # Convert to IssueData
+            issue_data = IssueData(
+                number=issue.number,
+                title=issue.title,
+                body=issue.body or "",
+                state=issue.state,
+                labels=[label.name for label in issue.labels],
+                assignees=[assignee.login for assignee in issue.assignees],
+                user=issue.user.login if issue.user else None,
+                created_at=(issue.created_at.isoformat() if issue.created_at else None),
+                updated_at=(issue.updated_at.isoformat() if issue.updated_at else None),
+                url=issue.html_url,
+                locked=issue.locked,
+            )
+            issues_list.append(issue_data)
+
+        return issues_list
+
+    @log_function_call
     @_handle_github_errors(
         default_return=CommentData(
             id=0,
