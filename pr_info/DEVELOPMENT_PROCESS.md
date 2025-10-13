@@ -102,29 +102,21 @@ flowchart TD
 
 **Note:** *Workflow supports iteration - plans can be revised during review, code can be reworked during review, and PRs may require returning to implementation for major changes.*
 
+**Detailed Workflows:** See sections below for step-by-step details: 
+- [1. Issue Discussion](#1-issue-discussion-workflow) 
+- [2. Plan Creation](#2-plan-creation-workflow) 
+- [3. Plan Review](#3-plan-review-workflow)
+- [4. Implementation](#4-implementation-workflow)
+- [5. Code Review](#5-code-review-workflow)
+- [6. PR Creation](#6-pr-creation-workflow)
+- [7. PR Review & Merge](#7-pr-review--merge-workflow)
+
 ### Key Characteristics
 
 **🎭 Roles:**
 - **Human Orchestrator** - Guides process, makes decisions, reviews outputs
 - **LLM Assistant** - Generates code, plans, documentation via structured prompts
 - **Automated Tools** - Quality checks (pylint, mypy, pytest), formatting, git operations
-
-**📊 Workflow Phases:**
-- **Phase 0 (Optional):** Requirements discussion without code
-- **Phase 1:** Strategic planning and step breakdown  
-- **Phase 2:** Iterative implementation with validation (main development loop)
-- **Phase 3:** Quality review, documentation, and PR creation
-
-**✨ Quality Gates:**
-- All code changes validated through: **pylint** → **pytest** → **mypy**
-- Automated formatting with **black** and **isort**
-- Git commits only after all checks pass
-- Full PR review before completion
-
-**🔄 Iteration Support:**
-- Can loop back to earlier phases when issues discovered
-- Flexible context management for long conversations
-- Step-by-step approach prevents overwhelming changes
 
 ---
 
@@ -134,22 +126,26 @@ Each workflow shows the transition between status labels, the artifacts produced
 
 ### 1. Issue Discussion Workflow
 
+**📍 Position in Flow:** `status:created` → **👤 Issue Discussion** → `status:awaiting-planning`
+
 ```mermaid
 flowchart LR
     Input[📥 GitHub Issue<br/>status:created]
     Process[👤 Issue Discussion<br/>Human + LLM]
-    Output1[📄 Refined Issue]
+    Output1[📄 Refined GitHub Issue]
     Output2[🏷️ status:awaiting-planning]
     
     Input --> Process
     Process --> Output1
     Process --> Output2
     
-    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef statusCreated fill:#10b981,stroke:#059669,stroke-width:3px,color:#ffffff
+    classDef statusAwaitingPlanning fill:#6ee7b7,stroke:#34d399,stroke-width:2px,color:#065f46
     classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
     
-    class Input,Output2 status
+    class Input statusCreated
+    class Output2 statusAwaitingPlanning
     class Output1 artifact
     class Process process
 ```
@@ -185,6 +181,8 @@ Please provide the issue text (with issue header!) as markdown artifact, so that
 ---
 
 ### 2. Plan Creation Workflow
+
+**📍 Position in Flow:** `status:awaiting-planning` → **🤖 create_plan** (`status:planning`) → `status:plan-review`
 
 ```mermaid
 flowchart LR
@@ -223,6 +221,8 @@ flowchart LR
 ---
 
 ### 3. Plan Review Workflow
+
+**📍 Position in Flow:** `status:plan-review` → **👤 Plan Review** → `status:plan-ready`
 
 ```mermaid
 flowchart LR
@@ -397,6 +397,18 @@ Possibly review the project plan one more time (see above) or continue with the 
 ---
 
 ### 4. Implementation Workflow
+
+**📍 Position in Flow:** `status:plan-ready` → **🤖 implement** (`status:implementing`) → `status:code-review`
+
+**✨ Quality Gates:**
+- All code changes validated through: **pylint** → **pytest** → **mypy**
+- Automated formatting with **black** and **isort**
+- Git commits only after all checks pass
+
+**🔄 Iteration Support:**
+- Can loop back when issues discovered
+- Flexible context management for long conversations
+- Step-by-step approach prevents overwhelming changes
 
 ```mermaid
 flowchart LR
@@ -601,6 +613,8 @@ This could benefit from `format_and_commit` tool.
 
 ### 5. Code Review Workflow
 
+**📍 Position in Flow:** `status:code-review` → **👤 Code Review** → `status:ready-pr`
+
 ```mermaid
 flowchart LR
     Input1[🏷️ status:code-review]
@@ -701,6 +715,8 @@ Please update the **summary** (`pr_info/steps/summary.md`).
 
 ### 6. PR Creation Workflow
 
+**📍 Position in Flow:** `status:ready-pr` → **🤖 create_pr** (`status:pr-creating`) → `status:pr-created`
+
 ```mermaid
 flowchart LR
     Input[🏷️ status:ready-pr]
@@ -798,6 +814,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ### 7. PR Review & Merge Workflow
+
+**📍 Position in Flow:** `status:pr-created` → **👤 Approve & Merge** → ✅ Merged & Closed
 
 ```mermaid
 flowchart LR
