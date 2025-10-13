@@ -685,6 +685,7 @@ Run certain checks in an automated way and deal with possibly highlighted issues
 - Check pytest runtime
 - Update architecture document
   ( to be further extended )
+- double-check also results of CI pipeline
 
 ##### 5.2 PR Review
 
@@ -771,6 +772,8 @@ flowchart LR
   - push
   - create PR
   - split pr_summary in header and text
+
+TODO - compare against implemented function
 
 **Final Clean State:**
 
