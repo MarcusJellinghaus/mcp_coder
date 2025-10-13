@@ -32,8 +32,6 @@ from .claude_executable_finder import (
 class ClaudeAPIError(Exception):
     """Custom exception for Claude API errors with user-friendly messages."""
 
-    pass
-
 
 # Create logger for this module
 logger = logging.getLogger(__name__)

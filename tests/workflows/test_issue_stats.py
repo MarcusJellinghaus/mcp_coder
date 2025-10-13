@@ -14,7 +14,6 @@ def test_load_labels_json() -> None:
     This test will verify that issue_stats.py can load and parse the
     workflows/config/labels.json configuration file.
     """
-    pass
 
 
 @pytest.mark.skip(reason="Will be implemented in Step 3 when issue_stats.py is created")
@@ -28,7 +27,6 @@ def test_labels_json_schema_valid() -> None:
     - description (string)
     - category (string: human_action, bot_pickup, or bot_busy)
     """
-    pass
 
 
 @pytest.mark.skip(reason="Will be implemented in Step 3 when issue_stats.py is created")
@@ -38,4 +36,3 @@ def test_category_values_valid() -> None:
     This test will verify that all label categories are one of the
     three valid values: human_action, bot_pickup, or bot_busy.
     """
-    pass
