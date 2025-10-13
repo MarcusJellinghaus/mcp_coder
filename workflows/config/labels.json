@@ -1,0 +1,75 @@
+<![CDATA[{
+  "workflow_labels": [
+    {
+      "internal_id": "created",
+      "name": "status-01:created",
+      "color": "10b981",
+      "description": "Fresh issue, may need refinement",
+      "category": "human_action"
+    },
+    {
+      "internal_id": "awaiting_planning",
+      "name": "status-02:awaiting-planning",
+      "color": "6ee7b7",
+      "description": "Issue is refined and ready for implementation planning",
+      "category": "bot_pickup"
+    },
+    {
+      "internal_id": "planning",
+      "name": "status-03:planning",
+      "color": "a7f3d0",
+      "description": "Implementation plan being drafted (auto/in-progress)",
+      "category": "bot_busy"
+    },
+    {
+      "internal_id": "plan_review",
+      "name": "status-04:plan-review",
+      "color": "3b82f6",
+      "description": "First implementation plan available for review/discussion",
+      "category": "human_action"
+    },
+    {
+      "internal_id": "plan_ready",
+      "name": "status-05:plan-ready",
+      "color": "93c5fd",
+      "description": "Implementation plan approved, ready to code",
+      "category": "bot_pickup"
+    },
+    {
+      "internal_id": "implementing",
+      "name": "status-06:implementing",
+      "color": "bfdbfe",
+      "description": "Code being written (auto/in-progress)",
+      "category": "bot_busy"
+    },
+    {
+      "internal_id": "code_review",
+      "name": "status-07:code-review",
+      "color": "f59e0b",
+      "description": "Implementation complete, needs code review",
+      "category": "human_action"
+    },
+    {
+      "internal_id": "ready_pr",
+      "name": "status-08:ready-pr",
+      "color": "fbbf24",
+      "description": "Approved for pull request creation",
+      "category": "bot_pickup"
+    },
+    {
+      "internal_id": "pr_creating",
+      "name": "status-09:pr-creating",
+      "color": "fed7aa",
+      "description": "Bot is creating the pull request (auto/in-progress)",
+      "category": "bot_busy"
+    },
+    {
+      "internal_id": "pr_created",
+      "name": "status-10:pr-created",
+      "color": "8b5cf6",
+      "description": "Pull request created, awaiting approval/merge",
+      "category": "human_action"
+    }
+  ],
+  "ignore_labels": []
+}]]>
