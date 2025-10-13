@@ -21,52 +21,82 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ## Tasks
 
-### Step 1: Setup and Argument Parsing
-- [ ] Implement `workflows/create_plan.bat` - Batch wrapper with UTF-8 encoding
-- [ ] Implement `workflows/create_plan.py` - Main workflow script with argument parsing
-- [ ] Implement `parse_arguments()` function - Parse CLI arguments (issue_number, project_dir, log_level, llm_method)
-- [ ] Implement `resolve_project_dir()` function - Validate and resolve project directory
-- [ ] Create `tests/workflows/create_plan/test_argument_parsing.py` with all test cases
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 1
+### Step 1: Label Configuration JSON ([details](steps/step_1.md))
+- [ ] Create workflows/config/labels.json with 10 workflow status labels
+- [ ] Create workflows/label_config.py with load_labels_config() function
+- [ ] Create tests/workflows/config/test_labels.json test fixture
+- [ ] Create tests/workflows/test_label_config.py with validation tests
+- [ ] Create tests/workflows/test_issue_stats.py skeleton
+- [ ] Run pylint check and fix all issues found
+- [ ] Run pytest check (fast unit tests) and fix all issues found
+- [ ] Run mypy check and fix all issues found
+- [ ] Prepare git commit message for label configuration setup
 
-### Step 2: Prerequisites Validation
-- [ ] Implement `check_prerequisites()` function in `workflows/create_plan.py`
-- [ ] Validate git working directory is clean
-- [ ] Fetch and validate GitHub issue exists
-- [ ] Create `tests/workflows/create_plan/test_prerequisites.py` with all test cases
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 2
+### Step 2: IssueManager.list_issues() Method ([details](steps/step_2.md))
+- [ ] Add list_issues() method to src/mcp_coder/utils/github_operations/issue_manager.py
+- [ ] Implement GitHub API pagination support
+- [ ] Add unit tests to tests/utils/github_operations/test_issue_manager.py
+- [ ] Test pagination handling with mocked data
+- [ ] Test pull request filtering
+- [ ] Run pylint check and fix all issues found
+- [ ] Run pytest check (fast unit tests) and fix all issues found
+- [ ] Run mypy check and fix all issues found
+- [ ] Prepare git commit message for IssueManager.list_issues() method
 
-### Step 3: Branch Management and Directory Verification
-- [ ] Implement `manage_branch()` function - Get existing or create new linked branch
-- [ ] Implement `verify_steps_directory()` function - Verify pr_info/steps/ is empty
-- [ ] Create `tests/workflows/create_plan/test_branch_management.py` with all test cases
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 3
+### Step 3: Core Statistics Script ([details](steps/step_3.md))
+- [ ] Create workflows/issue_stats.py main script
+- [ ] Implement load_labels_config() integration
+- [ ] Implement validate_issue_labels() function
+- [ ] Implement filter_ignored_issues() function
+- [ ] Implement group_issues_by_category() function
+- [ ] Implement display_statistics() with summary and details modes
+- [ ] Implement format_issue_line() for compact display
+- [ ] Implement truncate_title() for long titles
+- [ ] Implement parse_arguments() with --filter, --details, --ignore-labels flags
+- [ ] Implement main() orchestrator function
+- [ ] Add comprehensive tests to tests/workflows/test_issue_stats.py (12+ test functions)
+- [ ] Test ignore labels feature (JSON config + CLI)
+- [ ] Test validation error display in details mode
+- [ ] Run pylint check and fix all issues found
+- [ ] Run pytest check (fast unit tests) and fix all issues found
+- [ ] Run mypy check and fix all issues found
+- [ ] Prepare git commit message for issue statistics workflow
 
-### Step 4: Prompt Execution and Session Management
-- [ ] Implement `_load_prompt_or_exit()` function - Load prompt template with error handling
-- [ ] Implement `format_initial_prompt()` function - Format initial prompt with issue content
-- [ ] Implement `run_planning_prompts()` function - Execute three prompts with session continuation
-- [ ] Implement `validate_output_files()` function - Validate required output files exist
-- [ ] Create `tests/workflows/create_plan/test_prompt_execution.py` with all test cases
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 4
+### Step 4: CLI Integration & Batch Launcher ([details](steps/step_4.md))
+- [ ] Create workflows/issue_stats.bat batch launcher
+- [ ] Configure UTF-8 encoding setup in batch script
+- [ ] Configure PYTHONPATH setup in batch script
+- [ ] Test batch launcher without arguments
+- [ ] Test batch launcher with --filter flag
+- [ ] Test batch launcher with --details flag
+- [ ] Test batch launcher with --ignore-labels flag
+- [ ] Test batch launcher with invalid arguments
+- [ ] Test batch launcher from different directory
+- [ ] Run pylint check on entire implementation and fix all issues found
+- [ ] Run pytest check (fast unit tests) on entire implementation and fix all issues found
+- [ ] Run mypy check on entire implementation and fix all issues found
+- [ ] Prepare git commit message for CLI integration
 
-### Step 5: Finalization and Prompt File Updates
-- [x] Implement `main()` function - Complete workflow orchestration
-- [x] Add "Plan Generation Workflow" section to `src/mcp_coder/prompts/prompts.md`
-- [x] Update `PR_Info/DEVELOPMENT_PROCESS.md` - Replace inline prompts with links
-- [x] Create `tests/workflows/create_plan/test_main.py` with all test cases
-- [x] Run quality checks: pylint, pytest, mypy - fix all issues
-- [x] Prepare git commit message for Step 5
+### Step 5: Refactor define_labels.py ([details](steps/step_5.md))
+- [ ] Add import for load_labels_config from workflows.label_config
+- [ ] Remove WORKFLOW_LABELS constant from define_labels.py
+- [ ] Update main() to load from JSON config
+- [ ] Add error handling for missing/invalid JSON
+- [ ] Extract only needed fields (name, color, description) from JSON
+- [ ] Update tests in tests/workflows/test_define_labels.py
+- [ ] Add test for missing config file error
+- [ ] Add test for invalid JSON error
+- [ ] Verify backward compatibility (same labels created)
+- [ ] Manual test: workflows\define_labels.bat --dry-run
+- [ ] Run pylint check and fix all issues found
+- [ ] Run pytest check (fast unit tests) and fix all issues found
+- [ ] Run mypy check and fix all issues found
+- [ ] Prepare git commit message for define_labels refactoring
 
-## Pull Request
-
-### Final Review and PR Creation
-- [ ] Review all implemented code for consistency and quality
-- [ ] Ensure all tests pass with full coverage
-- [ ] Run final quality checks: pylint, pytest, mypy
-- [ ] Create PR summary describing the create_plan workflow implementation
-- [ ] Submit pull request for review
+### Pull Request
+- [ ] Review all changes across all steps
+- [ ] Ensure all code quality checks pass (pylint, pytest, mypy)
+- [ ] Verify all tests pass with fast unit test exclusions
+- [ ] Create comprehensive PR summary for issue #109
+- [ ] Include before/after examples in PR description
+- [ ] Document new workflow usage in PR description
