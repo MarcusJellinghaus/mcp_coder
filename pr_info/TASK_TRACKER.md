@@ -71,7 +71,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Test batch launcher with --details flag
 - [x] Test batch launcher with --ignore-labels flag
 - [x] Test batch launcher with invalid arguments
-- [ ] Test batch launcher from different directory
+- [x] Test batch launcher from different directory
 - [ ] Run pylint check on entire implementation and fix all issues found
 - [ ] Run pytest check (fast unit tests) on entire implementation and fix all issues found
 - [ ] Run mypy check on entire implementation and fix all issues found
