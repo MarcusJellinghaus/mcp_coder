@@ -8,7 +8,7 @@ import pytest
 from workflows.label_config import load_labels_config
 
 
-def test_load_labels_config_valid():
+def test_load_labels_config_valid() -> None:
     """Test loading valid labels.json"""
     # Use the test fixture
     test_config_path = Path("tests/workflows/config/test_labels.json")
@@ -35,7 +35,7 @@ def test_load_labels_config_valid():
     assert isinstance(config["ignore_labels"], list)
 
 
-def test_load_labels_config_missing_file():
+def test_load_labels_config_missing_file() -> None:
     """Test error handling for missing config file"""
     non_existent_path = Path("tests/workflows/config/non_existent.json")
 
@@ -46,7 +46,7 @@ def test_load_labels_config_missing_file():
     assert str(non_existent_path) in str(exc_info.value)
 
 
-def test_load_labels_config_invalid_json(tmp_path: Path):
+def test_load_labels_config_invalid_json(tmp_path: Path) -> None:
     """Test error handling for invalid JSON"""
     # Create a temporary file with invalid JSON
     invalid_json_file = tmp_path / "invalid.json"
@@ -56,7 +56,7 @@ def test_load_labels_config_invalid_json(tmp_path: Path):
         load_labels_config(invalid_json_file)
 
 
-def test_load_labels_config_missing_workflow_labels_key(tmp_path: Path):
+def test_load_labels_config_missing_workflow_labels_key(tmp_path: Path) -> None:
     """Test error handling for missing workflow_labels key"""
     # Create a temporary file with valid JSON but missing required key
     missing_key_file = tmp_path / "missing_key.json"
