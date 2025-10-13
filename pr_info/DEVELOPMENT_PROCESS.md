@@ -1,5 +1,7 @@
 # Development Process
 
+> **📝 Note:** Cross-file anchor links (e.g., `[text](file.md#section)`) work in PyCharm 2024.3.5+ but not in PyCharm 2025.2.x.
+
 ## 🎯 High-Level Overview
 
 Structured LLM-assisted development workflow orchestrated by a human developer. The process breaks down features into manageable steps with automated quality checks and git operations.
@@ -221,7 +223,7 @@ flowchart LR
 **Process:**
 - Creates feature branch
 - Analyzes requirements
-- Generates plan using prompts:
+- Generates plan using three prompts (🔗 [prompts.md](../src/mcp_coder/prompts/prompts.md#plan-generation-workflow)):
   - 🔗 [Initial Analysis](../src/mcp_coder/prompts/prompts.md#initial-analysis)
   - 🔗 [Simplification Review](../src/mcp_coder/prompts/prompts.md#simplification-review)
   - 🔗 [Implementation Plan Creation](../src/mcp_coder/prompts/prompts.md#implementation-plan-creation)
@@ -359,16 +361,6 @@ Use in case of uncertainty.
 
 **📍 Position in Flow:** `status:plan-ready` → **🤖 implement** (`status:implementing`) → `status:code-review`
 
-**✨ Quality Gates:**
-- All code changes validated through: **pylint** → **pytest** → **mypy**
-- Automated formatting with **black** and **isort**
-- Git commits only after all checks pass
-
-**🔄 Iteration Support:**
-- Can loop back when issues discovered
-- Flexible context management for long conversations
-- Step-by-step approach prevents overwhelming changes
-
 ```mermaid
 flowchart LR
     Input[🏷️ status:plan-ready]
@@ -391,23 +383,39 @@ flowchart LR
     class Process process
 ```
 
-**Tool:** CLI command `implement`  
-**Key Steps:**
-- Implement each step from TASK_TRACKER.md
-- Run quality checks (pylint → pytest → mypy)
-- Format code (black, isort, ruff)
-- Commit changes
+#### Tool: `mcp-coder implement` (fully automated)
 
-**Prompts:**
-- 🔗 [Task Tracker Update Prompt](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt)
-- 🔗 [Implementation Prompt Template](../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker)
-- 🔗 [Mypy Fix Prompt](../src/mcp_coder/prompts/prompts.md#mypy-fix-prompt)
+**✨ Quality Gates:**
+- All code changes validated through: **pylint** → **pytest** → **mypy**, by llm and by routine when implementation is done
+- Automated formatting with **black** and **isort**
+- Git commits only after all checks pass
+
+**🔄 Iteration Support:**
+- Project plan contains several steps, implementation loops over the steps
+- Each step starts with a fresh context
+- Step-by-step approach prevents overwhelming changes
+
+**Output:** Implemented code with all quality checks passed
+
+**Process:**
+- Updates TASK_TRACKER.md with implementation steps
+- Implements each step from the tracker
+- Runs quality checks (pylint → pytest → mypy) after each step
+- Formats code (black, isort, ruff)
+- Commits changes with descriptive messages
+- Uses prompts (🔗 [prompts.md](../src/mcp_coder/prompts/prompts.md)):
+  - 🔗 [Implementation Prompt Template](../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker)
+  - 🔗 [Task Tracker Update](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt)
+  - 🔗 [Mypy Fix](../src/mcp_coder/prompts/prompts.md#mypy-fix-prompt)
 
 **🔄 Alternative Paths:**
+- (WIP)
 - **Plan Issues Discovered:** Return to `status:plan-review` if implementation reveals plan needs adjustment
 - **Critical Blocker:** Return to `status:awaiting-planning` if fundamental redesign required
 
 #### Detailed Implementation Process
+
+( TODO - TO BE REVIEWED )
 
 **Preparing for implementation:**
 
@@ -612,8 +620,7 @@ flowchart LR
 - Run additional validation
 - Address feedback and fix issues
 
-**Prompts:**
-- 🔗 [Code Review prompts](#32-pr-review) (detailed section below)
+**See detailed prompts below in section 3.2**
 
 **🔄 Alternative Paths:**
 - **Minor Fixes Needed:** Return to `status:plan-ready` to resume implementation for bug fixes and adjustments
@@ -716,9 +723,9 @@ flowchart LR
 - Push branch to remote
 - Create pull request on GitHub
 
-**Prompts:**
-- 🔗 [PR Summary Generation](../src/mcp_coder/prompts/prompts.md#pr-summary-generation)
-- 🔗 [PR Creation details](#33-create-summary) (detailed section below)
+**Uses prompt 🔗 [PR Summary Generation](../src/mcp_coder/prompts/prompts.md#pr-summary-generation)**
+
+**See detailed process below in section 3.3**
 
 #### Detailed PR Creation Process
 
