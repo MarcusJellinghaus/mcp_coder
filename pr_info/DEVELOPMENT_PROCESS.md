@@ -1,5 +1,344 @@
 # Development Process
 
+## 🎯 High-Level Overview
+
+Structured LLM-assisted development workflow orchestrated by a human developer. The process breaks down features into manageable steps with automated quality checks and git operations.
+
+```mermaid
+flowchart LR
+    Issue[📥 GitHub Issue] --> P0[👤 Issue Discussion]
+    P0 --> P1[🤖 Feature Planning]
+    P1 --> Plan[📋 Plan in pr_info/]
+    Plan --> P2[🤖 Implementation]
+    P2 --> Code[💻 Code on Branch]
+    Code --> P3[🤖 Create PR]
+    P3 --> PR[✅ Pull Request]
+    
+    Plan -.-> P1
+    Code -.-> P2
+    PR -.-> P2
+    
+    classDef io fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef human fill:#fff9e6,stroke:#ff9800,stroke-width:2px
+    classDef bot fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Issue,Plan,Code,PR io
+    class P0 human
+    class P1,P2,P3 bot
+```
+
+### Key Characteristics
+
+**🎭 Roles:**
+- **Human Orchestrator** - Guides process, makes decisions, reviews outputs
+- **LLM Assistant** - Generates code, plans, documentation via structured prompts
+- **Automated Tools** - Quality checks (pylint, mypy, pytest), formatting, git operations
+
+**📊 Workflow Phases:**
+- **Phase 0 (Optional):** Requirements discussion without code
+- **Phase 1:** Strategic planning and step breakdown  
+- **Phase 2:** Iterative implementation with validation (main development loop)
+- **Phase 3:** Quality review, documentation, and PR creation
+
+**✨ Quality Gates:**
+- All code changes validated through: **pylint** → **pytest** → **mypy**
+- Automated formatting with **black** and **isort**
+- Git commits only after all checks pass
+- Full PR review before completion
+
+**🔄 Iteration Support:**
+- Can loop back to earlier phases when issues discovered
+- Flexible context management for long conversations
+- Step-by-step approach prevents overwhelming changes
+
+---
+
+## Detailed Workflow Diagrams
+
+Each workflow shows the transition between status labels, the artifacts produced, and the tools used.
+
+### 1. Issue Discussion Workflow
+
+```mermaid
+flowchart LR
+    Input[📥 GitHub Issue<br/>status:created]
+    Process[👤 Issue Discussion<br/>Human + LLM]
+    Output1[📄 Refined Issue]
+    Output2[🏷️ status:awaiting-planning]
+    
+    Input --> Process
+    Process --> Output1
+    Process --> Output2
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
+    
+    class Input,Output2 status
+    class Output1 artifact
+    class Process process
+```
+
+**Tools:** Claude Desktop/Chat  
+**Key Steps:**
+- Discuss requirements and feasibility
+- Refine issue description
+- Add implementation hints (without detailed plan)
+
+**Prompts:**
+
+<details>
+<summary>📋 Issue Discussion - Initial (click to expand and copy)</summary>
+
+```
+Can we discuss a requirement / implementation idea and its feasability?
+Do not provide code yet!
+At the end of our discussion, I want to have an even better issue description
+```
+</details>
+
+<details>
+<summary>📋 Issue Discussion - Draft Issue Text (click to expand and copy)</summary>
+
+```
+Let's draft the issue text, with some very limited, concise implementation ideas.
+The implementation plan should be developed later. Focus on the issue.
+Please provide the issue text (with issue header!) as markdown artifact, so that I can easily update the issue on GitHub.
+```
+</details>
+
+---
+
+### 2. Plan Creation Workflow
+
+```mermaid
+flowchart LR
+    Input[🏷️ status:awaiting-planning]
+    Process[🤖 Create Plan<br/>Bot]
+    Working[🏷️ status:planning]
+    Output1[📋 Implementation Plan<br/>in pr_info/]
+    Output2[🏷️ status:plan-review]
+    
+    Input --> Process
+    Process --> Working
+    Working --> Output1
+    Working --> Output2
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Input,Working,Output2 status
+    class Output1 artifact
+    class Process process
+```
+
+**Tool:** `workflows\create_plan`  
+**Key Steps:**
+- Create feature branch
+- Analyze requirements
+- Generate implementation steps
+- Create summary.md, step_*.md, TASK_TRACKER.md
+
+**Prompts:**
+- 🔗 [Initial Analysis](../src/mcp_coder/prompts/prompts.md#initial-analysis)
+- 🔗 [Simplification Review](../src/mcp_coder/prompts/prompts.md#simplification-review)
+- 🔗 [Implementation Plan Creation](../src/mcp_coder/prompts/prompts.md#implementation-plan-creation)
+
+---
+
+### 3. Plan Review Workflow
+
+```mermaid
+flowchart LR
+    Input1[🏷️ status:plan-review]
+    Input2[📋 Plan in pr_info/]
+    Process[👤 Review Plan<br/>Human + Bot]
+    Decision{Approved?}
+    Revise[🔄 Revise Plan]
+    Output[🏷️ status:plan-ready]
+    
+    Input1 --> Process
+    Input2 --> Process
+    Process --> Decision
+    Decision -->|Yes| Output
+    Decision -->|No| Revise
+    Revise --> Process
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    
+    class Input1,Output status
+    class Input2 artifact
+    class Process process
+    class Decision,Revise decision
+```
+
+**Tools:** Claude Desktop, interactive prompts  
+**Key Steps:**
+- Review step breakdown and complexity
+- Discuss and refine approach
+- Update plan files with decisions
+- Log decisions in Decisions.md
+
+**Prompts:**
+- 🔗 [Plan Review prompts](#plan-review) (detailed section below)
+
+---
+
+### 4. Implementation Workflow
+
+```mermaid
+flowchart LR
+    Input[🏷️ status:plan-ready]
+    Process[🤖 Implementation<br/>Bot]
+    Working[🏷️ status:implementing]
+    Output1[💻 Code on Branch]
+    Output2[🏷️ status:code-review]
+    
+    Input --> Process
+    Process --> Working
+    Working --> Output1
+    Working --> Output2
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Input,Working,Output2 status
+    class Output1 artifact
+    class Process process
+```
+
+**Tool:** CLI command `implement`  
+**Key Steps:**
+- Implement each step from TASK_TRACKER.md
+- Run quality checks (pylint → pytest → mypy)
+- Format code (black, isort, ruff)
+- Commit changes
+
+**Prompts:**
+- 🔗 [Task Tracker Update Prompt](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt)
+- 🔗 [Implementation Prompt Template](../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker)
+- 🔗 [Mypy Fix Prompt](../src/mcp_coder/prompts/prompts.md#mypy-fix-prompt)
+
+---
+
+### 5. Code Review Workflow
+
+```mermaid
+flowchart LR
+    Input1[🏷️ status:code-review]
+    Input2[💻 Code on Branch]
+    Process[👤 Review Code<br/>Human + Bot]
+    Decision{Approved?}
+    Fix[🔧 Fix Issues]
+    Output[🏷️ status:ready-pr]
+    
+    Input1 --> Process
+    Input2 --> Process
+    Process --> Decision
+    Decision -->|Yes| Output
+    Decision -->|No| Fix
+    Fix --> Process
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    
+    class Input1,Output status
+    class Input2 artifact
+    class Process process
+    class Decision,Fix decision
+```
+
+**Tools:** `pr_review.bat`, checks2clipboard.bat  
+**Key Steps:**
+- Review implementation completeness
+- Check code quality and tests
+- Run additional validation
+- Address feedback and fix issues
+
+---
+
+### 6. PR Creation Workflow
+
+```mermaid
+flowchart LR
+    Input[🏷️ status:ready-pr]
+    Process[🤖 Create PR<br/>Bot]
+    Working[🏷️ status:pr-creating]
+    Output1[✅ Pull Request]
+    Output2[📄 PR Summary]
+    Output3[🏷️ status:pr-created]
+    
+    Input --> Process
+    Process --> Working
+    Working --> Output1
+    Working --> Output2
+    Working --> Output3
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Input,Working,Output3 status
+    class Output1,Output2 artifact
+    class Process process
+```
+
+**Tool:** `workflows\create_pr`  
+**Key Steps:**
+- Generate PR summary from git diff
+- Clean up pr_info folder
+- Push branch to remote
+- Create pull request on GitHub
+
+---
+
+### 7. PR Review & Merge Workflow
+
+```mermaid
+flowchart LR
+    Input1[🏷️ status:pr-created]
+    Input2[✅ Pull Request]
+    Process[👤 Review PR<br/>Human]
+    Decision{Approved?}
+    Rework[🔄 Major Rework]
+    Output[🎉 Merged & Closed]
+    
+    Input1 --> Process
+    Input2 --> Process
+    Process --> Decision
+    Decision -->|Yes| Output
+    Decision -->|No| Rework
+    Rework -.-> |Back to Implementation| Input1
+    
+    classDef status fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef process fill:#fff9e6,stroke:#ff9800,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef done fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
+    
+    class Input1 status
+    class Input2 artifact
+    class Process process
+    class Decision,Rework decision
+    class Output done
+```
+
+**Tools:** GitHub PR interface  
+**Key Steps:**
+- Final review of changes
+- Check CI/CD passes
+- Approve and merge PR
+- Close related issue
+
+---
+
 ## High-Level Overview
 
 Structured development workflow for **Feature Implementation** consisting of multiple **Implementation Steps** (tasks).
