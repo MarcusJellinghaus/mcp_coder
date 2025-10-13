@@ -65,7 +65,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 4: CLI Integration & Batch Launcher ([details](steps/step_4.md))
 - [x] Create workflows/issue_stats.bat batch launcher
 - [x] Configure UTF-8 encoding setup in batch script
-- [ ] Configure PYTHONPATH setup in batch script
+- [x] Configure PYTHONPATH setup in batch script
 - [ ] Test batch launcher without arguments
 - [ ] Test batch launcher with --filter flag
 - [ ] Test batch launcher with --details flag
