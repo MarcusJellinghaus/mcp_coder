@@ -68,7 +68,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Configure PYTHONPATH setup in batch script
 - [x] Test batch launcher without arguments
 - [x] Test batch launcher with --filter flag
-- [ ] Test batch launcher with --details flag
+- [x] Test batch launcher with --details flag
 - [ ] Test batch launcher with --ignore-labels flag
 - [ ] Test batch launcher with invalid arguments
 - [ ] Test batch launcher from different directory
