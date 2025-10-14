@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_manager import EventData, IssueData
+from mcp_coder.utils.github_operations import EventData, IssueData
 from workflows.validate_labels import (
     STALE_TIMEOUTS,
     build_label_lookups,
@@ -1884,3 +1884,121 @@ def test_display_summary_all_categories(capsys: pytest.CaptureFixture[str]) -> N
     assert "Issue #300" in captured.out
     assert "Warnings (stale bot processes): 1" in captured.out
     assert "Issue #400: status-06:implementing (70 minutes)" in captured.out
+
+
+def test_batch_file_exists() -> None:
+    """Test that batch file is created and exists."""
+    from pathlib import Path
+
+    batch_path = Path("workflows/validate_labels.bat")
+    assert (
+        batch_path.exists()
+    ), "Batch file should exist at workflows/validate_labels.bat"
+    assert batch_path.is_file(), "Batch file should be a file, not a directory"
+
+
+def test_batch_file_runs_python_script() -> None:
+    """Test that batch file executes the Python script with help flag."""
+    import subprocess
+    from pathlib import Path
+
+    batch_path = Path("workflows/validate_labels.bat")
+    assert batch_path.exists(), "Batch file must exist"
+
+    # Run batch file with --help flag (should not require GitHub API access)
+    result = subprocess.run(
+        [str(batch_path.absolute()), "--help"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    # Verify help text appears in output
+    assert (
+        result.returncode == 0
+    ), f"Batch file should exit with code 0, got {result.returncode}"
+    assert (
+        "usage:" in result.stdout.lower()
+        or "Validate workflow status labels" in result.stdout
+    )
+
+
+def test_batch_file_forwards_arguments() -> None:
+    """Test that batch file correctly forwards command-line arguments."""
+    import subprocess
+    from pathlib import Path
+
+    batch_path = Path("workflows/validate_labels.bat")
+
+    # Test with --help to verify argument forwarding (doesn't require API)
+    result = subprocess.run(
+        [str(batch_path.absolute()), "--help"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    # Should show help for validate_labels.py, not batch file errors
+    assert (
+        "--log-level" in result.stdout
+    ), "Should show log-level option from Python script"
+    assert "--dry-run" in result.stdout, "Should show dry-run option from Python script"
+    assert (
+        "--project-dir" in result.stdout
+    ), "Should show project-dir option from Python script"
+
+
+def test_batch_file_handles_invalid_arguments() -> None:
+    """Test that batch file propagates errors for invalid arguments."""
+    import subprocess
+    from pathlib import Path
+
+    batch_path = Path("workflows/validate_labels.bat")
+
+    # Test with invalid argument
+    result = subprocess.run(
+        [str(batch_path.absolute()), "--invalid-flag-that-does-not-exist"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    # Should exit with non-zero code for invalid arguments
+    assert (
+        result.returncode != 0
+    ), "Should return non-zero exit code for invalid arguments"
+    # Error message should be from Python script (argparse)
+    assert (
+        "error" in result.stderr.lower()
+        or "unrecognized arguments" in result.stderr.lower()
+    )
+
+
+def test_batch_file_preserves_exit_codes() -> None:
+    """Test that batch file preserves Python script exit codes."""
+    import subprocess
+    from pathlib import Path
+
+    batch_path = Path("workflows/validate_labels.bat")
+
+    # Test help flag - should exit with 0
+    result_help = subprocess.run(
+        [str(batch_path.absolute()), "--help"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result_help.returncode == 0, "Help flag should return exit code 0"
+
+    # Test invalid flag - should exit with non-zero
+    result_invalid = subprocess.run(
+        [str(batch_path.absolute()), "--not-a-valid-flag"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert (
+        result_invalid.returncode != 0
+    ), "Invalid flag should return non-zero exit code"
