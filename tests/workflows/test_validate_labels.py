@@ -1760,3 +1760,127 @@ def test_process_issues_dry_run_prevents_all_api_calls() -> None:
     # (we can't check staleness without API calls)
     assert len(results["warnings"]) == 0
     assert len(results["errors"]) == 0
+
+
+def test_display_summary_no_issues(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test display with no issues."""
+    from workflows.validate_labels import display_summary
+
+    results: dict[str, Any] = {
+        "processed": 0,
+        "skipped": 0,
+        "initialized": [],
+        "errors": [],
+        "warnings": [],
+        "ok": [],
+    }
+
+    display_summary(results, "https://github.com/user/repo")
+    captured = capsys.readouterr()
+
+    assert "Summary:" in captured.out
+    assert "Total issues processed: 0" in captured.out
+    assert "Skipped (ignore labels): 0" in captured.out
+    assert "Initialized with 'created': 0" in captured.out
+    assert "Errors (multiple status labels): 0" in captured.out
+    assert "Warnings (stale bot processes): 0" in captured.out
+
+
+def test_display_summary_with_initialized(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test display with initialized issues."""
+    from workflows.validate_labels import display_summary
+
+    results: dict[str, Any] = {
+        "processed": 5,
+        "skipped": 1,
+        "initialized": [12, 45],
+        "errors": [],
+        "warnings": [],
+        "ok": [1, 2, 3],
+    }
+
+    display_summary(results, "https://github.com/user/repo")
+    captured = capsys.readouterr()
+
+    assert "Total issues processed: 5" in captured.out
+    assert "Skipped (ignore labels): 1" in captured.out
+    assert "Initialized with 'created': 2" in captured.out
+    assert "Issue #12 (https://github.com/user/repo/issues/12)" in captured.out
+    assert "Issue #45 (https://github.com/user/repo/issues/45)" in captured.out
+
+
+def test_display_summary_with_errors(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test display with errors."""
+    from workflows.validate_labels import display_summary
+
+    results: dict[str, Any] = {
+        "processed": 10,
+        "skipped": 1,
+        "initialized": [],
+        "errors": [
+            {"issue": 23, "labels": ["status-01:created", "status-03:planning"]},
+            {
+                "issue": 56,
+                "labels": ["status-04:plan-review", "status-06:implementing"],
+            },
+        ],
+        "warnings": [],
+        "ok": [1, 2, 3],
+    }
+
+    display_summary(results, "https://github.com/user/repo")
+    captured = capsys.readouterr()
+
+    assert "Errors (multiple status labels): 2" in captured.out
+    assert "Issue #23: status-01:created, status-03:planning" in captured.out
+    assert "Issue #56: status-04:plan-review, status-06:implementing" in captured.out
+
+
+def test_display_summary_with_warnings(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test display with warnings."""
+    from workflows.validate_labels import display_summary
+
+    results: dict[str, Any] = {
+        "processed": 10,
+        "skipped": 0,
+        "initialized": [],
+        "errors": [],
+        "warnings": [{"issue": 78, "label": "status-03:planning", "elapsed": 20}],
+        "ok": [1, 2, 3],
+    }
+
+    display_summary(results, "https://github.com/user/repo")
+    captured = capsys.readouterr()
+
+    assert "Warnings (stale bot processes): 1" in captured.out
+    assert "Issue #78: status-03:planning (20 minutes)" in captured.out
+
+
+def test_display_summary_all_categories(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test display with all categories present."""
+    from workflows.validate_labels import display_summary
+
+    results: dict[str, Any] = {
+        "processed": 20,
+        "skipped": 3,
+        "initialized": [100, 200],
+        "errors": [
+            {"issue": 300, "labels": ["status-01:created", "status-03:planning"]}
+        ],
+        "warnings": [{"issue": 400, "label": "status-06:implementing", "elapsed": 70}],
+        "ok": [1, 2, 3, 4, 5],
+    }
+
+    display_summary(results, "https://github.com/user/repo")
+    captured = capsys.readouterr()
+
+    # Verify all sections are present
+    assert "Total issues processed: 20" in captured.out
+    assert "Skipped (ignore labels): 3" in captured.out
+    assert "Initialized with 'created': 2" in captured.out
+    assert "Issue #100" in captured.out
+    assert "Issue #200" in captured.out
+    assert "Errors (multiple status labels): 1" in captured.out
+    assert "Issue #300" in captured.out
+    assert "Warnings (stale bot processes): 1" in captured.out
+    assert "Issue #400: status-06:implementing (70 minutes)" in captured.out

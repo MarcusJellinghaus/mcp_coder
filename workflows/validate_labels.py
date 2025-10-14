@@ -340,6 +340,66 @@ def process_issues(
     return results
 
 
+def display_summary(results: Dict[str, Any], repo_url: str) -> None:
+    """Display validation results summary.
+    
+    Args:
+        results: Results dictionary from process_issues()
+        repo_url: Repository URL for generating issue links
+        
+    Output Format (plain text, Decision #5):
+        Summary:
+          Total issues processed: 47
+          Skipped (ignore labels): 3
+          Initialized with 'created': 5
+            - Issue #12: Title (url)
+            - Issue #45: Title (url)
+          Errors (multiple status labels): 2
+            - Issue #23: status-01:created, status-03:planning
+            - Issue #56: status-04:plan-review, status-06:implementing
+          Warnings (stale bot processes): 1
+            - Issue #78: planning (20 minutes)
+    
+    Note: Uses plain text format (no emojis or colors, Decision #5)
+    """
+    # Print header
+    print("Summary:")
+    
+    # Print counts
+    print(f"  Total issues processed: {results['processed']}")
+    print(f"  Skipped (ignore labels): {results['skipped']}")
+    
+    # Print initialized issues count
+    initialized_count = len(results['initialized'])
+    print(f"  Initialized with 'created': {initialized_count}")
+    
+    # If initialized issues exist, print each with issue number only
+    # Note: We don't have titles or URLs in the results, so we just show issue numbers
+    if initialized_count > 0:
+        for issue_num in results['initialized']:
+            issue_url = f"{repo_url}/issues/{issue_num}"
+            print(f"    - Issue #{issue_num} ({issue_url})")
+    
+    # Print error count
+    error_count = len(results['errors'])
+    print(f"  Errors (multiple status labels): {error_count}")
+    
+    # If errors exist, print each with issue number and conflicting labels
+    if error_count > 0:
+        for error in results['errors']:
+            labels_str = ", ".join(error['labels'])
+            print(f"    - Issue #{error['issue']}: {labels_str}")
+    
+    # Print warning count
+    warning_count = len(results['warnings'])
+    print(f"  Warnings (stale bot processes): {warning_count}")
+    
+    # If warnings exist, print each with issue number, label, and elapsed time
+    if warning_count > 0:
+        for warning in results['warnings']:
+            print(f"    - Issue #{warning['issue']}: {warning['label']} ({warning['elapsed']} minutes)")
+
+
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments including project directory and log level.
     
@@ -482,11 +542,38 @@ def main() -> None:
         logger.error(f"Failed to fetch issues from GitHub: {e}")
         sys.exit(1)
     
-    # TODO: Process issues (Step 3)
-    # TODO: Display results (Step 4)
+    # Process issues with exception handling (Decision #22)
+    try:
+        logger.info("Processing issues for validation...")
+        results = process_issues(
+            issues=issues,
+            labels_config=labels_config,
+            issue_manager=issue_manager,
+            dry_run=args.dry_run
+        )
+    except GithubException as e:
+        logger.error(f"GitHub API error during validation: {e}")
+        logger.error("Validation incomplete - some issues were not checked")
+        logger.debug("Traceback:", exc_info=True)  # Log full traceback at DEBUG level
+        sys.exit(1)
     
-    logger.info("Label validation workflow completed successfully")
-    sys.exit(0)
+    # Display results
+    display_summary(results, repo_url)
+    
+    # Calculate exit code and exit
+    # Note: Errors take precedence over warnings (Decision #6)
+    has_errors = len(results["errors"]) > 0
+    has_warnings = len(results["warnings"]) > 0
+    
+    if has_errors:
+        logger.error(f"Validation completed with {len(results['errors'])} errors")
+        sys.exit(1)  # Exit 1 even if warnings also exist
+    elif has_warnings:
+        logger.warning(f"Validation completed with {len(results['warnings'])} warnings")
+        sys.exit(2)
+    else:
+        logger.info("Validation completed successfully")
+        sys.exit(0)
 
 
 if __name__ == "__main__":
