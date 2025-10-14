@@ -5,14 +5,16 @@ Tests cover argument parsing, STALE_TIMEOUTS constant, and basic setup logic.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
+from mcp_coder.utils.github_operations.issue_manager import IssueData
 from workflows.validate_labels import (
     STALE_TIMEOUTS,
     build_label_lookups,
     calculate_elapsed_minutes,
+    check_status_labels,
     parse_arguments,
 )
 
@@ -301,3 +303,180 @@ def test_build_label_lookups_all_categories() -> None:
 
     assert result["id_to_name"]["busy1"] == "bot-busy-label"
     assert result["name_to_id"]["bot-busy-label"] == "busy1"
+
+
+def test_check_status_labels_none() -> None:
+    """Test issue with no status labels."""
+    # Create issue with no workflow labels
+    issue_dict: dict[str, Any] = {
+        "number": 123,
+        "title": "Test issue",
+        "labels": ["bug", "enhancement"],  # Non-workflow labels
+    }
+
+    # Define workflow labels
+    workflow_labels = {
+        "status-01:created",
+        "status-03:planning",
+        "status-06:implementing",
+    }
+
+    count, labels = check_status_labels(cast(IssueData, issue_dict), workflow_labels)
+
+    # Should have 0 workflow labels
+    assert count == 0
+    assert labels == []
+
+
+def test_check_status_labels_one() -> None:
+    """Test issue with one status label."""
+    # Create issue with one workflow label
+    issue_dict: dict[str, Any] = {
+        "number": 456,
+        "title": "Test issue",
+        "labels": ["bug", "status-03:planning", "enhancement"],
+    }
+
+    # Define workflow labels
+    workflow_labels = {
+        "status-01:created",
+        "status-03:planning",
+        "status-06:implementing",
+    }
+
+    count, labels = check_status_labels(cast(IssueData, issue_dict), workflow_labels)
+
+    # Should have 1 workflow label
+    assert count == 1
+    assert labels == ["status-03:planning"]
+
+
+def test_check_status_labels_multiple() -> None:
+    """Test issue with multiple status labels."""
+    # Create issue with multiple workflow labels (error condition)
+    issue_dict: dict[str, Any] = {
+        "number": 789,
+        "title": "Test issue",
+        "labels": [
+            "bug",
+            "status-01:created",
+            "status-03:planning",
+            "enhancement",
+        ],
+    }
+
+    # Define workflow labels
+    workflow_labels = {
+        "status-01:created",
+        "status-03:planning",
+        "status-06:implementing",
+    }
+
+    count, labels = check_status_labels(cast(IssueData, issue_dict), workflow_labels)
+
+    # Should have 2 workflow labels (error condition)
+    assert count == 2
+    assert "status-01:created" in labels
+    assert "status-03:planning" in labels
+    assert len(labels) == 2
+
+
+def test_check_status_labels_empty_issue_labels() -> None:
+    """Test issue with no labels at all."""
+    # Create issue with empty labels list
+    issue_dict: dict[str, Any] = {
+        "number": 100,
+        "title": "Test issue",
+        "labels": [],
+    }
+
+    # Define workflow labels
+    workflow_labels = {"status-01:created", "status-03:planning"}
+
+    count, labels = check_status_labels(cast(IssueData, issue_dict), workflow_labels)
+
+    # Should have 0 workflow labels
+    assert count == 0
+    assert labels == []
+
+
+def test_check_status_labels_all_workflow_labels() -> None:
+    """Test issue with only workflow labels (no other labels)."""
+    # Create issue with only workflow labels
+    issue_dict: dict[str, Any] = {
+        "number": 200,
+        "title": "Test issue",
+        "labels": ["status-06:implementing"],
+    }
+
+    # Define workflow labels
+    workflow_labels = {
+        "status-01:created",
+        "status-03:planning",
+        "status-06:implementing",
+    }
+
+    count, labels = check_status_labels(cast(IssueData, issue_dict), workflow_labels)
+
+    # Should have 1 workflow label
+    assert count == 1
+    assert labels == ["status-06:implementing"]
+
+
+def test_check_status_labels_three_or_more() -> None:
+    """Test issue with three or more status labels (severe error condition)."""
+    # Create issue with three workflow labels
+    issue_dict: dict[str, Any] = {
+        "number": 300,
+        "title": "Test issue",
+        "labels": [
+            "status-01:created",
+            "status-03:planning",
+            "status-06:implementing",
+            "bug",
+        ],
+    }
+
+    # Define workflow labels
+    workflow_labels = {
+        "status-01:created",
+        "status-03:planning",
+        "status-06:implementing",
+    }
+
+    count, labels = check_status_labels(cast(IssueData, issue_dict), workflow_labels)
+
+    # Should have 3 workflow labels
+    assert count == 3
+    assert "status-01:created" in labels
+    assert "status-03:planning" in labels
+    assert "status-06:implementing" in labels
+    assert len(labels) == 3
+
+
+def test_check_status_labels_preserves_order() -> None:
+    """Test that check_status_labels preserves label order."""
+    # Create issue with labels in specific order
+    issue_dict: dict[str, Any] = {
+        "number": 400,
+        "title": "Test issue",
+        "labels": [
+            "bug",
+            "status-06:implementing",
+            "enhancement",
+            "status-01:created",
+        ],
+    }
+
+    # Define workflow labels
+    workflow_labels = {
+        "status-01:created",
+        "status-03:planning",
+        "status-06:implementing",
+    }
+
+    count, labels = check_status_labels(cast(IssueData, issue_dict), workflow_labels)
+
+    # Should preserve order from issue labels
+    assert count == 2
+    assert labels == ["status-06:implementing", "status-01:created"]

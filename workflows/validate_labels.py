@@ -103,6 +103,36 @@ def calculate_elapsed_minutes(timestamp_str: str) -> int:
     return int(elapsed_seconds / 60)
 
 
+def check_status_labels(
+    issue: IssueData,
+    workflow_label_names: set[str]
+) -> tuple[int, list[str]]:
+    """Check how many workflow status labels an issue has.
+    
+    Args:
+        issue: Issue data from IssueManager
+        workflow_label_names: Set of all valid workflow label names
+        
+    Returns:
+        Tuple of (count, list_of_status_labels)
+        
+    Example:
+        >>> count, labels = check_status_labels(issue, workflow_names)
+        >>> if count == 0:
+        ...     print("Issue needs initialization")
+        >>> elif count > 1:
+        ...     print(f"ERROR: Multiple labels: {labels}")
+    """
+    # Get issue labels list
+    issue_labels = issue["labels"]
+    
+    # Filter to only workflow status labels
+    status_labels = [label for label in issue_labels if label in workflow_label_names]
+    
+    # Return count and list of status labels
+    return (len(status_labels), status_labels)
+
+
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments including project directory and log level.
     
