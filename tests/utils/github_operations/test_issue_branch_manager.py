@@ -770,7 +770,7 @@ class TestCreateLinkedBranch:
         self, mock_manager: IssueBranchManager
     ) -> None:
         """Test that PyGithub's response format (without 'data' wrapper) is parsed correctly.
-        
+
         This test verifies the fix for issue #110 where the code incorrectly expected
         the response to be wrapped in a 'data' key, but PyGithub's graphql_named_mutation
         already unwraps it.
