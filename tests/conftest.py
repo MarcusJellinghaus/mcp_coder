@@ -56,6 +56,10 @@ def cleanup_test_artifacts() -> Generator[None, None, None]:
     # After test execution, clean up any artifacts
     test_dir = Path("tests")
 
+    # Only run cleanup if test_dir exists
+    if not test_dir.exists():
+        return
+
     # List of patterns that should be cleaned up
     cleanup_patterns = [
         "*.tmp",

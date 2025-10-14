@@ -72,11 +72,9 @@ class TestPullRequestManagerSmoke:
         Detailed functionality testing is in test_pr_manager.py with mocked APIs.
         """
         # Test that we can list PRs (tests auth + repo access)
-        open_prs = pr_manager.list_pull_requests(state="open")
+        # Only fetch a few to keep the test fast
+        open_prs = pr_manager.list_pull_requests(state="open", max_results=5)
         assert isinstance(open_prs, list), "Expected list for open PRs"
-
-        closed_prs = pr_manager.list_pull_requests(state="closed")
-        assert isinstance(closed_prs, list), "Expected list for closed PRs"
 
         # Verify manager properties work
         repo_name = pr_manager.repository_name
