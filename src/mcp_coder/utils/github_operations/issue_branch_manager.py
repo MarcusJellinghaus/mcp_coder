@@ -301,11 +301,11 @@ class IssueBranchManager(BaseGitHubManager):
 
         # Step 6: Parse response and return result
         # Note: graphql_named_mutation returns (headers, data) where data has format:
-        # {"data": {"createLinkedBranch": {"linkedBranch": {...}}}}
+        # {"createLinkedBranch": {"linkedBranch": {...}}}
+        # (The "data" wrapper is already unwrapped by PyGithub)
         try:
-            # Extract data from GraphQL response
-            data = result.get("data", {})
-            if not isinstance(data, dict):
+            # Extract mutation result from GraphQL response
+            if not isinstance(result, dict):
                 error_msg = (
                     "Failed to create linked branch: Malformed response from GitHub"
                 )
@@ -318,7 +318,7 @@ class IssueBranchManager(BaseGitHubManager):
                     existing_branches=[],
                 )
 
-            mutation_result = data.get("createLinkedBranch", {})
+            mutation_result = result.get("createLinkedBranch", {})
 
             # Check if result has the expected linkedBranch field
             if mutation_result is None or "linkedBranch" not in mutation_result:
