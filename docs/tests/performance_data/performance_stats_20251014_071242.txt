@@ -1,0 +1,199 @@
+=== PYTEST PERFORMANCE REPORT === 
+=== PYTEST PERFORMANCE REPORT === 
+Timestamp: 2025-10-14 07:12:42 
+Git Branch: 109-task-list-statistics 
+Command: .\tools\get_pytest_performance_stats.bat 
+ 
+======================================== 
+Pytest Performance Statistics (Durations Only) 
+======================================== 
+ 
+EXECUTION MODE: Single-threaded (-n0) for marker tests 
+PURPOSE: Accurate timing per test without parallel overhead 
+ 
+[1/6] UNIT TESTS (no integration markers) 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+0.34s call     tests/utils/github_operations/test_issue_branch_manager.py::TestCreateLinkedBranch::test_permission_error
+0.33s call     tests/utils/github_operations/test_issue_branch_manager.py::TestDeleteLinkedBranch::test_graphql_mutation_error
+0.31s call     tests/llm/providers/claude/test_claude_code_api.py::TestAskClaudeCodeApiAsync::test_timeout_handling
+0.13s call     tests/llm/formatting/test_formatters.py::TestFormatterComparison::test_raw_vs_verbose_difference
+0.12s call     tests/llm/formatting/test_formatters.py::TestFormatterComparison::test_verbose_vs_just_text_difference
+0.07s call     tests/cli/commands/test_session_priority.py::TestSessionPriority::test_continue_session_from_when_no_session_id
+0.07s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLM::test_generate_commit_message_with_llm_success
+0.07s call     tests/cli/commands/test_implement.py::TestExecuteImplement::test_execute_implement_exception_handling
+0.07s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_empty_llm_response
+0.07s call     tests/workflows/create_plan/test_prompt_execution.py::TestRunPlanningPrompts::test_run_planning_prompts_success
+0.07s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_empty_parsed_commit_message
+0.07s call     tests/cli/commands/test_session_priority.py::TestSessionPriority::test_session_id_overrides_continue_session
+0.07s call     tests/workflows/create_plan/test_prompt_execution.py::TestRunPlanningPrompts::test_run_planning_prompts_session_continuation
+0.07s call     tests/workflows/create_plan/test_prompt_execution.py::TestRunPlanningPrompts::test_run_planning_prompts_third_prompt_fails
+0.07s call     tests/workflows/implement/test_core.py::TestRunImplementWorkflow::test_run_implement_workflow_success
+0.07s call     tests/cli/commands/test_session_priority.py::TestSessionPriority::test_continue_session_when_no_session_id
+0.06s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLM::test_generate_commit_message_with_llm_failure
+0.06s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_prompt_file_not_found
+0.06s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_invalid_commit_message_format
+0.06s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_stage_exception_handling
+1 failed, 942 passed, 4 skipped, 238 deselected in 7.36s
+ 
+ 
+[2/6] CLAUDE CLI INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+38.08s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity
+35.72s call     tests/llm/providers/claude/test_claude_integration.py::TestEnvironmentVariablePropagation::test_env_vars_propagation
+33.07s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_basic_cli_api_integration
+0.01s call     tests/llm/providers/claude/test_llm_sessions.py::TestSerialization::test_serialization_roundtrip
+0.01s call     tests/llm/providers/claude/test_llm_sessions.py::TestSerialization::test_session_from_saved_file
+(15 durations < 0.005s hidden.  Use -vv to show these durations.)
+16 passed, 1169 deselected in 108.09s (0:01:48)
+ 
+ 
+[3/6] CLAUDE API INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+27.56s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity_api
+0.03s call     tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_all_attempts_fail
+0.03s call     tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_success_after_retries
+(17 durations < 0.005s hidden.  Use -vv to show these durations.)
+24 passed, 1161 deselected in 28.82s
+ 
+ 
+[4/6] GIT INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+5.82s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_with_complete_project_structure
+5.50s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_git_operations_integration
+4.72s call     tests/utils/git_operations/test_diffs.py::TestDiffOperations::test_get_branch_diff
+4.69s call     tests/utils/git_operations/test_diffs.py::TestDiffOperations::test_get_branch_diff_with_base_branch
+3.93s call     tests/utils/git_operations/test_file_tracking.py::TestFileTrackingOperations::test_is_file_tracked
+3.04s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_prerequisite_validation
+3.02s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_pr_summary_generation_with_diff
+2.92s call     tests/utils/git_operations/test_repository.py::TestRepositoryOperations::test_is_working_directory_clean
+2.79s call     tests/utils/git_operations/test_commits.py::TestCommitOperations::test_commit_with_multiline_message
+2.60s call     tests/utils/git_operations/test_commits.py::TestCommitOperations::test_commit_all_changes
+1.95s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[5000]
+1.92s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[1000]
+1.91s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_10k_special_characters
+1.91s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_mixed_line_endings
+1.91s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[10000]
+1.91s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_binary_and_text_mix
+1.37s call     tests/utils/git_operations/test_commits.py::TestCommitOperations::test_commit_staged_files
+1.35s call     tests/utils/git_operations/test_branches.py::TestBranchOperations::test_get_parent_branch_name
+1.35s call     tests/utils/git_operations/test_branches.py::TestBranchOperations::test_create_and_branch_exists
+1.26s call     tests/utils/git_operations/test_repository.py::TestRepositoryOperations::test_get_full_status
+147 passed, 1 skipped, 1037 deselected in 121.93s (0:02:01)
+ 
+ 
+[5/6] FORMATTER INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+3.45s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function
+1.68s call     tests/formatters/test_integration.py::TestAnalysisBasedScenarios::test_configuration_conflicts_from_analysis
+1.48s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_type_errors
+1.48s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_clean_code
+1.13s call     tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_idempotent_behavior_no_changes_on_second_run
+0.90s call     tests/formatters/test_integration.py::TestAnalysisBasedScenarios::test_step0_code_samples_from_analysis
+0.87s call     tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_error_resilience_mixed_scenarios
+0.61s call     tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_complete_formatting_workflow_with_exit_codes
+0.58s call     tests/formatters/test_integration.py::TestQualityGatesValidation::test_complete_tool_integration_workflow
+0.56s call     tests/formatters/test_integration.py::TestQualityGatesValidation::test_individual_formatter_error_handling
+0.54s call     tests/formatters/test_integration.py::TestQualityGatesValidation::test_formatter_target_directory_handling
+0.52s call     tests/formatters/test_main_api.py::TestAPIExportsAndImports::test_re_exports_work_from_init
+0.49s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_empty_directory
+0.07s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_invalid_directory
+0.01s call     tests/formatters/test_utils.py::TestConfigReading::test_read_tool_config_with_invalid_toml
+(5 durations < 0.005s hidden.  Use -vv to show these durations.)
+37 passed, 1148 deselected in 15.62s
+ 
+ 
+[6/6] GITHUB INTEGRATION tests 
+---------------------------------------- 
+============================ slowest 20 durations =============================
+35.94s call     tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+14.66s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+12.31s call     tests/utils/github_operations/test_github_integration_smoke.py::TestPullRequestManagerSmoke::test_pr_crud_lifecycle
+12.10s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+6.58s call     tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_complete_branch_linking_workflow
+6.48s call     tests/utils/github_operations/test_github_utils.py::TestLabelsManagerIntegration::test_labels_manager_lifecycle
+5.87s call     tests/utils/github_operations/test_github_integration_smoke.py::TestLabelsManagerSmoke::test_basic_api_connectivity
+3.78s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+3.77s call     tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_error_handling_without_creating_issues
+3.72s setup    tests/utils/github_operations/test_github_integration_smoke.py::TestPullRequestManagerSmoke::test_basic_api_connectivity
+3.68s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_manager_properties
+3.60s setup    tests/utils/github_operations/test_github_integration_smoke.py::TestPullRequestManagerSmoke::test_pr_crud_lifecycle
+3.58s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+3.55s call     tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_error_handling_without_creating_issues
+3.39s setup    tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_error_handling_without_creating_issues
+3.35s setup    tests/utils/github_operations/test_github_integration_smoke.py::TestLabelsManagerSmoke::test_basic_api_connectivity
+3.30s setup    tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+3.26s setup    tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_complete_branch_linking_workflow
+3.24s setup    tests/utils/github_operations/test_github_utils.py::TestLabelsManagerIntegration::test_labels_manager_lifecycle
+3.23s setup    tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_error_handling_without_creating_issues
+1 failed, 12 passed, 1172 deselected in 145.58s (0:02:25)
+ 
+ 
+======================================== 
+[FINAL] ALL TESTS (complete suite) 
+======================================== 
+EXECUTION MODE: Parallel (-n auto) for full suite 
+PURPOSE: Fast execution, showing 50 slowest tests 
+ 
+============================ slowest 50 durations =============================
+51.98s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity
+41.15s call     tests/llm/providers/claude/test_claude_integration.py::TestEnvironmentVariablePropagation::test_env_vars_propagation
+37.74s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_basic_cli_api_integration
+36.71s call     tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+30.11s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity_api
+18.11s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+15.40s call     tests/utils/github_operations/test_github_integration_smoke.py::TestPullRequestManagerSmoke::test_pr_crud_lifecycle
+14.38s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_git_operations_integration
+12.36s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+11.16s call     tests/utils/git_operations/test_repository.py::TestRepositoryOperations::test_is_working_directory_clean
+10.60s setup    tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+10.45s setup    tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_complete_branch_linking_workflow
+9.39s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_with_complete_project_structure
+7.42s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_prerequisite_validation
+7.26s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function
+7.04s setup    tests/utils/github_operations/test_github_integration_smoke.py::TestPullRequestManagerSmoke::test_basic_api_connectivity
+6.88s call     tests/utils/github_operations/test_github_utils.py::TestLabelsManagerIntegration::test_labels_manager_lifecycle
+6.79s call     tests/utils/github_operations/test_pr_manager.py::TestPullRequestManagerUnit::test_repository_name_property
+6.73s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_pr_summary_generation_with_diff
+6.71s call     tests/utils/github_operations/test_pr_manager.py::TestPullRequestManagerUnit::test_list_pull_requests_data_transformation
+6.52s call     tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_complete_branch_linking_workflow
+6.49s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+6.37s call     tests/formatters/test_main_api.py::TestAPIExportsAndImports::test_re_exports_work_from_init
+6.32s call     tests/utils/github_operations/test_issue_manager.py::TestIssueManagerUnit::test_create_issue_with_labels
+6.26s setup    tests/utils/github_operations/test_github_integration_smoke.py::TestPullRequestManagerSmoke::test_pr_crud_lifecycle
+6.23s call     tests/utils/github_operations/test_labels_manager.py::TestLabelsManagerUnit::test_update_label_description
+5.97s call     tests/utils/git_operations/test_diffs.py::TestDiffOperations::test_get_branch_diff
+5.91s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_validation_failures
+5.87s setup    tests/utils/git_operations/test_branches.py::TestBranchOperations::test_checkout_branch_from_remote
+5.83s setup    tests/utils/git_operations/test_file_tracking.py::TestFileTrackingOperations::test_git_move
+5.78s call     tests/utils/github_operations/test_github_integration_smoke.py::TestLabelsManagerSmoke::test_basic_api_connectivity
+5.73s call     tests/utils/git_operations/test_diffs.py::TestDiffOperations::test_get_branch_diff_with_base_branch
+5.59s setup    tests/utils/git_operations/test_branches.py::TestBranchOperations::test_get_parent_branch_name
+5.59s call     tests/utils/github_operations/test_github_utils.py::TestLabelsManagerUnit::test_initialization_requires_github_token
+5.59s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_10k_special_characters
+5.50s call     tests/utils/github_operations/test_issue_manager.py::TestIssueManagerUnit::test_list_issues_open_only
+5.49s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[1000]
+5.48s call     tests/utils/git_operations/test_commits.py::TestCommitOperations::test_commit_all_changes
+5.33s setup    tests/utils/github_operations/test_github_utils.py::TestLabelsManagerIntegration::test_labels_manager_lifecycle
+5.17s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_empty_llm_response
+5.15s call     tests/workflows/create_plan/test_prompt_execution.py::TestRunPlanningPrompts::test_run_planning_prompts_success
+5.14s call     tests/cli/commands/test_commit.py::TestGenerateCommitMessageWithLLMExtended::test_invalid_commit_message_format
+5.14s setup    tests/utils/git_operations/test_commits.py::TestCommitOperations::test_commit_with_multiline_message
+4.57s call     tests/utils/git_operations/test_branches.py::TestBranchOperations::test_create_and_branch_exists
+4.52s call     tests/utils/git_operations/test_file_tracking.py::TestFileTrackingOperations::test_is_file_tracked
+4.33s setup    tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_error_handling_without_creating_issues
+4.23s call     tests/formatters/test_integration.py::TestAnalysisBasedScenarios::test_configuration_conflicts_from_analysis
+4.13s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+4.06s call     tests/utils/git_operations/test_repository.py::TestRepositoryOperations::test_get_full_status
+4.03s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_binary_and_text_mix
+1 failed, 1179 passed, 5 skipped in 169.06s (0:02:49)
+ 
+ 
+======================================== 
+Performance statistics collection complete 
+Output saved to: docs\tests\performance_data\performance_stats_20251014_071242.txt 
+======================================== 
