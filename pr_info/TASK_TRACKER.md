@@ -59,11 +59,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Implement process_issues() to orchestrate validation
 - [x] Add comprehensive unit tests with mocking to test_validate_labels.py
 - [x] Test filtering of ignore labels works correctly
-- [ ] Test dry-run mode prevents API calls
-- [ ] Run pylint quality check and fix all issues
-- [ ] Run pytest quality check and fix all issues
-- [ ] Run mypy quality check and fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Test dry-run mode prevents API calls
+- [x] Run pylint quality check and fix all issues
+- [x] Run pytest quality check and fix all issues
+- [x] Run mypy quality check and fix all issues
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Implement Reporting and Complete Main Function
 [Details: pr_info/steps/step_4.md](steps/step_4.md)

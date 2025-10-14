@@ -1671,3 +1671,92 @@ def test_check_stale_bot_process_with_api_exception() -> None:
         )
 
     assert exc_info.value.status == 404
+
+
+def test_process_issues_dry_run_prevents_all_api_calls() -> None:
+    """Test dry-run mode prevents ALL API calls including staleness checks.
+
+    This test verifies that dry-run mode:
+    1. Does NOT call add_labels (for initialization)
+    2. Does NOT call get_issue_events (for staleness checking)
+    3. Still processes issues logically and returns results
+
+    This is the key requirement: dry-run should preview results WITHOUT
+    making ANY API calls whatsoever.
+    """
+    from workflows.validate_labels import process_issues
+
+    # Create config with multiple label types
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            },
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            },
+            {
+                "internal_id": "implementing",
+                "name": "status-06:implementing",
+                "category": "bot_busy",
+            },
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issues that would normally trigger various API calls
+    issues: list[IssueData] = [
+        # Issue 1: Needs initialization (would call add_labels in non-dry-run)
+        cast(IssueData, {"number": 1, "title": "Issue 1", "labels": ["bug"]}),
+        # Issue 2: bot_busy label (would call get_issue_events in non-dry-run)
+        cast(
+            IssueData,
+            {"number": 2, "title": "Issue 2", "labels": ["status-03:planning"]},
+        ),
+        # Issue 3: Another bot_busy (would call get_issue_events in non-dry-run)
+        cast(
+            IssueData,
+            {"number": 3, "title": "Issue 3", "labels": ["status-06:implementing"]},
+        ),
+        # Issue 4: human_action label (no API calls in any mode)
+        cast(
+            IssueData,
+            {"number": 4, "title": "Issue 4", "labels": ["status-01:created"]},
+        ),
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.add_labels = Mock()
+    mock_manager.get_issue_events = Mock()
+
+    # Process issues in DRY-RUN mode
+    results = process_issues(issues, labels_config, mock_manager, dry_run=True)
+
+    # Verify results are correct
+    assert results["processed"] == 4
+    assert results["skipped"] == 0
+    assert results["initialized"] == [1]
+    assert 4 in results["ok"]
+
+    # CRITICAL: Verify NO API calls were made in dry-run mode
+    # 1. add_labels should NOT be called (initialization prevented)
+    mock_manager.add_labels.assert_not_called()
+
+    # 2. get_issue_events should NOT be called (staleness checks prevented)
+    # This is the key assertion this test adds - dry-run should skip ALL API calls
+    mock_manager.get_issue_events.assert_not_called()
+
+    # Verify that bot_busy issues are still processed logically
+    # In dry-run mode, we can't check staleness, so they should be treated as OK
+    assert 2 in results["ok"], "bot_busy issue should be in 'ok' during dry-run"
+    assert 3 in results["ok"], "bot_busy issue should be in 'ok' during dry-run"
+
+    # Verify no warnings/errors for bot_busy labels in dry-run
+    # (we can't check staleness without API calls)
+    assert len(results["warnings"]) == 0
+    assert len(results["errors"]) == 0

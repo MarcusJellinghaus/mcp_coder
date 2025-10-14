@@ -290,8 +290,9 @@ def process_issues(
             internal_id = name_to_id.get(label_name, "")
             
             # Check if this is a bot_busy label
-            if category == "bot_busy":
+            if category == "bot_busy" and not dry_run:
                 # Check if stale (this makes an API call)
+                # Skip in dry-run mode to avoid ALL API calls
                 try:
                     is_stale, elapsed = check_stale_bot_process(
                         issue, label_name, internal_id, issue_manager
@@ -316,7 +317,7 @@ def process_issues(
                     # Let exception propagate per Decision #1
                     raise
             else:
-                # Not a bot_busy label, just mark as OK
+                # Not a bot_busy label OR dry-run mode, just mark as OK
                 logger.info(f"Issue #{issue_number}: OK - '{label_name}'")
                 results["ok"].append(issue_number)
             
