@@ -27,12 +27,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add `from enum import Enum` to imports in issue_manager.py
 - [x] Add IssueEventType enum after imports, before TypedDicts (around line 50)
 - [x] Add EventData TypedDict after LabelData (around line 90)
-- [ ] Implement get_issue_events() method at end of IssueManager class
-- [ ] Add unit tests to tests/utils/github_operations/test_issue_manager.py
-- [ ] Run pylint quality check and fix all issues
-- [ ] Run pytest quality check and fix all issues
-- [ ] Run mypy quality check and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement get_issue_events() method at end of IssueManager class
+- [x] Add unit tests to tests/utils/github_operations/test_issue_manager.py
+- [x] Run pylint quality check and fix all issues
+- [x] Run pytest quality check and fix all issues
+- [x] Run mypy quality check and fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Create validate_labels.py Script Structure
 [Details: pr_info/steps/step_2.md](steps/step_2.md)
