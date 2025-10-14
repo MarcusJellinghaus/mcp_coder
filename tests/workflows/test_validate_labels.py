@@ -2002,3 +2002,326 @@ def test_batch_file_preserves_exit_codes() -> None:
     assert (
         result_invalid.returncode != 0
     ), "Invalid flag should return non-zero exit code"
+
+
+def test_main_exit_code_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+    """Test main() exits with code 0 when validation succeeds (no errors or warnings)."""
+    import sys
+
+    from workflows.validate_labels import main
+
+    # Create minimal git repo structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    config_dir = tmp_path / "workflows" / "config"
+    config_dir.mkdir(parents=True)
+
+    # Create minimal labels.json config
+    labels_config = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ],
+        "ignore_labels": [],
+    }
+    import json
+
+    (config_dir / "labels.json").write_text(json.dumps(labels_config))
+
+    # Mock arguments
+    monkeypatch.setattr(
+        "sys.argv", ["validate_labels.py", "--project-dir", str(tmp_path)]
+    )
+
+    # Mock issue_manager to return issue with OK status (one status label)
+    mock_issue = {
+        "number": 1,
+        "title": "Test",
+        "labels": ["status-01:created"],
+    }
+
+    # Create a class to mock IssueManager
+    class MockIssueManager:
+        def __init__(self, project_dir: Any) -> None:
+            pass
+
+        def list_issues(
+            self, state: str = "open", include_pull_requests: bool = False
+        ) -> list[dict[str, Any]]:
+            return [mock_issue]
+
+    # Mock get_github_repository_url
+    def mock_get_repo_url(project_dir: Any) -> str:
+        return "https://github.com/test/repo"
+
+    # Apply mocks
+    monkeypatch.setattr("workflows.validate_labels.IssueManager", MockIssueManager)
+    monkeypatch.setattr(
+        "workflows.validate_labels.get_github_repository_url", mock_get_repo_url
+    )
+
+    # main() should call sys.exit(0) for success
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    # Verify exit code is 0 (success)
+    assert exc_info.value.code == 0, "Should exit with code 0 on success"
+
+
+def test_main_exit_code_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+    """Test main() exits with code 1 when validation finds errors (multiple status labels)."""
+    import sys
+
+    from workflows.validate_labels import main
+
+    # Create minimal git repo structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    config_dir = tmp_path / "workflows" / "config"
+    config_dir.mkdir(parents=True)
+
+    # Create minimal labels.json config
+    labels_config = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            },
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            },
+        ],
+        "ignore_labels": [],
+    }
+    import json
+
+    (config_dir / "labels.json").write_text(json.dumps(labels_config))
+
+    # Mock arguments
+    monkeypatch.setattr(
+        "sys.argv", ["validate_labels.py", "--project-dir", str(tmp_path)]
+    )
+
+    # Mock issue with multiple status labels (ERROR condition)
+    mock_issue = {
+        "number": 1,
+        "title": "Test",
+        "labels": ["status-01:created", "status-03:planning"],
+    }
+
+    # Create a class to mock IssueManager
+    class MockIssueManager:
+        def __init__(self, project_dir: Any) -> None:
+            pass
+
+        def list_issues(
+            self, state: str = "open", include_pull_requests: bool = False
+        ) -> list[dict[str, Any]]:
+            return [mock_issue]
+
+    # Mock get_github_repository_url
+    def mock_get_repo_url(project_dir: Any) -> str:
+        return "https://github.com/test/repo"
+
+    # Apply mocks
+    monkeypatch.setattr("workflows.validate_labels.IssueManager", MockIssueManager)
+    monkeypatch.setattr(
+        "workflows.validate_labels.get_github_repository_url", mock_get_repo_url
+    )
+
+    # main() should call sys.exit(1) for errors
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    # Verify exit code is 1 (errors)
+    assert exc_info.value.code == 1, "Should exit with code 1 when errors found"
+
+
+def test_main_exit_code_warnings_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Test main() exits with code 2 when validation finds warnings but no errors."""
+    import sys
+    from datetime import datetime, timedelta, timezone
+
+    from workflows.validate_labels import main
+
+    # Create minimal git repo structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    config_dir = tmp_path / "workflows" / "config"
+    config_dir.mkdir(parents=True)
+
+    # Create minimal labels.json config with bot_busy label
+    labels_config = {
+        "workflow_labels": [
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            }
+        ],
+        "ignore_labels": [],
+    }
+    import json
+
+    (config_dir / "labels.json").write_text(json.dumps(labels_config))
+
+    # Mock arguments
+    monkeypatch.setattr(
+        "sys.argv", ["validate_labels.py", "--project-dir", str(tmp_path)]
+    )
+
+    # Mock issue with stale bot_busy label (WARNING condition)
+    mock_issue = {
+        "number": 1,
+        "title": "Test",
+        "labels": ["status-03:planning"],
+    }
+
+    # Create stale event (20 minutes ago, exceeds 15 minute timeout)
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=20)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    mock_event = {
+        "event": "labeled",
+        "label": "status-03:planning",
+        "created_at": timestamp_str,
+        "actor": "testuser",
+    }
+
+    # Create a class to mock IssueManager
+    class MockIssueManager:
+        def __init__(self, project_dir: Any) -> None:
+            pass
+
+        def list_issues(
+            self, state: str = "open", include_pull_requests: bool = False
+        ) -> list[dict[str, Any]]:
+            return [mock_issue]
+
+        def get_issue_events(self, issue_number: int) -> list[dict[str, Any]]:
+            return [mock_event]
+
+    # Mock get_github_repository_url
+    def mock_get_repo_url(project_dir: Any) -> str:
+        return "https://github.com/test/repo"
+
+    # Apply mocks
+    monkeypatch.setattr("workflows.validate_labels.IssueManager", MockIssueManager)
+    monkeypatch.setattr(
+        "workflows.validate_labels.get_github_repository_url", mock_get_repo_url
+    )
+
+    # main() should call sys.exit(2) for warnings only
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    # Verify exit code is 2 (warnings)
+    assert exc_info.value.code == 2, "Should exit with code 2 when only warnings found"
+
+
+def test_main_exit_code_errors_take_precedence_over_warnings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Test main() exits with code 1 when both errors and warnings exist (errors take precedence)."""
+    import sys
+    from datetime import datetime, timedelta, timezone
+
+    from workflows.validate_labels import main
+
+    # Create minimal git repo structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    config_dir = tmp_path / "workflows" / "config"
+    config_dir.mkdir(parents=True)
+
+    # Create labels.json config
+    labels_config = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            },
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            },
+        ],
+        "ignore_labels": [],
+    }
+    import json
+
+    (config_dir / "labels.json").write_text(json.dumps(labels_config))
+
+    # Mock arguments
+    monkeypatch.setattr(
+        "sys.argv", ["validate_labels.py", "--project-dir", str(tmp_path)]
+    )
+
+    # Create stale event for issue 2
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=20)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    mock_event = {
+        "event": "labeled",
+        "label": "status-03:planning",
+        "created_at": timestamp_str,
+        "actor": "testuser",
+    }
+
+    # Mock issues: one with ERROR (multiple labels), one with WARNING (stale)
+    mock_issues = [
+        {
+            "number": 1,
+            "title": "Error Issue",
+            "labels": ["status-01:created", "status-03:planning"],  # ERROR
+        },
+        {
+            "number": 2,
+            "title": "Warning Issue",
+            "labels": ["status-03:planning"],  # WARNING (stale)
+        },
+    ]
+
+    # Create a class to mock IssueManager
+    class MockIssueManager:
+        def __init__(self, project_dir: Any) -> None:
+            pass
+
+        def list_issues(
+            self, state: str = "open", include_pull_requests: bool = False
+        ) -> list[dict[str, Any]]:
+            return mock_issues
+
+        def get_issue_events(self, issue_number: int) -> list[dict[str, Any]]:
+            if issue_number == 2:
+                return [mock_event]
+            return []
+
+    # Mock get_github_repository_url
+    def mock_get_repo_url(project_dir: Any) -> str:
+        return "https://github.com/test/repo"
+
+    # Apply mocks
+    monkeypatch.setattr("workflows.validate_labels.IssueManager", MockIssueManager)
+    monkeypatch.setattr(
+        "workflows.validate_labels.get_github_repository_url", mock_get_repo_url
+    )
+
+    # main() should call sys.exit(1) for errors (takes precedence over warnings)
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    # Verify exit code is 1 (errors take precedence)
+    assert (
+        exc_info.value.code == 1
+    ), "Should exit with code 1 when both errors and warnings exist (errors take precedence)"
