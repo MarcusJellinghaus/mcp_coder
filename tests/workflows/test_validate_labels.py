@@ -5,11 +5,13 @@ Tests cover argument parsing, STALE_TIMEOUTS constant, and basic setup logic.
 """
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 
 from workflows.validate_labels import (
     STALE_TIMEOUTS,
+    build_label_lookups,
     calculate_elapsed_minutes,
     parse_arguments,
 )
@@ -155,3 +157,147 @@ def test_calculate_elapsed_minutes_with_microseconds() -> None:
 
     # Should be approximately 20 minutes (allow ±1 minute for test execution time)
     assert 19 <= elapsed <= 21
+
+
+def test_build_label_lookups() -> None:
+    """Test building lookup dictionaries from config."""
+    # Create a minimal labels config for testing
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "color": "10b981",
+                "description": "Fresh issue",
+                "category": "human_action",
+            },
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "color": "a7f3d0",
+                "description": "Planning in progress",
+                "category": "bot_busy",
+            },
+            {
+                "internal_id": "implementing",
+                "name": "status-06:implementing",
+                "color": "bfdbfe",
+                "description": "Implementation in progress",
+                "category": "bot_busy",
+            },
+        ]
+    }
+
+    result = build_label_lookups(labels_config)
+
+    # Verify id_to_name mapping
+    assert result["id_to_name"]["created"] == "status-01:created"
+    assert result["id_to_name"]["planning"] == "status-03:planning"
+    assert result["id_to_name"]["implementing"] == "status-06:implementing"
+    assert len(result["id_to_name"]) == 3
+
+    # Verify all_names set
+    assert "status-01:created" in result["all_names"]
+    assert "status-03:planning" in result["all_names"]
+    assert "status-06:implementing" in result["all_names"]
+    assert len(result["all_names"]) == 3
+
+    # Verify name_to_category mapping
+    assert result["name_to_category"]["status-01:created"] == "human_action"
+    assert result["name_to_category"]["status-03:planning"] == "bot_busy"
+    assert result["name_to_category"]["status-06:implementing"] == "bot_busy"
+    assert len(result["name_to_category"]) == 3
+
+    # Verify name_to_id mapping
+    assert result["name_to_id"]["status-01:created"] == "created"
+    assert result["name_to_id"]["status-03:planning"] == "planning"
+    assert result["name_to_id"]["status-06:implementing"] == "implementing"
+    assert len(result["name_to_id"]) == 3
+
+
+def test_build_label_lookups_empty_config() -> None:
+    """Test building lookups from empty config."""
+    labels_config: dict[str, Any] = {"workflow_labels": []}
+
+    result = build_label_lookups(labels_config)
+
+    # All lookups should be empty
+    assert len(result["id_to_name"]) == 0
+    assert len(result["all_names"]) == 0
+    assert len(result["name_to_category"]) == 0
+    assert len(result["name_to_id"]) == 0
+
+
+def test_build_label_lookups_single_label() -> None:
+    """Test building lookups with single label."""
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "test_id",
+                "name": "test-label",
+                "color": "ffffff",
+                "description": "Test label",
+                "category": "test_category",
+            }
+        ]
+    }
+
+    result = build_label_lookups(labels_config)
+
+    # Verify single label is properly mapped
+    assert result["id_to_name"]["test_id"] == "test-label"
+    assert "test-label" in result["all_names"]
+    assert result["name_to_category"]["test-label"] == "test_category"
+    assert result["name_to_id"]["test-label"] == "test_id"
+
+    # Verify all lookups have exactly one entry
+    assert len(result["id_to_name"]) == 1
+    assert len(result["all_names"]) == 1
+    assert len(result["name_to_category"]) == 1
+    assert len(result["name_to_id"]) == 1
+
+
+def test_build_label_lookups_all_categories() -> None:
+    """Test building lookups with all category types."""
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "human1",
+                "name": "human-action-label",
+                "color": "ffffff",
+                "description": "Human action",
+                "category": "human_action",
+            },
+            {
+                "internal_id": "pickup1",
+                "name": "bot-pickup-label",
+                "color": "eeeeee",
+                "description": "Bot pickup",
+                "category": "bot_pickup",
+            },
+            {
+                "internal_id": "busy1",
+                "name": "bot-busy-label",
+                "color": "dddddd",
+                "description": "Bot busy",
+                "category": "bot_busy",
+            },
+        ]
+    }
+
+    result = build_label_lookups(labels_config)
+
+    # Verify category mappings for all types
+    assert result["name_to_category"]["human-action-label"] == "human_action"
+    assert result["name_to_category"]["bot-pickup-label"] == "bot_pickup"
+    assert result["name_to_category"]["bot-busy-label"] == "bot_busy"
+
+    # Verify bidirectional mappings work
+    assert result["id_to_name"]["human1"] == "human-action-label"
+    assert result["name_to_id"]["human-action-label"] == "human1"
+
+    assert result["id_to_name"]["pickup1"] == "bot-pickup-label"
+    assert result["name_to_id"]["bot-pickup-label"] == "pickup1"
+
+    assert result["id_to_name"]["busy1"] == "bot-busy-label"
+    assert result["name_to_id"]["bot-busy-label"] == "busy1"
