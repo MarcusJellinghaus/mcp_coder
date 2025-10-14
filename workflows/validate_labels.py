@@ -10,7 +10,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 from github import GithubException
 
@@ -22,6 +22,15 @@ from workflows.label_config import load_labels_config
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+
+class LabelLookups(TypedDict):
+    """TypedDict for label lookup data structures."""
+    id_to_name: dict[str, str]        # internal_id -> label_name
+    all_names: set[str]               # All workflow label names
+    name_to_category: dict[str, str]  # label_name -> category
+    name_to_id: dict[str, str]        # label_name -> internal_id
+
 
 # Timeout thresholds in minutes for bot_busy labels
 STALE_TIMEOUTS = {
