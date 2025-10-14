@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from mcp_coder.utils.github_operations import EventData, IssueData
+from mcp_coder.utils.github_operations.issue_manager import EventData, IssueData
 from workflows.validate_labels import (
     STALE_TIMEOUTS,
     build_label_lookups,
@@ -1369,3 +1369,305 @@ def test_process_issues_mixed_scenarios() -> None:
 
     # Verify get_issue_events was called for issues 5 and 6 (bot_busy labels)
     assert mock_manager.get_issue_events.call_count == 2
+
+
+def test_process_issues_with_bot_pickup_category() -> None:
+    """Test process_issues with bot_pickup category label (treated as OK)."""
+    from workflows.validate_labels import process_issues
+
+    # Create config with bot_pickup label
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "pending_review",
+                "name": "status-02:pending-review",
+                "category": "bot_pickup",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue with bot_pickup label
+    issues: list[IssueData] = [
+        cast(
+            IssueData,
+            {
+                "number": 999,
+                "title": "Test issue",
+                "labels": ["status-02:pending-review"],
+            },
+        )
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock()
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Verify issue marked as OK (bot_pickup doesn't need staleness check)
+    assert results["processed"] == 1
+    assert results["ok"] == [999]
+    assert len(results["warnings"]) == 0
+    assert len(results["errors"]) == 0
+
+    # Verify get_issue_events was NOT called (no staleness check for bot_pickup)
+    mock_manager.get_issue_events.assert_not_called()
+
+
+def test_process_issues_api_exception_on_initialization() -> None:
+    """Test process_issues propagates API exceptions during initialization."""
+    from github import GithubException
+
+    from workflows.validate_labels import process_issues
+
+    # Create config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue needing initialization
+    issues: list[IssueData] = [
+        cast(IssueData, {"number": 111, "title": "Test issue", "labels": ["bug"]})
+    ]
+
+    # Create mock that raises GithubException
+    mock_manager = Mock()
+    mock_manager.add_labels = Mock(
+        side_effect=GithubException(status=403, data={"message": "API rate limit"})
+    )
+
+    # Verify exception propagates
+    with pytest.raises(GithubException) as exc_info:
+        process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    assert exc_info.value.status == 403
+
+
+def test_process_issues_api_exception_on_stale_check() -> None:
+    """Test process_issues propagates API exceptions during staleness check."""
+    from github import GithubException
+
+    from workflows.validate_labels import process_issues
+
+    # Create config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue with bot_busy label
+    issues: list[IssueData] = [
+        cast(
+            IssueData,
+            {
+                "number": 222,
+                "title": "Test issue",
+                "labels": ["status-03:planning"],
+            },
+        )
+    ]
+
+    # Create mock that raises GithubException on get_issue_events
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(
+        side_effect=GithubException(status=500, data={"message": "Server error"})
+    )
+
+    # Verify exception propagates
+    with pytest.raises(GithubException) as exc_info:
+        process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    assert exc_info.value.status == 500
+
+
+def test_process_issues_mixed_ignore_label_positions() -> None:
+    """Test that issues with ignore labels in any position are skipped."""
+    from workflows.validate_labels import process_issues
+
+    # Create config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ],
+        "ignore_labels": ["wontfix", "duplicate", "invalid"],
+    }
+
+    # Create issues with ignore labels in different positions
+    issues: list[IssueData] = [
+        # Ignore label at start
+        cast(
+            IssueData,
+            {"number": 1, "title": "Issue 1", "labels": ["wontfix", "bug"]},
+        ),
+        # Ignore label in middle
+        cast(
+            IssueData,
+            {
+                "number": 2,
+                "title": "Issue 2",
+                "labels": ["bug", "duplicate", "enhancement"],
+            },
+        ),
+        # Ignore label at end
+        cast(
+            IssueData,
+            {"number": 3, "title": "Issue 3", "labels": ["bug", "invalid"]},
+        ),
+        # Multiple ignore labels
+        cast(
+            IssueData,
+            {
+                "number": 4,
+                "title": "Issue 4",
+                "labels": ["wontfix", "duplicate"],
+            },
+        ),
+        # No ignore labels
+        cast(
+            IssueData,
+            {"number": 5, "title": "Issue 5", "labels": ["bug"]},
+        ),
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.add_labels = Mock()
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Verify only issue 5 was processed
+    assert results["processed"] == 1
+    assert results["skipped"] == 4
+    assert results["initialized"] == [5]
+
+    # Verify add_labels was called only for issue 5
+    mock_manager.add_labels.assert_called_once_with(5, ["status-01:created"])
+
+
+def test_process_issues_no_ignore_labels_in_config() -> None:
+    """Test process_issues when config has no ignore_labels key."""
+    from workflows.validate_labels import process_issues
+
+    # Create config WITHOUT ignore_labels key
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ]
+        # Note: no "ignore_labels" key
+    }
+
+    # Create issues with various labels
+    issues: list[IssueData] = [
+        cast(
+            IssueData,
+            {"number": 1, "title": "Issue 1", "labels": ["wontfix", "bug"]},
+        ),
+        cast(IssueData, {"number": 2, "title": "Issue 2", "labels": ["bug"]}),
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.add_labels = Mock()
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Both issues should be processed (no ignore labels defined)
+    assert results["processed"] == 2
+    assert results["skipped"] == 0
+    assert 1 in results["initialized"]
+    assert 2 in results["initialized"]
+
+
+def test_process_issues_bot_busy_without_timeout() -> None:
+    """Test process_issues with bot_busy label that has no timeout defined."""
+    from workflows.validate_labels import process_issues
+
+    # Create config with bot_busy label not in STALE_TIMEOUTS
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "custom_busy",  # Not in STALE_TIMEOUTS
+                "name": "status-99:custom-busy",
+                "category": "bot_busy",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue with this label
+    issues: list[IssueData] = [
+        cast(
+            IssueData,
+            {
+                "number": 888,
+                "title": "Test issue",
+                "labels": ["status-99:custom-busy"],
+            },
+        )
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock()  # Should not be called
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Should mark as OK since no timeout defined
+    assert results["processed"] == 1
+    assert results["ok"] == [888]
+    assert len(results["warnings"]) == 0
+
+    # get_issue_events should not be called (no timeout defined)
+    mock_manager.get_issue_events.assert_not_called()
+
+
+def test_check_stale_bot_process_with_api_exception() -> None:
+    """Test check_stale_bot_process propagates API exceptions."""
+    from github import GithubException
+
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 777,
+        "title": "Test issue",
+        "labels": ["status-03:planning"],
+    }
+
+    # Create mock that raises exception
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(
+        side_effect=GithubException(status=404, data={"message": "Not found"})
+    )
+
+    # Verify exception propagates (not caught)
+    with pytest.raises(GithubException) as exc_info:
+        check_stale_bot_process(
+            cast(IssueData, issue_dict), "status-03:planning", "planning", mock_manager
+        )
+
+    assert exc_info.value.status == 404
