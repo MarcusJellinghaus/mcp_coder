@@ -71,5 +71,5 @@
       "category": "human_action"
     }
   ],
-  "ignore_labels": []
+  "ignore_labels": ["Overview"]
 }
