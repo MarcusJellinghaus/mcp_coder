@@ -2428,3 +2428,357 @@ def test_process_issues_respects_overview_ignore_label() -> None:
 
     # Verify add_labels was only called for issue 4 (issue 5 already has status)
     mock_manager.add_labels.assert_called_once_with(4, ["status-01:created"])
+
+
+def test_full_workflow_integration(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Test complete end-to-end workflow with mocked GitHub API.
+
+    This comprehensive integration test validates the entire workflow from
+    argument parsing through issue processing to result display.
+    """
+    import json
+    import sys
+
+    from workflows.validate_labels import main
+
+    # Create git repo structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    config_dir = tmp_path / "workflows" / "config"
+    config_dir.mkdir(parents=True)
+
+    # Create production-like labels.json config
+    labels_config = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "description": "Fresh issue needs initial planning",
+                "color": "10b981",
+                "category": "human_action",
+            },
+            {
+                "internal_id": "pending_review",
+                "name": "status-02:pending-review",
+                "description": "Waiting for review",
+                "color": "a7f3d0",
+                "category": "bot_pickup",
+            },
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "description": "AI is planning implementation",
+                "color": "bfdbfe",
+                "category": "bot_busy",
+            },
+            {
+                "internal_id": "implementing",
+                "name": "status-06:implementing",
+                "description": "AI is implementing solution",
+                "color": "fef3c7",
+                "category": "bot_busy",
+            },
+        ],
+        "ignore_labels": ["Overview", "wontfix"],
+    }
+    (config_dir / "labels.json").write_text(json.dumps(labels_config))
+
+    # Mock command-line arguments for dry-run mode
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "validate_labels.py",
+            "--project-dir",
+            str(tmp_path),
+            "--dry-run",
+            "--log-level",
+            "INFO",
+        ],
+    )
+
+    # Create diverse set of test issues covering all scenarios
+    from datetime import datetime, timedelta, timezone
+
+    past_stale = datetime.now(timezone.utc) - timedelta(minutes=20)
+    past_ok = datetime.now(timezone.utc) - timedelta(minutes=10)
+    stale_timestamp = past_stale.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+    ok_timestamp = past_ok.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    mock_issues = [
+        # Issue 1: No status label - needs initialization
+        {
+            "number": 1,
+            "title": "New bug report",
+            "labels": ["bug", "priority-high"],
+        },
+        # Issue 2: Has Overview ignore label - should be skipped
+        {
+            "number": 2,
+            "title": "Project Overview",
+            "labels": ["Overview", "documentation"],
+        },
+        # Issue 3: Multiple status labels - ERROR
+        {
+            "number": 3,
+            "title": "Confused issue",
+            "labels": ["status-01:created", "status-03:planning", "bug"],
+        },
+        # Issue 4: OK with human_action label
+        {
+            "number": 4,
+            "title": "Needs review",
+            "labels": ["status-01:created", "enhancement"],
+        },
+        # Issue 5: bot_pickup label - should be OK (no staleness check)
+        {
+            "number": 5,
+            "title": "Waiting for bot",
+            "labels": ["status-02:pending-review"],
+        },
+        # Issue 6: Stale bot_busy (planning > 15 min) - WARNING
+        {
+            "number": 6,
+            "title": "Stuck in planning",
+            "labels": ["status-03:planning"],
+        },
+        # Issue 7: OK bot_busy (implementing < 60 min) - OK
+        {
+            "number": 7,
+            "title": "Currently implementing",
+            "labels": ["status-06:implementing"],
+        },
+        # Issue 8: Has wontfix ignore label - should be skipped
+        {
+            "number": 8,
+            "title": "Won't fix this",
+            "labels": ["wontfix", "bug"],
+        },
+    ]
+
+    # Create mock events for bot_busy labels
+    def mock_get_events(issue_number: int) -> list[dict[str, Any]]:
+        if issue_number == 6:
+            # Stale planning (20 minutes > 15 minute timeout)
+            return [
+                {
+                    "event": "labeled",
+                    "label": "status-03:planning",
+                    "created_at": stale_timestamp,
+                    "actor": "testuser",
+                }
+            ]
+        elif issue_number == 7:
+            # OK implementing (10 minutes < 60 minute timeout)
+            return [
+                {
+                    "event": "labeled",
+                    "label": "status-06:implementing",
+                    "created_at": ok_timestamp,
+                    "actor": "testuser",
+                }
+            ]
+        return []
+
+    # Create mock IssueManager
+    class MockIssueManager:
+        def __init__(self, project_dir: Any) -> None:
+            self.add_labels_calls: list[tuple[int, list[str]]] = []
+
+        def list_issues(
+            self, state: str = "open", include_pull_requests: bool = False
+        ) -> list[dict[str, Any]]:
+            return mock_issues
+
+        def get_issue_events(self, issue_number: int) -> list[dict[str, Any]]:
+            return mock_get_events(issue_number)
+
+        def add_labels(self, issue_number: int, labels: list[str]) -> None:
+            # Track calls but don't actually add (dry-run mode)
+            self.add_labels_calls.append((issue_number, labels))
+
+    # Mock get_github_repository_url
+    def mock_get_repo_url(project_dir: Any) -> str:
+        return "https://github.com/test/repo"
+
+    # Apply mocks
+    monkeypatch.setattr("workflows.validate_labels.IssueManager", MockIssueManager)
+    monkeypatch.setattr(
+        "workflows.validate_labels.get_github_repository_url", mock_get_repo_url
+    )
+
+    # Run main() and expect successful execution
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    # Verify exit code based on results
+    # We have 1 error (issue 3) and 1 warning (issue 6)
+    # Errors take precedence, so exit code should be 1
+    assert exc_info.value.code == 1, "Should exit with code 1 due to errors"
+
+
+def test_full_workflow_integration_warnings_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Test end-to-end workflow with only warnings (no errors).
+
+    This test verifies exit code 2 when only warnings are present.
+    """
+    import json
+    import sys
+
+    from workflows.validate_labels import main
+
+    # Create git repo structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    config_dir = tmp_path / "workflows" / "config"
+    config_dir.mkdir(parents=True)
+
+    # Create minimal config
+    labels_config = {
+        "workflow_labels": [
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            }
+        ],
+        "ignore_labels": [],
+    }
+    (config_dir / "labels.json").write_text(json.dumps(labels_config))
+
+    # Mock arguments
+    monkeypatch.setattr(
+        "sys.argv", ["validate_labels.py", "--project-dir", str(tmp_path), "--dry-run"]
+    )
+
+    # Create stale bot_busy issue (WARNING only)
+    from datetime import datetime, timedelta, timezone
+
+    past_stale = datetime.now(timezone.utc) - timedelta(minutes=20)
+    stale_timestamp = past_stale.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    mock_issues = [
+        {
+            "number": 1,
+            "title": "Stale planning",
+            "labels": ["status-03:planning"],
+        }
+    ]
+
+    mock_event = {
+        "event": "labeled",
+        "label": "status-03:planning",
+        "created_at": stale_timestamp,
+        "actor": "testuser",
+    }
+
+    # Create mock IssueManager
+    class MockIssueManager:
+        def __init__(self, project_dir: Any) -> None:
+            pass
+
+        def list_issues(
+            self, state: str = "open", include_pull_requests: bool = False
+        ) -> list[dict[str, Any]]:
+            return mock_issues
+
+        def get_issue_events(self, issue_number: int) -> list[dict[str, Any]]:
+            return [mock_event]
+
+    # Mock get_github_repository_url
+    def mock_get_repo_url(project_dir: Any) -> str:
+        return "https://github.com/test/repo"
+
+    # Apply mocks
+    monkeypatch.setattr("workflows.validate_labels.IssueManager", MockIssueManager)
+    monkeypatch.setattr(
+        "workflows.validate_labels.get_github_repository_url", mock_get_repo_url
+    )
+
+    # Run main()
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    # Should exit with code 2 (warnings only, no errors)
+    assert exc_info.value.code == 2, "Should exit with code 2 for warnings only"
+
+
+def test_full_workflow_integration_success(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Test end-to-end workflow with all issues OK.
+
+    This test verifies exit code 0 when no errors or warnings are found.
+    """
+    import json
+    import sys
+
+    from workflows.validate_labels import main
+
+    # Create git repo structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    config_dir = tmp_path / "workflows" / "config"
+    config_dir.mkdir(parents=True)
+
+    # Create minimal config
+    labels_config = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ],
+        "ignore_labels": [],
+    }
+    (config_dir / "labels.json").write_text(json.dumps(labels_config))
+
+    # Mock arguments
+    monkeypatch.setattr(
+        "sys.argv", ["validate_labels.py", "--project-dir", str(tmp_path)]
+    )
+
+    # Create issues that are all OK
+    mock_issues = [
+        {
+            "number": 1,
+            "title": "Issue 1",
+            "labels": ["status-01:created"],
+        },
+        {
+            "number": 2,
+            "title": "Issue 2",
+            "labels": ["status-01:created", "bug"],
+        },
+    ]
+
+    # Create mock IssueManager
+    class MockIssueManager:
+        def __init__(self, project_dir: Any) -> None:
+            pass
+
+        def list_issues(
+            self, state: str = "open", include_pull_requests: bool = False
+        ) -> list[dict[str, Any]]:
+            return mock_issues
+
+    # Mock get_github_repository_url
+    def mock_get_repo_url(project_dir: Any) -> str:
+        return "https://github.com/test/repo"
+
+    # Apply mocks
+    monkeypatch.setattr("workflows.validate_labels.IssueManager", MockIssueManager)
+    monkeypatch.setattr(
+        "workflows.validate_labels.get_github_repository_url", mock_get_repo_url
+    )
+
+    # Run main()
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    # Should exit with code 0 (success)
+    assert exc_info.value.code == 0, "Should exit with code 0 for success"
