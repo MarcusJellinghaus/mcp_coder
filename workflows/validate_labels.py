@@ -199,6 +199,146 @@ def check_stale_bot_process(
     return (is_stale, elapsed)
 
 
+def process_issues(
+    issues: List[IssueData],
+    labels_config: Dict[str, Any],
+    issue_manager: IssueManager,
+    dry_run: bool = False
+) -> Dict[str, Any]:
+    """Process all issues and collect validation results.
+    
+    Args:
+        issues: List of issues to process
+        labels_config: Label configuration
+        issue_manager: IssueManager for API operations
+        dry_run: If True, don't make any changes
+        
+    Returns:
+        Results dictionary with structure:
+        {
+            "processed": 123,
+            "skipped": 5,
+            "initialized": [issue_numbers],
+            "errors": [{"issue": 45, "labels": ["label1", "label2"]}],
+            "warnings": [{"issue": 67, "label": "planning", "elapsed": 20}],
+            "ok": [issue_numbers]
+        }
+        
+    Note:
+        - Logs API call count at DEBUG level (Decision #10)
+        - Filters out issues with ANY ignore label (Decision #3)
+    """
+    # Build label lookups
+    label_lookups = build_label_lookups(labels_config)
+    workflow_label_names = label_lookups["all_names"]
+    name_to_category = label_lookups["name_to_category"]
+    name_to_id = label_lookups["name_to_id"]
+    id_to_name = label_lookups["id_to_name"]
+    
+    # Get ignore labels from config
+    ignore_labels = set(labels_config.get("ignore_labels", []))
+    
+    # Initialize API call counter
+    api_call_count = 0
+    
+    # Initialize results dictionary
+    results: Dict[str, Any] = {
+        "processed": 0,
+        "skipped": 0,
+        "initialized": [],
+        "errors": [],
+        "warnings": [],
+        "ok": []
+    }
+    
+    # Process each issue
+    for issue in issues:
+        issue_number = issue["number"]
+        issue_labels = set(issue["labels"])
+        
+        # Filter out issues with ANY ignore label (Decision #3)
+        if ignore_labels & issue_labels:
+            logger.debug(f"Issue #{issue_number}: Skipped (has ignore label)")
+            results["skipped"] += 1
+            continue
+        
+        # Check status label count
+        count, status_labels = check_status_labels(issue, workflow_label_names)
+        
+        # Case 1: No status labels - initialize with "created"
+        if count == 0:
+            logger.info(f"Issue #{issue_number}: Initializing with 'created' label")
+            if not dry_run:
+                try:
+                    # Get the "created" label name
+                    created_label_name = id_to_name.get("created", "status-01:created")
+                    issue_manager.add_labels(issue_number, [created_label_name])
+                    logger.debug(f"Issue #{issue_number}: Added label '{created_label_name}'")
+                except GithubException as e:
+                    logger.error(f"Issue #{issue_number}: Failed to add label - {e}")
+                    # Let exception propagate per Decision #1
+                    raise
+            else:
+                logger.debug(f"Issue #{issue_number}: DRY RUN - would add 'created' label")
+            results["initialized"].append(issue_number)
+            results["processed"] += 1
+            
+        # Case 2: Exactly one status label - check if bot_busy and check for staleness
+        elif count == 1:
+            label_name = status_labels[0]
+            category = name_to_category.get(label_name, "")
+            internal_id = name_to_id.get(label_name, "")
+            
+            # Check if this is a bot_busy label
+            if category == "bot_busy":
+                # Check if stale (this makes an API call)
+                try:
+                    is_stale, elapsed = check_stale_bot_process(
+                        issue, label_name, internal_id, issue_manager
+                    )
+                    api_call_count += 1
+                    
+                    if is_stale and elapsed is not None:
+                        logger.warning(
+                            f"Issue #{issue_number}: Stale bot process - "
+                            f"'{label_name}' for {elapsed} minutes"
+                        )
+                        results["warnings"].append({
+                            "issue": issue_number,
+                            "label": label_name,
+                            "elapsed": elapsed
+                        })
+                    else:
+                        logger.info(f"Issue #{issue_number}: OK - '{label_name}'")
+                        results["ok"].append(issue_number)
+                except GithubException as e:
+                    logger.error(f"Issue #{issue_number}: API error checking staleness - {e}")
+                    # Let exception propagate per Decision #1
+                    raise
+            else:
+                # Not a bot_busy label, just mark as OK
+                logger.info(f"Issue #{issue_number}: OK - '{label_name}'")
+                results["ok"].append(issue_number)
+            
+            results["processed"] += 1
+            
+        # Case 3: Multiple status labels - ERROR condition
+        else:
+            logger.error(
+                f"Issue #{issue_number}: Multiple status labels - {status_labels}"
+            )
+            results["errors"].append({
+                "issue": issue_number,
+                "labels": status_labels
+            })
+            results["processed"] += 1
+    
+    # Log API call count at DEBUG level (Decision #10)
+    logger.debug(f"API calls made: {api_call_count}")
+    
+    return results
+
+
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments including project directory and log level.
     

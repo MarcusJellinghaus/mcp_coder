@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_manager import EventData, IssueData
+from mcp_coder.utils.github_operations import EventData, IssueData
 from workflows.validate_labels import (
     STALE_TIMEOUTS,
     build_label_lookups,
@@ -886,3 +886,486 @@ def test_check_stale_bot_process_filters_unlabeled_events() -> None:
     # Should return (False, None) since no "labeled" events found
     assert is_stale is False
     assert elapsed is None
+
+
+def test_process_issues_empty_list() -> None:
+    """Test process_issues with empty issue list."""
+    from workflows.validate_labels import process_issues
+
+    # Create minimal config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create mock issue manager
+    mock_manager = Mock()
+
+    # Process empty list
+    results = process_issues([], labels_config, mock_manager, dry_run=False)
+
+    # Should have zero counts
+    assert results["processed"] == 0
+    assert results["skipped"] == 0
+    assert len(results["initialized"]) == 0
+    assert len(results["errors"]) == 0
+    assert len(results["warnings"]) == 0
+    assert len(results["ok"]) == 0
+
+
+def test_process_issues_single_issue_needs_initialization() -> None:
+    """Test process_issues with issue needing initialization."""
+    from workflows.validate_labels import process_issues
+
+    # Create config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue with no workflow labels
+    issues: list[IssueData] = [
+        cast(
+            IssueData,
+            {"number": 123, "title": "Test issue", "labels": ["bug", "enhancement"]},
+        )
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.add_labels = Mock()
+
+    # Process issues (not dry-run)
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Verify results
+    assert results["processed"] == 1
+    assert results["skipped"] == 0
+    assert results["initialized"] == [123]
+    assert len(results["errors"]) == 0
+    assert len(results["warnings"]) == 0
+    assert len(results["ok"]) == 0
+
+    # Verify add_labels was called
+    mock_manager.add_labels.assert_called_once_with(123, ["status-01:created"])
+
+
+def test_process_issues_dry_run_mode() -> None:
+    """Test process_issues in dry-run mode doesn't make changes."""
+    from workflows.validate_labels import process_issues
+
+    # Create config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue with no workflow labels
+    issues: list[IssueData] = [
+        cast(IssueData, {"number": 456, "title": "Test issue", "labels": ["bug"]})
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.add_labels = Mock()
+
+    # Process issues in dry-run mode
+    results = process_issues(issues, labels_config, mock_manager, dry_run=True)
+
+    # Verify results
+    assert results["processed"] == 1
+    assert results["initialized"] == [456]
+
+    # Verify add_labels was NOT called
+    mock_manager.add_labels.assert_not_called()
+
+
+def test_process_issues_with_ignore_labels() -> None:
+    """Test process_issues filters issues with ignore labels."""
+    from workflows.validate_labels import process_issues
+
+    # Create config with ignore labels
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ],
+        "ignore_labels": ["wontfix", "duplicate"],
+    }
+
+    # Create issues, some with ignore labels
+    issues: list[IssueData] = [
+        cast(
+            IssueData, {"number": 1, "title": "Issue 1", "labels": ["bug", "wontfix"]}
+        ),
+        cast(IssueData, {"number": 2, "title": "Issue 2", "labels": ["duplicate"]}),
+        cast(IssueData, {"number": 3, "title": "Issue 3", "labels": ["bug"]}),
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.add_labels = Mock()
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Verify only issue 3 was processed
+    assert results["processed"] == 1
+    assert results["skipped"] == 2
+    assert results["initialized"] == [3]
+
+    # Verify add_labels was called only once for issue 3
+    mock_manager.add_labels.assert_called_once_with(3, ["status-01:created"])
+
+
+def test_process_issues_with_multiple_status_labels() -> None:
+    """Test process_issues detects issues with multiple status labels (error)."""
+    from workflows.validate_labels import process_issues
+
+    # Create config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            },
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            },
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue with multiple status labels
+    issues: list[IssueData] = [
+        cast(
+            IssueData,
+            {
+                "number": 789,
+                "title": "Test issue",
+                "labels": ["bug", "status-01:created", "status-03:planning"],
+            },
+        )
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Verify error detected
+    assert results["processed"] == 1
+    assert len(results["errors"]) == 1
+    assert results["errors"][0]["issue"] == 789
+    assert "status-01:created" in results["errors"][0]["labels"]
+    assert "status-03:planning" in results["errors"][0]["labels"]
+
+
+def test_process_issues_with_ok_status() -> None:
+    """Test process_issues with issue that's OK (human_action label)."""
+    from workflows.validate_labels import process_issues
+
+    # Create config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue with one human_action label
+    issues: list[IssueData] = [
+        cast(
+            IssueData,
+            {
+                "number": 100,
+                "title": "Test issue",
+                "labels": ["bug", "status-01:created"],
+            },
+        )
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Verify issue marked as OK
+    assert results["processed"] == 1
+    assert results["ok"] == [100]
+    assert len(results["errors"]) == 0
+    assert len(results["warnings"]) == 0
+
+
+def test_process_issues_with_stale_bot_process() -> None:
+    """Test process_issues detects stale bot_busy labels (warning)."""
+    from workflows.validate_labels import process_issues
+
+    # Create config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue with bot_busy label
+    issues: list[IssueData] = [
+        cast(
+            IssueData,
+            {
+                "number": 200,
+                "title": "Test issue",
+                "labels": ["status-03:planning"],
+            },
+        )
+    ]
+
+    # Create event from 20 minutes ago (exceeds 15 minute planning timeout)
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=20)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-03:planning",
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        )
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Verify warning generated
+    assert results["processed"] == 1
+    assert len(results["warnings"]) == 1
+    assert results["warnings"][0]["issue"] == 200
+    assert results["warnings"][0]["label"] == "status-03:planning"
+    assert 19 <= results["warnings"][0]["elapsed"] <= 21
+
+    # Verify get_issue_events was called
+    mock_manager.get_issue_events.assert_called_once_with(200)
+
+
+def test_process_issues_with_not_stale_bot_process() -> None:
+    """Test process_issues with bot_busy label within timeout (OK)."""
+    from workflows.validate_labels import process_issues
+
+    # Create config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            }
+        ],
+        "ignore_labels": [],
+    }
+
+    # Create issue with bot_busy label
+    issues: list[IssueData] = [
+        cast(
+            IssueData,
+            {
+                "number": 300,
+                "title": "Test issue",
+                "labels": ["status-03:planning"],
+            },
+        )
+    ]
+
+    # Create event from 10 minutes ago (within 15 minute planning timeout)
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-03:planning",
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        )
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Verify issue marked as OK
+    assert results["processed"] == 1
+    assert results["ok"] == [300]
+    assert len(results["warnings"]) == 0
+
+    # Verify get_issue_events was called
+    mock_manager.get_issue_events.assert_called_once_with(300)
+
+
+def test_process_issues_mixed_scenarios() -> None:
+    """Test process_issues with multiple issues in various states."""
+    from workflows.validate_labels import process_issues
+
+    # Create comprehensive config
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            },
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            },
+            {
+                "internal_id": "implementing",
+                "name": "status-06:implementing",
+                "category": "bot_busy",
+            },
+        ],
+        "ignore_labels": ["wontfix"],
+    }
+
+    # Create various issues
+    issues: list[IssueData] = [
+        # Issue 1: Needs initialization
+        cast(IssueData, {"number": 1, "title": "Issue 1", "labels": ["bug"]}),
+        # Issue 2: Has ignore label
+        cast(IssueData, {"number": 2, "title": "Issue 2", "labels": ["wontfix"]}),
+        # Issue 3: Multiple status labels (error)
+        cast(
+            IssueData,
+            {
+                "number": 3,
+                "title": "Issue 3",
+                "labels": ["status-01:created", "status-03:planning"],
+            },
+        ),
+        # Issue 4: OK with human_action label
+        cast(
+            IssueData,
+            {"number": 4, "title": "Issue 4", "labels": ["status-01:created"]},
+        ),
+        # Issue 5: Stale bot process
+        cast(
+            IssueData,
+            {"number": 5, "title": "Issue 5", "labels": ["status-03:planning"]},
+        ),
+        # Issue 6: Not stale bot process
+        cast(
+            IssueData,
+            {"number": 6, "title": "Issue 6", "labels": ["status-06:implementing"]},
+        ),
+    ]
+
+    # Create mock events for issues 5 and 6
+    stale_time = datetime.now(timezone.utc) - timedelta(minutes=20)  # Stale
+    not_stale_time = datetime.now(timezone.utc) - timedelta(minutes=30)  # Not stale
+
+    stale_timestamp = stale_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+    not_stale_timestamp = not_stale_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.add_labels = Mock()
+
+    # Setup get_issue_events to return different events per issue
+    def mock_get_events(issue_number: int) -> list[EventData]:
+        if issue_number == 5:
+            # Stale planning (20 minutes > 15 minute timeout)
+            return [
+                cast(
+                    EventData,
+                    {
+                        "event": "labeled",
+                        "label": "status-03:planning",
+                        "created_at": stale_timestamp,
+                        "actor": "testuser",
+                    },
+                )
+            ]
+        elif issue_number == 6:
+            # Not stale implementing (30 minutes < 60 minute timeout)
+            return [
+                cast(
+                    EventData,
+                    {
+                        "event": "labeled",
+                        "label": "status-06:implementing",
+                        "created_at": not_stale_timestamp,
+                        "actor": "testuser",
+                    },
+                )
+            ]
+        return []
+
+    mock_manager.get_issue_events = Mock(side_effect=mock_get_events)
+
+    # Process issues in dry-run mode to avoid actual API calls
+    results = process_issues(issues, labels_config, mock_manager, dry_run=True)
+
+    # Verify results
+    assert results["processed"] == 5  # All except ignored issue 2
+    assert results["skipped"] == 1  # Issue 2
+    assert results["initialized"] == [1]  # Issue 1
+    assert len(results["errors"]) == 1  # Issue 3
+    assert results["errors"][0]["issue"] == 3
+    assert len(results["warnings"]) == 1  # Issue 5
+    assert results["warnings"][0]["issue"] == 5
+    assert 4 in results["ok"]  # Issue 4
+    assert 6 in results["ok"]  # Issue 6
+
+    # Verify add_labels was NOT called (dry-run mode)
+    mock_manager.add_labels.assert_not_called()
+
+    # Verify get_issue_events was called for issues 5 and 6 (bot_busy labels)
+    assert mock_manager.get_issue_events.call_count == 2
