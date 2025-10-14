@@ -39,7 +39,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Create workflows/validate_labels.py with proper imports and structure
 - [x] Define STALE_TIMEOUTS constant dict at module level
-- [ ] Implement parse_arguments() with --project-dir, --log-level, --dry-run
+- [x] Implement parse_arguments() with --project-dir, --log-level, --dry-run
 - [ ] Implement main() function with basic setup (parse, logging, load config, fetch issues)
 - [ ] Create tests/workflows/test_validate_labels.py with initial tests
 - [ ] Test script runs with --help flag
