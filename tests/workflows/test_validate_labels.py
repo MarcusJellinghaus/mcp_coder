@@ -2325,3 +2325,106 @@ def test_main_exit_code_errors_take_precedence_over_warnings(
     assert (
         exc_info.value.code == 1
     ), "Should exit with code 1 when both errors and warnings exist (errors take precedence)"
+
+
+def test_process_issues_respects_overview_ignore_label() -> None:
+    """Test that issues with 'Overview' label are skipped (integration test).
+
+    This test verifies the complete ignore_labels functionality using the
+    actual 'Overview' label from the production config file.
+    """
+    from workflows.validate_labels import process_issues
+
+    # Create config matching production labels.json with "Overview" ignore label
+    labels_config: dict[str, Any] = {
+        "workflow_labels": [
+            {
+                "internal_id": "created",
+                "name": "status-01:created",
+                "category": "human_action",
+            },
+            {
+                "internal_id": "planning",
+                "name": "status-03:planning",
+                "category": "bot_busy",
+            },
+        ],
+        "ignore_labels": ["Overview"],  # Production config uses "Overview"
+    }
+
+    # Create test issues including ones with Overview label
+    issues: list[IssueData] = [
+        # Issue 1: Has "Overview" label - should be SKIPPED
+        cast(
+            IssueData,
+            {
+                "number": 1,
+                "title": "Project Overview",
+                "labels": ["Overview"],
+            },
+        ),
+        # Issue 2: Has "Overview" + other labels - should still be SKIPPED
+        cast(
+            IssueData,
+            {
+                "number": 2,
+                "title": "Feature Overview",
+                "labels": ["Overview", "enhancement", "documentation"],
+            },
+        ),
+        # Issue 3: Has "Overview" + status label - should still be SKIPPED
+        # (ignore takes precedence even if it has a valid status label)
+        cast(
+            IssueData,
+            {
+                "number": 3,
+                "title": "Planning Overview",
+                "labels": ["Overview", "status-01:created"],
+            },
+        ),
+        # Issue 4: Normal issue without Overview - should be PROCESSED
+        cast(
+            IssueData,
+            {
+                "number": 4,
+                "title": "Regular Issue",
+                "labels": ["bug"],
+            },
+        ),
+        # Issue 5: Another normal issue - should be PROCESSED
+        cast(
+            IssueData,
+            {
+                "number": 5,
+                "title": "Another Issue",
+                "labels": ["status-01:created"],
+            },
+        ),
+    ]
+
+    # Create mock issue manager
+    mock_manager = Mock()
+    mock_manager.add_labels = Mock()
+
+    # Process issues
+    results = process_issues(issues, labels_config, mock_manager, dry_run=False)
+
+    # Verify Overview issues were skipped
+    assert results["skipped"] == 3, "Should skip 3 issues with Overview label"
+    assert results["processed"] == 2, "Should process 2 issues without Overview label"
+
+    # Verify only non-Overview issues were processed
+    assert 4 in results["initialized"], "Issue 4 should be initialized"
+    assert 5 in results["ok"], "Issue 5 should be OK"
+
+    # Verify Overview issues were NOT in any results
+    assert (
+        1 not in results["initialized"]
+    ), "Issue 1 with Overview should not be initialized"
+    assert (
+        2 not in results["initialized"]
+    ), "Issue 2 with Overview should not be initialized"
+    assert 3 not in results["ok"], "Issue 3 with Overview should not be OK"
+
+    # Verify add_labels was only called for issue 4 (issue 5 already has status)
+    mock_manager.add_labels.assert_called_once_with(4, ["status-01:created"])
