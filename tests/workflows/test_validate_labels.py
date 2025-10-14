@@ -4,9 +4,15 @@ Unit tests for workflows/validate_labels.py module.
 Tests cover argument parsing, STALE_TIMEOUTS constant, and basic setup logic.
 """
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
-from workflows.validate_labels import STALE_TIMEOUTS, parse_arguments
+from workflows.validate_labels import (
+    STALE_TIMEOUTS,
+    calculate_elapsed_minutes,
+    parse_arguments,
+)
 
 
 def test_stale_timeouts_defined() -> None:
@@ -77,3 +83,75 @@ def test_parse_arguments_all_options(monkeypatch: pytest.MonkeyPatch) -> None:
     assert args.project_dir == "/test/path"
     assert args.log_level == "ERROR"
     assert args.dry_run is True
+
+
+def test_calculate_elapsed_minutes_with_z_suffix() -> None:
+    """Test calculate_elapsed_minutes with 'Z' suffix timestamp."""
+    # Create a timestamp 30 minutes ago
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=30)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    elapsed = calculate_elapsed_minutes(timestamp_str)
+
+    # Should be approximately 30 minutes (allow ±1 minute for test execution time)
+    assert 29 <= elapsed <= 31
+
+
+def test_calculate_elapsed_minutes_without_z_suffix() -> None:
+    """Test calculate_elapsed_minutes with UTC offset format."""
+    # Create a timestamp 45 minutes ago
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=45)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "+00:00"
+
+    elapsed = calculate_elapsed_minutes(timestamp_str)
+
+    # Should be approximately 45 minutes (allow ±1 minute for test execution time)
+    assert 44 <= elapsed <= 46
+
+
+def test_calculate_elapsed_minutes_recent_timestamp() -> None:
+    """Test calculate_elapsed_minutes with very recent timestamp."""
+    # Create a timestamp just a few seconds ago
+    past_time = datetime.now(timezone.utc) - timedelta(seconds=30)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    elapsed = calculate_elapsed_minutes(timestamp_str)
+
+    # Should be 0 minutes (30 seconds rounds down to 0)
+    assert elapsed == 0
+
+
+def test_calculate_elapsed_minutes_one_hour_ago() -> None:
+    """Test calculate_elapsed_minutes with timestamp one hour ago."""
+    # Create a timestamp 60 minutes ago
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=60)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    elapsed = calculate_elapsed_minutes(timestamp_str)
+
+    # Should be approximately 60 minutes (allow ±1 minute for test execution time)
+    assert 59 <= elapsed <= 61
+
+
+def test_calculate_elapsed_minutes_multiple_hours() -> None:
+    """Test calculate_elapsed_minutes with timestamp several hours ago."""
+    # Create a timestamp 150 minutes (2.5 hours) ago
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=150)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    elapsed = calculate_elapsed_minutes(timestamp_str)
+
+    # Should be approximately 150 minutes (allow ±1 minute for test execution time)
+    assert 149 <= elapsed <= 151
+
+
+def test_calculate_elapsed_minutes_with_microseconds() -> None:
+    """Test calculate_elapsed_minutes with timestamp containing microseconds."""
+    # Create a timestamp 20 minutes ago with microseconds
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=20)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+
+    elapsed = calculate_elapsed_minutes(timestamp_str)
+
+    # Should be approximately 20 minutes (allow ±1 minute for test execution time)
+    assert 19 <= elapsed <= 21

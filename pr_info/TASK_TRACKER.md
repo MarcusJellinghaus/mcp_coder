@@ -52,7 +52,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [Details: pr_info/steps/step_3.md](steps/step_3.md)
 
 - [x] Add LabelLookups TypedDict at module level
-- [ ] Implement calculate_elapsed_minutes() helper function
+- [x] Implement calculate_elapsed_minutes() helper function
 - [ ] Implement build_label_lookups() to create lookup structures
 - [ ] Implement check_status_labels() to count workflow labels
 - [ ] Implement check_stale_bot_process() with event timeline checking

@@ -9,6 +9,7 @@ missing status labels to ensure consistent workflow state.
 import argparse
 import logging
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict
 
@@ -38,6 +39,32 @@ STALE_TIMEOUTS = {
     "planning": 15,
     "pr_creating": 15
 }
+
+
+def calculate_elapsed_minutes(timestamp_str: str) -> int:
+    """Calculate minutes elapsed since given ISO timestamp.
+    
+    Args:
+        timestamp_str: ISO format timestamp string (may have 'Z' suffix)
+        
+    Returns:
+        Integer minutes elapsed since the timestamp
+        
+    Example:
+        >>> elapsed = calculate_elapsed_minutes("2025-10-14T10:30:00Z")
+        >>> print(f"Elapsed: {elapsed} minutes")
+    """
+    # Handle 'Z' suffix by replacing with UTC offset
+    cleaned_timestamp = timestamp_str.replace('Z', '+00:00')
+    
+    # Parse ISO format timestamp
+    timestamp = datetime.fromisoformat(cleaned_timestamp)
+    
+    # Calculate elapsed time
+    elapsed_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
+    
+    # Convert to minutes and return as integer
+    return int(elapsed_seconds / 60)
 
 
 def parse_arguments() -> argparse.Namespace:
