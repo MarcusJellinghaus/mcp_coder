@@ -5,6 +5,7 @@ GitHub issues through the PyGithub library.
 """
 
 import logging
+from enum import Enum
 from pathlib import Path
 from typing import List, Optional, TypedDict
 

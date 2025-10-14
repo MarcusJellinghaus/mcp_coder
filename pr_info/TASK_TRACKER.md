@@ -24,7 +24,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Extend IssueManager with Events API Support
 [Details: pr_info/steps/step_1.md](steps/step_1.md)
 
-- [ ] Add `from enum import Enum` to imports in issue_manager.py
+- [x] Add `from enum import Enum` to imports in issue_manager.py
 - [ ] Add IssueEventType enum after imports, before TypedDicts (around line 50)
 - [ ] Add EventData TypedDict after LabelData (around line 90)
 - [ ] Implement get_issue_events() method at end of IssueManager class
