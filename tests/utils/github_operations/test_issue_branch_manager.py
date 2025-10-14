@@ -383,17 +383,15 @@ class TestCreateLinkedBranch:
         # Mock get_linked_branches to return empty (no existing branches)
         mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
-        # Mock GraphQL mutation response
+        # Mock GraphQL mutation response (PyGithub unwraps the 'data' wrapper)
         mock_response = {
-            "data": {
-                "createLinkedBranch": {
-                    "linkedBranch": {
-                        "id": "LB_kwDOABCDEF",
-                        "ref": {
-                            "name": "123-add-new-feature",
-                            "target": {"oid": "abc123def456"},
-                        },
-                    }
+            "createLinkedBranch": {
+                "linkedBranch": {
+                    "id": "LB_kwDOABCDEF",
+                    "ref": {
+                        "name": "123-add-new-feature",
+                        "target": {"oid": "abc123def456"},
+                    },
                 }
             }
         }
@@ -441,17 +439,15 @@ class TestCreateLinkedBranch:
         # Mock get_linked_branches to return empty
         mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
-        # Mock GraphQL mutation response
+        # Mock GraphQL mutation response (PyGithub unwraps the 'data' wrapper)
         mock_response = {
-            "data": {
-                "createLinkedBranch": {
-                    "linkedBranch": {
-                        "id": "LB_kwDOABCDEF",
-                        "ref": {
-                            "name": "custom-branch-name",
-                            "target": {"oid": "abc123def456"},
-                        },
-                    }
+            "createLinkedBranch": {
+                "linkedBranch": {
+                    "id": "LB_kwDOABCDEF",
+                    "ref": {
+                        "name": "custom-branch-name",
+                        "target": {"oid": "abc123def456"},
+                    },
                 }
             }
         }
@@ -495,17 +491,15 @@ class TestCreateLinkedBranch:
         # Mock get_linked_branches to return empty
         mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
 
-        # Mock GraphQL mutation response
+        # Mock GraphQL mutation response (PyGithub unwraps the 'data' wrapper)
         mock_response = {
-            "data": {
-                "createLinkedBranch": {
-                    "linkedBranch": {
-                        "id": "LB_kwDOABCDEF",
-                        "ref": {
-                            "name": "123-add-new-feature",
-                            "target": {"oid": "xyz789abc123"},
-                        },
-                    }
+            "createLinkedBranch": {
+                "linkedBranch": {
+                    "id": "LB_kwDOABCDEF",
+                    "ref": {
+                        "name": "123-add-new-feature",
+                        "target": {"oid": "xyz789abc123"},
+                    },
                 }
             }
         }
@@ -577,17 +571,15 @@ class TestCreateLinkedBranch:
         # Mock get_linked_branches to return existing branch
         mock_manager.get_linked_branches = Mock(return_value=["123-existing-branch"])  # type: ignore[method-assign]
 
-        # Mock GraphQL mutation response
+        # Mock GraphQL mutation response (PyGithub unwraps the 'data' wrapper)
         mock_response = {
-            "data": {
-                "createLinkedBranch": {
-                    "linkedBranch": {
-                        "id": "LB_kwDOABCDEF",
-                        "ref": {
-                            "name": "123-second-branch",
-                            "target": {"oid": "abc123def456"},
-                        },
-                    }
+            "createLinkedBranch": {
+                "linkedBranch": {
+                    "id": "LB_kwDOABCDEF",
+                    "ref": {
+                        "name": "123-second-branch",
+                        "target": {"oid": "abc123def456"},
+                    },
                 }
             }
         }
@@ -773,6 +765,64 @@ class TestCreateLinkedBranch:
         # Verify result - should fail gracefully
         assert result["success"] is False
         assert result["error"] is not None
+
+    def test_graphql_response_format_correct_parsing(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Test that PyGithub's response format (without 'data' wrapper) is parsed correctly.
+        
+        This test verifies the fix for issue #110 where the code incorrectly expected
+        the response to be wrapped in a 'data' key, but PyGithub's graphql_named_mutation
+        already unwraps it.
+        """
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.node_id = "R_kgDOPpBE2w"
+        mock_repo.default_branch = "main"
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        # Mock issue
+        mock_issue = Mock()
+        mock_issue.node_id = "I_kwDOPpBE287Px0Dx"
+        mock_issue.title = "Validate and Reset GitHub Issue Labels"
+        mock_repo.get_issue = Mock(return_value=mock_issue)
+
+        # Mock branch for getting base SHA
+        mock_branch = Mock()
+        mock_branch.commit.sha = "28e6978c9bf83797ea4a0825ed042a76e2fc2636"
+        mock_repo.get_branch = Mock(return_value=mock_branch)
+
+        # Mock get_linked_branches to return empty
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
+
+        # Mock GraphQL mutation response - EXACTLY as PyGithub returns it (without 'data' wrapper)
+        # This is the actual format from the logs in issue #110
+        mock_response = {
+            "createLinkedBranch": {
+                "linkedBranch": {
+                    "id": "LB_kwDOz8dA8c4ApN7w",
+                    "ref": {
+                        "name": "110-validate-and-reset-github-issue-labels",
+                        "target": {"oid": "28e6978c9bf83797ea4a0825ed042a76e2fc2636"},
+                    },
+                }
+            }
+        }
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_named_mutation = Mock(  # type: ignore[attr-defined]
+            return_value=({}, mock_response)
+        )
+
+        # Test - this should now succeed with the fix
+        result = mock_manager.create_remote_branch_for_issue(110)
+
+        # Verify result - should succeed
+        assert result["success"] is True
+        assert result["branch_name"] == "110-validate-and-reset-github-issue-labels"
+        assert result["error"] is None
+        assert result["existing_branches"] == []
 
 
 class TestDeleteLinkedBranch:
