@@ -57,7 +57,9 @@ def issue_manager(
 class TestIssueManagerIntegration:
     """Integration tests for IssueManager with GitHub API."""
 
-    def test_complete_issue_workflow(self, issue_manager: IssueManager) -> None:
+    def test_complete_issue_workflow(  # pylint: disable=too-many-statements
+        self, issue_manager: IssueManager
+    ) -> None:
         """Comprehensive test of ALL issue operations on a SINGLE issue.
 
         This single test exercises the complete IssueManager API:

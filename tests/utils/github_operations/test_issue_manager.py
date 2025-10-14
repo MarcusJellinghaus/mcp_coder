@@ -1467,3 +1467,267 @@ class TestIssueManagerUnit:
 
             with pytest.raises(GithubException):
                 manager.delete_comment(123, 456789)
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_default_parameters(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test list_issues with default parameters (open, no PRs)."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock label objects
+        mock_label = MagicMock()
+        mock_label.name = "bug"
+
+        # Mock issue (not a PR)
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "Test description"
+        mock_issue.state = "open"
+        mock_issue.labels = [mock_label]
+        mock_issue.assignees = []
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+        mock_issue.pull_request = None  # Not a PR
+
+        # Mock PR (should be filtered out)
+        mock_pr = MagicMock()
+        mock_pr.number = 124
+        mock_pr.title = "Test PR"
+        mock_pr.body = "PR description"
+        mock_pr.state = "open"
+        mock_pr.labels = []
+        mock_pr.assignees = []
+        mock_pr.html_url = "https://github.com/test/repo/pull/124"
+        mock_pr.created_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+        mock_pr.updated_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+        mock_pr.user.login = "testuser"
+        mock_pr.locked = False
+        mock_pr.pull_request = MagicMock()  # This is a PR
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.return_value = [mock_issue, mock_pr]
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.list_issues()
+
+            assert len(result) == 1
+            assert result[0]["number"] == 123
+            assert result[0]["title"] == "Test Issue"
+            assert result[0]["labels"] == ["bug"]
+
+            mock_repo.get_issues.assert_called_once_with(state="open")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_open_only(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test list_issues filters by state='open'."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock open issue
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Open Issue"
+        mock_issue.body = "Description"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+        mock_issue.pull_request = None
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.return_value = [mock_issue]
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.list_issues(state="open")
+
+            assert len(result) == 1
+            assert result[0]["state"] == "open"
+
+            mock_repo.get_issues.assert_called_once_with(state="open")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_include_pull_requests(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test list_issues includes PRs when flag=True."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock issue
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "Issue description"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+        mock_issue.pull_request = None
+
+        # Mock PR
+        mock_pr = MagicMock()
+        mock_pr.number = 124
+        mock_pr.title = "Test PR"
+        mock_pr.body = "PR description"
+        mock_pr.state = "open"
+        mock_pr.labels = []
+        mock_pr.assignees = []
+        mock_pr.html_url = "https://github.com/test/repo/pull/124"
+        mock_pr.created_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+        mock_pr.updated_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+        mock_pr.user.login = "testuser"
+        mock_pr.locked = False
+        mock_pr.pull_request = MagicMock()  # This is a PR
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.return_value = [mock_issue, mock_pr]
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.list_issues(include_pull_requests=True)
+
+            assert len(result) == 2
+            assert result[0]["number"] == 123
+            assert result[1]["number"] == 124
+
+            mock_repo.get_issues.assert_called_once_with(state="open")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_pagination_handled(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test list_issues handles GitHub API pagination."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Create 35 mock issues to simulate pagination
+        mock_issues = []
+        for i in range(35):
+            mock_issue = MagicMock()
+            mock_issue.number = i + 1
+            mock_issue.title = f"Issue {i + 1}"
+            mock_issue.body = f"Description {i + 1}"
+            mock_issue.state = "open"
+            mock_issue.labels = []
+            mock_issue.assignees = []
+            mock_issue.html_url = f"https://github.com/test/repo/issues/{i + 1}"
+            mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+            mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+            mock_issue.user.login = "testuser"
+            mock_issue.locked = False
+            mock_issue.pull_request = None
+            mock_issues.append(mock_issue)
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.return_value = mock_issues
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.list_issues()
+
+            assert len(result) == 35
+            assert result[0]["number"] == 1
+            assert result[34]["number"] == 35
+
+            mock_repo.get_issues.assert_called_once_with(state="open")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_empty_repository(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test list_issues returns empty list for repo with no issues."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.return_value = []
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.list_issues()
+
+            assert result == []
+            mock_repo.get_issues.assert_called_once_with(state="open")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_github_error_handling(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test list_issues handles GitHub API errors gracefully."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.side_effect = GithubException(
+            500, {"message": "Server error"}, None
+        )
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            # Non-auth errors should be handled gracefully and return empty list
+            result = manager.list_issues()
+            assert result == []

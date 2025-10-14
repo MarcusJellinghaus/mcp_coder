@@ -40,19 +40,13 @@ class TaskInfo:
 class TaskTrackerError(Exception):
     """Base exception for task tracker issues."""
 
-    pass
-
 
 class TaskTrackerFileNotFoundError(TaskTrackerError):
     """TASK_TRACKER.md file not found."""
 
-    pass
-
 
 class TaskTrackerSectionNotFoundError(TaskTrackerError):
     """Implementation Steps section not found."""
-
-    pass
 
 
 def _read_task_tracker(folder_path: str) -> str:

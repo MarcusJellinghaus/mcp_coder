@@ -300,11 +300,17 @@ class IssueBranchManager(BaseGitHubManager):
         )
 
         # Step 6: Parse response and return result
+        # Note: graphql_named_mutation returns (headers, data) where data has format:
+        # {"data": {"createLinkedBranch": {"linkedBranch": {...}}}}
         try:
-            data = result.get("data")
-            if data is None:
-                error_msg = "Failed to create linked branch: Invalid response from GitHub (null data)"
+            # Extract data from GraphQL response
+            data = result.get("data", {})
+            if not isinstance(data, dict):
+                error_msg = (
+                    "Failed to create linked branch: Malformed response from GitHub"
+                )
                 logger.error(error_msg)
+                logger.debug(f"GraphQL mutation response: {result}")
                 return BranchCreationResult(
                     success=False,
                     branch_name="",
@@ -312,15 +318,15 @@ class IssueBranchManager(BaseGitHubManager):
                     existing_branches=[],
                 )
 
-            linked_branch_data = data.get("createLinkedBranch")
-            if (
-                linked_branch_data is None
-                or linked_branch_data.get("linkedBranch") is None
-            ):
+            mutation_result = data.get("createLinkedBranch", {})
+
+            # Check if result has the expected linkedBranch field
+            if mutation_result is None or "linkedBranch" not in mutation_result:
                 error_msg = (
                     "Failed to create linked branch: Invalid response from GitHub"
                 )
                 logger.error(error_msg)
+                logger.debug(f"GraphQL mutation response: {result}")
                 return BranchCreationResult(
                     success=False,
                     branch_name="",
@@ -328,8 +334,20 @@ class IssueBranchManager(BaseGitHubManager):
                     existing_branches=[],
                 )
 
-            created_branch = linked_branch_data["linkedBranch"]
-            created_branch_name = created_branch["ref"]["name"]
+            # Extract the linked branch data from the mutation result
+            linked_branch = mutation_result["linkedBranch"]
+            if linked_branch is None or "ref" not in linked_branch:
+                error_msg = "Failed to create linked branch: Missing branch reference in response"
+                logger.error(error_msg)
+                logger.debug(f"GraphQL mutation response: {result}")
+                return BranchCreationResult(
+                    success=False,
+                    branch_name="",
+                    error=error_msg,
+                    existing_branches=[],
+                )
+
+            created_branch_name = linked_branch["ref"]["name"]
 
             logger.info(
                 f"Successfully created and linked branch '{created_branch_name}' to issue #{issue_number}"

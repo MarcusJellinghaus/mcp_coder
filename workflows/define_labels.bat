@@ -28,7 +28,7 @@ set PYTHONUTF8=1
 REM Set PYTHONPATH to include src directory
 set PYTHONPATH=%~dp0..\src;%PYTHONPATH%
 
-python workflows\define_labels.py %*
+python "%~dp0define_labels.py" %*
 
 if %ERRORLEVEL% neq 0 (
     echo Workflow failed with exit code %ERRORLEVEL%

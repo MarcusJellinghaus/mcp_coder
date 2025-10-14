@@ -259,13 +259,10 @@ class TestCLIEntryPoint:
 
     def test_cli_entry_point_exists(self) -> None:
         """Test that CLI entry point is properly configured."""
-        # This tests that the import path works
-        from mcp_coder.cli.main import main
-
+        # Main already imported at module level - verify it's callable
         assert callable(main)
 
     def test_main_can_be_imported_from_cli_module(self) -> None:
         """Test that main can be imported from CLI module."""
-        from mcp_coder.cli.main import main
-
+        # Main already imported at module level - verify it's callable
         assert callable(main)

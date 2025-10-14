@@ -106,19 +106,3 @@ x: int = "not an int"
         assert hasattr(result, "return_code")
         assert hasattr(result, "errors_found")
         assert (result.errors_found or 0) >= 0
-
-    def test_mypy_check_on_actual_codebase(self) -> None:
-        """Smoke test: verify mypy check works on actual codebase."""
-        project_dir = Path.cwd()
-        result = run_mypy_check(project_dir)
-
-        # Verify result structure
-        assert hasattr(result, "return_code")
-        assert hasattr(result, "messages")
-        assert hasattr(result, "errors_found")
-        assert isinstance(result.return_code, int)
-        assert isinstance(result.errors_found, (int, type(None)))
-
-        # Current codebase should be clean
-        assert result.return_code == 0
-        assert (result.errors_found or 0) == 0

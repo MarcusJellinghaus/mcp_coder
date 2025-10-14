@@ -100,7 +100,7 @@ def save_conversation(
     logger.debug(f"Conversation saved to {conversation_path.absolute()}")
 
 
-def _call_llm_with_comprehensive_capture(
+def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional-arguments
     prompt: str,
     provider: str,
     method: str,
@@ -161,10 +161,10 @@ def _call_llm_with_comprehensive_capture(
             )
             logger.error(f"LLM method: {provider}/{method}")
             logger.error(
-                f"This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout"
+                "This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout"
             )
             logger.error(
-                f"Consider: checking network, simplifying prompt, waiting for MCP tools to complete, or increasing timeout"
+                "Consider: checking network, simplifying prompt, waiting for MCP tools to complete, or increasing timeout"
             )
             raise Exception(f"LLM request timed out after {timeout} seconds") from e
         except Exception as e:
@@ -188,10 +188,10 @@ def _call_llm_with_comprehensive_capture(
             logger.error(f"Prompt length: {len(prompt)} characters")
             logger.error(f"LLM method: {provider}/{method}")
             logger.error(
-                f"This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout"
+                "This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout"
             )
             logger.error(
-                f"Consider: checking network, simplifying prompt, waiting for MCP tools to complete, or increasing timeout"
+                "Consider: checking network, simplifying prompt, waiting for MCP tools to complete, or increasing timeout"
             )
             raise Exception(f"LLM request timed out after {timeout} seconds") from e
         except Exception as e:

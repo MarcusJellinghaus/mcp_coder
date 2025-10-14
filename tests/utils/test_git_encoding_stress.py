@@ -18,7 +18,7 @@ from mcp_coder.utils.git_operations import get_branch_diff, is_git_repository
 class TestGitEncodingStress:
     """Test git operations with heavy Unicode and special character content."""
 
-    def test_git_diff_with_10k_special_characters(
+    def test_git_diff_with_10k_special_characters(  # pylint: disable=too-many-statements
         self, git_repo: tuple[Any, Path]
     ) -> None:
         """Test git diff with 10,000 special Unicode characters to stress subprocess handling."""

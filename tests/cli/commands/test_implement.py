@@ -255,7 +255,6 @@ class TestImplementCommandIntegration:
         # 1. main() routes 'implement' command correctly
         # 2. execute_implement is called with parsed arguments
         # 3. Return code is propagated correctly
-        pass
 
     @pytest.mark.skip(
         reason="Will be implemented when implement command is added to CLI"
@@ -269,7 +268,6 @@ class TestImplementCommandIntegration:
         # Implementation will test:
         # 1. execute_implement returns non-zero -> main() returns non-zero
         # 2. execute_implement returns zero -> main() returns zero
-        pass
 
     @pytest.mark.skip(
         reason="Will be implemented when implement command is added to CLI"
@@ -284,7 +282,6 @@ class TestImplementCommandIntegration:
         # 1. --project-dir argument is parsed correctly
         # 2. --llm-method argument is parsed correctly
         # 3. Arguments are passed to execute_implement
-        pass
 
     @pytest.mark.skip(
         reason="Will be implemented when implement command is added to CLI"
@@ -298,7 +295,6 @@ class TestImplementCommandIntegration:
         # Implementation will test:
         # 1. No --project-dir argument -> project_dir=None in args
         # 2. execute_implement handles None project_dir correctly
-        pass
 
 
 class TestImplementCommandError:

@@ -4,7 +4,7 @@ from .claude_code_api import ask_claude_code_api
 from .claude_code_cli import ask_claude_code_cli
 
 
-def ask_claude_code(
+def ask_claude_code(  # pylint: disable=too-many-positional-arguments
     question: str,
     method: str = "cli",
     session_id: str | None = None,

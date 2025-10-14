@@ -124,10 +124,15 @@ def test_prepare_llm_environment_paths_os_native(tmp_path: Path) -> None:
         assert venv_path.is_absolute()
 
 
+@pytest.mark.xdist_group(name="logging")
 def test_prepare_llm_environment_logging(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test that environment preparation logs debug messages."""
+    """Test that environment preparation logs debug messages.
+
+    Note: This test uses caplog which doesn't work well with pytest-xdist.
+    The xdist_group marker ensures it runs in isolation.
+    """
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     venv_dir = project_dir / ".venv"

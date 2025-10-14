@@ -20,8 +20,7 @@ class TestTaskTrackerIntegration:
 
     def test_imports_work(self) -> None:
         """Test importing task tracker functions from workflow_utils package."""
-        from mcp_coder.workflow_utils import get_incomplete_tasks, is_task_done
-
+        # Functions already imported at module level - verify they're callable
         assert callable(get_incomplete_tasks)
         assert callable(is_task_done)
 

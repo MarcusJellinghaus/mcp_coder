@@ -260,7 +260,9 @@ class TestPullRequestManagerUnit:
 class TestPullRequestManagerIntegration:
     """Integration tests for PullRequestManager with GitHub API."""
 
-    def test_pr_manager_lifecycle(self, pr_manager: PullRequestManager) -> None:
+    def test_pr_manager_lifecycle(  # pylint: disable=too-many-statements
+        self, pr_manager: PullRequestManager
+    ) -> None:
         """Test complete PR lifecycle: create, get, list, close.
 
         This test creates a test branch, creates a PR, retrieves it, lists PRs, and closes it.
@@ -318,8 +320,7 @@ class TestPullRequestManagerIntegration:
             print(f"Fetch result: {fetch_result}")
 
             # Check if the test branch exists remotely by checking git ls-remote
-            import git
-
+            # git already imported at module level
             repo = git.Repo(pr_manager.project_dir)
             try:
                 # List all remote branches
@@ -548,20 +549,31 @@ class TestPullRequestManagerIntegration:
     def test_list_pull_requests_with_filters(
         self, pr_manager: PullRequestManager
     ) -> None:
-        """Test listing pull requests with different filters."""
-        # Test listing open PRs
+        """Test listing pull requests with different filters.
+
+        This test verifies basic listing functionality with pagination limits
+        to avoid performance issues as the repository accumulates PRs.
+        """
+        # Test listing open PRs (no limit needed - usually small)
         open_prs = pr_manager.list_pull_requests(state="open")
         assert isinstance(open_prs, list), "Expected list for open PRs"
 
-        # Test listing closed PRs
-        closed_prs = pr_manager.list_pull_requests(state="closed")
+        # Test listing closed PRs (limit to 5 most recent to avoid slowdown)
+        closed_prs = pr_manager.list_pull_requests(state="closed", max_results=5)
         assert isinstance(closed_prs, list), "Expected list for closed PRs"
+        assert len(closed_prs) <= 5, "Expected at most 5 closed PRs"
 
-        # Test listing all PRs
-        all_prs = pr_manager.list_pull_requests(state="all")
+        # Test listing all PRs (limit to 10 most recent to avoid slowdown)
+        all_prs = pr_manager.list_pull_requests(state="all", max_results=10)
         assert isinstance(all_prs, list), "Expected list for all PRs"
+        assert len(all_prs) <= 10, "Expected at most 10 PRs total"
 
-        # When fully implemented with real API calls, we can add more specific assertions
+        # Verify returned data structure is valid
+        if len(all_prs) > 0:
+            pr = all_prs[0]
+            assert "number" in pr, "Expected PR to have number field"
+            assert "state" in pr, "Expected PR to have state field"
+            assert "title" in pr, "Expected PR to have title field"
 
     def test_validation_failures(self, tmp_path: Path) -> None:
         """Test validation failures for invalid inputs."""

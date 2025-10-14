@@ -168,9 +168,9 @@ class TestAPIExportsAndImports:
 
     def test_public_api_imports(self) -> None:
         """Test all expected functions/classes are importable."""
-        # Test all expected imports work
+        # FormatterResult already imported at module level
+        # Test remaining imports work
         from mcp_coder.formatters import (
-            FormatterResult,
             format_code,
             format_with_black,
             format_with_isort,

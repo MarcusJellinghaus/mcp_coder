@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 structured_logger = structlog.get_logger(__name__)
 
 
-def find_data_file(
+def find_data_file(  # pylint: disable=too-many-statements
     package_name: str,
     relative_path: str,
     development_base_dir: Optional[Path] = None,

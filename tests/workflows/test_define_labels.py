@@ -16,34 +16,46 @@ import pytest
 
 from tests.utils.conftest import git_repo
 from workflows.define_labels import (
-    WORKFLOW_LABELS,
-    _validate_color_format,
-    _validate_workflow_labels,
     apply_labels,
     calculate_label_changes,
     parse_arguments,
     resolve_project_dir,
 )
+from workflows.label_config import load_labels_config
+
+# Note: labels_config_path fixture is defined in conftest.py
 
 
-class TestWorkflowLabelsConstant:
-    """Test the WORKFLOW_LABELS constant definition and validation."""
+class TestWorkflowLabelsFromConfig:
+    """Test loading workflow labels from JSON config."""
 
-    def test_workflow_labels_constant(self) -> None:
-        """Test WORKFLOW_LABELS constant has correct structure and all 10 status labels."""
+    def test_load_workflow_labels_from_json(
+        self, tmp_path: Path, labels_config_path: Path
+    ) -> None:
+        """Test that workflow labels can be loaded from JSON config."""
+        # Create a temporary config file
+        config_dir = tmp_path / "workflows" / "config"
+        config_dir.mkdir(parents=True)
+        config_path = config_dir / "labels.json"
+
+        # Load the actual config to test against
+        labels_config = load_labels_config(labels_config_path)
+
         # Verify we have exactly 10 labels
         assert (
-            len(WORKFLOW_LABELS) == 10
-        ), "WORKFLOW_LABELS should contain exactly 10 status labels"
+            len(labels_config["workflow_labels"]) == 10
+        ), "Config should contain exactly 10 workflow labels"
 
-        # Verify each label has correct structure: (name, color, description)
-        for i, label in enumerate(WORKFLOW_LABELS, start=1):
-            assert isinstance(label, tuple), f"Label {i} should be a tuple"
-            assert (
-                len(label) == 3
-            ), f"Label {i} should have 3 elements (name, color, description)"
+        # Verify each label has correct structure
+        for i, label in enumerate(labels_config["workflow_labels"], start=1):
+            assert isinstance(label, dict), f"Label {i} should be a dict"
+            assert "name" in label, f"Label {i} should have 'name' field"
+            assert "color" in label, f"Label {i} should have 'color' field"
+            assert "description" in label, f"Label {i} should have 'description' field"
 
-            name, color, description = label
+            name = label["name"]
+            color = label["color"]
+            description = label["description"]
 
             # Verify name format
             assert isinstance(name, str), f"Label {i} name should be string"
@@ -67,19 +79,10 @@ class TestWorkflowLabelsConstant:
             ), f"Label {i} description should be string"
             assert len(description) > 0, f"Label {i} description should not be empty"
 
-    def test_workflow_labels_sequence(self) -> None:
-        """Test that workflow labels follow correct sequential numbering."""
-        expected_numbers = [f"{i:02d}" for i in range(1, 11)]
+    def test_workflow_labels_names_from_json(self, labels_config_path: Path) -> None:
+        """Test that all expected workflow label names are present in JSON."""
+        labels_config = load_labels_config(labels_config_path)
 
-        for i, label in enumerate(WORKFLOW_LABELS):
-            name = label[0]
-            expected_prefix = f"status-{expected_numbers[i]}:"
-            assert name.startswith(
-                expected_prefix
-            ), f"Label {i+1} should start with '{expected_prefix}'"
-
-    def test_workflow_labels_names(self) -> None:
-        """Test that all expected workflow label names are present."""
         expected_names = [
             "status-01:created",
             "status-02:awaiting-planning",
@@ -93,197 +96,55 @@ class TestWorkflowLabelsConstant:
             "status-10:pr-created",
         ]
 
-        actual_names = [label[0] for label in WORKFLOW_LABELS]
+        actual_names = [label["name"] for label in labels_config["workflow_labels"]]
         assert (
             actual_names == expected_names
         ), "Workflow label names should match expected sequence"
 
-    def test_workflow_labels_unique_names(self) -> None:
-        """Test that all workflow label names are unique."""
-        names = [label[0] for label in WORKFLOW_LABELS]
+    def test_workflow_labels_unique_names_from_json(
+        self, labels_config_path: Path
+    ) -> None:
+        """Test that all workflow label names in JSON are unique."""
+        labels_config = load_labels_config(labels_config_path)
+
+        names = [label["name"] for label in labels_config["workflow_labels"]]
         assert len(names) == len(
             set(names)
         ), "All workflow label names should be unique"
 
-    def test_workflow_labels_unique_colors(self) -> None:
-        """Test that all workflow label colors are unique."""
-        colors = [label[1] for label in WORKFLOW_LABELS]
+    def test_workflow_labels_unique_colors_from_json(
+        self, labels_config_path: Path
+    ) -> None:
+        """Test that all workflow label colors in JSON are unique."""
+        labels_config = load_labels_config(labels_config_path)
+
+        colors = [label["color"] for label in labels_config["workflow_labels"]]
         assert len(colors) == len(
             set(colors)
         ), "All workflow label colors should be unique"
-
-    def test_workflow_labels_immutability(self) -> None:
-        """Test that WORKFLOW_LABELS is a list of tuples (immutable entries)."""
-        assert isinstance(WORKFLOW_LABELS, list), "WORKFLOW_LABELS should be a list"
-
-        for label in WORKFLOW_LABELS:
-            assert isinstance(label, tuple), "Each label should be an immutable tuple"
-
-
-class TestColorFormatValidation:
-    """Test color format validation function."""
-
-    def test_validate_color_format_valid(self) -> None:
-        """Test _validate_color_format with valid hex colors."""
-        valid_colors = [
-            "10b981",
-            "6ee7b7",
-            "a7f3d0",
-            "3b82f6",
-            "93c5fd",
-            "bfdbfe",
-            "f59e0b",
-            "fbbf24",
-            "fed7aa",
-            "8b5cf6",
-            "AABBCC",  # uppercase
-            "aAbBcC",  # mixed case
-            "123456",
-            "000000",
-            "FFFFFF",
-        ]
-
-        for color in valid_colors:
-            assert _validate_color_format(color), f"'{color}' should be valid hex color"
-
-    def test_validate_color_format_invalid(self) -> None:
-        """Test _validate_color_format with invalid formats."""
-        invalid_colors = [
-            "#10b981",  # has '#' prefix
-            "10b98",  # too short
-            "10b9811",  # too long
-            "gggggg",  # invalid hex chars
-            "10b 981",  # contains space
-            "",  # empty string
-            "10b-981",  # contains dash
-        ]
-
-        for color in invalid_colors:
-            assert not _validate_color_format(color), f"'{color}' should be invalid"
-
-    def test_validate_color_format_non_string(self) -> None:
-        """Test _validate_color_format with non-string inputs."""
-        invalid_inputs: list[Any] = [
-            None,
-            123456,
-            ["10b981"],
-            {"color": "10b981"},
-        ]
-
-        for invalid_input in invalid_inputs:
-            assert not _validate_color_format(
-                invalid_input
-            ), f"{invalid_input} should be invalid"
-
-
-class TestWorkflowLabelsModuleValidation:
-    """Test module load-time validation of WORKFLOW_LABELS."""
-
-    def test_validate_workflow_labels_success(self) -> None:
-        """Test that _validate_workflow_labels succeeds with current WORKFLOW_LABELS."""
-        # Should not raise any exceptions
-        try:
-            _validate_workflow_labels()
-        except Exception as e:
-            pytest.fail(f"_validate_workflow_labels() raised unexpected exception: {e}")
-
-    def test_validate_workflow_labels_with_mock_data(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test validation behavior with various invalid label structures."""
-        import workflows.define_labels as define_labels_module
-
-        # Test invalid structure: not a tuple
-        invalid_labels = [["status-01:test", "10b981", "description"]]
-        monkeypatch.setattr(define_labels_module, "WORKFLOW_LABELS", invalid_labels)
-
-        with pytest.raises(ValueError, match="Invalid label structure"):
-            _validate_workflow_labels()
-
-    def test_validate_workflow_labels_invalid_tuple_length(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test validation fails with wrong tuple length."""
-        import workflows.define_labels as define_labels_module
-
-        # Test tuple with wrong number of elements
-        invalid_labels = [("status-01:test", "10b981")]  # missing description
-        monkeypatch.setattr(define_labels_module, "WORKFLOW_LABELS", invalid_labels)
-
-        with pytest.raises(ValueError, match="Invalid label structure"):
-            _validate_workflow_labels()
-
-    def test_validate_workflow_labels_invalid_name(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test validation fails with invalid label name."""
-        import workflows.define_labels as define_labels_module
-
-        # Test empty name
-        invalid_labels = [("", "10b981", "description")]
-        monkeypatch.setattr(define_labels_module, "WORKFLOW_LABELS", invalid_labels)
-
-        with pytest.raises(ValueError, match="Invalid label name"):
-            _validate_workflow_labels()
-
-        # Test non-string name
-        invalid_labels_non_string: list[Any] = [(123, "10b981", "description")]
-        monkeypatch.setattr(
-            define_labels_module, "WORKFLOW_LABELS", invalid_labels_non_string
-        )
-
-        with pytest.raises(ValueError, match="Invalid label name"):
-            _validate_workflow_labels()
-
-    def test_validate_workflow_labels_invalid_color(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test validation fails with invalid color format."""
-        import workflows.define_labels as define_labels_module
-
-        # Test invalid hex color
-        invalid_labels = [("status-01:test", "#10b981", "description")]
-        monkeypatch.setattr(define_labels_module, "WORKFLOW_LABELS", invalid_labels)
-
-        with pytest.raises(ValueError, match="Invalid color format"):
-            _validate_workflow_labels()
-
-        # Test too short
-        invalid_labels = [("status-01:test", "10b98", "description")]
-        monkeypatch.setattr(define_labels_module, "WORKFLOW_LABELS", invalid_labels)
-
-        with pytest.raises(ValueError, match="Invalid color format"):
-            _validate_workflow_labels()
-
-    def test_validate_workflow_labels_invalid_description(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test validation fails with invalid description."""
-        import workflows.define_labels as define_labels_module
-
-        # Test non-string description
-        invalid_labels = [("status-01:test", "10b981", 123)]
-        monkeypatch.setattr(define_labels_module, "WORKFLOW_LABELS", invalid_labels)
-
-        with pytest.raises(ValueError, match="Invalid description"):
-            _validate_workflow_labels()
 
 
 class TestWorkflowLabelsContent:
     """Test specific content and metadata of workflow labels."""
 
-    def test_all_labels_have_descriptions(self) -> None:
+    def test_all_labels_have_descriptions(self, labels_config_path: Path) -> None:
         """Test that all labels have non-empty descriptions."""
-        for label in WORKFLOW_LABELS:
-            description = label[2]
+        labels_config = load_labels_config(labels_config_path)
+
+        for label in labels_config["workflow_labels"]:
+            description = label["description"]
             assert (
                 description.strip()
-            ), f"Label '{label[0]}' should have non-empty description"
+            ), f"Label '{label['name']}' should have non-empty description"
 
-    def test_status_labels_cover_workflow_stages(self) -> None:
+    def test_status_labels_cover_workflow_stages(
+        self, labels_config_path: Path
+    ) -> None:
         """Test that labels cover the expected workflow stages."""
+        labels_config = load_labels_config(labels_config_path)
+
         # Check for key workflow stages
-        names = [label[0] for label in WORKFLOW_LABELS]
+        names = [label["name"] for label in labels_config["workflow_labels"]]
 
         # Should have creation stage
         assert any("created" in name for name in names), "Should have 'created' stage"
@@ -302,10 +163,13 @@ class TestWorkflowLabelsContent:
         # Should have PR-related stages
         assert any("pr" in name for name in names), "Should have PR-related stages"
 
-    def test_color_codes_are_github_compatible(self) -> None:
+    def test_color_codes_are_github_compatible(self, labels_config_path: Path) -> None:
         """Test that all color codes follow GitHub API format (6-char hex without #)."""
-        for label in WORKFLOW_LABELS:
-            name, color, _ = label
+        labels_config = load_labels_config(labels_config_path)
+
+        for label in labels_config["workflow_labels"]:
+            name = label["name"]
+            color = label["color"]
 
             # GitHub API requires 6-char hex WITHOUT '#' prefix
             assert not color.startswith(
@@ -477,6 +341,7 @@ class TestApplyLabels:
         mock_manager_class: MagicMock,
         mock_labels_manager: MagicMock,
         tmp_path: Path,
+        labels_config_path: Path,
     ) -> None:
         """Test apply_labels success flow with create, update, delete operations."""
         # Setup: Configure mock to return existing labels
@@ -495,8 +360,15 @@ class TestApplyLabels:
         mock_labels_manager.get_labels.return_value = existing_labels_data
         mock_manager_class.return_value = mock_labels_manager
 
+        # Load workflow labels from config
+        labels_config = load_labels_config(labels_config_path)
+        workflow_labels = [
+            (label["name"], label["color"], label["description"])
+            for label in labels_config["workflow_labels"]
+        ]
+
         # Execute: Call apply_labels with dry_run=False
-        result = apply_labels(tmp_path, dry_run=False)
+        result = apply_labels(tmp_path, workflow_labels, dry_run=False)
 
         # Verify: LabelsManager was initialized with project_dir
         mock_manager_class.assert_called_once_with(tmp_path)
@@ -530,6 +402,7 @@ class TestApplyLabels:
         mock_manager_class: MagicMock,
         mock_labels_manager: MagicMock,
         tmp_path: Path,
+        labels_config_path: Path,
     ) -> None:
         """Test apply_labels dry-run mode does not make API calls."""
         # Setup: Configure mock to return existing labels needing changes
@@ -548,8 +421,15 @@ class TestApplyLabels:
         mock_labels_manager.get_labels.return_value = existing_labels_data
         mock_manager_class.return_value = mock_labels_manager
 
+        # Load workflow labels from config
+        labels_config = load_labels_config(labels_config_path)
+        workflow_labels = [
+            (label["name"], label["color"], label["description"])
+            for label in labels_config["workflow_labels"]
+        ]
+
         # Execute: Call apply_labels with dry_run=True
-        result = apply_labels(tmp_path, dry_run=True)
+        result = apply_labels(tmp_path, workflow_labels, dry_run=True)
 
         # Verify: get_labels was called (read operation is OK in dry-run)
         mock_labels_manager.get_labels.assert_called_once()
@@ -570,6 +450,7 @@ class TestApplyLabels:
         mock_manager_class: MagicMock,
         mock_labels_manager: MagicMock,
         tmp_path: Path,
+        labels_config_path: Path,
     ) -> None:
         """Test apply_labels fails fast on first API error."""
         # Setup: Configure mock to return empty labels (all need creation)
@@ -582,9 +463,16 @@ class TestApplyLabels:
 
         mock_manager_class.return_value = mock_labels_manager
 
+        # Load workflow labels from config
+        labels_config = load_labels_config(labels_config_path)
+        workflow_labels = [
+            (label["name"], label["color"], label["description"])
+            for label in labels_config["workflow_labels"]
+        ]
+
         # Execute & Verify: apply_labels should exit immediately with code 1
         with pytest.raises(SystemExit) as exc_info:
-            apply_labels(tmp_path, dry_run=False)
+            apply_labels(tmp_path, workflow_labels, dry_run=False)
 
         assert exc_info.value.code == 1
 
@@ -661,16 +549,25 @@ class TestApplyLabels:
             "status-05:plan-ready",
         ]
 
-    def test_calculate_label_changes_all_exist_unchanged(self) -> None:
+    def test_calculate_label_changes_all_exist_unchanged(
+        self, labels_config_path: Path
+    ) -> None:
         """Test when all 10 workflow labels already exist with correct values."""
-        # Use actual WORKFLOW_LABELS as both existing and target
-        existing_labels = list(WORKFLOW_LABELS)
-        target_labels = list(WORKFLOW_LABELS)
+        # Load workflow labels from config
+        labels_config = load_labels_config(labels_config_path)
+        workflow_labels = [
+            (label["name"], label["color"], label["description"])
+            for label in labels_config["workflow_labels"]
+        ]
+
+        # Use actual workflow_labels as both existing and target
+        existing_labels = list(workflow_labels)
+        target_labels = list(workflow_labels)
 
         result = calculate_label_changes(existing_labels, target_labels)
 
         # All should be unchanged
-        expected_names = [label[0] for label in WORKFLOW_LABELS]
+        expected_names = [label[0] for label in workflow_labels]
         assert result["unchanged"] == expected_names
         assert result["created"] == []
         assert result["updated"] == []

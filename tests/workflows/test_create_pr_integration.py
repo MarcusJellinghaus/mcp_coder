@@ -128,12 +128,8 @@ class TestCreatePRWorkflowIntegration:
         # Setup complete project structure
         self._setup_complete_project(project_dir, repo)
 
-        # Import workflow functions
-        from mcp_coder.utils.git_operations import (
-            get_current_branch_name,
-            get_parent_branch_name,
-            is_working_directory_clean,
-        )
+        # Import workflow functions (get_current_branch_name and is_working_directory_clean already imported at module level)
+        from mcp_coder.utils.git_operations import get_parent_branch_name
         from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
         from workflows.create_PR import check_prerequisites
 
@@ -149,8 +145,8 @@ class TestCreatePRWorkflowIntegration:
             pytest.fail(f"Task tracker check failed: {e}")
 
         # Individual assertions for better error messages
-        assert is_clean, f"Working directory not clean"
-        assert current_branch is not None, f"Could not get current branch name"
+        assert is_clean, "Working directory not clean"
+        assert current_branch is not None, "Could not get current branch name"
         assert (
             parent_branch is not None
         ), f"Could not get parent branch name: {parent_branch}"
