@@ -104,6 +104,15 @@ class LabelData(TypedDict):
     description: Optional[str]
 
 
+class EventData(TypedDict):
+    """TypedDict for issue event data structure."""
+
+    event: str  # Event type (e.g., "labeled", "unlabeled")
+    label: Optional[str]  # Label name (for label events)
+    created_at: str  # ISO format timestamp
+    actor: Optional[str]  # GitHub username who performed action
+
+
 class IssueManager(BaseGitHubManager):
     """Manages GitHub issue operations using the GitHub API.
 

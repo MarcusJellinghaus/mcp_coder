@@ -26,7 +26,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Add `from enum import Enum` to imports in issue_manager.py
 - [x] Add IssueEventType enum after imports, before TypedDicts (around line 50)
-- [ ] Add EventData TypedDict after LabelData (around line 90)
+- [x] Add EventData TypedDict after LabelData (around line 90)
 - [ ] Implement get_issue_events() method at end of IssueManager class
 - [ ] Add unit tests to tests/utils/github_operations/test_issue_manager.py
 - [ ] Run pylint quality check and fix all issues
