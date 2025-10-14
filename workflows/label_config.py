@@ -1,7 +1,7 @@
 """Shared label configuration loading utilities."""
 import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def load_labels_config(config_path: Path) -> Dict[str, Any]:

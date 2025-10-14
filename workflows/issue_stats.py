@@ -10,10 +10,10 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 from mcp_coder.utils import get_github_repository_url
-from mcp_coder.utils.github_operations.issue_manager import IssueManager, IssueData
+from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
 from mcp_coder.utils.log_utils import setup_logging
 from workflows.label_config import load_labels_config
 

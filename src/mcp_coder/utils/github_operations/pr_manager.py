@@ -247,7 +247,10 @@ class PullRequestManager(BaseGitHubManager):
     @log_function_call
     @_handle_github_errors(lambda: [])
     def list_pull_requests(
-        self, state: str = "open", base_branch: Optional[str] = None, max_results: Optional[int] = None
+        self,
+        state: str = "open",
+        base_branch: Optional[str] = None,
+        max_results: Optional[int] = None,
     ) -> List[PullRequestData]:
         """List pull requests in the repository.
 
@@ -282,7 +285,7 @@ class PullRequestManager(BaseGitHubManager):
                 # Stop if we've reached max_results limit
                 if max_results is not None and i >= max_results:
                     break
-                    
+
                 pr_dict = cast(
                     PullRequestData,
                     {

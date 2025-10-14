@@ -106,5 +106,3 @@ x: int = "not an int"
         assert hasattr(result, "return_code")
         assert hasattr(result, "errors_found")
         assert (result.errors_found or 0) >= 0
-
-

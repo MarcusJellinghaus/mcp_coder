@@ -550,7 +550,7 @@ class TestPullRequestManagerIntegration:
         self, pr_manager: PullRequestManager
     ) -> None:
         """Test listing pull requests with different filters.
-        
+
         This test verifies basic listing functionality with pagination limits
         to avoid performance issues as the repository accumulates PRs.
         """
@@ -567,7 +567,7 @@ class TestPullRequestManagerIntegration:
         all_prs = pr_manager.list_pull_requests(state="all", max_results=10)
         assert isinstance(all_prs, list), "Expected list for all PRs"
         assert len(all_prs) <= 10, "Expected at most 10 PRs total"
-        
+
         # Verify returned data structure is valid
         if len(all_prs) > 0:
             pr = all_prs[0]
