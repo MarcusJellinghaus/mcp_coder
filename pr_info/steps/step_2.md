@@ -80,6 +80,8 @@ parser.add_argument("--log-level", type=str.upper, choices=[...], default="INFO"
 parser.add_argument("--dry-run", action="store_true", default=False, ...)
 ```
 
+**Note:** No `--issue` parameter for testing specific issues (Decision #2 - KISS principle)
+
 ## ALGORITHM
 
 ### main() Function Flow

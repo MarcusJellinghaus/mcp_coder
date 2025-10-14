@@ -24,7 +24,6 @@ class EventData(TypedDict):
 ### New Method
 ```python
 @log_function_call
-@_handle_github_errors(default_return=[])
 def get_issue_events(self, issue_number: int) -> List[EventData]:
     """Get timeline events for an issue.
     
@@ -32,10 +31,10 @@ def get_issue_events(self, issue_number: int) -> List[EventData]:
         issue_number: Issue number to get events for
         
     Returns:
-        List of EventData dicts with event information, or empty list on error
+        List of EventData dicts with event information
         
     Raises:
-        GithubException: For authentication or permission errors
+        GithubException: For authentication, permission, or API errors
         
     Example:
         >>> events = manager.get_issue_events(123)
@@ -48,9 +47,10 @@ def get_issue_events(self, issue_number: int) -> List[EventData]:
 ## HOW
 
 ### Integration Points
-- **Decorators**: Use existing `@log_function_call` and `@_handle_github_errors`
+- **Decorators**: Use existing `@log_function_call` only (no error handler - let exceptions propagate)
 - **Imports**: Already have `List`, `Optional`, `TypedDict` imports
-- **Pattern**: Follow same validation and error handling as existing methods
+- **Pattern**: Follow same validation pattern as existing methods
+- **Error Handling**: Unlike other methods, this one raises on API errors per Decision #1
 
 ### Location in File
 - Add `EventData` TypedDict after `LabelData` (around line 70)
@@ -117,7 +117,8 @@ Review the summary at pr_info/steps/summary.md for context.
 Key requirements:
 - Add EventData TypedDict after LabelData around line 70
 - Add get_issue_events() method at end of IssueManager class
-- Follow existing patterns: use decorators, validation, error handling
+- Follow existing patterns: use @log_function_call decorator, validation
+- Note: No @_handle_github_errors decorator - exceptions should propagate (see Decisions.md)
 - Use PyGithub's issue.get_events() API
 - Add unit tests to tests/utils/github_operations/test_issue_manager.py
 

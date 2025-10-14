@@ -11,21 +11,26 @@ These are the heart of the validation system. Each function should be simple, fo
 
 ## WHAT
 
+### TypedDict for Label Lookups
+```python
+class LabelLookups(TypedDict):
+    """TypedDict for label lookup data structures."""
+    id_to_name: dict[str, str]        # internal_id -> label_name
+    all_names: set[str]               # All workflow label names
+    name_to_category: dict[str, str]  # label_name -> category
+    name_to_id: dict[str, str]        # label_name -> internal_id
+```
+
 ### Function 1: Build Label Lookup
 ```python
-def build_label_lookups(labels_config: Dict[str, Any]) -> tuple[
-    dict[str, str],           # internal_id -> label_name
-    set[str],                 # All workflow label names
-    dict[str, str],           # label_name -> category
-    dict[str, str]            # label_name -> internal_id
-]:
+def build_label_lookups(labels_config: Dict[str, Any]) -> LabelLookups:
     """Build lookup dictionaries from label configuration.
     
     Args:
         labels_config: Loaded label configuration from JSON
         
     Returns:
-        Tuple of (id_to_name, all_names, name_to_category, name_to_id)
+        LabelLookups TypedDict with all lookup structures
     """
 ```
 
@@ -53,6 +58,23 @@ def check_status_labels(
     """
 ```
 
+### Helper Function: Calculate Elapsed Minutes
+```python
+def calculate_elapsed_minutes(timestamp_str: str) -> int:
+    """Calculate minutes elapsed since given ISO timestamp.
+    
+    Args:
+        timestamp_str: ISO format timestamp string (may have 'Z' suffix)
+        
+    Returns:
+        Integer minutes elapsed since the timestamp
+        
+    Example:
+        >>> elapsed = calculate_elapsed_minutes("2025-10-14T10:30:00Z")
+        >>> print(f"Elapsed: {elapsed} minutes")
+    """
+```
+
 ### Function 3: Check Stale Bot Process
 ```python
 def check_stale_bot_process(
@@ -76,9 +98,10 @@ def check_stale_bot_process(
         
     Algorithm:
         1. Get events for issue via issue_manager.get_issue_events()
+           Note: This will raise exceptions on API errors (Decision #1)
         2. Filter to "labeled" events with matching label_name
         3. Find most recent such event
-        4. Calculate elapsed time from event timestamp to now
+        4. Calculate elapsed time using calculate_elapsed_minutes() helper
         5. Compare against STALE_TIMEOUTS[internal_id]
         6. Return (is_stale, elapsed_minutes)
     """
@@ -102,6 +125,10 @@ def process_issues(
         
     Returns:
         Results dictionary with structure:
+        
+    Note:
+        - Logs API call count at DEBUG level (Decision #10)
+        - Filters out issues with ANY ignore label (Decision #3)
         {
             "processed": 123,
             "skipped": 5,
@@ -116,9 +143,11 @@ def process_issues(
 ## HOW
 
 ### Integration Points
-- **DateTime handling**: Use `datetime.fromisoformat()` and `datetime.now(timezone.utc)`
-- **Filtering**: Use `labels_config.get("ignore_labels", [])` to filter issues
+- **DateTime handling**: Use `calculate_elapsed_minutes()` helper function
+- **Filtering**: Skip issues that have ANY ignore label present (Decision #3)
+  - Check if any issue label is in `labels_config.get("ignore_labels", [])`
 - **Label operations**: Use `issue_manager.add_labels()` for initialization (unless dry_run)
+- **API Logging**: Track and log API call count at DEBUG level (Decision #10)
 
 ## ALGORITHM
 
@@ -127,7 +156,16 @@ def process_issues(
 # 1. Initialize empty dicts and set
 # 2. Loop through labels_config["workflow_labels"]
 # 3. For each label, populate all lookup structures
-# 4. Return tuple of lookups
+# 4. Return LabelLookups TypedDict (Decision #4)
+```
+
+### calculate_elapsed_minutes()
+```python
+# 1. Handle 'Z' suffix in timestamp: timestamp_str.replace('Z', '+00:00')
+# 2. Parse: datetime.fromisoformat(cleaned_timestamp)
+# 3. Calculate: (datetime.now(timezone.utc) - timestamp).total_seconds()
+# 4. Convert to minutes: int(elapsed_seconds / 60)
+# 5. Return integer minutes
 ```
 
 ### check_status_labels()
@@ -141,26 +179,29 @@ def process_issues(
 ```python
 # 1. Check if internal_id in STALE_TIMEOUTS, return (False, None) if not
 # 2. Get events: issue_manager.get_issue_events(issue["number"])
+#    Note: Will raise on API errors (Decision #1)
 # 3. Filter events: event["event"] == "labeled" AND event["label"] == label_name
-# 4. Find most recent: max(filtered, key=lambda e: e["created_at"])
-# 5. Parse timestamp: datetime.fromisoformat(event["created_at"])
-# 6. Calculate elapsed: (datetime.now(timezone.utc) - timestamp).total_seconds() / 60
+# 4. Find most recent: max(filtered, key=lambda e: e["created_at"]) if filtered else None
+# 5. If no matching event found, return (False, None)
+# 6. Calculate elapsed: calculate_elapsed_minutes(event["created_at"])
 # 7. Check stale: elapsed > STALE_TIMEOUTS[internal_id]
-# 8. Return (is_stale, int(elapsed))
+# 8. Return (is_stale, elapsed)
 ```
 
 ### process_issues()
 ```python
-# 1. Build label lookups
-# 2. Filter ignored issues (any with ignore_labels)
-# 3. Initialize results dict
-# 4. Loop through filtered issues:
+# 1. Build label lookups using build_label_lookups()
+# 2. Initialize API call counter = 0
+# 3. Filter ignored issues: skip if ANY label in ignore_labels (Decision #3)
+# 4. Initialize results dict
+# 5. Loop through filtered issues:
 #    a. Check status labels count
 #    b. If 0: initialize with "created" (unless dry_run), log, record
-#    c. If 1: check if bot_busy, then check stale, log, record
+#    c. If 1: check if bot_busy, then check stale (increment API counter), log, record
 #    d. If 2+: log ERROR, record
-#    e. Log per-issue status
-# 5. Return results dict
+#    e. Log per-issue status at INFO level (Decision #9)
+# 6. Log API call count at DEBUG level: logger.debug(f"API calls made: {api_counter}")
+# 7. Return results dict
 ```
 
 ## DATA
@@ -227,11 +268,15 @@ Please implement Step 3 from pr_info/steps/step_3.md
 Review the summary at pr_info/steps/summary.md for context.
 
 Key requirements:
+- Add LabelLookups TypedDict at module level
+- Implement calculate_elapsed_minutes() helper function
 - Implement build_label_lookups() to create lookup structures
 - Implement check_status_labels() to count workflow labels
 - Implement check_stale_bot_process() with event timeline checking
 - Implement process_issues() to orchestrate validation
 - Use datetime with timezone.utc for time calculations
+- Filter issues with ANY ignore label (Decision #3)
+- Log API call count at DEBUG level (Decision #10)
 - Follow existing patterns from issue_stats.py for filtering
 - Add comprehensive unit tests with mocking
 

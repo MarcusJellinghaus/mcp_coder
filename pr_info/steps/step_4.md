@@ -20,7 +20,7 @@ def display_summary(results: Dict[str, Any], repo_url: str) -> None:
         results: Results dictionary from process_issues()
         repo_url: Repository URL for generating issue links
         
-    Output Format:
+    Output Format (plain text, Decision #5):
         Summary:
           Total issues processed: 47
           Skipped (ignore labels): 3
@@ -32,6 +32,8 @@ def display_summary(results: Dict[str, Any], repo_url: str) -> None:
             - Issue #56: status-04:plan-review, status-06:implementing
           Warnings (stale bot processes): 1
             - Issue #78: planning (20 minutes)
+    
+    Note: Uses plain text format (no emojis or colors, Decision #5)
     """
 ```
 
@@ -54,15 +56,16 @@ Update the main() function to:
 has_errors = len(results["errors"]) > 0
 has_warnings = len(results["warnings"]) > 0
 
+# Exit code priority: errors take precedence (Decision #6)
 if has_errors:
     logger.error(f"Validation completed with {len(results['errors'])} errors")
-    sys.exit(1)
+    sys.exit(1)  # Errors = exit 1 (even if warnings also present)
 elif has_warnings:
     logger.warning(f"Validation completed with {len(results['warnings'])} warnings")
-    sys.exit(2)
+    sys.exit(2)  # Warnings only = exit 2
 else:
     logger.info("Validation completed successfully - no errors or warnings")
-    sys.exit(0)
+    sys.exit(0)  # Success = exit 0
 ```
 
 ## ALGORITHM
@@ -99,12 +102,13 @@ results = process_issues(
 display_summary(results, repo_url)
 
 # Calculate exit code and exit
+# Note: Errors take precedence over warnings (Decision #6)
 has_errors = len(results["errors"]) > 0
 has_warnings = len(results["warnings"]) > 0
 
 if has_errors:
     logger.error(f"Validation completed with {len(results['errors'])} errors")
-    sys.exit(1)
+    sys.exit(1)  # Exit 1 even if warnings also exist
 elif has_warnings:
     logger.warning(f"Validation completed with {len(results['warnings'])} warnings")
     sys.exit(2)

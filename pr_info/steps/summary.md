@@ -12,6 +12,9 @@ This implementation follows the **KISS principle** by maximizing reuse of existi
 2. **Minimal Extension**: Adds only ONE new method to existing `IssueManager` class
 3. **Linear Processing**: Simple sequential issue processing without complex grouping
 4. **Report and Exit**: Detect and report problems, don't attempt auto-fixes
+5. **Plain Text Output**: No emojis or colors, works everywhere (CI/CD, logs)
+
+**Design Decisions:** See `pr_info/steps/Decisions.md` for detailed rationale on all choices made during plan review.
 
 ### Architectural Changes
 
@@ -79,6 +82,8 @@ src/mcp_coder/utils/github_operations/issue_manager.py  # Add get_issue_events()
   - `implementing`: 60 minutes
   - `planning`: 15 minutes
   - `pr_creating`: 15 minutes
+- **Ignore Labels**: Issues with ANY ignore label (e.g., "Overview") are skipped entirely
+- **API Errors**: Event fetching failures cause script to stop (no silent failures)
 
 ### 2. Processing Flow
 ```
@@ -97,11 +102,14 @@ src/mcp_coder/utils/github_operations/issue_manager.py  # Add get_issue_events()
 ### 3. Timeout Detection Algorithm
 ```
 For each issue with bot_busy label:
-1. Get issue events via GitHub Events API
+1. Get issue events via GitHub Events API (will raise on API errors)
 2. Find most recent "labeled" event for that specific label
-3. Calculate elapsed time = now - event.created_at
+3. Calculate elapsed time using helper function
 4. If elapsed > timeout: Log WARNING with details
+5. Log total API calls at DEBUG level
 ```
+
+**Note:** API call counting helps monitor rate limit usage (logged at DEBUG level).
 
 ## Implementation Steps
 
@@ -129,3 +137,5 @@ For each issue with bot_busy label:
 - ❌ Processing closed issues (requirement specifies open only)
 - ❌ Complex categorization or grouping (linear processing sufficient)
 - ❌ Historical analysis (focus on current state only)
+- ❌ Debug mode for specific issues (KISS - use --dry-run instead)
+- ❌ JSON output or fancy formatting (plain text for maximum compatibility)
