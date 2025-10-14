@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Project imports
+from github import GithubException
 from mcp_coder.utils import get_github_repository_url
 from mcp_coder.utils.github_operations.issue_manager import IssueManager
 from mcp_coder.utils.github_operations.labels_manager import LabelsManager

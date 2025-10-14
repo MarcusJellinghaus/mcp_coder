@@ -89,14 +89,20 @@ else:
 # (existing code from Step 2...)
 # After fetching issues:
 
-# Process issues
-logger.info("Processing issues for validation...")
-results = process_issues(
-    issues=filtered_issues,
-    labels_config=labels_config,
-    issue_manager=issue_manager,
-    dry_run=args.dry_run
-)
+# Process issues with exception handling (Decision #22)
+try:
+    logger.info("Processing issues for validation...")
+    results = process_issues(
+        issues=filtered_issues,
+        labels_config=labels_config,
+        issue_manager=issue_manager,
+        dry_run=args.dry_run
+    )
+except GithubException as e:
+    logger.error(f"GitHub API error during validation: {e}")
+    logger.error("Validation incomplete - some issues were not checked")
+    logger.debug("Traceback:", exc_info=True)  # Log full traceback at DEBUG level
+    sys.exit(1)
 
 # Display results
 display_summary(results, repo_url)
@@ -209,11 +215,12 @@ Review the summary at pr_info/steps/summary.md for context.
 
 Key requirements:
 - Implement display_summary() with clear formatted output
-- Complete main() function by calling process_issues() and display_summary()
+- Complete main() function by calling process_issues() with try/except for GithubException
+- Add exception handling that logs error with traceback and exits with code 1
 - Implement proper exit code logic (0/1/2)
 - Add comprehensive tests for display and exit codes
 - Use capsys fixture for testing output
-- Test all three exit code scenarios
+- Test all three exit code scenarios plus API error scenario
 
 After implementation:
 1. Run the complete script end-to-end with test data
@@ -226,9 +233,10 @@ After implementation:
 
 ## Definition of Done
 - [ ] display_summary() implemented with proper formatting
-- [ ] main() function completed with process_issues() call
+- [ ] main() function completed with process_issues() call wrapped in try/except
+- [ ] GithubException handling logs error with traceback at DEBUG level
 - [ ] Exit code logic implemented correctly (0/1/2)
 - [ ] Output format matches specification exactly
-- [ ] All tests passing including exit code tests
+- [ ] All tests passing including exit code tests and exception handling
 - [ ] Script can be run end-to-end successfully
 - [ ] All quality checks pass (pylint, pytest, mypy)

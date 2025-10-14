@@ -96,6 +96,14 @@ def check_stale_bot_process(
         - is_stale: True if label exceeded timeout
         - elapsed_minutes: Minutes since label was applied, or None if not found
         
+    Raises:
+        GithubException: If API call fails (per Decision #1 - let exceptions propagate)
+        
+    Note:
+        Unlike other issue_manager methods, this intentionally does NOT catch exceptions,
+        allowing the script to fail fast on API errors rather than silently skipping issues.
+        This ensures we don't miss API problems and maintains data integrity.
+        
     Algorithm:
         1. Get events for issue via issue_manager.get_issue_events()
            Note: This will raise exceptions on API errors (Decision #1)
