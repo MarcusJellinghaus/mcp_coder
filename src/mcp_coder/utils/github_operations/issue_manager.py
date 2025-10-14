@@ -19,6 +19,47 @@ from .base_manager import BaseGitHubManager, _handle_github_errors
 logger = logging.getLogger(__name__)
 
 
+class IssueEventType(str, Enum):
+    """Enum for GitHub issue event types."""
+
+    # Label events
+    LABELED = "labeled"
+    UNLABELED = "unlabeled"
+
+    # State events
+    CLOSED = "closed"
+    REOPENED = "reopened"
+
+    # Assignment events
+    ASSIGNED = "assigned"
+    UNASSIGNED = "unassigned"
+
+    # Milestone events
+    MILESTONED = "milestoned"
+    DEMILESTONED = "demilestoned"
+
+    # Reference events
+    REFERENCED = "referenced"
+    CROSS_REFERENCED = "cross-referenced"
+
+    # Interaction events
+    COMMENTED = "commented"
+    MENTIONED = "mentioned"
+    SUBSCRIBED = "subscribed"
+    UNSUBSCRIBED = "unsubscribed"
+
+    # Title/Lock events
+    RENAMED = "renamed"
+    LOCKED = "locked"
+    UNLOCKED = "unlocked"
+
+    # PR-specific events (included for completeness)
+    REVIEW_REQUESTED = "review_requested"
+    REVIEW_REQUEST_REMOVED = "review_request_removed"
+    CONVERTED_TO_DRAFT = "converted_to_draft"
+    READY_FOR_REVIEW = "ready_for_review"
+
+
 class IssueData(TypedDict):
     """TypedDict for issue data structure.
 
