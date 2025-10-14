@@ -6,14 +6,16 @@ Tests cover argument parsing, STALE_TIMEOUTS constant, and basic setup logic.
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
+from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issue_manager import EventData, IssueData
 from workflows.validate_labels import (
     STALE_TIMEOUTS,
     build_label_lookups,
     calculate_elapsed_minutes,
+    check_stale_bot_process,
     check_status_labels,
     parse_arguments,
 )
@@ -480,3 +482,407 @@ def test_check_status_labels_preserves_order() -> None:
     # Should preserve order from issue labels
     assert count == 2
     assert labels == ["status-06:implementing", "status-01:created"]
+
+
+def test_check_stale_bot_process_at_exact_timeout_threshold() -> None:
+    """Test bot process at exact timeout threshold (should not be stale)."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 700,
+        "title": "Test issue",
+        "labels": ["status-03:planning"],
+    }
+
+    # Create event from exactly 15 minutes ago (at threshold, not over)
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=15)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-03:planning",
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        )
+    ]
+
+    # Create mock issue_manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Call function
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict), "status-03:planning", "planning", mock_manager
+    )
+
+    # At exact threshold, should NOT be stale (uses > not >=)
+    assert is_stale is False
+    assert elapsed is not None
+    assert 14 <= elapsed <= 16  # Allow ±1 minute for test execution
+
+
+def test_check_stale_bot_process_not_stale() -> None:
+    """Test bot process within timeout."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 123,
+        "title": "Test issue",
+        "labels": ["status-03:planning"],
+    }
+
+    # Create event from 10 minutes ago (within 15 minute planning timeout)
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    # Create mock events
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-03:planning",
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        )
+    ]
+
+    # Create mock issue_manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Call function
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict), "status-03:planning", "planning", mock_manager
+    )
+
+    # Verify not stale (10 minutes < 15 minute timeout)
+    assert is_stale is False
+    assert elapsed is not None
+    assert 9 <= elapsed <= 11  # Allow ±1 minute for test execution
+
+
+def test_check_stale_bot_process_is_stale() -> None:
+    """Test bot process exceeding timeout."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 456,
+        "title": "Test issue",
+        "labels": ["status-03:planning"],
+    }
+
+    # Create event from 20 minutes ago (exceeds 15 minute planning timeout)
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=20)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    # Create mock events
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-03:planning",
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        )
+    ]
+
+    # Create mock issue_manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Call function
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict), "status-03:planning", "planning", mock_manager
+    )
+
+    # Verify stale (20 minutes > 15 minute timeout)
+    assert is_stale is True
+    assert elapsed is not None
+    assert 19 <= elapsed <= 21  # Allow ±1 minute for test execution
+
+
+def test_check_stale_bot_process_no_events() -> None:
+    """Test when no label events found."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 789,
+        "title": "Test issue",
+        "labels": ["status-03:planning"],
+    }
+
+    # Create mock with no events
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=[])
+
+    # Call function
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict), "status-03:planning", "planning", mock_manager
+    )
+
+    # Verify returns (False, None) when no events found
+    assert is_stale is False
+    assert elapsed is None
+
+
+def test_check_stale_bot_process_no_matching_label_events() -> None:
+    """Test when events exist but none match the target label."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 100,
+        "title": "Test issue",
+        "labels": ["status-03:planning"],
+    }
+
+    # Create events for different labels
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-01:created",  # Different label
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        ),
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "bug",  # Different label
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        ),
+    ]
+
+    # Create mock issue_manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Call function
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict), "status-03:planning", "planning", mock_manager
+    )
+
+    # Verify returns (False, None) when no matching label events
+    assert is_stale is False
+    assert elapsed is None
+
+
+def test_check_stale_bot_process_no_timeout_defined() -> None:
+    """Test when internal_id has no timeout threshold defined."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 200,
+        "title": "Test issue",
+        "labels": ["status-01:created"],
+    }
+
+    # Create mock issue_manager (should not be called)
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock()
+
+    # Call function with internal_id that has no timeout
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict), "status-01:created", "created", mock_manager
+    )
+
+    # Verify returns (False, None) when no timeout defined
+    assert is_stale is False
+    assert elapsed is None
+    # Verify get_issue_events was NOT called
+    mock_manager.get_issue_events.assert_not_called()
+
+
+def test_check_stale_bot_process_multiple_labeled_events() -> None:
+    """Test with multiple labeled events, should use most recent."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 300,
+        "title": "Test issue",
+        "labels": ["status-03:planning"],
+    }
+
+    # Create multiple events at different times
+    older_time = datetime.now(timezone.utc) - timedelta(minutes=25)
+    recent_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+
+    older_timestamp = older_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+    recent_timestamp = recent_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-03:planning",
+                "created_at": older_timestamp,  # 25 minutes ago
+                "actor": "testuser",
+            },
+        ),
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-03:planning",
+                "created_at": recent_timestamp,  # 10 minutes ago (most recent)
+                "actor": "testuser",
+            },
+        ),
+    ]
+
+    # Create mock issue_manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Call function
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict), "status-03:planning", "planning", mock_manager
+    )
+
+    # Should use most recent event (10 minutes), not older one (25 minutes)
+    assert is_stale is False  # 10 minutes < 15 minute timeout
+    assert elapsed is not None
+    assert 9 <= elapsed <= 11  # Should be ~10 minutes, not ~25
+
+
+def test_check_stale_bot_process_implementing_timeout() -> None:
+    """Test implementing label with 60 minute timeout."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 400,
+        "title": "Test issue",
+        "labels": ["status-06:implementing"],
+    }
+
+    # Create event from 70 minutes ago (exceeds 60 minute implementing timeout)
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=70)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-06:implementing",
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        )
+    ]
+
+    # Create mock issue_manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Call function
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict),
+        "status-06:implementing",
+        "implementing",
+        mock_manager,
+    )
+
+    # Verify stale (70 minutes > 60 minute timeout)
+    assert is_stale is True
+    assert elapsed is not None
+    assert 69 <= elapsed <= 71  # Allow ±1 minute for test execution
+
+
+def test_check_stale_bot_process_pr_creating_timeout() -> None:
+    """Test pr_creating label with 15 minute timeout."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 500,
+        "title": "Test issue",
+        "labels": ["status-08:pr_creating"],
+    }
+
+    # Create event from 5 minutes ago (within 15 minute pr_creating timeout)
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=5)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "labeled",
+                "label": "status-08:pr_creating",
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        )
+    ]
+
+    # Create mock issue_manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Call function
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict),
+        "status-08:pr_creating",
+        "pr_creating",
+        mock_manager,
+    )
+
+    # Verify not stale (5 minutes < 15 minute timeout)
+    assert is_stale is False
+    assert elapsed is not None
+    assert 4 <= elapsed <= 6  # Allow ±1 minute for test execution
+
+
+def test_check_stale_bot_process_filters_unlabeled_events() -> None:
+    """Test that unlabeled events are filtered out."""
+    # Create issue data
+    issue_dict: dict[str, Any] = {
+        "number": 600,
+        "title": "Test issue",
+        "labels": ["status-03:planning"],
+    }
+
+    # Create mixed labeled/unlabeled events
+    past_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+    timestamp_str = past_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
+    events: list[EventData] = [
+        cast(
+            EventData,
+            {
+                "event": "unlabeled",  # Should be filtered out
+                "label": "status-03:planning",
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        ),
+        cast(
+            EventData,
+            {
+                "event": "closed",  # Should be filtered out
+                "label": None,
+                "created_at": timestamp_str,
+                "actor": "testuser",
+            },
+        ),
+    ]
+
+    # Create mock issue_manager
+    mock_manager = Mock()
+    mock_manager.get_issue_events = Mock(return_value=events)
+
+    # Call function
+    is_stale, elapsed = check_stale_bot_process(
+        cast(IssueData, issue_dict), "status-03:planning", "planning", mock_manager
+    )
+
+    # Should return (False, None) since no "labeled" events found
+    assert is_stale is False
+    assert elapsed is None

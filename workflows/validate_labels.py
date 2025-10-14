@@ -133,6 +133,72 @@ def check_status_labels(
     return (len(status_labels), status_labels)
 
 
+def check_stale_bot_process(
+    issue: IssueData,
+    label_name: str,
+    internal_id: str,
+    issue_manager: IssueManager
+) -> tuple[bool, Optional[int]]:
+    """Check if a bot_busy label has exceeded its timeout threshold.
+    
+    Args:
+        issue: Issue data
+        label_name: The bot_busy label name to check
+        internal_id: The internal_id of the label (for timeout lookup)
+        issue_manager: IssueManager instance for API calls
+        
+    Returns:
+        Tuple of (is_stale, elapsed_minutes)
+        - is_stale: True if label exceeded timeout
+        - elapsed_minutes: Minutes since label was applied, or None if not found
+        
+    Raises:
+        GithubException: If API call fails (per Decision #1 - let exceptions propagate)
+        
+    Note:
+        Unlike other issue_manager methods, this intentionally does NOT catch exceptions,
+        allowing the script to fail fast on API errors rather than silently skipping issues.
+        This ensures we don't miss API problems and maintains data integrity.
+        
+    Algorithm:
+        1. Get events for issue via issue_manager.get_issue_events()
+           Note: This will raise exceptions on API errors (Decision #1)
+        2. Filter to "labeled" events with matching label_name
+        3. Find most recent such event
+        4. Calculate elapsed time using calculate_elapsed_minutes() helper
+        5. Compare against STALE_TIMEOUTS[internal_id]
+        6. Return (is_stale, elapsed_minutes)
+    """
+    # Check if internal_id has a timeout threshold, return (False, None) if not
+    if internal_id not in STALE_TIMEOUTS:
+        return (False, None)
+    
+    # Get events for issue (will raise GithubException on API errors)
+    events = issue_manager.get_issue_events(issue["number"])
+    
+    # Filter to "labeled" events with matching label_name
+    labeled_events = [
+        event for event in events
+        if event["event"] == "labeled" and event["label"] == label_name
+    ]
+    
+    # If no matching events found, return (False, None)
+    if not labeled_events:
+        return (False, None)
+    
+    # Find most recent labeled event
+    most_recent_event = max(labeled_events, key=lambda e: e["created_at"])
+    
+    # Calculate elapsed time using helper
+    elapsed = calculate_elapsed_minutes(most_recent_event["created_at"])
+    
+    # Check if stale by comparing against timeout threshold
+    is_stale = elapsed > STALE_TIMEOUTS[internal_id]
+    
+    # Return (is_stale, elapsed_minutes)
+    return (is_stale, elapsed)
+
+
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments including project directory and log level.
     

@@ -10,7 +10,7 @@ from .issue_branch_manager import (
     IssueBranchManager,
     generate_branch_name_from_issue,
 )
-from .issue_manager import CommentData, IssueData, IssueManager
+from .issue_manager import CommentData, EventData, IssueData, IssueManager
 from .labels_manager import LabelData, LabelsManager
 from .pr_manager import PullRequestManager
 
@@ -18,6 +18,7 @@ __all__ = [
     "BaseGitHubManager",
     "BranchCreationResult",
     "CommentData",
+    "EventData",
     "IssueBranchManager",
     "IssueData",
     "IssueManager",
