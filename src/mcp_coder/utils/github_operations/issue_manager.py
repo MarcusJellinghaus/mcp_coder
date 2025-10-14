@@ -18,6 +18,16 @@ from .base_manager import BaseGitHubManager, _handle_github_errors
 # Configure logger for GitHub operations
 logger = logging.getLogger(__name__)
 
+# Export public API
+__all__ = [
+    "IssueEventType",
+    "IssueData",
+    "CommentData",
+    "LabelData",
+    "EventData",
+    "IssueManager",
+]
+
 
 class IssueEventType(str, Enum):
     """Enum for GitHub issue event types."""
