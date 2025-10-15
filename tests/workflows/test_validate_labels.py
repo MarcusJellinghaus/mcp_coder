@@ -5,6 +5,7 @@ Tests cover argument parsing, STALE_TIMEOUTS constant, and basic setup logic.
 """
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock, Mock
 
@@ -1889,8 +1890,6 @@ def test_display_summary_all_categories(capsys: pytest.CaptureFixture[str]) -> N
 
 def test_batch_file_exists() -> None:
     """Test that batch file is created and exists."""
-    from pathlib import Path
-
     batch_path = Path("workflows/validate_labels.bat")
     assert (
         batch_path.exists()
@@ -1898,7 +1897,9 @@ def test_batch_file_exists() -> None:
     assert batch_path.is_file(), "Batch file should be a file, not a directory"
 
 
-def test_main_exit_code_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+def test_main_exit_code_success(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Test main() exits with code 0 when validation succeeds (no errors or warnings)."""
     import sys
 
@@ -1965,7 +1966,7 @@ def test_main_exit_code_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) 
     assert exc_info.value.code == 0, "Should exit with code 0 on success"
 
 
-def test_main_exit_code_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+def test_main_exit_code_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Test main() exits with code 1 when validation finds errors (multiple status labels)."""
     import sys
 
@@ -2038,7 +2039,7 @@ def test_main_exit_code_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -
 
 
 def test_main_exit_code_warnings_only(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Test main() exits with code 2 when validation finds warnings but no errors."""
     import sys
@@ -2122,7 +2123,7 @@ def test_main_exit_code_warnings_only(
 
 
 def test_main_exit_code_errors_take_precedence_over_warnings(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Test main() exits with code 1 when both errors and warnings exist (errors take precedence)."""
     import sys
@@ -2325,7 +2326,7 @@ def test_process_issues_respects_overview_ignore_label() -> None:
 
 
 def test_full_workflow_integration(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Test complete end-to-end workflow with mocked GitHub API.
 
@@ -2513,7 +2514,7 @@ def test_full_workflow_integration(
 
 
 def test_full_workflow_integration_warnings_only(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Test end-to-end workflow with only warnings (no errors).
 
@@ -2601,7 +2602,7 @@ def test_full_workflow_integration_warnings_only(
 
 
 def test_full_workflow_integration_success(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Test end-to-end workflow with all issues OK.
 

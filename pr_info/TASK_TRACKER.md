@@ -117,7 +117,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 7: Code Review Fixes - Type Hints and Documentation
 [Details: pr_info/steps/step_7.md](steps/step_7.md)
 
-- [ ] Add/verify Path import in test file
+- [x] Add/verify Path import in test file
 - [ ] Fix all tmp_path: Any to tmp_path: Path (6-8 occurrences)
 - [ ] Update batch file comment for UTF-8 (mention label names)
 - [ ] Run mypy tests/workflows/test_validate_labels.py
