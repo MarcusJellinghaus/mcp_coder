@@ -100,6 +100,31 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run mypy quality check and fix all issues
 - [x] Prepare git commit message for Step 5
 
+### Step 6: Code Review Fixes - Critical Issues
+[Details: pr_info/steps/step_6.md](steps/step_6.md)
+
+- [ ] Remove hardcoded label fallback in process_issues()
+- [ ] Add import: from mcp_coder.workflows.utils import resolve_project_dir
+- [ ] Delete duplicate resolve_project_dir() function (~50 lines)
+- [ ] Delete test_multiple_labels_manual.py from project root
+- [ ] Delete pr_info/test_results_multiple_labels.md
+- [ ] Run pytest tests/workflows/test_validate_labels.py -v
+- [ ] Run workflows\validate_labels.bat --help to verify
+- [ ] Run pylint quality check and fix all issues
+- [ ] Run mypy quality check and fix all issues
+- [ ] Prepare git commit message for Step 6
+
+### Step 7: Code Review Fixes - Type Hints and Documentation
+[Details: pr_info/steps/step_7.md](steps/step_7.md)
+
+- [ ] Add/verify Path import in test file
+- [ ] Fix all tmp_path: Any to tmp_path: Path (6-8 occurrences)
+- [ ] Update batch file comment for UTF-8 (mention label names)
+- [ ] Run mypy tests/workflows/test_validate_labels.py
+- [ ] Run pytest tests/workflows/test_validate_labels.py -v
+- [ ] Run workflows\validate_labels.bat --help to verify
+- [ ] Prepare git commit message for Step 7
+
 ---
 
 ## Pull Request

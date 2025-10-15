@@ -101,3 +101,54 @@ This document tracks decisions made during the plan review discussion.
 ## 24. Steps 2 and 3 Separation
 **Decision:** Keep Steps 2 and 3 separate as originally planned.
 **Rationale:** Better for incremental testing and implementation. Each step remains focused and manageable.
+
+---
+
+## Code Review Follow-up Decisions
+
+### 25. Hardcoded Label Name Fallback
+**Decision:** Remove fallback value in `process_issues()`, use direct dictionary access `id_to_name["created"]`.
+**Rationale:** Fail fast with clear KeyError if "created" label is missing from config. No silent fallbacks that could hide configuration errors.
+**Implementation:** Change `id_to_name.get("created", "status-01:created")` to `id_to_name["created"]`.
+
+### 26. Temporary Test File Cleanup
+**Decision:** Delete `test_multiple_labels_manual.py` from project root.
+**Rationale:** Temporary manual testing file no longer needed - comprehensive automated tests exist in proper location.
+**Action:** Remove file immediately.
+
+### 27. Duplicate resolve_project_dir() Function
+**Decision:** Remove duplicate implementation from `workflows/validate_labels.py`, import from `mcp_coder.workflows.utils`.
+**Rationale:** Avoid code duplication - utility function already exists and is identical.
+**Implementation:** 
+- Remove lines ~430-480 from `workflows/validate_labels.py`
+- Add import: `from mcp_coder.workflows.utils import resolve_project_dir`
+
+### 28. Rate Limiting Feedback Visibility
+**Decision:** Keep API call count logging at DEBUG level only.
+**Rationale:** Users who need visibility can use `--log-level DEBUG`. Script doesn't make excessive calls in typical use.
+**Action:** No change needed - current implementation is correct.
+
+### 29. Test Results Documentation
+**Decision:** Delete `pr_info/test_results_multiple_labels.md` immediately.
+**Rationale:** File served its purpose for PR verification documentation but is no longer needed.
+**Action:** Remove file now.
+
+### 30. Type Hints in Test Functions
+**Decision:** Fix all `tmp_path: Any` type hints to `tmp_path: Path` in test file.
+**Rationale:** Improve type safety and enable better mypy checking. Simple find-replace operation.
+**Implementation:** Update all test function signatures in `tests/workflows/test_validate_labels.py`.
+
+### 31. Time Tolerance Magic Numbers
+**Decision:** Keep inline time tolerance assertions as-is with comments.
+**Rationale:** Inline assertions with comments are clear and readable. Extracting to constant wouldn't add value.
+**Action:** No change needed - current implementation is optimal.
+
+### 32. Batch File UTF-8 Comments
+**Decision:** Add specific comment about Unicode label name support.
+**Rationale:** Make it clear why UTF-8 setup is needed (for label names with emoji/special characters).
+**Implementation:** Update comment in `workflows/validate_labels.bat` near UTF-8 setup section.
+
+### 33. Version Flag for Script
+**Decision:** Do not add `--version` flag to script.
+**Rationale:** Internal workflow script tracked by git history. Version flag adds maintenance overhead without sufficient benefit.
+**Action:** No change needed.

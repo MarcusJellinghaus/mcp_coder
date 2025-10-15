@@ -14,7 +14,7 @@ This implementation follows the **KISS principle** by maximizing reuse of existi
 4. **Report and Exit**: Detect and report problems, don't attempt auto-fixes
 5. **Plain Text Output**: No emojis or colors, works everywhere (CI/CD, logs)
 
-**Design Decisions:** See `pr_info/steps/Decisions.md` for detailed rationale on all choices made during plan review.
+**Design Decisions:** See `pr_info/steps/Decisions.md` for detailed rationale on all choices made during plan review and code review follow-up.
 
 ### Architectural Changes
 
@@ -48,15 +48,15 @@ This implementation follows the **KISS principle** by maximizing reuse of existi
 - Exit codes: 0 (success), 1 (errors), 2 (warnings only)
 
 **Reused Utilities:**
-- `workflows/utils.py::resolve_project_dir()` - Project directory resolution
-- `workflows/label_config.py::load_labels_config()` - Config loading
+- `mcp_coder.workflows.utils::resolve_project_dir()` - Project directory resolution
+- `workflows.label_config::load_labels_config()` - Config loading
 - `mcp_coder.utils.log_utils::setup_logging()` - Logging configuration
 - `IssueManager` - Issue operations
 - `LabelsManager` - Label operations (for adding missing labels)
 
 ## Files to Create or Modify
 
-### Files to CREATE:
+### Files CREATED:
 ```
 workflows/validate_labels.py          # Main workflow script
 workflows/validate_labels.bat         # Windows batch wrapper
@@ -66,11 +66,22 @@ pr_info/steps/step_1.md               # Implementation steps
 pr_info/steps/step_2.md
 pr_info/steps/step_3.md
 pr_info/steps/step_4.md
+pr_info/steps/step_5.md
+pr_info/steps/step_6.md               # Code review fixes - critical
+pr_info/steps/step_7.md               # Code review fixes - quality
 ```
 
-### Files to MODIFY:
+### Files MODIFIED:
 ```
 src/mcp_coder/utils/github_operations/issue_manager.py  # Add get_issue_events()
+pr_info/steps/Decisions.md                              # Add code review decisions
+pr_info/TASK_TRACKER.md                                 # Add new steps
+```
+
+### Files DELETED (in Step 6):
+```
+test_multiple_labels_manual.py              # Temporary test file
+pr_info/test_results_multiple_labels.md     # Temporary documentation
 ```
 
 ## Core Functionality
@@ -113,11 +124,22 @@ For each issue with bot_busy label:
 
 ## Implementation Steps
 
+### Initial Implementation (Steps 1-5)
 1. **Step 1**: Extend IssueManager with Events API support
 2. **Step 2**: Create validate_labels.py structure with argument parsing
 3. **Step 3**: Implement core validation logic (status checks, stale detection)
 4. **Step 4**: Implement reporting and main orchestration
-5. **Step 5**: Create batch file and tests
+5. **Step 5**: Create batch file and integration tests
+
+### Code Review Fixes (Steps 6-7)
+6. **Step 6**: Fix critical issues
+   - Remove hardcoded label fallback
+   - Import resolve_project_dir from utilities
+   - Delete duplicate function and temporary files
+   
+7. **Step 7**: Improve code quality
+   - Fix type hints in tests (tmp_path: Path)
+   - Enhance batch file documentation
 
 ## Success Criteria
 
@@ -129,6 +151,23 @@ For each issue with bot_busy label:
 - ✅ Exit codes work correctly (0/1/2)
 - ✅ All quality checks pass (pylint, pytest, mypy)
 - ✅ Follows existing codebase patterns and conventions
+- ✅ No code duplication
+- ✅ Proper type hints throughout
+- ✅ Clear documentation
+
+## Code Quality Standards
+
+### From Initial Implementation
+- **KISS Principle**: Simple, linear processing
+- **Pattern Reuse**: Follow existing workflow script patterns
+- **Error Handling**: Fail fast on API errors
+- **Testing**: Comprehensive unit tests with mocks
+
+### From Code Review
+- **No Silent Fallbacks**: Use direct dictionary access, let KeyError propagate
+- **Eliminate Duplication**: Import shared utilities, don't reimplement
+- **Type Safety**: Use proper type hints (Path, not Any)
+- **Clear Documentation**: Explain why (Unicode support for labels)
 
 ## Non-Goals (Kept Simple)
 
@@ -139,3 +178,13 @@ For each issue with bot_busy label:
 - ❌ Historical analysis (focus on current state only)
 - ❌ Debug mode for specific issues (KISS - use --dry-run instead)
 - ❌ JSON output or fancy formatting (plain text for maximum compatibility)
+- ❌ Version flag (internal script, git provides versioning)
+- ❌ Rate limit warnings at INFO level (DEBUG sufficient)
+
+## Review Process
+
+This implementation went through a comprehensive code review that identified:
+- 3 critical issues (hardcoded values, duplication, temporary files)
+- 6 suggestions for improvement (addressed or accepted as-is)
+
+All review findings were documented in `Decisions.md` (items 25-33) and addressed in Steps 6-7.
