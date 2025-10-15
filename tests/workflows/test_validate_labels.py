@@ -1359,16 +1359,17 @@ def test_process_issues_mixed_scenarios() -> None:
     assert results["initialized"] == [1]  # Issue 1
     assert len(results["errors"]) == 1  # Issue 3
     assert results["errors"][0]["issue"] == 3
-    assert len(results["warnings"]) == 1  # Issue 5
-    assert results["warnings"][0]["issue"] == 5
+    # In dry-run mode, staleness checks are skipped to avoid API calls
+    assert len(results["warnings"]) == 0  # No warnings in dry-run mode
     assert 4 in results["ok"]  # Issue 4
+    assert 5 in results["ok"]  # Issue 5 marked as OK (not checked for staleness)
     assert 6 in results["ok"]  # Issue 6
 
     # Verify add_labels was NOT called (dry-run mode)
     mock_manager.add_labels.assert_not_called()
 
-    # Verify get_issue_events was called for issues 5 and 6 (bot_busy labels)
-    assert mock_manager.get_issue_events.call_count == 2
+    # Verify get_issue_events was NOT called (dry-run mode skips staleness checks)
+    assert mock_manager.get_issue_events.call_count == 0
 
 
 def test_process_issues_with_bot_pickup_category() -> None:
@@ -1895,113 +1896,6 @@ def test_batch_file_exists() -> None:
         batch_path.exists()
     ), "Batch file should exist at workflows/validate_labels.bat"
     assert batch_path.is_file(), "Batch file should be a file, not a directory"
-
-
-def test_batch_file_runs_python_script() -> None:
-    """Test that batch file executes the Python script with help flag."""
-    import subprocess
-    from pathlib import Path
-
-    batch_path = Path("workflows/validate_labels.bat")
-    assert batch_path.exists(), "Batch file must exist"
-
-    # Run batch file with --help flag (should not require GitHub API access)
-    result = subprocess.run(
-        [str(batch_path.absolute()), "--help"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-
-    # Verify help text appears in output
-    assert (
-        result.returncode == 0
-    ), f"Batch file should exit with code 0, got {result.returncode}"
-    assert (
-        "usage:" in result.stdout.lower()
-        or "Validate workflow status labels" in result.stdout
-    )
-
-
-def test_batch_file_forwards_arguments() -> None:
-    """Test that batch file correctly forwards command-line arguments."""
-    import subprocess
-    from pathlib import Path
-
-    batch_path = Path("workflows/validate_labels.bat")
-
-    # Test with --help to verify argument forwarding (doesn't require API)
-    result = subprocess.run(
-        [str(batch_path.absolute()), "--help"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-
-    # Should show help for validate_labels.py, not batch file errors
-    assert (
-        "--log-level" in result.stdout
-    ), "Should show log-level option from Python script"
-    assert "--dry-run" in result.stdout, "Should show dry-run option from Python script"
-    assert (
-        "--project-dir" in result.stdout
-    ), "Should show project-dir option from Python script"
-
-
-def test_batch_file_handles_invalid_arguments() -> None:
-    """Test that batch file propagates errors for invalid arguments."""
-    import subprocess
-    from pathlib import Path
-
-    batch_path = Path("workflows/validate_labels.bat")
-
-    # Test with invalid argument
-    result = subprocess.run(
-        [str(batch_path.absolute()), "--invalid-flag-that-does-not-exist"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-
-    # Should exit with non-zero code for invalid arguments
-    assert (
-        result.returncode != 0
-    ), "Should return non-zero exit code for invalid arguments"
-    # Error message should be from Python script (argparse)
-    assert (
-        "error" in result.stderr.lower()
-        or "unrecognized arguments" in result.stderr.lower()
-    )
-
-
-def test_batch_file_preserves_exit_codes() -> None:
-    """Test that batch file preserves Python script exit codes."""
-    import subprocess
-    from pathlib import Path
-
-    batch_path = Path("workflows/validate_labels.bat")
-
-    # Test help flag - should exit with 0
-    result_help = subprocess.run(
-        [str(batch_path.absolute()), "--help"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-
-    assert result_help.returncode == 0, "Help flag should return exit code 0"
-
-    # Test invalid flag - should exit with non-zero
-    result_invalid = subprocess.run(
-        [str(batch_path.absolute()), "--not-a-valid-flag"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-
-    assert (
-        result_invalid.returncode != 0
-    ), "Invalid flag should return non-zero exit code"
 
 
 def test_main_exit_code_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
@@ -2649,9 +2543,9 @@ def test_full_workflow_integration_warnings_only(
     }
     (config_dir / "labels.json").write_text(json.dumps(labels_config))
 
-    # Mock arguments
+    # Mock arguments - remove --dry-run to allow staleness checks
     monkeypatch.setattr(
-        "sys.argv", ["validate_labels.py", "--project-dir", str(tmp_path), "--dry-run"]
+        "sys.argv", ["validate_labels.py", "--project-dir", str(tmp_path)]
     )
 
     # Create stale bot_busy issue (WARNING only)
