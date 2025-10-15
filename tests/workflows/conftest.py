@@ -27,9 +27,7 @@ def labels_config_path() -> Path:
         return labels_file_1
 
     # Strategy 2: From current working directory
-    from pathlib import Path as P
-
-    labels_file_2 = P.cwd() / "workflows" / "config" / "labels.json"
+    labels_file_2 = Path.cwd() / "workflows" / "config" / "labels.json"
 
     if labels_file_2.exists():
         return labels_file_2
@@ -40,5 +38,5 @@ def labels_config_path() -> Path:
         f"  1. {labels_file_1} (from conftest)\n"
         f"  2. {labels_file_2} (from cwd)\n"
         f"  conftest.py: {conftest_path}\n"
-        f"  CWD: {P.cwd()}"
+        f"  CWD: {Path.cwd()}"
     )

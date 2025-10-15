@@ -15,7 +15,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Task format:**
 - [x] = Implementation step complete (code + all checks pass)
 - [ ] = Implementation step not complete
-- Each task links to a detail file in PR_Info/ folder
+- Each task links to a detail file in pr_info/steps/ folder
 
 ---
 

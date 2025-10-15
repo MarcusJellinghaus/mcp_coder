@@ -1731,3 +1731,258 @@ class TestIssueManagerUnit:
             # Non-auth errors should be handled gracefully and return empty list
             result = manager.list_issues()
             assert result == []
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_get_issue_events_success(self, mock_github: Mock, tmp_path: Path) -> None:
+        """Test successful event retrieval."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock event objects
+        mock_event1 = MagicMock()
+        mock_event1.event = "labeled"
+        mock_event1.label.name = "bug"
+        mock_event1.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_event1.actor.login = "user1"
+
+        mock_event2 = MagicMock()
+        mock_event2.event = "unlabeled"
+        mock_event2.label.name = "enhancement"
+        mock_event2.created_at.isoformat.return_value = "2023-01-01T01:00:00Z"
+        mock_event2.actor.login = "user2"
+
+        mock_event3 = MagicMock()
+        mock_event3.event = "commented"
+        mock_event3.created_at.isoformat.return_value = "2023-01-01T02:00:00Z"
+        mock_event3.actor.login = "user3"
+        # commented events don't have label attribute
+        delattr(mock_event3, "label")
+
+        mock_issue = MagicMock()
+        mock_issue.get_events.return_value = [mock_event1, mock_event2, mock_event3]
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.get_issue_events(123)
+
+            assert len(result) == 3
+            assert result[0]["event"] == "labeled"
+            assert result[0]["label"] == "bug"
+            assert result[0]["created_at"] == "2023-01-01T00:00:00Z"
+            assert result[0]["actor"] == "user1"
+
+            assert result[1]["event"] == "unlabeled"
+            assert result[1]["label"] == "enhancement"
+            assert result[1]["created_at"] == "2023-01-01T01:00:00Z"
+            assert result[1]["actor"] == "user2"
+
+            assert result[2]["event"] == "commented"
+            assert result[2]["label"] is None
+            assert result[2]["created_at"] == "2023-01-01T02:00:00Z"
+            assert result[2]["actor"] == "user3"
+
+            mock_issue.get_events.assert_called_once()
+
+    def test_get_issue_events_invalid_issue_number(self, tmp_path: Path) -> None:
+        """Test with invalid issue number returns empty list."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.get_issue_events(0)
+            assert result == []
+
+            result = manager.get_issue_events(-1)
+            assert result == []
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_get_issue_events_filter_label_events(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test that filtering by IssueEventType.LABELED works correctly."""
+        from mcp_coder.utils.github_operations.issue_manager import IssueEventType
+
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock event objects
+        mock_labeled_event = MagicMock()
+        mock_labeled_event.event = "labeled"
+        mock_labeled_event.label.name = "bug"
+        mock_labeled_event.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_labeled_event.actor.login = "user1"
+
+        mock_unlabeled_event = MagicMock()
+        mock_unlabeled_event.event = "unlabeled"
+        mock_unlabeled_event.label.name = "enhancement"
+        mock_unlabeled_event.created_at.isoformat.return_value = "2023-01-01T01:00:00Z"
+        mock_unlabeled_event.actor.login = "user2"
+
+        mock_closed_event = MagicMock()
+        mock_closed_event.event = "closed"
+        mock_closed_event.created_at.isoformat.return_value = "2023-01-01T02:00:00Z"
+        mock_closed_event.actor.login = "user3"
+        delattr(mock_closed_event, "label")
+
+        mock_issue = MagicMock()
+        mock_issue.get_events.return_value = [
+            mock_labeled_event,
+            mock_unlabeled_event,
+            mock_closed_event,
+        ]
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            # Filter for only labeled events
+            result = manager.get_issue_events(123, IssueEventType.LABELED)
+
+            assert len(result) == 1
+            assert result[0]["event"] == "labeled"
+            assert result[0]["label"] == "bug"
+            assert result[0]["actor"] == "user1"
+
+            mock_issue.get_events.assert_called_once()
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_get_issue_events_api_error_raises(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test that API errors are raised for get_issue_events."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_issue = MagicMock()
+        mock_issue.get_events.side_effect = GithubException(
+            500, {"message": "Server error"}, None
+        )
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            # Verify that GithubException is raised (not handled)
+            with pytest.raises(GithubException):
+                manager.get_issue_events(123)
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_get_issue_events_filter_unlabeled(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test filtering by IssueEventType.UNLABELED."""
+        from mcp_coder.utils.github_operations.issue_manager import IssueEventType
+
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock event objects
+        mock_labeled_event = MagicMock()
+        mock_labeled_event.event = "labeled"
+        mock_labeled_event.label.name = "bug"
+        mock_labeled_event.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_labeled_event.actor.login = "user1"
+
+        mock_unlabeled_event1 = MagicMock()
+        mock_unlabeled_event1.event = "unlabeled"
+        mock_unlabeled_event1.label.name = "enhancement"
+        mock_unlabeled_event1.created_at.isoformat.return_value = "2023-01-01T01:00:00Z"
+        mock_unlabeled_event1.actor.login = "user2"
+
+        mock_unlabeled_event2 = MagicMock()
+        mock_unlabeled_event2.event = "unlabeled"
+        mock_unlabeled_event2.label.name = "wontfix"
+        mock_unlabeled_event2.created_at.isoformat.return_value = "2023-01-01T02:00:00Z"
+        mock_unlabeled_event2.actor.login = "user3"
+
+        mock_issue = MagicMock()
+        mock_issue.get_events.return_value = [
+            mock_labeled_event,
+            mock_unlabeled_event1,
+            mock_unlabeled_event2,
+        ]
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            # Filter for only unlabeled events
+            result = manager.get_issue_events(123, IssueEventType.UNLABELED)
+
+            assert len(result) == 2
+            assert result[0]["event"] == "unlabeled"
+            assert result[0]["label"] == "enhancement"
+            assert result[1]["event"] == "unlabeled"
+            assert result[1]["label"] == "wontfix"
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_get_issue_events_empty_events(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test with issue that has no events."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_issue = MagicMock()
+        mock_issue.get_events.return_value = []
+
+        mock_repo = MagicMock()
+        mock_repo.get_issue.return_value = mock_issue
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            result = manager.get_issue_events(123)
+
+            assert result == []
+            mock_issue.get_events.assert_called_once()
