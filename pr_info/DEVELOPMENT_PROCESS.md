@@ -165,6 +165,7 @@ flowchart LR
 - Discuss requirements and feasibility
 - Refine issue description
 - Add implementation hints (without detailed plan)
+- **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:awaiting-planning`
 
 **Prompts:**
 
@@ -307,6 +308,8 @@ flowchart LR
    </details>
 
 4. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
+
+5. **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
 
 **Additional Prompts (for special cases):**
 
@@ -670,6 +673,7 @@ flowchart TD
 - Check code quality and tests
 - Run additional validation
 - Address feedback and fix issues
+- **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:ready-pr`
 
 **See detailed prompts below in section 5.2**
 
