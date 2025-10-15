@@ -103,7 +103,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 6: Code Review Fixes - Critical Issues
 [Details: pr_info/steps/step_6.md](steps/step_6.md)
 
-- [ ] Remove hardcoded label fallback in process_issues()
+- [x] Remove hardcoded label fallback in process_issues()
 - [ ] Add import: from mcp_coder.workflows.utils import resolve_project_dir
 - [ ] Delete duplicate resolve_project_dir() function (~50 lines)
 - [ ] Delete test_multiple_labels_manual.py from project root
