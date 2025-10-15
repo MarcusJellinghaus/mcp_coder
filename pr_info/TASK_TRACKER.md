@@ -104,7 +104,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [Details: pr_info/steps/step_6.md](steps/step_6.md)
 
 - [x] Remove hardcoded label fallback in process_issues()
-- [ ] Add import: from mcp_coder.workflows.utils import resolve_project_dir
+- [x] Add import: from mcp_coder.workflows.utils import resolve_project_dir
 - [ ] Delete duplicate resolve_project_dir() function (~50 lines)
 - [ ] Delete test_multiple_labels_manual.py from project root
 - [ ] Delete pr_info/test_results_multiple_labels.md
@@ -112,7 +112,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Run workflows\validate_labels.bat --help to verify
 - [ ] Run pylint quality check and fix all issues
 - [ ] Run mypy quality check and fix all issues
-- [ ] Prepare git commit message for Step 6
+- [x] Prepare git commit message for Step 6
 
 ### Step 7: Code Review Fixes - Type Hints and Documentation
 [Details: pr_info/steps/step_7.md](steps/step_7.md)
