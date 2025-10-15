@@ -106,7 +106,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Remove hardcoded label fallback in process_issues()
 - [x] Add import: from mcp_coder.workflows.utils import resolve_project_dir
 - [x] Delete duplicate resolve_project_dir() function (~50 lines)
-- [ ] Delete test_multiple_labels_manual.py from project root
+- [x] Delete test_multiple_labels_manual.py from project root
 - [ ] Delete pr_info/test_results_multiple_labels.md
 - [ ] Run pytest tests/workflows/test_validate_labels.py -v
 - [ ] Run workflows\validate_labels.bat --help to verify
