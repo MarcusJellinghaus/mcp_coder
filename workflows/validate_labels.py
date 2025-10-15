@@ -273,7 +273,7 @@ def process_issues(
                 try:
                     # Get the "created" label name
                     created_label_name = id_to_name["created"]
-                    issue_manager.add_labels(issue_number, [created_label_name])
+                    issue_manager.add_labels(issue_number, created_label_name)
                     logger.debug(f"Issue #{issue_number}: Added label '{created_label_name}'")
                 except GithubException as e:
                     logger.error(f"Issue #{issue_number}: Failed to add label - {e}")

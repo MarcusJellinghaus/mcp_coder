@@ -959,8 +959,9 @@ def test_process_issues_single_issue_needs_initialization() -> None:
     assert len(results["warnings"]) == 0
     assert len(results["ok"]) == 0
 
-    # Verify add_labels was called
-    mock_manager.add_labels.assert_called_once_with(123, ["status-01:created"])
+    # Verify add_labels was called with correct varargs signature
+    # Note: add_labels expects *labels (varargs), not a list
+    mock_manager.add_labels.assert_called_once_with(123, "status-01:created")
 
 
 def test_process_issues_dry_run_mode() -> None:
@@ -1036,8 +1037,8 @@ def test_process_issues_with_ignore_labels() -> None:
     assert results["skipped"] == 2
     assert results["initialized"] == [3]
 
-    # Verify add_labels was called only once for issue 3
-    mock_manager.add_labels.assert_called_once_with(3, ["status-01:created"])
+    # Verify add_labels was called only once for issue 3 with correct varargs signature
+    mock_manager.add_labels.assert_called_once_with(3, "status-01:created")
 
 
 def test_process_issues_with_multiple_status_labels() -> None:
@@ -1562,8 +1563,8 @@ def test_process_issues_mixed_ignore_label_positions() -> None:
     assert results["skipped"] == 4
     assert results["initialized"] == [5]
 
-    # Verify add_labels was called only for issue 5
-    mock_manager.add_labels.assert_called_once_with(5, ["status-01:created"])
+    # Verify add_labels was called only for issue 5 with correct varargs signature
+    mock_manager.add_labels.assert_called_once_with(5, "status-01:created")
 
 
 def test_process_issues_no_ignore_labels_in_config() -> None:
@@ -2321,8 +2322,8 @@ def test_process_issues_respects_overview_ignore_label() -> None:
     ), "Issue 2 with Overview should not be initialized"
     assert 3 not in results["ok"], "Issue 3 with Overview should not be OK"
 
-    # Verify add_labels was only called for issue 4 (issue 5 already has status)
-    mock_manager.add_labels.assert_called_once_with(4, ["status-01:created"])
+    # Verify add_labels was only called for issue 4 (issue 5 already has status) with correct varargs signature
+    mock_manager.add_labels.assert_called_once_with(4, "status-01:created")
 
 
 def test_full_workflow_integration(
