@@ -17,7 +17,7 @@ REM   validate_labels.bat --project-dir . --log-level INFO --dry-run
 REM
 REM This wrapper sets up the Python environment and executes the label validation workflow.
 
-REM Set console to UTF-8 codepage to handle Unicode characters
+REM Set console to UTF-8 codepage to handle Unicode characters in label names
 chcp 65001 >nul 2>&1
 
 REM Set Python to use UTF-8 encoding for all I/O operations

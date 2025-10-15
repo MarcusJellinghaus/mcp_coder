@@ -118,12 +118,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [Details: pr_info/steps/step_7.md](steps/step_7.md)
 
 - [x] Add/verify Path import in test file
-- [ ] Fix all tmp_path: Any to tmp_path: Path (6-8 occurrences)
-- [ ] Update batch file comment for UTF-8 (mention label names)
-- [ ] Run mypy tests/workflows/test_validate_labels.py
-- [ ] Run pytest tests/workflows/test_validate_labels.py -v
-- [ ] Run workflows\validate_labels.bat --help to verify
-- [ ] Prepare git commit message for Step 7
+- [x] Fix all tmp_path: Any to tmp_path: Path (6-8 occurrences)
+- [x] Update batch file comment for UTF-8 (mention label names)
+- [x] Run mypy tests/workflows/test_validate_labels.py
+- [x] Run pytest tests/workflows/test_validate_labels.py -v
+- [x] Run workflows\validate_labels.bat --help to verify
+- [x] Prepare git commit message for Step 7
 
 ---
 
