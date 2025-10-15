@@ -107,7 +107,7 @@ REM Generate git diff and create enhanced review prompt
     echo.
     echo === GIT DIFF ===
     echo.
-    git diff --unified=5 --no-prefix %BASE_BRANCH%...HEAD -- . ":(exclude)pr_info/.conversations"
+    git diff --unified=5 --no-prefix %BASE_BRANCH%...HEAD -- . ":(exclude)pr_info/.conversations/**"
 ) > %TEMP_FILE%
 
 REM Check file size (warn if > 500KB)
