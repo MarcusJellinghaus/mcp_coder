@@ -33,7 +33,9 @@ class TestGetClaudeSearchPaths:
 
         # Should include Windows user-specific paths
         # os.path.join() produces platform-specific separators, so normalize for comparison
-        expected_path = os.path.join(r"C:\Users\testuser", ".local", "bin", "claude.exe")
+        expected_path = os.path.join(
+            r"C:\Users\testuser", ".local", "bin", "claude.exe"
+        )
         assert expected_path in paths
 
         # Should include Unix-like paths with user home
@@ -58,7 +60,9 @@ class TestGetClaudeSearchPaths:
 
         # Should generate paths correctly regardless of platform
         # os.path.join() produces platform-specific separators, so normalize for comparison
-        expected_path = os.path.join(r"C:\Users\unixuser", ".local", "bin", "claude.exe")
+        expected_path = os.path.join(
+            r"C:\Users\unixuser", ".local", "bin", "claude.exe"
+        )
         assert expected_path in paths
 
 
