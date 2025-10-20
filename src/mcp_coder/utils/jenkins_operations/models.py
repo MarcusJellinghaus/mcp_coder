@@ -68,7 +68,7 @@ class JobStatus:
         """Return human-readable job status.
 
         Returns:
-            Formatted string representation of job status.
+            Formatted job status string.
         """
         if self.status == "queued":
             return "Job queued"
@@ -114,7 +114,7 @@ class QueueSummary:
         """Return human-readable queue summary.
 
         Returns:
-            Formatted string representation of queue status.
+            Formatted queue summary string.
         """
         running_text = f"{self.running} job{'s' if self.running != 1 else ''} running"
         queued_text = f"{self.queued} job{'s' if self.queued != 1 else ''} queued"
