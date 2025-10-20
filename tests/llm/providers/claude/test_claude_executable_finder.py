@@ -31,8 +31,10 @@ class TestGetClaudeSearchPaths:
         # Should include shutil.which result
         assert "/usr/bin/claude" in paths
 
-        # Should include Windows user-specific paths (using raw strings)
-        assert r"C:\Users\testuser\.local\bin\claude.exe" in paths
+        # Should include Windows user-specific paths
+        # os.path.join() produces platform-specific separators, so normalize for comparison
+        expected_path = os.path.join(r"C:\Users\testuser", ".local", "bin", "claude.exe")
+        assert expected_path in paths
 
         # Should include Unix-like paths with user home
         assert any(r"C:\Users\testuser" in path and "claude" in path for path in paths)
@@ -54,8 +56,10 @@ class TestGetClaudeSearchPaths:
 
         paths = _get_claude_search_paths()
 
-        # Should use USER variable when USERNAME is not available
-        assert r"C:\Users\unixuser\.local\bin\claude.exe" in paths
+        # Should generate paths correctly regardless of platform
+        # os.path.join() produces platform-specific separators, so normalize for comparison
+        expected_path = os.path.join(r"C:\Users\unixuser", ".local", "bin", "claude.exe")
+        assert expected_path in paths
 
 
 class TestFindClaudeExecutable:
