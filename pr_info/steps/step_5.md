@@ -118,9 +118,10 @@ Verify ALL issue #136 requirements are met:
 - ✅ test_job optional with default
 
 **Error Handling:**
-- ✅ Custom exception hierarchy (4 exceptions)
+- ✅ Single exception type (JenkinsError) - per Decision 4
+- ✅ Exception chaining preserves original tracebacks
 - ✅ Clear error messages with context
-- ✅ Proper exception raising
+- ✅ Parameters validation (params must be dict)
 
 **Logging:**
 - ✅ structlog integration
@@ -428,14 +429,15 @@ mcp__code-checker__run_pytest_check(
 
 6. **Exceptions:**
    ```python
-   from mcp_coder.utils import (
-       JenkinsError,
-       JenkinsConnectionError,
-       JenkinsAuthError,
-       JenkinsJobNotFoundError,
-   )
-   assert issubclass(JenkinsConnectionError, JenkinsError)
-   # ✅ Exception hierarchy works
+   from mcp_coder.utils import JenkinsError
+   
+   # Test that exception can be raised and caught
+   try:
+       raise JenkinsError("Test error")
+   except JenkinsError as e:
+       assert str(e) == "Test error"
+   
+   # ✅ Single exception type works (per Decision 4)
    ```
 
 7. **Logging:**

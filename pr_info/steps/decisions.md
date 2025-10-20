@@ -172,16 +172,312 @@ This document records the decisions made during the project plan review discussi
 
 ---
 
-## Decision 11: Jenkins Version Compatibility
+## Decision 11: Jenkins Version Compatibility (SUPERSEDED)
 
 **Topic:** Should we document which Jenkins version was tested?
 
-**Decision:** Document tested Jenkins version in module docstring
+**Decision:** SUPERSEDED by Decision 14 - Do not document Jenkins version
 
 **Rationale:**
-- Provides clear compatibility information for users
-- Helps with troubleshooting version-specific issues
+- Original decision replaced during review discussion
+- See Decision 14 for current approach
 
 **Impact:**
-- Step 2: Add "Tested with Jenkins X.Y.Z" note to module docstring
-- Step 5: Verify version note is present
+- This decision is no longer active
+
+
+---
+
+## Decision 12: Exception Types Consistency (Review Discussion)
+
+**Topic:** Resolve inconsistency between Decision 4 (single exception) and Steps 2/5 (multiple exceptions)
+
+**Decision:** Stick with single `JenkinsError` exception only
+
+**Rationale:**
+- Maintains consistency with Decision 4
+- Follows KISS principle
+- Simpler implementation and testing
+- Error messages provide sufficient context
+
+**Impact:**
+- Step 2: Remove references to JenkinsConnectionError, JenkinsAuthError, JenkinsJobNotFoundError
+- Step 4: Export only `JenkinsError`
+- Step 5: Update requirements checklist to reflect single exception
+
+---
+
+## Decision 13: Test Specification Detail Level (Review Discussion)
+
+**Topic:** Should test specifications be simplified to high-level coverage only?
+
+**Decision:** Keep current detailed test specifications
+
+**Rationale:**
+- Provides comprehensive implementation guidance
+- Reduces ambiguity during implementation
+- Ensures thorough test coverage
+
+**Impact:**
+- No changes to Steps 1-3 test specifications
+
+---
+
+## Decision 14: Jenkins Version Documentation (Review Discussion)
+
+**Topic:** Should we document which Jenkins version was tested?
+
+**Decision:** Do not document Jenkins version at all
+
+**Rationale:**
+- Keeps documentation simpler
+- Avoids maintenance burden of version updates
+- Works with modern Jenkins versions generically
+
+**Impact:**
+- Step 2: Remove "Tested with Jenkins X.Y.Z" note from module docstring
+- Remove Decision 11 (superseded by this decision)
+
+---
+
+## Decision 15: Queue Item Expiration Handling (Review Discussion)
+
+**Topic:** How should we handle expired/purged queue items?
+
+**Decision:** Let it fail naturally - Jenkins API will error, wrap as JenkinsError
+
+**Rationale:**
+- Simplest approach (KISS principle)
+- No special handling needed
+- Jenkins error message provides context
+- Forward-compatible
+
+**Impact:**
+- Step 2: No special handling for expired queue items in `get_job_status()`
+
+---
+
+## Decision 16: Build Number Availability (Review Discussion)
+
+**Topic:** What if a queued job fails before getting a build number?
+
+**Decision:** Pass through whatever Jenkins provides - build_number stays None if unavailable
+
+**Rationale:**
+- Aligns with Decision 5 (pass through as-is)
+- Simple implementation
+- No validation needed
+- Handles edge cases gracefully
+
+**Impact:**
+- Step 2: No special error handling for missing build numbers
+
+---
+
+## Decision 17: Exception Chaining (Review Discussion)
+
+**Topic:** Should JenkinsError preserve the original exception?
+
+**Decision:** Yes - use `raise JenkinsError("message") from original_exception`
+
+**Rationale:**
+- Python best practice
+- Preserves full stack trace for debugging
+- Helpful for troubleshooting
+- No additional complexity
+
+**Impact:**
+- Step 2: Use exception chaining with `from` syntax in all error handling
+
+---
+
+## Decision 18: Rate Limiting (Review Discussion)
+
+**Topic:** Should we document or handle Jenkins API rate limiting?
+
+**Decision:** No rate limiting handling or documentation
+
+**Rationale:**
+- Let Jenkins API errors surface naturally (KISS principle)
+- Simplest implementation
+- Users can handle rate limiting at their level if needed
+
+**Impact:**
+- No rate limiting documentation or handling anywhere
+
+---
+
+## Decision 19: Timeout Documentation Location (Review Discussion)
+
+**Topic:** Where should the 30-second timeout be documented?
+
+**Decision:** Document in JenkinsClient class docstring (not module docstring)
+
+**Rationale:**
+- More visible to users instantiating the class
+- Keeps limitation close to where it matters
+
+**Impact:**
+- Step 2: Move timeout limitation from module docstring to class docstring
+
+---
+
+## Decision 20: Job Parameters Validation (Review Discussion)
+
+**Topic:** Should we validate that params is a dict?
+
+**Decision:** Yes - add explicit type validation
+
+**Rationale:**
+- Provides clear error message early
+- Better user experience than cryptic Jenkins API error
+- Simple validation (2 lines of code)
+
+**Impact:**
+- Step 2: Add type check in `start_job()`: raise ValueError if params is not None and not a dict
+
+---
+
+## Decision 21: Build Duration Availability (Review Discussion)
+
+**Topic:** When is duration_ms available and what should be documented?
+
+**Decision:** duration_ms is None until job completes - document in JobStatus docstring
+
+**Rationale:**
+- Clear behavior specification
+- Helps users understand when to expect values
+- Simple to implement and understand
+
+**Impact:**
+- Step 1: Add documentation in JobStatus docstring about duration_ms availability
+- Step 2: Ensure duration_ms is None for running/queued jobs
+
+---
+
+## Decision 22: Job URL Source (Review Discussion)
+
+**Topic:** Should job URL be constructed or obtained from Jenkins API?
+
+**Decision:** Get URL from Jenkins API response only - don't construct it
+
+**Rationale:**
+- Single source of truth (Jenkins)
+- Avoids URL construction errors
+- Forward-compatible with Jenkins URL structure changes
+- Simple implementation
+
+**Impact:**
+- Step 2: Extract URL from Jenkins API response (build_info) in `get_job_status()`
+
+---
+
+## Decision 23: Troubleshooting Documentation (Review Discussion)
+
+**Topic:** Should we add a troubleshooting section?
+
+**Decision:** No troubleshooting section - rely on clear error messages
+
+**Rationale:**
+- Keeps documentation minimal (KISS principle)
+- Good error messages should be self-explanatory
+- Reduces maintenance burden
+
+**Impact:**
+- No troubleshooting section added anywhere
+
+---
+
+## Decision 24: Quick Start Example (Review Discussion)
+
+**Topic:** Should we add a Quick Start example to summary.md?
+
+**Decision:** No separate Quick Start - examples in docstrings are sufficient
+
+**Rationale:**
+- Docstrings already contain usage examples
+- Avoids duplication
+- Simpler documentation structure
+
+**Impact:**
+- No Quick Start section added to summary.md
+
+---
+
+## Decision 25: Performance Considerations (Review Discussion)
+
+**Topic:** Should we document performance considerations about polling?
+
+**Decision:** No performance documentation about polling
+
+**Rationale:**
+- Trust users to handle polling appropriately (KISS principle)
+- Avoids prescriptive guidance
+- Users know their use cases best
+
+**Impact:**
+- No polling guidance in documentation
+
+---
+
+## Decision 26: File Size Estimates (Review Discussion)
+
+**Topic:** Should we add KB size estimates in addition to line counts?
+
+**Decision:** Line counts are sufficient - no KB size estimates needed
+
+**Rationale:**
+- Line counts adequate for planning
+- File sizes vary with comments/whitespace
+- Simpler documentation
+
+**Impact:**
+- No changes to existing line count estimates
+
+---
+
+## Decision 27: Rollback Plan (Review Discussion)
+
+**Topic:** Should we document what to do if quality checks fail?
+
+**Decision:** No rollback plan needed
+
+**Rationale:**
+- Fix-and-rerun process is self-evident
+- Obvious procedure doesn't need documentation
+- Keeps plan simpler
+
+**Impact:**
+- No rollback section added to Step 5
+
+---
+
+## Decision 28: Complexity Estimate Format (Review Discussion)
+
+**Topic:** Should we update the specific line count estimates (450-550 vs 710-810)?
+
+**Decision:** Remove specific line counts - just note "moderate complexity"
+
+**Rationale:**
+- Avoids over-precision in estimates
+- More flexible
+- Focuses on complexity level rather than exact numbers
+
+**Impact:**
+- Summary.md: Update "Estimated Complexity" section to remove specific line counts
+
+---
+
+## Decision 29: Scope Simplification (Review Discussion)
+
+**Topic:** Should we simplify the implementation scope to reduce complexity?
+
+**Decision:** Keep current scope as-is - no simplifications
+
+**Rationale:**
+- Current scope is appropriate for requirements
+- Features are all valuable
+- Already applied KISS principle in design decisions
+
+**Impact:**
+- No scope changes to any step

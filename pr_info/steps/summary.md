@@ -179,6 +179,8 @@ __all__ = [
 ]
 ```
 
+Note: Only `JenkinsError` is exported (single exception type per Decision 4).
+
 #### **6.3 Logging Integration**
 Uses existing `structlog` setup from `log_utils.py`:
 ```python
@@ -193,10 +195,12 @@ def start_job(self, job_path: str, params: dict = None) -> int:
 
 Simplified error handling (KISS principle):
 - Single exception type (JenkinsError) wraps all errors
+- Exception chaining preserves original tracebacks (`raise JenkinsError(...) from e`)
 - Error messages from python-jenkins library provide context
 - Logging at appropriate levels (debug for success, error for failures)
 - Graceful handling of missing configuration
 - Status strings passed through as-is (forward-compatible)
+- Parameters validated (params must be dict if provided)
 
 ---
 
@@ -304,13 +308,12 @@ See `pr_info/steps/decisions.md` for complete discussion log.
 
 ## Estimated Complexity
 
-- **Lines of Code:** ~450-550 total
-  - `models.py`: ~60 lines
-  - `client.py`: ~200 lines
-  - Tests: ~310 lines (test_models: ~30, test_client: ~200, test_integration: ~80)
-  - Config/exports: ~25 lines
+- **Complexity Level:** Moderate
+  - New package with 3 source files
+  - Comprehensive test coverage with mocked and integration tests
+  - Integration with existing patterns (config, logging, error handling)
 
-- **Implementation Time:** 2-4 hours (with TDD)
+- **Implementation Time:** 3-5 hours (with TDD)
   
 - **Maintenance Burden:** Low (follows existing patterns, well-tested)
 

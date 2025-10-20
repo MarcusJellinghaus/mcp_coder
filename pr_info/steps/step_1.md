@@ -73,8 +73,10 @@ class JobStatus:
 **Fields:**
 - `status`: Job state - "queued", "running", "SUCCESS", "FAILURE", "ABORTED", "UNSTABLE"
 - `build_number`: Build number once job starts (None if still queued)
-- `duration_ms`: Duration in milliseconds (None if not completed)
-- `url`: Jenkins job URL (None if not available)
+- `duration_ms`: Duration in milliseconds (None until job completes)
+- `url`: Jenkins job URL from API (None if not available)
+
+**Note:** duration_ms becomes available only after job completion.
 
 ### 2. QueueSummary Dataclass
 

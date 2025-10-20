@@ -59,9 +59,13 @@ class JenkinsError(Exception):
     
     All Jenkins-related errors are wrapped in this exception type.
     This keeps error handling simple while providing clear context.
+    
+    The original exception is preserved via exception chaining for debugging.
     """
     pass
 ```
+
+**Note:** Only ONE exception type (JenkinsError) - no specific subtypes per Decision 4.
 
 ### 2. Configuration Helper Function
 
@@ -108,10 +112,22 @@ class JenkinsClient:
     """
     
     def __init__(self, server_url: str, username: str, api_token: str) -> None:
-        """Initialize Jenkins client with credentials."""
+        """Initialize Jenkins client with credentials.
+        
+        Timeout: Fixed 30 seconds for all operations (not configurable).
+        """
         
     def start_job(self, job_path: str, params: Optional[dict] = None) -> int:
-        """Start a Jenkins job and return queue ID."""
+        """Start a Jenkins job and return queue ID.
+        
+        Args:
+            job_path: Jenkins job path (e.g., "folder/job-name")
+            params: Optional job parameters dict
+            
+        Raises:
+            ValueError: If params is not None and not a dict
+            JenkinsError: For any Jenkins API errors
+        """
         
     def get_job_status(self, queue_id: int) -> JobStatus:
         """Get job status by queue ID."""
@@ -184,28 +200,36 @@ from mcp_coder.utils.jenkins_operations.models import JobStatus, QueueSummary
 
 ### start_job() Algorithm:
 ```python
-1. Default params to {} if None
-2. Try: queue_id = self._client.build_job(job_path, parameters=params)
-3. Catch JenkinsException or any exception: wrap in JenkinsError with context
-4. Log success at debug level
-5. Return queue_id
+1. Validate params: if params is not None and not isinstance(params, dict), raise ValueError
+2. Default params to {} if None
+3. Try: queue_id = self._client.build_job(job_path, parameters=params)
+4. Catch exceptions: wrap in JenkinsError with context using exception chaining:
+   raise JenkinsError(f"Failed to start job '{job_path}': {str(e)}") from e
+5. Log success at debug level
+6. Return queue_id
 ```
 
-**Note:** We wrap ALL exceptions as JenkinsError (KISS principle). The error message from python-jenkins provides sufficient context.
+**Note:** We wrap ALL exceptions as JenkinsError (KISS principle). Exception chaining preserves original tracebacks for debugging.
 
 ### get_job_status() Algorithm:
 ```python
 1. Try: item = self._client.get_queue_item(queue_id)
 2. If item["executable"]: build running/completed
-   - Extract build_number, get build_info for duration and url
+   - Extract build_number, get build_info for duration and url from API
    - Pass through status string as-is from Jenkins (no validation)
+   - duration_ms is None until job completes
 3. Else if item["why"]: still queued
    - Return JobStatus(status="queued", build_number=None, ...)
-4. Catch exceptions: wrap in JenkinsError
+4. Catch exceptions: wrap in JenkinsError using exception chaining:
+   raise JenkinsError(f"Failed to get status for queue_id {queue_id}: {str(e)}") from e
 5. Return JobStatus dataclass
 ```
 
-**Note:** Status strings are passed through as-is from Jenkins API (forward-compatible with new statuses).
+**Notes:** 
+- Status strings passed through as-is from Jenkins API (forward-compatible)
+- Expired/purged queue items fail naturally with Jenkins API error
+- URL obtained from Jenkins API response, not constructed
+- build_number stays None if job never starts
 
 ### get_queue_summary() Algorithm:
 ```python
@@ -400,8 +424,6 @@ class TestJenkinsClientGetQueueSummary:
 This module provides the JenkinsClient class for interacting with Jenkins
 to start jobs, check status, and monitor the queue.
 
-Tested with Jenkins 2.4xx series.
-
 Configuration:
     ~/.mcp_coder/config.toml:
         [jenkins]
@@ -413,9 +435,8 @@ Configuration:
         JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
 
 Limitations:
-    - Not designed for concurrent use (create separate instances per thread if needed)
-    - 30-second timeout for all operations (not configurable)
     - All errors wrapped as JenkinsError (check error message for details)
+    - Queue items may expire if queried long after job completion
 
 Example:
     >>> from mcp_coder.utils.jenkins_operations import JenkinsClient

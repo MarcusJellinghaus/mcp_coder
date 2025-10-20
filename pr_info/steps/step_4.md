@@ -57,10 +57,12 @@ src/mcp_coder/utils/__init__.py
 - `JenkinsClient` - Main client class
 - `JobStatus` - Job status dataclass
 - `QueueSummary` - Queue summary dataclass
-- `JenkinsError` - Exception for all Jenkins operations
+- `JenkinsError` - Single exception for all Jenkins operations (per Decision 4)
 
 **DO NOT Export:**
 - `_get_jenkins_config()` - Private helper function
+
+**Note:** Only ONE exception type is exported (JenkinsError). No specific exception subtypes.
 
 ### 2. Utils Package Exports
 
