@@ -336,7 +336,10 @@ class IssueBranchManager(BaseGitHubManager):
             # or if it has 'createLinkedBranch' wrapper (wrapped response)
             if "linkedBranch" in result:
                 linked_branch = result["linkedBranch"]
-            elif "createLinkedBranch" in result and "linkedBranch" in result["createLinkedBranch"]:
+            elif (
+                "createLinkedBranch" in result
+                and "linkedBranch" in result["createLinkedBranch"]
+            ):
                 linked_branch = result["createLinkedBranch"]["linkedBranch"]
             else:
                 # Provide detailed error information

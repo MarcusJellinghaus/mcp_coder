@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Quick test to verify Claude executable can be found."""
 
-import sys
 import os
+import sys
+
+from mcp_coder.llm.providers.claude.claude_executable_finder import (
+    _get_claude_search_paths,
+    find_claude_executable,
+    verify_claude_installation,
+)
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from mcp_coder.llm.providers.claude.claude_executable_finder import (
-    find_claude_executable,
-    verify_claude_installation,
-    _get_claude_search_paths
-)
 
 print("=" * 80)
 print("TESTING CLAUDE EXECUTABLE FINDER")

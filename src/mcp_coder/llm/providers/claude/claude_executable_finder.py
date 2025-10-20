@@ -17,7 +17,7 @@ def _get_claude_search_paths() -> List[str]:
         List of potential Claude executable paths
     """
     paths_list: List[str] = []
-    
+
     # First check PATH (highest priority)
     claude_from_path = shutil.which("claude")
     if claude_from_path is not None:
@@ -27,30 +27,40 @@ def _get_claude_search_paths() -> List[str]:
     # These are the standard locations for the native Claude Code installer
     # Use os.path.join for proper path construction across platforms
     user_home = os.path.expanduser("~")
-    paths_list.extend([
-        os.path.join(user_home, ".local", "bin", "claude.exe"),
-        os.path.join(user_home, ".local", "bin", "claude"),
-    ])
+    paths_list.extend(
+        [
+            os.path.join(user_home, ".local", "bin", "claude.exe"),
+            os.path.join(user_home, ".local", "bin", "claude"),
+        ]
+    )
 
     # Node.js global install locations
-    paths_list.extend([
-        os.path.join(user_home, "node_modules", ".bin", "claude.exe"),
-        os.path.join(user_home, "node_modules", ".bin", "claude"),
-        os.path.join(user_home, "AppData", "Roaming", "npm", "claude.exe"),
-        os.path.join(user_home, "AppData", "Roaming", "npm", "claude"),
-    ])
+    paths_list.extend(
+        [
+            os.path.join(user_home, "node_modules", ".bin", "claude.exe"),
+            os.path.join(user_home, "node_modules", ".bin", "claude"),
+            os.path.join(user_home, "AppData", "Roaming", "npm", "claude.exe"),
+            os.path.join(user_home, "AppData", "Roaming", "npm", "claude"),
+        ]
+    )
 
     # Other Windows locations
-    paths_list.extend([
-        os.path.join(user_home, "AppData", "Local", "Programs", "Claude", "claude.exe"),
-        os.path.join(user_home, "AppData", "Roaming", "Claude", "claude.exe"),
-    ])
+    paths_list.extend(
+        [
+            os.path.join(
+                user_home, "AppData", "Local", "Programs", "Claude", "claude.exe"
+            ),
+            os.path.join(user_home, "AppData", "Roaming", "Claude", "claude.exe"),
+        ]
+    )
 
     # System-wide locations (Unix-like)
-    paths_list.extend([
-        "/usr/local/bin/claude",
-        "/opt/claude/claude",
-    ])
+    paths_list.extend(
+        [
+            "/usr/local/bin/claude",
+            "/opt/claude/claude",
+        ]
+    )
 
     return paths_list
 

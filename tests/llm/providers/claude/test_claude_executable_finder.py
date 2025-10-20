@@ -19,7 +19,9 @@ class TestGetClaudeSearchPaths:
 
     @patch("mcp_coder.llm.providers.claude.claude_executable_finder.os.path.expanduser")
     @patch("mcp_coder.llm.providers.claude.claude_executable_finder.shutil.which")
-    def test_search_paths_generation(self, mock_which: Mock, mock_expanduser: Mock) -> None:
+    def test_search_paths_generation(
+        self, mock_which: Mock, mock_expanduser: Mock
+    ) -> None:
         """Test that search paths are generated correctly."""
         mock_which.return_value = "/usr/bin/claude"
         mock_expanduser.return_value = r"C:\Users\testuser"
@@ -43,7 +45,9 @@ class TestGetClaudeSearchPaths:
 
     @patch("mcp_coder.llm.providers.claude.claude_executable_finder.os.path.expanduser")
     @patch("mcp_coder.llm.providers.claude.claude_executable_finder.shutil.which")
-    def test_search_paths_unix_user(self, mock_which: Mock, mock_expanduser: Mock) -> None:
+    def test_search_paths_unix_user(
+        self, mock_which: Mock, mock_expanduser: Mock
+    ) -> None:
         """Test search paths with Unix USER environment variable."""
         mock_which.return_value = None
         mock_expanduser.return_value = r"C:\Users\unixuser"
