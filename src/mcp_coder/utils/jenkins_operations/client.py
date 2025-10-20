@@ -30,7 +30,7 @@ import os
 from typing import Any, Optional, cast
 
 import structlog
-from jenkins import Jenkins  # type: ignore[import-untyped]
+from jenkins import Jenkins
 
 from mcp_coder.utils import get_config_value
 from mcp_coder.utils.log_utils import log_function_call
