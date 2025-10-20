@@ -29,20 +29,8 @@ class JobStatus:
         url: Jenkins job URL from API (None if not available)
 
     Example:
-        >>> # Queued job
-        >>> status = JobStatus(status="queued", build_number=None, duration_ms=None, url=None)
-        >>> print(status)
-        Job queued
-
-        >>> # Running job
-        >>> status = JobStatus(status="running", build_number=42, duration_ms=None,
-        ...                    url="https://jenkins.example.com/job/test/42")
-        >>> print(status)
-        Job #42: running
-
-        >>> # Completed job
-        >>> status = JobStatus(status="SUCCESS", build_number=42, duration_ms=1234,
-        ...                    url="https://jenkins.example.com/job/test/42")
+        >>> status = JobStatus(status="SUCCESS", build_number=42,
+        ...                    duration_ms=1234, url="https://jenkins.example.com/job/test/42")
         >>> print(status)
         Job #42: SUCCESS (1234ms)
     """
@@ -56,17 +44,27 @@ class JobStatus:
         """Return human-readable job status.
 
         Returns:
-            Formatted string describing job status.
+            Formatted string representation of job status.
+
+        Example:
+            >>> status = JobStatus(status="queued", build_number=None,
+            ...                    duration_ms=None, url=None)
+            >>> str(status)
+            'Job queued'
         """
+        # If status is "queued", return simple message
         if self.status == "queued":
             return "Job queued"
 
+        # If build_number exists, format with build number
         if self.build_number is not None:
             result = f"Job #{self.build_number}: {self.status}"
+            # Add duration if available
             if self.duration_ms is not None:
                 result += f" ({self.duration_ms}ms)"
             return result
 
+        # Otherwise, just return status
         return self.status
 
 
@@ -82,10 +80,6 @@ class QueueSummary:
         >>> summary = QueueSummary(running=3, queued=2)
         >>> print(summary)
         3 jobs running, 2 jobs queued
-
-        >>> summary = QueueSummary(running=1, queued=0)
-        >>> print(summary)
-        1 job running, 0 jobs queued
     """
 
     running: int
@@ -95,8 +89,17 @@ class QueueSummary:
         """Return human-readable queue summary.
 
         Returns:
-            Formatted string describing queue status.
+            Formatted string representation of queue status.
+
+        Example:
+            >>> summary = QueueSummary(running=1, queued=0)
+            >>> str(summary)
+            '1 job running, 0 jobs queued'
         """
+        # Create running text with proper pluralization
         running_text = f"{self.running} job{'s' if self.running != 1 else ''} running"
+
+        # Create queued text with proper pluralization
         queued_text = f"{self.queued} job{'s' if self.queued != 1 else ''} queued"
+
         return f"{running_text}, {queued_text}"
