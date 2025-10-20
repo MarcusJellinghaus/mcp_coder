@@ -300,9 +300,9 @@ class IssueBranchManager(BaseGitHubManager):
         )
 
         # Step 6: Parse response and return result
-        # Note: graphql_named_mutation returns (headers, data) where data has format:
-        # {"createLinkedBranch": {"linkedBranch": {...}}}
-        # (The "data" wrapper is already unwrapped by PyGithub)
+        # Note: PyGithub's graphql_named_mutation returns the INNER content directly
+        # Response format: {'linkedBranch': {'id': '...', 'ref': {'name': '...', 'target': {'oid': '...'}}}}}
+        # NOT wrapped in {'createLinkedBranch': {...}}
         try:
             # Extract mutation result from GraphQL response
             if not isinstance(result, dict):
@@ -318,13 +318,10 @@ class IssueBranchManager(BaseGitHubManager):
                     existing_branches=[],
                 )
 
-            mutation_result = result.get("createLinkedBranch", {})
-
-            # Check if result has the expected linkedBranch field
-            if mutation_result is None or "linkedBranch" not in mutation_result:
-                error_msg = (
-                    "Failed to create linked branch: Invalid response from GitHub"
-                )
+            # Check if response has errors field
+            if "errors" in result:
+                errors = result["errors"]
+                error_msg = f"Failed to create linked branch: {errors}"
                 logger.error(error_msg)
                 logger.debug(f"GraphQL mutation response: {result}")
                 return BranchCreationResult(
@@ -334,8 +331,32 @@ class IssueBranchManager(BaseGitHubManager):
                     existing_branches=[],
                 )
 
+            # PyGithub returns the inner content directly, not wrapped in mutation name
+            # Check if the response directly has 'linkedBranch' (unwrapped response)
+            # or if it has 'createLinkedBranch' wrapper (wrapped response)
+            if "linkedBranch" in result:
+                linked_branch = result["linkedBranch"]
+            elif "createLinkedBranch" in result and "linkedBranch" in result["createLinkedBranch"]:
+                linked_branch = result["createLinkedBranch"]["linkedBranch"]
+            else:
+                # Provide detailed error information
+                error_details = (
+                    f"Full response: {result}, "
+                    f"Available keys: {list(result.keys())}"
+                )
+                error_msg = (
+                    f"Failed to create linked branch: Invalid response from GitHub. "
+                    f"Details: {error_details}"
+                )
+                logger.error(error_msg)
+                return BranchCreationResult(
+                    success=False,
+                    branch_name="",
+                    error=error_msg,
+                    existing_branches=[],
+                )
+
             # Extract the linked branch data from the mutation result
-            linked_branch = mutation_result["linkedBranch"]
             if linked_branch is None or "ref" not in linked_branch:
                 error_msg = "Failed to create linked branch: Missing branch reference in response"
                 logger.error(error_msg)

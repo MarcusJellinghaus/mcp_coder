@@ -17,11 +17,12 @@ from mcp_coder.llm.providers.claude.claude_executable_finder import (
 class TestGetClaudeSearchPaths:
     """Test the _get_claude_search_paths function."""
 
-    @patch.dict(os.environ, {"USERNAME": "testuser"}, clear=True)
+    @patch("mcp_coder.llm.providers.claude.claude_executable_finder.os.path.expanduser")
     @patch("mcp_coder.llm.providers.claude.claude_executable_finder.shutil.which")
-    def test_search_paths_generation(self, mock_which: Mock) -> None:
+    def test_search_paths_generation(self, mock_which: Mock, mock_expanduser: Mock) -> None:
         """Test that search paths are generated correctly."""
         mock_which.return_value = "/usr/bin/claude"
+        mock_expanduser.return_value = r"C:\Users\testuser"
 
         paths = _get_claude_search_paths()
 
@@ -31,8 +32,8 @@ class TestGetClaudeSearchPaths:
         # Should include Windows user-specific paths (using raw strings)
         assert r"C:\Users\testuser\.local\bin\claude.exe" in paths
 
-        # Should include Unix-like paths
-        assert any(".local/bin/claude" in path for path in paths)
+        # Should include Unix-like paths with user home
+        assert any(r"C:\Users\testuser" in path and "claude" in path for path in paths)
 
         # Should include system paths
         assert "/usr/local/bin/claude" in paths
@@ -40,11 +41,12 @@ class TestGetClaudeSearchPaths:
         # Should not include None values
         assert None not in paths
 
-    @patch.dict(os.environ, {"USER": "unixuser"}, clear=True)
+    @patch("mcp_coder.llm.providers.claude.claude_executable_finder.os.path.expanduser")
     @patch("mcp_coder.llm.providers.claude.claude_executable_finder.shutil.which")
-    def test_search_paths_unix_user(self, mock_which: Mock) -> None:
+    def test_search_paths_unix_user(self, mock_which: Mock, mock_expanduser: Mock) -> None:
         """Test search paths with Unix USER environment variable."""
         mock_which.return_value = None
+        mock_expanduser.return_value = r"C:\Users\unixuser"
 
         paths = _get_claude_search_paths()
 
