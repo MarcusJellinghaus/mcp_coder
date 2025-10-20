@@ -68,7 +68,10 @@ class JobStatus:
         """Return human-readable job status.
 
         Returns:
-            Formatted job status string.
+            Formatted status string based on job state:
+            - "Job queued" for queued jobs
+            - "Job #N: STATUS" for running jobs
+            - "Job #N: STATUS (Xms)" for completed jobs
         """
         if self.status == "queued":
             return "Job queued"
@@ -91,17 +94,14 @@ class QueueSummary:
         queued: Number of jobs waiting in queue
 
     Example:
-        >>> # Multiple jobs
         >>> summary = QueueSummary(running=3, queued=2)
         >>> print(summary)
         3 jobs running, 2 jobs queued
 
-        >>> # Single job
         >>> summary = QueueSummary(running=1, queued=0)
         >>> print(summary)
         1 job running, 0 jobs queued
 
-        >>> # Empty queue
         >>> summary = QueueSummary(running=0, queued=0)
         >>> print(summary)
         0 jobs running, 0 jobs queued
@@ -114,7 +114,8 @@ class QueueSummary:
         """Return human-readable queue summary.
 
         Returns:
-            Formatted queue summary string.
+            Formatted string showing running and queued job counts
+            with proper singular/plural forms.
         """
         running_text = f"{self.running} job{'s' if self.running != 1 else ''} running"
         queued_text = f"{self.queued} job{'s' if self.queued != 1 else ''} queued"

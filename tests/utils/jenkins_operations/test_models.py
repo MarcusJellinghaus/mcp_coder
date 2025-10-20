@@ -22,8 +22,8 @@ class TestJobStatus:
         assert status.duration_ms == 1234
         assert status.url == "https://jenkins.example.com/job/test/42"
 
-    def test_job_status_creation_with_none_fields(self) -> None:
-        """Test JobStatus creation with Optional fields as None."""
+    def test_job_status_creation_with_none_values(self) -> None:
+        """Test JobStatus creation with None values for optional fields."""
         status = JobStatus(
             status="queued",
             build_number=None,
@@ -59,7 +59,7 @@ class TestJobStatus:
         assert str(status) == "Job #42: running"
 
     def test_job_status_str_completed(self) -> None:
-        """Test __str__() for completed job."""
+        """Test __str__() for completed job with duration."""
         status = JobStatus(
             status="SUCCESS",
             build_number=42,
@@ -69,12 +69,34 @@ class TestJobStatus:
 
         assert str(status) == "Job #42: SUCCESS (1234ms)"
 
+    def test_job_status_str_failed(self) -> None:
+        """Test __str__() for failed job with duration."""
+        status = JobStatus(
+            status="FAILURE",
+            build_number=99,
+            duration_ms=5678,
+            url="https://jenkins.example.com/job/test/99",
+        )
+
+        assert str(status) == "Job #99: FAILURE (5678ms)"
+
+    def test_job_status_str_without_duration(self) -> None:
+        """Test __str__() for job with build number but no duration."""
+        status = JobStatus(
+            status="ABORTED",
+            build_number=15,
+            duration_ms=None,
+            url="https://jenkins.example.com/job/test/15",
+        )
+
+        assert str(status) == "Job #15: ABORTED"
+
 
 class TestQueueSummary:
     """Tests for QueueSummary dataclass."""
 
     def test_queue_summary_creation(self) -> None:
-        """Test QueueSummary creation."""
+        """Test QueueSummary creation with all fields."""
         summary = QueueSummary(running=3, queued=2)
 
         assert summary.running == 3
@@ -86,14 +108,26 @@ class TestQueueSummary:
 
         assert str(summary) == "3 jobs running, 2 jobs queued"
 
-    def test_queue_summary_str_singular(self) -> None:
-        """Test __str__() with single job."""
+    def test_queue_summary_str_singular_running(self) -> None:
+        """Test __str__() with single running job."""
         summary = QueueSummary(running=1, queued=0)
 
         assert str(summary) == "1 job running, 0 jobs queued"
 
+    def test_queue_summary_str_singular_queued(self) -> None:
+        """Test __str__() with single queued job."""
+        summary = QueueSummary(running=0, queued=1)
+
+        assert str(summary) == "0 jobs running, 1 job queued"
+
     def test_queue_summary_str_empty(self) -> None:
-        """Test __str__() with zero jobs."""
+        """Test __str__() with no jobs."""
         summary = QueueSummary(running=0, queued=0)
 
         assert str(summary) == "0 jobs running, 0 jobs queued"
+
+    def test_queue_summary_str_many_jobs(self) -> None:
+        """Test __str__() with many jobs."""
+        summary = QueueSummary(running=10, queued=25)
+
+        assert str(summary) == "10 jobs running, 25 jobs queued"
