@@ -34,10 +34,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **File:** [pr_info/steps/step_2.md](./steps/step_2.md)
 
 - [x] Create test file `tests/utils/jenkins_operations/test_client.py` with mocked python-jenkins
-- [ ] Create source file `src/mcp_coder/utils/jenkins_operations/client.py` with JenkinsClient class
-- [ ] Implement `_get_jenkins_config()` helper function
-- [ ] Implement JenkinsError exception and error handling with exception chaining
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
+- [x] Create source file `src/mcp_coder/utils/jenkins_operations/client.py` with JenkinsClient class
+- [x] Implement `_get_jenkins_config()` helper function
+- [x] Implement JenkinsError exception and error handling with exception chaining
+- [x] Run quality checks: pylint, pytest, mypy - fix all issues
 - [ ] Prepare git commit message for Step 2
 
 ### Step 3: Integration Tests with Real Jenkins
