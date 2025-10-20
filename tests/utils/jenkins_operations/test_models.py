@@ -22,18 +22,19 @@ class TestJobStatus:
         assert status.duration_ms == 1234
         assert status.url == "https://jenkins.example.com/job/test/42"
 
-        # Test with None values
-        queued_status = JobStatus(
+    def test_job_status_creation_with_none(self) -> None:
+        """Test JobStatus creation with Optional fields as None."""
+        status = JobStatus(
             status="queued", build_number=None, duration_ms=None, url=None
         )
 
-        assert queued_status.status == "queued"
-        assert queued_status.build_number is None
-        assert queued_status.duration_ms is None
-        assert queued_status.url is None
+        assert status.status == "queued"
+        assert status.build_number is None
+        assert status.duration_ms is None
+        assert status.url is None
 
     def test_job_status_str_queued(self) -> None:
-        """Test JobStatus __str__() for queued job."""
+        """Test __str__() for queued job."""
         status = JobStatus(
             status="queued", build_number=None, duration_ms=None, url=None
         )
@@ -41,7 +42,7 @@ class TestJobStatus:
         assert str(status) == "Job queued"
 
     def test_job_status_str_running(self) -> None:
-        """Test JobStatus __str__() for running job."""
+        """Test __str__() for running job."""
         status = JobStatus(
             status="running",
             build_number=42,
@@ -52,7 +53,7 @@ class TestJobStatus:
         assert str(status) == "Job #42: running"
 
     def test_job_status_str_completed(self) -> None:
-        """Test JobStatus __str__() for completed job."""
+        """Test __str__() for completed job with duration."""
         status = JobStatus(
             status="SUCCESS",
             build_number=42,
@@ -62,24 +63,24 @@ class TestJobStatus:
 
         assert str(status) == "Job #42: SUCCESS (1234ms)"
 
-    def test_job_status_str_failed(self) -> None:
-        """Test JobStatus __str__() for failed job."""
+    def test_job_status_str_completed_no_duration(self) -> None:
+        """Test __str__() for completed job without duration."""
         status = JobStatus(
-            status="FAILURE",
-            build_number=15,
-            duration_ms=5678,
-            url="https://jenkins.example.com/job/test/15",
+            status="SUCCESS",
+            build_number=42,
+            duration_ms=None,
+            url="https://jenkins.example.com/job/test/42",
         )
 
-        assert str(status) == "Job #15: FAILURE (5678ms)"
+        assert str(status) == "Job #42: SUCCESS"
 
-    def test_job_status_str_no_build_number(self) -> None:
-        """Test JobStatus __str__() when status is not queued but no build number."""
+    def test_job_status_str_without_build_number(self) -> None:
+        """Test __str__() when status is not queued but no build number."""
         status = JobStatus(
-            status="ABORTED", build_number=None, duration_ms=None, url=None
+            status="FAILURE", build_number=None, duration_ms=None, url=None
         )
 
-        assert str(status) == "ABORTED"
+        assert str(status) == "FAILURE"
 
 
 class TestQueueSummary:
@@ -93,25 +94,25 @@ class TestQueueSummary:
         assert summary.queued == 2
 
     def test_queue_summary_str_multiple(self) -> None:
-        """Test QueueSummary __str__() with multiple jobs."""
+        """Test __str__() with multiple jobs."""
         summary = QueueSummary(running=3, queued=2)
 
         assert str(summary) == "3 jobs running, 2 jobs queued"
 
     def test_queue_summary_str_singular(self) -> None:
-        """Test QueueSummary __str__() with single job."""
+        """Test __str__() with single job."""
         summary = QueueSummary(running=1, queued=0)
 
         assert str(summary) == "1 job running, 0 jobs queued"
 
     def test_queue_summary_str_empty(self) -> None:
-        """Test QueueSummary __str__() with zero jobs."""
+        """Test __str__() with zero jobs."""
         summary = QueueSummary(running=0, queued=0)
 
         assert str(summary) == "0 jobs running, 0 jobs queued"
 
     def test_queue_summary_str_singular_queued(self) -> None:
-        """Test QueueSummary __str__() with single queued job."""
+        """Test __str__() with single queued job."""
         summary = QueueSummary(running=0, queued=1)
 
         assert str(summary) == "0 jobs running, 1 job queued"
