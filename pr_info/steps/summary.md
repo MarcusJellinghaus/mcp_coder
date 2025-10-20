@@ -37,10 +37,15 @@ src/mcp_coder/utils/jenkins_operations/
 - ✅ **Chosen:** Pass paths to Jenkins API, let it validate
 - **Rationale:** Don't duplicate `python-jenkins` library validation logic. Single source of truth.
 
-#### **Simplification 4: Consolidated Test Files**
-- ❌ **Rejected:** Separate `test_exceptions.py`, `test_config.py`
-- ✅ **Chosen:** Test config in `test_client.py`, skip exception tests
-- **Rationale:** Testing simple class definitions adds no value. Config is tested via client initialization.
+#### **Simplification 4: Single Exception Type**
+- ❌ **Rejected:** Multiple specific exception types (JenkinsConnectionError, JenkinsAuthError, etc.)
+- ✅ **Chosen:** Single JenkinsError exception wrapping all errors
+- **Rationale:** Follows KISS principle. The python-jenkins library error messages provide sufficient context. Avoids fragile error message parsing or status code inspection.
+
+#### **Simplification 5: Configuration Helper Scope**
+- ❌ **Rejected:** Include test_job in _get_jenkins_config() return
+- ✅ **Chosen:** Return only 3 required values (server_url, username, api_token)
+- **Rationale:** test_job is only for integration tests, not client usage. Cleaner separation of concerns.
 
 ### 3. Core Components
 
@@ -71,21 +76,25 @@ class QueueSummary:
 
 #### **3.2 Client (`client.py`)**
 
-**Custom Exceptions:**
+**Custom Exception:**
 ```python
-class JenkinsError(Exception): pass
-class JenkinsConnectionError(JenkinsError): pass
-class JenkinsAuthError(JenkinsError): pass
-class JenkinsJobNotFoundError(JenkinsError): pass
+class JenkinsError(Exception):
+    """Base exception for Jenkins operations.
+    
+    All Jenkins-related errors are wrapped in this exception type.
+    This keeps error handling simple while providing clear context.
+    """
+    pass
 ```
 
 **Configuration Helper:**
 ```python
 def _get_jenkins_config() -> dict:
-    """Priority: env vars > config file > defaults"""
-    # Check JENKINS_URL, JENKINS_USER, JENKINS_TOKEN, JENKINS_TEST_JOB
+    """Priority: env vars > config file > None"""
+    # Check JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
     # Fall back to config file [jenkins] section
-    # Return dict with server_url, username, api_token, test_job
+    # Return dict with server_url, username, api_token (3 values only)
+    # test_job is NOT included - handled separately in integration tests
 ```
 
 **Main Client Class:**
@@ -106,14 +115,14 @@ class JenkinsClient:
 server_url = "https://jenkins.example.com:8080"  # Port in URL
 username = "jenkins-user"
 api_token = "your-api-token-here"
-test_job = "mcp-coder-test-job"  # Optional, for integration tests
+test_job = "mcp-coder-test-job"  # Optional, only for integration tests
 ```
 
 **Environment Variables (override config):**
 - `JENKINS_URL` → `server_url`
 - `JENKINS_USER` → `username`
 - `JENKINS_TOKEN` → `api_token`
-- `JENKINS_TEST_JOB` → `test_job`
+- `JENKINS_TEST_JOB` → `test_job` (integration tests only)
 
 ### 5. Testing Strategy
 
@@ -122,8 +131,8 @@ test_job = "mcp-coder-test-job"  # Optional, for integration tests
 tests/utils/jenkins_operations/
   ├── __init__.py
   ├── test_models.py       # Dataclass tests (~30 lines)
-  ├── test_client.py       # Unit tests with mocked python-jenkins (~150 lines)
-  └── test_integration.py  # @pytest.mark.jenkins_integration (~80 lines)
+  ├── test_client.py       # Unit tests with mocked python-jenkins (~200 lines)
+  └── test_integration.py  # @pytest.mark.jenkins_integration (~80-100 lines)
 ```
 
 #### **New Pytest Marker:**
@@ -159,9 +168,6 @@ from .jenkins_operations import (
     JobStatus,
     QueueSummary,
     JenkinsError,
-    JenkinsConnectionError,
-    JenkinsAuthError,
-    JenkinsJobNotFoundError,
 )
 
 __all__ = [
@@ -170,9 +176,6 @@ __all__ = [
     "JobStatus", 
     "QueueSummary",
     "JenkinsError",
-    "JenkinsConnectionError",
-    "JenkinsAuthError",
-    "JenkinsJobNotFoundError",
 ]
 ```
 
@@ -188,11 +191,12 @@ def start_job(self, job_path: str, params: dict = None) -> int:
 
 ### 7. Error Handling Pattern
 
-Following `github_operations/base_manager.py` pattern:
-- Custom exception hierarchy for specific error types
-- Clear error messages with context
+Simplified error handling (KISS principle):
+- Single exception type (JenkinsError) wraps all errors
+- Error messages from python-jenkins library provide context
 - Logging at appropriate levels (debug for success, error for failures)
 - Graceful handling of missing configuration
+- Status strings passed through as-is (forward-compatible)
 
 ---
 
@@ -220,6 +224,21 @@ Following `github_operations/base_manager.py` pattern:
 9. `src/mcp_coder/utils/__init__.py` - Add jenkins_operations exports
 
 **Total:** 7 new files, 2 modified files
+
+---
+
+## Design Decisions Summary
+
+See `pr_info/steps/decisions.md` for complete discussion log.
+
+**Key Simplifications Made:**
+1. Single exception type (JenkinsError) instead of 4 specific types
+2. Config helper returns 3 values (test_job handled separately)
+3. Simplified integration test skip messages
+4. Pass through status strings as-is (no validation)
+5. Fixed 30-second timeout (not configurable)
+6. No retry logic in integration tests
+7. Limitations documented in code docstrings only
 
 ---
 
@@ -269,9 +288,12 @@ Following `github_operations/base_manager.py` pattern:
 
 ✅ KISS principles applied:
 - Minimal file structure (3 source files)
-- Consolidated related code
+- Single exception type (not 4)
+- Config helper with focused scope (3 values)
+- Status strings passed through as-is
+- Fixed timeout (not configurable)
+- Simple skip messages
 - Lazy validation
-- Simple, clear implementations
 
 ✅ All quality checks pass:
 - Pylint (no errors)
@@ -282,11 +304,11 @@ Following `github_operations/base_manager.py` pattern:
 
 ## Estimated Complexity
 
-- **Lines of Code:** ~500-600 total
+- **Lines of Code:** ~450-550 total
   - `models.py`: ~60 lines
-  - `client.py`: ~250 lines
-  - Tests: ~260 lines
-  - Config/exports: ~30 lines
+  - `client.py`: ~200 lines
+  - Tests: ~310 lines (test_models: ~30, test_client: ~200, test_integration: ~80)
+  - Config/exports: ~25 lines
 
 - **Implementation Time:** 2-4 hours (with TDD)
   

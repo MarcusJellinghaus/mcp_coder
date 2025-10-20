@@ -57,10 +57,7 @@ src/mcp_coder/utils/__init__.py
 - `JenkinsClient` - Main client class
 - `JobStatus` - Job status dataclass
 - `QueueSummary` - Queue summary dataclass
-- `JenkinsError` - Base exception
-- `JenkinsConnectionError` - Connection error
-- `JenkinsAuthError` - Authentication error
-- `JenkinsJobNotFoundError` - Job not found error
+- `JenkinsError` - Exception for all Jenkins operations
 
 **DO NOT Export:**
 - `_get_jenkins_config()` - Private helper function
@@ -70,7 +67,7 @@ src/mcp_coder/utils/__init__.py
 **Purpose:** Make jenkins_operations accessible from utils package.
 
 **Add to existing exports:**
-- All jenkins_operations public exports listed above
+- `JenkinsClient`, `JobStatus`, `QueueSummary`, `JenkinsError`
 
 ---
 
@@ -86,11 +83,7 @@ src/mcp_coder/utils/__init__.py
 **Export Style:**
 ```python
 # Import from submodules
-from .client import (
-    JenkinsClient,
-    JenkinsError,
-    # ...
-)
+from .client import JenkinsClient, JenkinsError
 from .models import JobStatus, QueueSummary
 
 # Define __all__ for explicit exports
@@ -100,9 +93,8 @@ __all__ = [
     # Models
     "JobStatus",
     "QueueSummary",
-    # Exceptions
+    # Exception
     "JenkinsError",
-    # ...
 ]
 ```
 
@@ -113,10 +105,10 @@ __all__ = [
 ### Step 4.1: Create jenkins_operations/__init__.py
 ```
 1. Add module docstring explaining the package
-2. Import public classes from .client (JenkinsClient, exceptions)
+2. Import public classes from .client (JenkinsClient, JenkinsError)
 3. Import dataclasses from .models (JobStatus, QueueSummary)
 4. Define __all__ list with all public exports
-5. Organize __all__ by category (client, models, exceptions)
+5. Organize __all__ by category (client, models, exception)
 ```
 
 ### Step 4.2: Update utils/__init__.py
@@ -146,12 +138,7 @@ Main Components:
     JenkinsClient: Main client for Jenkins operations
     JobStatus: Dataclass for job status information
     QueueSummary: Dataclass for queue statistics
-    
-Custom Exceptions:
-    JenkinsError: Base exception for Jenkins operations
-    JenkinsConnectionError: Connection failed
-    JenkinsAuthError: Authentication failed
-    JenkinsJobNotFoundError: Job not found
+    JenkinsError: Exception for all Jenkins operations
 
 Example:
     >>> from mcp_coder.utils import JenkinsClient, JobStatus
@@ -165,14 +152,8 @@ Configuration:
     See client.py for configuration details.
 """
 
-# Client and exceptions
-from .client import (
-    JenkinsAuthError,
-    JenkinsClient,
-    JenkinsConnectionError,
-    JenkinsError,
-    JenkinsJobNotFoundError,
-)
+# Client and exception
+from .client import JenkinsClient, JenkinsError
 
 # Data models
 from .models import JobStatus, QueueSummary
@@ -183,11 +164,8 @@ __all__ = [
     # Models
     "JobStatus",
     "QueueSummary",
-    # Exceptions
-    "JenkinsAuthError",
-    "JenkinsConnectionError",
+    # Exception
     "JenkinsError",
-    "JenkinsJobNotFoundError",
 ]
 ```
 
@@ -242,11 +220,8 @@ __all__ = [
 1. **Add import statement** (after github_operations import):
 ```python
 from .jenkins_operations import (
-    JenkinsAuthError,
     JenkinsClient,
-    JenkinsConnectionError,
     JenkinsError,
-    JenkinsJobNotFoundError,
     JobStatus,
     QueueSummary,
 )
@@ -266,9 +241,6 @@ __all__ = [
     "JobStatus",
     "QueueSummary",
     "JenkinsError",
-    "JenkinsConnectionError",
-    "JenkinsAuthError",
-    "JenkinsJobNotFoundError",
     # ... rest of existing exports
 ]
 ```
@@ -304,15 +276,15 @@ After implementation, verify:
    ```python
    # Create small test script or use Python REPL
    from mcp_coder.utils import JenkinsClient, JobStatus, QueueSummary
-   from mcp_coder.utils import JenkinsError, JenkinsConnectionError
+   from mcp_coder.utils import JenkinsError
    
    # Verify classes are imported correctly
    assert JenkinsClient is not None
    assert JobStatus is not None
    assert QueueSummary is not None
    
-   # Verify exceptions are imported
-   assert issubclass(JenkinsConnectionError, JenkinsError)
+   # Verify exception is imported
+   assert issubclass(JenkinsError, Exception)
    ```
 
 2. **Run mypy on updated files:**
@@ -338,10 +310,7 @@ After implementation, verify:
        "JenkinsClient",
        "JobStatus",
        "QueueSummary",
-       "JenkinsAuthError",
-       "JenkinsConnectionError",
        "JenkinsError",
-       "JenkinsJobNotFoundError",
    ]
    
    assert set(__all__) == set(expected)
@@ -368,12 +337,12 @@ After implementation, verify:
 - `src/mcp_coder/utils/jenkins_operations/__init__.py` (~60 lines)
 
 ✅ **Files modified:**
-- `src/mcp_coder/utils/__init__.py` (added ~10 lines)
+- `src/mcp_coder/utils/__init__.py` (added ~5 lines)
 
 ✅ **Public API available:**
 - Can import from `mcp_coder.utils.jenkins_operations`
 - Can import from `mcp_coder.utils`
-- All public classes and exceptions accessible
+- All public classes (client, models, exception) accessible
 - Private helpers not exposed
 
 ✅ **Type checking passes:**
@@ -398,29 +367,24 @@ def test_jenkins_operations_exports() -> None:
     """Verify all jenkins_operations exports are accessible."""
     # Direct imports
     from mcp_coder.utils.jenkins_operations import (
-        JenkinsAuthError,
         JenkinsClient,
-        JenkinsConnectionError,
         JenkinsError,
-        JenkinsJobNotFoundError,
         JobStatus,
         QueueSummary,
     )
     
     # Via utils package
     from mcp_coder.utils import (
-        JenkinsAuthError as JenkinsAuthError2,
         JenkinsClient as JenkinsClient2,
+        JenkinsError as JenkinsError2,
     )
     
     # Verify they're the same classes
     assert JenkinsClient is JenkinsClient2
-    assert JenkinsAuthError is JenkinsAuthError2
+    assert JenkinsError is JenkinsError2
     
-    # Verify exception hierarchy
-    assert issubclass(JenkinsConnectionError, JenkinsError)
-    assert issubclass(JenkinsAuthError, JenkinsError)
-    assert issubclass(JenkinsJobNotFoundError, JenkinsError)
+    # Verify exception is an Exception
+    assert issubclass(JenkinsError, Exception)
     
     print("✅ All jenkins_operations exports verified")
 

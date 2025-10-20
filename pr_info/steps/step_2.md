@@ -49,25 +49,17 @@ src/mcp_coder/utils/jenkins_operations/client.py
 
 ## WHAT: Main Components
 
-### 1. Custom Exceptions
+### 1. Custom Exception
 
 **Location:** Top of `client.py`
 
 ```python
 class JenkinsError(Exception):
-    """Base exception for Jenkins operations."""
-    pass
-
-class JenkinsConnectionError(JenkinsError):
-    """Jenkins connection failed."""
-    pass
-
-class JenkinsAuthError(JenkinsError):
-    """Jenkins authentication failed."""
-    pass
-
-class JenkinsJobNotFoundError(JenkinsError):
-    """Jenkins job not found."""
+    """Base exception for Jenkins operations.
+    
+    All Jenkins-related errors are wrapped in this exception type.
+    This keeps error handling simple while providing clear context.
+    """
     pass
 ```
 
@@ -84,18 +76,20 @@ def _get_jenkins_config() -> dict[str, Optional[str]]:
         JENKINS_URL: Jenkins server URL with port
         JENKINS_USER: Jenkins username
         JENKINS_TOKEN: Jenkins API token
-        JENKINS_TEST_JOB: Test job name (optional)
     
     Config File (~/.mcp_coder/config.toml):
         [jenkins]
         server_url = "https://jenkins.example.com:8080"
         username = "user"
         api_token = "token"
-        test_job = "test-job"
     
     Returns:
-        Dict with keys: server_url, username, api_token, test_job
+        Dict with keys: server_url, username, api_token
         Values are None if not configured
+    
+    Note:
+        test_job is NOT included here - it's only for integration tests
+        and is handled separately in the test fixture.
     """
 ```
 
@@ -154,9 +148,6 @@ from jenkins import JenkinsException
 from mcp_coder.utils.jenkins_operations.client import (
     JenkinsClient,
     JenkinsError,
-    JenkinsConnectionError,
-    JenkinsAuthError,
-    JenkinsJobNotFoundError,
     _get_jenkins_config,
 )
 from mcp_coder.utils.jenkins_operations.models import JobStatus, QueueSummary
@@ -176,11 +167,10 @@ from mcp_coder.utils.jenkins_operations.models import JobStatus, QueueSummary
 
 ### _get_jenkins_config() Algorithm:
 ```python
-1. Check env vars: JENKINS_URL, JENKINS_USER, JENKINS_TOKEN, JENKINS_TEST_JOB
+1. Check env vars: JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
 2. For each missing env var, check config file with get_config_value("jenkins", key)
-3. test_job defaults to "mcp-coder-test-job" if not in env or config
-4. Return dict: {server_url, username, api_token, test_job}
-5. Values are None if not configured (except test_job has default)
+3. Return dict: {server_url, username, api_token}
+4. Values are None if not configured
 ```
 
 ### JenkinsClient.__init__() Algorithm:
@@ -196,22 +186,26 @@ from mcp_coder.utils.jenkins_operations.models import JobStatus, QueueSummary
 ```python
 1. Default params to {} if None
 2. Try: queue_id = self._client.build_job(job_path, parameters=params)
-3. Catch JenkinsException: check if job not found (404) → raise JenkinsJobNotFoundError
-4. Catch other exceptions → wrap in JenkinsError
-5. Log success at debug level
-6. Return queue_id
+3. Catch JenkinsException or any exception: wrap in JenkinsError with context
+4. Log success at debug level
+5. Return queue_id
 ```
+
+**Note:** We wrap ALL exceptions as JenkinsError (KISS principle). The error message from python-jenkins provides sufficient context.
 
 ### get_job_status() Algorithm:
 ```python
-1. Get queue item: item = self._client.get_queue_item(queue_id)
+1. Try: item = self._client.get_queue_item(queue_id)
 2. If item["executable"]: build running/completed
    - Extract build_number, get build_info for duration and url
-   - Map result to status: SUCCESS, FAILURE, ABORTED, UNSTABLE
+   - Pass through status string as-is from Jenkins (no validation)
 3. Else if item["why"]: still queued
    - Return JobStatus(status="queued", build_number=None, ...)
-4. Return JobStatus dataclass
+4. Catch exceptions: wrap in JenkinsError
+5. Return JobStatus dataclass
 ```
+
+**Note:** Status strings are passed through as-is from Jenkins API (forward-compatible with new statuses).
 
 ### get_queue_summary() Algorithm:
 ```python
@@ -232,7 +226,6 @@ from mcp_coder.utils.jenkins_operations.models import JobStatus, QueueSummary
     "server_url": "https://jenkins.example.com:8080",  # or None
     "username": "jenkins-user",                         # or None
     "api_token": "token123",                            # or None
-    "test_job": "mcp-coder-test-job"                    # always has default
 }
 ```
 
@@ -281,9 +274,6 @@ class TestGetJenkinsConfig:
     def test_config_env_priority(self, monkeypatch):
         """Test environment variables take priority."""
         
-    def test_config_test_job_default(self, monkeypatch):
-        """Test test_job defaults to mcp-coder-test-job."""
-        
     def test_config_missing_returns_none(self, monkeypatch):
         """Test missing config returns None values."""
 
@@ -319,11 +309,11 @@ class TestJenkinsClientStartJob:
     def test_start_job_folder_path(self):
         """Test starting job with folder path."""
         
-    def test_start_job_not_found(self):
-        """Test job not found raises JenkinsJobNotFoundError."""
+    def test_start_job_jenkins_error(self):
+        """Test JenkinsException is wrapped as JenkinsError."""
         
-    def test_start_job_connection_error(self):
-        """Test connection error raises JenkinsConnectionError."""
+    def test_start_job_generic_error(self):
+        """Test generic exceptions are wrapped as JenkinsError."""
 
 
 class TestJenkinsClientGetJobStatus:
@@ -341,8 +331,8 @@ class TestJenkinsClientGetJobStatus:
     def test_get_job_status_failure(self):
         """Test job status when failed."""
         
-    def test_get_job_status_not_found(self):
-        """Test queue ID not found raises error."""
+    def test_get_job_status_error(self):
+        """Test errors are wrapped as JenkinsError."""
 
 
 class TestJenkinsClientGetQueueSummary:
@@ -354,8 +344,8 @@ class TestJenkinsClientGetQueueSummary:
     def test_get_queue_summary_empty(self):
         """Test queue summary with no jobs."""
         
-    def test_get_queue_summary_connection_error(self):
-        """Test connection error handling."""
+    def test_get_queue_summary_error(self):
+        """Test errors are wrapped as JenkinsError."""
 ```
 
 **Key Test Patterns:**
@@ -394,7 +384,7 @@ class TestJenkinsClientGetQueueSummary:
        # ... test logic
    ```
 
-**Total Tests:** ~20-25 tests
+**Total Tests:** ~18-20 tests
 
 ---
 
@@ -410,16 +400,22 @@ class TestJenkinsClientGetQueueSummary:
 This module provides the JenkinsClient class for interacting with Jenkins
 to start jobs, check status, and monitor the queue.
 
+Tested with Jenkins 2.4xx series.
+
 Configuration:
     ~/.mcp_coder/config.toml:
         [jenkins]
         server_url = "https://jenkins.example.com:8080"
         username = "jenkins-user"
         api_token = "your-api-token"
-        test_job = "mcp-coder-test-job"
     
     Environment Variables (override config):
-        JENKINS_URL, JENKINS_USER, JENKINS_TOKEN, JENKINS_TEST_JOB
+        JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
+
+Limitations:
+    - Not designed for concurrent use (create separate instances per thread if needed)
+    - 30-second timeout for all operations (not configurable)
+    - All errors wrapped as JenkinsError (check error message for details)
 
 Example:
     >>> from mcp_coder.utils.jenkins_operations import JenkinsClient
@@ -435,7 +431,7 @@ Example:
 
 1. **Imports** (structlog, jenkins, typing, utils)
 2. **Logger setup:** `logger = structlog.get_logger(__name__)`
-3. **Custom exceptions** (4 exception classes)
+3. **Custom exception** (1 exception class: JenkinsError)
 4. **_get_jenkins_config()** helper function
 5. **JenkinsClient class:**
    - `__init__()` method
@@ -446,7 +442,7 @@ Example:
 **Key Implementation Details:**
 
 - **Timeout:** Fixed 30 seconds in Jenkins() constructor
-- **Error Mapping:** Convert JenkinsException to custom exceptions
+- **Error Wrapping:** Wrap all exceptions as JenkinsError with context
 - **Logging:** Debug level for success, error level for failures
 - **Parameters:** Default to `{}` for `start_job()` params
 - **Build Status Mapping:** Map Jenkins result strings to status field
@@ -491,7 +487,7 @@ After implementation, verify:
 - `tests/utils/jenkins_operations/test_client.py` (~250-300 lines)
 - `src/mcp_coder/utils/jenkins_operations/client.py` (~250-300 lines)
 
-✅ **All tests pass** (~20-25 tests)
+✅ **All tests pass** (~18-20 tests)
 
 ✅ **Type checking passes** (mypy clean)
 
@@ -502,7 +498,7 @@ After implementation, verify:
 - Start jobs with optional parameters
 - Get detailed job status
 - Get queue summary
-- Custom exceptions with clear messages
+- Simple exception handling (all wrapped as JenkinsError)
 - Structured logging with @log_function_call
 
 ---

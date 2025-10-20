@@ -67,6 +67,10 @@ def jenkins_test_setup() -> Generator[dict, None, None]:
         
     Raises:
         pytest.skip: If configuration is missing
+    
+    Note:
+        test_job is handled separately here (not in _get_jenkins_config)
+        because it's only needed for integration tests.
     """
 ```
 
@@ -130,14 +134,12 @@ from mcp_coder.utils.jenkins_operations.client import _get_jenkins_config
 
 ### jenkins_test_setup() Fixture Algorithm:
 ```python
-1. Import get_config_value from user_config
-2. Check env vars: JENKINS_URL, JENKINS_USER, JENKINS_TOKEN, JENKINS_TEST_JOB
-3. For missing env vars, try config file with get_config_value("jenkins", key)
-4. If server_url OR username OR api_token missing:
-   - Generate detailed skip message showing what's missing
-   - Call pytest.skip(message)
-5. Default test_job to "mcp-coder-test-job" if not configured
-6. Yield config dict: {server_url, username, api_token, test_job}
+1. Check env vars: JENKINS_URL, JENKINS_USER, JENKINS_TOKEN, JENKINS_TEST_JOB
+2. For missing env vars, try config file with get_config_value("jenkins", key)
+3. If server_url OR username OR api_token missing:
+   - Call pytest.skip("Jenkins not configured. Set JENKINS_URL, JENKINS_USER, JENKINS_TOKEN env vars or configure in ~/.mcp_coder/config.toml [jenkins] section")
+4. Default test_job to "mcp-coder-test-job" if not configured
+5. Yield config dict: {server_url, username, api_token, test_job}
 ```
 
 ### test_basic_api_connectivity() Algorithm:
@@ -263,9 +265,7 @@ def jenkins_test_setup() -> Generator[dict, None, None]:
     api_token = os.getenv("JENKINS_TOKEN")
     test_job = os.getenv("JENKINS_TEST_JOB")
     
-    # Fall back to config file
-    config_file_path = get_config_file_path()
-    
+    # Fall back to config file for missing values
     if not server_url:
         server_url = get_config_value("jenkins", "server_url")
     if not username:
@@ -279,54 +279,12 @@ def jenkins_test_setup() -> Generator[dict, None, None]:
     if not test_job:
         test_job = "mcp-coder-test-job"
     
-    # Determine sources for reporting
-    url_source = "env" if os.getenv("JENKINS_URL") else "config" if server_url else "none"
-    user_source = "env" if os.getenv("JENKINS_USER") else "config" if username else "none"
-    token_source = "env" if os.getenv("JENKINS_TOKEN") else "config" if api_token else "none"
-    
-    print(f"\nJenkins Integration: url={url_source}, user={user_source}, token={token_source}")
-    
-    # Check required configuration
-    if not server_url:
-        skip_msg = (
-            "Jenkins server URL not configured.\n"
-            f"  Environment variable JENKINS_URL: Not found\n"
-            f"  Config file location: {config_file_path}\n"
-            f"  Config file exists: {config_file_path.exists() if config_file_path else False}\n"
-            f"  Config file jenkins.server_url: Not found\n\n"
-            "To fix, either:\n"
-            "  1. Set environment variable: export JENKINS_URL=https://jenkins.example.com:8080\n"
-            f"  2. Add to config file {config_file_path}:\n"
-            "     [jenkins]\n"
-            '     server_url = "https://jenkins.example.com:8080"'
+    # Check required configuration and skip if missing
+    if not server_url or not username or not api_token:
+        pytest.skip(
+            "Jenkins not configured. Set JENKINS_URL, JENKINS_USER, JENKINS_TOKEN "
+            "environment variables or configure in ~/.mcp_coder/config.toml [jenkins] section."
         )
-        pytest.skip(skip_msg)
-    
-    if not username:
-        skip_msg = (
-            "Jenkins username not configured.\n"
-            f"  Environment variable JENKINS_USER: Not found\n"
-            f"  Config file jenkins.username: Not found\n\n"
-            "To fix, either:\n"
-            "  1. Set environment variable: export JENKINS_USER=jenkins-user\n"
-            f"  2. Add to config file {config_file_path}:\n"
-            "     [jenkins]\n"
-            '     username = "jenkins-user"'
-        )
-        pytest.skip(skip_msg)
-    
-    if not api_token:
-        skip_msg = (
-            "Jenkins API token not configured.\n"
-            f"  Environment variable JENKINS_TOKEN: Not found\n"
-            f"  Config file jenkins.api_token: Not found\n\n"
-            "To fix, either:\n"
-            "  1. Set environment variable: export JENKINS_TOKEN=your-token\n"
-            f"  2. Add to config file {config_file_path}:\n"
-            "     [jenkins]\n"
-            '     api_token = "your-token"'
-        )
-        pytest.skip(skip_msg)
     
     setup = {
         "server_url": server_url,
@@ -414,9 +372,9 @@ class TestJenkinsIntegration:
 ```
 
 **Test Characteristics:**
-- ~120-150 lines total
+- ~80-100 lines total
 - 2 test methods
-- Comprehensive skip messages
+- Simple, clear skip messages
 - Clear success messages
 - No waiting for job completion
 
@@ -501,7 +459,7 @@ After implementation, verify:
 ## Expected Outcomes
 
 ✅ **Files created:**
-- `tests/utils/jenkins_operations/test_integration.py` (~120-150 lines)
+- `tests/utils/jenkins_operations/test_integration.py` (~80-100 lines)
 
 ✅ **Files modified:**
 - `pyproject.toml` (added jenkins_integration marker)
