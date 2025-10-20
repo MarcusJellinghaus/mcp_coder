@@ -25,7 +25,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **File:** [pr_info/steps/step_1.md](./steps/step_1.md)
 
 - [x] Create test file `tests/utils/jenkins_operations/test_models.py` with TDD tests
-- [ ] Create source file `src/mcp_coder/utils/jenkins_operations/models.py` with JobStatus and QueueSummary dataclasses
+- [x] Create source file `src/mcp_coder/utils/jenkins_operations/models.py` with JobStatus and QueueSummary dataclasses
 - [ ] Create `__init__.py` files for both directories
 - [ ] Run quality checks: pylint, pytest, mypy - fix all issues
 - [ ] Prepare git commit message for Step 1

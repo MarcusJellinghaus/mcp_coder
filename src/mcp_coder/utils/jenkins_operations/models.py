@@ -22,7 +22,7 @@ from typing import Optional
 class JobStatus:
     """Represents the status of a Jenkins job.
 
-    Args:
+    Attributes:
         status: Job state - "queued", "running", "SUCCESS", "FAILURE", "ABORTED", "UNSTABLE"
         build_number: Build number once job starts (None if still queued)
         duration_ms: Duration in milliseconds (None until job completes)
@@ -56,21 +56,17 @@ class JobStatus:
         """Return human-readable job status.
 
         Returns:
-            Formatted status string based on job state
+            Formatted string representation of job status
         """
-        # Special case for queued jobs
         if self.status == "queued":
             return "Job queued"
 
-        # If we have a build number, format with it
         if self.build_number is not None:
             result = f"Job #{self.build_number}: {self.status}"
-            # Add duration if available
             if self.duration_ms is not None:
                 result += f" ({self.duration_ms}ms)"
             return result
 
-        # Otherwise, just return the status
         return self.status
 
 
@@ -78,7 +74,7 @@ class JobStatus:
 class QueueSummary:
     """Summary of Jenkins queue status.
 
-    Args:
+    Attributes:
         running: Number of jobs currently running
         queued: Number of jobs waiting in queue
 
@@ -106,7 +102,7 @@ class QueueSummary:
         """Return human-readable queue summary.
 
         Returns:
-            Formatted summary with proper pluralization
+            Formatted string representation of queue status
         """
         running_text = f"{self.running} job{'s' if self.running != 1 else ''} running"
         queued_text = f"{self.queued} job{'s' if self.queued != 1 else ''} queued"
