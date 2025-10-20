@@ -560,26 +560,35 @@ def main() -> None:
     cleanup_success = cleanup_repository(project_dir)
     
     if cleanup_success:
-        # Commit cleanup changes
-        log_step("Committing cleanup changes...")
-        commit_result = commit_all_changes(
-            "Clean up pr_info/steps planning files", 
-            project_dir
-        )
-        
-        if commit_result["success"]:
-            log_step(f"Cleanup committed: {commit_result['commit_hash']}")
+        # Check if there are changes to commit
+        if not is_working_directory_clean(project_dir):
+            # Commit cleanup changes
+            log_step("Committing cleanup changes...")
+            commit_result = commit_all_changes(
+                "Clean up pr_info/steps planning files", 
+                project_dir
+            )
             
-            # Push cleanup commit
-            log_step("Pushing cleanup changes...")
-            push_result = git_push(project_dir)
-            
-            if push_result["success"]:
-                log_step("Cleanup changes pushed successfully")
+            if commit_result["success"]:
+                log_step(f"Cleanup committed: {commit_result['commit_hash']}")
+                
+                # Push cleanup commit
+                log_step("Pushing cleanup changes...")
+                push_result = git_push(project_dir)
+                
+                if push_result["success"]:
+                    log_step("Cleanup changes pushed successfully")
+                else:
+                    logger.warning(f"Failed to push cleanup changes: {push_result['error']}")
             else:
-                logger.warning(f"Failed to push cleanup changes: {push_result['error']}")
+                # Don't warn about "No staged files" - this is expected when cleanup had no effect
+                error_msg = commit_result.get("error", "")
+                if error_msg and "No staged files" in error_msg:
+                    log_step("No cleanup changes to commit (files were already clean)")
+                else:
+                    logger.warning(f"Failed to commit cleanup changes: {commit_result['error']}")
         else:
-            logger.warning(f"Failed to commit cleanup changes: {commit_result['error']}")
+            log_step("No cleanup changes to commit")
     else:
         logger.warning("Repository cleanup completed with errors, but PR was created successfully")
     

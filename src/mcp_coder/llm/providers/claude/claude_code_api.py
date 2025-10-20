@@ -214,12 +214,9 @@ def _create_claude_client(
 ) -> ClaudeCodeOptions:
     """Create a Claude Code SDK client with optional session resumption.
 
-    Uses lazy verification pattern:
-    - Attempts SDK client creation first (SDK validates CLI internally)
-    - Only runs verification if SDK raises CLINotFoundError
-    - Provides enhanced diagnostics when Claude CLI is not found
-
-    This improves performance by avoiding preemptive checks when Claude is already available.
+    Proactively sets up PATH to include Claude CLI location before SDK attempts
+    to find it, ensuring the SDK can locate Claude even if it's in non-standard
+    locations like ~/.local/bin on Windows.
 
     Args:
         session_id: Optional Claude session ID to resume conversation
@@ -230,9 +227,17 @@ def _create_claude_client(
         ClaudeCodeOptions object configured for basic usage or session resumption
 
     Raises:
-        RuntimeError: If Claude CLI cannot be found or verified (only after SDK failure)
+        RuntimeError: If Claude CLI cannot be found or verified
     """
     logger.debug("Creating Claude Code SDK client")
+
+    # Proactively setup PATH before SDK tries to find Claude
+    # This is important for Windows where Claude may be in ~/.local/bin
+    claude_path = setup_claude_path()
+    if claude_path:
+        logger.debug("Claude CLI found and PATH configured: %s", claude_path)
+    else:
+        logger.warning("setup_claude_path() returned None - Claude not found")
 
     try:
         # Use basic configuration with optional session resumption
@@ -242,9 +247,9 @@ def _create_claude_client(
         else:
             return ClaudeCodeOptions(env=env or {}, cwd=cwd)
     except CLINotFoundError as e:
-        # SDK couldn't find Claude - run verification for diagnostics
-        logger.error("SDK raised CLINotFoundError, running verification: %s", e)
-        success, claude_path, error_msg = _verify_claude_before_use()
+        # SDK still couldn't find Claude after PATH setup - run verification for diagnostics
+        logger.error("SDK raised CLINotFoundError after PATH setup: %s", e)
+        success, found_path, error_msg = _verify_claude_before_use()
 
         if not success:
             logger.error("Claude verification failed: %s", error_msg)
@@ -254,10 +259,10 @@ def _create_claude_client(
 
         # Verification passed but SDK still failed - shouldn't happen
         logger.error(
-            "Claude verified at %s but SDK still raised CLINotFoundError", claude_path
+            "Claude verified at %s but SDK still raised CLINotFoundError", found_path
         )
         raise RuntimeError(
-            f"Claude CLI found at {claude_path} but SDK cannot access it: {str(e)}"
+            f"Claude CLI found at {found_path} but SDK cannot access it: {str(e)}"
         ) from e
 
 

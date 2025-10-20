@@ -28,9 +28,9 @@ jobs:
             
             // Define the promotion paths: [current_status, next_status]
             const promotions = {
-              'status:created': 'status:awaiting-planning',
-              'status:plan-review': 'status:plan-ready',
-              'status:code-review': 'status:ready-pr'
+              'status-01:created': 'status-02:awaiting-planning',
+              'status-04:plan-review': 'status-05:plan-ready',
+              'status-07:code-review': 'status-08:ready-pr'
             };
             
             let promoted = false;
@@ -77,6 +77,6 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: `⚠️ Cannot promote issue. The issue must have one of these statuses:\n- \`status:created\`\n- \`status:plan-review\`\n- \`status:code-review\`\n\nCurrent labels: ${labels.filter(l => l.startsWith('status:')).join(', ') || 'none'}`
+                body: `⚠️ Cannot promote issue. The issue must have one of these statuses:\n- \`status-01:created\`\n- \`status-04:plan-review\`\n- \`status-07:code-review\`\n\nCurrent labels: ${labels.filter(l => l.startsWith('status-')).join(', ') || 'none'}`
               });
             }

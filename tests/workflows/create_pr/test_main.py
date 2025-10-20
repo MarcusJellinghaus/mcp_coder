@@ -17,6 +17,7 @@ class TestMainWorkflow:
     @patch("workflows.create_PR.generate_pr_summary")
     @patch("workflows.create_PR.create_pull_request")
     @patch("workflows.create_PR.cleanup_repository")
+    @patch("workflows.create_PR.is_working_directory_clean")
     @patch("workflows.create_PR.commit_all_changes")
     @patch("workflows.create_PR.git_push")
     @patch("workflows.create_PR.parse_arguments")
@@ -25,6 +26,7 @@ class TestMainWorkflow:
         mock_parse_args: MagicMock,
         mock_git_push: MagicMock,
         mock_commit: MagicMock,
+        mock_is_clean: MagicMock,
         mock_cleanup: MagicMock,
         mock_create_pr: MagicMock,
         mock_generate_summary: MagicMock,
@@ -43,6 +45,7 @@ class TestMainWorkflow:
         mock_generate_summary.return_value = ("Test PR Title", "Test PR Body")
         mock_create_pr.return_value = True
         mock_cleanup.return_value = True
+        mock_is_clean.return_value = False  # There are changes to commit
         mock_commit.return_value = {"success": True, "commit_hash": "abc1234"}
         mock_git_push.return_value = {"success": True}
 
@@ -159,6 +162,7 @@ class TestMainWorkflow:
     @patch("workflows.create_PR.generate_pr_summary")
     @patch("workflows.create_PR.create_pull_request")
     @patch("workflows.create_PR.cleanup_repository")
+    @patch("workflows.create_PR.is_working_directory_clean")
     @patch("workflows.create_PR.commit_all_changes")
     @patch("workflows.create_PR.parse_arguments")
     @patch("workflows.create_PR.logger")
@@ -167,6 +171,7 @@ class TestMainWorkflow:
         mock_logger: MagicMock,
         mock_parse_args: MagicMock,
         mock_commit: MagicMock,
+        mock_is_clean: MagicMock,
         mock_cleanup: MagicMock,
         mock_create_pr: MagicMock,
         mock_generate_summary: MagicMock,
@@ -184,6 +189,7 @@ class TestMainWorkflow:
         mock_generate_summary.return_value = ("Test PR Title", "Test PR Body")
         mock_create_pr.return_value = True
         mock_cleanup.return_value = True
+        mock_is_clean.return_value = False  # There are changes to commit
         mock_commit.return_value = {"success": False, "error": "Commit failed"}
 
         with patch("sys.exit", side_effect=SystemExit) as mock_exit:
@@ -200,6 +206,7 @@ class TestMainWorkflow:
     @patch("workflows.create_PR.generate_pr_summary")
     @patch("workflows.create_PR.create_pull_request")
     @patch("workflows.create_PR.cleanup_repository")
+    @patch("workflows.create_PR.is_working_directory_clean")
     @patch("workflows.create_PR.commit_all_changes")
     @patch("workflows.create_PR.git_push")
     @patch("workflows.create_PR.parse_arguments")
@@ -210,6 +217,7 @@ class TestMainWorkflow:
         mock_parse_args: MagicMock,
         mock_git_push: MagicMock,
         mock_commit: MagicMock,
+        mock_is_clean: MagicMock,
         mock_cleanup: MagicMock,
         mock_create_pr: MagicMock,
         mock_generate_summary: MagicMock,
@@ -227,6 +235,7 @@ class TestMainWorkflow:
         mock_generate_summary.return_value = ("Test PR Title", "Test PR Body")
         mock_create_pr.return_value = True
         mock_cleanup.return_value = True
+        mock_is_clean.return_value = False  # There are changes to commit
         mock_commit.return_value = {"success": True, "commit_hash": "abc1234"}
         mock_git_push.return_value = {"success": False, "error": "Push failed"}
 
@@ -283,3 +292,47 @@ class TestMainWorkflow:
             main()
 
         assert exc_info.value.code == 1
+
+    @patch("workflows.create_PR.setup_logging")
+    @patch("workflows.create_PR.resolve_project_dir")
+    @patch("workflows.create_PR.check_prerequisites")
+    @patch("workflows.create_PR.generate_pr_summary")
+    @patch("workflows.create_PR.create_pull_request")
+    @patch("workflows.create_PR.cleanup_repository")
+    @patch("workflows.create_PR.is_working_directory_clean")
+    @patch("workflows.create_PR.git_push")
+    @patch("workflows.create_PR.parse_arguments")
+    @patch("workflows.create_PR.log_step")
+    def test_main_workflow_no_cleanup_changes(
+        self,
+        mock_log_step: MagicMock,
+        mock_parse_args: MagicMock,
+        mock_git_push: MagicMock,
+        mock_is_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_generate_summary: MagicMock,
+        mock_check_prereqs: MagicMock,
+        mock_resolve_dir: MagicMock,
+        mock_setup_logging: MagicMock,
+    ) -> None:
+        """Test workflow when cleanup produces no changes to commit."""
+        mock_args = MagicMock()
+        mock_args.log_level = "INFO"
+        mock_parse_args.return_value = mock_args
+
+        mock_resolve_dir.return_value = Path("/test/project")
+        mock_check_prereqs.return_value = True
+        mock_generate_summary.return_value = ("Test PR Title", "Test PR Body")
+        mock_create_pr.return_value = True
+        mock_cleanup.return_value = True
+        mock_is_clean.return_value = True  # No changes to commit
+        mock_git_push.return_value = {"success": True}
+
+        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+            with pytest.raises(SystemExit):
+                main()
+            mock_exit.assert_called_once_with(0)
+
+        # Verify "No cleanup changes to commit" message was logged
+        mock_log_step.assert_any_call("No cleanup changes to commit")

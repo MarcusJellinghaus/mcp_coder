@@ -16,31 +16,51 @@ def _get_claude_search_paths() -> List[str]:
     Returns:
         List of potential Claude executable paths
     """
-    username = os.environ.get("USERNAME", os.environ.get("USER", ""))
+    paths_list: List[str] = []
 
-    # Start with the paths that are definitely strings
-    paths_list: List[str] = [
-        # Windows user-specific locations
-        f"C:\\Users\\{username}\\.local\\bin\\claude.exe",
-        f"C:\\Users\\{username}\\.local\\bin\\claude",
-        f"C:\\Users\\{username}\\AppData\\Local\\Programs\\Claude\\claude.exe",
-        f"C:\\Users\\{username}\\AppData\\Roaming\\Claude\\claude.exe",
-        f"C:\\Users\\{username}\\AppData\\Roaming\\npm\\claude.exe",
-        # Unix-like user-specific locations
-        os.path.expanduser("~/.local/bin/claude"),
-        os.path.expanduser("~/.local/bin/claude.exe"),
-        # Node.js global install locations
-        os.path.expanduser("~/node_modules/.bin/claude"),
-        os.path.expanduser("~/node_modules/.bin/claude.exe"),
-        # System-wide locations
-        "/usr/local/bin/claude",
-        "/opt/claude/claude",
-    ]
-
-    # Add PATH location if it exists
+    # First check PATH (highest priority)
     claude_from_path = shutil.which("claude")
     if claude_from_path is not None:
-        paths_list.insert(0, claude_from_path)
+        paths_list.append(claude_from_path)
+
+    # Native installer locations - highest priority after PATH
+    # These are the standard locations for the native Claude Code installer
+    # Use os.path.join for proper path construction across platforms
+    user_home = os.path.expanduser("~")
+    paths_list.extend(
+        [
+            os.path.join(user_home, ".local", "bin", "claude.exe"),
+            os.path.join(user_home, ".local", "bin", "claude"),
+        ]
+    )
+
+    # Node.js global install locations
+    paths_list.extend(
+        [
+            os.path.join(user_home, "node_modules", ".bin", "claude.exe"),
+            os.path.join(user_home, "node_modules", ".bin", "claude"),
+            os.path.join(user_home, "AppData", "Roaming", "npm", "claude.exe"),
+            os.path.join(user_home, "AppData", "Roaming", "npm", "claude"),
+        ]
+    )
+
+    # Other Windows locations
+    paths_list.extend(
+        [
+            os.path.join(
+                user_home, "AppData", "Local", "Programs", "Claude", "claude.exe"
+            ),
+            os.path.join(user_home, "AppData", "Roaming", "Claude", "claude.exe"),
+        ]
+    )
+
+    # System-wide locations (Unix-like)
+    paths_list.extend(
+        [
+            "/usr/local/bin/claude",
+            "/opt/claude/claude",
+        ]
+    )
 
     return paths_list
 
