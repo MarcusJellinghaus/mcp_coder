@@ -244,10 +244,10 @@ class TestJenkinsClientStartJob:
 
         # Execute & Verify
         with pytest.raises(ValueError, match="params must be a dict"):
-            client.start_job("test-job", "not-a-dict")  # type: ignore
+            client.start_job("test-job", "not-a-dict")  # pyright: ignore
 
         with pytest.raises(ValueError, match="params must be a dict"):
-            client.start_job("test-job", ["list", "not", "dict"])  # type: ignore
+            client.start_job("test-job", ["list", "not", "dict"])  # pyright: ignore
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_start_job_jenkins_error(self, mock_jenkins_class: MagicMock) -> None:
