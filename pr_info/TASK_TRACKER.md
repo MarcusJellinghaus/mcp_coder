@@ -71,7 +71,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2d
 
 ### Step 3: Register CLI Command in Main CLI System
-- [ ] Add import for `execute_create_plan` in `src/mcp_coder/cli/main.py` ([step_3.md](steps/step_3.md))
+- [x] Add import for `execute_create_plan` in `src/mcp_coder/cli/main.py` ([step_3.md](steps/step_3.md))
 - [ ] Add create-plan subparser in `create_parser()` function
 - [ ] Add routing logic in `main()` function
 - [ ] Verify CLI help displays correctly
