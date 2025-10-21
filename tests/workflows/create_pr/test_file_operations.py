@@ -97,7 +97,7 @@ class TestDeleteStepsDirectory:
                 # Should log error
                 mock_logger.error.assert_called()
 
-    @patch("workflows.create_PR.logger")
+    @patch("mcp_coder.workflows.create_pr.core.logger")
     def test_delete_with_logging(self, mock_logger: MagicMock) -> None:
         """Test that operations are properly logged."""
         with TemporaryDirectory() as temp_dir:
@@ -235,7 +235,7 @@ Some content here without Tasks section.
             result = truncate_task_tracker(project_dir)
             assert result is False
 
-    @patch("workflows.create_PR.logger")
+    @patch("mcp_coder.workflows.create_pr.core.logger")
     def test_truncate_with_logging(self, mock_logger: MagicMock) -> None:
         """Test that operations are properly logged."""
         with TemporaryDirectory() as temp_dir:
@@ -296,7 +296,7 @@ Content with specific formatting.
             assert truncated == expected
 
     @patch("pathlib.Path.read_text", side_effect=PermissionError("Access denied"))
-    @patch("workflows.create_PR.logger")
+    @patch("mcp_coder.workflows.create_pr.core.logger")
     def test_truncate_with_permission_error(
         self, mock_logger: MagicMock, mock_read_text: MagicMock
     ) -> None:
