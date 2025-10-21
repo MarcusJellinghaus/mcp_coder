@@ -224,7 +224,7 @@ mcp-coder create-pr --help
 3. ✅ `src/mcp_coder/cli/commands/create_pr.py`
 4. ✅ `tests/cli/commands/test_create_pr.py`
 
-### Files Modified (10)
+### Files Modified (9)
 1. ✅ `src/mcp_coder/cli/main.py` (added create-pr command)
 2. ✅ `tests/workflows/create_pr/test_file_operations.py` (updated imports)
 3. ✅ `tests/workflows/create_pr/test_parsing.py` (updated imports)
@@ -233,11 +233,11 @@ mcp-coder create-pr --help
 6. ✅ `tests/workflows/create_pr/test_repository.py` (updated imports)
 7. ✅ `tests/workflows/create_pr/test_main.py` (updated imports)
 8. ✅ `tests/workflows/test_create_pr_integration.py` (updated imports)
-9. ✅ `tests/test_create_pr.py` (updated imports)
 
-### Files Deleted (2)
+### Files Deleted (3)
 1. ✅ `workflows/create_PR.py`
 2. ✅ `workflows/create_PR.bat`
+3. ✅ `tests/test_create_pr.py`
 
 ### Net Change
 - **Created:** 5 files

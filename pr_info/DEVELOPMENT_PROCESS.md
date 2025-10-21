@@ -308,9 +308,18 @@ flowchart LR
    ```
    </details>
 
-4. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
+4. **Commit updated implementation plan**
+   <details>
+   <summary>📋 Commit updated implementation plan with</summary>
+   
+   ```
+   Updated implementation plan
+   ```
+   </details>
 
-5. **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
+5. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
+
+6**Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
 
 **Additional Prompts (for special cases):**
 
