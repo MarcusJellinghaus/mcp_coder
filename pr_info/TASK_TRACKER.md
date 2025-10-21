@@ -96,10 +96,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 5: Remove Legacy Files and Final Validation
 **Details:** [step_5.md](./steps/step_5.md)
 
-- [ ] Part A: Remove Legacy Files
-  - [ ] Delete `workflows/create_PR.py`
-  - [ ] Delete `workflows/create_PR.bat`
-  - [ ] Verify files are deleted
+- [x] Part A: Remove Legacy Files
+  - [x] Delete `workflows/create_PR.py`
+  - [x] Delete `workflows/create_PR.bat`
+  - [x] Verify files are deleted
 
 - [ ] Part B: Comprehensive Testing
   - [ ] Run all create_pr workflow tests
