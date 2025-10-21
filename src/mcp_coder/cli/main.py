@@ -6,6 +6,7 @@ import sys
 
 from ..utils.log_utils import setup_logging
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
+from .commands.create_pr import execute_create_pr
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
 from .commands.prompt import execute_prompt
