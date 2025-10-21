@@ -19,7 +19,12 @@ try:
     )
 
     CREATE_PR_MODULE_AVAILABLE = True
-except ImportError:
+except Exception as e:
+    import traceback
+
+    print(f"\n\n*** IMPORT FAILED: {type(e).__name__}: {e} ***")
+    traceback.print_exc()
+    print("\n\n")
     CREATE_PR_MODULE_AVAILABLE = False
 
     # Create a mock for type checking in tests
