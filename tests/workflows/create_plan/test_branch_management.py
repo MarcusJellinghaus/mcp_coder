@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from workflows.create_plan import manage_branch, verify_steps_directory
+from mcp_coder.workflows.create_plan import manage_branch, verify_steps_directory
 
 
 class TestManageBranch:
@@ -14,13 +14,17 @@ class TestManageBranch:
     def test_manage_branch_existing_branch(self, tmp_path: Path) -> None:
         """Test manage_branch with existing linked branch."""
         # Mock IssueBranchManager to return existing branch
-        with patch("workflows.create_plan.IssueBranchManager") as mock_manager_class:
+        with patch(
+            "mcp_coder.workflows.create_plan.IssueBranchManager"
+        ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = ["123-test-feature"]
             mock_manager_class.return_value = mock_manager
 
             # Mock checkout_branch to succeed
-            with patch("workflows.create_plan.checkout_branch", return_value=True):
+            with patch(
+                "mcp_coder.workflows.create_plan.checkout_branch", return_value=True
+            ):
                 branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
         assert branch_name == "123-test-feature"
@@ -30,7 +34,9 @@ class TestManageBranch:
     def test_manage_branch_create_new_branch(self, tmp_path: Path) -> None:
         """Test manage_branch creates new branch when none exist."""
         # Mock IssueBranchManager with no existing branches
-        with patch("workflows.create_plan.IssueBranchManager") as mock_manager_class:
+        with patch(
+            "mcp_coder.workflows.create_plan.IssueBranchManager"
+        ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = []
             mock_manager.create_remote_branch_for_issue.return_value = {
@@ -42,7 +48,9 @@ class TestManageBranch:
             mock_manager_class.return_value = mock_manager
 
             # Mock checkout_branch to succeed
-            with patch("workflows.create_plan.checkout_branch", return_value=True):
+            with patch(
+                "mcp_coder.workflows.create_plan.checkout_branch", return_value=True
+            ):
                 branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
         assert branch_name == "123-test-feature"
@@ -52,7 +60,9 @@ class TestManageBranch:
     def test_manage_branch_create_failure(self, tmp_path: Path) -> None:
         """Test manage_branch when branch creation fails."""
         # Mock IssueBranchManager with no existing branches
-        with patch("workflows.create_plan.IssueBranchManager") as mock_manager_class:
+        with patch(
+            "mcp_coder.workflows.create_plan.IssueBranchManager"
+        ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = []
             mock_manager.create_remote_branch_for_issue.return_value = {
@@ -72,13 +82,17 @@ class TestManageBranch:
     def test_manage_branch_checkout_failure(self, tmp_path: Path) -> None:
         """Test manage_branch when checkout fails."""
         # Mock IssueBranchManager to return existing branch
-        with patch("workflows.create_plan.IssueBranchManager") as mock_manager_class:
+        with patch(
+            "mcp_coder.workflows.create_plan.IssueBranchManager"
+        ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = ["123-test-feature"]
             mock_manager_class.return_value = mock_manager
 
             # Mock checkout_branch to fail
-            with patch("workflows.create_plan.checkout_branch", return_value=False):
+            with patch(
+                "mcp_coder.workflows.create_plan.checkout_branch", return_value=False
+            ):
                 branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
         assert branch_name is None
@@ -88,7 +102,7 @@ class TestManageBranch:
         """Test manage_branch when IssueBranchManager initialization fails."""
         # Mock IssueBranchManager initialization to raise exception
         with patch(
-            "workflows.create_plan.IssueBranchManager",
+            "mcp_coder.workflows.create_plan.IssueBranchManager",
             side_effect=ValueError("Invalid configuration"),
         ):
             branch_name = manage_branch(tmp_path, 123, "Test Feature")
@@ -98,7 +112,9 @@ class TestManageBranch:
     def test_manage_branch_get_linked_branches_error(self, tmp_path: Path) -> None:
         """Test manage_branch when get_linked_branches throws error."""
         # Mock IssueBranchManager with get_linked_branches raising exception
-        with patch("workflows.create_plan.IssueBranchManager") as mock_manager_class:
+        with patch(
+            "mcp_coder.workflows.create_plan.IssueBranchManager"
+        ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.side_effect = Exception("API error")
             mock_manager_class.return_value = mock_manager
@@ -111,15 +127,19 @@ class TestManageBranch:
     def test_manage_branch_logs_existing_branch(self, tmp_path: Path) -> None:
         """Test manage_branch logs when using existing branch."""
         # Mock IssueBranchManager to return existing branch
-        with patch("workflows.create_plan.IssueBranchManager") as mock_manager_class:
+        with patch(
+            "mcp_coder.workflows.create_plan.IssueBranchManager"
+        ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = ["123-existing-branch"]
             mock_manager_class.return_value = mock_manager
 
             # Mock checkout_branch to succeed
-            with patch("workflows.create_plan.checkout_branch", return_value=True):
+            with patch(
+                "mcp_coder.workflows.create_plan.checkout_branch", return_value=True
+            ):
                 # Capture logger output
-                with patch("workflows.create_plan.logger") as mock_logger:
+                with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
                     branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
                     # Verify logging calls
@@ -136,7 +156,9 @@ class TestManageBranch:
     def test_manage_branch_logs_new_branch(self, tmp_path: Path) -> None:
         """Test manage_branch logs when creating new branch."""
         # Mock IssueBranchManager with no existing branches
-        with patch("workflows.create_plan.IssueBranchManager") as mock_manager_class:
+        with patch(
+            "mcp_coder.workflows.create_plan.IssueBranchManager"
+        ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = []
             mock_manager.create_remote_branch_for_issue.return_value = {
@@ -148,9 +170,11 @@ class TestManageBranch:
             mock_manager_class.return_value = mock_manager
 
             # Mock checkout_branch to succeed
-            with patch("workflows.create_plan.checkout_branch", return_value=True):
+            with patch(
+                "mcp_coder.workflows.create_plan.checkout_branch", return_value=True
+            ):
                 # Capture logger output
-                with patch("workflows.create_plan.logger") as mock_logger:
+                with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
                     branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
                     # Verify logging calls
@@ -222,7 +246,7 @@ class TestVerifyStepsDirectory:
         (steps_dir / "summary.md").write_text("Summary")
 
         # Capture logger output
-        with patch("workflows.create_plan.logger") as mock_logger:
+        with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
             result = verify_steps_directory(tmp_path)
 
             # Verify error logging calls
@@ -245,7 +269,7 @@ class TestVerifyStepsDirectory:
     def test_verify_steps_directory_logs_debug_when_ok(self, tmp_path: Path) -> None:
         """Test verify_steps_directory logs debug message when directory is OK."""
         # Test with non-existent directory
-        with patch("workflows.create_plan.logger") as mock_logger:
+        with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
             result = verify_steps_directory(tmp_path)
 
             # Verify debug logging
@@ -258,7 +282,7 @@ class TestVerifyStepsDirectory:
         steps_dir = tmp_path / "pr_info" / "steps"
         steps_dir.mkdir(parents=True)
 
-        with patch("workflows.create_plan.logger") as mock_logger:
+        with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
             result = verify_steps_directory(tmp_path)
 
             # Verify debug logging
