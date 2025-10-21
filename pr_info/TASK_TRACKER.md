@@ -20,3 +20,117 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### Step 1: Create CLI Command Interface (TDD)
+**Details:** [step_1.md](./steps/step_1.md)
+
+- [ ] Part A: Write Tests First (RED Phase)
+  - [ ] Create `tests/cli/commands/test_create_pr.py` with comprehensive test suite
+  - [ ] Run tests to verify they FAIL initially (RED phase)
+
+- [ ] Part B: Implement CLI Command (GREEN Phase)
+  - [ ] Create `src/mcp_coder/cli/commands/create_pr.py` with `execute_create_pr()` function
+  - [ ] Run tests to verify they PASS (GREEN phase)
+  - [ ] Run pylint check on new files
+  - [ ] Run mypy check on new files
+  - [ ] Prepare git commit message for Step 1
+
+### Step 2: Create Workflow Package and Core Logic
+**Details:** [step_2.md](./steps/step_2.md)
+
+- [ ] Part A: Create Workflow Package Structure
+  - [ ] Create `src/mcp_coder/workflows/create_pr/__init__.py`
+  - [ ] Create `src/mcp_coder/workflows/create_pr/core.py` (moved from `workflows/create_PR.py`)
+  - [ ] Remove duplicate functions: `parse_arguments()`, `resolve_project_dir()`, `main()`
+  - [ ] Update `generate_pr_summary()` signature to accept `provider` and `method` parameters
+  - [ ] Create `run_create_pr_workflow()` function with binary return codes (0/1)
+
+- [ ] Part B: Update Existing Tests
+  - [ ] Update imports in `tests/workflows/create_pr/test_file_operations.py`
+  - [ ] Update imports in `tests/workflows/create_pr/test_parsing.py`
+  - [ ] Update imports in `tests/workflows/create_pr/test_prerequisites.py`
+  - [ ] Update imports in `tests/workflows/create_pr/test_generation.py`
+  - [ ] Update imports in `tests/workflows/create_pr/test_repository.py`
+  - [ ] Update imports in `tests/workflows/create_pr/test_main.py`
+
+- [ ] Part C: Validate and Run Quality Checks
+  - [ ] Run all create_pr workflow tests: `pytest tests/workflows/create_pr/ -v`
+  - [ ] Run pylint check on workflow package
+  - [ ] Run mypy check on workflow package
+  - [ ] Prepare git commit message for Step 2
+
+### Step 3: Integrate with CLI Main Entry Point
+**Details:** [step_3.md](./steps/step_3.md)
+
+- [ ] Add Import Statement
+  - [ ] Import `execute_create_pr` in `src/mcp_coder/cli/main.py`
+
+- [ ] Add Subcommand to Argument Parser
+  - [ ] Add `create-pr` subcommand with `--project-dir` and `--llm-method` arguments
+
+- [ ] Add Command Routing
+  - [ ] Add routing for `create-pr` command in `main()` function
+
+- [ ] Validation
+  - [ ] Manual test: `mcp-coder --help` shows create-pr command
+  - [ ] Manual test: `mcp-coder create-pr --help` works
+  - [ ] Run CLI tests: `pytest tests/cli/ -v`
+  - [ ] Run pylint check on main.py
+  - [ ] Run mypy check on main.py
+  - [ ] Prepare git commit message for Step 3
+
+### Step 4: Update Integration Test Imports
+**Details:** [step_4.md](./steps/step_4.md)
+
+- [ ] Update Integration Tests
+  - [ ] Update imports in `tests/workflows/test_create_pr_integration.py`
+  - [ ] Update patch decorators to use new module path
+
+- [ ] Validation
+  - [ ] Run integration tests: `pytest tests/workflows/test_create_pr_integration.py -v`
+  - [ ] Run all create_pr tests: `pytest tests/ -k "create_pr" -v`
+  - [ ] Run pylint check on updated test file
+  - [ ] Run mypy check on updated test file
+  - [ ] Prepare git commit message for Step 4
+
+### Step 5: Remove Legacy Files and Final Validation
+**Details:** [step_5.md](./steps/step_5.md)
+
+- [ ] Part A: Remove Legacy Files
+  - [ ] Delete `workflows/create_PR.py`
+  - [ ] Delete `workflows/create_PR.bat`
+  - [ ] Verify files are deleted
+
+- [ ] Part B: Comprehensive Testing
+  - [ ] Run all create_pr workflow tests
+  - [ ] Run CLI command tests
+  - [ ] Run integration tests
+  - [ ] Run full test suite with parallel execution
+
+- [ ] Part C: Code Quality Validation
+  - [ ] Run pylint on workflow package
+  - [ ] Run pylint on CLI command
+  - [ ] Run pylint on CLI main
+  - [ ] Run mypy on workflow package
+  - [ ] Run mypy on CLI command
+  - [ ] Run mypy on CLI main
+
+- [ ] Part D: Manual Functional Testing
+  - [ ] Verify `mcp-coder --help` shows create-pr
+  - [ ] Verify `mcp-coder create-pr --help` works
+  - [ ] Test command accessibility (no import errors)
+
+- [ ] Part E: Final Verification
+  - [ ] Verify all success criteria from Issue #139 are met
+  - [ ] Prepare final git commit message for Step 5
+
+---
+
+## Pull Request
+
+- [ ] Review all changes across all steps
+- [ ] Ensure all tests pass
+- [ ] Ensure all code quality checks pass
+- [ ] Create PR summary highlighting key changes and benefits
+- [ ] Link to Issue #139
+- [ ] Add appropriate labels
