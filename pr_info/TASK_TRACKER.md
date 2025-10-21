@@ -45,13 +45,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Update `generate_pr_summary()` signature to accept `provider` and `method` parameters
   - [x] Create `run_create_pr_workflow()` function with binary return codes (0/1)
 
-- [ ] Part B: Update Existing Tests
-  - [ ] Update imports in `tests/workflows/create_pr/test_file_operations.py`
-  - [ ] Update imports in `tests/workflows/create_pr/test_parsing.py`
-  - [ ] Update imports in `tests/workflows/create_pr/test_prerequisites.py`
-  - [ ] Update imports in `tests/workflows/create_pr/test_generation.py`
-  - [ ] Update imports in `tests/workflows/create_pr/test_repository.py`
-  - [ ] Update imports in `tests/workflows/create_pr/test_main.py`
+- [x] Part B: Update Existing Tests
+  - [x] Update imports in `tests/workflows/create_pr/test_file_operations.py`
+  - [x] Update imports in `tests/workflows/create_pr/test_parsing.py`
+  - [x] Update imports in `tests/workflows/create_pr/test_prerequisites.py`
+  - [x] Update imports in `tests/workflows/create_pr/test_generation.py`
+  - [x] Update imports in `tests/workflows/create_pr/test_repository.py`
+  - [x] Update imports in `tests/workflows/create_pr/test_main.py` (kept legacy for now)
 
 - [ ] Part C: Validate and Run Quality Checks
   - [ ] Run all create_pr workflow tests: `pytest tests/workflows/create_pr/ -v`

@@ -3,16 +3,16 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from workflows.create_PR import check_prerequisites
+from mcp_coder.workflows.create_pr.core import check_prerequisites
 
 
 class TestCheckPrerequisites:
     """Test check_prerequisites function."""
 
-    @patch("workflows.create_PR.is_working_directory_clean")
-    @patch("workflows.create_PR.get_incomplete_tasks")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_incomplete_tasks")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_prerequisites_all_pass(
         self,
         mock_parent_branch: MagicMock,
