@@ -68,16 +68,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add Subcommand to Argument Parser
   - [x] Add `create-pr` subcommand with `--project-dir` and `--llm-method` arguments
 
-- [ ] Add Command Routing
-  - [ ] Add routing for `create-pr` command in `main()` function
+- [x] Add Command Routing
+  - [x] Add routing for `create-pr` command in `main()` function
 
-- [ ] Validation
-  - [ ] Manual test: `mcp-coder --help` shows create-pr command
-  - [ ] Manual test: `mcp-coder create-pr --help` works
-  - [ ] Run CLI tests: `pytest tests/cli/ -v`
-  - [ ] Run pylint check on main.py
-  - [ ] Run mypy check on main.py
-  - [ ] Prepare git commit message for Step 3
+- [x] Validation
+  - [x] Manual test: `mcp-coder --help` shows create-pr command
+  - [x] Manual test: `mcp-coder create-pr --help` works
+  - [x] Run CLI tests: `pytest tests/cli/ -v`
+  - [x] Run pylint check on main.py
+  - [x] Run mypy check on main.py
+  - [x] Prepare git commit message for Step 3
 
 ### Step 4: Update Integration Test Imports
 **Details:** [step_4.md](./steps/step_4.md)
