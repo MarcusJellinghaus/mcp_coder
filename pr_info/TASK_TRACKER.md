@@ -94,7 +94,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 4
 
 ### Step 5: Update Existing Workflow Tests
-- [ ] Update `tests/workflows/create_plan/test_main.py` with new import paths and function name ([step_5.md](steps/step_5.md))
+- [x] Update `tests/workflows/create_plan/test_main.py` with new import paths and function name ([step_5.md](steps/step_5.md))
 - [ ] Update `tests/workflows/create_plan/test_argument_parsing.py` - delete TestParseArguments class
 - [ ] Update `tests/workflows/create_plan/test_prerequisites.py` with new import paths
 - [ ] Update `tests/workflows/create_plan/test_branch_management.py` with new import paths
