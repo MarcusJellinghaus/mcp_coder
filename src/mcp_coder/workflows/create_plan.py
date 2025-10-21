@@ -31,34 +31,6 @@ from mcp_coder.utils.log_utils import setup_logging
 logger = logging.getLogger(__name__)
 
 
-def parse_arguments() -> argparse.Namespace:
-    """Parse command line arguments including project directory and log level."""
-    parser = argparse.ArgumentParser(
-        description="Create plan workflow script that generates implementation plan for GitHub issue."
-    )
-    parser.add_argument("issue_number", type=int, help="GitHub issue number (required)")
-    parser.add_argument(
-        "--project-dir",
-        metavar="PATH",
-        help="Project directory path (default: current directory)",
-    )
-    parser.add_argument(
-        "--log-level",
-        type=str.upper,
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="INFO",
-        help="Set the logging level (default: INFO)",
-    )
-    parser.add_argument(
-        "--llm-method",
-        choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_cli",
-        help="LLM method to use (default: claude_code_cli)",
-    )
-
-    return parser.parse_args()
-
-
 def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, IssueData]:
     """Validate prerequisites for plan creation workflow.
 
@@ -593,29 +565,3 @@ def run_create_plan_workflow(
 
     logger.info("Create plan workflow completed successfully!")
     return 0
-
-
-if __name__ == "__main__":
-    # This block will be removed in Step 2c - kept for backward compatibility during migration
-    import sys
-
-    args = parse_arguments()
-    project_dir = resolve_project_dir(args.project_dir)
-    setup_logging(args.log_level)
-
-    # Parse provider and method from llm_method
-    if args.llm_method == "claude_code_cli":
-        provider, method = "claude", "cli"
-    elif args.llm_method == "claude_code_api":
-        provider, method = "claude", "api"
-    else:
-        logger.error(f"Unknown llm_method: {args.llm_method}")
-        sys.exit(1)
-
-    exit_code = run_create_plan_workflow(
-        issue_number=args.issue_number,
-        project_dir=project_dir,
-        provider=provider,
-        method=method,
-    )
-    sys.exit(exit_code)

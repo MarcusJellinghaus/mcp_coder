@@ -51,14 +51,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2b
 
 ### Step 2c: Remove CLI Parsing Code
-- [ ] Delete `parse_arguments()` function from workflow ([step_2c.md](steps/step_2c.md))
-- [ ] Delete `if __name__ == "__main__":` block from workflow
-- [ ] Verify no references to parse_arguments remain
-- [ ] Run pylint check after cleanup
-- [ ] Run pytest check after cleanup
-- [ ] Run mypy check after cleanup
-- [ ] Fix any issues found in code quality checks
-- [ ] Prepare git commit message for Step 2c
+- [x] Delete `parse_arguments()` function from workflow ([step_2c.md](steps/step_2c.md))
+- [x] Delete `if __name__ == "__main__":` block from workflow
+- [x] Verify no references to parse_arguments remain
+- [x] Run pylint check after cleanup
+- [x] Run pytest check after cleanup
+- [x] Run mypy check after cleanup
+- [x] Fix any issues found in code quality checks
+- [x] Prepare git commit message for Step 2c
 
 ### Step 2d: Clean Up Imports and Verify Quality
 - [ ] Remove unused imports (argparse, sys if unused) ([step_2d.md](steps/step_2d.md))
