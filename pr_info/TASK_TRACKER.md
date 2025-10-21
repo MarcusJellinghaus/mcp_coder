@@ -107,14 +107,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 5
 
 ### Step 6: Run Comprehensive Code Quality Checks
-- [ ] Run pylint check on all affected code (src and tests) ([step_6.md](steps/step_6.md))
-- [ ] Fix any pylint issues found
-- [ ] Run mypy check on all affected code (src and tests)
-- [ ] Fix any mypy issues found
-- [ ] Run pytest on all tests (fast unit tests)
-- [ ] Fix any test failures
-- [ ] Verify all quality checks pass
-- [ ] Prepare git commit message for Step 6
+- [x] Run pylint check on all affected code (src and tests) ([step_6.md](steps/step_6.md))
+- [x] Fix any pylint issues found
+- [x] Run mypy check on all affected code (src and tests)
+- [x] Fix any mypy issues found
+- [x] Run pytest on all tests (fast unit tests)
+- [x] Fix any test failures
+- [x] Verify all quality checks pass
+- [x] Prepare git commit message for Step 6
 
 ### Step 7: Delete Old Files and Final Verification
 - [ ] Verify new CLI command works: `mcp-coder create-plan --help` ([step_7.md](steps/step_7.md))
