@@ -507,13 +507,13 @@ Did you tick of the tasks in the task tracker?
   - Dependencies not available in project's virtual environment
   - *Response:* Update `pyproject.toml` dependencies, run `pip install -e .[dev]` to reinstall project with new requirements
 
-- **IMplementation gets stuck in a certain step**
+- **Implementation gets stuck in a certain step**
   - Working prompt:
     ```
     Please take a look at 
     pr_info/TASK_TRACKER.md
   
-    Teh next step could not be implemented
+    The next step could not be implemented
   
     Do you know why?
     Please analyse carefully.
