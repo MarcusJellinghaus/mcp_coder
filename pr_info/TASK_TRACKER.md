@@ -83,15 +83,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 3
 
 ### Step 4: Create CLI Command Tests (TDD)
-- [ ] Create `tests/cli/commands/test_create_plan.py` ([step_4.md](steps/step_4.md))
-- [ ] Implement test for successful workflow execution
-- [ ] Implement test for error handling (workflow failure, exceptions, keyboard interrupt)
-- [ ] Run pytest on new CLI tests
-- [ ] Verify all CLI tests pass
-- [ ] Run pylint check on CLI tests
-- [ ] Run mypy check on CLI tests
-- [ ] Fix any issues found in code quality checks
-- [ ] Prepare git commit message for Step 4
+- [x] Create `tests/cli/commands/test_create_plan.py` ([step_4.md](steps/step_4.md))
+- [x] Implement test for successful workflow execution
+- [x] Implement test for error handling (workflow failure, exceptions, keyboard interrupt)
+- [x] Run pytest on new CLI tests
+- [x] Verify all CLI tests pass
+- [x] Run pylint check on CLI tests
+- [x] Run mypy check on CLI tests
+- [x] Fix any issues found in code quality checks
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Update Existing Workflow Tests
 - [ ] Update `tests/workflows/create_plan/test_main.py` with new import paths and function name ([step_5.md](steps/step_5.md))

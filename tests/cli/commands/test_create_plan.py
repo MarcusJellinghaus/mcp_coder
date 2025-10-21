@@ -31,7 +31,7 @@ class TestExecuteCreatePlan:
                 "mcp_coder.cli.commands.create_plan.parse_llm_method_from_args"
             ) as mock_parse:
                 with patch(
-                    "mcp_coder.cli.commands.create_plan.run_create_plan_workflow"
+                    "mcp_coder.workflows.create_plan.run_create_plan_workflow"
                 ) as mock_workflow:
                     # Configure mocks
                     mock_resolve.return_value = test_project_dir
@@ -63,7 +63,7 @@ class TestExecuteCreatePlan:
                 return_value=("claude", "cli"),
             ):
                 with patch(
-                    "mcp_coder.cli.commands.create_plan.run_create_plan_workflow",
+                    "mcp_coder.workflows.create_plan.run_create_plan_workflow",
                     return_value=1,
                 ):
                     result = execute_create_plan(mock_args)
@@ -87,7 +87,7 @@ class TestExecuteCreatePlan:
                 return_value=("claude", "cli"),
             ):
                 with patch(
-                    "mcp_coder.cli.commands.create_plan.run_create_plan_workflow",
+                    "mcp_coder.workflows.create_plan.run_create_plan_workflow",
                     side_effect=KeyboardInterrupt(),
                 ):
                     result = execute_create_plan(mock_args)
