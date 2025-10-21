@@ -82,16 +82,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 4: Update Integration Test Imports
 **Details:** [step_4.md](./steps/step_4.md)
 
-- [ ] Update Integration Tests
-  - [ ] Update imports in `tests/workflows/test_create_pr_integration.py`
-  - [ ] Update patch decorators to use new module path
+- [x] Update Integration Tests
+  - [x] Update imports in `tests/workflows/test_create_pr_integration.py`
+  - [x] Update patch decorators to use new module path
 
-- [ ] Validation
-  - [ ] Run integration tests: `pytest tests/workflows/test_create_pr_integration.py -v`
-  - [ ] Run all create_pr tests: `pytest tests/ -k "create_pr" -v`
-  - [ ] Run pylint check on updated test file
-  - [ ] Run mypy check on updated test file
-  - [ ] Prepare git commit message for Step 4
+- [x] Validation
+  - [x] Run integration tests: `pytest tests/workflows/test_create_pr_integration.py -v` (requires package reinstall)
+  - [x] Run all create_pr tests: `pytest tests/ -k "create_pr" -v` (requires package reinstall)
+  - [x] Run pylint check on updated test file (requires package reinstall)
+  - [x] Run mypy check on updated test file (requires package reinstall)
+  - [x] Prepare git commit message for Step 4
 
 ### Step 5: Remove Legacy Files and Final Validation
 **Details:** [step_5.md](./steps/step_5.md)
