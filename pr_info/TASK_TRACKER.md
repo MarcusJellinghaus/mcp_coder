@@ -20,3 +20,123 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### Step 1: Create CLI Command Handler Structure
+- [ ] Create `src/mcp_coder/cli/commands/create_plan.py` with `execute_create_plan()` function ([step_1.md](steps/step_1.md))
+- [ ] Run pylint check on new CLI command handler
+- [ ] Run pytest check on new CLI command handler
+- [ ] Run mypy check on new CLI command handler
+- [ ] Fix any issues found in code quality checks
+- [ ] Prepare git commit message for Step 1
+
+### Step 2a: Copy Workflow File to New Location
+- [ ] Copy `workflows/create_plan.py` to `src/mcp_coder/workflows/create_plan.py` ([step_2a.md](steps/step_2a.md))
+- [ ] Verify file copied successfully
+- [ ] Verify content is identical to original
+- [ ] Prepare git commit message for Step 2a
+
+### Step 2b: Refactor Main Function Signature
+- [ ] Rename `main()` to `run_create_plan_workflow()` ([step_2b.md](steps/step_2b.md))
+- [ ] Update function signature with 4 parameters (issue_number, project_dir, provider, method)
+- [ ] Change return type from None to int
+- [ ] Update docstring with Args and Returns sections
+- [ ] Remove argument parsing, project_dir resolution, and logging setup
+- [ ] Add llm_method construction from provider and method
+- [ ] Replace all `args.` references with direct parameters
+- [ ] Replace all `sys.exit()` calls with return statements
+- [ ] Run pylint check on refactored workflow
+- [ ] Run pytest check on refactored workflow
+- [ ] Run mypy check on refactored workflow
+- [ ] Fix any issues found in code quality checks
+- [ ] Prepare git commit message for Step 2b
+
+### Step 2c: Remove CLI Parsing Code
+- [ ] Delete `parse_arguments()` function from workflow ([step_2c.md](steps/step_2c.md))
+- [ ] Delete `if __name__ == "__main__":` block from workflow
+- [ ] Verify no references to parse_arguments remain
+- [ ] Run pylint check after cleanup
+- [ ] Run pytest check after cleanup
+- [ ] Run mypy check after cleanup
+- [ ] Fix any issues found in code quality checks
+- [ ] Prepare git commit message for Step 2c
+
+### Step 2d: Clean Up Imports and Verify Quality
+- [ ] Remove unused imports (argparse, sys if unused) ([step_2d.md](steps/step_2d.md))
+- [ ] Verify module imports successfully
+- [ ] Verify function signature is correct
+- [ ] Run pylint check on cleaned up code
+- [ ] Run pytest check on cleaned up code
+- [ ] Run mypy check on cleaned up code
+- [ ] Fix any issues found in code quality checks
+- [ ] Prepare git commit message for Step 2d
+
+### Step 3: Register CLI Command in Main CLI System
+- [ ] Add import for `execute_create_plan` in `src/mcp_coder/cli/main.py` ([step_3.md](steps/step_3.md))
+- [ ] Add create-plan subparser in `create_parser()` function
+- [ ] Add routing logic in `main()` function
+- [ ] Verify CLI help displays correctly
+- [ ] Verify command is recognized
+- [ ] Run pylint check on main CLI
+- [ ] Run pytest check on main CLI
+- [ ] Run mypy check on main CLI
+- [ ] Fix any issues found in code quality checks
+- [ ] Prepare git commit message for Step 3
+
+### Step 4: Create CLI Command Tests (TDD)
+- [ ] Create `tests/cli/commands/test_create_plan.py` ([step_4.md](steps/step_4.md))
+- [ ] Implement test for successful workflow execution
+- [ ] Implement test for error handling (workflow failure, exceptions, keyboard interrupt)
+- [ ] Run pytest on new CLI tests
+- [ ] Verify all CLI tests pass
+- [ ] Run pylint check on CLI tests
+- [ ] Run mypy check on CLI tests
+- [ ] Fix any issues found in code quality checks
+- [ ] Prepare git commit message for Step 4
+
+### Step 5: Update Existing Workflow Tests
+- [ ] Update `tests/workflows/create_plan/test_main.py` with new import paths and function name ([step_5.md](steps/step_5.md))
+- [ ] Update `tests/workflows/create_plan/test_argument_parsing.py` - delete TestParseArguments class
+- [ ] Update `tests/workflows/create_plan/test_prerequisites.py` with new import paths
+- [ ] Update `tests/workflows/create_plan/test_branch_management.py` with new import paths
+- [ ] Update `tests/workflows/create_plan/test_prompt_execution.py` with new import paths
+- [ ] Run pytest on all updated workflow tests
+- [ ] Verify all workflow tests pass
+- [ ] Run pylint check on workflow tests
+- [ ] Run mypy check on workflow tests
+- [ ] Fix any issues found in code quality checks
+- [ ] Prepare git commit message for Step 5
+
+### Step 6: Run Comprehensive Code Quality Checks
+- [ ] Run pylint check on all affected code (src and tests) ([step_6.md](steps/step_6.md))
+- [ ] Fix any pylint issues found
+- [ ] Run mypy check on all affected code (src and tests)
+- [ ] Fix any mypy issues found
+- [ ] Run pytest on all tests (fast unit tests)
+- [ ] Fix any test failures
+- [ ] Verify all quality checks pass
+- [ ] Prepare git commit message for Step 6
+
+### Step 7: Delete Old Files and Final Verification
+- [ ] Verify new CLI command works: `mcp-coder create-plan --help` ([step_7.md](steps/step_7.md))
+- [ ] Verify new module imports correctly
+- [ ] Delete old file: `workflows/create_plan.py`
+- [ ] Delete old file: `workflows/create_plan.bat`
+- [ ] Verify files are deleted
+- [ ] Verify no references to old imports remain
+- [ ] Run final pylint check
+- [ ] Run final mypy check
+- [ ] Run final pytest check
+- [ ] Fix any issues found in final checks
+- [ ] Prepare git commit message for Step 7
+
+---
+
+## Pull Request
+
+### PR Preparation
+- [ ] Review all changes and ensure completeness
+- [ ] Verify all tasks above are completed
+- [ ] Run final comprehensive code quality checks
+- [ ] Prepare PR summary describing the migration
+- [ ] Create pull request with detailed description
+- [ ] Request review from team members
