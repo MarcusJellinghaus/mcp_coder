@@ -224,7 +224,7 @@ Do not yet modify any code!
 ### Simplification Review
 
 ```
-Let's review the plan with simplicity in mind. Can we achieve the same goals with a simpler approach? Consider KISS principle and maintainability while preserving the issue's core requirements.
+Let's review the plan with simplicity in mind. Can we achieve the same goals with a simpler approach? Consider KISS principle and maintainability while preserving the issue's requirements.
 ```
 
 ### Implementation Plan Creation
