@@ -30,10 +30,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 1
 
 ### Step 2a: Copy Workflow File to New Location
-- [ ] Copy `workflows/create_plan.py` to `src/mcp_coder/workflows/create_plan.py` ([step_2a.md](steps/step_2a.md))
-- [ ] Verify file copied successfully
-- [ ] Verify content is identical to original
-- [ ] Prepare git commit message for Step 2a
+- [x] Copy `workflows/create_plan.py` to `src/mcp_coder/workflows/create_plan.py` ([step_2a.md](steps/step_2a.md))
+- [x] Verify file copied successfully
+- [x] Verify content is identical to original
+- [x] Prepare git commit message for Step 2a
 
 ### Step 2b: Refactor Main Function Signature
 - [ ] Rename `main()` to `run_create_plan_workflow()` ([step_2b.md](steps/step_2b.md))
