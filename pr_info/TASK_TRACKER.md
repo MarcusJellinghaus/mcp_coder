@@ -65,8 +65,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add Import Statement
   - [x] Import `execute_create_pr` in `src/mcp_coder/cli/main.py`
 
-- [ ] Add Subcommand to Argument Parser
-  - [ ] Add `create-pr` subcommand with `--project-dir` and `--llm-method` arguments
+- [x] Add Subcommand to Argument Parser
+  - [x] Add `create-pr` subcommand with `--project-dir` and `--llm-method` arguments
 
 - [ ] Add Command Routing
   - [ ] Add routing for `create-pr` command in `main()` function

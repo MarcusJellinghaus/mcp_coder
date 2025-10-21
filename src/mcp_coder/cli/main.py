@@ -204,6 +204,23 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="LLM method to use (default: claude_code_cli)",
     )
 
+    # Create PR command - Step 3
+    create_pr_parser = subparsers.add_parser(
+        "create-pr", help="Create pull request with AI-generated summary"
+    )
+    create_pr_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    create_pr_parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_cli",
+        help="LLM method to use (default: claude_code_cli)",
+    )
+
     return parser
 
 
@@ -258,6 +275,8 @@ def main() -> int:
             return execute_implement(args)
         elif args.command == "create-plan":
             return execute_create_plan(args)
+        elif args.command == "create-pr":
+            return execute_create_pr(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")
