@@ -36,19 +36,19 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2a
 
 ### Step 2b: Refactor Main Function Signature
-- [ ] Rename `main()` to `run_create_plan_workflow()` ([step_2b.md](steps/step_2b.md))
-- [ ] Update function signature with 4 parameters (issue_number, project_dir, provider, method)
-- [ ] Change return type from None to int
-- [ ] Update docstring with Args and Returns sections
-- [ ] Remove argument parsing, project_dir resolution, and logging setup
-- [ ] Add llm_method construction from provider and method
-- [ ] Replace all `args.` references with direct parameters
-- [ ] Replace all `sys.exit()` calls with return statements
-- [ ] Run pylint check on refactored workflow
-- [ ] Run pytest check on refactored workflow
-- [ ] Run mypy check on refactored workflow
-- [ ] Fix any issues found in code quality checks
-- [ ] Prepare git commit message for Step 2b
+- [x] Rename `main()` to `run_create_plan_workflow()` ([step_2b.md](steps/step_2b.md))
+- [x] Update function signature with 4 parameters (issue_number, project_dir, provider, method)
+- [x] Change return type from None to int
+- [x] Update docstring with Args and Returns sections
+- [x] Remove argument parsing, project_dir resolution, and logging setup
+- [x] Add llm_method construction from provider and method
+- [x] Replace all `args.` references with direct parameters
+- [x] Replace all `sys.exit()` calls with return statements
+- [x] Run pylint check on refactored workflow
+- [x] Run pytest check on refactored workflow
+- [x] Run mypy check on refactored workflow
+- [x] Fix any issues found in code quality checks
+- [x] Prepare git commit message for Step 2b
 
 ### Step 2c: Remove CLI Parsing Code
 - [ ] Delete `parse_arguments()` function from workflow ([step_2c.md](steps/step_2c.md))

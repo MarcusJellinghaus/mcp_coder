@@ -510,43 +510,53 @@ def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
     return project_path
 
 
-def main() -> None:
-    """Main workflow orchestration function - creates implementation plan for GitHub issue."""
-    # Parse command line arguments
-    args = parse_arguments()
-    project_dir = resolve_project_dir(args.project_dir)
+def run_create_plan_workflow(
+    issue_number: int, project_dir: Path, provider: str, method: str
+) -> int:
+    """Main workflow orchestration function - creates implementation plan for GitHub issue.
 
-    # Setup logging early
-    setup_logging(args.log_level)
+    Args:
+        issue_number: GitHub issue number to create plan for
+        project_dir: Path to the project directory
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'cli' or 'api')
 
-    logger.info("Starting create plan workflow...")
-    logger.info(f"Using project directory: {project_dir}")
-    logger.info(f"GitHub issue number: {args.issue_number}")
-    logger.info(f"LLM method: {args.llm_method}")
+    Returns:
+        int: Exit code (0 for success, 1 for error)
+    """
+    # Note: Logging already setup by CLI layer
+    # Note: project_dir already resolved and validated by CLI layer
+
+    # Combine provider and method for legacy function compatibility
+    llm_method = f"{provider}_code_{method}"
+
+    logger.info(f"Starting create plan workflow for project: {project_dir}")
+    logger.info(f"GitHub issue number: {issue_number}")
+    logger.info(f"LLM method: {llm_method}")
 
     # Step 1: Validate prerequisites
     logger.info("Step 1/7: Validating prerequisites...")
-    success, issue_data = check_prerequisites(project_dir, args.issue_number)
+    success, issue_data = check_prerequisites(project_dir, issue_number)
     if not success:
         logger.error("Prerequisites validation failed")
-        sys.exit(1)
+        return 1
 
     # Step 2: Manage branch
     logger.info("Step 2/7: Managing branch...")
-    branch_name = manage_branch(project_dir, args.issue_number, issue_data["title"])
+    branch_name = manage_branch(project_dir, issue_number, issue_data["title"])
     if branch_name is None:
         logger.error("Branch management failed")
-        sys.exit(1)
+        return 1
 
     # Step 3: Verify pr_info/steps/ is empty
     logger.info("Step 3/7: Verifying pr_info/steps/ is empty...")
     if not verify_steps_directory(project_dir):
         logger.error("Steps directory verification failed")
-        sys.exit(1)
+        return 1
 
     # Step 4: Run initial analysis
     logger.info(
-        f"Step 4/7: Running initial analysis for issue #{args.issue_number} '{issue_data['title']}'..."
+        f"Step 4/7: Running initial analysis for issue #{issue_number} '{issue_data['title']}'..."
     )
 
     # Step 5: Run simplification review
@@ -554,19 +564,19 @@ def main() -> None:
 
     # Step 6: Generate implementation plan
     logger.info("Step 6/7: Generating implementation plan...")
-    if not run_planning_prompts(project_dir, issue_data, args.llm_method):
+    if not run_planning_prompts(project_dir, issue_data, llm_method):
         logger.error("Planning prompts execution failed")
-        sys.exit(1)
+        return 1
 
     # Step 7: Validate output files
     logger.info("Step 7/7: Validating output files...")
     if not validate_output_files(project_dir):
         logger.error("Output files validation failed")
-        sys.exit(1)
+        return 1
 
     # Commit changes
     logger.info("Committing generated plan...")
-    commit_message = f"Initial plan generated for issue #{args.issue_number}"
+    commit_message = f"Initial plan generated for issue #{issue_number}"
     commit_result = commit_all_changes(commit_message, project_dir)
     if not commit_result["success"]:
         logger.warning(f"Commit failed: {commit_result.get('error')}")
@@ -582,8 +592,30 @@ def main() -> None:
         logger.info("Successfully pushed changes to remote")
 
     logger.info("Create plan workflow completed successfully!")
-    sys.exit(0)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    # This block will be removed in Step 2c - kept for backward compatibility during migration
+    import sys
+
+    args = parse_arguments()
+    project_dir = resolve_project_dir(args.project_dir)
+    setup_logging(args.log_level)
+
+    # Parse provider and method from llm_method
+    if args.llm_method == "claude_code_cli":
+        provider, method = "claude", "cli"
+    elif args.llm_method == "claude_code_api":
+        provider, method = "claude", "api"
+    else:
+        logger.error(f"Unknown llm_method: {args.llm_method}")
+        sys.exit(1)
+
+    exit_code = run_create_plan_workflow(
+        issue_number=args.issue_number,
+        project_dir=project_dir,
+        provider=provider,
+        method=method,
+    )
+    sys.exit(exit_code)
