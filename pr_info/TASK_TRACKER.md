@@ -28,12 +28,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Create `tests/cli/commands/test_create_pr.py` with comprehensive test suite
   - [x] Run tests to verify they FAIL initially (RED phase)
 
-- [ ] Part B: Implement CLI Command (GREEN Phase)
-  - [ ] Create `src/mcp_coder/cli/commands/create_pr.py` with `execute_create_pr()` function
-  - [ ] Run tests to verify they PASS (GREEN phase)
-  - [ ] Run pylint check on new files
-  - [ ] Run mypy check on new files
-  - [ ] Prepare git commit message for Step 1
+- [x] Part B: Implement CLI Command (GREEN Phase)
+  - [x] Create `src/mcp_coder/cli/commands/create_pr.py` with `execute_create_pr()` function
+  - [x] Run tests to verify they PASS (GREEN phase)
+  - [x] Run pylint check on new files
+  - [x] Run mypy check on new files
+  - [x] Prepare git commit message for Step 1
 
 ### Step 2: Create Workflow Package and Core Logic
 **Details:** [step_2.md](./steps/step_2.md)
