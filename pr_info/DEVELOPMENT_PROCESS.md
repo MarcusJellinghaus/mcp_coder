@@ -173,9 +173,10 @@ flowchart LR
 <summary>📋 Issue Discussion - Initial (click to expand and copy)</summary>
 
 ```
-Can we discuss a requirement / implementation idea and its feasability?
+Can we discuss a requirement / implementation idea and its feasibility?
+Please also look at the code base to understand the context (using the different tools with access to the project directory ).
 Do not provide code yet!
-At the end of our discussion, I want to have an even better issue description
+At the end of our discussion, I want to have an even better issue description.
 ```
 </details>
 
