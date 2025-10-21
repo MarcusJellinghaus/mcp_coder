@@ -1,12 +1,12 @@
-# Step 4: Update Integration and Legacy Test Imports
+# Step 4: Update Integration Test Imports
 
 ## Context
-Read `pr_info/steps/summary.md` for full architectural context.
+See `pr_info/steps/summary.md` for architectural context.
 
-This step updates the remaining test files that weren't updated in Step 2 - specifically the integration tests and legacy compatibility shim.
+This step updates the integration test file that wasn't updated in Step 2.
 
 ## Objective
-Update import statements in integration and legacy test files to use the new module structure.
+Update import statements in the integration test file to use the new module structure.
 
 ---
 
@@ -179,26 +179,20 @@ def test_backwards_compatibility(mock_prereqs):
 ```
 I'm implementing Step 4 of the create_PR to CLI command conversion (Issue #139).
 
-Context: Read pr_info/steps/summary.md for full architectural context.
+Context: See pr_info/steps/summary.md for architecture.
 
-Task: Update remaining test file imports (integration and legacy tests).
+Task: Update integration test imports.
 
 Step 4 Details: Read pr_info/steps/step_4.md
 
 Instructions:
 1. Update tests/workflows/test_create_pr_integration.py:
-   - Change all "from workflows.create_PR" → "from mcp_coder.workflows.create_pr.core"
-   - Change all "@patch("workflows.create_PR" → "@patch("mcp_coder.workflows.create_pr.core"
-   
-2. Run tests to verify:
-   - pytest tests/workflows/test_create_pr_integration.py -v
-   - pytest tests/ -k "create_pr" -v
-   
-3. Run code quality checks on updated file
+   - Change "from workflows.create_PR" → "from mcp_coder.workflows.create_pr.core"
+   - Change "@patch("workflows.create_PR" → "@patch("mcp_coder.workflows.create_pr.core"
+2. Run tests to verify
+3. Run code quality checks
 
-Note: tests/test_create_pr.py will be deleted in Step 5, not updated here.
-
-This is a simple find-and-replace task. No logic changes needed.
+Simple find-and-replace task.
 ```
 
 ---

@@ -1,9 +1,9 @@
 # Step 5: Remove Legacy Files and Final Validation
 
 ## Context
-Read `pr_info/steps/summary.md` for full architectural context.
+See `pr_info/steps/summary.md` for architectural context.
 
-This is the final step - removing the legacy standalone script and batch wrapper, then running comprehensive validation to ensure everything works.
+This is the final step - removing the legacy standalone script and batch wrapper, then running comprehensive validation.
 
 ## Objective
 Clean up legacy files and validate that the conversion is complete and functional.
@@ -16,6 +16,8 @@ Clean up legacy files and validate that the conversion is complete and functiona
 
 1. **`workflows/create_PR.py`** - Standalone script (replaced by `src/mcp_coder/workflows/create_pr/core.py`)
 2. **`workflows/create_PR.bat`** - Batch wrapper (no longer needed)
+
+**Note:** `tests/test_create_pr.py` was already deleted in Step 2.
 
 ### HOW - Deletion Process
 
@@ -56,15 +58,11 @@ pytest tests/cli/commands/test_create_pr.py -v
 pytest tests/workflows/test_create_pr_integration.py -v
 # Expected: All tests PASS
 
-# Test 4: Legacy compatibility tests
-pytest tests/test_create_pr.py -v
-# Expected: All tests PASS
-
-# Test 5: Full test suite (comprehensive check)
+# Test 4: Full test suite (comprehensive check)
 pytest tests/ -v
 # Expected: All tests PASS
 
-# Test 6: Just create_pr related tests
+# Test 5: Just create_pr related tests
 pytest tests/ -k "create_pr" -v
 # Expected: All tests PASS
 ```
@@ -107,25 +105,6 @@ mypy src/mcp_coder/cli/commands/create_pr.py
 # Mypy type checking on CLI main
 mypy src/mcp_coder/cli/main.py
 # Expected: No type errors
-```
-
-### Using MCP Code Checker Tools (Recommended)
-
-```bash
-# Run pytest with MCP tool
-mcp__code-checker__run_pytest_check(
-    extra_args=["-n", "auto", "-k", "create_pr"]
-)
-
-# Run pylint with MCP tool
-mcp__code-checker__run_pylint_check(
-    categories=["error", "fatal"]
-)
-
-# Run mypy with MCP tool
-mcp__code-checker__run_mypy_check(
-    strict=True
-)
 ```
 
 ---
@@ -252,35 +231,20 @@ mcp-coder create-pr --help
 ```
 I'm implementing Step 5 (FINAL STEP) of the create_PR to CLI command conversion (Issue #139).
 
-Context: Read pr_info/steps/summary.md for full architectural context.
+Context: See pr_info/steps/summary.md for architecture.
 
 Task: Remove legacy files and run comprehensive validation.
 
 Step 5 Details: Read pr_info/steps/step_5.md
 
 Instructions:
-1. Delete legacy files:
-   - rm workflows/create_PR.py
-   - rm workflows/create_PR.bat
+1. Delete: workflows/create_PR.py, workflows/create_PR.bat
+2. Run comprehensive test suite
+3. Run code quality checks (pylint, mypy)
+4. Manual testing: verify help text and command works
+5. Verify all success criteria met
 
-2. Run comprehensive test suite:
-   - pytest tests/workflows/create_pr/ -v
-   - pytest tests/cli/commands/test_create_pr.py -v
-   - pytest tests/ -k "create_pr" -v
-   - pytest tests/ -v (full suite)
-
-3. Run code quality checks using MCP tools:
-   - mcp__code-checker__run_pytest_check (with create_pr filter)
-   - mcp__code-checker__run_pylint_check
-   - mcp__code-checker__run_mypy_check
-
-4. Manual testing:
-   - mcp-coder --help (verify create-pr appears)
-   - mcp-coder create-pr --help (verify options shown)
-
-5. Verify all success criteria from summary.md are met
-
-This is the final cleanup step - ensure everything works before marking complete!
+Final cleanup step - ensure everything works!
 ```
 
 ---

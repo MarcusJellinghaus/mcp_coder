@@ -30,17 +30,18 @@ This document records decisions made during plan review discussions.
 
 ---
 
-## Decision 3: Error Handling - Return Codes
-**Date:** Discussion on 2025-10-21
+## Decision 3: Error Handling - Return Codes (REVISED)
+**Date:** Discussion on 2025-10-21 (Revised same day)
 
-**Question:** What should `run_create_pr_workflow()` return when PR succeeds but cleanup fails?
+**Question:** Should we use simple binary success/failure or include partial success return code?
 
-**Decision:** Add return code 2 for partial success (Option C)
+**Decision:** Simplify to binary return codes (Option B)
 
 **Return codes:**
-- 0: Complete success (PR created and cleanup completed)
-- 1: Error (PR creation failed or prerequisites failed)
-- 2: Partial success (PR created successfully but cleanup failed)
+- 0: Success (PR created and cleanup completed)
+- 1: Failure (any error during workflow)
+
+**Rationale:** KISS principle - simpler error handling for MVP. Partial success handling adds unnecessary complexity.
 
 **Impact:** Function signature documentation and implementation logic in Step 2.
 
@@ -59,16 +60,16 @@ This document records decisions made during plan review discussions.
 
 ---
 
-## Decision 5: Documentation Structure
-**Date:** Discussion on 2025-10-21
+## Decision 5: Documentation Structure (REVISED)
+**Date:** Discussion on 2025-10-21 (Revised same day)
 
 **Question:** How to handle repeated content across summary.md and step files?
 
-**Decision:** Middle ground - core concepts in summary, step-specific details in steps (Option C)
+**Decision:** Steps reference summary.md for architecture, include only step-specific details (Option A)
 
-**Rationale:** Balance between avoiding redundancy and maintaining step file independence.
+**Rationale:** Reduce repetition following KISS principle. Summary.md contains architecture, steps contain implementation details.
 
-**Impact:** Minor adjustments to reduce repetition while keeping essential context in each file.
+**Impact:** Step files will start with "See summary.md for architecture" and avoid repeating architectural context.
 
 ---
 
@@ -137,16 +138,16 @@ This document records decisions made during plan review discussions.
 
 ---
 
-## Decision 11: Delete Legacy Test Shim
-**Date:** Discussion on 2025-10-21
+## Decision 11: Delete Legacy Test Shim (REVISED)
+**Date:** Discussion on 2025-10-21 (Revised same day)
 
-**Question:** What to do with `tests/test_create_pr.py` (backwards compatibility shim)?
+**Question:** When should we delete `tests/test_create_pr.py` (backwards compatibility shim)?
 
-**Decision:** Delete it in Step 5 (Option B)
+**Decision:** Delete it in Step 2 after new structure is validated (Option B)
 
-**Rationale:** It's just a re-export shim; actual tests are in organized modules.
+**Rationale:** It's just a re-export shim; can be removed once new modules exist. No need to maintain it through Steps 3-4.
 
-**Impact:** Add `tests/test_create_pr.py` to deletion list in Step 5.
+**Impact:** Add `tests/test_create_pr.py` to deletion list in Step 2, remove from Step 5 deletion list.
 
 ---
 
@@ -160,3 +161,42 @@ This document records decisions made during plan review discussions.
 **Rationale:** Step 4 focuses on integration test updates, which is still a distinct task.
 
 **Impact:** Step 4 only updates `tests/workflows/test_create_pr_integration.py` (not the legacy shim).
+
+---
+
+## Decision 13: Step 4 Title Simplification
+**Date:** Plan revision discussion on 2025-10-21
+
+**Question:** Should Step 4 title reflect that it only updates integration tests?
+
+**Decision:** Rename to "Update Integration Test Imports" (Option A)
+
+**Rationale:** Clearer and more accurate - legacy file is not updated in this step.
+
+**Impact:** Step 4 title and description updated for clarity.
+
+---
+
+## Decision 14: Use MCP Code Checker Tools
+**Date:** Plan revision discussion on 2025-10-21
+
+**Question:** Should MCP Code Checker commands be shown in each step or centralized?
+
+**Decision:** Remove from individual steps, add note in summary.md (KISS approach)
+
+**Rationale:** Simpler documentation. Developers can use MCP tools as needed without cluttering step instructions.
+
+**Impact:** Remove MCP tool commands from Steps 1-5, add usage note to summary.md.
+
+---
+
+## Decision 15: Import Review in Step 2
+**Date:** Plan revision discussion on 2025-10-21
+
+**Question:** Should Step 2 explicitly list all import changes needed?
+
+**Decision:** Add note to review imports as needed (Option C)
+
+**Rationale:** Implementation code already shows correct imports. No need for exhaustive list.
+
+**Impact:** Add note in Step 2 about reviewing/updating imports.

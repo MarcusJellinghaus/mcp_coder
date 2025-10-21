@@ -1,7 +1,7 @@
 # Step 1: Create CLI Command Interface (TDD)
 
 ## Context
-Read `pr_info/steps/summary.md` for full architectural context.
+See `pr_info/steps/summary.md` for full architectural context.
 
 This step creates the CLI command interface following Test-Driven Development. We write tests first, then implement the `execute_create_pr()` function that will be called by the CLI main entry point.
 

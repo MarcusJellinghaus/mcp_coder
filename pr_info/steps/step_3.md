@@ -1,7 +1,7 @@
 # Step 3: Integrate with CLI Main Entry Point
 
 ## Context
-Read `pr_info/steps/summary.md` for full architectural context.
+See `pr_info/steps/summary.md` for architectural context.
 
 This step integrates the new `create-pr` command into the main CLI entry point, making it accessible via `mcp-coder create-pr` command.
 

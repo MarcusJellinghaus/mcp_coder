@@ -1,7 +1,7 @@
 # Step 2: Create Workflow Package and Core Logic
 
 ## Context
-Read `pr_info/steps/summary.md` for full architectural context.
+See `pr_info/steps/summary.md` for full architectural context and design principles.
 
 This step creates the workflow package structure and moves the core workflow logic from the standalone script into the new package, following the pattern from the `implement` workflow.
 
@@ -88,6 +88,12 @@ llm_response = ask_llm(full_prompt, provider=provider, method=method, timeout=30
 
 #### 3. Create New Main Function
 
+**Return Codes:**
+```
+0 - Success (PR created and cleanup completed)
+1 - Failure (any error during workflow)
+```
+
 **Replace `main()` with:**
 
 ```python
@@ -100,10 +106,7 @@ def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int
         method: LLM method (e.g., 'cli' or 'api')
     
     Returns:
-        int: Exit code
-            0 - Complete success (PR created and cleanup completed)
-            1 - Error (prerequisites failed or PR creation failed)
-            2 - Partial success (PR created but cleanup failed)
+        int: Exit code (0 for success, 1 for failure)
     """
     log_step("Starting create PR workflow...")
     log_step(f"Using project directory: {project_dir}")
@@ -134,45 +137,39 @@ def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int
     
     # Step 5: Clean up repository
     log_step("Step 5/5: Cleaning up repository...")
-    cleanup_success = cleanup_repository(project_dir)
+    if not cleanup_repository(project_dir):
+        logger.error("Repository cleanup failed")
+        return 1
     
-    if cleanup_success:
-        # Check if there are changes to commit
-        if not is_working_directory_clean(project_dir):
-            # Commit cleanup changes
-            log_step("Committing cleanup changes...")
-            commit_result = commit_all_changes(
-                "Clean up pr_info/steps planning files", 
-                project_dir
-            )
-            
-            if commit_result["success"]:
-                log_step(f"Cleanup committed: {commit_result['commit_hash']}")
-                
-                # Push cleanup commit
-                log_step("Pushing cleanup changes...")
-                push_result = git_push(project_dir)
-                
-                if push_result["success"]:
-                    log_step("Cleanup changes pushed successfully")
-                else:
-                    logger.warning(f"Failed to push cleanup changes: {push_result['error']}")
-                    log_step("PR created successfully, but cleanup push failed")
-                    return 2  # Partial success
-            else:
-                # Don't warn about "No staged files" - this is expected when cleanup had no effect
-                error_msg = commit_result.get("error", "")
-                if error_msg and "No staged files" in error_msg:
-                    log_step("No cleanup changes to commit (files were already clean)")
-                else:
-                    logger.warning(f"Failed to commit cleanup changes: {commit_result['error']}")
-                    log_step("PR created successfully, but cleanup commit failed")
-                    return 2  # Partial success
+    # Check if there are changes to commit
+    if not is_working_directory_clean(project_dir):
+        # Commit cleanup changes
+        log_step("Committing cleanup changes...")
+        commit_result = commit_all_changes(
+            "Clean up pr_info/steps planning files", 
+            project_dir
+        )
+        
+        if not commit_result["success"]:
+            # Ignore "No staged files" - this is expected when cleanup had no effect
+            error_msg = commit_result.get("error", "")
+            if "No staged files" not in error_msg:
+                logger.error(f"Failed to commit cleanup changes: {commit_result['error']}")
+                return 1
+            log_step("No cleanup changes to commit (files were already clean)")
         else:
-            log_step("No cleanup changes to commit")
+            log_step(f"Cleanup committed: {commit_result['commit_hash']}")
+            
+            # Push cleanup commit
+            log_step("Pushing cleanup changes...")
+            push_result = git_push(project_dir)
+            
+            if not push_result["success"]:
+                logger.error(f"Failed to push cleanup changes: {push_result['error']}")
+                return 1
+            log_step("Cleanup changes pushed successfully")
     else:
-        logger.warning("Repository cleanup completed with errors, but PR was created successfully")
-        return 2  # Partial success
+        log_step("No cleanup changes to commit")
     
     log_step("Create PR workflow completed successfully!")
     return 0
@@ -185,6 +182,8 @@ Delete:
 import argparse  # No longer needed
 import sys  # No longer needed (returns int instead of sys.exit)
 ```
+
+**Note:** Review and update other imports as needed. The implementation code shows the correct imports for shared utilities.
 
 #### 5. Keep All Other Functions Unchanged
 
@@ -267,7 +266,22 @@ For each test file, replace:
 
 ---
 
-## Part C: Validate Tests Pass
+## Part C: Delete Legacy Test Shim
+
+### WHERE
+**File to delete:** `tests/test_create_pr.py`
+
+### WHY
+This file is just a backwards compatibility shim that re-exports from the old module path. Now that the new module structure exists, it's no longer needed.
+
+### HOW
+```bash
+rm tests/test_create_pr.py
+```
+
+---
+
+## Part D: Validate Tests Pass
 
 ### TEST EXECUTION
 ```bash
@@ -295,24 +309,22 @@ mypy src/mcp_coder/workflows/create_pr/
 ```
 I'm implementing Step 2 of the create_PR to CLI command conversion (Issue #139).
 
-Context: Read pr_info/steps/summary.md for full architectural overview.
+Context: See pr_info/steps/summary.md for architecture.
 
-Task: Create workflow package and migrate core logic from standalone script.
+Task: Create workflow package and migrate core logic.
 
 Step 2 Details: Read pr_info/steps/step_2.md
 
 Instructions:
-1. Create src/mcp_coder/workflows/create_pr/__init__.py (package initialization)
-2. Create src/mcp_coder/workflows/create_pr/core.py by:
-   - Copying from workflows/create_PR.py
-   - Removing: parse_arguments(), resolve_project_dir(), main()
-   - Updating: generate_pr_summary() signature
-   - Creating: run_create_pr_workflow() function
-3. Update all test file imports (tests/workflows/create_pr/*.py) from workflows.create_PR to mcp_coder.workflows.create_pr.core
-4. Run tests (they should PASS)
-5. Run code quality checks (pylint, mypy)
-
-Reference: src/mcp_coder/workflows/implement/core.py for workflow pattern
+1. Create src/mcp_coder/workflows/create_pr/__init__.py
+2. Create src/mcp_coder/workflows/create_pr/core.py:
+   - Copy from workflows/create_PR.py
+   - Remove: parse_arguments(), resolve_project_dir(), main()
+   - Update: generate_pr_summary() signature
+   - Create: run_create_pr_workflow() with binary return codes (0/1)
+3. Update test imports: workflows.create_PR → mcp_coder.workflows.create_pr.core
+4. Delete legacy shim: tests/test_create_pr.py
+5. Run tests and code quality checks
 
 Keep all existing helper functions unchanged - minimal changes only!
 ```
@@ -321,12 +333,13 @@ Keep all existing helper functions unchanged - minimal changes only!
 
 ## Verification Checklist
 
-- [ ] All test imports updated to new module path
 - [ ] Package created: `src/mcp_coder/workflows/create_pr/__init__.py`
 - [ ] Core module created: `src/mcp_coder/workflows/create_pr/core.py`
 - [ ] Removed: `parse_arguments()`, `resolve_project_dir()`, `main()`
 - [ ] Updated: `generate_pr_summary()` signature
-- [ ] Created: `run_create_pr_workflow()` function
+- [ ] Created: `run_create_pr_workflow()` function with binary return codes (0/1)
+- [ ] All test imports updated to new module path
+- [ ] Legacy test shim deleted: `tests/test_create_pr.py`
 - [ ] All tests pass: `pytest tests/workflows/create_pr/ -v`
 - [ ] Pylint passes: `pylint src/mcp_coder/workflows/create_pr/`
 - [ ] Mypy passes: `mypy src/mcp_coder/workflows/create_pr/`
