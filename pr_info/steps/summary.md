@@ -69,56 +69,61 @@ Usage: mcp-coder create-plan <issue_number> [options]
 
 ### Files to CREATE
 
-1. **`src/mcp_coder/cli/commands/create_plan.py`**
+1. **`pr_info/steps/decisions.md`**
+   - Documents key architectural and design decisions
+   - Emphasizes "no functionality changes" principle
+   - 6 decisions documented
+
+2. **`src/mcp_coder/cli/commands/create_plan.py`**
    - New CLI command handler
    - ~40 lines
    - Thin wrapper following `implement.py` pattern
 
-2. **`src/mcp_coder/workflows/create_plan.py`**
+3. **`src/mcp_coder/workflows/create_plan.py`**
    - Relocated workflow module (moved from `workflows/`)
-   - ~450 lines
+   - ~443 lines (after removing CLI code)
    - Refactored to return exit codes
 
-3. **`tests/cli/commands/test_create_plan.py`**
+4. **`tests/cli/commands/test_create_plan.py`**
    - New CLI command tests
-   - ~100 lines
+   - 2 minimal tests (success + error handling)
    - Follow pattern from `test_implement.py`
 
 ### Files to MODIFY
 
-4. **`src/mcp_coder/cli/main.py`**
+5. **`src/mcp_coder/cli/main.py`**
    - Add `create-plan` subparser
    - Register command handler
    - ~20 lines added
 
-5. **`tests/workflows/create_plan/test_main.py`**
+6. **`tests/workflows/create_plan/test_main.py`**
    - Update import path: `workflows.create_plan` → `mcp_coder.workflows.create_plan`
    - Update function name: `main()` → `run_create_plan_workflow()`
    - Minimal changes to test logic
 
-6. **`tests/workflows/create_plan/test_argument_parsing.py`**
+7. **`tests/workflows/create_plan/test_argument_parsing.py`**
    - Update imports for `resolve_project_dir`
    - Remove CLI argument parsing tests (now in CLI layer)
    - Keep directory validation tests
 
-7. **`tests/workflows/create_plan/test_prerequisites.py`**
+8. **`tests/workflows/create_plan/test_prerequisites.py`**
    - Update import path only
    - No logic changes
 
-8. **`tests/workflows/create_plan/test_branch_management.py`**
+9. **`tests/workflows/create_plan/test_branch_management.py`**
    - Update import path only
    - No logic changes
 
-9. **`tests/workflows/create_plan/test_prompt_execution.py`**
+10. **`tests/workflows/create_plan/test_prompt_execution.py`**
    - Update import path only
    - No logic changes
 
 ### Files to DELETE
 
-10. **`workflows/create_plan.py`**
+11. **`workflows/create_plan.py`**
     - Original standalone script (replaced by src/ version)
 
-11. **`workflows/create_plan.bat`**
+12. **`workflows/create_plan.bat`**
     - Batch wrapper (no longer needed)
 
 ## Functional Changes
@@ -238,3 +243,30 @@ Follow **Test-Driven Development** where applicable:
 4. Verify all checks pass
 
 Each step is self-contained and can be validated independently before proceeding to the next.
+
+- `test_prerequisites.py`: ~6 tests (updated imports)
+- `test_branch_management.py`: ~5 tests (updated imports)
+- `test_prompt_execution.py`: ~8 tests (updated imports)
+- **New CLI tests:** 2 minimal tests in `tests/cli/commands/test_create_plan.py`
+- **Total: ~35 tests**
+
+**Note:** The 4 deleted CLI parsing tests are replaced by 2 minimal CLI handler tests, resulting in net -2 tests overall. This reduction is intentional - the CLI layer is kept minimal since workflow logic is thoroughly tested separately.
+
+## Key Implementation Notes
+
+**Step 2 is broken into 4 sub-steps for easier verification:**
+- **Step 2a:** Copy file to new location (preserve as-is)
+- **Step 2b:** Refactor main() → run_create_plan_workflow() 
+- **Step 2c:** Remove CLI parsing code (parse_arguments, if __name__)
+- **Step 2d:** Clean up imports and verify quality
+
+**CLI tests are kept minimal (2 tests):**
+- Success case
+- Error handling (combines workflow failure, exceptions, keyboard interrupt)
+
+This minimal approach is justified because:
+- The CLI handler is a thin wrapper (just ~40 lines)
+- Workflow logic has comprehensive test coverage (~33 tests)
+- Reduces test maintenance burden
+
+**See `decisions.md` for full rationale of all design choices.**
