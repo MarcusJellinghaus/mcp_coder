@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Create CLI Command Interface (TDD)
 **Details:** [step_1.md](./steps/step_1.md)
 
-- [ ] Part A: Write Tests First (RED Phase)
-  - [ ] Create `tests/cli/commands/test_create_pr.py` with comprehensive test suite
-  - [ ] Run tests to verify they FAIL initially (RED phase)
+- [x] Part A: Write Tests First (RED Phase)
+  - [x] Create `tests/cli/commands/test_create_pr.py` with comprehensive test suite
+  - [x] Run tests to verify they FAIL initially (RED phase)
 
 - [ ] Part B: Implement CLI Command (GREEN Phase)
   - [ ] Create `src/mcp_coder/cli/commands/create_pr.py` with `execute_create_pr()` function
