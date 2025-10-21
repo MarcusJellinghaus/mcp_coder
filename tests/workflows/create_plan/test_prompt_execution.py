@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from workflows.create_plan import (
+from mcp_coder.workflows.create_plan import (
     _load_prompt_or_exit,
     format_initial_prompt,
     run_planning_prompts,
@@ -21,7 +21,9 @@ class TestLoadPromptOrExit:
         """Test _load_prompt_or_exit with successful prompt loading."""
         mock_prompt = "This is a test prompt template"
 
-        with patch("workflows.create_plan.get_prompt", return_value=mock_prompt):
+        with patch(
+            "mcp_coder.workflows.create_plan.get_prompt", return_value=mock_prompt
+        ):
             result = _load_prompt_or_exit("Test Header")
 
         assert result == mock_prompt
@@ -29,7 +31,7 @@ class TestLoadPromptOrExit:
     def test_load_prompt_or_exit_file_not_found(self) -> None:
         """Test _load_prompt_or_exit when prompt file is not found."""
         with patch(
-            "workflows.create_plan.get_prompt",
+            "mcp_coder.workflows.create_plan.get_prompt",
             side_effect=FileNotFoundError("Prompt file not found"),
         ):
             with pytest.raises(SystemExit) as exc_info:
@@ -40,7 +42,7 @@ class TestLoadPromptOrExit:
     def test_load_prompt_or_exit_value_error(self) -> None:
         """Test _load_prompt_or_exit when prompt header is invalid."""
         with patch(
-            "workflows.create_plan.get_prompt",
+            "mcp_coder.workflows.create_plan.get_prompt",
             side_effect=ValueError("Invalid prompt header"),
         ):
             with pytest.raises(SystemExit) as exc_info:
@@ -51,7 +53,7 @@ class TestLoadPromptOrExit:
     def test_load_prompt_or_exit_unexpected_error(self) -> None:
         """Test _load_prompt_or_exit with unexpected error."""
         with patch(
-            "workflows.create_plan.get_prompt",
+            "mcp_coder.workflows.create_plan.get_prompt",
             side_effect=RuntimeError("Unexpected error"),
         ):
             with pytest.raises(SystemExit) as exc_info:
@@ -166,13 +168,16 @@ class TestRunPlanningPrompts:
         mock_response_2 = {"text": "Response 2", "session_id": "test-session-123"}
         mock_response_3 = {"text": "Response 3", "session_id": "test-session-123"}
 
-        with patch("workflows.create_plan.get_prompt") as mock_get_prompt:
+        with patch("mcp_coder.workflows.create_plan.get_prompt") as mock_get_prompt:
             mock_get_prompt.side_effect = lambda _, header: mock_prompts[header]
 
             with patch(
-                "workflows.create_plan.parse_llm_method", return_value=("claude", "cli")
+                "mcp_coder.workflows.create_plan.parse_llm_method",
+                return_value=("claude", "cli"),
             ):
-                with patch("workflows.create_plan.prompt_llm") as mock_prompt_llm:
+                with patch(
+                    "mcp_coder.workflows.create_plan.prompt_llm"
+                ) as mock_prompt_llm:
                     mock_prompt_llm.side_effect = [
                         mock_response_1,
                         mock_response_2,
@@ -214,12 +219,15 @@ class TestRunPlanningPrompts:
             locked=False,
         )
 
-        with patch("workflows.create_plan.get_prompt", return_value="Test prompt"):
+        with patch(
+            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
+        ):
             with patch(
-                "workflows.create_plan.parse_llm_method", return_value=("claude", "cli")
+                "mcp_coder.workflows.create_plan.parse_llm_method",
+                return_value=("claude", "cli"),
             ):
                 with patch(
-                    "workflows.create_plan.prompt_llm",
+                    "mcp_coder.workflows.create_plan.prompt_llm",
                     side_effect=Exception("LLM error"),
                 ):
                     result = run_planning_prompts(
@@ -249,11 +257,16 @@ class TestRunPlanningPrompts:
         mock_response_2 = {"text": "Response 2", "session_id": mock_session_id}
         mock_response_3 = {"text": "Response 3", "session_id": mock_session_id}
 
-        with patch("workflows.create_plan.get_prompt", return_value="Test prompt"):
+        with patch(
+            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
+        ):
             with patch(
-                "workflows.create_plan.parse_llm_method", return_value=("claude", "cli")
+                "mcp_coder.workflows.create_plan.parse_llm_method",
+                return_value=("claude", "cli"),
             ):
-                with patch("workflows.create_plan.prompt_llm") as mock_prompt_llm:
+                with patch(
+                    "mcp_coder.workflows.create_plan.prompt_llm"
+                ) as mock_prompt_llm:
                     mock_prompt_llm.side_effect = [
                         mock_response_1,
                         mock_response_2,
@@ -290,12 +303,16 @@ class TestRunPlanningPrompts:
 
         mock_response = {"text": "", "session_id": "test-session"}
 
-        with patch("workflows.create_plan.get_prompt", return_value="Test prompt"):
+        with patch(
+            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
+        ):
             with patch(
-                "workflows.create_plan.parse_llm_method", return_value=("claude", "cli")
+                "mcp_coder.workflows.create_plan.parse_llm_method",
+                return_value=("claude", "cli"),
             ):
                 with patch(
-                    "workflows.create_plan.prompt_llm", return_value=mock_response
+                    "mcp_coder.workflows.create_plan.prompt_llm",
+                    return_value=mock_response,
                 ):
                     result = run_planning_prompts(
                         tmp_path, issue_data, "claude_code_cli"
@@ -321,12 +338,16 @@ class TestRunPlanningPrompts:
 
         mock_response = {"text": "Response text"}  # Missing session_id
 
-        with patch("workflows.create_plan.get_prompt", return_value="Test prompt"):
+        with patch(
+            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
+        ):
             with patch(
-                "workflows.create_plan.parse_llm_method", return_value=("claude", "cli")
+                "mcp_coder.workflows.create_plan.parse_llm_method",
+                return_value=("claude", "cli"),
             ):
                 with patch(
-                    "workflows.create_plan.prompt_llm", return_value=mock_response
+                    "mcp_coder.workflows.create_plan.prompt_llm",
+                    return_value=mock_response,
                 ):
                     result = run_planning_prompts(
                         tmp_path, issue_data, "claude_code_cli"
@@ -350,9 +371,11 @@ class TestRunPlanningPrompts:
             locked=False,
         )
 
-        with patch("workflows.create_plan.get_prompt", return_value="Test prompt"):
+        with patch(
+            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
+        ):
             with patch(
-                "workflows.create_plan.parse_llm_method",
+                "mcp_coder.workflows.create_plan.parse_llm_method",
                 side_effect=ValueError("Invalid method"),
             ):
                 result = run_planning_prompts(tmp_path, issue_data, "invalid_method")
@@ -377,11 +400,16 @@ class TestRunPlanningPrompts:
 
         mock_response_1 = {"text": "Response 1", "session_id": "test-session"}
 
-        with patch("workflows.create_plan.get_prompt", return_value="Test prompt"):
+        with patch(
+            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
+        ):
             with patch(
-                "workflows.create_plan.parse_llm_method", return_value=("claude", "cli")
+                "mcp_coder.workflows.create_plan.parse_llm_method",
+                return_value=("claude", "cli"),
             ):
-                with patch("workflows.create_plan.prompt_llm") as mock_prompt_llm:
+                with patch(
+                    "mcp_coder.workflows.create_plan.prompt_llm"
+                ) as mock_prompt_llm:
                     mock_prompt_llm.side_effect = [
                         mock_response_1,
                         Exception("Second prompt failed"),
@@ -412,11 +440,16 @@ class TestRunPlanningPrompts:
         mock_response_1 = {"text": "Response 1", "session_id": "test-session"}
         mock_response_2 = {"text": "Response 2", "session_id": "test-session"}
 
-        with patch("workflows.create_plan.get_prompt", return_value="Test prompt"):
+        with patch(
+            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
+        ):
             with patch(
-                "workflows.create_plan.parse_llm_method", return_value=("claude", "cli")
+                "mcp_coder.workflows.create_plan.parse_llm_method",
+                return_value=("claude", "cli"),
             ):
-                with patch("workflows.create_plan.prompt_llm") as mock_prompt_llm:
+                with patch(
+                    "mcp_coder.workflows.create_plan.prompt_llm"
+                ) as mock_prompt_llm:
                     mock_prompt_llm.side_effect = [
                         mock_response_1,
                         mock_response_2,
