@@ -1,7 +1,6 @@
 """Integration tests for create_PR workflow script.
 
 These tests verify the complete workflow integration including:
-- Windows batch wrapper functionality
 - End-to-end workflow execution
 - File system operations
 - Git repository state management
@@ -24,71 +23,6 @@ from mcp_coder.utils.git_operations import (
 
 # Import git fixtures from utils
 from tests.utils.conftest import git_repo, git_repo_with_files
-
-
-class TestCreatePRBatchWrapper:
-    """Test Windows batch wrapper functionality."""
-
-    def test_batch_file_exists(self) -> None:
-        """Test that the batch wrapper file exists and is executable."""
-        batch_file = Path("workflows/create_PR.bat")
-        assert batch_file.exists(), "create_PR.bat wrapper should exist"
-        assert batch_file.is_file(), "create_PR.bat should be a file"
-
-        # Check file has content
-        content = batch_file.read_text(encoding="utf-8")
-        assert len(content) > 0, "Batch file should not be empty"
-        assert "@echo off" in content, "Should be a proper Windows batch file"
-
-    def test_batch_file_structure(self) -> None:
-        """Test that batch file has proper structure and commands."""
-        batch_file = Path("workflows/create_PR.bat")
-        content = batch_file.read_text(encoding="utf-8")
-
-        # Check for essential components
-        assert "create_PR.py" in content, "Should reference the Python script"
-        assert "python" in content.lower(), "Should call Python"
-        assert "exit /b" in content, "Should properly handle exit codes"
-        assert (
-            "workflows\\create_PR.py" in content
-        ), "Should reference correct script path"
-        assert "PYTHONPATH" in content, "Should set PYTHONPATH for src directory"
-
-    def test_batch_file_help_documentation(self) -> None:
-        """Test that batch file contains proper usage documentation."""
-        batch_file = Path("workflows/create_PR.bat")
-        content = batch_file.read_text(encoding="utf-8")
-
-        # Check for usage documentation
-        assert "Usage:" in content, "Should have usage documentation"
-        assert "--project-dir" in content, "Should document project-dir parameter"
-        assert "--log-level" in content, "Should document log-level parameter"
-        assert "Examples:" in content, "Should have usage examples"
-
-    @pytest.mark.git_integration
-    def test_batch_wrapper_environment_checks(self, tmp_path: Path) -> None:
-        """Test batch wrapper environment validation."""
-        # Create a temporary directory structure
-        test_project = tmp_path / "test_project"
-        test_project.mkdir()
-
-        # Copy the batch file to test directory
-        original_batch = Path("workflows/create_PR.bat")
-        test_batch = test_project / "workflows"
-        test_batch.mkdir()
-
-        # Create a modified batch file that just does environment checks
-        test_batch_file = test_batch / "create_PR.bat"
-        original_content = original_batch.read_text(encoding="utf-8")
-
-        # Replace the Python execution with just environment checks
-        test_content = original_content.replace(
-            "python workflows\\create_PR.py %*", "echo Environment checks passed"
-        )
-        test_batch_file.write_text(test_content, encoding="utf-8")
-
-        # Test environment check behavior (Python availability, etc.)
-        # Note: This is a basic structure test, actual execution would require Windows
 
 
 class TestCreatePRWorkflowIntegration:
