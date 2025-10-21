@@ -34,7 +34,7 @@ class TestCheckPrerequisites:
         mock_current_branch.assert_called_once()
         mock_parent_branch.assert_called_once()
 
-    @patch("workflows.create_PR.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     def test_prerequisites_dirty_working_directory(self, mock_clean: MagicMock) -> None:
         """Test prerequisites check fails when working directory is dirty."""
         mock_clean.return_value = False
@@ -44,8 +44,8 @@ class TestCheckPrerequisites:
         assert result is False
         mock_clean.assert_called_once()
 
-    @patch("workflows.create_PR.is_working_directory_clean")
-    @patch("workflows.create_PR.get_incomplete_tasks")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_incomplete_tasks")
     def test_prerequisites_incomplete_tasks(
         self, mock_incomplete_tasks: MagicMock, mock_clean: MagicMock
     ) -> None:
@@ -59,10 +59,10 @@ class TestCheckPrerequisites:
         mock_clean.assert_called_once()
         mock_incomplete_tasks.assert_called_once()
 
-    @patch("workflows.create_PR.is_working_directory_clean")
-    @patch("workflows.create_PR.get_incomplete_tasks")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_incomplete_tasks")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_prerequisites_same_branch(
         self,
         mock_parent_branch: MagicMock,
@@ -80,9 +80,9 @@ class TestCheckPrerequisites:
 
         assert result is False
 
-    @patch("workflows.create_PR.is_working_directory_clean")
-    @patch("workflows.create_PR.get_incomplete_tasks")
-    @patch("workflows.create_PR.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_incomplete_tasks")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     def test_prerequisites_no_current_branch(
         self,
         mock_current_branch: MagicMock,
@@ -98,10 +98,10 @@ class TestCheckPrerequisites:
 
         assert result is False
 
-    @patch("workflows.create_PR.is_working_directory_clean")
-    @patch("workflows.create_PR.get_incomplete_tasks")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_incomplete_tasks")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_prerequisites_no_parent_branch(
         self,
         mock_parent_branch: MagicMock,
@@ -119,7 +119,7 @@ class TestCheckPrerequisites:
 
         assert result is False
 
-    @patch("workflows.create_PR.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     def test_prerequisites_git_exception(self, mock_clean: MagicMock) -> None:
         """Test prerequisites check fails when git operations raise exceptions."""
         mock_clean.side_effect = Exception("Git error")
@@ -129,8 +129,8 @@ class TestCheckPrerequisites:
         assert result is False
         mock_clean.assert_called_once()
 
-    @patch("workflows.create_PR.is_working_directory_clean")
-    @patch("workflows.create_PR.get_incomplete_tasks")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_incomplete_tasks")
     def test_prerequisites_task_tracker_exception(
         self, mock_incomplete_tasks: MagicMock, mock_clean: MagicMock
     ) -> None:
@@ -144,9 +144,9 @@ class TestCheckPrerequisites:
         mock_clean.assert_called_once()
         mock_incomplete_tasks.assert_called_once()
 
-    @patch("workflows.create_PR.is_working_directory_clean")
-    @patch("workflows.create_PR.get_incomplete_tasks")
-    @patch("workflows.create_PR.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_incomplete_tasks")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     def test_prerequisites_branch_exception(
         self,
         mock_current_branch: MagicMock,
