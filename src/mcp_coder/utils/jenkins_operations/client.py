@@ -32,8 +32,8 @@ from typing import Any, Optional, cast
 import structlog
 from jenkins import Jenkins
 
-from mcp_coder.utils.log_utils import log_function_call
-from mcp_coder.utils.user_config import get_config_value
+from ..log_utils import log_function_call
+from ..user_config import get_config_value
 
 from .models import JobStatus, QueueSummary
 
