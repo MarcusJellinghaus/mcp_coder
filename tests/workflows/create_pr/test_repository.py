@@ -3,14 +3,14 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from workflows.create_PR import cleanup_repository, create_pull_request
+from mcp_coder.workflows.create_pr.core import cleanup_repository, create_pull_request
 
 
 class TestCleanupRepository:
     """Test cleanup_repository function."""
 
-    @patch("workflows.create_PR.delete_steps_directory")
-    @patch("workflows.create_PR.truncate_task_tracker")
+    @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
+    @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
     def test_cleanup_repository_success(
         self, mock_truncate: MagicMock, mock_delete: MagicMock
     ) -> None:
@@ -74,9 +74,9 @@ class TestCleanupRepository:
 class TestCreatePullRequest:
     """Test create_pull_request function."""
 
-    @patch("workflows.create_PR.PullRequestManager")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_create_pull_request_success(
         self,
         mock_parent_branch: MagicMock,

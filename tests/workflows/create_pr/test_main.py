@@ -1,4 +1,9 @@
-"""Tests for create_PR workflow main function."""
+"""Tests for create_PR workflow main function.
+
+NOTE: This file tests the LEGACY workflows/create_PR.py main() function.
+It will be removed in Step 5 when the legacy file is deleted.
+The new run_create_pr_workflow() function in core.py will be tested via CLI tests.
+"""
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch

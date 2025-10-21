@@ -5,15 +5,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from workflows.create_PR import generate_pr_summary
+from mcp_coder.workflows.create_pr.core import generate_pr_summary
 
 
 class TestGeneratePrSummary:
     """Test generate_pr_summary function."""
 
-    @patch("workflows.create_PR.get_branch_diff")
-    @patch("workflows.create_PR.get_prompt")
-    @patch("workflows.create_PR.ask_llm")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_prompt")
+    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
     def test_generate_pr_summary_success(
         self,
         mock_ask_llm: MagicMock,
@@ -25,7 +25,7 @@ class TestGeneratePrSummary:
         mock_get_prompt.return_value = "PR Summary prompt template"
         mock_ask_llm.return_value = "feat: Add authentication\n\nDetailed description"
 
-        title, body = generate_pr_summary(Path("/test/project"))
+        title, body = generate_pr_summary(Path("/test/project"), "claude", "cli")
 
         assert title == "feat: Add authentication"
         assert "Detailed description" in body
@@ -35,9 +35,9 @@ class TestGeneratePrSummary:
         mock_get_prompt.assert_called_once()
         mock_ask_llm.assert_called_once()
 
-    @patch("workflows.create_PR.get_branch_diff")
-    @patch("workflows.create_PR.get_prompt")
-    @patch("workflows.create_PR.ask_llm")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_prompt")
+    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
     def test_generate_pr_summary_structured_response(
         self,
         mock_ask_llm: MagicMock,
@@ -57,38 +57,38 @@ Implements comprehensive user management functionality.
 - Role-based access control
 - User profile management"""
 
-        title, body = generate_pr_summary(Path("/test/project"))
+        title, body = generate_pr_summary(Path("/test/project"), "claude", "cli")
 
         assert title == "feat: Add user management"
         assert "## Summary" in body
         assert "User registration and authentication" in body
         assert "Role-based access control" in body
 
-    @patch("workflows.create_PR.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     def test_generate_pr_summary_no_diff(self, mock_get_diff: MagicMock) -> None:
         """Test PR summary generation when no diff available."""
         mock_get_diff.return_value = ""
 
-        title, body = generate_pr_summary(Path("/test/project"))
+        title, body = generate_pr_summary(Path("/test/project"), "claude", "cli")
 
         assert title == "Pull Request"
         assert body == "Pull Request"
 
-    @patch("workflows.create_PR.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     def test_generate_pr_summary_whitespace_diff(
         self, mock_get_diff: MagicMock
     ) -> None:
         """Test PR summary generation when diff is only whitespace."""
         mock_get_diff.return_value = "   \n\n   \t   \n   "
 
-        title, body = generate_pr_summary(Path("/test/project"))
+        title, body = generate_pr_summary(Path("/test/project"), "claude", "cli")
 
         assert title == "Pull Request"
         assert body == "Pull Request"
 
-    @patch("workflows.create_PR.get_branch_diff")
-    @patch("workflows.create_PR.get_prompt")
-    @patch("workflows.create_PR.ask_llm")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_prompt")
+    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
     def test_generate_pr_summary_llm_failure(
         self,
         mock_ask_llm: MagicMock,
@@ -100,15 +100,13 @@ Implements comprehensive user management functionality.
         mock_get_prompt.return_value = "prompt template"
         mock_ask_llm.return_value = None  # LLM failure
 
-        # Should exit with code 1 on LLM failure
-        with pytest.raises(SystemExit) as exc_info:
-            generate_pr_summary(Path("/test/project"))
+        # Should raise ValueError on LLM failure
+        with pytest.raises(ValueError, match="LLM returned empty response"):
+            generate_pr_summary(Path("/test/project"), "claude", "cli")
 
-        assert exc_info.value.code == 1
-
-    @patch("workflows.create_PR.get_branch_diff")
-    @patch("workflows.create_PR.get_prompt")
-    @patch("workflows.create_PR.ask_llm")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_prompt")
+    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
     def test_generate_pr_summary_llm_exception(
         self,
         mock_ask_llm: MagicMock,
@@ -120,15 +118,13 @@ Implements comprehensive user management functionality.
         mock_get_prompt.return_value = "prompt template"
         mock_ask_llm.side_effect = Exception("LLM API error")
 
-        # Should exit with code 1 on LLM exception
-        with pytest.raises(SystemExit) as exc_info:
-            generate_pr_summary(Path("/test/project"))
+        # Should propagate exception from LLM
+        with pytest.raises(Exception, match="LLM API error"):
+            generate_pr_summary(Path("/test/project"), "claude", "cli")
 
-        assert exc_info.value.code == 1
-
-    @patch("workflows.create_PR.get_branch_diff")
-    @patch("workflows.create_PR.get_prompt")
-    @patch("workflows.create_PR.ask_llm")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_prompt")
+    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
     def test_generate_pr_summary_empty_llm_response(
         self,
         mock_ask_llm: MagicMock,
@@ -140,15 +136,13 @@ Implements comprehensive user management functionality.
         mock_get_prompt.return_value = "prompt template"
         mock_ask_llm.return_value = ""  # Empty response
 
-        # Should exit with code 1 on empty response
-        with pytest.raises(SystemExit) as exc_info:
-            generate_pr_summary(Path("/test/project"))
+        # Should raise ValueError on empty response
+        with pytest.raises(ValueError, match="LLM returned empty response"):
+            generate_pr_summary(Path("/test/project"), "claude", "cli")
 
-        assert exc_info.value.code == 1
-
-    @patch("workflows.create_PR.get_branch_diff")
-    @patch("workflows.create_PR.get_prompt")
-    @patch("workflows.create_PR.ask_llm")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_prompt")
+    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
     def test_generate_pr_summary_whitespace_llm_response(
         self,
         mock_ask_llm: MagicMock,
@@ -160,30 +154,26 @@ Implements comprehensive user management functionality.
         mock_get_prompt.return_value = "prompt template"
         mock_ask_llm.return_value = "   \n\n   \t   \n   "  # Whitespace only
 
-        # Should exit with code 1 on whitespace-only response
-        with pytest.raises(SystemExit) as exc_info:
-            generate_pr_summary(Path("/test/project"))
+        # Should raise ValueError on whitespace-only response
+        with pytest.raises(ValueError, match="LLM returned empty response"):
+            generate_pr_summary(Path("/test/project"), "claude", "cli")
 
-        assert exc_info.value.code == 1
-
-    @patch("workflows.create_PR.get_branch_diff")
-    @patch("workflows.create_PR._load_prompt_or_exit")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_prompt")
     def test_generate_pr_summary_prompt_failure(
         self,
-        mock_load_prompt: MagicMock,
+        mock_get_prompt: MagicMock,
         mock_get_diff: MagicMock,
     ) -> None:
         """Test PR summary generation when prompt loading fails."""
         mock_get_diff.return_value = "diff content"
-        mock_load_prompt.side_effect = SystemExit(1)  # Prompt loading exits
+        mock_get_prompt.side_effect = FileNotFoundError("Prompt file not found")
 
-        # Should exit with code 1 on prompt failure
-        with pytest.raises(SystemExit) as exc_info:
-            generate_pr_summary(Path("/test/project"))
+        # Should propagate exception from get_prompt
+        with pytest.raises(FileNotFoundError, match="Prompt file not found"):
+            generate_pr_summary(Path("/test/project"), "claude", "cli")
 
-        assert exc_info.value.code == 1
-
-    @patch("workflows.create_PR.get_branch_diff")
+    @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     def test_generate_pr_summary_git_diff_exception(
         self, mock_get_diff: MagicMock
     ) -> None:
@@ -192,4 +182,4 @@ Implements comprehensive user management functionality.
 
         # Should let the exception propagate (no special handling for git errors)
         with pytest.raises(Exception, match="Git error"):
-            generate_pr_summary(Path("/test/project"))
+            generate_pr_summary(Path("/test/project"), "claude", "cli")

@@ -1,6 +1,6 @@
 """Tests for create_PR workflow PR parsing functionality."""
 
-from workflows.create_PR import parse_pr_summary
+from mcp_coder.workflows.create_pr.core import parse_pr_summary
 
 
 class TestParsePrSummary:
