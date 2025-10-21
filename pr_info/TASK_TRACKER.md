@@ -62,8 +62,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Integrate with CLI Main Entry Point
 **Details:** [step_3.md](./steps/step_3.md)
 
-- [ ] Add Import Statement
-  - [ ] Import `execute_create_pr` in `src/mcp_coder/cli/main.py`
+- [x] Add Import Statement
+  - [x] Import `execute_create_pr` in `src/mcp_coder/cli/main.py`
 
 - [ ] Add Subcommand to Argument Parser
   - [ ] Add `create-pr` subcommand with `--project-dir` and `--llm-method` arguments
