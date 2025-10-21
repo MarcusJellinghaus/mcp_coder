@@ -99,12 +99,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Update `tests/workflows/create_plan/test_prerequisites.py` with new import paths
 - [x] Update `tests/workflows/create_plan/test_branch_management.py` with new import paths
 - [x] Update `tests/workflows/create_plan/test_prompt_execution.py` with new import paths
-- [ ] Run pytest on all updated workflow tests
-- [ ] Verify all workflow tests pass
-- [ ] Run pylint check on workflow tests
-- [ ] Run mypy check on workflow tests
-- [ ] Fix any issues found in code quality checks
-- [ ] Prepare git commit message for Step 5
+- [x] Run pytest on all updated workflow tests
+- [x] Verify all workflow tests pass
+- [x] Run pylint check on workflow tests
+- [x] Run mypy check on workflow tests
+- [x] Fix any issues found in code quality checks
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: Run Comprehensive Code Quality Checks
 - [ ] Run pylint check on all affected code (src and tests) ([step_6.md](steps/step_6.md))
