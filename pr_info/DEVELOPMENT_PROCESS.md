@@ -184,7 +184,7 @@ At the end of our discussion, I want to have an even better issue description
 
 ```
 Let's draft the issue text, with some very limited, concise implementation ideas.
-The implementation plan should be developed later. Focus on the issue.
+The implementation plan should be developed later. Focus on the issue and include the discussed details.
 Please provide the issue text (with issue header!) as markdown artifact, so that I can easily update the issue on GitHub.
 ```
 </details>

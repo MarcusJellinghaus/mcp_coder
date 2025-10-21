@@ -29,4 +29,5 @@ REM echo MCP_CODER_VENV_DIR=%MCP_CODER_VENV_DIR%
 REM echo.
 
 REM Start Claude Code
-claude
+REM claude
+C:\Users\%USERNAME%\.local\bin\claude.exe

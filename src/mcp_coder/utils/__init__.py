@@ -40,6 +40,14 @@ from .git_operations import (
 
 # GitHub operations
 from .github_operations import PullRequestManager
+
+# Jenkins operations
+from .jenkins_operations import (
+    JenkinsClient,
+    JenkinsError,
+    JobStatus,
+    QueueSummary,
+)
 from .log_utils import log_function_call, setup_logging
 from .subprocess_runner import (
     CommandOptions,
@@ -92,4 +100,9 @@ __all__ = [
     "execute_subprocess",
     # GitHub operations
     "PullRequestManager",
+    # Jenkins operations
+    "JenkinsClient",
+    "JenkinsError",
+    "JobStatus",
+    "QueueSummary",
 ]
