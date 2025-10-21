@@ -10,47 +10,7 @@ Move `workflows/create_PR.py` to `src/mcp_coder/workflows/create_pr/core.py` wit
 
 ---
 
-## Part A: Update Existing Tests to Use New Module Path
-
-### WHERE
-Update import statements in all existing test files:
-
-1. `tests/workflows/create_pr/test_file_operations.py`
-2. `tests/workflows/create_pr/test_parsing.py`
-3. `tests/workflows/create_pr/test_prerequisites.py`
-4. `tests/workflows/create_pr/test_generation.py`
-5. `tests/workflows/create_pr/test_repository.py`
-6. `tests/workflows/create_pr/test_main.py`
-
-### WHAT - Import Changes
-
-**OLD (current):**
-```python
-from workflows.create_PR import function_name
-```
-
-**NEW (target):**
-```python
-from mcp_coder.workflows.create_pr.core import function_name
-```
-
-### HOW - Find and Replace
-
-For each test file, replace:
-- `from workflows.create_PR import` → `from mcp_coder.workflows.create_pr.core import`
-- `@patch("workflows.create_PR.` → `@patch("mcp_coder.workflows.create_pr.core.`
-
-### TEST EXECUTION (Should FAIL initially)
-```bash
-# Run all create_pr workflow tests
-pytest tests/workflows/create_pr/ -v
-
-# Expected: All tests FAIL (module not found - this is correct, we haven't created it yet)
-```
-
----
-
-## Part B: Create Workflow Package Structure
+## Part A: Create Workflow Package Structure
 
 ### WHERE - Files to Create
 
@@ -140,7 +100,10 @@ def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int
         method: LLM method (e.g., 'cli' or 'api')
     
     Returns:
-        int: Exit code (0 for success, 1 for error)
+        int: Exit code
+            0 - Complete success (PR created and cleanup completed)
+            1 - Error (prerequisites failed or PR creation failed)
+            2 - Partial success (PR created but cleanup failed)
     """
     log_step("Starting create PR workflow...")
     log_step(f"Using project directory: {project_dir}")
@@ -194,6 +157,8 @@ def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int
                     log_step("Cleanup changes pushed successfully")
                 else:
                     logger.warning(f"Failed to push cleanup changes: {push_result['error']}")
+                    log_step("PR created successfully, but cleanup push failed")
+                    return 2  # Partial success
             else:
                 # Don't warn about "No staged files" - this is expected when cleanup had no effect
                 error_msg = commit_result.get("error", "")
@@ -201,10 +166,13 @@ def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int
                     log_step("No cleanup changes to commit (files were already clean)")
                 else:
                     logger.warning(f"Failed to commit cleanup changes: {commit_result['error']}")
+                    log_step("PR created successfully, but cleanup commit failed")
+                    return 2  # Partial success
         else:
             log_step("No cleanup changes to commit")
     else:
         logger.warning("Repository cleanup completed with errors, but PR was created successfully")
+        return 2  # Partial success
     
     log_step("Create PR workflow completed successfully!")
     return 0
@@ -267,9 +235,41 @@ def log_step(message: str) -> None
 
 ---
 
+## Part B: Update Existing Tests to Use New Module Path
+
+### WHERE
+Update import statements in all existing test files:
+
+1. `tests/workflows/create_pr/test_file_operations.py`
+2. `tests/workflows/create_pr/test_parsing.py`
+3. `tests/workflows/create_pr/test_prerequisites.py`
+4. `tests/workflows/create_pr/test_generation.py`
+5. `tests/workflows/create_pr/test_repository.py`
+6. `tests/workflows/create_pr/test_main.py`
+
+### WHAT - Import Changes
+
+**OLD (current):**
+```python
+from workflows.create_PR import function_name
+```
+
+**NEW (target):**
+```python
+from mcp_coder.workflows.create_pr.core import function_name
+```
+
+### HOW - Find and Replace
+
+For each test file, replace:
+- `from workflows.create_PR import` → `from mcp_coder.workflows.create_pr.core import`
+- `@patch("workflows.create_PR.` → `@patch("mcp_coder.workflows.create_pr.core.`
+
+---
+
 ## Part C: Validate Tests Pass
 
-### TEST EXECUTION (Should PASS now)
+### TEST EXECUTION
 ```bash
 # Run all create_pr workflow tests
 pytest tests/workflows/create_pr/ -v
@@ -302,16 +302,15 @@ Task: Create workflow package and migrate core logic from standalone script.
 Step 2 Details: Read pr_info/steps/step_2.md
 
 Instructions:
-1. Update all test file imports (tests/workflows/create_pr/*.py) from workflows.create_PR to mcp_coder.workflows.create_pr.core
-2. Run tests (they should FAIL - module not found)
-3. Create src/mcp_coder/workflows/create_pr/__init__.py (package initialization)
-4. Create src/mcp_coder/workflows/create_pr/core.py by:
+1. Create src/mcp_coder/workflows/create_pr/__init__.py (package initialization)
+2. Create src/mcp_coder/workflows/create_pr/core.py by:
    - Copying from workflows/create_PR.py
    - Removing: parse_arguments(), resolve_project_dir(), main()
    - Updating: generate_pr_summary() signature
    - Creating: run_create_pr_workflow() function
-5. Run tests (they should PASS now)
-6. Run code quality checks (pylint, mypy)
+3. Update all test file imports (tests/workflows/create_pr/*.py) from workflows.create_PR to mcp_coder.workflows.create_pr.core
+4. Run tests (they should PASS)
+5. Run code quality checks (pylint, mypy)
 
 Reference: src/mcp_coder/workflows/implement/core.py for workflow pattern
 

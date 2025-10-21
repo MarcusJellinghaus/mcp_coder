@@ -90,7 +90,7 @@ def execute_create_pr(args: argparse.Namespace) -> int:
 # Workflow Core (core.py)
 def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int:
     # Orchestrate workflow steps
-    # Return 0 for success, 1 for error
+    # Return 0 for complete success, 1 for error, 2 for partial success
 ```
 
 ## Files to Create

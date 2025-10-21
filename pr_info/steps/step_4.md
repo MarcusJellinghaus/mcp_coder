@@ -13,7 +13,8 @@ Update import statements in integration and legacy test files to use the new mod
 ## WHERE - Files to Update
 
 1. **`tests/workflows/test_create_pr_integration.py`** - Integration tests
-2. **`tests/test_create_pr.py`** - Legacy backwards compatibility shim
+
+**Note:** `tests/test_create_pr.py` (legacy compatibility shim) will be deleted in Step 5, not updated.
 
 ---
 
@@ -41,27 +42,7 @@ from mcp_coder.workflows.create_pr.core import <function_name>
 @patch("mcp_coder.workflows.create_pr.core.<function_name>")
 ```
 
-### File 2: Legacy Compatibility Shim
 
-**File:** `tests/test_create_pr.py`
-
-**Find and replace:**
-```python
-# OLD
-from workflows.create_PR import <function_name>
-
-# NEW
-from mcp_coder.workflows.create_pr.core import <function_name>
-```
-
-**Patch path updates:**
-```python
-# OLD
-@patch("workflows.create_PR.<function_name>")
-
-# NEW
-@patch("mcp_coder.workflows.create_pr.core.<function_name>")
-```
 
 ---
 
@@ -104,7 +85,7 @@ Open `tests/test_create_pr.py` and update all occurrences:
 ## ALGORITHM - Update Process (Pseudocode)
 
 ```
-FOR EACH file in [test_create_pr_integration.py, test_create_pr.py]:
+FOR file test_create_pr_integration.py:
     1. Read file contents
     2. Replace "from workflows.create_PR" → "from mcp_coder.workflows.create_pr.core"
     3. Replace "@patch(\"workflows.create_PR" → "@patch(\"mcp_coder.workflows.create_pr.core"
@@ -124,15 +105,11 @@ FOR EACH file in [test_create_pr_integration.py, test_create_pr.py]:
 pytest tests/workflows/test_create_pr_integration.py -v
 # Expected: All tests PASS
 
-# Test 2: Run legacy compatibility tests
-pytest tests/test_create_pr.py -v
-# Expected: All tests PASS
-
-# Test 3: Run ALL create_pr related tests
+# Test 2: Run ALL create_pr related tests
 pytest tests/ -k "create_pr" -v
 # Expected: All tests PASS
 
-# Test 4: Run full test suite to ensure nothing broke
+# Test 3: Run full test suite to ensure nothing broke
 pytest tests/workflows/create_pr/ -v
 pytest tests/cli/commands/test_create_pr.py -v
 # Expected: All tests PASS
@@ -141,13 +118,11 @@ pytest tests/cli/commands/test_create_pr.py -v
 ### Code Quality Checks
 
 ```bash
-# Pylint check on updated test files
+# Pylint check on updated test file
 pylint tests/workflows/test_create_pr_integration.py
-pylint tests/test_create_pr.py
 
-# Mypy check on updated test files
+# Mypy check on updated test file
 mypy tests/workflows/test_create_pr_integration.py
-mypy tests/test_create_pr.py
 ```
 
 ---
@@ -195,41 +170,7 @@ def test_backwards_compatibility(mock_prereqs):
     # ...
 ```
 
-**After:**
-```python
-from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
-@patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
-def test_backwards_compatibility(mock_prereqs):
-    # ...
-```
-
-**Note:** If `tests/test_create_pr.py` references `main()` function, it needs to be updated to reference `run_create_pr_workflow()` instead.
-
----
-
-## SPECIAL CASE: main() Function References
-
-If any test file calls or references the old `main()` function, it needs updating:
-
-**Before:**
-```python
-from workflows.create_PR import main
-
-def test_main():
-    with pytest.raises(SystemExit):
-        main()
-```
-
-**After:**
-```python
-from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
-
-def test_workflow():
-    # Note: run_create_pr_workflow returns int, doesn't call sys.exit
-    result = run_create_pr_workflow(project_dir, "claude", "cli")
-    assert result == 0
-```
 
 ---
 
@@ -249,17 +190,13 @@ Instructions:
    - Change all "from workflows.create_PR" → "from mcp_coder.workflows.create_pr.core"
    - Change all "@patch("workflows.create_PR" → "@patch("mcp_coder.workflows.create_pr.core"
    
-2. Update tests/test_create_pr.py:
-   - Change all "from workflows.create_PR" → "from mcp_coder.workflows.create_pr.core"
-   - Change all "@patch("workflows.create_PR" → "@patch("mcp_coder.workflows.create_pr.core"
-   - If it references main(), update to run_create_pr_workflow()
-   
-3. Run tests to verify:
+2. Run tests to verify:
    - pytest tests/workflows/test_create_pr_integration.py -v
-   - pytest tests/test_create_pr.py -v
    - pytest tests/ -k "create_pr" -v
    
-4. Run code quality checks on updated files
+3. Run code quality checks on updated file
+
+Note: tests/test_create_pr.py will be deleted in Step 5, not updated here.
 
 This is a simple find-and-replace task. No logic changes needed.
 ```
@@ -269,14 +206,11 @@ This is a simple find-and-replace task. No logic changes needed.
 ## Verification Checklist
 
 - [ ] `tests/workflows/test_create_pr_integration.py` imports updated
-- [ ] `tests/test_create_pr.py` imports updated
 - [ ] All patch decorators updated
-- [ ] Any `main()` references updated to `run_create_pr_workflow()`
 - [ ] Integration tests pass
-- [ ] Legacy tests pass
 - [ ] All create_pr tests pass: `pytest tests/ -k "create_pr" -v`
-- [ ] Pylint passes on updated test files
-- [ ] Mypy passes on updated test files
+- [ ] Pylint passes on updated test file
+- [ ] Mypy passes on updated test file
 
 ---
 
@@ -293,8 +227,7 @@ This is a simple find-and-replace task. No logic changes needed.
 
 ## Notes
 
-- **Simple task:** This is primarily find-and-replace work
+- **Simple task:** This is primarily find-and-replace work for one file
 - **Low risk:** Tests will immediately show if imports are incorrect
-- **Completes test migration:** After this step, ALL tests use new module structure
-- **Enables cleanup:** Once tests pass, we can safely delete legacy files in Step 5
-- Step 2 already updated the main test suite, this handles the outliers
+- **Legacy shim handling:** `tests/test_create_pr.py` is just a re-export shim and will be deleted in Step 5
+- Step 2 already updated the main test suite, this handles the integration tests
