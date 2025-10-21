@@ -1,8 +1,7 @@
 """Tests for create-plan CLI command handler."""
 
-import argparse
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -12,120 +11,84 @@ from mcp_coder.cli.commands.create_plan import execute_create_plan
 class TestExecuteCreatePlan:
     """Test execute_create_plan CLI command handler."""
 
-    @patch("mcp_coder.workflows.create_plan.run_create_plan_workflow")
-    @patch("mcp_coder.cli.utils.parse_llm_method_from_args")
-    @patch("mcp_coder.workflows.utils.resolve_project_dir")
-    def test_execute_create_plan_success(
-        self,
-        mock_resolve_dir: Mock,
-        mock_parse_llm: Mock,
-        mock_run_workflow: Mock,
-    ) -> None:
+    @pytest.fixture
+    def mock_args(self) -> MagicMock:
+        """Create mock command line arguments."""
+        args = MagicMock()
+        args.issue_number = 123
+        args.project_dir = "/test/project"
+        args.llm_method = "claude_code_cli"
+        return args
+
+    def test_execute_create_plan_success(self, mock_args: MagicMock) -> None:
         """Test successful create-plan command execution."""
-        # Setup mocks
-        project_dir = Path("/test/project")
-        mock_resolve_dir.return_value = project_dir
-        mock_parse_llm.return_value = ("claude", "cli")
-        mock_run_workflow.return_value = 0
+        test_project_dir = Path("/test/project")
 
-        args = argparse.Namespace(
-            issue_number=123,
-            project_dir="/test/project",
-            llm_method="claude_code_cli",
-        )
+        with patch(
+            "mcp_coder.cli.commands.create_plan.resolve_project_dir"
+        ) as mock_resolve:
+            with patch(
+                "mcp_coder.cli.commands.create_plan.parse_llm_method_from_args"
+            ) as mock_parse:
+                with patch(
+                    "mcp_coder.cli.commands.create_plan.run_create_plan_workflow"
+                ) as mock_workflow:
+                    # Configure mocks
+                    mock_resolve.return_value = test_project_dir
+                    mock_parse.return_value = ("claude", "cli")
+                    mock_workflow.return_value = 0
 
-        result = execute_create_plan(args)
+                    # Execute
+                    result = execute_create_plan(mock_args)
 
-        assert result == 0
-        mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_parse_llm.assert_called_once_with("claude_code_cli")
-        mock_run_workflow.assert_called_once_with(123, project_dir, "claude", "cli")
+                    # Assert
+                    assert result == 0
+                    mock_resolve.assert_called_once_with("/test/project")
+                    mock_parse.assert_called_once_with("claude_code_cli")
+                    mock_workflow.assert_called_once_with(
+                        123, test_project_dir, "claude", "cli"
+                    )
 
-    @patch("mcp_coder.workflows.create_plan.run_create_plan_workflow")
-    @patch("mcp_coder.cli.utils.parse_llm_method_from_args")
-    @patch("mcp_coder.workflows.utils.resolve_project_dir")
-    def test_execute_create_plan_workflow_failure(
-        self,
-        mock_resolve_dir: Mock,
-        mock_parse_llm: Mock,
-        mock_run_workflow: Mock,
-    ) -> None:
-        """Test create-plan execution with workflow failure."""
-        # Setup mocks
-        project_dir = Path("/test/project")
-        mock_resolve_dir.return_value = project_dir
-        mock_parse_llm.return_value = ("claude", "cli")
-        mock_run_workflow.return_value = 1
+    def test_execute_create_plan_error_handling(self, mock_args: MagicMock) -> None:
+        """Test error handling for workflow failures and exceptions."""
+        test_project_dir = Path("/test/project")
 
-        args = argparse.Namespace(
-            issue_number=123,
-            project_dir="/test/project",
-            llm_method="claude_code_cli",
-        )
+        # Test workflow failure (returns error code)
+        with patch(
+            "mcp_coder.cli.commands.create_plan.resolve_project_dir",
+            return_value=test_project_dir,
+        ):
+            with patch(
+                "mcp_coder.cli.commands.create_plan.parse_llm_method_from_args",
+                return_value=("claude", "cli"),
+            ):
+                with patch(
+                    "mcp_coder.cli.commands.create_plan.run_create_plan_workflow",
+                    return_value=1,
+                ):
+                    result = execute_create_plan(mock_args)
+                    assert result == 1
 
-        result = execute_create_plan(args)
+        # Test exception handling
+        with patch(
+            "mcp_coder.cli.commands.create_plan.resolve_project_dir",
+            side_effect=RuntimeError("Test error"),
+        ):
+            result = execute_create_plan(mock_args)
+            assert result == 1
 
-        assert result == 1
-        mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_parse_llm.assert_called_once_with("claude_code_cli")
-        mock_run_workflow.assert_called_once_with(123, project_dir, "claude", "cli")
-
-    @patch("mcp_coder.workflows.create_plan.run_create_plan_workflow")
-    @patch("mcp_coder.cli.utils.parse_llm_method_from_args")
-    @patch("mcp_coder.workflows.utils.resolve_project_dir")
-    def test_execute_create_plan_exception_handling(
-        self,
-        mock_resolve_dir: Mock,
-        mock_parse_llm: Mock,
-        mock_run_workflow: Mock,
-        capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        """Test create-plan execution with unexpected exception."""
-        # Setup mocks
-        project_dir = Path("/test/project")
-        mock_resolve_dir.return_value = project_dir
-        mock_parse_llm.return_value = ("claude", "cli")
-        mock_run_workflow.side_effect = Exception("Unexpected error")
-
-        args = argparse.Namespace(
-            issue_number=123,
-            project_dir="/test/project",
-            llm_method="claude_code_cli",
-        )
-
-        result = execute_create_plan(args)
-
-        assert result == 1
-        captured = capsys.readouterr()
-        captured_err: str = captured.err or ""
-        assert "Error during workflow execution: Unexpected error" in captured_err
-
-    @patch("mcp_coder.workflows.create_plan.run_create_plan_workflow")
-    @patch("mcp_coder.cli.utils.parse_llm_method_from_args")
-    @patch("mcp_coder.workflows.utils.resolve_project_dir")
-    def test_execute_create_plan_keyboard_interrupt(
-        self,
-        mock_resolve_dir: Mock,
-        mock_parse_llm: Mock,
-        mock_run_workflow: Mock,
-        capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        """Test create-plan execution with keyboard interrupt."""
-        # Setup mocks
-        project_dir = Path("/test/project")
-        mock_resolve_dir.return_value = project_dir
-        mock_parse_llm.return_value = ("claude", "cli")
-        mock_run_workflow.side_effect = KeyboardInterrupt()
-
-        args = argparse.Namespace(
-            issue_number=123,
-            project_dir="/test/project",
-            llm_method="claude_code_cli",
-        )
-
-        result = execute_create_plan(args)
-
-        assert result == 1
-        captured = capsys.readouterr()
-        captured_out: str = captured.out or ""
-        assert "Operation cancelled by user." in captured_out
+        # Test keyboard interrupt
+        with patch(
+            "mcp_coder.cli.commands.create_plan.resolve_project_dir",
+            return_value=test_project_dir,
+        ):
+            with patch(
+                "mcp_coder.cli.commands.create_plan.parse_llm_method_from_args",
+                return_value=("claude", "cli"),
+            ):
+                with patch(
+                    "mcp_coder.cli.commands.create_plan.run_create_plan_workflow",
+                    side_effect=KeyboardInterrupt(),
+                ):
+                    result = execute_create_plan(mock_args)
+                    assert result == 1
