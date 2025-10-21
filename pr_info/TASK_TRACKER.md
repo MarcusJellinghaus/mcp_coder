@@ -117,17 +117,17 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 6
 
 ### Step 7: Delete Old Files and Final Verification
-- [ ] Verify new CLI command works: `mcp-coder create-plan --help` ([step_7.md](steps/step_7.md))
-- [ ] Verify new module imports correctly
-- [ ] Delete old file: `workflows/create_plan.py`
-- [ ] Delete old file: `workflows/create_plan.bat`
-- [ ] Verify files are deleted
-- [ ] Verify no references to old imports remain
-- [ ] Run final pylint check
-- [ ] Run final mypy check
-- [ ] Run final pytest check
-- [ ] Fix any issues found in final checks
-- [ ] Prepare git commit message for Step 7
+- [x] Verify new CLI command works: `mcp-coder create-plan --help` ([step_7.md](steps/step_7.md))
+- [x] Verify new module imports correctly
+- [x] Delete old file: `workflows/create_plan.py`
+- [x] Delete old file: `workflows/create_plan.bat`
+- [x] Verify files are deleted
+- [x] Verify no references to old imports remain
+- [x] Run final pylint check
+- [x] Run final mypy check
+- [x] Run final pytest check
+- [x] Fix any issues found in final checks
+- [x] Prepare git commit message for Step 7
 
 ---
 
