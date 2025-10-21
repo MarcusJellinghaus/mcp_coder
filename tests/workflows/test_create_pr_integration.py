@@ -499,7 +499,7 @@ class TestWorkflowMainFunction:
         mock_git_push.return_value = {"success": True}  # Push succeeds
         mock_create_pr.return_value = False  # PR creation fails
 
-        from workflows.create_PR import main
+        from mcp_coder.workflows.create_pr.core import main
 
         # Should exit with code 1 due to failed PR creation
         with patch("sys.exit", side_effect=SystemExit) as mock_exit:
