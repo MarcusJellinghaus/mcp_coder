@@ -7,7 +7,6 @@ argument parsing, prerequisite validation, branch management, prompt execution,
 and output validation.
 """
 
-import argparse
 import logging
 import sys
 from pathlib import Path

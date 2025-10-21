@@ -61,14 +61,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2c
 
 ### Step 2d: Clean Up Imports and Verify Quality
-- [ ] Remove unused imports (argparse, sys if unused) ([step_2d.md](steps/step_2d.md))
-- [ ] Verify module imports successfully
-- [ ] Verify function signature is correct
-- [ ] Run pylint check on cleaned up code
-- [ ] Run pytest check on cleaned up code
-- [ ] Run mypy check on cleaned up code
-- [ ] Fix any issues found in code quality checks
-- [ ] Prepare git commit message for Step 2d
+- [x] Remove unused imports (argparse, sys if unused) ([step_2d.md](steps/step_2d.md))
+- [x] Verify module imports successfully
+- [x] Verify function signature is correct
+- [x] Run pylint check on cleaned up code
+- [x] Run pytest check on cleaned up code
+- [x] Run mypy check on cleaned up code
+- [x] Fix any issues found in code quality checks
+- [x] Prepare git commit message for Step 2d
 
 ### Step 3: Register CLI Command in Main CLI System
 - [ ] Add import for `execute_create_plan` in `src/mcp_coder/cli/main.py` ([step_3.md](steps/step_3.md))
