@@ -72,15 +72,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 3: Register CLI Command in Main CLI System
 - [x] Add import for `execute_create_plan` in `src/mcp_coder/cli/main.py` ([step_3.md](steps/step_3.md))
-- [ ] Add create-plan subparser in `create_parser()` function
-- [ ] Add routing logic in `main()` function
-- [ ] Verify CLI help displays correctly
-- [ ] Verify command is recognized
-- [ ] Run pylint check on main CLI
-- [ ] Run pytest check on main CLI
-- [ ] Run mypy check on main CLI
-- [ ] Fix any issues found in code quality checks
-- [ ] Prepare git commit message for Step 3
+- [x] Add create-plan subparser in `create_parser()` function
+- [x] Add routing logic in `main()` function
+- [x] Verify CLI help displays correctly
+- [x] Verify command is recognized
+- [x] Run pylint check on main CLI
+- [x] Run pytest check on main CLI
+- [x] Run mypy check on main CLI
+- [x] Fix any issues found in code quality checks
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Create CLI Command Tests (TDD)
 - [ ] Create `tests/cli/commands/test_create_plan.py` ([step_4.md](steps/step_4.md))

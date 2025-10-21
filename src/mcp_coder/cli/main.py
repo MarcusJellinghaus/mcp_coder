@@ -183,6 +183,26 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="LLM method to use (default: claude_code_cli)",
     )
 
+    # Create plan command - Generate implementation plan from GitHub issue
+    create_plan_parser = subparsers.add_parser(
+        "create-plan", help="Generate implementation plan for a GitHub issue"
+    )
+    create_plan_parser.add_argument(
+        "issue_number", type=int, help="GitHub issue number to create plan for"
+    )
+    create_plan_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    create_plan_parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_cli",
+        help="LLM method to use (default: claude_code_cli)",
+    )
+
     return parser
 
 
@@ -235,6 +255,8 @@ def main() -> int:
                 return 1
         elif args.command == "implement":
             return execute_implement(args)
+        elif args.command == "create-plan":
+            return execute_create_plan(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")
