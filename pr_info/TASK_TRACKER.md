@@ -38,12 +38,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Create Workflow Package and Core Logic
 **Details:** [step_2.md](./steps/step_2.md)
 
-- [ ] Part A: Create Workflow Package Structure
-  - [ ] Create `src/mcp_coder/workflows/create_pr/__init__.py`
-  - [ ] Create `src/mcp_coder/workflows/create_pr/core.py` (moved from `workflows/create_PR.py`)
-  - [ ] Remove duplicate functions: `parse_arguments()`, `resolve_project_dir()`, `main()`
-  - [ ] Update `generate_pr_summary()` signature to accept `provider` and `method` parameters
-  - [ ] Create `run_create_pr_workflow()` function with binary return codes (0/1)
+- [x] Part A: Create Workflow Package Structure
+  - [x] Create `src/mcp_coder/workflows/create_pr/__init__.py`
+  - [x] Create `src/mcp_coder/workflows/create_pr/core.py` (moved from `workflows/create_PR.py`)
+  - [x] Remove duplicate functions: `parse_arguments()`, `resolve_project_dir()`, `main()`
+  - [x] Update `generate_pr_summary()` signature to accept `provider` and `method` parameters
+  - [x] Create `run_create_pr_workflow()` function with binary return codes (0/1)
 
 - [ ] Part B: Update Existing Tests
   - [ ] Update imports in `tests/workflows/create_pr/test_file_operations.py`
