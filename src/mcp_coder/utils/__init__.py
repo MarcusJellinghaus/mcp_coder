@@ -2,15 +2,32 @@
 
 This module provides various utility functions including git operations,
 subprocess execution, and other helper functions.
-"""
 
+Import Organization:
+    Layer 1: Core utilities with no internal dependencies
+    Layer 2: Operations that depend on Layer 1 utilities
+
+Note: Import order is critical to prevent circular imports.
+      isort is disabled for this file - do not reorder imports.
+"""
+# isort: skip_file
+
+# Layer 1: Core utilities (no dependencies on other utils submodules)
 from .clipboard import (
     get_clipboard_text,
     parse_commit_message,
     validate_commit_message,
 )
+from .log_utils import log_function_call, setup_logging
+from .subprocess_runner import (
+    CommandOptions,
+    CommandResult,
+    execute_command,
+    execute_subprocess,
+)
+from .user_config import get_config_file_path, get_config_value
 
-# Import all git operations for easy access
+# Layer 2: Operations (depend on Layer 1)
 from .git_operations import (
     CommitResult,
     branch_exists,
@@ -37,25 +54,13 @@ from .git_operations import (
     stage_all_changes,
     stage_specific_files,
 )
-
-# GitHub operations
 from .github_operations import PullRequestManager
-
-# Jenkins operations
 from .jenkins_operations import (
     JenkinsClient,
     JenkinsError,
     JobStatus,
     QueueSummary,
 )
-from .log_utils import log_function_call, setup_logging
-from .subprocess_runner import (
-    CommandOptions,
-    CommandResult,
-    execute_command,
-    execute_subprocess,
-)
-from .user_config import get_config_file_path, get_config_value
 
 __all__ = [
     # Clipboard operations
