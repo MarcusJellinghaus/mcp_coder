@@ -182,6 +182,12 @@ def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int
 2. ✅ Pass **pytest** (all tests, including new ones)
 3. ✅ Pass **mypy** type checking (strict mode)
 
+### Using MCP Code Checker Tools
+You can use the MCP Code Checker tools for validation:
+- `run_pytest_check` - Run tests
+- `run_pylint_check` - Check code quality
+- `run_mypy_check` - Type checking
+
 ### TDD Requirements:
 - Write tests BEFORE implementation
 - Red → Green → Refactor cycle
