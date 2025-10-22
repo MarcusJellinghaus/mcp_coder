@@ -478,7 +478,11 @@ def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int
 
     # Step 2: Generate PR summary
     log_step("Step 2/5: Generating PR summary...")
-    title, body = generate_pr_summary(project_dir, provider, method)
+    try:
+        title, body = generate_pr_summary(project_dir, provider, method)
+    except (ValueError, FileNotFoundError) as e:
+        logger.error(f"Failed to generate PR summary: {e}")
+        return 1
 
     # Step 3: Push any existing commits
     log_step("Step 3/5: Pushing commits...")

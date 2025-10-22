@@ -151,16 +151,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 **Details:** [step_7.md](./steps/step_7.md)
 
-- [ ] Update `src/mcp_coder/workflows/create_pr/core.py`
-  - [ ] Add try-except around `generate_pr_summary()` call
-  - [ ] Catch ValueError and FileNotFoundError
-  - [ ] Log error and return 1
+- [x] Update `src/mcp_coder/workflows/create_pr/core.py`
+  - [x] Add try-except around `generate_pr_summary()` call
+  - [x] Catch ValueError and FileNotFoundError
+  - [x] Log error and return 1
 
-- [ ] Validation
-  - [ ] Run workflow tests to verify error handling
-  - [ ] Run pylint check
-  - [ ] Run mypy check
-  - [ ] Commit changes
+- [x] Validation
+  - [x] Run workflow tests to verify error handling
+  - [x] Run pylint check
+  - [x] Run mypy check
+  - [x] Prepare git commit message for Step 7
 
 ### Step 8: Add CLI Smoke Test
 
