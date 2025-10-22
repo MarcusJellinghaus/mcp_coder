@@ -189,8 +189,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Change tool references to `mcp-coder create-pr`
   - [x] Update automation notes
 
-- [ ] Part C: Delete Obsolete Documentation
-  - [ ] Delete `workflows/docs/create_PR_workflow.md`
+- [x] Part C: Delete Obsolete Documentation
+  - [x] Delete `workflows/docs/create_PR_workflow.md`
 
 - [ ] Validation
   - [ ] Verify updates with grep commands
