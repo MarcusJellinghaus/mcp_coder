@@ -268,4 +268,3 @@ class TestExecuteCreatePr:
         captured = capsys.readouterr()
         captured_err: str = captured.err or ""
         assert "Error during workflow execution: Unexpected error" in captured_err
-

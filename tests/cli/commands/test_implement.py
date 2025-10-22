@@ -235,7 +235,6 @@ class TestExecuteImplement:
         assert "Operation cancelled by user." in captured_out
 
 
-
 class TestImplementCommandError:
     """Test error handling scenarios for implement command."""
 
