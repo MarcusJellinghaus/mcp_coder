@@ -319,7 +319,7 @@ flowchart LR
 
 5. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
 
-6**Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
+6. **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
 
 **Additional Prompts (for special cases):**
 
