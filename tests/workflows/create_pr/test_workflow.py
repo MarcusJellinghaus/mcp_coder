@@ -3,6 +3,8 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
 
