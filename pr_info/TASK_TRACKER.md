@@ -181,9 +181,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 **Details:** [step_9.md](./steps/step_9.md)
 
-- [ ] Part A: Update README.md
-  - [ ] Add CLI Commands section with create-pr examples
-  - [ ] Include prerequisites
+- [x] Part A: Update README.md
+  - [x] Add CLI Commands section with create-pr examples
+  - [x] Include prerequisites
 
 - [ ] Part B: Update DEVELOPMENT_PROCESS.md
   - [ ] Change tool references to `mcp-coder create-pr`
