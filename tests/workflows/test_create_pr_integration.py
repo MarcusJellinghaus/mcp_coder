@@ -151,7 +151,9 @@ class TestCreatePRWorkflowIntegration:
 
             from mcp_coder.workflows.create_pr.core import generate_pr_summary
 
-            title, body = generate_pr_summary(project_dir)
+            title, body = generate_pr_summary(
+                project_dir, provider="claude", method="cli"
+            )
 
             assert title == "feat: Add new feature"
             assert "This PR adds a new feature function." in body
@@ -370,43 +372,26 @@ class TestWorkflowErrorHandling:
 class TestWorkflowMainFunction:
     """Test the main workflow orchestration function."""
 
-    @patch("mcp_coder.workflows.create_pr.core.parse_arguments")
-    @patch("mcp_coder.workflows.create_pr.core.resolve_project_dir")
-    @patch("mcp_coder.workflows.create_pr.core.setup_logging")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
-    def test_main_workflow_argument_handling(
+    def test_main_workflow_prerequisite_failure(
         self,
         mock_check_prereqs: MagicMock,
-        mock_setup_logging: MagicMock,
-        mock_resolve_dir: MagicMock,
-        mock_parse_args: MagicMock,
     ) -> None:
-        """Test main workflow argument parsing and setup."""
+        """Test main workflow exits early when prerequisites fail."""
         # Setup mocks
-        mock_args = MagicMock()
-        mock_args.log_level = "INFO"
-        mock_parse_args.return_value = mock_args
-
-        mock_resolve_dir.return_value = Path("/test/project")
         mock_check_prereqs.return_value = False  # Fail prerequisites to exit early
 
-        from mcp_coder.workflows.create_pr.core import main
+        from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
-        # Should exit with code 1 due to failed prerequisites
-        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
-            with pytest.raises(SystemExit):
-                main()
-            mock_exit.assert_called_with(1)
+        # Should return 1 due to failed prerequisites
+        result = run_create_pr_workflow(
+            Path("/test/project"), provider="claude", method="cli"
+        )
+        assert result == 1
 
-        # Verify setup was called
-        mock_parse_args.assert_called_once()
-        mock_resolve_dir.assert_called_once()
-        mock_setup_logging.assert_called_once_with("INFO")
-        mock_check_prereqs.assert_called_once()
+        # Verify prerequisite check was called
+        mock_check_prereqs.assert_called_once_with(Path("/test/project"))
 
-    @patch("mcp_coder.workflows.create_pr.core.parse_arguments")
-    @patch("mcp_coder.workflows.create_pr.core.resolve_project_dir")
-    @patch("mcp_coder.workflows.create_pr.core.setup_logging")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
@@ -417,32 +402,26 @@ class TestWorkflowMainFunction:
         mock_git_push: MagicMock,
         mock_generate_summary: MagicMock,
         mock_check_prereqs: MagicMock,
-        mock_setup_logging: MagicMock,
-        mock_resolve_dir: MagicMock,
-        mock_parse_args: MagicMock,
     ) -> None:
         """Test main workflow handles PR creation failure."""
         # Setup mocks for successful prerequisites but failed PR creation
-        mock_args = MagicMock()
-        mock_args.log_level = "INFO"
-        mock_parse_args.return_value = mock_args
-
-        mock_resolve_dir.return_value = Path("/test/project")
         mock_check_prereqs.return_value = True
         mock_generate_summary.return_value = ("Test PR", "Test body")
         mock_git_push.return_value = {"success": True}  # Push succeeds
         mock_create_pr.return_value = False  # PR creation fails
 
-        from mcp_coder.workflows.create_pr.core import main
+        from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
-        # Should exit with code 1 due to failed PR creation
-        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
-            with pytest.raises(SystemExit):
-                main()
-            mock_exit.assert_called_with(1)
+        # Should return 1 due to failed PR creation
+        result = run_create_pr_workflow(
+            Path("/test/project"), provider="claude", method="cli"
+        )
+        assert result == 1
 
         # Verify the workflow got to PR creation step
-        mock_generate_summary.assert_called_once()
+        mock_generate_summary.assert_called_once_with(
+            Path("/test/project"), "claude", "cli"
+        )
         mock_create_pr.assert_called_once_with(
             Path("/test/project"), "Test PR", "Test body"
         )
