@@ -7,12 +7,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Development Process:** See [DEVELOPMENT_PROCESS.md](./DEVELOPMENT_PROCESS.md) for detailed workflow, prompts, and tools.
 
 **How to update tasks:**
+
 1. Change [ ] to [x] when implementation step is fully complete (code + checks pass)
 2. Change [x] to [ ] if task needs to be reopened
 3. Add brief notes in the linked detail files if needed
 4. Keep it simple - just GitHub-style checkboxes
 
 **Task format:**
+
 - [x] = Implementation step complete (code + all checks pass)
 - [ ] = Implementation step not complete
 - Each task links to a detail file in pr_info/steps/ folder
@@ -22,6 +24,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Create CLI Command Interface (TDD)
+
 **Details:** [step_1.md](./steps/step_1.md)
 
 - [x] Part A: Write Tests First (RED Phase)
@@ -36,6 +39,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Prepare git commit message for Step 1
 
 ### Step 2: Create Workflow Package and Core Logic
+
 **Details:** [step_2.md](./steps/step_2.md)
 
 - [x] Part A: Create Workflow Package Structure
@@ -60,6 +64,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Prepare git commit message for Step 2
 
 ### Step 3: Integrate with CLI Main Entry Point
+
 **Details:** [step_3.md](./steps/step_3.md)
 
 - [x] Add Import Statement
@@ -80,6 +85,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Prepare git commit message for Step 3
 
 ### Step 4: Update Integration Test Imports
+
 **Details:** [step_4.md](./steps/step_4.md)
 
 - [x] Update Integration Tests
@@ -94,6 +100,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Prepare git commit message for Step 4
 
 ### Step 5: Remove Legacy Files and Final Validation
+
 **Details:** [step_5.md](./steps/step_5.md)
 
 - [x] Part A: Remove Legacy Files
@@ -124,11 +131,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Verify all success criteria from Issue #139 are met
   - [x] Prepare final git commit message for Step 5
 
----
-
-## Code Review Follow-up Tasks
-
 ### Step 6: Add Workflow Tests
+
 **Details:** [step_6.md](./steps/step_6.md)
 
 - [ ] Create `tests/workflows/create_pr/test_workflow.py`
@@ -144,6 +148,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [ ] Commit changes
 
 ### Step 7: Add Error Handling for PR Summary Generation
+
 **Details:** [step_7.md](./steps/step_7.md)
 
 - [ ] Update `src/mcp_coder/workflows/create_pr/core.py`
@@ -158,6 +163,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [ ] Commit changes
 
 ### Step 8: Add CLI Smoke Test
+
 **Details:** [step_8.md](./steps/step_8.md)
 
 - [ ] Update `tests/cli/commands/test_create_pr.py`
@@ -172,6 +178,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [ ] Commit changes
 
 ### Step 9: Update Documentation
+
 **Details:** [step_9.md](./steps/step_9.md)
 
 - [ ] Part A: Update README.md
