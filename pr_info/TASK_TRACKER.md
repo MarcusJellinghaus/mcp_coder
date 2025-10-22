@@ -185,9 +185,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Add CLI Commands section with create-pr examples
   - [x] Include prerequisites
 
-- [ ] Part B: Update DEVELOPMENT_PROCESS.md
-  - [ ] Change tool references to `mcp-coder create-pr`
-  - [ ] Update automation notes
+- [x] Part B: Update DEVELOPMENT_PROCESS.md
+  - [x] Change tool references to `mcp-coder create-pr`
+  - [x] Update automation notes
 
 - [ ] Part C: Delete Obsolete Documentation
   - [ ] Delete `workflows/docs/create_PR_workflow.md`

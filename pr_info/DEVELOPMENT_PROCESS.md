@@ -784,7 +784,7 @@ flowchart LR
     class Process process
 ```
 
-**Tool:** `workflows\create_pr` (fully automated)
+**Tool:** `mcp-coder create-pr` (fully automated)
 
 **Output:** Pull request created on GitHub with summary
 
@@ -800,7 +800,7 @@ flowchart LR
 
 #### Detailed PR Creation Process (Manual Reference)
 
-**Note:** This section documents the manual process for reference. The `workflows/create_pr` tool now automates all these steps.
+**Note:** This section documents the manual process for reference. The `mcp-coder create-pr` command now automates all these steps.
 
 ##### 6.1 Create Summary (Manual Process - Now Automated)
 
