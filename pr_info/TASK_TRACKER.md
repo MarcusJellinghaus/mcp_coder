@@ -166,16 +166,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 **Details:** [step_8.md](./steps/step_8.md)
 
-- [ ] Update `tests/cli/commands/test_create_pr.py`
-  - [ ] Add TestCreatePrCliIntegration class
-  - [ ] Test: Command registered in CLI
-  - [ ] Test: Required arguments exist
+- [x] Update `tests/cli/commands/test_create_pr.py`
+  - [x] Add TestCreatePrCliIntegration class
+  - [x] Test: Command registered in CLI
+  - [x] Test: Required arguments exist
 
-- [ ] Validation
-  - [ ] Run smoke tests: `pytest tests/cli/commands/test_create_pr.py::TestCreatePrCliIntegration -v`
-  - [ ] Run pylint check
-  - [ ] Run mypy check
-  - [ ] Commit changes
+- [x] Validation
+  - [x] Run smoke tests: `pytest tests/cli/commands/test_create_pr.py::TestCreatePrCliIntegration -v`
+  - [x] Run pylint check
+  - [x] Run mypy check
+  - [x] Commit changes
 
 ### Step 9: Update Documentation
 
