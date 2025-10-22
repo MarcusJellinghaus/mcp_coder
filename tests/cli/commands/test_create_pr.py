@@ -268,3 +268,39 @@ class TestExecuteCreatePr:
         captured = capsys.readouterr()
         captured_err: str = captured.err or ""
         assert "Error during workflow execution: Unexpected error" in captured_err
+
+
+class TestCreatePrCliIntegration:
+    """Smoke tests for CLI integration.
+
+    Note: These tests verify that the create-pr command is properly registered
+    in the CLI parser. They require the package to be reinstalled after changes
+    to src/mcp_coder/cli/main.py.
+    """
+
+    def test_create_pr_command_registered(self) -> None:
+        """Test that create-pr command is registered in CLI."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+
+        # Parse with create-pr command (without --help to avoid SystemExit)
+        args = parser.parse_args(["create-pr"])
+
+        # Should not raise exception
+        assert args.command == "create-pr"
+
+    def test_create_pr_command_has_required_arguments(self) -> None:
+        """Test that create-pr command has expected arguments."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["create-pr"])
+
+        # Check arguments exist
+        assert hasattr(args, "project_dir")
+        assert hasattr(args, "llm_method")
+
+        # Check defaults
+        assert args.project_dir is None
+        assert args.llm_method == "claude_code_cli"
