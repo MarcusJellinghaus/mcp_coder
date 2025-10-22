@@ -115,10 +115,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run mypy on CLI command
   - [x] Run mypy on CLI main
 
-- [ ] Part D: Manual Functional Testing
-  - [ ] Verify `mcp-coder --help` shows create-pr
-  - [ ] Verify `mcp-coder create-pr --help` works
-  - [ ] Test command accessibility (no import errors)
+- [x] Part D: Manual Functional Testing
+  - [x] Verify `mcp-coder --help` shows create-pr
+  - [x] Verify `mcp-coder create-pr --help` works
+  - [x] Test command accessibility (no import errors)
 
 - [ ] Part E: Final Verification
   - [ ] Verify all success criteria from Issue #139 are met
