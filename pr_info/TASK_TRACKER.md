@@ -145,7 +145,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [x] Run workflow tests: `pytest tests/workflows/create_pr/test_workflow.py -v` (Note: requires package reinstall)
   - [x] Run pylint check (no issues found)
   - [x] Run mypy check (passes)
-  - [ ] Commit changes
+  - [x] Commit changes
 
 ### Step 7: Add Error Handling for PR Summary Generation
 
