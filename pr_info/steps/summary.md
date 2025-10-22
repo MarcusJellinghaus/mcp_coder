@@ -47,6 +47,7 @@ tests/workflows/create_pr/
 ├── test_prerequisites.py      # Updated imports
 ├── test_generation.py         # Updated imports
 ├── test_repository.py         # Updated imports
+├── test_workflow.py           # NEW: Workflow orchestration tests
 └── test_main.py               # Updated imports
 ```
 
@@ -90,12 +91,12 @@ def execute_create_pr(args: argparse.Namespace) -> int:
 # Workflow Core (core.py)
 def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int:
     # Orchestrate workflow steps
-    # Return 0 for complete success, 1 for error, 2 for partial success
+    # Return 0 for success, 1 for error
 ```
 
 ## Files to Create
 
-### New Files (3)
+### New Files (4)
 1. **`src/mcp_coder/workflows/create_pr/__init__.py`**
    - Purpose: Package initialization, export main function
    - Content: Export `run_create_pr_workflow`
@@ -110,70 +111,86 @@ def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int
    - Pattern: Copy from `implement.py`
    - Function: `execute_create_pr(args)`
 
+4. **`tests/workflows/create_pr/test_workflow.py`**
+   - Purpose: Unit tests for workflow orchestration
+   - Tests: 4 essential scenarios for `run_create_pr_workflow()`
+
 ## Files to Modify
 
-### Modified Files (9)
+### Modified Files (10+)
 1. **`src/mcp_coder/cli/main.py`**
    - Add: Import `execute_create_pr`
    - Add: `create-pr` subcommand to argument parser
    - Add: Route to `execute_create_pr()` in main()
 
-2. **`tests/workflows/create_pr/test_file_operations.py`**
-   - Change: `from workflows.create_PR` → `from mcp_coder.workflows.create_pr.core`
+2. **`src/mcp_coder/workflows/create_pr/core.py`**
+   - Add: Error handling for `generate_pr_summary()` call
+   - Catch: ValueError, FileNotFoundError
 
-3. **`tests/workflows/create_pr/test_parsing.py`**
-   - Change: `from workflows.create_PR` → `from mcp_coder.workflows.create_pr.core`
+3. **`tests/cli/commands/test_create_pr.py`**
+   - Add: CLI smoke tests (2 tests)
 
-4. **`tests/workflows/create_pr/test_prerequisites.py`**
-   - Change: `from workflows.create_PR` → `from mcp_coder.workflows.create_pr.core`
+4. **`README.md`**
+   - Add: CLI Commands section with create-pr examples
 
-5. **`tests/workflows/create_pr/test_generation.py`**
-   - Change: `from workflows.create_PR` → `from mcp_coder.workflows.create_pr.core`
+5. **`pr_info/DEVELOPMENT_PROCESS.md`**
+   - Update: Tool references from `workflows\create_pr` to `mcp-coder create-pr`
 
-6. **`tests/workflows/create_pr/test_repository.py`**
-   - Change: `from workflows.create_PR` → `from mcp_coder.workflows.create_pr.core`
+6-10. **Test files** (import updates):
+   - `tests/workflows/create_pr/test_file_operations.py`
+   - `tests/workflows/create_pr/test_parsing.py`
+   - `tests/workflows/create_pr/test_prerequisites.py`
+   - `tests/workflows/create_pr/test_generation.py`
+   - `tests/workflows/create_pr/test_repository.py`
 
-7. **`tests/workflows/create_pr/test_main.py`**
-   - Change: `from workflows.create_PR` → `from mcp_coder.workflows.create_pr.core`
-   - Change: Mock paths and function references
-
-8. **`tests/workflows/test_create_pr_integration.py`**
-   - Change: Update imports to new module structure
-
-9. **`tests/test_create_pr.py`**
-   - Change: Update legacy compatibility shim imports
+11-12. **Integration tests** (import updates):
+   - `tests/workflows/create_pr/test_main.py`
+   - `tests/workflows/test_create_pr_integration.py`
 
 ## Files to Delete
 
-### Removed Files (2)
+### Removed Files (3)
 1. **`workflows/create_PR.py`** - Replaced by `src/mcp_coder/workflows/create_pr/core.py`
 2. **`workflows/create_PR.bat`** - No longer needed (CLI handles execution)
+3. **`workflows/docs/create_PR_workflow.md`** - Obsolete documentation
 
 ## Implementation Steps Overview
 
-### Step 1: Create CLI Command Interface
-- **File:** `src/mcp_coder/cli/commands/create_pr.py`
-- **Tests:** `tests/cli/commands/test_create_pr.py`
-- **Approach:** TDD - Write tests first, implement command second
-- **Pattern:** Follow `implement.py` exactly
+### Step 1: Create CLI Command Interface (TDD)
+- Write tests first, implement command second
+- Follow `implement.py` pattern exactly
 
 ### Step 2: Create Workflow Package and Core Logic
-- **Files:** `src/mcp_coder/workflows/create_pr/__init__.py`, `core.py`
-- **Tests:** Update existing test imports
-- **Approach:** Move and refactor `workflows/create_PR.py`
+- Move and refactor `workflows/create_PR.py`
+- Update existing test imports
 
 ### Step 3: Integrate with CLI Main
-- **File:** `src/mcp_coder/cli/main.py`
-- **Tests:** Manual verification with `mcp-coder create-pr --help`
-- **Approach:** Add subcommand and routing
+- Add subcommand and routing
+- Manual verification
 
-### Step 4: Update All Test Imports
-- **Files:** All test files under `tests/workflows/create_pr/`
-- **Approach:** Find/replace imports, run tests to validate
+### Step 4: Update Integration Test Imports
+- Update integration test imports to new module structure
 
-### Step 5: Remove Legacy Files
-- **Files:** `workflows/create_PR.py`, `workflows/create_PR.bat`
-- **Validation:** Run full test suite, verify CLI works
+### Step 5: Remove Legacy Files and Final Validation
+- Delete old files
+- Run comprehensive validation
+
+### Step 6: Add Workflow Tests (NEW)
+- Create workflow orchestration tests
+- 4 essential test scenarios
+
+### Step 7: Add Error Handling (NEW)
+- Wrap `generate_pr_summary()` with try-except
+- Catch specific exceptions
+
+### Step 8: Add CLI Smoke Test (NEW)
+- Minimal integration verification
+- Confirm CLI wiring works
+
+### Step 9: Update Documentation (NEW)
+- Update README.md with CLI examples
+- Update DEVELOPMENT_PROCESS.md tool references
+- Delete obsolete documentation
 
 ## Code Quality Requirements
 
@@ -195,6 +212,7 @@ You can use the MCP Code Checker tools for validation:
 
 ## Success Criteria
 
+### Original Criteria
 - [ ] Command available: `mcp-coder create-pr --help` works
 - [ ] Accepts arguments: `--project-dir PATH`, `--llm-method METHOD`
 - [ ] All existing tests pass with updated imports
@@ -203,6 +221,13 @@ You can use the MCP Code Checker tools for validation:
 - [ ] All code quality checks pass (pylint, pytest, mypy)
 - [ ] Legacy files removed
 - [ ] Consistent with `implement` command pattern
+
+### Additional Criteria (Steps 6-9)
+- [ ] Workflow orchestration tests added (4 tests)
+- [ ] Error handling for PR summary generation
+- [ ] CLI smoke tests added
+- [ ] Documentation updated (README, DEVELOPMENT_PROCESS)
+- [ ] Obsolete documentation removed
 
 ## Risk Assessment
 
@@ -219,10 +244,20 @@ You can use the MCP Code Checker tools for validation:
 
 ## Estimated Complexity
 
+### Original Steps (1-5)
 - **Lines of code changed:** ~50-100 (mostly imports)
 - **New code:** ~50 lines (CLI command interface)
 - **Test updates:** Simple find/replace
-- **Time estimate:** 1-2 hours for careful implementation
+- **Time estimate:** 1-2 hours
+
+### Additional Steps (6-9)
+- **Test code:** ~150 lines (workflow tests + smoke tests)
+- **Error handling:** ~4 lines
+- **Documentation:** ~50 lines
+- **Time estimate:** 1-2 hours
+
+### Total Estimate
+- **Total time:** 2-4 hours for complete implementation
 
 ## Dependencies
 

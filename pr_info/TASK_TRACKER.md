@@ -126,9 +126,75 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ---
 
+## Code Review Follow-up Tasks
+
+### Step 6: Add Workflow Tests
+**Details:** [step_6.md](./steps/step_6.md)
+
+- [ ] Create `tests/workflows/create_pr/test_workflow.py`
+  - [ ] Test 1: Complete success flow
+  - [ ] Test 2: Prerequisites fail
+  - [ ] Test 3: PR creation fails
+  - [ ] Test 4: Generate summary exception
+
+- [ ] Validation
+  - [ ] Run workflow tests: `pytest tests/workflows/create_pr/test_workflow.py -v`
+  - [ ] Run pylint check
+  - [ ] Run mypy check
+  - [ ] Commit changes
+
+### Step 7: Add Error Handling for PR Summary Generation
+**Details:** [step_7.md](./steps/step_7.md)
+
+- [ ] Update `src/mcp_coder/workflows/create_pr/core.py`
+  - [ ] Add try-except around `generate_pr_summary()` call
+  - [ ] Catch ValueError and FileNotFoundError
+  - [ ] Log error and return 1
+
+- [ ] Validation
+  - [ ] Run workflow tests to verify error handling
+  - [ ] Run pylint check
+  - [ ] Run mypy check
+  - [ ] Commit changes
+
+### Step 8: Add CLI Smoke Test
+**Details:** [step_8.md](./steps/step_8.md)
+
+- [ ] Update `tests/cli/commands/test_create_pr.py`
+  - [ ] Add TestCreatePrCliIntegration class
+  - [ ] Test: Command registered in CLI
+  - [ ] Test: Required arguments exist
+
+- [ ] Validation
+  - [ ] Run smoke tests: `pytest tests/cli/commands/test_create_pr.py::TestCreatePrCliIntegration -v`
+  - [ ] Run pylint check
+  - [ ] Run mypy check
+  - [ ] Commit changes
+
+### Step 9: Update Documentation
+**Details:** [step_9.md](./steps/step_9.md)
+
+- [ ] Part A: Update README.md
+  - [ ] Add CLI Commands section with create-pr examples
+  - [ ] Include prerequisites
+
+- [ ] Part B: Update DEVELOPMENT_PROCESS.md
+  - [ ] Change tool references to `mcp-coder create-pr`
+  - [ ] Update automation notes
+
+- [ ] Part C: Delete Obsolete Documentation
+  - [ ] Delete `workflows/docs/create_PR_workflow.md`
+
+- [ ] Validation
+  - [ ] Verify updates with grep commands
+  - [ ] Manual review of documentation
+  - [ ] Commit changes
+
+---
+
 ## Pull Request
 
-- [ ] Review all changes across all steps
+- [ ] Review all changes across all steps (1-9)
 - [ ] Ensure all tests pass
 - [ ] Ensure all code quality checks pass
 - [ ] Create PR summary highlighting key changes and benefits
