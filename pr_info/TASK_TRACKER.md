@@ -32,10 +32,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 2: Repository Config Validation (TDD)
 - [x] Create `tests/cli/commands/test_coordinator.py` with validation tests (see [step_2.md](steps/step_2.md))
-- [ ] Create `src/mcp_coder/cli/commands/coordinator.py` with helper functions (see [step_2.md](steps/step_2.md))
-- [ ] Run code quality checks: pylint, pytest, mypy (see [step_2.md](steps/step_2.md))
-- [ ] Verify all tests pass and fix any issues found (see [step_2.md](steps/step_2.md))
-- [ ] Prepare git commit message for Step 2 (see [step_2.md](steps/step_2.md))
+- [x] Create `src/mcp_coder/cli/commands/coordinator.py` with helper functions (see [step_2.md](steps/step_2.md))
+- [x] Run code quality checks: pylint, pytest, mypy (see [step_2.md](steps/step_2.md))
+- [x] Verify all tests pass and fix any issues found (see [step_2.md](steps/step_2.md))
+- [x] Prepare git commit message for Step 2 (see [step_2.md](steps/step_2.md))
 
 ### Step 3: CLI Command Core Logic (TDD)
 - [ ] Extend `tests/cli/commands/test_coordinator.py` with execution tests (see [step_3.md](steps/step_3.md))
