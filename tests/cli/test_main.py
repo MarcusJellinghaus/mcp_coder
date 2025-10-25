@@ -49,7 +49,7 @@ class TestCreateParser:
         """Test log level has correct default value."""
         parser = create_parser()
         args = parser.parse_args(["help"])
-        assert args.log_level == "WARNING"
+        assert args.log_level == "INFO"
 
     def test_parser_log_level_choices(self) -> None:
         """Test log level validates choices."""
@@ -106,7 +106,7 @@ class TestMain:
         """Test that main calls handle_no_command when no command provided."""
         mock_parser = Mock()
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command=None, log_level="WARNING"
+            command=None, log_level="INFO"
         )
         mock_create_parser.return_value = mock_parser
         mock_handle_no_command.return_value = 1
@@ -115,7 +115,7 @@ class TestMain:
 
         assert result == 1
         mock_handle_no_command.assert_called_once()
-        mock_setup_logging.assert_called_once_with("WARNING")
+        mock_setup_logging.assert_called_once_with("INFO")
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.execute_help")
@@ -129,7 +129,7 @@ class TestMain:
         """Test 'mcp-coder help' command works."""
         mock_parser = Mock()
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command="help", log_level="WARNING"
+            command="help", log_level="INFO"
         )
         mock_create_parser.return_value = mock_parser
         mock_execute_help.return_value = 0
@@ -138,7 +138,7 @@ class TestMain:
 
         assert result == 0
         mock_execute_help.assert_called_once()
-        mock_setup_logging.assert_called_once_with("WARNING")
+        mock_setup_logging.assert_called_once_with("INFO")
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
@@ -149,7 +149,7 @@ class TestMain:
         """Test that main returns error for unknown commands."""
         mock_parser = Mock()
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command="unknown", log_level="WARNING"
+            command="unknown", log_level="INFO"
         )
         mock_create_parser.return_value = mock_parser
 
@@ -157,7 +157,7 @@ class TestMain:
 
         assert result == 1
         mock_print.assert_called()
-        mock_setup_logging.assert_called_once_with("WARNING")
+        mock_setup_logging.assert_called_once_with("INFO")
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
@@ -169,7 +169,7 @@ class TestMain:
         # For KeyboardInterrupt, the exception occurs before we get log_level,
         # so we need to mock the args parsing to succeed first
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command=None, log_level="WARNING"
+            command=None, log_level="INFO"
         )
         mock_create_parser.return_value = mock_parser
 
@@ -181,7 +181,7 @@ class TestMain:
                 result = main()
 
         assert result == 1
-        mock_setup_logging.assert_called_once_with("WARNING")
+        mock_setup_logging.assert_called_once_with("INFO")
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
@@ -193,7 +193,7 @@ class TestMain:
         # For unexpected exceptions, the exception occurs after we get log_level,
         # so we need args parsing to succeed first
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command=None, log_level="WARNING"
+            command=None, log_level="INFO"
         )
         mock_create_parser.return_value = mock_parser
 
@@ -205,7 +205,7 @@ class TestMain:
                 result = main()
 
         assert result == 2
-        mock_setup_logging.assert_called_once_with("WARNING")
+        mock_setup_logging.assert_called_once_with("INFO")
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.handle_no_command")
