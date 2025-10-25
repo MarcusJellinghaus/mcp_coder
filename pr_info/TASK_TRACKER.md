@@ -53,7 +53,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 5: Documentation & Integration Tests
 - [x] Create `docs/configuration/CONFIG.md` with comprehensive examples (see [step_5.md](steps/step_5.md))
-- [ ] Update `README.md` with coordinator command usage (see [step_5.md](steps/step_5.md))
+- [x] Update `README.md` with coordinator command usage (see [step_5.md](steps/step_5.md))
 - [ ] Add integration tests to `test_coordinator.py` with jenkins_integration marker (see [step_5.md](steps/step_5.md))
 - [ ] Run code quality checks: pylint, pytest, mypy (see [step_5.md](steps/step_5.md))
 - [ ] Verify all tests pass and fix any issues found (see [step_5.md](steps/step_5.md))

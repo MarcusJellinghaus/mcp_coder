@@ -208,6 +208,44 @@ mcp-coder create-pr --help
 - On feature branch (not main)
 - GitHub credentials configured
 
+### Coordinator Commands
+
+Trigger Jenkins-based integration tests for repositories in containerized environments.
+
+#### coordinator test
+
+Trigger integration test for a specific repository and branch:
+
+```bash
+mcp-coder coordinator test <repo_name> --branch-name <branch>
+```
+
+**Parameters:**
+- `<repo_name>` - Repository identifier from config (e.g., `mcp_coder`)
+- `--branch-name` - Git branch to test (required)
+- `--log-level` - Logging verbosity (optional, default: INFO)
+
+**Example:**
+```bash
+mcp-coder coordinator test mcp_coder --branch-name feature-x
+```
+
+**Output:**
+```
+Job triggered: MCP_Coder/mcp-coder-test-job - test - queue: 12345
+https://jenkins.example.com/job/MCP_Coder/mcp-coder-test-job/42/
+```
+
+**Configuration:**
+See [Configuration Guide](docs/configuration/CONFIG.md) for complete configuration documentation.
+
+**First Run:**
+On first use, a configuration template is auto-created at:
+- Windows: `%USERPROFILE%\.mcp_coder\config.toml`
+- Linux: `~/.config/mcp_coder/config.toml`
+
+Update the template with your Jenkins credentials and repository information.
+
 ### Git Operations
 
 ```python
