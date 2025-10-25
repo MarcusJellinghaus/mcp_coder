@@ -31,7 +31,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 1 (see [step_1.md](steps/step_1.md))
 
 ### Step 2: Repository Config Validation (TDD)
-- [ ] Create `tests/cli/commands/test_coordinator.py` with validation tests (see [step_2.md](steps/step_2.md))
+- [x] Create `tests/cli/commands/test_coordinator.py` with validation tests (see [step_2.md](steps/step_2.md))
 - [ ] Create `src/mcp_coder/cli/commands/coordinator.py` with helper functions (see [step_2.md](steps/step_2.md))
 - [ ] Run code quality checks: pylint, pytest, mypy (see [step_2.md](steps/step_2.md))
 - [ ] Verify all tests pass and fix any issues found (see [step_2.md](steps/step_2.md))
