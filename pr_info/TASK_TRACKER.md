@@ -45,11 +45,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 3 (see [step_3.md](steps/step_3.md))
 
 ### Step 4: CLI Integration (TDD)
-- [ ] Extend `tests/cli/test_main.py` with coordinator CLI tests (see [step_4.md](steps/step_4.md))
-- [ ] Update `src/mcp_coder/cli/main.py` with coordinator subparser (see [step_4.md](steps/step_4.md))
-- [ ] Run code quality checks: pylint, pytest, mypy (see [step_4.md](steps/step_4.md))
-- [ ] Verify all tests pass and fix any issues found (see [step_4.md](steps/step_4.md))
-- [ ] Prepare git commit message for Step 4 (see [step_4.md](steps/step_4.md))
+- [x] Extend `tests/cli/test_main.py` with coordinator CLI tests (see [step_4.md](steps/step_4.md))
+- [x] Update `src/mcp_coder/cli/main.py` with coordinator subparser (see [step_4.md](steps/step_4.md))
+- [x] Run code quality checks: pylint, pytest, mypy (see [step_4.md](steps/step_4.md))
+- [x] Verify all tests pass and fix any issues found (see [step_4.md](steps/step_4.md))
+- [x] Prepare git commit message for Step 4 (see [step_4.md](steps/step_4.md))
 
 ### Step 5: Documentation & Integration Tests
 - [ ] Create `docs/configuration/CONFIG.md` with comprehensive examples (see [step_5.md](steps/step_5.md))
