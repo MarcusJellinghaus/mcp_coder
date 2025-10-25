@@ -38,11 +38,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2 (see [step_2.md](steps/step_2.md))
 
 ### Step 3: CLI Command Core Logic (TDD)
-- [ ] Extend `tests/cli/commands/test_coordinator.py` with execution tests (see [step_3.md](steps/step_3.md))
-- [ ] Implement `execute_coordinator_test()` in coordinator.py (see [step_3.md](steps/step_3.md))
-- [ ] Run code quality checks: pylint, pytest, mypy (see [step_3.md](steps/step_3.md))
-- [ ] Verify all tests pass and fix any issues found (see [step_3.md](steps/step_3.md))
-- [ ] Prepare git commit message for Step 3 (see [step_3.md](steps/step_3.md))
+- [x] Extend `tests/cli/commands/test_coordinator.py` with execution tests (see [step_3.md](steps/step_3.md))
+- [x] Implement `execute_coordinator_test()` in coordinator.py (see [step_3.md](steps/step_3.md))
+- [x] Run code quality checks: pylint, pytest, mypy (see [step_3.md](steps/step_3.md))
+- [x] Verify all tests pass and fix any issues found (see [step_3.md](steps/step_3.md))
+- [x] Prepare git commit message for Step 3 (see [step_3.md](steps/step_3.md))
 
 ### Step 4: CLI Integration (TDD)
 - [ ] Extend `tests/cli/test_main.py` with coordinator CLI tests (see [step_4.md](steps/step_4.md))
