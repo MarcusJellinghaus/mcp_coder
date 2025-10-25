@@ -22,3 +22,49 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### Step 1: Config Template Infrastructure (TDD)
+- [ ] Write tests for `create_default_config` in `tests/utils/test_user_config.py` (see [step_1.md](steps/step_1.md))
+- [ ] Implement `create_default_config()` in `src/mcp_coder/utils/user_config.py` (see [step_1.md](steps/step_1.md))
+- [ ] Run code quality checks: pylint, pytest, mypy (see [step_1.md](steps/step_1.md))
+- [ ] Verify all tests pass and fix any issues found (see [step_1.md](steps/step_1.md))
+- [ ] Prepare git commit message for Step 1 (see [step_1.md](steps/step_1.md))
+
+### Step 2: Repository Config Validation (TDD)
+- [ ] Create `tests/cli/commands/test_coordinator.py` with validation tests (see [step_2.md](steps/step_2.md))
+- [ ] Create `src/mcp_coder/cli/commands/coordinator.py` with helper functions (see [step_2.md](steps/step_2.md))
+- [ ] Run code quality checks: pylint, pytest, mypy (see [step_2.md](steps/step_2.md))
+- [ ] Verify all tests pass and fix any issues found (see [step_2.md](steps/step_2.md))
+- [ ] Prepare git commit message for Step 2 (see [step_2.md](steps/step_2.md))
+
+### Step 3: CLI Command Core Logic (TDD)
+- [ ] Extend `tests/cli/commands/test_coordinator.py` with execution tests (see [step_3.md](steps/step_3.md))
+- [ ] Implement `execute_coordinator_test()` in coordinator.py (see [step_3.md](steps/step_3.md))
+- [ ] Run code quality checks: pylint, pytest, mypy (see [step_3.md](steps/step_3.md))
+- [ ] Verify all tests pass and fix any issues found (see [step_3.md](steps/step_3.md))
+- [ ] Prepare git commit message for Step 3 (see [step_3.md](steps/step_3.md))
+
+### Step 4: CLI Integration (TDD)
+- [ ] Extend `tests/cli/test_main.py` with coordinator CLI tests (see [step_4.md](steps/step_4.md))
+- [ ] Update `src/mcp_coder/cli/main.py` with coordinator subparser (see [step_4.md](steps/step_4.md))
+- [ ] Run code quality checks: pylint, pytest, mypy (see [step_4.md](steps/step_4.md))
+- [ ] Verify all tests pass and fix any issues found (see [step_4.md](steps/step_4.md))
+- [ ] Prepare git commit message for Step 4 (see [step_4.md](steps/step_4.md))
+
+### Step 5: Documentation & Integration Tests
+- [ ] Create `docs/configuration/CONFIG.md` with comprehensive examples (see [step_5.md](steps/step_5.md))
+- [ ] Update `README.md` with coordinator command usage (see [step_5.md](steps/step_5.md))
+- [ ] Add integration tests to `test_coordinator.py` with jenkins_integration marker (see [step_5.md](steps/step_5.md))
+- [ ] Run code quality checks: pylint, pytest, mypy (see [step_5.md](steps/step_5.md))
+- [ ] Verify all tests pass and fix any issues found (see [step_5.md](steps/step_5.md))
+- [ ] Prepare git commit message for Step 5 (see [step_5.md](steps/step_5.md))
+
+---
+
+## Pull Request
+
+- [ ] Review all implementation steps are complete
+- [ ] Run final code quality checks across entire codebase
+- [ ] Verify all acceptance criteria from issue #149 are met
+- [ ] Create pull request with summary of changes
+- [ ] Link pull request to issue #149
