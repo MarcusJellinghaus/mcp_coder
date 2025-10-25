@@ -324,7 +324,9 @@ def generate_pr_summary(
     try:
         prompt_template = get_prompt(str(PROMPTS_FILE_PATH), "PR Summary Generation")
     except (FileNotFoundError, ValueError) as e:
-        logger.error(f"Critical error: Cannot load prompt 'PR Summary Generation' from {PROMPTS_FILE_PATH}: {e}")
+        logger.error(
+            f"Critical error: Cannot load prompt 'PR Summary Generation' from {PROMPTS_FILE_PATH}: {e}"
+        )
         raise
     except Exception as e:
         logger.error(f"Unexpected error loading prompt 'PR Summary Generation': {e}")
