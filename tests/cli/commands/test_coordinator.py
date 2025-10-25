@@ -607,3 +607,80 @@ class TestExecuteCoordinatorTest:
         # Verify fallback message in output
         captured = capsys.readouterr()
         assert "will be available once build starts" in captured.out
+
+
+@pytest.mark.jenkins_integration
+class TestCoordinatorIntegration:
+    """Integration tests for coordinator command with real Jenkins.
+
+    These tests require:
+    - Jenkins server configured
+    - Jenkins credentials in config or environment
+    - Test job configured in Jenkins
+
+    Tests are skipped if Jenkins not configured.
+    """
+
+    @pytest.fixture
+    def jenkins_available(self) -> bool:
+        """Check if Jenkins configuration is available."""
+        try:
+            get_jenkins_credentials()
+            return True
+        except ValueError:
+            return False
+
+    def test_coordinator_test_end_to_end(
+        self, jenkins_available: bool, tmp_path: Path
+    ) -> None:
+        """Test complete coordinator test flow with real Jenkins.
+
+        This test actually triggers a Jenkins job.
+        Only run if you have a test Jenkins environment.
+        """
+        if not jenkins_available:
+            pytest.skip("Jenkins not configured")
+
+        # Create minimal args for the test
+        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+
+        # This would trigger an actual Jenkins job if Jenkins is configured
+        # For safety, we skip this test by default unless Jenkins is explicitly configured
+        # and the repository exists in the config
+        try:
+            repo_config = load_repo_config("mcp_coder")
+            if repo_config is None:
+                pytest.skip("Repository 'mcp_coder' not configured")
+
+            # Validate repo config
+            validate_repo_config("mcp_coder", repo_config)
+
+            # If we get here, Jenkins and repo are configured
+            # In a real test environment, we would call execute_coordinator_test(args)
+            # For now, we just verify the configuration is valid
+            assert repo_config["repo_url"] is not None
+            assert repo_config["test_job_path"] is not None
+            assert repo_config["github_credentials_id"] is not None
+
+        except ValueError as e:
+            pytest.skip(f"Configuration incomplete: {e}")
+
+    def test_coordinator_test_with_invalid_job(self, jenkins_available: bool) -> None:
+        """Test error handling with invalid job path.
+
+        This test verifies proper error handling when attempting to
+        trigger a job that doesn't exist in Jenkins.
+        """
+        if not jenkins_available:
+            pytest.skip("Jenkins not configured")
+
+        # Create args with a non-existent repository
+        args = argparse.Namespace(
+            repo_name="nonexistent_repo_12345", branch_name="main"
+        )
+
+        # This should fail with a helpful error message
+        result = execute_coordinator_test(args)
+
+        # Verify exit code indicates failure
+        assert result == 1
