@@ -266,3 +266,110 @@ class TestCLIEntryPoint:
         """Test that main can be imported from CLI module."""
         # Main already imported at module level - verify it's callable
         assert callable(main)
+
+
+class TestCoordinatorCommand:
+    """Tests for coordinator command CLI integration."""
+
+    def test_coordinator_test_command_parsing(self) -> None:
+        """Test that coordinator test command is parsed correctly."""
+        # Setup
+        parser = create_parser()
+
+        # Execute
+        args = parser.parse_args(
+            ["coordinator", "test", "mcp_coder", "--branch-name", "feature-x"]
+        )
+
+        # Verify
+        assert args.command == "coordinator"
+        assert args.coordinator_subcommand == "test"
+        assert args.repo_name == "mcp_coder"
+        assert args.branch_name == "feature-x"
+        assert args.log_level == "INFO"  # default
+
+    def test_coordinator_test_requires_branch_name(self) -> None:
+        """Test that --branch-name is required."""
+        parser = create_parser()
+
+        # Should raise SystemExit when --branch-name is missing
+        with pytest.raises(SystemExit):
+            parser.parse_args(["coordinator", "test", "mcp_coder"])
+
+    @patch("mcp_coder.cli.main.execute_coordinator_test")
+    def test_coordinator_test_executes_handler(self, mock_execute: Mock) -> None:
+        """Test that coordinator test calls execute_coordinator_test."""
+        # Setup
+        mock_execute.return_value = 0
+
+        # Execute
+        with patch(
+            "sys.argv",
+            [
+                "mcp-coder",
+                "coordinator",
+                "test",
+                "mcp_coder",
+                "--branch-name",
+                "feature-x",
+            ],
+        ):
+            result = main()
+
+        # Verify
+        assert result == 0
+        mock_execute.assert_called_once()
+
+        # Check args passed to handler
+        call_args = mock_execute.call_args[0][0]
+        assert call_args.repo_name == "mcp_coder"
+        assert call_args.branch_name == "feature-x"
+
+    @patch("mcp_coder.cli.main.execute_coordinator_test")
+    def test_coordinator_test_with_log_level(self, mock_execute: Mock) -> None:
+        """Test coordinator test respects --log-level flag."""
+        # Setup
+        mock_execute.return_value = 0
+
+        # Execute
+        with patch(
+            "sys.argv",
+            [
+                "mcp-coder",
+                "--log-level",
+                "DEBUG",
+                "coordinator",
+                "test",
+                "mcp_coder",
+                "--branch-name",
+                "feature-x",
+            ],
+        ):
+            result = main()
+
+        # Verify
+        assert result == 0
+        mock_execute.assert_called_once()
+
+        # Check args passed to handler
+        call_args = mock_execute.call_args[0][0]
+        assert call_args.repo_name == "mcp_coder"
+        assert call_args.branch_name == "feature-x"
+        assert call_args.log_level == "DEBUG"
+
+    @patch("mcp_coder.cli.main.logger")
+    @patch("builtins.print")
+    def test_coordinator_no_subcommand_shows_error(
+        self, mock_print: Mock, mock_logger: Mock
+    ) -> None:
+        """Test that coordinator without subcommand shows error."""
+        # Execute
+        with patch("sys.argv", ["mcp-coder", "coordinator"]):
+            result = main()
+
+        # Verify
+        assert result == 1
+        mock_logger.error.assert_called_with("Coordinator subcommand required")
+        mock_print.assert_called_with(
+            "Error: Please specify a coordinator subcommand (e.g., 'test')"
+        )
