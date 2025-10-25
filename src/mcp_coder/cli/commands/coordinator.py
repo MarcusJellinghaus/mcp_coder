@@ -7,9 +7,12 @@ Jenkins-based integration tests for MCP Coder repositories.
 import argparse
 import logging
 import os
+import sys
 from typing import Optional
 
-from ...utils.user_config import get_config_value
+from ...utils.jenkins_operations.client import JenkinsClient
+from ...utils.jenkins_operations.models import JobStatus
+from ...utils.user_config import create_default_config, get_config_value
 
 logger = logging.getLogger(__name__)
 
@@ -125,3 +128,75 @@ def format_job_output(job_path: str, queue_id: int, url: Optional[str]) -> str:
         output += "\n(Job URL will be available once build starts)"
 
     return output
+
+
+def execute_coordinator_test(args: argparse.Namespace) -> int:
+    """Execute coordinator test command.
+
+    Args:
+        args: Parsed command line arguments with:
+            - repo_name: Repository name to test
+            - branch_name: Git branch to test
+
+    Returns:
+        int: Exit code (0 for success, 1 for error)
+    """
+    try:
+        # Auto-create config on first run
+        created = create_default_config()
+        if created:
+            logger.info(
+                "Created default config file. Please update with your credentials."
+            )
+            print("Created default config file at ~/.mcp_coder/config.toml")
+            print("Please update it with your Jenkins and repository information.")
+            return 1  # Exit to let user configure
+
+        # Load and validate repository config
+        repo_config = load_repo_config(args.repo_name)
+        validate_repo_config(args.repo_name, repo_config)
+
+        # Type narrowing: validate_repo_config raises if repo_config is None
+        assert repo_config is not None
+
+        # Get Jenkins credentials
+        server_url, username, api_token = get_jenkins_credentials()
+
+        # Create Jenkins client
+        client = JenkinsClient(server_url, username, api_token)
+
+        # Build job parameters
+        params = {
+            "REPO_URL": repo_config["repo_url"],
+            "BRANCH_NAME": args.branch_name,
+            "GITHUB_CREDENTIALS_ID": repo_config["github_credentials_id"],
+        }
+
+        # Start job
+        queue_id = client.start_job(repo_config["test_job_path"], params)
+
+        # Try to get job URL (may not be available immediately)
+        try:
+            status = client.get_job_status(queue_id)
+            job_url = status.url
+        except Exception as e:
+            logger.debug(f"Could not get job status: {e}")
+            job_url = None
+
+        # Format and print output
+        output = format_job_output(repo_config["test_job_path"], queue_id, job_url)
+        print(output)
+
+        return 0
+
+    except ValueError as e:
+        # User-facing errors (config issues)
+        print(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Configuration error: {e}")
+        return 1
+
+    except Exception as e:
+        # Let all other exceptions bubble up with full traceback
+        # (per issue spec: "Let exceptions bubble up naturally for debugging")
+        logger.error(f"Unexpected error: {e}", exc_info=True)
+        raise
