@@ -1,7 +1,6 @@
 """Integration tests for create_PR workflow script.
 
 These tests verify the complete workflow integration including:
-- Windows batch wrapper functionality
 - End-to-end workflow execution
 - File system operations
 - Git repository state management
@@ -26,71 +25,6 @@ from mcp_coder.utils.git_operations import (
 from tests.utils.conftest import git_repo, git_repo_with_files
 
 
-class TestCreatePRBatchWrapper:
-    """Test Windows batch wrapper functionality."""
-
-    def test_batch_file_exists(self) -> None:
-        """Test that the batch wrapper file exists and is executable."""
-        batch_file = Path("workflows/create_PR.bat")
-        assert batch_file.exists(), "create_PR.bat wrapper should exist"
-        assert batch_file.is_file(), "create_PR.bat should be a file"
-
-        # Check file has content
-        content = batch_file.read_text(encoding="utf-8")
-        assert len(content) > 0, "Batch file should not be empty"
-        assert "@echo off" in content, "Should be a proper Windows batch file"
-
-    def test_batch_file_structure(self) -> None:
-        """Test that batch file has proper structure and commands."""
-        batch_file = Path("workflows/create_PR.bat")
-        content = batch_file.read_text(encoding="utf-8")
-
-        # Check for essential components
-        assert "create_PR.py" in content, "Should reference the Python script"
-        assert "python" in content.lower(), "Should call Python"
-        assert "exit /b" in content, "Should properly handle exit codes"
-        assert (
-            "workflows\\create_PR.py" in content
-        ), "Should reference correct script path"
-        assert "PYTHONPATH" in content, "Should set PYTHONPATH for src directory"
-
-    def test_batch_file_help_documentation(self) -> None:
-        """Test that batch file contains proper usage documentation."""
-        batch_file = Path("workflows/create_PR.bat")
-        content = batch_file.read_text(encoding="utf-8")
-
-        # Check for usage documentation
-        assert "Usage:" in content, "Should have usage documentation"
-        assert "--project-dir" in content, "Should document project-dir parameter"
-        assert "--log-level" in content, "Should document log-level parameter"
-        assert "Examples:" in content, "Should have usage examples"
-
-    @pytest.mark.git_integration
-    def test_batch_wrapper_environment_checks(self, tmp_path: Path) -> None:
-        """Test batch wrapper environment validation."""
-        # Create a temporary directory structure
-        test_project = tmp_path / "test_project"
-        test_project.mkdir()
-
-        # Copy the batch file to test directory
-        original_batch = Path("workflows/create_PR.bat")
-        test_batch = test_project / "workflows"
-        test_batch.mkdir()
-
-        # Create a modified batch file that just does environment checks
-        test_batch_file = test_batch / "create_PR.bat"
-        original_content = original_batch.read_text(encoding="utf-8")
-
-        # Replace the Python execution with just environment checks
-        test_content = original_content.replace(
-            "python workflows\\create_PR.py %*", "echo Environment checks passed"
-        )
-        test_batch_file.write_text(test_content, encoding="utf-8")
-
-        # Test environment check behavior (Python availability, etc.)
-        # Note: This is a basic structure test, actual execution would require Windows
-
-
 class TestCreatePRWorkflowIntegration:
     """Integration tests for the complete PR creation workflow."""
 
@@ -107,7 +41,7 @@ class TestCreatePRWorkflowIntegration:
         test_file.write_text("uncommitted content")
 
         # Import and test the prerequisite check
-        from workflows.create_PR import check_prerequisites
+        from mcp_coder.workflows.create_pr.core import check_prerequisites
 
         # Should fail with dirty working directory
         assert not check_prerequisites(project_dir)
@@ -131,7 +65,7 @@ class TestCreatePRWorkflowIntegration:
         # Import workflow functions (get_current_branch_name and is_working_directory_clean already imported at module level)
         from mcp_coder.utils.git_operations import get_parent_branch_name
         from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
-        from workflows.create_PR import check_prerequisites
+        from mcp_coder.workflows.create_pr.core import check_prerequisites
 
         # Test each prerequisite individually
         is_clean = is_working_directory_clean(project_dir)
@@ -167,7 +101,7 @@ class TestCreatePRWorkflowIntegration:
         self._setup_project_with_steps(project_dir)
 
         # Import cleanup functions
-        from workflows.create_PR import (
+        from mcp_coder.workflows.create_pr.core import (
             cleanup_repository,
             delete_steps_directory,
             truncate_task_tracker,
@@ -210,14 +144,16 @@ class TestCreatePRWorkflowIntegration:
         repo.index.commit("Add new feature")
 
         # Mock LLM response for PR summary
-        with patch("workflows.create_PR.ask_llm") as mock_llm:
+        with patch("mcp_coder.workflows.create_pr.core.ask_llm") as mock_llm:
             mock_llm.return_value = (
                 "feat: Add new feature\n\nThis PR adds a new feature function."
             )
 
-            from workflows.create_PR import generate_pr_summary
+            from mcp_coder.workflows.create_pr.core import generate_pr_summary
 
-            title, body = generate_pr_summary(project_dir)
+            title, body = generate_pr_summary(
+                project_dir, provider="claude", method="cli"
+            )
 
             assert title == "feat: Add new feature"
             assert "This PR adds a new feature function." in body
@@ -369,7 +305,10 @@ class TestWorkflowErrorHandling:
         project_dir = tmp_path / "empty_project"
         project_dir.mkdir()
 
-        from workflows.create_PR import check_prerequisites, cleanup_repository
+        from mcp_coder.workflows.create_pr.core import (
+            check_prerequisites,
+            cleanup_repository,
+        )
 
         # Should handle missing files without crashing
         assert not check_prerequisites(project_dir)  # Should return False, not crash
@@ -394,10 +333,10 @@ class TestWorkflowErrorHandling:
         steps_dir.mkdir()
         (steps_dir / "test.md").write_text("test content")
 
-        from workflows.create_PR import delete_steps_directory
+        from mcp_coder.workflows.create_pr.core import delete_steps_directory
 
         # Mock permission error
-        with patch("workflows.create_PR.shutil.rmtree") as mock_rmtree:
+        with patch("mcp_coder.workflows.create_pr.core.shutil.rmtree") as mock_rmtree:
             mock_rmtree.side_effect = PermissionError("Access denied")
 
             # Should return False and log error, not crash
@@ -406,7 +345,7 @@ class TestWorkflowErrorHandling:
 
     def test_parse_pr_summary_edge_cases(self) -> None:
         """Test PR summary parsing with various edge cases."""
-        from workflows.create_PR import parse_pr_summary
+        from mcp_coder.workflows.create_pr.core import parse_pr_summary
 
         # Test empty response
         title, body = parse_pr_summary("")
@@ -433,79 +372,56 @@ class TestWorkflowErrorHandling:
 class TestWorkflowMainFunction:
     """Test the main workflow orchestration function."""
 
-    @patch("workflows.create_PR.parse_arguments")
-    @patch("workflows.create_PR.resolve_project_dir")
-    @patch("workflows.create_PR.setup_logging")
-    @patch("workflows.create_PR.check_prerequisites")
-    def test_main_workflow_argument_handling(
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    def test_main_workflow_prerequisite_failure(
         self,
         mock_check_prereqs: MagicMock,
-        mock_setup_logging: MagicMock,
-        mock_resolve_dir: MagicMock,
-        mock_parse_args: MagicMock,
     ) -> None:
-        """Test main workflow argument parsing and setup."""
+        """Test main workflow exits early when prerequisites fail."""
         # Setup mocks
-        mock_args = MagicMock()
-        mock_args.log_level = "INFO"
-        mock_parse_args.return_value = mock_args
-
-        mock_resolve_dir.return_value = Path("/test/project")
         mock_check_prereqs.return_value = False  # Fail prerequisites to exit early
 
-        from workflows.create_PR import main
+        from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
-        # Should exit with code 1 due to failed prerequisites
-        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
-            with pytest.raises(SystemExit):
-                main()
-            mock_exit.assert_called_with(1)
+        # Should return 1 due to failed prerequisites
+        result = run_create_pr_workflow(
+            Path("/test/project"), provider="claude", method="cli"
+        )
+        assert result == 1
 
-        # Verify setup was called
-        mock_parse_args.assert_called_once()
-        mock_resolve_dir.assert_called_once()
-        mock_setup_logging.assert_called_once_with("INFO")
-        mock_check_prereqs.assert_called_once()
+        # Verify prerequisite check was called
+        mock_check_prereqs.assert_called_once_with(Path("/test/project"))
 
-    @patch("workflows.create_PR.parse_arguments")
-    @patch("workflows.create_PR.resolve_project_dir")
-    @patch("workflows.create_PR.setup_logging")
-    @patch("workflows.create_PR.check_prerequisites")
-    @patch("workflows.create_PR.generate_pr_summary")
-    @patch("workflows.create_PR.git_push")
-    @patch("workflows.create_PR.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     def test_main_workflow_pr_creation_failure(
         self,
         mock_create_pr: MagicMock,
         mock_git_push: MagicMock,
         mock_generate_summary: MagicMock,
         mock_check_prereqs: MagicMock,
-        mock_setup_logging: MagicMock,
-        mock_resolve_dir: MagicMock,
-        mock_parse_args: MagicMock,
     ) -> None:
         """Test main workflow handles PR creation failure."""
         # Setup mocks for successful prerequisites but failed PR creation
-        mock_args = MagicMock()
-        mock_args.log_level = "INFO"
-        mock_parse_args.return_value = mock_args
-
-        mock_resolve_dir.return_value = Path("/test/project")
         mock_check_prereqs.return_value = True
         mock_generate_summary.return_value = ("Test PR", "Test body")
         mock_git_push.return_value = {"success": True}  # Push succeeds
         mock_create_pr.return_value = False  # PR creation fails
 
-        from workflows.create_PR import main
+        from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
-        # Should exit with code 1 due to failed PR creation
-        with patch("sys.exit", side_effect=SystemExit) as mock_exit:
-            with pytest.raises(SystemExit):
-                main()
-            mock_exit.assert_called_with(1)
+        # Should return 1 due to failed PR creation
+        result = run_create_pr_workflow(
+            Path("/test/project"), provider="claude", method="cli"
+        )
+        assert result == 1
 
         # Verify the workflow got to PR creation step
-        mock_generate_summary.assert_called_once()
+        mock_generate_summary.assert_called_once_with(
+            Path("/test/project"), "claude", "cli"
+        )
         mock_create_pr.assert_called_once_with(
             Path("/test/project"), "Test PR", "Test body"
         )

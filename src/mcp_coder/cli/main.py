@@ -7,6 +7,7 @@ import sys
 from ..utils.log_utils import setup_logging
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.create_plan import execute_create_plan
+from .commands.create_pr import execute_create_pr
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
 from .commands.prompt import execute_prompt
@@ -42,8 +43,8 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         "--log-level",
         type=str.upper,
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="WARNING",
-        help="Set the logging level (default: WARNING)",
+        default="INFO",
+        help="Set the logging level (default: INFO)",
         metavar="LEVEL",
     )
 
@@ -203,6 +204,23 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="LLM method to use (default: claude_code_cli)",
     )
 
+    # Create PR command - Step 3
+    create_pr_parser = subparsers.add_parser(
+        "create-pr", help="Create pull request with AI-generated summary"
+    )
+    create_pr_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    create_pr_parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_cli",
+        help="LLM method to use (default: claude_code_cli)",
+    )
+
     return parser
 
 
@@ -257,6 +275,8 @@ def main() -> int:
             return execute_implement(args)
         elif args.command == "create-plan":
             return execute_create_plan(args)
+        elif args.command == "create-pr":
+            return execute_create_pr(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")

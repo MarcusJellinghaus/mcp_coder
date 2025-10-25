@@ -235,68 +235,6 @@ class TestExecuteImplement:
         assert "Operation cancelled by user." in captured_out
 
 
-class TestImplementCommandIntegration:
-    """Test the implement command CLI integration.
-
-    Note: These tests document expected behavior when implement command is added to main CLI.
-    This follows test-first development - tests are written before implementation.
-    """
-
-    @pytest.mark.skip(
-        reason="Will be implemented when implement command is added to CLI"
-    )
-    def test_implement_command_calls_execute_function(self) -> None:
-        """Test that the implement CLI command calls the execute function.
-
-        TODO: Enable this test when implement command is added to main CLI.
-        Expected behavior: CLI should route 'implement' command to execute_implement function.
-        """
-        # Implementation will test:
-        # 1. main() routes 'implement' command correctly
-        # 2. execute_implement is called with parsed arguments
-        # 3. Return code is propagated correctly
-
-    @pytest.mark.skip(
-        reason="Will be implemented when implement command is added to CLI"
-    )
-    def test_implement_command_propagates_return_code(self) -> None:
-        """Test that the implement CLI command propagates the return code.
-
-        TODO: Enable this test when implement command is added to main CLI.
-        Expected behavior: CLI should return the same exit code as execute_implement.
-        """
-        # Implementation will test:
-        # 1. execute_implement returns non-zero -> main() returns non-zero
-        # 2. execute_implement returns zero -> main() returns zero
-
-    @pytest.mark.skip(
-        reason="Will be implemented when implement command is added to CLI"
-    )
-    def test_implement_command_with_arguments(self) -> None:
-        """Test implement command with custom arguments.
-
-        TODO: Enable this test when implement command is added to main CLI.
-        Expected behavior: CLI should parse --project-dir and --llm-method arguments.
-        """
-        # Implementation will test:
-        # 1. --project-dir argument is parsed correctly
-        # 2. --llm-method argument is parsed correctly
-        # 3. Arguments are passed to execute_implement
-
-    @pytest.mark.skip(
-        reason="Will be implemented when implement command is added to CLI"
-    )
-    def test_implement_command_default_project_dir(self) -> None:
-        """Test implement command with default project directory.
-
-        TODO: Enable this test when implement command is added to main CLI.
-        Expected behavior: When no --project-dir provided, should default to None.
-        """
-        # Implementation will test:
-        # 1. No --project-dir argument -> project_dir=None in args
-        # 2. execute_implement handles None project_dir correctly
-
-
 class TestImplementCommandError:
     """Test error handling scenarios for implement command."""
 

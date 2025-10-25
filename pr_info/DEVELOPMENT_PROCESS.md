@@ -308,9 +308,18 @@ flowchart LR
    ```
    </details>
 
-4. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
+4. **Commit updated implementation plan**
+   <details>
+   <summary>📋 Commit updated implementation plan with</summary>
+   
+   ```
+   Updated implementation plan
+   ```
+   </details>
 
-5. **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
+5. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
+
+6. **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
 
 **Additional Prompts (for special cases):**
 
@@ -775,7 +784,7 @@ flowchart LR
     class Process process
 ```
 
-**Tool:** `workflows\create_pr` (fully automated)
+**Tool:** `mcp-coder create-pr` (fully automated)
 
 **Output:** Pull request created on GitHub with summary
 
@@ -791,7 +800,7 @@ flowchart LR
 
 #### Detailed PR Creation Process (Manual Reference)
 
-**Note:** This section documents the manual process for reference. The `workflows/create_pr` tool now automates all these steps.
+**Note:** This section documents the manual process for reference. The `mcp-coder create-pr` command now automates all these steps.
 
 ##### 6.1 Create Summary (Manual Process - Now Automated)
 

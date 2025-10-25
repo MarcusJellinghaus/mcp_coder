@@ -3,14 +3,14 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from workflows.create_PR import cleanup_repository, create_pull_request
+from mcp_coder.workflows.create_pr.core import cleanup_repository, create_pull_request
 
 
 class TestCleanupRepository:
     """Test cleanup_repository function."""
 
-    @patch("workflows.create_PR.delete_steps_directory")
-    @patch("workflows.create_PR.truncate_task_tracker")
+    @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
+    @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
     def test_cleanup_repository_success(
         self, mock_truncate: MagicMock, mock_delete: MagicMock
     ) -> None:
@@ -24,8 +24,8 @@ class TestCleanupRepository:
         mock_delete.assert_called_once_with(Path("/test/project"))
         mock_truncate.assert_called_once_with(Path("/test/project"))
 
-    @patch("workflows.create_PR.delete_steps_directory")
-    @patch("workflows.create_PR.truncate_task_tracker")
+    @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
+    @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
     def test_cleanup_repository_delete_fails(
         self, mock_truncate: MagicMock, mock_delete: MagicMock
     ) -> None:
@@ -40,8 +40,8 @@ class TestCleanupRepository:
         # Should still call truncate even if delete fails
         mock_truncate.assert_called_once_with(Path("/test/project"))
 
-    @patch("workflows.create_PR.delete_steps_directory")
-    @patch("workflows.create_PR.truncate_task_tracker")
+    @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
+    @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
     def test_cleanup_repository_truncate_fails(
         self, mock_truncate: MagicMock, mock_delete: MagicMock
     ) -> None:
@@ -55,8 +55,8 @@ class TestCleanupRepository:
         mock_delete.assert_called_once_with(Path("/test/project"))
         mock_truncate.assert_called_once_with(Path("/test/project"))
 
-    @patch("workflows.create_PR.delete_steps_directory")
-    @patch("workflows.create_PR.truncate_task_tracker")
+    @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
+    @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
     def test_cleanup_repository_both_fail(
         self, mock_truncate: MagicMock, mock_delete: MagicMock
     ) -> None:
@@ -74,9 +74,9 @@ class TestCleanupRepository:
 class TestCreatePullRequest:
     """Test create_pull_request function."""
 
-    @patch("workflows.create_PR.PullRequestManager")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_create_pull_request_success(
         self,
         mock_parent_branch: MagicMock,
@@ -107,7 +107,7 @@ class TestCreatePullRequest:
             body="Test PR Body",
         )
 
-    @patch("workflows.create_PR.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     def test_create_pull_request_no_current_branch(
         self, mock_current_branch: MagicMock
     ) -> None:
@@ -120,8 +120,8 @@ class TestCreatePullRequest:
 
         assert result is False
 
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_create_pull_request_no_parent_branch(
         self,
         mock_parent_branch: MagicMock,
@@ -137,9 +137,9 @@ class TestCreatePullRequest:
 
         assert result is False
 
-    @patch("workflows.create_PR.PullRequestManager")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_create_pull_request_manager_failure(
         self,
         mock_parent_branch: MagicMock,
@@ -162,9 +162,9 @@ class TestCreatePullRequest:
 
         assert result is False
 
-    @patch("workflows.create_PR.PullRequestManager")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_create_pull_request_no_pr_number(
         self,
         mock_parent_branch: MagicMock,
@@ -188,9 +188,9 @@ class TestCreatePullRequest:
 
         assert result is False
 
-    @patch("workflows.create_PR.PullRequestManager")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_create_pull_request_exception(
         self,
         mock_parent_branch: MagicMock,
@@ -209,9 +209,9 @@ class TestCreatePullRequest:
 
         assert result is False
 
-    @patch("workflows.create_PR.PullRequestManager")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_create_pull_request_success_with_url(
         self,
         mock_parent_branch: MagicMock,
@@ -241,9 +241,9 @@ class TestCreatePullRequest:
             body="Detailed description",
         )
 
-    @patch("workflows.create_PR.PullRequestManager")
-    @patch("workflows.create_PR.get_current_branch_name")
-    @patch("workflows.create_PR.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
     def test_create_pull_request_success_without_url(
         self,
         mock_parent_branch: MagicMock,

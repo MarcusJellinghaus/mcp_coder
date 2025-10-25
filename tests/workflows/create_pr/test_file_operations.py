@@ -7,7 +7,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from workflows.create_PR import delete_steps_directory, truncate_task_tracker
+from mcp_coder.workflows.create_pr.core import (
+    delete_steps_directory,
+    truncate_task_tracker,
+)
 
 
 class TestDeleteStepsDirectory:
@@ -70,7 +73,7 @@ class TestDeleteStepsDirectory:
             result = delete_steps_directory(project_dir)
             assert result is True
 
-    @patch("workflows.create_PR.logger")
+    @patch("mcp_coder.workflows.create_pr.core.logger")
     def test_delete_with_permission_error(self, mock_logger: MagicMock) -> None:
         """Test handling of permission errors during deletion."""
         with TemporaryDirectory() as temp_dir:
@@ -81,7 +84,9 @@ class TestDeleteStepsDirectory:
             steps_dir.mkdir(parents=True)
 
             # Mock shutil.rmtree only for the actual call, not for cleanup
-            with patch("workflows.create_PR.shutil.rmtree") as mock_rmtree:
+            with patch(
+                "mcp_coder.workflows.create_pr.core.shutil.rmtree"
+            ) as mock_rmtree:
                 # Simulate permission error
                 mock_rmtree.side_effect = PermissionError("Access denied")
 
@@ -92,7 +97,7 @@ class TestDeleteStepsDirectory:
                 # Should log error
                 mock_logger.error.assert_called()
 
-    @patch("workflows.create_PR.logger")
+    @patch("mcp_coder.workflows.create_pr.core.logger")
     def test_delete_with_logging(self, mock_logger: MagicMock) -> None:
         """Test that operations are properly logged."""
         with TemporaryDirectory() as temp_dir:
@@ -230,7 +235,7 @@ Some content here without Tasks section.
             result = truncate_task_tracker(project_dir)
             assert result is False
 
-    @patch("workflows.create_PR.logger")
+    @patch("mcp_coder.workflows.create_pr.core.logger")
     def test_truncate_with_logging(self, mock_logger: MagicMock) -> None:
         """Test that operations are properly logged."""
         with TemporaryDirectory() as temp_dir:
@@ -291,7 +296,7 @@ Content with specific formatting.
             assert truncated == expected
 
     @patch("pathlib.Path.read_text", side_effect=PermissionError("Access denied"))
-    @patch("workflows.create_PR.logger")
+    @patch("mcp_coder.workflows.create_pr.core.logger")
     def test_truncate_with_permission_error(
         self, mock_logger: MagicMock, mock_read_text: MagicMock
     ) -> None:

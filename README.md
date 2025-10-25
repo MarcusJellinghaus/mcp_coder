@@ -182,6 +182,32 @@ mcp-coder prompt "What's next?" --continue-from response_2025-09-19T14-30-22.jso
 mcp-coder prompt "What's next?" --continue
 ```
 
+### CLI Commands
+
+#### Create Pull Request
+
+Automate PR creation with AI-generated summaries after feature implementation.
+
+```bash
+# Create PR (uses current directory)
+mcp-coder create-pr
+
+# Specify project directory
+mcp-coder create-pr --project-dir /path/to/project
+
+# Use API method instead of CLI
+mcp-coder create-pr --llm-method claude_code_api
+
+# Get help
+mcp-coder create-pr --help
+```
+
+**Prerequisites:**
+- Clean working directory (no uncommitted changes)
+- All tasks complete in `pr_info/TASK_TRACKER.md`
+- On feature branch (not main)
+- GitHub credentials configured
+
 ### Git Operations
 
 ```python
