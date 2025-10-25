@@ -24,7 +24,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Config Template Infrastructure (TDD)
-- [ ] Write tests for `create_default_config` in `tests/utils/test_user_config.py` (see [step_1.md](steps/step_1.md))
+- [x] Write tests for `create_default_config` in `tests/utils/test_user_config.py` (see [step_1.md](steps/step_1.md))
 - [ ] Implement `create_default_config()` in `src/mcp_coder/utils/user_config.py` (see [step_1.md](steps/step_1.md))
 - [ ] Run code quality checks: pylint, pytest, mypy (see [step_1.md](steps/step_1.md))
 - [ ] Verify all tests pass and fix any issues found (see [step_1.md](steps/step_1.md))
