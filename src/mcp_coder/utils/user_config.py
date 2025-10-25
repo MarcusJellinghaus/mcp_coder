@@ -64,3 +64,62 @@ def get_config_value(section: str, key: str) -> Optional[str]:
     except (tomllib.TOMLDecodeError, OSError, IOError):
         # Return None for any file reading or parsing errors
         return None
+
+
+@log_function_call
+def create_default_config() -> bool:
+    """Create default configuration file with template content.
+
+    Creates ~/.mcp_coder/config.toml with example configuration
+    including Jenkins settings and repository examples.
+
+    Returns:
+        True if config was created, False if it already exists
+
+    Raises:
+        OSError: If directory/file creation fails due to permissions
+    """
+    config_path = get_config_file_path()
+
+    # Don't overwrite existing config
+    if config_path.exists():
+        return False
+
+    # Create parent directory
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Define template content
+    template = """# MCP Coder Configuration
+# Update with your actual credentials and repository information
+
+[jenkins]
+# Jenkins server configuration
+# Environment variables (higher priority): JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
+server_url = "https://jenkins.example.com:8080"
+username = "your-jenkins-username"
+api_token = "your-jenkins-api-token"
+
+# Coordinator test repositories
+# Add your repositories here following this pattern
+
+[coordinator.repos.mcp_coder]
+repo_url = "https://github.com/your-org/mcp_coder.git"
+test_job_path = "MCP_Coder/mcp-coder-test-job"
+github_credentials_id = "github-general-pat"
+
+[coordinator.repos.mcp_server_filesystem]
+repo_url = "https://github.com/your-org/mcp_server_filesystem.git"
+test_job_path = "MCP_Filesystem/test-job"
+github_credentials_id = "github-general-pat"
+
+# Add more repositories as needed:
+# [coordinator.repos.your_repo_name]
+# repo_url = "https://github.com/your-org/your_repo.git"
+# test_job_path = "Folder/job-name"
+# github_credentials_id = "github-credentials-id"
+"""
+
+    # Write template to file
+    config_path.write_text(template, encoding="utf-8")
+
+    return True
