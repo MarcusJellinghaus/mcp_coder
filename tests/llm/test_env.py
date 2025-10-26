@@ -77,6 +77,28 @@ def test_prepare_llm_environment_uses_sys_prefix_fallback(
     assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
 
 
+def test_prepare_llm_environment_empty_virtual_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that empty VIRTUAL_ENV falls back to CONDA_PREFIX."""
+    # Arrange
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    conda_env = tmp_path / "conda" / "envs" / "myenv"
+    conda_env.mkdir(parents=True)
+
+    # Act - Set VIRTUAL_ENV to whitespace only
+    monkeypatch.setenv("VIRTUAL_ENV", "   ")
+    monkeypatch.setenv("CONDA_PREFIX", str(conda_env))
+
+    result = prepare_llm_environment(project_dir)
+
+    # Assert
+    assert result["MCP_CODER_VENV_DIR"] == str(conda_env.resolve())
+    assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
+
+
 def test_prepare_llm_environment_separate_runner_project(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
