@@ -26,7 +26,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Update Tests for Runner Environment Detection (TDD Red Phase)
 See [step_1.md](./steps/step_1.md) for detailed instructions.
 
-- [ ] Add new test: `test_prepare_llm_environment_uses_virtual_env_variable`
+- [x] Add new test: `test_prepare_llm_environment_uses_virtual_env_variable`
 - [ ] Add new test: `test_prepare_llm_environment_uses_conda_prefix`
 - [ ] Add new test: `test_prepare_llm_environment_uses_sys_prefix_fallback`
 - [ ] Add new test: `test_prepare_llm_environment_separate_runner_project`

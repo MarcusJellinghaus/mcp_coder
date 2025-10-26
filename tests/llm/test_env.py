@@ -1,6 +1,7 @@
 """Tests for LLM environment variable preparation module."""
 
 import logging
+import os
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -8,6 +9,24 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.env import prepare_llm_environment
+
+
+def test_prepare_llm_environment_uses_virtual_env_variable(tmp_path: Path) -> None:
+    """Test that VIRTUAL_ENV environment variable is used for runner environment."""
+    # Arrange
+    runner_venv = tmp_path / "runner" / ".venv"
+    runner_venv.mkdir(parents=True)
+
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    # Act
+    with patch.dict(os.environ, {"VIRTUAL_ENV": str(runner_venv)}):
+        result = prepare_llm_environment(project_dir)
+
+    # Assert
+    assert result["MCP_CODER_VENV_DIR"] == str(runner_venv.resolve())
+    assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
 
 
 def test_prepare_llm_environment_success(tmp_path: Path) -> None:
