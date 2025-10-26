@@ -99,34 +99,23 @@ def test_prepare_llm_environment_separate_runner_project(tmp_path: Path) -> None
 
 def test_prepare_llm_environment_success(tmp_path: Path) -> None:
     """Test successful environment preparation with valid venv."""
+    # Arrange
     project_dir = tmp_path / "project"
     project_dir.mkdir()
-    venv_dir = project_dir / ".venv"
-    venv_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
 
-    # Mock detect_python_environment to return a valid venv
-    with patch("mcp_coder.llm.env.detect_python_environment") as mock_detect:
-        mock_detect.return_value = (
-            str(venv_dir / "bin" / "python"),
-            str(venv_dir),
-        )
-
+    # Act - Use VIRTUAL_ENV instead of mocking detect_python_environment
+    with patch.dict(os.environ, {"VIRTUAL_ENV": str(venv_dir)}):
         result = prepare_llm_environment(project_dir)
 
-        # Verify function was called with project_dir
-        mock_detect.assert_called_once_with(project_dir)
-
-        # Verify return value
-        assert "MCP_CODER_PROJECT_DIR" in result
-        assert "MCP_CODER_VENV_DIR" in result
-
-        # Verify paths are absolute
-        assert Path(result["MCP_CODER_PROJECT_DIR"]).is_absolute()
-        assert Path(result["MCP_CODER_VENV_DIR"]).is_absolute()
-
-        # Verify paths match expected values (resolved absolute paths)
-        assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
-        assert result["MCP_CODER_VENV_DIR"] == str(venv_dir.resolve())
+    # Assert
+    assert "MCP_CODER_PROJECT_DIR" in result
+    assert "MCP_CODER_VENV_DIR" in result
+    assert Path(result["MCP_CODER_PROJECT_DIR"]).is_absolute()
+    assert Path(result["MCP_CODER_VENV_DIR"]).is_absolute()
+    assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
+    assert result["MCP_CODER_VENV_DIR"] == str(venv_dir.resolve())
 
 
 def test_prepare_llm_environment_no_venv(tmp_path: Path) -> None:
