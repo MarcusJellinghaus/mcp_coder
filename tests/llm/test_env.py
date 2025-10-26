@@ -29,6 +29,28 @@ def test_prepare_llm_environment_uses_virtual_env_variable(tmp_path: Path) -> No
     assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
 
 
+def test_prepare_llm_environment_uses_conda_prefix(tmp_path: Path) -> None:
+    """Test that CONDA_PREFIX is used when VIRTUAL_ENV not set."""
+    # Arrange
+    conda_env = tmp_path / "miniconda3" / "envs" / "myenv"
+    conda_env.mkdir(parents=True)
+
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    # Act - Clear VIRTUAL_ENV, set CONDA_PREFIX
+    env_vars = os.environ.copy()
+    env_vars.pop("VIRTUAL_ENV", None)  # Ensure not set
+    env_vars["CONDA_PREFIX"] = str(conda_env)
+
+    with patch.dict(os.environ, env_vars, clear=True):
+        result = prepare_llm_environment(project_dir)
+
+    # Assert
+    assert result["MCP_CODER_VENV_DIR"] == str(conda_env.resolve())
+    assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
+
+
 def test_prepare_llm_environment_success(tmp_path: Path) -> None:
     """Test successful environment preparation with valid venv."""
     project_dir = tmp_path / "project"
