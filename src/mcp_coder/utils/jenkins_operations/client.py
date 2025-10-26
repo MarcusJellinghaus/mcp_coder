@@ -49,8 +49,6 @@ class JenkinsError(Exception):
     The original exception is preserved via exception chaining for debugging.
     """
 
-    pass
-
 
 def _get_jenkins_config() -> dict[str, Optional[str]]:
     """Get Jenkins configuration from environment or config file.
