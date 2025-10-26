@@ -70,7 +70,7 @@ See [step_3.md](./steps/step_3.md) for detailed instructions.
 
 - [x] Delete unused `detect_python_environment()` function from `src/mcp_coder/utils/detection.py`
 - [x] Run pytest with fast unit tests (exclude integration tests)
-- [ ] Fix any pytest failures
+- [x] Fix any pytest failures
 - [ ] Run pylint on src and tests directories
 - [ ] Fix all pylint issues
 - [ ] Run mypy on src and tests directories
