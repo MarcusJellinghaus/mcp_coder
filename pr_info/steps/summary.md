@@ -67,15 +67,25 @@ Works with all installation types:
    - Simplify `prepare_llm_environment()` function
    - Remove call to `detect_python_environment(project_dir)`
    - Use `os.environ.get("VIRTUAL_ENV")` or `os.environ.get("CONDA_PREFIX")` or `sys.prefix`
+   - Add validation: empty string handling and path existence checks
+   - Add logging to indicate which environment source was used
    - Remove unused imports and platform-specific logic
 
-2. **`tests/llm/test_env.py`** (MODIFIED)
+2. **`src/mcp_coder/utils/detection.py`** (MODIFIED)
+   - Delete unused `detect_python_environment()` function
+
+3. **`tests/llm/test_env.py`** (MODIFIED)
    - Update existing tests for new behavior
    - Add test: runner with `VIRTUAL_ENV` set
    - Add test: runner with `CONDA_PREFIX` set
    - Add test: runner with system Python (`sys.prefix`)
    - Add test: separate runner/project directories
    - Remove tests for unused `detect_python_environment()` logic
+
+4. **Documentation files** (MODIFIED if needed)
+   - README.md
+   - Setup/installation guides
+   - `.mcp.json` examples
 
 ### No New Files
 
@@ -91,16 +101,27 @@ This is a simplification - we're removing complexity, not adding it.
 
 **Step 2:** Simplify implementation (env.py)
 - Replace complex logic with direct environment queries
-- Tests pass (green phase)
+- Basic implementation (tests pass - green phase)
 
-**Step 3:** Run full quality checks
-- Pytest (all tests pass)
-- Pylint (code quality)
-- Mypy (type checking)
+**Step 2.5:** Add validation and robustness
+- Add empty string handling for environment variables
+- Add path existence validation with fallback behavior
+- Add logging to show which environment source was used
+
+**Step 3:** Run quality checks and cleanup
+- Delete unused `detect_python_environment()` function
+- Pytest, Pylint, Mypy checks
+- Final full test suite verification
+
+**Step 4:** Update documentation
+- Review and update README.md if needed
+- Check setup/installation guides
+- Verify `.mcp.json` configuration examples
 
 ### Minimal Changes Principle
 
-- ✅ Only modify `env.py` and `test_env.py`
+- ✅ Modify `env.py` and `test_env.py`
+- ✅ Delete unused `detect_python_environment()` from `detection.py`
 - ✅ No new functions or modules
 - ✅ No workflow changes
 - ✅ Backward compatible (co-located runner/project still works)
@@ -116,6 +137,9 @@ This is a simplification - we're removing complexity, not adding it.
 ## Acceptance Criteria
 
 - [ ] `prepare_llm_environment()` uses `VIRTUAL_ENV`, `CONDA_PREFIX`, or `sys.prefix`
+- [ ] Empty environment variables are handled correctly
+- [ ] Invalid paths trigger fallback to next option with warning log
+- [ ] Logging indicates which environment source was used
 - [ ] `MCP_CODER_VENV_DIR` points to runner environment (current process)
 - [ ] `MCP_CODER_PROJECT_DIR` points to project directory (parameter)
 - [ ] Works when runner and project are separate directories
@@ -123,6 +147,9 @@ This is a simplification - we're removing complexity, not adding it.
 - [ ] All existing tests pass
 - [ ] New tests cover venv, conda, and system Python scenarios
 - [ ] Pylint, pytest, and mypy all pass
+- [ ] Full test suite passes (final verification)
+- [ ] Unused `detect_python_environment()` function deleted
+- [ ] Documentation updated if needed
 
 ## Testing Strategy
 

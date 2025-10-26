@@ -1,7 +1,7 @@
-# Step 3: Run Full Code Quality Checks and Verification
+# Step 3: Run Quality Checks, Cleanup, and Full Verification
 
 ## Context
-This step runs comprehensive code quality checks to ensure the implementation is correct, maintainable, and follows project standards. This is the **TDD verification phase** plus quality assurance.
+This step runs comprehensive code quality checks, cleans up unused code, and performs final verification. This is the **TDD verification phase** plus quality assurance and cleanup.
 
 **Reference:** See `pr_info/steps/summary.md` for full architectural context.
 
@@ -10,9 +10,22 @@ This step runs comprehensive code quality checks to ensure the implementation is
 - **Source modules**: `src/mcp_coder/llm/env.py`
 - **Test module**: `tests/llm/test_env.py`
 
-## WHAT: Quality Checks to Run
+## WHAT: Tasks in This Step
 
-### 1. Pytest - All Unit Tests
+### Task 1: Delete Unused detect_python_environment() Function
+
+**File to modify:** `src/mcp_coder/utils/detection.py`
+
+**Action:** Remove the `detect_python_environment()` function definition. This function is no longer used after our changes to `env.py` (confirmed: only used by env.py line 35 which was removed, and by detection.py line 333 which is the definition itself).
+
+**Process:**
+1. Read `src/mcp_coder/utils/detection.py`
+2. Locate the `detect_python_environment()` function
+3. Delete the entire function definition
+4. Keep all other functions in the file
+5. Ensure no other code references this function
+
+### Task 2: Pytest - Module-Specific Tests
 **Purpose:** Verify all tests pass (Step 1 tests + existing tests)
 
 **Command:**
@@ -28,7 +41,7 @@ mcp__code-checker__run_pytest_check(
 - ✅ No regressions in other modules
 - ✅ 100% test success rate
 
-### 2. Pylint - Code Quality Analysis
+### Task 3: Pylint - Code Quality Analysis
 **Purpose:** Check code style, potential bugs, and maintainability
 
 **Command:**
@@ -44,7 +57,7 @@ mcp__code-checker__run_pylint_check(
 - ✅ Code follows project style guidelines
 - ✅ No unused imports or variables
 
-### 3. Mypy - Static Type Checking
+### Task 4: Mypy - Static Type Checking
 **Purpose:** Verify type annotations are correct
 
 **Command:**
@@ -60,29 +73,52 @@ mcp__code-checker__run_mypy_check(
 - ✅ Path type handling is correct
 - ✅ No type mismatches
 
+### Task 5: Full Test Suite Verification
+
+**Purpose:** Final verification that changes don't break anything in the broader codebase
+
+**Command:**
+```python
+mcp__code-checker__run_pytest_check(
+    extra_args=["-n", "auto"]
+)
+```
+
+**Expected Result:**
+- ✅ All tests pass across the entire codebase
+- ✅ No regressions in modules that depend on `prepare_llm_environment()`
+- ✅ Full confidence in the changes
+
 ## HOW: Execution Sequence
 
 ### Step-by-Step Process
 
 ```
-1. Run pytest (fast unit tests only)
-   → Verify Step 1 tests pass
-   → Verify no regressions
+1. Delete unused detect_python_environment() function
+   → Clean up detection.py
 
-2. If pytest passes:
-   → Run pylint
+2. Run pytest (fast unit tests for llm module)
+   → Verify Step 1, 2, and 2.5 tests pass
+   → Verify no regressions in llm module
+
+3. If pytest passes:
+   → Run pylint on modified files
    → Fix any style issues
    
-3. If pylint passes:
-   → Run mypy
+4. If pylint passes:
+   → Run mypy on modified files
    → Fix any type issues
    
-4. If all checks pass:
+5. If all checks pass:
+   → Run FULL test suite
+   → Final verification across entire codebase
+   
+6. If full test suite passes:
    → Step 3 complete ✅
    
-5. If any check fails:
+7. If any check fails:
    → Review errors
-   → Fix issues in env.py or test_env.py
+   → Fix issues
    → Re-run checks
    → Repeat until all pass
 ```
@@ -302,12 +338,14 @@ Use MCP tools exclusively for all operations.
 
 ## Success Criteria Checklist
 
-- [ ] Pytest: All tests pass (no failures, no errors)
+- [ ] Unused `detect_python_environment()` function deleted from detection.py
+- [ ] Pytest: All llm module tests pass (no failures, no errors)
 - [ ] Pylint: Code rated 10.00/10 or acceptable warnings only
 - [ ] Mypy: No type errors found
-- [ ] No unused imports in env.py
+- [ ] No unused imports in env.py or detection.py
+- [ ] Full test suite: All tests pass across entire codebase
 - [ ] No regressions in other modules
-- [ ] All Step 1 tests pass
+- [ ] All Step 1, 2, and 2.5 tests pass
 - [ ] All existing tests still pass
 - [ ] Code follows project style guidelines
 

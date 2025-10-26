@@ -3,6 +3,8 @@
 ## Context
 This step implements the **Test-Driven Development GREEN phase**. We simplify `prepare_llm_environment()` to use direct environment queries instead of complex detection logic. This will make the tests from Step 1 pass.
 
+**Note:** This step focuses on the core simplification. Validation enhancements (empty string handling, path existence checks, and logging) will be added in Step 2.5.
+
 **Reference:** See `pr_info/steps/summary.md` for full architectural context.
 
 ## WHERE: File Location
