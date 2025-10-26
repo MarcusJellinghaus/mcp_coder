@@ -33,7 +33,7 @@ See [step_1.md](./steps/step_1.md) for detailed instructions.
 - [x] Update existing test: `test_prepare_llm_environment_success` (remove detect_python_environment mock)
 - [x] Remove/replace test: `test_prepare_llm_environment_no_venv`
 - [x] Run pylint - fix all issues found
-- [ ] Run pytest - verify tests FAIL (expected RED phase)
+- [x] Run pytest - verify tests FAIL (expected RED phase)
 - [ ] Run mypy - fix all issues found
 - [ ] Prepare git commit message for Step 1
 
