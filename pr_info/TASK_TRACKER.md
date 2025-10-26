@@ -75,8 +75,8 @@ See [step_3.md](./steps/step_3.md) for detailed instructions.
 - [x] Fix all pylint issues
 - [x] Run mypy on src and tests directories
 - [x] Fix all mypy issues
-- [ ] Run full test suite (all tests including integration)
-- [ ] Fix any remaining test failures
+- [x] Run full test suite (all tests including integration)
+- [x] Fix any remaining test failures
 - [ ] Prepare git commit message for Step 3
 
 ### Step 4: Update Documentation
