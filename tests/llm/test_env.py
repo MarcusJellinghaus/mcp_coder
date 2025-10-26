@@ -11,7 +11,9 @@ import pytest
 from mcp_coder.llm.env import prepare_llm_environment
 
 
-def test_prepare_llm_environment_uses_virtual_env_variable(tmp_path: Path) -> None:
+def test_prepare_llm_environment_uses_virtual_env_variable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that VIRTUAL_ENV environment variable is used for runner environment."""
     # Arrange
     runner_venv = tmp_path / "runner" / ".venv"
@@ -20,24 +22,20 @@ def test_prepare_llm_environment_uses_virtual_env_variable(tmp_path: Path) -> No
     project_dir = tmp_path / "project"
     project_dir.mkdir()
 
-    # Act - Mock os.environ.get
-    original_environ_get = os.environ.get
-    def mock_environ_get(key, default=None):
-        if key == "VIRTUAL_ENV":
-            return str(runner_venv)
-        if key == "CONDA_PREFIX":
-            return None
-        return original_environ_get(key, default)
-    
-    with patch.object(os.environ, "get", side_effect=mock_environ_get):
-        result = prepare_llm_environment(project_dir)
+    # Act - Set environment variables using monkeypatch
+    monkeypatch.setenv("VIRTUAL_ENV", str(runner_venv))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+
+    result = prepare_llm_environment(project_dir)
 
     # Assert
     assert result["MCP_CODER_VENV_DIR"] == str(runner_venv.resolve())
     assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
 
 
-def test_prepare_llm_environment_uses_conda_prefix(tmp_path: Path) -> None:
+def test_prepare_llm_environment_uses_conda_prefix(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that CONDA_PREFIX is used when VIRTUAL_ENV not set."""
     # Arrange
     conda_env = tmp_path / "miniconda3" / "envs" / "myenv"
@@ -46,24 +44,20 @@ def test_prepare_llm_environment_uses_conda_prefix(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     project_dir.mkdir()
 
-    # Act - Mock os.environ.get to return CONDA_PREFIX (not VIRTUAL_ENV)
-    original_environ_get = os.environ.get
-    def mock_environ_get(key, default=None):
-        if key == "VIRTUAL_ENV":
-            return None  # Not set
-        if key == "CONDA_PREFIX":
-            return str(conda_env)
-        return original_environ_get(key, default)
+    # Act - Set environment variables using monkeypatch
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    monkeypatch.setenv("CONDA_PREFIX", str(conda_env))
 
-    with patch.object(os.environ, "get", side_effect=mock_environ_get):
-        result = prepare_llm_environment(project_dir)
+    result = prepare_llm_environment(project_dir)
 
     # Assert
     assert result["MCP_CODER_VENV_DIR"] == str(conda_env.resolve())
     assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
 
 
-def test_prepare_llm_environment_uses_sys_prefix_fallback(tmp_path: Path) -> None:
+def test_prepare_llm_environment_uses_sys_prefix_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that sys.prefix is used when no venv/conda variables set."""
     # Arrange
     project_dir = tmp_path / "project"
@@ -71,23 +65,21 @@ def test_prepare_llm_environment_uses_sys_prefix_fallback(tmp_path: Path) -> Non
 
     system_prefix = "/usr" if sys.platform != "win32" else "C:\\Python311"
 
-    # Act - Mock os.environ.get to return None for both variables
-    original_environ_get = os.environ.get
-    def mock_environ_get(key, default=None):
-        if key == "VIRTUAL_ENV" or key == "CONDA_PREFIX":
-            return None  # Neither set
-        return original_environ_get(key, default)
+    # Act - Clear both environment variables using monkeypatch
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
 
-    with patch.object(os.environ, "get", side_effect=mock_environ_get):
-        with patch.object(sys, "prefix", system_prefix):
-            result = prepare_llm_environment(project_dir)
+    with patch.object(sys, "prefix", system_prefix):
+        result = prepare_llm_environment(project_dir)
 
     # Assert
     assert result["MCP_CODER_VENV_DIR"] == str(Path(system_prefix).resolve())
     assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
 
 
-def test_prepare_llm_environment_separate_runner_project(tmp_path: Path) -> None:
+def test_prepare_llm_environment_separate_runner_project(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that runner environment and project directory are independent."""
     # Arrange - Create separate locations
     runner_location = tmp_path / "opt" / "mcp-coder" / ".venv"
@@ -96,17 +88,11 @@ def test_prepare_llm_environment_separate_runner_project(tmp_path: Path) -> None
     project_location = tmp_path / "workspace" / "myproject"
     project_location.mkdir(parents=True)
 
-    # Act - Mock os.environ.get to return runner location
-    original_environ_get = os.environ.get
-    def mock_environ_get(key, default=None):
-        if key == "VIRTUAL_ENV":
-            return str(runner_location)
-        if key == "CONDA_PREFIX":
-            return None
-        return original_environ_get(key, default)
-    
-    with patch.object(os.environ, "get", side_effect=mock_environ_get):
-        result = prepare_llm_environment(project_location)
+    # Act - Set environment variables using monkeypatch
+    monkeypatch.setenv("VIRTUAL_ENV", str(runner_location))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+
+    result = prepare_llm_environment(project_location)
 
     # Assert - They should be completely different paths
     assert result["MCP_CODER_VENV_DIR"] == str(runner_location.resolve())
@@ -119,7 +105,9 @@ def test_prepare_llm_environment_separate_runner_project(tmp_path: Path) -> None
     assert not project_path.is_relative_to(venv_path)
 
 
-def test_prepare_llm_environment_success(tmp_path: Path) -> None:
+def test_prepare_llm_environment_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test successful environment preparation with valid venv."""
     # Arrange
     project_dir = tmp_path / "project"
@@ -127,17 +115,11 @@ def test_prepare_llm_environment_success(tmp_path: Path) -> None:
     venv_dir = tmp_path / "runner" / ".venv"
     venv_dir.mkdir(parents=True)
 
-    # Act - Mock os.environ.get to return venv_dir
-    original_environ_get = os.environ.get
-    def mock_environ_get(key, default=None):
-        if key == "VIRTUAL_ENV":
-            return str(venv_dir)
-        if key == "CONDA_PREFIX":
-            return None
-        return original_environ_get(key, default)
-    
-    with patch.object(os.environ, "get", side_effect=mock_environ_get):
-        result = prepare_llm_environment(project_dir)
+    # Act - Set environment variables using monkeypatch
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+
+    result = prepare_llm_environment(project_dir)
 
     # Assert
     assert "MCP_CODER_PROJECT_DIR" in result
@@ -148,55 +130,57 @@ def test_prepare_llm_environment_success(tmp_path: Path) -> None:
     assert result["MCP_CODER_VENV_DIR"] == str(venv_dir.resolve())
 
 
-def test_prepare_llm_environment_paths_absolute(tmp_path: Path) -> None:
+def test_prepare_llm_environment_paths_absolute(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that returned paths are always absolute."""
     # Use a relative path for project_dir
     project_dir = tmp_path / "project"
     project_dir.mkdir()
-    venv_dir = project_dir / ".venv"
-    venv_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
 
-    with patch("mcp_coder.llm.env.detect_python_environment") as mock_detect:
-        # Return relative paths from detect_python_environment
-        mock_detect.return_value = ("bin/python", ".venv")
+    # Set environment variable
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
 
-        result = prepare_llm_environment(project_dir)
+    result = prepare_llm_environment(project_dir)
 
-        # Both paths should be absolute
-        assert Path(result["MCP_CODER_PROJECT_DIR"]).is_absolute()
-        assert Path(result["MCP_CODER_VENV_DIR"]).is_absolute()
+    # Both paths should be absolute
+    assert Path(result["MCP_CODER_PROJECT_DIR"]).is_absolute()
+    assert Path(result["MCP_CODER_VENV_DIR"]).is_absolute()
 
 
-def test_prepare_llm_environment_paths_os_native(tmp_path: Path) -> None:
+def test_prepare_llm_environment_paths_os_native(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that returned paths use OS-native format."""
     project_dir = tmp_path / "project"
     project_dir.mkdir()
-    venv_dir = project_dir / ".venv"
-    venv_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
 
-    with patch("mcp_coder.llm.env.detect_python_environment") as mock_detect:
-        mock_detect.return_value = (
-            str(venv_dir / "bin" / "python"),
-            str(venv_dir),
-        )
+    # Set environment variable
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
 
-        result = prepare_llm_environment(project_dir)
+    result = prepare_llm_environment(project_dir)
 
-        # Verify paths are strings (not Path objects)
-        assert isinstance(result["MCP_CODER_PROJECT_DIR"], str)
-        assert isinstance(result["MCP_CODER_VENV_DIR"], str)
+    # Verify paths are strings (not Path objects)
+    assert isinstance(result["MCP_CODER_PROJECT_DIR"], str)
+    assert isinstance(result["MCP_CODER_VENV_DIR"], str)
 
-        # Verify they can be converted back to Path objects
-        project_path = Path(result["MCP_CODER_PROJECT_DIR"])
-        venv_path = Path(result["MCP_CODER_VENV_DIR"])
+    # Verify they can be converted back to Path objects
+    project_path = Path(result["MCP_CODER_PROJECT_DIR"])
+    venv_path = Path(result["MCP_CODER_VENV_DIR"])
 
-        assert project_path.is_absolute()
-        assert venv_path.is_absolute()
+    assert project_path.is_absolute()
+    assert venv_path.is_absolute()
 
 
 @pytest.mark.xdist_group(name="logging")
 def test_prepare_llm_environment_logging(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test that environment preparation logs debug messages.
 
@@ -205,22 +189,18 @@ def test_prepare_llm_environment_logging(
     """
     project_dir = tmp_path / "project"
     project_dir.mkdir()
-    venv_dir = project_dir / ".venv"
-    venv_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
 
-    with patch("mcp_coder.llm.env.detect_python_environment") as mock_detect:
-        mock_detect.return_value = (
-            str(venv_dir / "bin" / "python"),
-            str(venv_dir),
-        )
+    # Set environment variable
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
 
-        with caplog.at_level(logging.DEBUG):
-            prepare_llm_environment(project_dir)
+    with caplog.at_level(logging.DEBUG):
+        prepare_llm_environment(project_dir)
 
-        # Verify debug messages were logged
-        assert any(
-            "Preparing LLM environment" in record.message for record in caplog.records
-        )
-        assert any(
-            "MCP_CODER_PROJECT_DIR" in record.message for record in caplog.records
-        )
+    # Verify debug messages were logged
+    assert any(
+        "Preparing LLM environment" in record.message for record in caplog.records
+    )
+    assert any("MCP_CODER_PROJECT_DIR" in record.message for record in caplog.records)

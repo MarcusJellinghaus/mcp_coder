@@ -3,6 +3,7 @@
 import logging
 import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from typing import Generator, Type, TypeVar
@@ -10,6 +11,13 @@ from unittest.mock import patch
 
 import git
 import pytest
+
+# Ensure local src directory is first in sys.path for development/testing
+# This allows tests to use the local source code instead of installed package
+project_root = Path(__file__).parent.parent
+src_dir = project_root / "src"
+if src_dir.exists() and str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
 
 try:
     from typing import TypedDict

@@ -40,14 +40,14 @@ See [step_1.md](./steps/step_1.md) for detailed instructions.
 ### Step 2: Simplify Runner Environment Detection (TDD Green Phase)
 See [step_2.md](./steps/step_2.md) for detailed instructions.
 
-- [ ] Modify `prepare_llm_environment()` to use environment variables (VIRTUAL_ENV, CONDA_PREFIX, sys.prefix)
-- [ ] Remove import for `detect_python_environment`
-- [ ] Update docstring to explain runner environment detection
-- [ ] Remove complex detection logic and platform-specific checks
-- [ ] Run pylint - fix all issues found
-- [ ] Run pytest - verify tests PASS (expected GREEN phase)
-- [ ] Run mypy - fix all issues found
-- [ ] Prepare git commit message for Step 2
+- [x] Modify `prepare_llm_environment()` to use environment variables (VIRTUAL_ENV, CONDA_PREFIX, sys.prefix)
+- [x] Remove import for `detect_python_environment`
+- [x] Update docstring to explain runner environment detection
+- [x] Remove complex detection logic and platform-specific checks
+- [x] Run pylint - fix all issues found
+- [x] Run pytest - verify tests PASS (expected GREEN phase)
+- [x] Run mypy - fix all issues found
+- [x] Prepare git commit message for Step 2
 
 ### Step 2.5: Add Validation and Robustness Enhancements
 See [step_2.5.md](./steps/step_2.5.md) for detailed instructions.

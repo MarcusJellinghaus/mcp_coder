@@ -17,7 +17,7 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
 
     This function prepares environment variables that can be used in .mcp.json
     configuration files to make them portable across different machines.
-    
+
     The runner environment (MCP_CODER_VENV_DIR) is where mcp-coder is currently
     executing, detected from VIRTUAL_ENV, CONDA_PREFIX, or sys.prefix.
 
@@ -37,7 +37,7 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
         runner_venv = os.environ.get("CONDA_PREFIX")
     if not runner_venv:
         runner_venv = sys.prefix
-    
+
     logger.debug("Detected runner environment: %s", runner_venv)
 
     # Convert paths to absolute OS-native strings
