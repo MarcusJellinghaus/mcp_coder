@@ -45,65 +45,6 @@ def _detect_active_venv() -> Optional[str]:
     return None
 
 
-def detect_python_environment(
-    project_dir: Path,
-) -> tuple[Optional[str], Optional[str]]:
-    """Auto-detect Python executable and virtual environment.
-
-    Args:
-        project_dir: Project directory to search for virtual environments
-
-    Returns:
-        Tuple of (python_executable, venv_path)
-    """
-    # First, look for virtual environments in the project
-    venvs = find_virtual_environments(project_dir)
-
-    if venvs:
-        # Use the first valid venv found
-        venv_path = venvs[0]
-        python_exe = get_venv_python(venv_path)
-        if python_exe and validate_python_executable(str(python_exe)):
-            return str(python_exe), str(venv_path)
-
-    # If no venv found or venv Python is invalid, use current Python
-    current_python = sys.executable
-    if validate_python_executable(current_python):
-        # Check if current Python is running from a virtual environment
-        current_venv = _detect_active_venv()
-        return current_python, current_venv
-
-    # As a last resort, try to find Python in PATH
-    python_cmd = "python3" if sys.platform != "win32" else "python"
-    try:
-        result = subprocess.run(
-            [python_cmd, "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-        if result.returncode == 0:
-            # Get the full path to this Python
-            result = subprocess.run(
-                [python_cmd, "-c", "import sys; print(sys.executable)"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-            )
-            if result.returncode == 0:
-                python_path = result.stdout.strip()
-                if validate_python_executable(python_path):
-                    # Check if this Python is in a venv
-                    current_venv = _detect_active_venv()
-                    return python_path, current_venv
-    except (subprocess.SubprocessError, OSError):
-        pass
-
-    return None, None
-
-
 def find_virtual_environments(project_dir: Path) -> list[Path]:
     """Find all potential virtual environments in project directory.
 
@@ -316,22 +257,6 @@ print(json.dumps(info))
         pass
 
     return info
-
-
-def find_project_python_executable(project_dir: Path) -> Optional[str]:
-    """Find the best Python executable for a project.
-
-    This is a convenience function that combines environment detection
-    with validation.
-
-    Args:
-        project_dir: Project directory
-
-    Returns:
-        Path to Python executable, or None if not found
-    """
-    python_exe, _ = detect_python_environment(project_dir)
-    return python_exe
 
 
 def get_project_dependencies(project_dir: Path) -> list[str]:
