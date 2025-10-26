@@ -29,7 +29,7 @@ See [step_1.md](./steps/step_1.md) for detailed instructions.
 - [x] Add new test: `test_prepare_llm_environment_uses_virtual_env_variable`
 - [x] Add new test: `test_prepare_llm_environment_uses_conda_prefix`
 - [x] Add new test: `test_prepare_llm_environment_uses_sys_prefix_fallback`
-- [ ] Add new test: `test_prepare_llm_environment_separate_runner_project`
+- [x] Add new test: `test_prepare_llm_environment_separate_runner_project`
 - [ ] Update existing test: `test_prepare_llm_environment_success` (remove detect_python_environment mock)
 - [ ] Remove/replace test: `test_prepare_llm_environment_no_venv`
 - [ ] Run pylint - fix all issues found

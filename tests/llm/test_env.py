@@ -73,6 +73,30 @@ def test_prepare_llm_environment_uses_sys_prefix_fallback(tmp_path: Path) -> Non
     assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
 
 
+def test_prepare_llm_environment_separate_runner_project(tmp_path: Path) -> None:
+    """Test that runner environment and project directory are independent."""
+    # Arrange - Create separate locations
+    runner_location = tmp_path / "opt" / "mcp-coder" / ".venv"
+    runner_location.mkdir(parents=True)
+
+    project_location = tmp_path / "workspace" / "myproject"
+    project_location.mkdir(parents=True)
+
+    # Act
+    with patch.dict(os.environ, {"VIRTUAL_ENV": str(runner_location)}):
+        result = prepare_llm_environment(project_location)
+
+    # Assert - They should be completely different paths
+    assert result["MCP_CODER_VENV_DIR"] == str(runner_location.resolve())
+    assert result["MCP_CODER_PROJECT_DIR"] == str(project_location.resolve())
+
+    # Verify they're truly separate
+    venv_path = Path(result["MCP_CODER_VENV_DIR"])
+    project_path = Path(result["MCP_CODER_PROJECT_DIR"])
+    assert not venv_path.is_relative_to(project_path)
+    assert not project_path.is_relative_to(venv_path)
+
+
 def test_prepare_llm_environment_success(tmp_path: Path) -> None:
     """Test successful environment preparation with valid venv."""
     project_dir = tmp_path / "project"
