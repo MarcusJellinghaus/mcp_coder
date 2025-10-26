@@ -73,7 +73,7 @@ See [step_3.md](./steps/step_3.md) for detailed instructions.
 - [x] Fix any pytest failures
 - [x] Run pylint on src and tests directories
 - [x] Fix all pylint issues
-- [ ] Run mypy on src and tests directories
+- [x] Run mypy on src and tests directories
 - [ ] Fix all mypy issues
 - [ ] Run full test suite (all tests including integration)
 - [ ] Fix any remaining test failures
