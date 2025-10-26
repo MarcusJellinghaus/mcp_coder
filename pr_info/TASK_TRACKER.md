@@ -34,8 +34,8 @@ See [step_1.md](./steps/step_1.md) for detailed instructions.
 - [x] Remove/replace test: `test_prepare_llm_environment_no_venv`
 - [x] Run pylint - fix all issues found
 - [x] Run pytest - verify tests FAIL (expected RED phase)
-- [ ] Run mypy - fix all issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Run mypy - fix all issues found
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Simplify Runner Environment Detection (TDD Green Phase)
 See [step_2.md](./steps/step_2.md) for detailed instructions.
