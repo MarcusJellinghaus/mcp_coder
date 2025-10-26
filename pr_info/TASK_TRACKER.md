@@ -60,7 +60,7 @@ See [step_2.5.md](./steps/step_2.5.md) for detailed instructions.
 - [x] Add test: `test_prepare_llm_environment_empty_virtual_env`
 - [x] Add test: `test_prepare_llm_environment_invalid_path_fallback`
 - [x] Add test: `test_prepare_llm_environment_all_invalid_uses_sys_prefix`
-- [ ] Run pylint - fix all issues found
+- [x] Run pylint - fix all issues found
 - [ ] Run pytest - verify all tests pass
 - [ ] Run mypy - fix all issues found
 - [ ] Prepare git commit message for Step 2.5
