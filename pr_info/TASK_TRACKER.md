@@ -55,7 +55,7 @@ See [step_2.5.md](./steps/step_2.5.md) for detailed instructions.
 - [x] Add private helper function `_get_runner_environment()` with validation logic
 - [x] Implement empty string handling for environment variables
 - [x] Add path existence validation with fallback behavior
-- [ ] Add logging to show which environment source was used
+- [x] Add logging to show which environment source was used
 - [ ] Update `prepare_llm_environment()` to use new helper function
 - [ ] Add test: `test_prepare_llm_environment_empty_virtual_env`
 - [ ] Add test: `test_prepare_llm_environment_invalid_path_fallback`
