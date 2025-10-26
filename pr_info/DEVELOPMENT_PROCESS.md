@@ -180,6 +180,20 @@ At the end of our discussion, I want to have an even better issue description.
 ```
 </details>
 
+ <details>
+ <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
+ 
+ ```
+ Can we go through all open suggested changes and questions step by step?
+ You explain, ask and I answer until we discussed all topics?
+ Please offer, whenever possible, simple options like 
+ - A
+ - B
+ - C
+ Always just ask ONE question
+ ```
+ </details>
+
 <details>
 <summary>📋 Draft Issue Text (click to expand and copy)</summary>
 
