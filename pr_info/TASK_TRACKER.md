@@ -86,7 +86,7 @@ See [step_4.md](./steps/step_4.md) for detailed instructions.
 - [x] Check setup/installation guides (if they exist)
 - [x] Verify .mcp.json configuration examples are correct
 - [x] Update architecture documentation (if it exists)
-- [ ] Remove outdated venv requirement statements
+- [x] Remove outdated venv requirement statements
 - [ ] Remove platform-specific warnings that are no longer relevant
 - [ ] Verify code examples in documentation are correct
 - [ ] Run pylint - fix all issues found
