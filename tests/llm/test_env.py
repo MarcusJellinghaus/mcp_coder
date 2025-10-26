@@ -51,6 +51,28 @@ def test_prepare_llm_environment_uses_conda_prefix(tmp_path: Path) -> None:
     assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
 
 
+def test_prepare_llm_environment_uses_sys_prefix_fallback(tmp_path: Path) -> None:
+    """Test that sys.prefix is used when no venv/conda variables set."""
+    # Arrange
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    system_prefix = "/usr" if sys.platform != "win32" else "C:\\Python311"
+
+    # Act - Clear both VIRTUAL_ENV and CONDA_PREFIX
+    env_vars = os.environ.copy()
+    env_vars.pop("VIRTUAL_ENV", None)
+    env_vars.pop("CONDA_PREFIX", None)
+
+    with patch.dict(os.environ, env_vars, clear=True):
+        with patch.object(sys, "prefix", system_prefix):
+            result = prepare_llm_environment(project_dir)
+
+    # Assert
+    assert result["MCP_CODER_VENV_DIR"] == str(Path(system_prefix).resolve())
+    assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
+
+
 def test_prepare_llm_environment_success(tmp_path: Path) -> None:
     """Test successful environment preparation with valid venv."""
     project_dir = tmp_path / "project"
