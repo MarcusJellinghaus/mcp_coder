@@ -3,6 +3,8 @@
 ## Context
 This step reviews and updates user-facing documentation to ensure it accurately reflects the simplified and more robust environment detection approach.
 
+**Approach:** Most documentation files likely need no changes and require only quick verification. Detailed review and updates should focus on README.md if needed. The `.mcp.json` configuration is already correct per the summary.
+
 **Reference:** See `pr_info/steps/summary.md` for full architectural context.
 
 ## WHERE: Documentation Locations
@@ -123,15 +125,16 @@ Summarize findings and changes made
 ## DATA: Documentation Files to Check
 
 ### Primary Files (Most Likely to Need Updates)
-- `README.md` - Main project documentation
-- `.mcp.json` - MCP configuration (verify only, likely correct)
+- `README.md` - Main project documentation (detailed review)
+- `.mcp.json` - MCP configuration (quick verification only, already correct per summary)
 
-### Secondary Files (Check if They Exist)
-- `INSTALL.md` or `SETUP.md`
-- `docs/GETTING_STARTED.md`
-- `docs/TROUBLESHOOTING.md`
-- `docs/architecture/ARCHITECTURE.md`
-- Any Python environment or venv setup guides
+### Secondary Files (Quick Verification - Check if They Exist)
+These files likely need no changes. Quick verification to confirm:
+- `INSTALL.md` or `SETUP.md` (if exists - quick check)
+- `docs/GETTING_STARTED.md` (if exists - quick check)
+- `docs/TROUBLESHOOTING.md` (if exists - quick check)
+- `docs/architecture/ARCHITECTURE.md` (if exists - quick check)
+- Any Python environment or venv setup guides (if exist - quick check)
 
 ### Example Code in Documentation
 If documentation contains code examples for:

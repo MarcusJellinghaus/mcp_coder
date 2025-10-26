@@ -176,6 +176,118 @@ logger.debug("Detected runner environment from %s: %s", source_name, runner_venv
 - Clear checkpoint in the process
 - Separates code changes from documentation changes
 
+## Decision 14: Step 2.5 Helper Function Structure (Plan Review)
+
+**Question:** Should we keep the helper function `_get_runner_environment()` or inline the validation logic?
+
+**Decision:** Option A - Keep the helper function as currently planned
+
+**Rationale:**
+- Cleaner separation of concerns
+- Path validation logic is isolated
+- More testable and maintainable
+- Aligns with modular design principles
+
+**Implementation:** Maintain `_get_runner_environment()` helper in Step 2.5 as designed
+
+## Decision 15: Step 1 Test Implementation Detail Level (Plan Review)
+
+**Question:** Should step_1.md include full detailed test implementations or just signatures and patterns?
+
+**Decision:** Option A - Keep all detailed test implementations exactly as they are
+
+**Rationale:**
+- Provides complete reference for implementer
+- No ambiguity about what to write
+- Clear examples reduce implementation errors
+- Detailed guidance supports high-quality implementation
+
+**Implementation:** No changes to Step 1 - keep detailed test code blocks
+
+## Decision 16: Step 3 Troubleshooting Content (Plan Review)
+
+**Question:** Should Step 3 include hypothetical troubleshooting sections like "Common Issues and Fixes" and "Expected Output Examples"?
+
+**Decision:** Option B - Remove these sections to streamline Step 3
+
+**Rationale:**
+- Success criteria already define what "passing" means
+- Troubleshooting happens naturally during implementation
+- Reduces documentation verbosity
+- Focuses on essential guidance rather than hypothetical problems
+
+**Implementation:** Remove "Common Issues and Fixes" and "Expected Output Examples" sections from step_3.md
+
+## Decision 17: Path Existence Validation Scope (Plan Review)
+
+**Question:** Should we validate path existence for all environment sources or trust they are configured correctly?
+
+**Decision:** Option C - Validate only VIRTUAL_ENV and CONDA_PREFIX (not sys.prefix)
+
+**Rationale:**
+- VIRTUAL_ENV and CONDA_PREFIX are user-configured and may be invalid
+- sys.prefix is set by Python interpreter and always valid
+- Good balance between robustness and simplicity
+- Current plan already implements this approach
+
+**Implementation:** No changes needed - existing plan is correct
+
+## Decision 18: Validation Tests Location (Plan Review)
+
+**Question:** Should validation tests be in Step 1 (TDD red phase) or Step 2.5 (when validation is implemented)?
+
+**Decision:** Option B - Keep validation tests in Step 2.5 as currently planned
+
+**Rationale:**
+- Progressive approach: basic tests first, validation tests when adding validation
+- Clearer: each step's tests match that step's functionality
+- Easier to implement incrementally
+- Better alignment between test creation and implementation
+
+**Implementation:** No changes needed - validation tests remain in Step 2.5
+
+## Decision 19: Documentation Review Scope (Plan Review)
+
+**Question:** Should Step 4 do comprehensive review of all documentation or focus only on known files?
+
+**Decision:** Option C - Keep comprehensive review list but mark most items as quick verification
+
+**Rationale:**
+- Ensures nothing is missed through systematic check
+- Most documentation likely needs no changes (quick verification)
+- Professional and thorough approach
+- Efficient: detailed review only where needed
+
+**Implementation:** Update step_4.md to indicate most items are quick verification with detailed review only if changes needed
+
+## Decision 20: Benefits Statement Specificity (Plan Review)
+
+**Question:** Should we add concrete line count metrics to the benefits section or keep current abstract statement?
+
+**Decision:** Option B - Keep the current "~90% less complexity" statement as-is
+
+**Rationale:**
+- Already clear enough for understanding impact
+- No need to count lines precisely
+- Focuses on conceptual simplification which is more important
+- Precise metrics can be verified during implementation
+
+**Implementation:** No changes to summary.md benefits section
+
+## Decision 21: Step 2 and 2.5 Structure (Plan Review)
+
+**Question:** Should Steps 2 and 2.5 be separate or combined into a single step?
+
+**Decision:** Option A - Keep Steps 2 and 2.5 separate as currently planned
+
+**Rationale:**
+- Clear TDD progression: green (basic) → enhanced (robust)
+- Easier to review incrementally
+- Distinct concerns: detection vs. validation
+- Better separation of core implementation from robustness enhancements
+
+**Implementation:** No changes needed - maintain separate Steps 2 and 2.5
+
 ## Summary
 
 These decisions shaped the final implementation plan structure:
@@ -186,3 +298,5 @@ These decisions shaped the final implementation plan structure:
 - **Step 4:** Documentation updates
 
 All decisions prioritize simplicity, robustness, and maintainability while following TDD principles.
+
+**Plan Review Decisions (14-21):** During plan review, we confirmed the overall structure is sound and made targeted adjustments to reduce documentation verbosity while maintaining comprehensive guidance.
