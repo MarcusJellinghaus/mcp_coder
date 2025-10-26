@@ -121,6 +121,28 @@ def test_prepare_llm_environment_invalid_path_fallback(
     assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
 
 
+def test_prepare_llm_environment_all_invalid_uses_sys_prefix(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that all invalid paths fall back to sys.prefix."""
+    # Arrange
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    system_prefix = "/usr" if sys.platform != "win32" else "C:\\Python311"
+
+    # Act - Both VIRTUAL_ENV and CONDA_PREFIX set to invalid paths
+    monkeypatch.setenv("VIRTUAL_ENV", "/nonexistent/venv")
+    monkeypatch.setenv("CONDA_PREFIX", "/nonexistent/conda")
+
+    with patch.object(sys, "prefix", system_prefix):
+        result = prepare_llm_environment(project_dir)
+
+    # Assert
+    assert result["MCP_CODER_VENV_DIR"] == str(Path(system_prefix).resolve())
+    assert result["MCP_CODER_PROJECT_DIR"] == str(project_dir.resolve())
+
+
 def test_prepare_llm_environment_separate_runner_project(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
