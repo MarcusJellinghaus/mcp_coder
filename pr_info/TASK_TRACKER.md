@@ -83,7 +83,7 @@ See [step_3.md](./steps/step_3.md) for detailed instructions.
 See [step_4.md](./steps/step_4.md) for detailed instructions.
 
 - [x] Review README.md for accuracy (check venv requirements, setup instructions)
-- [ ] Check setup/installation guides (if they exist)
+- [x] Check setup/installation guides (if they exist)
 - [ ] Verify .mcp.json configuration examples are correct
 - [ ] Update architecture documentation (if it exists)
 - [ ] Remove outdated venv requirement statements
