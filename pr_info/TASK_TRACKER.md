@@ -88,10 +88,10 @@ See [step_4.md](./steps/step_4.md) for detailed instructions.
 - [x] Update architecture documentation (if it exists)
 - [x] Remove outdated venv requirement statements
 - [x] Remove platform-specific warnings that are no longer relevant
-- [ ] Verify code examples in documentation are correct
-- [ ] Run pylint - fix all issues found
-- [ ] Run pytest - verify all tests pass
-- [ ] Run mypy - fix all issues found
+- [x] Verify code examples in documentation are correct
+- [x] Run pylint - fix all issues found
+- [x] Run pytest - verify all tests pass
+- [x] Run mypy - fix all issues found
 - [ ] Prepare git commit message for Step 4
 
 ---
