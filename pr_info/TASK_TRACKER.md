@@ -62,7 +62,7 @@ See [step_2.5.md](./steps/step_2.5.md) for detailed instructions.
 - [x] Add test: `test_prepare_llm_environment_all_invalid_uses_sys_prefix`
 - [x] Run pylint - fix all issues found
 - [x] Run pytest - verify all tests pass
-- [ ] Run mypy - fix all issues found
+- [x] Run mypy - fix all issues found
 - [ ] Prepare git commit message for Step 2.5
 
 ### Step 3: Run Quality Checks, Cleanup, and Full Verification
