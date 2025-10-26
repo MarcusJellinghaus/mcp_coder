@@ -63,7 +63,7 @@ See [step_2.5.md](./steps/step_2.5.md) for detailed instructions.
 - [x] Run pylint - fix all issues found
 - [x] Run pytest - verify all tests pass
 - [x] Run mypy - fix all issues found
-- [ ] Prepare git commit message for Step 2.5
+- [x] Prepare git commit message for Step 2.5
 
 ### Step 3: Run Quality Checks, Cleanup, and Full Verification
 See [step_3.md](./steps/step_3.md) for detailed instructions.
@@ -71,8 +71,8 @@ See [step_3.md](./steps/step_3.md) for detailed instructions.
 - [x] Delete unused `detect_python_environment()` function from `src/mcp_coder/utils/detection.py`
 - [x] Run pytest with fast unit tests (exclude integration tests)
 - [x] Fix any pytest failures
-- [ ] Run pylint on src and tests directories
-- [ ] Fix all pylint issues
+- [x] Run pylint on src and tests directories
+- [x] Fix all pylint issues
 - [ ] Run mypy on src and tests directories
 - [ ] Fix all mypy issues
 - [ ] Run full test suite (all tests including integration)
