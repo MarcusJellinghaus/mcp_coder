@@ -20,8 +20,16 @@ def test_prepare_llm_environment_uses_virtual_env_variable(tmp_path: Path) -> No
     project_dir = tmp_path / "project"
     project_dir.mkdir()
 
-    # Act
-    with patch.dict(os.environ, {"VIRTUAL_ENV": str(runner_venv)}):
+    # Act - Mock os.environ.get
+    original_environ_get = os.environ.get
+    def mock_environ_get(key, default=None):
+        if key == "VIRTUAL_ENV":
+            return str(runner_venv)
+        if key == "CONDA_PREFIX":
+            return None
+        return original_environ_get(key, default)
+    
+    with patch.object(os.environ, "get", side_effect=mock_environ_get):
         result = prepare_llm_environment(project_dir)
 
     # Assert
@@ -38,12 +46,16 @@ def test_prepare_llm_environment_uses_conda_prefix(tmp_path: Path) -> None:
     project_dir = tmp_path / "project"
     project_dir.mkdir()
 
-    # Act - Clear VIRTUAL_ENV, set CONDA_PREFIX
-    env_vars = os.environ.copy()
-    env_vars.pop("VIRTUAL_ENV", None)  # Ensure not set
-    env_vars["CONDA_PREFIX"] = str(conda_env)
+    # Act - Mock os.environ.get to return CONDA_PREFIX (not VIRTUAL_ENV)
+    original_environ_get = os.environ.get
+    def mock_environ_get(key, default=None):
+        if key == "VIRTUAL_ENV":
+            return None  # Not set
+        if key == "CONDA_PREFIX":
+            return str(conda_env)
+        return original_environ_get(key, default)
 
-    with patch.dict(os.environ, env_vars, clear=True):
+    with patch.object(os.environ, "get", side_effect=mock_environ_get):
         result = prepare_llm_environment(project_dir)
 
     # Assert
@@ -59,12 +71,14 @@ def test_prepare_llm_environment_uses_sys_prefix_fallback(tmp_path: Path) -> Non
 
     system_prefix = "/usr" if sys.platform != "win32" else "C:\\Python311"
 
-    # Act - Clear both VIRTUAL_ENV and CONDA_PREFIX
-    env_vars = os.environ.copy()
-    env_vars.pop("VIRTUAL_ENV", None)
-    env_vars.pop("CONDA_PREFIX", None)
+    # Act - Mock os.environ.get to return None for both variables
+    original_environ_get = os.environ.get
+    def mock_environ_get(key, default=None):
+        if key == "VIRTUAL_ENV" or key == "CONDA_PREFIX":
+            return None  # Neither set
+        return original_environ_get(key, default)
 
-    with patch.dict(os.environ, env_vars, clear=True):
+    with patch.object(os.environ, "get", side_effect=mock_environ_get):
         with patch.object(sys, "prefix", system_prefix):
             result = prepare_llm_environment(project_dir)
 
@@ -82,8 +96,16 @@ def test_prepare_llm_environment_separate_runner_project(tmp_path: Path) -> None
     project_location = tmp_path / "workspace" / "myproject"
     project_location.mkdir(parents=True)
 
-    # Act
-    with patch.dict(os.environ, {"VIRTUAL_ENV": str(runner_location)}):
+    # Act - Mock os.environ.get to return runner location
+    original_environ_get = os.environ.get
+    def mock_environ_get(key, default=None):
+        if key == "VIRTUAL_ENV":
+            return str(runner_location)
+        if key == "CONDA_PREFIX":
+            return None
+        return original_environ_get(key, default)
+    
+    with patch.object(os.environ, "get", side_effect=mock_environ_get):
         result = prepare_llm_environment(project_location)
 
     # Assert - They should be completely different paths
@@ -105,8 +127,16 @@ def test_prepare_llm_environment_success(tmp_path: Path) -> None:
     venv_dir = tmp_path / "runner" / ".venv"
     venv_dir.mkdir(parents=True)
 
-    # Act - Use VIRTUAL_ENV instead of mocking detect_python_environment
-    with patch.dict(os.environ, {"VIRTUAL_ENV": str(venv_dir)}):
+    # Act - Mock os.environ.get to return venv_dir
+    original_environ_get = os.environ.get
+    def mock_environ_get(key, default=None):
+        if key == "VIRTUAL_ENV":
+            return str(venv_dir)
+        if key == "CONDA_PREFIX":
+            return None
+        return original_environ_get(key, default)
+    
+    with patch.object(os.environ, "get", side_effect=mock_environ_get):
         result = prepare_llm_environment(project_dir)
 
     # Assert
