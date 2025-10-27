@@ -43,6 +43,16 @@ api_key = "test_api_key_456"
 default_branch = "main"
 timeout = 30
 debug = true
+
+[coordinator.repos.mcp_coder]
+repo_url = "https://github.com/test/mcp_coder.git"
+test_job = "MCP_Coder/mcp-coder-test-job"
+github_credentials_id = "github-general-pat"
+
+[coordinator.repos.test_repo]
+repo_url = "https://github.com/test/test_repo.git"
+test_job = "Test/test-job"
+github_credentials_id = "github-pat"
 """
 
     @patch("mcp_coder.utils.user_config.get_config_file_path")
@@ -203,6 +213,107 @@ debug = true
 
             # Verify - empty string should be converted to string
             assert result == ""
+
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
+    def test_get_config_value_nested_section_success(
+        self, mock_get_path: MagicMock, sample_config_content: str
+    ) -> None:
+        """Test successful retrieval from nested section using dot notation."""
+        # Setup
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_get_path.return_value = mock_path
+
+        with patch(
+            "builtins.open", mock_open(read_data=sample_config_content.encode())
+        ):
+            # Execute
+            result = get_config_value("coordinator.repos.mcp_coder", "repo_url")
+
+            # Verify
+            assert result == "https://github.com/test/mcp_coder.git"
+
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
+    def test_get_config_value_nested_section_different_repo(
+        self, mock_get_path: MagicMock, sample_config_content: str
+    ) -> None:
+        """Test retrieval from different nested repository."""
+        # Setup
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_get_path.return_value = mock_path
+
+        with patch(
+            "builtins.open", mock_open(read_data=sample_config_content.encode())
+        ):
+            # Execute
+            result = get_config_value("coordinator.repos.test_repo", "test_job")
+
+            # Verify
+            assert result == "Test/test-job"
+
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
+    def test_get_config_value_nested_section_missing_intermediate(
+        self, mock_get_path: MagicMock, sample_config_content: str
+    ) -> None:
+        """Test that None is returned when intermediate section doesn't exist."""
+        # Setup
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_get_path.return_value = mock_path
+
+        with patch(
+            "builtins.open", mock_open(read_data=sample_config_content.encode())
+        ):
+            # Execute - 'nonexistent' is not a key in coordinator
+            result = get_config_value(
+                "coordinator.nonexistent.mcp_coder", "repo_url"
+            )
+
+            # Verify
+            assert result is None
+
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
+    def test_get_config_value_nested_section_missing_leaf(
+        self, mock_get_path: MagicMock, sample_config_content: str
+    ) -> None:
+        """Test that None is returned when leaf section doesn't exist."""
+        # Setup
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_get_path.return_value = mock_path
+
+        with patch(
+            "builtins.open", mock_open(read_data=sample_config_content.encode())
+        ):
+            # Execute - 'nonexistent_repo' doesn't exist in coordinator.repos
+            result = get_config_value(
+                "coordinator.repos.nonexistent_repo", "repo_url"
+            )
+
+            # Verify
+            assert result is None
+
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
+    def test_get_config_value_nested_section_missing_key(
+        self, mock_get_path: MagicMock, sample_config_content: str
+    ) -> None:
+        """Test that None is returned when key doesn't exist in nested section."""
+        # Setup
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_get_path.return_value = mock_path
+
+        with patch(
+            "builtins.open", mock_open(read_data=sample_config_content.encode())
+        ):
+            # Execute - section exists but key doesn't
+            result = get_config_value(
+                "coordinator.repos.mcp_coder", "nonexistent_key"
+            )
+
+            # Verify
+            assert result is None
 
 
 class TestCreateDefaultConfig:

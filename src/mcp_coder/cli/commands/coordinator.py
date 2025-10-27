@@ -12,12 +12,16 @@ from typing import Optional
 
 from ...utils.jenkins_operations.client import JenkinsClient
 from ...utils.jenkins_operations.models import JobStatus
-from ...utils.user_config import create_default_config, get_config_value
+from ...utils.user_config import (
+    create_default_config,
+    get_config_file_path,
+    get_config_value,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def load_repo_config(repo_name: str) -> Optional[dict[str, str]]:
+def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
     """Load repository configuration from config file.
 
     Args:
@@ -25,7 +29,7 @@ def load_repo_config(repo_name: str) -> Optional[dict[str, str]]:
 
     Returns:
         Dictionary with repo_url, test_job_path, github_credentials_id
-        or None if repository not found in config
+        Values may be None if not found in config
     """
     section = f"coordinator.repos.{repo_name}"
 
@@ -33,39 +37,53 @@ def load_repo_config(repo_name: str) -> Optional[dict[str, str]]:
     test_job_path = get_config_value(section, "test_job_path")
     github_credentials_id = get_config_value(section, "github_credentials_id")
 
-    # Return dict only if all values present
-    if repo_url and test_job_path and github_credentials_id:
-        return {
-            "repo_url": repo_url,
-            "test_job_path": test_job_path,
-            "github_credentials_id": github_credentials_id,
-        }
-
-    return None
+    # Always return dict with field values (may be None)
+    return {
+        "repo_url": repo_url,
+        "test_job_path": test_job_path,
+        "github_credentials_id": github_credentials_id,
+    }
 
 
-def validate_repo_config(repo_name: str, config: Optional[dict[str, str]]) -> None:
+def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> None:
     """Validate repository configuration has all required fields.
 
     Args:
         repo_name: Name of repository being validated
-        config: Repository configuration dict or None
+        config: Repository configuration dict with possibly None values
 
     Raises:
-        ValueError: If config is None or missing required fields
+        ValueError: If any required fields are missing with detailed error message
     """
-    if config is None:
-        raise ValueError(
-            f"Repository '{repo_name}' not found in config\n"
-            f"Add it to config file under [coordinator.repos.{repo_name}]"
-        )
-
     required_fields = ["repo_url", "test_job_path", "github_credentials_id"]
+    missing_fields = []
+    
     for field in required_fields:
         if field not in config or not config[field]:
-            raise ValueError(
-                f"Repository '{repo_name}' missing required field '{field}'"
+            missing_fields.append(field)
+    
+    if missing_fields:
+        config_path = get_config_file_path()
+        section_name = f"coordinator.repos.{repo_name}"
+        
+        # Build concise one-line error message for each missing field
+        if len(missing_fields) == 1:
+            field = missing_fields[0]
+            error_msg = (
+                f"Config file: {config_path} - "
+                f"section [{section_name}] - "
+                f"value for field '{field}' missing"
             )
+        else:
+            # Multiple missing fields
+            fields_str = "', '".join(missing_fields)
+            error_msg = (
+                f"Config file: {config_path} - "
+                f"section [{section_name}] - "
+                f"values for fields '{fields_str}' missing"
+            )
+        
+        raise ValueError(error_msg)
 
 
 def get_jenkins_credentials() -> tuple[str, str, str]:
@@ -145,10 +163,11 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         # Auto-create config on first run
         created = create_default_config()
         if created:
+            config_path = get_config_file_path()
             logger.info(
                 "Created default config file. Please update with your credentials."
             )
-            print("Created default config file at ~/.mcp_coder/config.toml")
+            print(f"Created default config file at {config_path}")
             print("Please update it with your Jenkins and repository information.")
             return 1  # Exit to let user configure
 
@@ -156,8 +175,13 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         repo_config = load_repo_config(args.repo_name)
         validate_repo_config(args.repo_name, repo_config)
 
-        # Type narrowing: validate_repo_config raises if repo_config is None
-        assert repo_config is not None
+        # Type narrowing: validate_repo_config raises if any fields are None
+        # After validation, we can safely cast to non-optional dict
+        validated_config: dict[str, str] = {
+            "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
+            "test_job_path": repo_config["test_job_path"],  # type: ignore[dict-item]
+            "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
+        }
 
         # Get Jenkins credentials
         server_url, username, api_token = get_jenkins_credentials()
@@ -166,14 +190,16 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         client = JenkinsClient(server_url, username, api_token)
 
         # Build job parameters
+        # Default COMMAND for coordinator test: simple version check
         params = {
-            "REPO_URL": repo_config["repo_url"],
+            "REPO_URL": validated_config["repo_url"],
             "BRANCH_NAME": args.branch_name,
-            "GITHUB_CREDENTIALS_ID": repo_config["github_credentials_id"],
+            "COMMAND": "mcp-coder --version",
+            "GITHUB_CREDENTIALS_ID": validated_config["github_credentials_id"],
         }
 
-        # Start job
-        queue_id = client.start_job(repo_config["test_job_path"], params)
+        # Start job (API token in Basic Auth bypasses CSRF)
+        queue_id = client.start_job(validated_config["test_job_path"], params)
 
         # Try to get job URL (may not be available immediately)
         try:
@@ -184,7 +210,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
             job_url = None
 
         # Format and print output
-        output = format_job_output(repo_config["test_job_path"], queue_id, job_url)
+        output = format_job_output(validated_config["test_job_path"], queue_id, job_url)
         print(output)
 
         return 0

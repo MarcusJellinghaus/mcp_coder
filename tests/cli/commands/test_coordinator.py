@@ -49,15 +49,18 @@ class TestLoadRepoConfig:
 
     @patch("mcp_coder.cli.commands.coordinator.get_config_value")
     def test_load_repo_config_missing_repo(self, mock_get_config: MagicMock) -> None:
-        """Test error when repository doesn't exist in config."""
+        """Test that missing repository returns dict with None values."""
         # Setup - return None for all keys
         mock_get_config.return_value = None
 
         # Execute
         result = load_repo_config("nonexistent_repo")
 
-        # Verify
-        assert result is None
+        # Verify - returns dict with None values
+        assert result is not None
+        assert result["repo_url"] is None
+        assert result["test_job_path"] is None
+        assert result["github_credentials_id"] is None
 
     @patch("mcp_coder.cli.commands.coordinator.get_config_value")
     def test_load_repo_config_handles_missing_config_file(
@@ -70,8 +73,11 @@ class TestLoadRepoConfig:
         # Execute
         result = load_repo_config("mcp_coder")
 
-        # Verify - should return None, not raise exception
-        assert result is None
+        # Verify - should return dict with None values, not raise exception
+        assert result is not None
+        assert result["repo_url"] is None
+        assert result["test_job_path"] is None
+        assert result["github_credentials_id"] is None
 
 
 class TestValidateRepoConfig:
@@ -80,7 +86,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_complete(self) -> None:
         """Test validation passes for complete configuration."""
         # Setup
-        config = {
+        config: dict[str, Optional[str]] = {
             "repo_url": "https://github.com/user/repo.git",
             "test_job_path": "Folder/job-name",
             "github_credentials_id": "github-pat",
@@ -93,12 +99,13 @@ class TestValidateRepoConfig:
         """Test validation fails when repo_url is missing."""
         # Setup
         config = {
+            "repo_url": None,
             "test_job_path": "Folder/job-name",
             "github_credentials_id": "github-pat",
         }
 
         # Execute & Verify
-        with pytest.raises(ValueError, match="missing required field 'repo_url'"):
+        with pytest.raises(ValueError, match="Config file:.*value for field 'repo_url' missing"):
             validate_repo_config("mcp_coder", config)
 
     def test_validate_repo_config_missing_test_job_path(self) -> None:
@@ -106,11 +113,12 @@ class TestValidateRepoConfig:
         # Setup
         config = {
             "repo_url": "https://github.com/user/repo.git",
+            "test_job_path": None,
             "github_credentials_id": "github-pat",
         }
 
         # Execute & Verify
-        with pytest.raises(ValueError, match="missing required field 'test_job_path'"):
+        with pytest.raises(ValueError, match="Config file:.*value for field 'test_job_path' missing"):
             validate_repo_config("mcp_coder", config)
 
     def test_validate_repo_config_missing_github_credentials_id(self) -> None:
@@ -119,21 +127,31 @@ class TestValidateRepoConfig:
         config = {
             "repo_url": "https://github.com/user/repo.git",
             "test_job_path": "Folder/job-name",
+            "github_credentials_id": None,
         }
 
         # Execute & Verify
-        with pytest.raises(
-            ValueError, match="missing required field 'github_credentials_id'"
-        ):
+        with pytest.raises(ValueError, match="Config file:.*value for field 'github_credentials_id' missing"):
             validate_repo_config("mcp_coder", config)
 
-    def test_validate_repo_config_none_value(self) -> None:
-        """Test validation handles None repository config."""
+    def test_validate_repo_config_multiple_missing_fields(self) -> None:
+        """Test validation reports multiple missing fields."""
+        # Setup
+        config = {
+            "repo_url": None,
+            "test_job_path": None,
+            "github_credentials_id": "github-pat",
+        }
+
         # Execute & Verify
-        with pytest.raises(
-            ValueError, match="Repository 'mcp_coder' not found in config"
-        ):
-            validate_repo_config("mcp_coder", None)
+        with pytest.raises(ValueError) as exc_info:
+            validate_repo_config("mcp_coder", config)
+        
+        error_msg = str(exc_info.value)
+        assert "Config file:" in error_msg
+        assert "values for fields 'repo_url', 'test_job_path' missing" in error_msg
+
+
 
 
 class TestGetJenkinsCredentials:
@@ -352,6 +370,7 @@ class TestExecuteCoordinatorTest:
             {
                 "REPO_URL": "https://github.com/user/repo.git",
                 "BRANCH_NAME": "feature-x",
+                "COMMAND": "mcp-coder --version",
                 "GITHUB_CREDENTIALS_ID": "github-pat",
             },
         )
@@ -380,7 +399,9 @@ class TestExecuteCoordinatorTest:
         # Verify message printed
         captured = capsys.readouterr()
         assert "Created default config file" in captured.out
-        assert ".mcp_coder/config.toml" in captured.out
+        assert (
+            "config.toml" in captured.out
+        )  # Check for filename, not specific path format
 
     @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
     @patch("mcp_coder.cli.commands.coordinator.create_default_config")
@@ -394,7 +415,12 @@ class TestExecuteCoordinatorTest:
         # Setup
         args = argparse.Namespace(repo_name="nonexistent", branch_name="feature-x")
         mock_create_config.return_value = False
-        mock_load_repo.return_value = None  # Repo not found
+        # Repo not found - all values None
+        mock_load_repo.return_value = {
+            "repo_url": None,
+            "test_job_path": None,
+            "github_credentials_id": None,
+        }
 
         # Execute
         result = execute_coordinator_test(args)
@@ -403,7 +429,8 @@ class TestExecuteCoordinatorTest:
         assert result == 1
         captured = capsys.readouterr()
         assert "Error:" in captured.err
-        assert "not found in config" in captured.err
+        assert "Config file:" in captured.err
+        assert "missing" in captured.err
 
     @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
     @patch("mcp_coder.cli.commands.coordinator.create_default_config")
@@ -421,6 +448,7 @@ class TestExecuteCoordinatorTest:
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
             "test_job_path": "MCP/test-job",
+            "github_credentials_id": None,
         }
 
         # Execute
@@ -430,7 +458,8 @@ class TestExecuteCoordinatorTest:
         assert result == 1
         captured = capsys.readouterr()
         assert "Error:" in captured.err
-        assert "missing required field" in captured.err
+        assert "Config file:" in captured.err
+        assert "github_credentials_id" in captured.err
 
     @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
@@ -625,9 +654,14 @@ class TestCoordinatorIntegration:
     def jenkins_available(self) -> bool:
         """Check if Jenkins configuration is available."""
         try:
-            get_jenkins_credentials()
+            server_url, username, api_token = get_jenkins_credentials()
+            print(f"\n[DEBUG] Jenkins credentials found:")
+            print(f"  server_url: {server_url}")
+            print(f"  username: {username}")
+            print(f"  api_token: {'*' * len(api_token) if api_token else None}")
             return True
-        except ValueError:
+        except ValueError as e:
+            print(f"\n[DEBUG] Jenkins credentials NOT available: {e}")
             return False
 
     def test_coordinator_test_end_to_end(
@@ -648,19 +682,21 @@ class TestCoordinatorIntegration:
         # For safety, we skip this test by default unless Jenkins is explicitly configured
         # and the repository exists in the config
         try:
+            print(f"\n[DEBUG] Loading repo config for 'mcp_coder'...")
             repo_config = load_repo_config("mcp_coder")
-            if repo_config is None:
-                pytest.skip("Repository 'mcp_coder' not configured")
-
+            print(f"[DEBUG] Repo config loaded: {repo_config}")
+            
             # Validate repo config
+            print(f"[DEBUG] Validating repo config...")
             validate_repo_config("mcp_coder", repo_config)
 
-            # If we get here, Jenkins and repo are configured
-            # In a real test environment, we would call execute_coordinator_test(args)
-            # For now, we just verify the configuration is valid
-            assert repo_config["repo_url"] is not None
-            assert repo_config["test_job_path"] is not None
-            assert repo_config["github_credentials_id"] is not None
+            # If we get here, Jenkins and repo are configured - actually trigger the job
+            result = execute_coordinator_test(args)
+
+            # Verify successful execution
+            assert (
+                result == 0
+            ), "Job triggering should succeed when Jenkins is configured"
 
         except ValueError as e:
             pytest.skip(f"Configuration incomplete: {e}")
