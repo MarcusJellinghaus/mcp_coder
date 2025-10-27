@@ -23,6 +23,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ## Tasks
 
+## Phase 1: Initial Implementation (Steps 1-5) ✅ COMPLETE
+
 ### Step 1: Config Template Infrastructure (TDD)
 - [x] Write tests for `create_default_config` in `tests/utils/test_user_config.py` (see [step_1.md](steps/step_1.md))
 - [x] Implement `create_default_config()` in `src/mcp_coder/utils/user_config.py` (see [step_1.md](steps/step_1.md))
@@ -61,10 +63,64 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ---
 
+## Phase 2: Code Review Fixes (Steps 6-9) 📋 NEW
+
+**Context:** After code review, several issues were identified requiring fixes. See [decisions.md](steps/decisions.md) for detailed rationale.
+
+### Step 6: Fix Field Name Inconsistency
+- [ ] Search README.md for all occurrences of `test_job_path` (see [step_6.md](steps/step_6.md))
+- [ ] Replace `test_job_path` with `executor_test_path` in all config examples (see [step_6.md](steps/step_6.md))
+- [ ] Verify no remaining inconsistencies with grep (see [step_6.md](steps/step_6.md))
+- [ ] Verify field name matches code in coordinator.py (see [step_6.md](steps/step_6.md))
+- [ ] Prepare git commit message for Step 6 (see [step_6.md](steps/step_6.md))
+
+### Step 7: Remove build_token from Documentation
+- [ ] Remove `build_token` from all config examples in README.md (see [step_7.md](steps/step_7.md))
+- [ ] Remove `build_token` from config template in CONFIG.md (see [step_7.md](steps/step_7.md))
+- [ ] Remove `build_token` from field description tables in CONFIG.md (see [step_7.md](steps/step_7.md))
+- [ ] Remove "About build_token" explanatory sections in CONFIG.md (see [step_7.md](steps/step_7.md))
+- [ ] Verify no remaining build_token references with grep (see [step_7.md](steps/step_7.md))
+- [ ] Verify only 3 required fields documented (repo_url, executor_test_path, github_credentials_id) (see [step_7.md](steps/step_7.md))
+- [ ] Prepare git commit message for Step 7 (see [step_7.md](steps/step_7.md))
+
+### Step 8: Implement DEFAULT_TEST_COMMAND Constant (TDD)
+- [ ] Write test `test_execute_coordinator_test_uses_default_test_command` in test_coordinator.py (see [step_8.md](steps/step_8.md))
+- [ ] Run test (should fail - constant doesn't exist yet) (see [step_8.md](steps/step_8.md))
+- [ ] Add DEFAULT_TEST_COMMAND constant to coordinator.py with comprehensive test script (see [step_8.md](steps/step_8.md))
+- [ ] Update execute_coordinator_test() to use DEFAULT_TEST_COMMAND in params (see [step_8.md](steps/step_8.md))
+- [ ] Run test again (should pass now) (see [step_8.md](steps/step_8.md))
+- [ ] Add "Test Command" section to CONFIG.md documenting what tests run (see [step_8.md](steps/step_8.md))
+- [ ] Run code quality checks: pylint, pytest, mypy (see [step_8.md](steps/step_8.md))
+- [ ] Verify all tests pass and fix any issues found (see [step_8.md](steps/step_8.md))
+- [ ] Prepare git commit message for Step 8 (see [step_8.md](steps/step_8.md))
+
+### Step 9: Clean Up Test Imports
+- [ ] Remove `Any` from typing imports in test_coordinator.py (see [step_9.md](steps/step_9.md))
+- [ ] Replace all `pytest.CaptureFixture[Any]` with `pytest.CaptureFixture[str]` (see [step_9.md](steps/step_9.md))
+- [ ] Verify no remaining Any usage with grep (see [step_9.md](steps/step_9.md))
+- [ ] Run all coordinator tests to verify type hints are correct (see [step_9.md](steps/step_9.md))
+- [ ] Run code quality checks: pylint, pytest, mypy (especially mypy for type checking) (see [step_9.md](steps/step_9.md))
+- [ ] Verify all tests pass and fix any issues found (see [step_9.md](steps/step_9.md))
+- [ ] Prepare git commit message for Step 9 (see [step_9.md](steps/step_9.md))
+
+---
+
 ## Pull Request
 
-- [ ] Review all implementation steps are complete
+- [ ] Review all implementation steps are complete (Steps 1-9)
 - [ ] Run final code quality checks across entire codebase
 - [ ] Verify all acceptance criteria from issue #149 are met
+- [ ] Verify all code review fixes are complete (Steps 6-9)
 - [ ] Create pull request with summary of changes
 - [ ] Link pull request to issue #149
+
+---
+
+## Progress Summary
+
+**Phase 1 (Steps 1-5):** ✅ Complete (~80% of implementation)  
+**Phase 2 (Steps 6-9):** 📋 Ready for implementation (~2 hours remaining)
+
+**Total Estimated Time:** ~9.5 hours  
+**Completed:** ~7.5 hours  
+**Remaining:** ~2 hours
