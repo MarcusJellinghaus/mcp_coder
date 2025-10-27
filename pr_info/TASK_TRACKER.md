@@ -23,9 +23,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ## Tasks
 
-## Phase 1: Initial Implementation (Steps 1-5) ✅ COMPLETE
-
 ### Step 1: Config Template Infrastructure (TDD)
+
 - [x] Write tests for `create_default_config` in `tests/utils/test_user_config.py` (see [step_1.md](steps/step_1.md))
 - [x] Implement `create_default_config()` in `src/mcp_coder/utils/user_config.py` (see [step_1.md](steps/step_1.md))
 - [x] Run code quality checks: pylint, pytest, mypy (see [step_1.md](steps/step_1.md))
@@ -33,6 +32,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 1 (see [step_1.md](steps/step_1.md))
 
 ### Step 2: Repository Config Validation (TDD)
+
 - [x] Create `tests/cli/commands/test_coordinator.py` with validation tests (see [step_2.md](steps/step_2.md))
 - [x] Create `src/mcp_coder/cli/commands/coordinator.py` with helper functions (see [step_2.md](steps/step_2.md))
 - [x] Run code quality checks: pylint, pytest, mypy (see [step_2.md](steps/step_2.md))
@@ -40,6 +40,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2 (see [step_2.md](steps/step_2.md))
 
 ### Step 3: CLI Command Core Logic (TDD)
+
 - [x] Extend `tests/cli/commands/test_coordinator.py` with execution tests (see [step_3.md](steps/step_3.md))
 - [x] Implement `execute_coordinator_test()` in coordinator.py (see [step_3.md](steps/step_3.md))
 - [x] Run code quality checks: pylint, pytest, mypy (see [step_3.md](steps/step_3.md))
@@ -47,6 +48,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 3 (see [step_3.md](steps/step_3.md))
 
 ### Step 4: CLI Integration (TDD)
+
 - [x] Extend `tests/cli/test_main.py` with coordinator CLI tests (see [step_4.md](steps/step_4.md))
 - [x] Update `src/mcp_coder/cli/main.py` with coordinator subparser (see [step_4.md](steps/step_4.md))
 - [x] Run code quality checks: pylint, pytest, mypy (see [step_4.md](steps/step_4.md))
@@ -54,6 +56,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 4 (see [step_4.md](steps/step_4.md))
 
 ### Step 5: Documentation & Integration Tests
+
 - [x] Create `docs/configuration/CONFIG.md` with comprehensive examples (see [step_5.md](steps/step_5.md))
 - [x] Update `README.md` with coordinator command usage (see [step_5.md](steps/step_5.md))
 - [x] Add integration tests to `test_coordinator.py` with jenkins_integration marker (see [step_5.md](steps/step_5.md))
@@ -61,13 +64,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Verify all tests pass and fix any issues found (see [step_5.md](steps/step_5.md))
 - [x] Prepare git commit message for Step 5 (see [step_5.md](steps/step_5.md))
 
----
-
-## Phase 2: Code Review Fixes (Steps 6-9) 📋 NEW
-
-**Context:** After code review, several issues were identified requiring fixes. See [decisions.md](steps/decisions.md) for detailed rationale.
-
 ### Step 6: Fix Field Name Inconsistency
+
 - [ ] Search README.md for all occurrences of `test_job_path` (see [step_6.md](steps/step_6.md))
 - [ ] Replace `test_job_path` with `executor_test_path` in all config examples (see [step_6.md](steps/step_6.md))
 - [ ] Verify no remaining inconsistencies with grep (see [step_6.md](steps/step_6.md))
@@ -75,6 +73,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 6 (see [step_6.md](steps/step_6.md))
 
 ### Step 7: Remove build_token from Documentation
+
 - [ ] Remove `build_token` from all config examples in README.md (see [step_7.md](steps/step_7.md))
 - [ ] Remove `build_token` from config template in CONFIG.md (see [step_7.md](steps/step_7.md))
 - [ ] Remove `build_token` from field description tables in CONFIG.md (see [step_7.md](steps/step_7.md))
@@ -84,6 +83,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 7 (see [step_7.md](steps/step_7.md))
 
 ### Step 8: Implement DEFAULT_TEST_COMMAND Constant (TDD)
+
 - [ ] Write test `test_execute_coordinator_test_uses_default_test_command` in test_coordinator.py (see [step_8.md](steps/step_8.md))
 - [ ] Run test (should fail - constant doesn't exist yet) (see [step_8.md](steps/step_8.md))
 - [ ] Add DEFAULT_TEST_COMMAND constant to coordinator.py with comprehensive test script (see [step_8.md](steps/step_8.md))
@@ -95,6 +95,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Prepare git commit message for Step 8 (see [step_8.md](steps/step_8.md))
 
 ### Step 9: Clean Up Test Imports
+
 - [ ] Remove `Any` from typing imports in test_coordinator.py (see [step_9.md](steps/step_9.md))
 - [ ] Replace all `pytest.CaptureFixture[Any]` with `pytest.CaptureFixture[str]` (see [step_9.md](steps/step_9.md))
 - [ ] Verify no remaining Any usage with grep (see [step_9.md](steps/step_9.md))
