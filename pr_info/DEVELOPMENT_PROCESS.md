@@ -167,10 +167,10 @@ flowchart LR
 - Add implementation hints (without detailed plan)
 - **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:awaiting-planning`
 
-**Prompts:**
+**Prompts for issue discussion:**
 
 <details>
-<summary>📋 Issue Discussion - Initial (click to expand and copy)</summary>
+<summary>📋 Initiate discussion (click to expand and copy)</summary>
 
 ```
 Can we discuss a requirement / implementation idea and its feasibility?
@@ -180,8 +180,22 @@ At the end of our discussion, I want to have an even better issue description.
 ```
 </details>
 
+ <details>
+ <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
+ 
+ ```
+ Can we go through all open suggested changes and questions step by step?
+ You explain, ask and I answer until we discussed all topics?
+ Please offer, whenever possible, simple options like 
+ - A
+ - B
+ - C
+ Always just ask ONE question
+ ```
+ </details>
+
 <details>
-<summary>📋 Issue Discussion - Draft Issue Text (click to expand and copy)</summary>
+<summary>📋 Draft Issue Text (click to expand and copy)</summary>
 
 ```
 Let's draft the issue text, with some very limited, concise implementation ideas.
@@ -191,6 +205,17 @@ Please provide the issue text (with issue header!) as markdown artifact, so that
 </details>
 
 ---
+
+<details>
+<summary>📋 Add analysis to Issue Text (click to expand and copy)</summary>
+
+```
+Let's draft the initial analysis text, with some very limited, concise implementation ideas to be added to the initial issue text.
+The implementation plan should be developed later. Focus on the issue and include the discussed details.
+Please provide the issue text as markdown artifact, so that I can easily update the issue on GitHub by adding the analysis text.
+```
+</details>
+
 
 ### 2. Plan Creation Workflow
 
