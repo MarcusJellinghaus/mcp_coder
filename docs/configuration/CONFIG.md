@@ -177,6 +177,67 @@ mcp-coder coordinator test mcp_coder --branch-name main
 mcp-coder coordinator test mcp_server_filesystem --branch-name develop
 ```
 
+## Test Command
+
+When you trigger a coordinator test, Jenkins executes a comprehensive verification script that validates the entire environment setup. This ensures the containerized environment is properly configured before running actual tests.
+
+### What Gets Tested
+
+The default test command performs the following checks:
+
+#### 1. Tool Verification
+- Verifies `mcp-coder` is installed and displays version
+- Verifies `mcp-code-checker` is installed
+- Verifies `mcp-server-filesystem` is installed
+- Runs `mcp-coder verify` to check environment
+
+#### 2. Environment Setup
+- Sets `MCP_CODER_PROJECT_DIR=/workspace/repo`
+- Sets `MCP_CODER_VENV_DIR=/workspace/.venv`
+- Syncs dependencies using `uv sync --extra dev`
+
+#### 3. Claude CLI Verification
+- Verifies `claude` CLI is installed
+- Lists configured MCP servers with `claude mcp list`
+- Tests basic Claude functionality with simple prompt
+
+#### 4. MCP Coder Functionality
+- Tests MCP Coder with debug logging
+- Verifies prompt command works correctly
+
+#### 5. Virtual Environment
+- Activates project virtual environment
+- Re-verifies `mcp-coder` from within venv
+
+### Test Command Script
+
+The full test script executed by Jenkins:
+
+```bash
+# Tool verification
+which mcp-coder && mcp-coder --version
+which mcp-code-checker && mcp-code-checker --help
+which mcp-server-filesystem && mcp-server-filesystem --help
+mcp-coder verify
+# Environment setup
+export MCP_CODER_PROJECT_DIR='/workspace/repo'
+export MCP_CODER_VENV_DIR='/workspace/.venv'
+uv sync --extra dev
+# Claude CLI verification
+which claude
+claude mcp list
+claude -p "What is 1 + 1?"
+# MCP Coder functionality test
+mcp-coder --log-level debug prompt "What is 1 + 1?"
+# Project environment verification
+source .venv/bin/activate
+which mcp-coder && mcp-coder --version
+```
+
+### Customization
+
+**Note**: The test command is currently hardcoded in the coordinator implementation. Future versions may support custom test commands per repository via configuration.
+
 ## Troubleshooting
 
 ### Error: Repository not found

@@ -86,13 +86,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Write test `test_execute_coordinator_test_uses_default_test_command` in test_coordinator.py (see [step_8.md](steps/step_8.md))
 - [x] Run test (should fail - constant doesn't exist yet) (see [step_8.md](steps/step_8.md))
-- [ ] Add DEFAULT_TEST_COMMAND constant to coordinator.py with comprehensive test script (see [step_8.md](steps/step_8.md))
-- [ ] Update execute_coordinator_test() to use DEFAULT_TEST_COMMAND in params (see [step_8.md](steps/step_8.md))
-- [ ] Run test again (should pass now) (see [step_8.md](steps/step_8.md))
-- [ ] Add "Test Command" section to CONFIG.md documenting what tests run (see [step_8.md](steps/step_8.md))
-- [ ] Run code quality checks: pylint, pytest, mypy (see [step_8.md](steps/step_8.md))
-- [ ] Verify all tests pass and fix any issues found (see [step_8.md](steps/step_8.md))
-- [ ] Prepare git commit message for Step 8 (see [step_8.md](steps/step_8.md))
+- [x] Add DEFAULT_TEST_COMMAND constant to coordinator.py with comprehensive test script (see [step_8.md](steps/step_8.md))
+- [x] Update execute_coordinator_test() to use DEFAULT_TEST_COMMAND in params (see [step_8.md](steps/step_8.md))
+- [x] Run test again (should pass now) (see [step_8.md](steps/step_8.md))
+- [x] Add "Test Command" section to CONFIG.md documenting what tests run (see [step_8.md](steps/step_8.md))
+- [x] Run code quality checks: pylint, pytest, mypy (see [step_8.md](steps/step_8.md))
+- [x] Verify all tests pass and fix any issues found (see [step_8.md](steps/step_8.md))
+- [x] Prepare git commit message for Step 8 (see [step_8.md](steps/step_8.md))
 
 ### Step 9: Clean Up Test Imports
 
