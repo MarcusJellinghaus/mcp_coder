@@ -97,7 +97,7 @@ See [step_4.md](./steps/step_4.md) for detailed instructions.
 ### Step 5: Code Review Quick Fixes
 See [step_5.md](./steps/step_5.md) for detailed instructions.
 
-- [ ] Fix 1: Remove sys.path manipulation from tests/conftest.py
+- [x] Fix 1: Remove sys.path manipulation from tests/conftest.py
 - [ ] Fix 2: Add ellipsis (...) to JenkinsError class body
 - [ ] Fix 3: Remove check=False from test_git_encoding_stress.py
 - [ ] Fix 4: Standardize test mocking to monkeypatch in test_env.py
