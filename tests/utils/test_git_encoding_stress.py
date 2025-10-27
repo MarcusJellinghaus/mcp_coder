@@ -318,7 +318,6 @@ print("Testing Unicode: 🌍🚀💻⭐🎉")
                 errors="replace",  # Replace invalid characters instead of crashing
                 env=env,
                 timeout=10,  # Prevent hanging
-                check=False,  # Don't raise exception on non-zero exit code
             )
 
             # Verify the subprocess completed successfully
