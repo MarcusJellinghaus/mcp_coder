@@ -194,7 +194,9 @@ class TestJenkinsClientStartJob:
 
         # Verify
         assert queue_id == 12345
-        mock_client.build_job.assert_called_once_with("test-job", parameters={}, token=None)
+        mock_client.build_job.assert_called_once_with(
+            "test-job", parameters={}, token=None
+        )
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_start_job_with_params(self, mock_jenkins_class: MagicMock) -> None:
@@ -212,7 +214,9 @@ class TestJenkinsClientStartJob:
 
         # Verify
         assert queue_id == 12346
-        mock_client.build_job.assert_called_once_with("test-job", parameters=params, token=None)
+        mock_client.build_job.assert_called_once_with(
+            "test-job", parameters=params, token=None
+        )
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_start_job_folder_path(self, mock_jenkins_class: MagicMock) -> None:

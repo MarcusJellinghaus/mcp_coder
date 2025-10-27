@@ -57,15 +57,15 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
     """
     required_fields = ["repo_url", "executor_test_path", "github_credentials_id"]
     missing_fields = []
-    
+
     for field in required_fields:
         if field not in config or not config[field]:
             missing_fields.append(field)
-    
+
     if missing_fields:
         config_path = get_config_file_path()
         section_name = f"coordinator.repos.{repo_name}"
-        
+
         # Build concise one-line error message for each missing field
         if len(missing_fields) == 1:
             field = missing_fields[0]
@@ -82,7 +82,7 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
                 f"section [{section_name}] - "
                 f"values for fields '{fields_str}' missing"
             )
-        
+
         raise ValueError(error_msg)
 
 
@@ -210,7 +210,9 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
             job_url = None
 
         # Format and print output
-        output = format_job_output(validated_config["executor_test_path"], queue_id, job_url)
+        output = format_job_output(
+            validated_config["executor_test_path"], queue_id, job_url
+        )
         print(output)
 
         return 0

@@ -66,11 +66,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 6: Fix Field Name Inconsistency
 
-- [ ] Search README.md for all occurrences of `test_job_path` (see [step_6.md](steps/step_6.md))
-- [ ] Replace `test_job_path` with `executor_test_path` in all config examples (see [step_6.md](steps/step_6.md))
-- [ ] Verify no remaining inconsistencies with grep (see [step_6.md](steps/step_6.md))
-- [ ] Verify field name matches code in coordinator.py (see [step_6.md](steps/step_6.md))
-- [ ] Prepare git commit message for Step 6 (see [step_6.md](steps/step_6.md))
+- [x] Search README.md for all occurrences of `test_job_path` (see [step_6.md](steps/step_6.md))
+- [x] Replace `test_job_path` with `executor_test_path` in all config examples (see [step_6.md](steps/step_6.md))
+- [x] Verify no remaining inconsistencies with grep (see [step_6.md](steps/step_6.md))
+- [x] Verify field name matches code in coordinator.py (see [step_6.md](steps/step_6.md))
+- [x] Prepare git commit message for Step 6 (see [step_6.md](steps/step_6.md))
 
 ### Step 7: Remove build_token from Documentation
 

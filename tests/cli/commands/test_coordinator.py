@@ -31,7 +31,10 @@ class TestLoadRepoConfig:
                     "coordinator.repos.mcp_coder",
                     "repo_url",
                 ): "https://github.com/user/repo.git",
-                ("coordinator.repos.mcp_coder", "executor_test_path"): "Folder/job-name",
+                (
+                    "coordinator.repos.mcp_coder",
+                    "executor_test_path",
+                ): "Folder/job-name",
                 ("coordinator.repos.mcp_coder", "github_credentials_id"): "github-pat",
             }
             return config_map.get((section, key))
@@ -105,7 +108,9 @@ class TestValidateRepoConfig:
         }
 
         # Execute & Verify
-        with pytest.raises(ValueError, match="Config file:.*value for field 'repo_url' missing"):
+        with pytest.raises(
+            ValueError, match="Config file:.*value for field 'repo_url' missing"
+        ):
             validate_repo_config("mcp_coder", config)
 
     def test_validate_repo_config_missing_executor_test_path(self) -> None:
@@ -118,7 +123,10 @@ class TestValidateRepoConfig:
         }
 
         # Execute & Verify
-        with pytest.raises(ValueError, match="Config file:.*value for field 'executor_test_path' missing"):
+        with pytest.raises(
+            ValueError,
+            match="Config file:.*value for field 'executor_test_path' missing",
+        ):
             validate_repo_config("mcp_coder", config)
 
     def test_validate_repo_config_missing_github_credentials_id(self) -> None:
@@ -131,7 +139,10 @@ class TestValidateRepoConfig:
         }
 
         # Execute & Verify
-        with pytest.raises(ValueError, match="Config file:.*value for field 'github_credentials_id' missing"):
+        with pytest.raises(
+            ValueError,
+            match="Config file:.*value for field 'github_credentials_id' missing",
+        ):
             validate_repo_config("mcp_coder", config)
 
     def test_validate_repo_config_multiple_missing_fields(self) -> None:
@@ -146,12 +157,10 @@ class TestValidateRepoConfig:
         # Execute & Verify
         with pytest.raises(ValueError) as exc_info:
             validate_repo_config("mcp_coder", config)
-        
+
         error_msg = str(exc_info.value)
         assert "Config file:" in error_msg
         assert "values for fields 'repo_url', 'executor_test_path' missing" in error_msg
-
-
 
 
 class TestGetJenkinsCredentials:
@@ -685,7 +694,7 @@ class TestCoordinatorIntegration:
             print(f"\n[DEBUG] Loading repo config for 'mcp_coder'...")
             repo_config = load_repo_config("mcp_coder")
             print(f"[DEBUG] Repo config loaded: {repo_config}")
-            
+
             # Validate repo config
             print(f"[DEBUG] Validating repo config...")
             validate_repo_config("mcp_coder", repo_config)

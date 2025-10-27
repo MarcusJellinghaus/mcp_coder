@@ -63,7 +63,7 @@ def get_config_value(section: str, key: str) -> Optional[str]:
 
         # Navigate nested sections using dot notation
         section_data = config_data
-        section_parts = section.split('.')
+        section_parts = section.split(".")
 
         for part in section_parts:
             if not isinstance(section_data, dict) or part not in section_data:

@@ -266,9 +266,7 @@ github_credentials_id = "github-pat"
             "builtins.open", mock_open(read_data=sample_config_content.encode())
         ):
             # Execute - 'nonexistent' is not a key in coordinator
-            result = get_config_value(
-                "coordinator.nonexistent.mcp_coder", "repo_url"
-            )
+            result = get_config_value("coordinator.nonexistent.mcp_coder", "repo_url")
 
             # Verify
             assert result is None
@@ -287,9 +285,7 @@ github_credentials_id = "github-pat"
             "builtins.open", mock_open(read_data=sample_config_content.encode())
         ):
             # Execute - 'nonexistent_repo' doesn't exist in coordinator.repos
-            result = get_config_value(
-                "coordinator.repos.nonexistent_repo", "repo_url"
-            )
+            result = get_config_value("coordinator.repos.nonexistent_repo", "repo_url")
 
             # Verify
             assert result is None
@@ -308,9 +304,7 @@ github_credentials_id = "github-pat"
             "builtins.open", mock_open(read_data=sample_config_content.encode())
         ):
             # Execute - section exists but key doesn't
-            result = get_config_value(
-                "coordinator.repos.mcp_coder", "nonexistent_key"
-            )
+            result = get_config_value("coordinator.repos.mcp_coder", "nonexistent_key")
 
             # Verify
             assert result is None

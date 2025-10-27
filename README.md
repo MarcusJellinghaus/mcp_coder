@@ -79,13 +79,13 @@ api_token = "jenkins-api-token"
 
 [coordinator.repos.mcp_coder]
 repo_url = "https://github.com/user/mcp_coder.git"
-test_job_path = "MCP_Coder/mcp-coder-test-job"
+executor_test_path = "MCP_Coder/mcp-coder-test-job"
 github_credentials_id = "github-general-pat"
 build_token = "your-build-token"  # Required
 
 [coordinator.repos.mcp_server_filesystem]
 repo_url = "https://github.com/user/mcp_server_filesystem.git"
-test_job_path = "MCP_Filesystem/test-job"
+executor_test_path = "MCP_Filesystem/test-job"
 github_credentials_id = "github-general-pat"
 build_token = "another-build-token"  # Required
 ```
