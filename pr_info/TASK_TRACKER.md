@@ -77,7 +77,7 @@ See [step_3.md](./steps/step_3.md) for detailed instructions.
 - [x] Fix all mypy issues
 - [x] Run full test suite (all tests including integration)
 - [x] Fix any remaining test failures
-- [ ] Prepare git commit message for Step 3
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Update Documentation
 See [step_4.md](./steps/step_4.md) for detailed instructions.
@@ -92,7 +92,7 @@ See [step_4.md](./steps/step_4.md) for detailed instructions.
 - [x] Run pylint - fix all issues found
 - [x] Run pytest - verify all tests pass
 - [x] Run mypy - fix all issues found
-- [ ] Prepare git commit message for Step 4
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Code Review Quick Fixes
 See [step_5.md](./steps/step_5.md) for detailed instructions.
@@ -104,7 +104,7 @@ See [step_5.md](./steps/step_5.md) for detailed instructions.
 - [x] Run pytest - verify all tests pass
 - [x] Run pylint - verify no new issues
 - [x] Run mypy - verify no type errors
-- [ ] Prepare git commit message for Step 5
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: Clean Up Global Pylint Disables
 See [step_6.md](./steps/step_6.md) for detailed instructions.
