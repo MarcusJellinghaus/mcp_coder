@@ -4,7 +4,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -68,9 +67,9 @@ def test_prepare_llm_environment_uses_sys_prefix_fallback(
     # Act - Clear both environment variables using monkeypatch
     monkeypatch.delenv("VIRTUAL_ENV", raising=False)
     monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.setattr(sys, "prefix", system_prefix)
 
-    with patch.object(sys, "prefix", system_prefix):
-        result = prepare_llm_environment(project_dir)
+    result = prepare_llm_environment(project_dir)
 
     # Assert
     assert result["MCP_CODER_VENV_DIR"] == str(Path(system_prefix).resolve())
@@ -134,9 +133,9 @@ def test_prepare_llm_environment_all_invalid_uses_sys_prefix(
     # Act - Both VIRTUAL_ENV and CONDA_PREFIX set to invalid paths
     monkeypatch.setenv("VIRTUAL_ENV", "/nonexistent/venv")
     monkeypatch.setenv("CONDA_PREFIX", "/nonexistent/conda")
+    monkeypatch.setattr(sys, "prefix", system_prefix)
 
-    with patch.object(sys, "prefix", system_prefix):
-        result = prepare_llm_environment(project_dir)
+    result = prepare_llm_environment(project_dir)
 
     # Assert
     assert result["MCP_CODER_VENV_DIR"] == str(Path(system_prefix).resolve())

@@ -100,10 +100,10 @@ See [step_5.md](./steps/step_5.md) for detailed instructions.
 - [x] Fix 1: Remove sys.path manipulation from tests/conftest.py
 - [x] Fix 2: Add ellipsis (...) to JenkinsError class body
 - [x] Fix 3: Remove check=False from test_git_encoding_stress.py
-- [ ] Fix 4: Standardize test mocking to monkeypatch in test_env.py
-- [ ] Run pytest - verify all tests pass
-- [ ] Run pylint - verify no new issues
-- [ ] Run mypy - verify no type errors
+- [x] Fix 4: Standardize test mocking to monkeypatch in test_env.py
+- [x] Run pytest - verify all tests pass
+- [x] Run pylint - verify no new issues
+- [x] Run mypy - verify no type errors
 - [ ] Prepare git commit message for Step 5
 
 ### Step 6: Clean Up Global Pylint Disables
