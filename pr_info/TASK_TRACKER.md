@@ -74,13 +74,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 7: Remove build_token from Documentation
 
-- [ ] Remove `build_token` from all config examples in README.md (see [step_7.md](steps/step_7.md))
-- [ ] Remove `build_token` from config template in CONFIG.md (see [step_7.md](steps/step_7.md))
-- [ ] Remove `build_token` from field description tables in CONFIG.md (see [step_7.md](steps/step_7.md))
-- [ ] Remove "About build_token" explanatory sections in CONFIG.md (see [step_7.md](steps/step_7.md))
-- [ ] Verify no remaining build_token references with grep (see [step_7.md](steps/step_7.md))
-- [ ] Verify only 3 required fields documented (repo_url, executor_test_path, github_credentials_id) (see [step_7.md](steps/step_7.md))
-- [ ] Prepare git commit message for Step 7 (see [step_7.md](steps/step_7.md))
+- [x] Remove `build_token` from all config examples in README.md (see [step_7.md](steps/step_7.md))
+- [x] Remove `build_token` from config template in CONFIG.md (see [step_7.md](steps/step_7.md))
+- [x] Remove `build_token` from field description tables in CONFIG.md (see [step_7.md](steps/step_7.md))
+- [x] Remove "About build_token" explanatory sections in CONFIG.md (see [step_7.md](steps/step_7.md))
+- [x] Verify no remaining build_token references with grep (see [step_7.md](steps/step_7.md))
+- [x] Verify only 3 required fields documented (repo_url, executor_test_path, github_credentials_id) (see [step_7.md](steps/step_7.md))
+- [x] Prepare git commit message for Step 7 (see [step_7.md](steps/step_7.md))
 
 ### Step 8: Implement DEFAULT_TEST_COMMAND Constant (TDD)
 

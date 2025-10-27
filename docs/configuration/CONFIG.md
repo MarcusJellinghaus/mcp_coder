@@ -52,20 +52,17 @@ api_token = "your-jenkins-api-token"
 repo_url = "https://github.com/your-org/repo_a.git"
 test_job_path = "jenkins_folder_a/test-job-a"
 github_credentials_id = "github-general-pat"
-build_token = "your-build-token-here"  # Required
 
 [coordinator.repos.repo_b]
 repo_url = "https://github.com/your-org/repo_b.git"
 test_job_path = "jenkins_folder_b/test-job-b"
 github_credentials_id = "github-general-pat"
-build_token = "another-build-token"  # Required
 
 # Add more repositories as needed:
 # [coordinator.repos.your_repo_name]
 # repo_url = "https://github.com/your-org/your_repo.git"
 # test_job_path = "Folder/job-name"
 # github_credentials_id = "github-credentials-id"
-# build_token = "your-job-build-token"  # Required
 ```
 
 ## Configuration Sections
@@ -107,7 +104,6 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 | `repo_url` | string | Git repository HTTPS URL | Yes |
 | `test_job_path` | string | Jenkins job path (folder/job-name) | Yes |
 | `github_credentials_id` | string | Jenkins GitHub credentials ID | Yes |
-| `build_token` | string | Per-job build authentication token | **Yes** |
 
 **Example:**
 ```toml
@@ -115,15 +111,7 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 repo_url = "https://github.com/myorg/my_project.git"
 test_job_path = "MyProject/integration-tests"
 github_credentials_id = "github-pat-token"
-build_token = "my-secure-build-token"  # Required for remote job triggering
 ```
-
-**About `build_token` (Required)**:
-- **Required** for all coordinator test jobs
-- Jenkins jobs must have "Trigger builds remotely (e.g., from scripts)" enabled
-- Set in Jenkins: Job → Configure → Check "Trigger builds remotely" → Enter token in "Authentication Token" field
-- You create this token yourself in Jenkins job configuration (can be any string)
-- This token authenticates the remote trigger request
 
 **Repository naming:**
 - Use lowercase with underscores (e.g., `mcp_coder`, `my_project`)
