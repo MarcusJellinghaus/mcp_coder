@@ -296,7 +296,7 @@ class TestCoordinatorCommand:
         with pytest.raises(SystemExit):
             parser.parse_args(["coordinator", "test", "mcp_coder"])
 
-    @patch("mcp_coder.cli.commands.coordinator.execute_coordinator_test")
+    @patch("mcp_coder.cli.main.execute_coordinator_test")
     def test_coordinator_test_executes_handler(self, mock_execute: Mock) -> None:
         """Test that coordinator test calls execute_coordinator_test."""
         # Setup
@@ -325,7 +325,7 @@ class TestCoordinatorCommand:
         assert call_args.repo_name == "mcp_coder"
         assert call_args.branch_name == "feature-x"
 
-    @patch("mcp_coder.cli.commands.coordinator.execute_coordinator_test")
+    @patch("mcp_coder.cli.main.execute_coordinator_test")
     def test_coordinator_test_with_log_level(self, mock_execute: Mock) -> None:
         """Test coordinator test respects --log-level flag."""
         # Setup
