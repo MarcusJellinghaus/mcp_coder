@@ -29,7 +29,7 @@ Now, simply `claude` should work in any terminal.
 - `--version`  Show the version and exit
 - `--help`  Show help message and exit
 
-- `mcp add-from-claude-desktop` Add mcp config files from Claude Desktop, not working on windows
+- `mcp add-from-claude-desktop` Add mcp config files from Claude Desktop (limited platform support)
 
 - `mcp list` List MCP projects
 

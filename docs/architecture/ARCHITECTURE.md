@@ -3,8 +3,8 @@
 ## Document Metadata
 
 **Framework**: Arc42 Template  
-**Version**: 1.6  
-**Last Updated**: 2025-10-08  
+**Version**: 1.7  
+**Last Updated**: 2025-10-26  
 **Status**: Complete (Sections 1-8)  
 **Maintainer**: Marcus Jellinghaus  
 **Review Frequency**: Quarterly or on major changes  
@@ -131,7 +131,11 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 
 ### LLM System (`src/mcp_coder/llm/`)
 - **Interface**: `llm/interface.py` - Multi-provider LLM abstraction (tests: `llm/test_interface.py`)
-- **Environment**: `llm/env.py` - Environment variable preparation for LLM subprocess (tests: `llm/test_env.py`)
+- **Environment**: `llm/env.py` - Runner environment detection and environment variable preparation for LLM subprocess (tests: `llm/test_env.py`)
+  - **Design Decision**: Simplified from filesystem detection to environment variables (Oct 2025)
+    - **Rationale**: Use Python's built-in environment information (`VIRTUAL_ENV`, `CONDA_PREFIX`, `sys.prefix`) instead of complex filesystem searches
+    - **Benefits**: Universal compatibility (venv/conda/system Python), simpler code (~90% less complexity), more reliable
+    - **Key Change**: `MCP_CODER_VENV_DIR` now points to runner environment (where mcp-coder executes), not project directory
 - **Formatting**: `llm/formatting/` - Response formatters and SDK utilities
   - `formatters.py` - Text/verbose/raw output formatting (tests: `llm/formatting/test_formatters.py`)
   - `sdk_serialization.py` - SDK message object handling (tests: `llm/formatting/test_sdk_serialization.py`)
