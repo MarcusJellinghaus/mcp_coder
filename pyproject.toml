@@ -93,24 +93,9 @@ line_length = 88
 float_to_top = true
 
 [tool.pylint.messages_control]
-# W1203: Disable lazy % formatting requirement - prefer f-strings for readability
-# W0511: Disable fixme warnings - TODOs are tracked in issue tracker and PR steps
-# W0613: Disable unused-argument for test mocks and fixtures (intentional for interface compatibility)
-# W0621: Disable redefined-outer-name for pytest fixtures (standard pytest pattern)
-# W0246: Disable useless-parent-delegation when __init__ provides class-specific documentation
-# W0612: Disable unused-variable for variables that exist for side effects or test setup
-# W0706: Disable try-except-raise when except block performs cleanup in finally before re-raising
-# W0719: Disable broad-exception-raised when raising generic Exception is intentional
-# W0404: Disable reimported warnings in test files (common pattern for test isolation)
-# W0718: Disable broad-exception-caught for robust error handling in top-level handlers
-# W0707: Disable raise-missing-from when exception chaining is not needed
-disable = ["W1203", "W0511", "W0613", "W0621", "W0246", "W0612", "W0706", "W0719", "W0404", "W0718", "W0707"]
-# To be reviewed
-# R0903: Disable too-few-public-methods for test classes (tests often have single methods)
-# R0917: Disable too-many-positional-arguments for test mocks (mocks mirror real signatures)
-# R0913: Disable too-many-arguments for test mocks (mocks mirror real signatures)
-# C0415: Disable import-outside-toplevel for test files (common for testing optional dependencies)
-# R0801: Disable duplicate-code for test files (similar test patterns are expected)
+# W1203: Disable lazy % formatting - project prefers f-strings for readability
+# W0621: Disable redefined-outer-name - pytest fixtures standard pattern
+disable = ["W1203", "W0621"]
 
 
 [tool.mypy]

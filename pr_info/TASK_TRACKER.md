@@ -109,16 +109,16 @@ See [step_5.md](./steps/step_5.md) for detailed instructions.
 ### Step 6: Clean Up Global Pylint Disables
 See [step_6.md](./steps/step_6.md) for detailed instructions.
 
-- [ ] Update pyproject.toml to keep only W1203 and W0621 in global disables
-- [ ] Run pylint to identify all new warnings
-- [ ] Review each warning and decide: fix code or add inline disable
-- [ ] Fix code where possible (preferred over disables)
-- [ ] Add inline disables only where justified with clear comments
-- [ ] Run pylint - verify clean results
-- [ ] Run pytest - verify all tests pass
-- [ ] Run mypy - verify no type errors
-- [ ] Document common patterns in step_6.md
-- [ ] Prepare git commit message for Step 6
+- [x] Update pyproject.toml to keep only W1203 and W0621 in global disables
+- [x] Run pylint to identify all new warnings
+- [x] Review each warning and decide: fix code or add inline disable
+- [x] Fix code where possible (preferred over disables)
+- [x] Add inline disables only where justified with clear comments
+- [x] Run pylint - verify clean results
+- [x] Run pytest - verify all tests pass
+- [x] Run mypy - verify no type errors
+- [x] Document common patterns in step_6.md
+- [x] Prepare git commit message for Step 6
 
 ---
 
