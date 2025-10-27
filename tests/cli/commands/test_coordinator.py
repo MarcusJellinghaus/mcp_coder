@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
+    DEFAULT_TEST_COMMAND,
     execute_coordinator_test,
     format_job_output,
     get_jenkins_credentials,
@@ -379,7 +380,7 @@ class TestExecuteCoordinatorTest:
             {
                 "REPO_URL": "https://github.com/user/repo.git",
                 "BRANCH_NAME": "feature-x",
-                "COMMAND": "mcp-coder --version",
+                "COMMAND": DEFAULT_TEST_COMMAND,
                 "GITHUB_CREDENTIALS_ID": "github-pat",
             },
         )
@@ -645,6 +646,54 @@ class TestExecuteCoordinatorTest:
         # Verify fallback message in output
         captured = capsys.readouterr()
         assert "will be available once build starts" in captured.out
+
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_test_uses_default_test_command(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+    ) -> None:
+        """Test that DEFAULT_TEST_COMMAND is used in job parameters."""
+        # Setup
+        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        mock_create_config.return_value = False
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_test_path": "MCP/test-job",
+            "github_credentials_id": "github-pat",
+        }
+        mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
+
+        mock_client = MagicMock()
+        mock_jenkins_class.return_value = mock_client
+        mock_client.start_job.return_value = 12345
+
+        # Execute
+        execute_coordinator_test(args)
+
+        # Verify - check that start_job was called with comprehensive test command
+        call_args = mock_client.start_job.call_args
+        params = call_args[0][1]  # Second positional argument is params dict
+
+        # Verify COMMAND parameter exists and contains comprehensive test
+        assert "COMMAND" in params
+        command = params["COMMAND"]
+
+        # Verify comprehensive test script components
+        assert "which mcp-coder" in command
+        assert "which mcp-code-checker" in command
+        assert "which mcp-server-filesystem" in command
+        assert "mcp-coder verify" in command
+        assert "export MCP_CODER_PROJECT_DIR" in command
+        assert "uv sync --extra dev" in command
+        assert "which claude" in command
+        assert "claude mcp list" in command
+        assert "source .venv/bin/activate" in command
 
 
 @pytest.mark.jenkins_integration

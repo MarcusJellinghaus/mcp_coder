@@ -21,6 +21,29 @@ from ...utils.user_config import (
 logger = logging.getLogger(__name__)
 
 
+# Default test command for coordinator integration tests
+# This comprehensive script verifies the complete environment setup
+DEFAULT_TEST_COMMAND = """# Tool verification
+which mcp-coder && mcp-coder --version
+which mcp-code-checker && mcp-code-checker --help
+which mcp-server-filesystem && mcp-server-filesystem --help
+mcp-coder verify
+# Environment setup
+export MCP_CODER_PROJECT_DIR='/workspace/repo'
+export MCP_CODER_VENV_DIR='/workspace/.venv'
+uv sync --extra dev
+# Claude CLI verification
+which claude
+claude mcp list
+claude -p "What is 1 + 1?"
+# MCP Coder functionality test
+mcp-coder --log-level debug prompt "What is 1 + 1?"
+# Project environment verification
+source .venv/bin/activate
+which mcp-coder && mcp-coder --version
+"""
+
+
 def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
     """Load repository configuration from config file.
 
@@ -190,11 +213,10 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         client = JenkinsClient(server_url, username, api_token)
 
         # Build job parameters
-        # Default COMMAND for coordinator test: simple version check
         params = {
             "REPO_URL": validated_config["repo_url"],
             "BRANCH_NAME": args.branch_name,
-            "COMMAND": "mcp-coder --version",
+            "COMMAND": DEFAULT_TEST_COMMAND,
             "GITHUB_CREDENTIALS_ID": validated_config["github_credentials_id"],
         }
 
