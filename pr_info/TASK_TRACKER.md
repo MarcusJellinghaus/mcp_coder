@@ -85,7 +85,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 8: Implement DEFAULT_TEST_COMMAND Constant (TDD)
 
 - [x] Write test `test_execute_coordinator_test_uses_default_test_command` in test_coordinator.py (see [step_8.md](steps/step_8.md))
-- [ ] Run test (should fail - constant doesn't exist yet) (see [step_8.md](steps/step_8.md))
+- [x] Run test (should fail - constant doesn't exist yet) (see [step_8.md](steps/step_8.md))
 - [ ] Add DEFAULT_TEST_COMMAND constant to coordinator.py with comprehensive test script (see [step_8.md](steps/step_8.md))
 - [ ] Update execute_coordinator_test() to use DEFAULT_TEST_COMMAND in params (see [step_8.md](steps/step_8.md))
 - [ ] Run test again (should pass now) (see [step_8.md](steps/step_8.md))
