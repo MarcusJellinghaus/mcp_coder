@@ -96,13 +96,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 9: Clean Up Test Imports
 
-- [ ] Remove `Any` from typing imports in test_coordinator.py (see [step_9.md](steps/step_9.md))
-- [ ] Replace all `pytest.CaptureFixture[Any]` with `pytest.CaptureFixture[str]` (see [step_9.md](steps/step_9.md))
-- [ ] Verify no remaining Any usage with grep (see [step_9.md](steps/step_9.md))
-- [ ] Run all coordinator tests to verify type hints are correct (see [step_9.md](steps/step_9.md))
-- [ ] Run code quality checks: pylint, pytest, mypy (especially mypy for type checking) (see [step_9.md](steps/step_9.md))
-- [ ] Verify all tests pass and fix any issues found (see [step_9.md](steps/step_9.md))
-- [ ] Prepare git commit message for Step 9 (see [step_9.md](steps/step_9.md))
+- [x] Remove `Any` from typing imports in test_coordinator.py (see [step_9.md](steps/step_9.md))
+- [x] Replace all `pytest.CaptureFixture[Any]` with `pytest.CaptureFixture[str]` (see [step_9.md](steps/step_9.md))
+- [x] Verify no remaining Any usage with grep (see [step_9.md](steps/step_9.md))
+- [x] Run all coordinator tests to verify type hints are correct (see [step_9.md](steps/step_9.md))
+- [x] Run code quality checks: pylint, pytest, mypy (especially mypy for type checking) (see [step_9.md](steps/step_9.md))
+- [x] Verify all tests pass and fix any issues found (see [step_9.md](steps/step_9.md))
+- [x] Prepare git commit message for Step 9 (see [step_9.md](steps/step_9.md))
 
 ---
 

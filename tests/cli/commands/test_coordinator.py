@@ -2,7 +2,7 @@
 
 import argparse
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -331,7 +331,7 @@ class TestExecuteCoordinatorTest:
         mock_load_repo: MagicMock,
         mock_get_creds: MagicMock,
         mock_jenkins_class: MagicMock,
-        capsys: pytest.CaptureFixture[Any],
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test successful command execution."""
         # Setup
@@ -392,7 +392,7 @@ class TestExecuteCoordinatorTest:
 
     @patch("mcp_coder.cli.commands.coordinator.create_default_config")
     def test_execute_coordinator_test_creates_config_if_missing(
-        self, mock_create_config: MagicMock, capsys: pytest.CaptureFixture[Any]
+        self, mock_create_config: MagicMock, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Test config file is auto-created on first run."""
         # Setup
@@ -419,7 +419,7 @@ class TestExecuteCoordinatorTest:
         self,
         mock_create_config: MagicMock,
         mock_load_repo: MagicMock,
-        capsys: pytest.CaptureFixture[Any],
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test error when repository not in config."""
         # Setup
@@ -448,7 +448,7 @@ class TestExecuteCoordinatorTest:
         self,
         mock_create_config: MagicMock,
         mock_load_repo: MagicMock,
-        capsys: pytest.CaptureFixture[Any],
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test error when repository config incomplete."""
         # Setup
@@ -479,7 +479,7 @@ class TestExecuteCoordinatorTest:
         mock_create_config: MagicMock,
         mock_load_repo: MagicMock,
         mock_get_creds: MagicMock,
-        capsys: pytest.CaptureFixture[Any],
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test error when Jenkins credentials missing."""
         # Setup
@@ -542,7 +542,7 @@ class TestExecuteCoordinatorTest:
         mock_load_repo: MagicMock,
         mock_get_creds: MagicMock,
         mock_jenkins_class: MagicMock,
-        capsys: pytest.CaptureFixture[Any],
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that job information is printed to stdout."""
         # Setup
@@ -580,7 +580,7 @@ class TestExecuteCoordinatorTest:
         mock_load_repo: MagicMock,
         mock_get_creds: MagicMock,
         mock_jenkins_class: MagicMock,
-        capsys: pytest.CaptureFixture[Any],
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test output when job URL immediately available."""
         # Setup
@@ -621,7 +621,7 @@ class TestExecuteCoordinatorTest:
         mock_load_repo: MagicMock,
         mock_get_creds: MagicMock,
         mock_jenkins_class: MagicMock,
-        capsys: pytest.CaptureFixture[Any],
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test output when job URL not yet available."""
         # Setup
