@@ -8,7 +8,7 @@ Configuration:
         JENKINS_URL: Jenkins server URL with port
         JENKINS_USER: Jenkins username
         JENKINS_TOKEN: Jenkins API token
-        JENKINS_TEST_JOB: Test job name (optional, defaults to mcp-coder-test-job)
+        JENKINS_TEST_JOB: Test job name (required)
 
     Config File (~/.mcp_coder/config.toml):
         [jenkins]
@@ -64,15 +64,11 @@ def jenkins_test_setup() -> Generator[dict[str, str], None, None]:
     if not test_job:
         test_job = get_config_value("jenkins", "test_job")
 
-    # Default test_job if still not set
-    if not test_job:
-        test_job = "mcp-coder-test-job"
-
     # Check required configuration and skip if missing
-    if not server_url or not username or not api_token:
+    if not server_url or not username or not api_token or not test_job:
         pytest.skip(
-            "Jenkins not configured. Set JENKINS_URL, JENKINS_USER, JENKINS_TOKEN "
-            "environment variables or configure in ~/.mcp_coder/config.toml [jenkins] section."
+            "Jenkins not configured. Set JENKINS_URL, JENKINS_USER, JENKINS_TOKEN, JENKINS_TEST_JOB "
+            "environment variables or configure in ~/.mcp_coder/config.toml [jenkins] section (including test_job)."
         )
 
     setup = {

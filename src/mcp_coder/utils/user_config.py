@@ -116,28 +116,27 @@ def create_default_config() -> bool:
 server_url = "https://jenkins.example.com:8080"
 username = "your-jenkins-username"
 api_token = "your-jenkins-api-token"
+test_job = "Tests/mcp-coder-simple-test"  # Job for integration tests
+test_job_coordination = "Tests/mcp-coder-coordinator-test"  # Job for coordinator tests
 
 # Coordinator test repositories
 # Add your repositories here following this pattern
 
 [coordinator.repos.mcp_coder]
 repo_url = "https://github.com/your-org/mcp_coder.git"
-test_job_path = "MCP_Coder/mcp-coder-test-job"
+executor_test_path = "Tests/mcp-coder-coordinator-test"
 github_credentials_id = "github-general-pat"
-build_token = "your-build-token"  # Required: Set in Jenkins job "Trigger builds remotely"
 
 [coordinator.repos.mcp_server_filesystem]
 repo_url = "https://github.com/your-org/mcp_server_filesystem.git"
-test_job_path = "MCP_Filesystem/test-job"
+executor_test_path = "Tests/mcp-filesystem-coordinator-test"
 github_credentials_id = "github-general-pat"
-build_token = "another-build-token"  # Required
 
 # Add more repositories as needed:
 # [coordinator.repos.your_repo_name]
 # repo_url = "https://github.com/your-org/your_repo.git"
-# test_job_path = "Folder/job-name"
+# executor_test_path = "Tests/your-repo-coordinator-test"
 # github_credentials_id = "github-credentials-id"
-# build_token = "your-job-build-token"  # Required
 """
 
     # Write template to file

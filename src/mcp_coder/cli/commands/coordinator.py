@@ -28,19 +28,19 @@ def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
         repo_name: Name of repository to load (e.g., "mcp_coder")
 
     Returns:
-        Dictionary with repo_url, test_job_path, github_credentials_id
+        Dictionary with repo_url, executor_test_path, github_credentials_id
         Values may be None if not found in config
     """
     section = f"coordinator.repos.{repo_name}"
 
     repo_url = get_config_value(section, "repo_url")
-    test_job_path = get_config_value(section, "test_job_path")
+    executor_test_path = get_config_value(section, "executor_test_path")
     github_credentials_id = get_config_value(section, "github_credentials_id")
 
     # Always return dict with field values (may be None)
     return {
         "repo_url": repo_url,
-        "test_job_path": test_job_path,
+        "executor_test_path": executor_test_path,
         "github_credentials_id": github_credentials_id,
     }
 
@@ -55,7 +55,7 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
     Raises:
         ValueError: If any required fields are missing with detailed error message
     """
-    required_fields = ["repo_url", "test_job_path", "github_credentials_id"]
+    required_fields = ["repo_url", "executor_test_path", "github_credentials_id"]
     missing_fields = []
     
     for field in required_fields:
@@ -179,7 +179,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         # After validation, we can safely cast to non-optional dict
         validated_config: dict[str, str] = {
             "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
-            "test_job_path": repo_config["test_job_path"],  # type: ignore[dict-item]
+            "executor_test_path": repo_config["executor_test_path"],  # type: ignore[dict-item]
             "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
         }
 
@@ -199,7 +199,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         }
 
         # Start job (API token in Basic Auth bypasses CSRF)
-        queue_id = client.start_job(validated_config["test_job_path"], params)
+        queue_id = client.start_job(validated_config["executor_test_path"], params)
 
         # Try to get job URL (may not be available immediately)
         try:
@@ -210,7 +210,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
             job_url = None
 
         # Format and print output
-        output = format_job_output(validated_config["test_job_path"], queue_id, job_url)
+        output = format_job_output(validated_config["executor_test_path"], queue_id, job_url)
         print(output)
 
         return 0
