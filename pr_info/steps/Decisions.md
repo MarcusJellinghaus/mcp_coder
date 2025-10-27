@@ -300,3 +300,119 @@ These decisions shaped the final implementation plan structure:
 All decisions prioritize simplicity, robustness, and maintainability while following TDD principles.
 
 **Plan Review Decisions (14-21):** During plan review, we confirmed the overall structure is sound and made targeted adjustments to reduce documentation verbosity while maintaining comprehensive guidance.
+
+
+---
+
+## Code Review Decisions (22-28)
+
+These decisions were made during code review of the implemented changes in PR #151.
+
+## Decision 22: sys.path Manipulation in conftest.py (Code Review)
+
+**Question:** What should we do with the sys.path manipulation added to tests/conftest.py?
+
+**Decision:** Option A - Remove it completely
+
+**Rationale:**
+- Tests should use properly installed package
+- sys.path manipulation can cause import confusion
+- Can mask packaging issues
+- Not related to issue #151
+
+**Implementation:** Remove lines 9-20 from tests/conftest.py in Step 5
+
+## Decision 23: Empty JenkinsError Exception Class Body (Code Review)
+
+**Question:** What should be in the JenkinsError class body after removing `pass`?
+
+**Decision:** Option B - Add `...` (ellipsis)
+
+**Rationale:**
+- Modern Python style for intentionally empty bodies
+- More explicit than no body at all
+- Cleaner than `pass` for empty classes
+
+**Implementation:** Add `...` to JenkinsError class in src/mcp_coder/utils/jenkins_operations/client.py in Step 5
+
+## Decision 24: Global Pylint Disables (Code Review)
+
+**Question:** How should we handle overly broad global pylint disables in pyproject.toml?
+
+**Decision:** Option B - Remove global disables, use inline comments only where needed
+
+**Rationale:**
+- Maintain code quality checks project-wide
+- Allow exceptions only where justified
+- Inline comments provide context for each exception
+- Improves overall code quality
+
+**Implementation:** Create Step 6 dedicated to cleaning up pylint disables
+
+## Decision 25: Missing Test for Empty CONDA_PREFIX (Code Review)
+
+**Question:** Should we add a test for empty CONDA_PREFIX with empty VIRTUAL_ENV?
+
+**Decision:** Option B - No, current tests sufficient
+
+**Rationale:**
+- Empty string handling is already tested
+- Existing fallback test validates the behavior
+- No additional value from redundant test
+
+**Implementation:** No action needed
+
+## Decision 26: Backward Compatibility Note in Documentation (Code Review)
+
+**Question:** Should we keep the backward compatibility note in ARCHITECTURE.md?
+
+**Decision:** Option B - Remove it (transparent change)
+
+**Rationale:**
+- Change is transparent to users
+- No migration needed
+- Note clutters documentation without adding value
+
+**Implementation:** Remove "Backward Compatible" line from docs/architecture/ARCHITECTURE.md (completed)
+
+## Decision 27: Unrelated Test Change in test_git_encoding_stress.py (Code Review)
+
+**Question:** What should we do with the `check=False` parameter added to test_git_encoding_stress.py?
+
+**Decision:** Option B - Remove from this PR
+
+**Rationale:**
+- Unrelated to issue #151 (environment detection)
+- Keeps PR focused on single purpose
+- If this fixes a real issue, it deserves separate PR with proper context
+
+**Implementation:** Remove check=False parameter from tests/utils/test_git_encoding_stress.py line 319 in Step 5
+
+## Decision 28: Test Style Consistency - monkeypatch vs patch (Code Review)
+
+**Question:** Should we standardize test mocking style to use monkeypatch consistently?
+
+**Decision:** Option A - Convert all to monkeypatch
+
+**Rationale:**
+- Consistent style makes tests easier to read
+- Better maintainability
+- monkeypatch is pytest's recommended approach
+- Already used in most new tests
+
+**Implementation:** Replace `patch.object(sys, "prefix", ...)` with `monkeypatch.setattr(sys, "prefix", ...)` in tests/llm/test_env.py in Step 5
+
+## Code Review Summary
+
+**Implementation Plan Updates:**
+- Created **Step 5**: Code Review Quick Fixes (issues 22, 23, 27, 28)
+- Created **Step 6**: Clean Up Global Pylint Disables (issue 24)
+- Updated TASK_TRACKER.md with new steps
+- Removed backward compatibility note from ARCHITECTURE.md (issue 26)
+
+**Guiding Principles:**
+- Maintain high code quality
+- Keep PR focused on single purpose
+- Use modern Python conventions
+- Prefer fixing code over adding disables
+- Make tests consistent and maintainable

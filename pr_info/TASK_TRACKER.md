@@ -94,6 +94,32 @@ See [step_4.md](./steps/step_4.md) for detailed instructions.
 - [x] Run mypy - fix all issues found
 - [ ] Prepare git commit message for Step 4
 
+### Step 5: Code Review Quick Fixes
+See [step_5.md](./steps/step_5.md) for detailed instructions.
+
+- [ ] Fix 1: Remove sys.path manipulation from tests/conftest.py
+- [ ] Fix 2: Add ellipsis (...) to JenkinsError class body
+- [ ] Fix 3: Remove check=False from test_git_encoding_stress.py
+- [ ] Fix 4: Standardize test mocking to monkeypatch in test_env.py
+- [ ] Run pytest - verify all tests pass
+- [ ] Run pylint - verify no new issues
+- [ ] Run mypy - verify no type errors
+- [ ] Prepare git commit message for Step 5
+
+### Step 6: Clean Up Global Pylint Disables
+See [step_6.md](./steps/step_6.md) for detailed instructions.
+
+- [ ] Update pyproject.toml to keep only W1203 and W0621 in global disables
+- [ ] Run pylint to identify all new warnings
+- [ ] Review each warning and decide: fix code or add inline disable
+- [ ] Fix code where possible (preferred over disables)
+- [ ] Add inline disables only where justified with clear comments
+- [ ] Run pylint - verify clean results
+- [ ] Run pytest - verify all tests pass
+- [ ] Run mypy - verify no type errors
+- [ ] Document common patterns in step_6.md
+- [ ] Prepare git commit message for Step 6
+
 ---
 
 ## Pull Request

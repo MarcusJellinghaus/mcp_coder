@@ -136,7 +136,6 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
     - **Rationale**: Use Python's built-in environment information (`VIRTUAL_ENV`, `CONDA_PREFIX`, `sys.prefix`) instead of complex filesystem searches
     - **Benefits**: Universal compatibility (venv/conda/system Python), simpler code (~90% less complexity), more reliable
     - **Key Change**: `MCP_CODER_VENV_DIR` now points to runner environment (where mcp-coder executes), not project directory
-    - **Backward Compatible**: Works with both co-located and separate runner/project directories
 - **Formatting**: `llm/formatting/` - Response formatters and SDK utilities
   - `formatters.py` - Text/verbose/raw output formatting (tests: `llm/formatting/test_formatters.py`)
   - `sdk_serialization.py` - SDK message object handling (tests: `llm/formatting/test_sdk_serialization.py`)
