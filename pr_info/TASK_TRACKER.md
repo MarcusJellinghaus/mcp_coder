@@ -26,7 +26,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 0: Refactor Shared Components
 **Details:** [step_0.md](steps/step_0.md)
 
-- [ ] Move `build_label_lookups()` from `workflows/validate_labels.py` to `workflows/label_config.py`
+- [x] Move `build_label_lookups()` from `workflows/validate_labels.py` to `workflows/label_config.py`
 - [ ] Move `LabelLookups` TypedDict to `workflows/label_config.py`
 - [ ] Update import in `workflows/validate_labels.py`
 - [ ] Add `repo_url` parameter support to `BaseGitHubManager.__init__()`
