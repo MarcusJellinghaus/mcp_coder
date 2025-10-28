@@ -153,7 +153,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_end_to_end_log_level_pass_through()`
 - [x] Write test: `test_no_open_issues()`
 - [x] Write test: `test_all_issues_have_bot_busy_labels()`
-- [ ] Write test: `test_issue_with_multiple_bot_pickup_labels()`
+- [x] Write test: `test_issue_with_multiple_bot_pickup_labels()`
 - [ ] Set up comprehensive mocks for all dependencies
 - [ ] Verify complete workflow (jobs triggered, labels updated)
 - [ ] Verify priority ordering in integration tests

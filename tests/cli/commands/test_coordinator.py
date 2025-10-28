@@ -3861,3 +3861,183 @@ class TestCoordinatorRunEdgeCases:
         # Verify - No labels were updated (all issues are already being processed)
         mock_issue_mgr.remove_labels.assert_not_called()
         mock_issue_mgr.add_labels.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_issue_with_multiple_bot_pickup_labels(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_load_labels: MagicMock,
+    ) -> None:
+        """Test handling of misconfigured issues with multiple bot_pickup labels.
+
+        Verifies that:
+        1. Issues with multiple bot_pickup labels are filtered out
+        2. Only properly configured issues (exactly one bot_pickup label) are processed
+        3. The function continues normally, skipping misconfigured issues
+        4. Returns exit code 0 (success)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Mock label configuration
+        mock_load_labels.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-03:planning", "category": "bot_busy"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-06:implementing", "category": "bot_busy"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+                {"name": "status-09:pr-creating", "category": "bot_busy"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock JenkinsClient
+        mock_jenkins = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.start_job.return_value = 12345
+        mock_jenkins.get_job_status.return_value = JobStatus(
+            status="queued", build_number=None, duration_ms=None, url=None
+        )
+
+        # Setup - Mock IssueBranchManager
+        mock_branch_mgr = MagicMock()
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+        # Issue 101 (status-02) doesn't need branch
+        # Issue 103 (status-08) needs branch for create-pr
+        mock_branch_mgr.get_linked_branches.return_value = ["103-feature-branch"]
+
+        # Setup - Mock IssueManager with mix of valid and misconfigured issues
+        mock_issue_mgr = MagicMock()
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+        mock_issue_mgr.list_issues.return_value = [
+            # Issue with valid single bot_pickup label - should be processed
+            IssueData(
+                number=101,
+                title="Valid issue awaiting planning",
+                body="This issue is properly configured",
+                state="open",
+                labels=["status-02:awaiting-planning", "enhancement"],
+                assignees=[],
+                user="testuser",
+                created_at="2025-01-01T00:00:00Z",
+                updated_at="2025-01-02T00:00:00Z",
+                url="https://github.com/user/mcp_coder/issues/101",
+                locked=False,
+            ),
+            # Issue with MULTIPLE bot_pickup labels - should be SKIPPED
+            IssueData(
+                number=102,
+                title="Misconfigured issue with multiple pickup labels",
+                body="This issue has conflicting status labels",
+                state="open",
+                labels=[
+                    "status-02:awaiting-planning",
+                    "status-05:plan-ready",
+                    "bug",
+                ],
+                assignees=[],
+                user="testuser",
+                created_at="2025-01-01T00:00:00Z",
+                updated_at="2025-01-02T00:00:00Z",
+                url="https://github.com/user/mcp_coder/issues/102",
+                locked=False,
+            ),
+            # Another valid issue - should be processed
+            IssueData(
+                number=103,
+                title="Valid issue ready for PR",
+                body="This issue is properly configured",
+                state="open",
+                labels=["status-08:ready-pr", "documentation"],
+                assignees=[],
+                user="testuser",
+                created_at="2025-01-01T00:00:00Z",
+                updated_at="2025-01-02T00:00:00Z",
+                url="https://github.com/user/mcp_coder/issues/103",
+                locked=False,
+            ),
+        ]
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success - filtering works correctly)
+        assert result == 0
+
+        # Verify - IssueManager was created with correct repo_url
+        mock_issue_mgr_class.assert_called_once()
+        call_kwargs = mock_issue_mgr_class.call_args[1]
+        assert call_kwargs["repo_url"] == "https://github.com/user/mcp_coder.git"
+
+        # Verify - list_issues was called
+        mock_issue_mgr.list_issues.assert_called_once_with(
+            state="open", include_pull_requests=False
+        )
+
+        # Verify - Only 2 valid issues were processed (issue #102 was skipped)
+        # The function filters issues internally via get_eligible_issues()
+        # Issue #102 with multiple bot_pickup labels should be excluded
+        assert mock_jenkins.start_job.call_count == 2
+
+        # Verify - Workflows dispatched for issues 103 and 101 (priority order: 08 > 02)
+        jenkins_calls = mock_jenkins.start_job.call_args_list
+        # First call should be for issue 103 (status-08:ready-pr, highest priority)
+        first_command = jenkins_calls[0][0][1]["COMMAND"]
+        assert "create-pr" in first_command
+        assert "103" in first_command
+        # Second call should be for issue 101 (status-02:awaiting-planning)
+        second_command = jenkins_calls[1][0][1]["COMMAND"]
+        assert "create-plan" in second_command
+        assert "101" in second_command
+
+        # Verify - Labels were updated for the 2 valid issues only
+        assert mock_issue_mgr.remove_labels.call_count == 2
+        assert mock_issue_mgr.add_labels.call_count == 2
+
+        # Verify - Issue 103: status-08 → status-09
+        remove_calls = mock_issue_mgr.remove_labels.call_args_list
+        add_calls = mock_issue_mgr.add_labels.call_args_list
+        assert remove_calls[0][0] == (103, "status-08:ready-pr")
+        assert add_calls[0][0] == (103, "status-09:pr-creating")
+
+        # Verify - Issue 101: status-02 → status-03
+        assert remove_calls[1][0] == (101, "status-02:awaiting-planning")
+        assert add_calls[1][0] == (101, "status-03:planning")
