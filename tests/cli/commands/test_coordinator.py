@@ -1867,6 +1867,7 @@ class TestExecuteCoordinatorRun:
         assert second_call[1]["branch_manager"] == mock_branch_mgr
         assert second_call[1]["log_level"] == "INFO"
 
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
     @patch("mcp_coder.cli.commands.coordinator.IssueManager")
     @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
     @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
@@ -1879,6 +1880,7 @@ class TestExecuteCoordinatorRun:
         mock_get_creds: MagicMock,
         mock_load_repo: MagicMock,
         mock_issue_mgr_class: MagicMock,
+        mock_load_labels: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test handling when no eligible issues found.
@@ -2024,6 +2026,7 @@ class TestExecuteCoordinatorRun:
         assert "Config file:" in captured.err
         assert "missing" in captured.err
 
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
     @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
     @patch("mcp_coder.cli.commands.coordinator.get_eligible_issues")
     @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
@@ -2042,6 +2045,7 @@ class TestExecuteCoordinatorRun:
         mock_branch_mgr_class: MagicMock,
         mock_get_eligible_issues: MagicMock,
         mock_dispatch_workflow: MagicMock,
+        mock_load_labels: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test fail-fast on dispatch error.
@@ -2419,7 +2423,7 @@ class TestCoordinatorRunIntegration:
         # Setup - Mock IssueManager
         mock_issue_mgr = MagicMock()
         mock_issue_mgr_class.return_value = mock_issue_mgr
-        
+
         # Setup - Mock 3 eligible issues (one per workflow type)
         # Note: Issues returned in random order to test priority sorting
         mock_issue_mgr.list_issues.return_value = [
@@ -2467,7 +2471,7 @@ class TestCoordinatorRunIntegration:
         # Setup - Mock IssueBranchManager
         mock_branch_mgr = MagicMock()
         mock_branch_mgr_class.return_value = mock_branch_mgr
-        
+
         # Setup - Mock linked branches for issues that need them
         def get_linked_branches_side_effect(issue_number: int) -> list[str]:
             if issue_number == 101:  # status-08 (create-pr)
@@ -2476,8 +2480,10 @@ class TestCoordinatorRunIntegration:
                 return ["102-feature-branch"]
             else:  # status-02 (create-plan) - no branch needed
                 return []
-        
-        mock_branch_mgr.get_linked_branches.side_effect = get_linked_branches_side_effect
+
+        mock_branch_mgr.get_linked_branches.side_effect = (
+            get_linked_branches_side_effect
+        )
 
         # Execute
         result = execute_coordinator_run(args)
@@ -2499,17 +2505,17 @@ class TestCoordinatorRunIntegration:
 
         # Verify - Workflows dispatched in priority order: status-08 → status-05 → status-02
         start_job_calls = mock_jenkins.start_job.call_args_list
-        
+
         # First call should be for issue #101 (status-08:ready-pr → create-pr workflow)
         first_call_params = start_job_calls[0][0][1]
         assert "101" in first_call_params["COMMAND"]
         assert "create-pr" in first_call_params["COMMAND"]
-        
+
         # Second call should be for issue #102 (status-05:plan-ready → implement workflow)
         second_call_params = start_job_calls[1][0][1]
         assert "102" in second_call_params["COMMAND"]
         assert "implement" in second_call_params["COMMAND"]
-        
+
         # Third call should be for issue #103 (status-02:awaiting-planning → create-plan workflow)
         third_call_params = start_job_calls[2][0][1]
         assert "103" in third_call_params["COMMAND"]
@@ -2518,19 +2524,19 @@ class TestCoordinatorRunIntegration:
         # Verify - Label transitions correct
         remove_calls = mock_issue_mgr.remove_labels.call_args_list
         add_calls = mock_issue_mgr.add_labels.call_args_list
-        
+
         # Issue #101: status-08:ready-pr → status-09:pr-creating
         assert remove_calls[0][0][0] == 101
         assert "status-08:ready-pr" in remove_calls[0][0][1]
         assert add_calls[0][0][0] == 101
         assert "status-09:pr-creating" in add_calls[0][0][1]
-        
+
         # Issue #102: status-05:plan-ready → status-06:implementing
         assert remove_calls[1][0][0] == 102
         assert "status-05:plan-ready" in remove_calls[1][0][1]
         assert add_calls[1][0][0] == 102
         assert "status-06:implementing" in add_calls[1][0][1]
-        
+
         # Issue #103: status-02:awaiting-planning → status-03:planning
         assert remove_calls[2][0][0] == 103
         assert "status-02:awaiting-planning" in remove_calls[2][0][1]

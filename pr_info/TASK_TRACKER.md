@@ -144,7 +144,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 6: Integration Testing & Validation
 **Details:** [step_6.md](steps/step_6.md)
 
-- [ ] Write test: `test_end_to_end_single_repo_multiple_issues()`
+- [x] Write test: `test_end_to_end_single_repo_multiple_issues()`
 - [ ] Write test: `test_end_to_end_all_repos_mode()`
 - [ ] Write test: `test_end_to_end_priority_ordering()`
 - [ ] Write test: `test_end_to_end_ignore_labels_filtering()`
