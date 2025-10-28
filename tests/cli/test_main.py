@@ -460,3 +460,11 @@ class TestCoordinatorRunCommand:
         assert call_args.repo == "mcp_coder"
         assert call_args.all is False
         assert call_args.log_level == "DEBUG"
+
+    def test_coordinator_run_requires_all_or_repo(self) -> None:
+        """Test error when neither --all nor --repo provided."""
+        parser = create_parser()
+
+        # Should raise SystemExit when neither --all nor --repo is provided
+        with pytest.raises(SystemExit):
+            parser.parse_args(["coordinator", "run"])
