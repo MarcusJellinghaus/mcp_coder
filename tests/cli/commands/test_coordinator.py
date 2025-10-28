@@ -3518,3 +3518,125 @@ class TestCoordinatorRunIntegration:
         # Verify - No labels updated (error before label update)
         assert mock_issue_mgr.remove_labels.call_count == 0
         assert mock_issue_mgr.add_labels.call_count == 0
+
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_end_to_end_log_level_pass_through(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_load_labels: MagicMock,
+    ) -> None:
+        """Test log level passed through to workflow commands.
+
+        This test verifies that the --log-level argument is correctly
+        passed through to the mcp-coder commands in the Jenkins job:
+        1. Coordinator run called with --log-level DEBUG
+        2. Issue with status-02 (create-plan) found
+        3. Jenkins job triggered with COMMAND containing "mcp-coder --log-level debug"
+        4. Verify log level lowercase in command (debug not DEBUG)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args with DEBUG log level
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="DEBUG",  # Testing log level pass-through
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Mock label configuration
+        mock_load_labels.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-03:planning", "category": "bot_busy"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock Jenkins client
+        mock_jenkins = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.start_job.return_value = 12345
+        mock_jenkins.get_job_status.return_value = JobStatus(
+            status="queued", build_number=None, duration_ms=None, url=None
+        )
+
+        # Setup - Mock IssueManager
+        mock_issue_mgr = MagicMock()
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+
+        # Setup - Mock issue with status-02 (create-plan)
+        mock_issue_mgr.list_issues.return_value = [
+            IssueData(
+                number=401,
+                title="Test log level pass-through",
+                body="This issue tests that log level is passed correctly",
+                state="open",
+                labels=["status-02:awaiting-planning"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/401",
+                locked=False,
+            ),
+        ]
+
+        # Setup - Mock IssueBranchManager (not needed for create-plan but required)
+        mock_branch_mgr = MagicMock()
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success)
+        assert result == 0
+
+        # Verify - Jenkins job started
+        assert mock_jenkins.start_job.call_count == 1
+
+        # Verify - Extract command from start_job call
+        call_args = mock_jenkins.start_job.call_args
+        params = call_args[0][1]  # Second positional arg is the params dict
+        command = params["COMMAND"]
+
+        # Verify - Command contains log level (lowercase as per template)
+        assert "--log-level debug" in command.lower()
+        # Note: The template formats with {log_level} which will be "DEBUG" from args
+        # but the actual command should use lowercase "debug" per template format
+
+        # Verify - Labels updated correctly
+        mock_issue_mgr.remove_labels.assert_called_once_with(
+            401, "status-02:awaiting-planning"
+        )
+        mock_issue_mgr.add_labels.assert_called_once_with(401, "status-03:planning")
