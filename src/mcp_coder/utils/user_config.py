@@ -4,6 +4,7 @@ This module provides functions to read user configuration from TOML files
 located in user-specific configuration directories.
 """
 
+import platform
 import tomllib
 from pathlib import Path
 from typing import Optional
@@ -13,12 +14,18 @@ from .log_utils import log_function_call
 
 @log_function_call
 def get_config_file_path() -> Path:
-    """Get the path to the user configuration file.
+    r"""Get the path to the user configuration file.
 
     Returns:
-        Path object pointing to ~/.mcp_coder/config.toml
+        Path object pointing to platform-specific config location:
+        - Windows: %USERPROFILE%\.mcp_coder\config.toml
+        - Linux/macOS/Containers: ~/.config/mcp_coder/config.toml
     """
-    return Path.home() / ".mcp_coder" / "config.toml"
+    if platform.system() == "Windows":
+        return Path.home() / ".mcp_coder" / "config.toml"
+    else:
+        # Linux/macOS/Containers - use XDG Base Directory Specification
+        return Path.home() / ".config" / "mcp_coder" / "config.toml"
 
 
 @log_function_call
@@ -26,7 +33,8 @@ def get_config_value(section: str, key: str) -> Optional[str]:
     """Read a configuration value from the user config file.
 
     Args:
-        section: The TOML section name
+        section: The TOML section name (supports dot notation for nested sections,
+                e.g., 'coordinator.repos.mcp_coder')
         key: The configuration key within the section
 
     Returns:
@@ -35,6 +43,13 @@ def get_config_value(section: str, key: str) -> Optional[str]:
     Note:
         Returns None gracefully for any missing file, section, or key.
         No exceptions are raised for missing resources.
+
+    Examples:
+        # Top-level section
+        get_config_value('jenkins', 'server_url')
+
+        # Nested section using dot notation
+        get_config_value('coordinator.repos.mcp_coder', 'repo_url')
     """
     config_path = get_config_file_path()
 
@@ -46,14 +61,17 @@ def get_config_value(section: str, key: str) -> Optional[str]:
         with open(config_path, "rb") as f:
             config_data = tomllib.load(f)
 
-        # Return None if section doesn't exist
-        if section not in config_data:
-            return None
+        # Navigate nested sections using dot notation
+        section_data = config_data
+        section_parts = section.split(".")
 
-        section_data = config_data[section]
+        for part in section_parts:
+            if not isinstance(section_data, dict) or part not in section_data:
+                return None
+            section_data = section_data[part]
 
         # Return None if key doesn't exist in section
-        if key not in section_data:
+        if not isinstance(section_data, dict) or key not in section_data:
             return None
 
         value = section_data[key]
@@ -64,3 +82,64 @@ def get_config_value(section: str, key: str) -> Optional[str]:
     except (tomllib.TOMLDecodeError, OSError, IOError):
         # Return None for any file reading or parsing errors
         return None
+
+
+@log_function_call
+def create_default_config() -> bool:
+    r"""Create default configuration file with template content.
+
+    Creates ~/.mcp_coder/config.toml with example configuration
+    including Jenkins settings and repository examples.
+
+    Returns:
+        True if config was created, False if it already exists
+
+    Raises:
+        OSError: If directory/file creation fails due to permissions
+    """
+    config_path = get_config_file_path()
+
+    # Don't overwrite existing config
+    if config_path.exists():
+        return False
+
+    # Create parent directory
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Define template content
+    template = """# MCP Coder Configuration
+# Update with your actual credentials and repository information
+
+[jenkins]
+# Jenkins server configuration
+# Environment variables (higher priority): JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
+server_url = "https://jenkins.example.com:8080"
+username = "your-jenkins-username"
+api_token = "your-jenkins-api-token"
+test_job = "Tests/mcp-coder-simple-test"  # Job for integration tests
+test_job_coordination = "Tests/mcp-coder-coordinator-test"  # Job for coordinator tests
+
+# Coordinator test repositories
+# Add your repositories here following this pattern
+
+[coordinator.repos.mcp_coder]
+repo_url = "https://github.com/your-org/mcp_coder.git"
+executor_test_path = "Tests/mcp-coder-coordinator-test"
+github_credentials_id = "github-general-pat"
+
+[coordinator.repos.mcp_server_filesystem]
+repo_url = "https://github.com/your-org/mcp_server_filesystem.git"
+executor_test_path = "Tests/mcp-filesystem-coordinator-test"
+github_credentials_id = "github-general-pat"
+
+# Add more repositories as needed:
+# [coordinator.repos.your_repo_name]
+# repo_url = "https://github.com/your-org/your_repo.git"
+# executor_test_path = "Tests/your-repo-coordinator-test"
+# github_credentials_id = "github-credentials-id"
+"""
+
+    # Write template to file
+    config_path.write_text(template, encoding="utf-8")
+
+    return True

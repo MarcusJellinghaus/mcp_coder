@@ -37,92 +37,66 @@ Automated software feature development with stringent quality controls using AI-
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-## ⚙️ User Configuration
+## ⚙️ Configuration
 
-MCP Coder supports user configuration through TOML files located in user-specific directories. This allows you to store tokens, settings, and other user preferences securely.
+MCP Coder uses TOML configuration files for storing credentials and settings. Configuration is currently used for:
+- Jenkins integration (coordinator commands)
+- Repository definitions for integration testing
 
 ### Configuration File Location
 
-- **Windows**: `%USERPROFILE%\.mcp_coder\config.toml`
-- **macOS/Linux**: `~/.mcp_coder/config.toml`
+**Windows:**
+```
+%USERPROFILE%\.mcp_coder\config.toml
+```
+Example: `C:\Users\YourName\.mcp_coder\config.toml`
 
-### Configuration Format
+**Linux/macOS/Containers:**
+```
+~/.config/mcp_coder/config.toml
+```
+Example: `/home/username/.config/mcp_coder/config.toml`
 
-Create a TOML file with sections for different types of configuration:
+### Auto-Creation
+
+The configuration file is automatically created on first use of commands that require it (like `coordinator test`). You'll see:
+
+```bash
+$ mcp-coder coordinator test mcp_coder --branch-name main
+Created default config file at /home/username/.config/mcp_coder/config.toml
+Please update it with your Jenkins and repository information.
+```
+
+### Configuration Structure
+
+The auto-generated template includes:
 
 ```toml
-[tokens]
-github = "ghp_your_github_token_here"
-claude = "cl_your_claude_token_here"
-api_key = "your_api_key_here"
+[jenkins]
+server_url = "https://jenkins.example.com:8080"
+username = "jenkins-user"
+api_token = "jenkins-api-token"
 
-[settings]
-default_branch = "main"
-timeout = 30
-debug = true
+[coordinator.repos.mcp_coder]
+repo_url = "https://github.com/user/mcp_coder.git"
+executor_test_path = "MCP_Coder/mcp-coder-test-job"
+github_credentials_id = "github-general-pat"
 
-[database]
-host = "localhost"
-port = 5432
-name = "mcp_coder_db"
+[coordinator.repos.mcp_server_filesystem]
+repo_url = "https://github.com/user/mcp_server_filesystem.git"
+executor_test_path = "MCP_Filesystem/test-job"
+github_credentials_id = "github-general-pat"
 ```
 
-### Usage in Code
+### Complete Documentation
 
-```python
-from mcp_coder.utils.user_config import get_config_value, get_config_file_path
+For detailed configuration documentation including:
+- Environment variable overrides
+- Security best practices
+- Troubleshooting
+- Platform-specific notes
 
-# Get configuration file path
-config_path = get_config_file_path()
-print(f"Config file: {config_path}")
-
-# Read configuration values
-github_token = get_config_value("tokens", "github")
-default_branch = get_config_value("settings", "default_branch")
-db_port = get_config_value("database", "port")  # Returns "5432" as string
-
-# Handle missing values gracefully
-missing_value = get_config_value("section", "missing_key")  # Returns None
-if missing_value is None:
-    print("Configuration value not found")
-```
-
-### Security Considerations
-
-- **Never commit** the config file to version control
-- **Use environment variables** for CI/CD environments instead of config files
-- **Set appropriate file permissions** (readable only by the user)
-- **Rotate tokens regularly** and update the config file accordingly
-- **Use specific scopes** for tokens (e.g., GitHub personal access tokens with minimal required permissions)
-
-### Setup Instructions
-
-**Note**: The configuration directory (`~/.mcp_coder`) will not be created automatically. You must manually create it before using user configuration features.
-
-1. Create the configuration directory:
-   ```bash
-   # Windows (PowerShell)
-   New-Item -ItemType Directory -Path "$env:USERPROFILE\.mcp_coder" -Force
-   
-   # macOS/Linux
-   mkdir -p ~/.mcp_coder
-   ```
-
-2. Create and edit the config file:
-   ```bash
-   # Windows
-   notepad "%USERPROFILE%\.mcp_coder\config.toml"
-   
-   # macOS/Linux
-   nano ~/.mcp_coder/config.toml
-   ```
-
-3. Add your configuration following the TOML format shown above
-
-4. Set secure file permissions (Unix-like systems):
-   ```bash
-   chmod 600 ~/.mcp_coder/config.toml
-   ```
+See the [Configuration Guide](docs/configuration/CONFIG.md).
 
 ## 🚀 Quick Start
 
@@ -207,6 +181,52 @@ mcp-coder create-pr --help
 - All tasks complete in `pr_info/TASK_TRACKER.md`
 - On feature branch (not main)
 - GitHub credentials configured
+
+### Coordinator Commands
+
+Trigger Jenkins-based integration tests for repositories in containerized environments.
+
+#### coordinator test
+
+Trigger integration test for a specific repository and branch:
+
+```bash
+mcp-coder coordinator test <repo_name> --branch-name <branch>
+```
+
+**Parameters:**
+- `<repo_name>` - Repository identifier from config (e.g., `mcp_coder`)
+- `--branch-name` - Git branch to test (required)
+- `--log-level` - Logging verbosity (optional, default: INFO)
+
+**Example:**
+```bash
+mcp-coder coordinator test mcp_coder --branch-name feature-x
+```
+
+**Output:**
+```
+Job triggered: MCP_Coder/mcp-coder-test-job - test - queue: 12345
+https://jenkins.example.com/job/MCP_Coder/mcp-coder-test-job/42/
+```
+
+**Configuration:**
+See [Configuration Guide](docs/configuration/CONFIG.md) for complete configuration documentation.
+
+**First Run:**
+On first use, a configuration template is auto-created at:
+
+**Windows:**
+```
+Created default config file at C:\Users\YourName\.mcp_coder\config.toml
+Please update it with your Jenkins and repository information.
+```
+
+**Linux:**
+```
+Created default config file at /home/username/.config/mcp_coder/config.toml
+Please update it with your Jenkins and repository information.
+```
 
 ### Git Operations
 

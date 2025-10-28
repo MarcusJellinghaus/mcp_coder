@@ -134,12 +134,19 @@ class JenkinsClient:
         )
 
     @log_function_call
-    def start_job(self, job_path: str, params: Optional[dict[str, Any]] = None) -> int:
+    def start_job(
+        self,
+        job_path: str,
+        params: Optional[dict[str, Any]] = None,
+        token: Optional[str] = None,
+    ) -> int:
         """Start a Jenkins job and return queue ID.
 
         Args:
             job_path: Jenkins job path (e.g., "folder/job-name")
             params: Optional job parameters dict
+            token: Optional per-job build authentication token
+                   (configured in Jenkins job under "Trigger builds remotely")
 
         Returns:
             Queue ID for tracking the job
@@ -158,7 +165,10 @@ class JenkinsClient:
 
         try:
             # Start the job and get queue ID
-            queue_id_result = self._client.build_job(job_path, parameters=params)
+            # Pass token to build_job - it will append it to the URL if provided
+            queue_id_result = self._client.build_job(
+                job_path, parameters=params, token=token
+            )
             # Cast to int as build_job returns the queue ID
             queue_id = cast(int, queue_id_result)
             logger.debug(

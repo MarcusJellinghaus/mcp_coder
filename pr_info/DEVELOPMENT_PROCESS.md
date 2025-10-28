@@ -750,6 +750,8 @@ flowchart TD
   - **HOW**: Integration points (decorators, imports, etc.)
   - **ALGORITHM**: 5-6 line pseudocode for core logic (if any)
   - **DATA**: Return values and data structures
+  
+  Please also update the task tracker ('pr_info/TASK_TRACKER.md').
   ```
   </details>
 - **Fundamental Problems:** Return to `status:plan-review` or `status:created` for complete redesign

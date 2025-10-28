@@ -6,6 +6,7 @@ import sys
 
 from ..utils.log_utils import setup_logging
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
+from .commands.coordinator import execute_coordinator_test
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.help import execute_help, get_help_text
@@ -221,6 +222,29 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="LLM method to use (default: claude_code_cli)",
     )
 
+    # Coordinator commands - Jenkins-based integration testing
+    coordinator_parser = subparsers.add_parser(
+        "coordinator", help="Coordinator commands for repository testing"
+    )
+    coordinator_subparsers = coordinator_parser.add_subparsers(
+        dest="coordinator_subcommand",
+        help="Available coordinator commands",
+        metavar="SUBCOMMAND",
+    )
+
+    # coordinator test command
+    test_parser = coordinator_subparsers.add_parser(
+        "test", help="Trigger Jenkins integration test for repository"
+    )
+    test_parser.add_argument(
+        "repo_name", help="Repository name from config (e.g., mcp_coder)"
+    )
+    test_parser.add_argument(
+        "--branch-name",
+        required=True,
+        help="Git branch to test (e.g., feature-x, main)",
+    )
+
     return parser
 
 
@@ -277,6 +301,16 @@ def main() -> int:
             return execute_create_plan(args)
         elif args.command == "create-pr":
             return execute_create_pr(args)
+        elif args.command == "coordinator":
+            if (
+                hasattr(args, "coordinator_subcommand")
+                and args.coordinator_subcommand == "test"
+            ):
+                return execute_coordinator_test(args)
+            else:
+                logger.error("Coordinator subcommand required")
+                print("Error: Please specify a coordinator subcommand (e.g., 'test')")
+                return 1
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")
