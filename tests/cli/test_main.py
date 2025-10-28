@@ -427,3 +427,36 @@ class TestCoordinatorRunCommand:
         assert call_args.all is True
         assert call_args.repo is None
         assert call_args.log_level == "INFO"  # default
+
+    @patch("mcp_coder.cli.main.execute_coordinator_run")
+    def test_coordinator_run_with_log_level(self, mock_execute: Mock) -> None:
+        """Test log level pass-through."""
+        # Setup
+        mock_execute.return_value = 0
+
+        # Execute
+        with patch(
+            "sys.argv",
+            [
+                "mcp-coder",
+                "--log-level",
+                "DEBUG",
+                "coordinator",
+                "run",
+                "--repo",
+                "mcp_coder",
+            ],
+        ):
+            result = main()
+
+        # Verify
+        assert result == 0
+        mock_execute.assert_called_once()
+
+        # Check args passed to handler
+        call_args = mock_execute.call_args[0][0]
+        assert call_args.command == "coordinator"
+        assert call_args.coordinator_subcommand == "run"
+        assert call_args.repo == "mcp_coder"
+        assert call_args.all is False
+        assert call_args.log_level == "DEBUG"
