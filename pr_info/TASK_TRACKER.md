@@ -126,7 +126,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 5: CLI Integration
 **Details:** [step_5.md](steps/step_5.md)
 
-- [ ] Add import for `execute_coordinator_run` in `src/mcp_coder/cli/main.py`
+- [x] Add import for `execute_coordinator_run` in `src/mcp_coder/cli/main.py`
 - [ ] Add coordinator run subparser in `create_parser()`
 - [ ] Add mutually exclusive group (--all | --repo, required=True)
 - [ ] Add routing logic in `main()` function

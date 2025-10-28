@@ -6,7 +6,7 @@ import sys
 
 from ..utils.log_utils import setup_logging
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
-from .commands.coordinator import execute_coordinator_test
+from .commands.coordinator import execute_coordinator_run, execute_coordinator_test
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.help import execute_help, get_help_text
