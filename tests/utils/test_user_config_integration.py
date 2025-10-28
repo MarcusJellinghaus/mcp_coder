@@ -3,6 +3,7 @@
 These tests use real file operations (no mocking) to verify end-to-end functionality.
 """
 
+import platform
 from pathlib import Path
 from unittest.mock import patch
 
@@ -62,13 +63,20 @@ port = 5432
         with patch("pathlib.Path.home", return_value=fake_home):
             config_path = get_config_file_path()
 
-            # Verify path structure
-            assert config_path.parent.name == ".mcp_coder"
-            assert config_path.name == "config.toml"
-            assert config_path.parent.parent == fake_home
-
+            # Verify path structure is platform-specific
+            if platform.system() == "Windows":
+                assert config_path.parent.name == ".mcp_coder"
+                assert config_path.name == "config.toml"
+                assert config_path.parent.parent == fake_home
+                expected_path = fake_home / ".mcp_coder" / "config.toml"
+            else:
+                # Linux/macOS - XDG Base Directory Specification
+                assert config_path.parent.name == "mcp_coder"
+                assert config_path.name == "config.toml"
+                assert config_path.parent.parent.name == ".config"
+                expected_path = fake_home / ".config" / "mcp_coder" / "config.toml"
+            
             # Verify the full path construction
-            expected_path = fake_home / ".mcp_coder" / "config.toml"
             assert config_path == expected_path
 
     def test_path_consistency(self) -> None:
@@ -79,11 +87,22 @@ port = 5432
 
         assert path1 == path2
         assert path1.name == "config.toml"
-        assert path1.parent.name == ".mcp_coder"
-        # Should be relative to user's home directory
-        assert str(path1).endswith(".mcp_coder/config.toml") or str(path1).endswith(
-            ".mcp_coder\\config.toml"
-        )
+        
+        # Verify platform-specific path structure
+        if platform.system() == "Windows":
+            assert path1.parent.name == ".mcp_coder"
+            # Should be relative to user's home directory
+            assert str(path1).endswith(".mcp_coder/config.toml") or str(path1).endswith(
+                ".mcp_coder\\config.toml"
+            )
+        else:
+            # Linux/macOS - XDG Base Directory Specification
+            assert path1.parent.name == "mcp_coder"
+            # Should be in .config directory
+            assert ".config" in str(path1)
+            assert str(path1).endswith("mcp_coder/config.toml") or str(path1).endswith(
+                "mcp_coder\\config.toml"
+            )
 
     def test_malformed_config_file_handling(self, tmp_path: Path) -> None:
         """Test behavior with malformed TOML files."""

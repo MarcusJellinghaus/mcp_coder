@@ -1,5 +1,6 @@
 """Tests for user_config module."""
 
+import platform
 import tomllib
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
@@ -21,11 +22,19 @@ class TestGetConfigFilePath:
         # Execute
         result = get_config_file_path()
 
-        # Verify
-        expected = Path.home() / ".mcp_coder" / "config.toml"
-        assert result == expected
+        # Verify platform-specific behavior
+        if platform.system() == "Windows":
+            expected = Path.home() / ".mcp_coder" / "config.toml"
+            assert result == expected
+            assert ".mcp_coder" in str(result)
+        else:
+            # Linux/macOS - XDG Base Directory Specification
+            expected = Path.home() / ".config" / "mcp_coder" / "config.toml"
+            assert result == expected
+            assert "mcp_coder" in str(result)
+        
+        # Common assertions
         assert result.name == "config.toml"
-        assert ".mcp_coder" in str(result)
 
 
 class TestGetConfigValue:
