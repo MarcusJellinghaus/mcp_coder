@@ -12,6 +12,7 @@ from typing import Optional
 
 from workflows.label_config import load_labels_config
 
+from ...utils.github_operations.issue_branch_manager import IssueBranchManager
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
 from ...utils.jenkins_operations.client import JenkinsClient
 from ...utils.jenkins_operations.models import JobStatus
@@ -99,6 +100,34 @@ which claude && claude --version
 uv sync --extra dev
 mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo
 """
+
+
+def dispatch_workflow(
+    issue: IssueData,
+    workflow_name: str,
+    repo_config: dict[str, str],
+    jenkins_client: JenkinsClient,
+    issue_manager: IssueManager,
+    branch_manager: IssueBranchManager,
+    log_level: str,
+) -> None:
+    """Trigger Jenkins job for workflow and update issue label.
+
+    Args:
+        issue: GitHub issue data
+        workflow_name: Workflow to execute ("create-plan", "implement", "create-pr")
+        repo_config: Repository configuration with repo_url, executor_test_path, credentials
+        jenkins_client: Jenkins client for job triggering
+        issue_manager: IssueManager for label updates
+        branch_manager: IssueBranchManager for branch resolution
+        log_level: Log level to pass to workflow command
+
+    Raises:
+        ValueError: If linked branch missing for implement/create-pr
+        JenkinsError: If job trigger or status check fails
+    """
+    # TODO: Implement in next step
+    raise NotImplementedError("dispatch_workflow not yet implemented")
 
 
 def get_eligible_issues(

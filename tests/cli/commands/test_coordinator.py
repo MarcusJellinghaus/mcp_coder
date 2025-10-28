@@ -15,6 +15,9 @@ from mcp_coder.cli.commands.coordinator import (
     load_repo_config,
     validate_repo_config,
 )
+from mcp_coder.utils.github_operations.issue_branch_manager import (
+    IssueBranchManager,
+)
 from mcp_coder.utils.github_operations.issue_manager import IssueData
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 
@@ -1100,6 +1103,108 @@ class TestGetEligibleIssues:
         mock_issue_manager.list_issues.assert_called_once_with(
             state="open", include_pull_requests=False
         )
+
+
+class TestDispatchWorkflow:
+    """Tests for dispatch_workflow function."""
+
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_create_plan(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test dispatching create-plan workflow.
+
+        For create-plan workflow:
+        - Uses "main" branch (not from_issue)
+        - Formats command with issue number
+        - Triggers Jenkins job with correct parameters
+        - Updates issue labels (removes old, adds next)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-02:awaiting-planning label
+        issue = IssueData(
+            number=123,
+            title="Add feature X",
+            body="Description of feature",
+            state="open",
+            labels=["status-02:awaiting-planning", "enhancement"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/123",
+            locked=False,
+        )
+
+        # Setup - Repo configuration
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Mock Jenkins responses
+        mock_jenkins.start_job.return_value = 98765  # Queue ID
+        mock_jenkins.get_job_status.return_value = MagicMock(status="queued")
+
+        # Execute
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="create-plan",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
+
+        # Verify - Jenkins job started with correct parameters
+        mock_jenkins.start_job.assert_called_once()
+        call_args = mock_jenkins.start_job.call_args
+        executor_path = call_args[0][0]
+        params = call_args[0][1]
+
+        # Verify executor path
+        assert executor_path == "MCP_Coder/executor-test"
+
+        # Verify job parameters
+        assert params["REPO_URL"] == "https://github.com/user/repo.git"
+        assert params["BRANCH_NAME"] == "main"  # create-plan uses main branch
+        assert params["GITHUB_CREDENTIALS_ID"] == "github-pat-123"
+
+        # Verify COMMAND contains expected elements for create-plan
+        command = params["COMMAND"]
+        assert "git checkout main" in command
+        assert "git pull" in command
+        assert "mcp-coder --log-level INFO create-plan 123" in command
+        assert "--project-dir /workspace/repo" in command
+        assert "uv sync --extra dev" in command
+        assert "which mcp-coder" in command
+        assert "which claude" in command
+
+        # Verify - Job status checked
+        mock_jenkins.get_job_status.assert_called_once_with(98765)
+
+        # Verify - Issue labels updated
+        mock_issue_mgr.remove_labels.assert_called_once_with(
+            123, "status-02:awaiting-planning"
+        )
+        mock_issue_mgr.add_labels.assert_called_once_with(123, "status-03:planning")
+
+        # Verify - Branch manager NOT called (create-plan uses main)
+        mock_branch_mgr.get_linked_branches.assert_not_called()
 
 
 @pytest.mark.jenkins_integration
