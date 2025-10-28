@@ -1566,6 +1566,97 @@ class TestDispatchWorkflow:
         mock_issue_mgr.remove_labels.assert_not_called()
         mock_issue_mgr.add_labels.assert_not_called()
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_label_update(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test label update after successful job trigger.
+
+        When a Jenkins job is successfully triggered and verified,
+        the function should update the issue labels by:
+        1. Removing the current workflow label (e.g., status-02:awaiting-planning)
+        2. Adding the next workflow label (e.g., status-03:planning)
+
+        This test verifies the label update happens in the correct order
+        and with the correct label values from WORKFLOW_MAPPING.
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-05:plan-ready label (implement workflow)
+        issue = IssueData(
+            number=777,
+            title="Test label update",
+            body="Testing label update functionality",
+            state="open",
+            labels=["status-05:plan-ready", "enhancement", "priority:high"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/777",
+            locked=False,
+        )
+
+        # Setup - Repo configuration
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-777",
+        }
+
+        # Setup - Mock branch manager to return linked branch
+        mock_branch_mgr.get_linked_branches.return_value = ["777-test-label-update"]
+
+        # Setup - Mock successful Jenkins job trigger
+        mock_jenkins.start_job.return_value = 77777  # Queue ID
+        mock_jenkins.get_job_status.return_value = MagicMock(
+            status="queued", build_number=None
+        )
+
+        # Execute
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="implement",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
+
+        # Verify - Jenkins job was successfully triggered and verified
+        mock_jenkins.start_job.assert_called_once()
+        mock_jenkins.get_job_status.assert_called_once_with(77777)
+
+        # Verify - Label update occurred in correct order
+        # First, remove the old label
+        mock_issue_mgr.remove_labels.assert_called_once_with(
+            777, "status-05:plan-ready"
+        )
+        # Then, add the new label
+        mock_issue_mgr.add_labels.assert_called_once_with(777, "status-06:implementing")
+
+        # Verify - Both label operations were called (exactly once each)
+        assert mock_issue_mgr.remove_labels.call_count == 1
+        assert mock_issue_mgr.add_labels.call_count == 1
+
+        # Verify - remove_labels was called before add_labels (proper order)
+        remove_call = mock_issue_mgr.remove_labels.call_args
+        add_call = mock_issue_mgr.add_labels.call_args
+        assert remove_call is not None, "remove_labels should have been called"
+        assert add_call is not None, "add_labels should have been called"
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
