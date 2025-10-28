@@ -1413,6 +1413,81 @@ class TestDispatchWorkflow:
         mock_issue_mgr.remove_labels.assert_called_once_with(789, "status-08:ready-pr")
         mock_issue_mgr.add_labels.assert_called_once_with(789, "status-09:pr-creating")
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_missing_branch(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test error when linked branch missing for implement/create-pr.
+
+        For workflows that require a branch from the issue (implement, create-pr),
+        the function should raise ValueError if get_linked_branches() returns
+        an empty list, indicating no branch is linked to the issue.
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-05:plan-ready label (implement workflow)
+        issue = IssueData(
+            number=555,
+            title="Implement feature missing branch",
+            body="This issue has no linked branch",
+            state="open",
+            labels=["status-05:plan-ready", "bug"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/555",
+            locked=False,
+        )
+
+        # Setup - Repo configuration
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-555",
+        }
+
+        # Setup - Mock branch manager to return empty list (no linked branches)
+        mock_branch_mgr.get_linked_branches.return_value = []
+
+        # Execute & Verify - should raise ValueError with helpful message
+        with pytest.raises(ValueError) as exc_info:
+            dispatch_workflow(
+                issue=issue,
+                workflow_name="implement",
+                repo_config=repo_config,
+                jenkins_client=mock_jenkins,
+                issue_manager=mock_issue_mgr,
+                branch_manager=mock_branch_mgr,
+                log_level="INFO",
+            )
+
+        # Verify error message is helpful
+        error_msg = str(exc_info.value)
+        assert "No linked branch found for issue" in error_msg
+        assert "#555" in error_msg
+
+        # Verify - Branch manager was called to check for linked branches
+        mock_branch_mgr.get_linked_branches.assert_called_once_with(555)
+
+        # Verify - Jenkins job was NOT started (error occurred before that)
+        mock_jenkins.start_job.assert_not_called()
+
+        # Verify - Issue labels were NOT updated (error occurred before that)
+        mock_issue_mgr.remove_labels.assert_not_called()
+        mock_issue_mgr.add_labels.assert_not_called()
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:

@@ -82,7 +82,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_dispatch_workflow_create_plan()`
 - [x] Write test: `test_dispatch_workflow_implement()`
 - [x] Write test: `test_dispatch_workflow_create_pr()`
-- [ ] Write test: `test_dispatch_workflow_missing_branch()`
+- [x] Write test: `test_dispatch_workflow_missing_branch()`
 - [ ] Write test: `test_dispatch_workflow_jenkins_failure()`
 - [ ] Write test: `test_dispatch_workflow_label_update()`
 - [ ] Implement `dispatch_workflow()` function signature
