@@ -46,6 +46,14 @@ which mcp-coder && mcp-coder --version
 """
 
 
+# Priority order for processing issues (highest to lowest)
+PRIORITY_ORDER = [
+    "status-08:ready-pr",
+    "status-05:plan-ready",
+    "status-02:awaiting-planning",
+]
+
+
 def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
     """Load repository configuration from config file.
 
