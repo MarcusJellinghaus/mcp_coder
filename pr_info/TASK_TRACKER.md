@@ -155,16 +155,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_all_issues_have_bot_busy_labels()`
 - [x] Write test: `test_issue_with_multiple_bot_pickup_labels()`
 - [x] Set up comprehensive mocks for all dependencies
-- [ ] Verify complete workflow (jobs triggered, labels updated)
-- [ ] Verify priority ordering in integration tests
-- [ ] Verify filtering logic in integration tests
-- [ ] Verify fail-fast behavior in integration tests
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check (fast unit tests) and fix all issues
-- [ ] Run mypy check and fix all issues
-- [ ] Run all coordinator tests: `pytest tests/cli/commands/test_coordinator.py -v`
-- [ ] Run all CLI tests: `pytest tests/cli/test_main.py -v`
-- [ ] Prepare git commit message for Step 6
+- [x] Verify complete workflow (jobs triggered, labels updated)
+- [x] Verify priority ordering in integration tests
+- [x] Verify filtering logic in integration tests
+- [x] Verify fail-fast behavior in integration tests
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check (fast unit tests) and fix all issues
+- [x] Run mypy check and fix all issues
+- [x] Run all coordinator tests: `pytest tests/cli/commands/test_coordinator.py -v`
+- [x] Run all CLI tests: `pytest tests/cli/test_main.py -v`
+- [x] Prepare git commit message for Step 6
 
 ---
 
