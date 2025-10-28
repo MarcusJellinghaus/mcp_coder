@@ -101,7 +101,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 4: Main Coordinator Runner
 **Details:** [step_4.md](steps/step_4.md)
 
-- [ ] Write test: `test_execute_coordinator_run_creates_config_if_missing()`
+- [x] Write test: `test_execute_coordinator_run_creates_config_if_missing()`
 - [ ] Write test: `test_execute_coordinator_run_single_repo_success()`
 - [ ] Write test: `test_execute_coordinator_run_no_eligible_issues()`
 - [ ] Write test: `test_execute_coordinator_run_missing_repo_config()`

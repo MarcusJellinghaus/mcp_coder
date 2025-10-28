@@ -468,3 +468,44 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         # (per issue spec: "Let exceptions bubble up naturally for debugging")
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise
+
+
+def execute_coordinator_run(args: argparse.Namespace) -> int:
+    """Execute coordinator run command.
+
+    Args:
+        args: Parsed command line arguments with:
+            - all: Process all repositories (bool)
+            - repo: Single repository name (str, optional)
+            - log_level: Logging level (str)
+
+    Returns:
+        int: Exit code (0 for success, 1 for error)
+
+    Raises:
+        Exception: Any unexpected errors (not caught, let bubble up)
+    """
+    try:
+        # Auto-create config on first run
+        created = create_default_config()
+        if created:
+            config_path = get_config_file_path()
+            logger.info(
+                "Created default config file. Please update with your credentials."
+            )
+            print(f"Created default config file at {config_path}")
+            print("Please update it with your Jenkins and repository information.")
+            return 1  # Exit to let user configure
+
+        return 0
+
+    except ValueError as e:
+        # User-facing errors (config issues)
+        print(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Configuration error: {e}")
+        return 1
+
+    except Exception as e:
+        # Let all other exceptions bubble up with full traceback
+        logger.error(f"Unexpected error: {e}", exc_info=True)
+        raise

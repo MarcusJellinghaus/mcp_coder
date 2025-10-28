@@ -1658,6 +1658,51 @@ class TestDispatchWorkflow:
         assert add_call is not None, "add_labels should have been called"
 
 
+class TestExecuteCoordinatorRun:
+    """Tests for execute_coordinator_run function."""
+
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_run_creates_config_if_missing(
+        self, mock_create_config: MagicMock, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test config auto-creation on first run.
+
+        When the config file doesn't exist, execute_coordinator_run should:
+        1. Call create_default_config() which returns True (config was created)
+        2. Print a helpful message about the created config file
+        3. Return exit code 1 to let user configure
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for coordinator run with --repo
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Mock create_default_config to return True (config was created)
+        mock_create_config.return_value = True
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 1 (user needs to configure)
+        assert result == 1
+
+        # Verify - create_default_config was called
+        mock_create_config.assert_called_once()
+
+        # Verify - Helpful message printed to stdout
+        captured = capsys.readouterr()
+        assert "Created default config file" in captured.out
+        assert "config.toml" in captured.out
+        assert "Please update" in captured.out
+
+
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
     """Integration tests for coordinator command with real Jenkins.
