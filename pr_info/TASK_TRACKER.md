@@ -60,7 +60,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_get_eligible_issues_excludes_ignore_labels()`
 - [x] Write test: `test_get_eligible_issues_priority_order()`
 - [x] Write test: `test_get_eligible_issues_empty_result()`
-- [ ] Implement `get_eligible_issues()` function signature
+- [x] Implement `get_eligible_issues()` function signature
 - [ ] Implement label configuration loading
 - [ ] Implement issue querying via `IssueManager`
 - [ ] Implement filtering by bot_pickup labels (exactly one required)

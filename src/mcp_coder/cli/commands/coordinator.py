@@ -12,7 +12,7 @@ from typing import Optional
 
 from workflows.label_config import build_label_lookups, load_labels_config
 
-from ...utils.github_operations.issue_manager import IssueManager
+from ...utils.github_operations.issue_manager import IssueData, IssueManager
 from ...utils.jenkins_operations.client import JenkinsClient
 from ...utils.jenkins_operations.models import JobStatus
 from ...utils.user_config import (
@@ -53,6 +53,38 @@ PRIORITY_ORDER = [
     "status-05:plan-ready",
     "status-02:awaiting-planning",
 ]
+
+
+def get_eligible_issues(
+    issue_manager: IssueManager, log_level: str = "INFO"
+) -> list[IssueData]:
+    """Get issues ready for automation, sorted by priority.
+
+    Args:
+        issue_manager: IssueManager instance for GitHub API calls
+        log_level: Logging level for debug output
+
+    Returns:
+        List of IssueData sorted by priority:
+        1. status-08:ready-pr (highest priority)
+        2. status-05:plan-ready
+        3. status-02:awaiting-planning (lowest priority)
+
+    Raises:
+        GithubException: If GitHub API errors occur
+    """
+    # TODO: Implement issue filtering and sorting logic
+    # 1. Load label configuration (bot_pickup, ignore_labels)
+    # 2. Query all open issues via issue_manager.list_issues(state="open")
+    # 3. Filter issues:
+    #    - Must have exactly ONE bot_pickup label
+    #    - Must NOT have any ignore_labels
+    # 4. Sort filtered issues by priority:
+    #    - Create priority map: {label: index in PRIORITY_ORDER}
+    #    - Sort by priority (lower index = higher priority)
+    # 5. Log filtering results (count before/after)
+    # 6. Return sorted list
+    return []
 
 
 def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
