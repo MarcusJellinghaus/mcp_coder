@@ -35,7 +35,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Update `_get_repository()` to work with both modes
 - [x] Add validation for exactly one of (project_dir, repo_url)
 - [x] Write tests for `BaseGitHubManager` with `project_dir` (existing behavior)
-- [ ] Write tests for `BaseGitHubManager` with `repo_url` (new behavior)
+- [x] Write tests for `BaseGitHubManager` with `repo_url` (new behavior)
 - [ ] Write tests for error cases (neither, both parameters)
 - [ ] Run pylint check and fix all issues
 - [ ] Run pytest check (fast unit tests) and fix all issues

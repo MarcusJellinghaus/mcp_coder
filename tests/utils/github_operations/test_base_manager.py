@@ -369,6 +369,258 @@ class TestBaseGitHubManagerWithProjectDir:
             # Verify get_repo was called with correct full name
             mock_github_client.get_repo.assert_called_once_with("test-owner/test-repo")
 
+
+class TestBaseGitHubManagerWithRepoUrl:
+    """Test suite for BaseGitHubManager initialization with repo_url.
+
+    Tests the new behavior where BaseGitHubManager is initialized
+    with a GitHub repository URL (repo_url parameter).
+    """
+
+    def test_successful_initialization_with_https_repo_url(self) -> None:
+        """Test successful initialization with valid HTTPS repo_url."""
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.Github"
+            ) as mock_github_class,
+        ):
+            manager = BaseGitHubManager(
+                repo_url="https://github.com/test-owner/test-repo.git"
+            )
+
+            # Verify manager was initialized correctly
+            assert manager.project_dir is None
+            assert manager._repo is None
+            assert manager._repo_owner == "test-owner"
+            assert manager._repo_name == "test-repo"
+            assert manager._repo_full_name == "test-owner/test-repo"
+            assert manager.github_token == "fake_token"
+            assert manager._repository is None  # Not fetched yet
+
+            # Verify GitHub client was initialized
+            mock_github_class.assert_called_once_with("fake_token")
+
+    def test_successful_initialization_with_https_repo_url_no_git_extension(
+        self,
+    ) -> None:
+        """Test successful initialization with HTTPS repo_url without .git extension."""
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.Github"
+            ) as mock_github_class,
+        ):
+            manager = BaseGitHubManager(
+                repo_url="https://github.com/test-owner/test-repo"
+            )
+
+            # Verify manager was initialized correctly
+            assert manager.project_dir is None
+            assert manager._repo is None
+            assert manager._repo_owner == "test-owner"
+            assert manager._repo_name == "test-repo"
+            assert manager._repo_full_name == "test-owner/test-repo"
+            assert manager.github_token == "fake_token"
+            assert manager._repository is None  # Not fetched yet
+
+            # Verify GitHub client was initialized
+            mock_github_class.assert_called_once_with("fake_token")
+
+    def test_successful_initialization_with_ssh_repo_url(self) -> None:
+        """Test successful initialization with valid SSH repo_url."""
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.Github"
+            ) as mock_github_class,
+        ):
+            manager = BaseGitHubManager(
+                repo_url="git@github.com:test-owner/test-repo.git"
+            )
+
+            # Verify manager was initialized correctly
+            assert manager.project_dir is None
+            assert manager._repo is None
+            assert manager._repo_owner == "test-owner"
+            assert manager._repo_name == "test-repo"
+            assert manager._repo_full_name == "test-owner/test-repo"
+            assert manager.github_token == "fake_token"
+            assert manager._repository is None  # Not fetched yet
+
+            # Verify GitHub client was initialized
+            mock_github_class.assert_called_once_with("fake_token")
+
+    def test_initialization_fails_invalid_repo_url(self) -> None:
+        """Test initialization fails with invalid GitHub repo_url."""
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
+        ):
+            with pytest.raises(ValueError) as exc_info:
+                BaseGitHubManager(
+                    repo_url="https://gitlab.com/test-owner/test-repo.git"
+                )
+
+            assert "Invalid GitHub repository URL" in str(exc_info.value)
+
+    def test_initialization_fails_malformed_repo_url(self) -> None:
+        """Test initialization fails with malformed repo_url."""
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
+        ):
+            with pytest.raises(ValueError) as exc_info:
+                BaseGitHubManager(repo_url="not-a-valid-url")
+
+            assert "Invalid GitHub repository URL" in str(exc_info.value)
+
+    def test_initialization_fails_no_github_token(self) -> None:
+        """Test initialization fails when GitHub token is not configured."""
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value=None,  # No token configured
+            ),
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
+        ):
+            with pytest.raises(ValueError) as exc_info:
+                BaseGitHubManager(
+                    repo_url="https://github.com/test-owner/test-repo.git"
+                )
+
+            assert "GitHub token not found" in str(exc_info.value)
+
+    def test_get_repository_with_repo_url_mode(self) -> None:
+        """Test _get_repository() in repo_url mode uses stored repo_full_name."""
+        mock_github_repo = Mock()
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.Github"
+            ) as mock_github_class,
+        ):
+            mock_github_client = Mock()
+            mock_github_client.get_repo.return_value = mock_github_repo
+            mock_github_class.return_value = mock_github_client
+
+            manager = BaseGitHubManager(
+                repo_url="https://github.com/test-owner/test-repo.git"
+            )
+
+            # Call _get_repository
+            result = manager._get_repository()
+
+            # Verify result
+            assert result == mock_github_repo
+            assert manager._repository == mock_github_repo  # Cached
+
+            # Verify get_repo was called with correct full name
+            mock_github_client.get_repo.assert_called_once_with("test-owner/test-repo")
+
+    def test_get_repository_caching_with_repo_url(self) -> None:
+        """Test _get_repository() caches the repository object in repo_url mode."""
+        mock_github_repo = Mock()
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.Github"
+            ) as mock_github_class,
+        ):
+            mock_github_client = Mock()
+            mock_github_client.get_repo.return_value = mock_github_repo
+            mock_github_class.return_value = mock_github_client
+
+            manager = BaseGitHubManager(
+                repo_url="https://github.com/test-owner/test-repo.git"
+            )
+
+            # Call _get_repository multiple times
+            result1 = manager._get_repository()
+            result2 = manager._get_repository()
+            result3 = manager._get_repository()
+
+            # Verify all results are the same
+            assert result1 == result2 == result3 == mock_github_repo
+
+            # Verify get_repo was called only once (caching works)
+            mock_github_client.get_repo.assert_called_once()
+
+    def test_get_repository_github_api_error_with_repo_url(self) -> None:
+        """Test _get_repository() returns None when GitHub API returns error."""
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.Github"
+            ) as mock_github_class,
+        ):
+            mock_github_client = Mock()
+            mock_github_client.get_repo.side_effect = GithubException(
+                404, {"message": "Not Found"}, None
+            )
+            mock_github_class.return_value = mock_github_client
+
+            manager = BaseGitHubManager(
+                repo_url="https://github.com/test-owner/test-repo.git"
+            )
+
+            # Call _get_repository
+            result = manager._get_repository()
+
+            # Verify result is None (API error)
+            assert result is None
+
+    def test_get_repository_generic_exception_with_repo_url(self) -> None:
+        """Test _get_repository() returns None on unexpected exceptions."""
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.Github"
+            ) as mock_github_class,
+        ):
+            mock_github_client = Mock()
+            mock_github_client.get_repo.side_effect = RuntimeError("Unexpected error")
+            mock_github_class.return_value = mock_github_client
+
+            manager = BaseGitHubManager(
+                repo_url="https://github.com/test-owner/test-repo.git"
+            )
+
+            # Call _get_repository
+            result = manager._get_repository()
+
+            # Verify result is None (generic exception)
+            assert result is None
+
     def test_get_repository_caching(self) -> None:
         """Test _get_repository() caches the repository object."""
         mock_path = Mock(spec=Path)
