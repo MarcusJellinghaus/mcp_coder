@@ -1206,6 +1206,110 @@ class TestDispatchWorkflow:
         # Verify - Branch manager NOT called (create-plan uses main)
         mock_branch_mgr.get_linked_branches.assert_not_called()
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_implement(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test dispatching implement workflow.
+
+        For implement workflow:
+        - Uses branch from issue (not main)
+        - Gets branch name via get_linked_branches()
+        - Formats command without issue number
+        - Triggers Jenkins job with correct parameters
+        - Updates issue labels (removes old, adds next)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-05:plan-ready label
+        issue = IssueData(
+            number=456,
+            title="Implement feature Y",
+            body="Implementation task",
+            state="open",
+            labels=["status-05:plan-ready", "enhancement"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/456",
+            locked=False,
+        )
+
+        # Setup - Repo configuration
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-456",
+        }
+
+        # Setup - Mock branch manager to return linked branch
+        mock_branch_mgr.get_linked_branches.return_value = ["456-implement-feature-y"]
+
+        # Setup - Mock Jenkins responses
+        mock_jenkins.start_job.return_value = 54321  # Queue ID
+        mock_jenkins.get_job_status.return_value = MagicMock(status="queued")
+
+        # Execute
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="implement",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="DEBUG",
+        )
+
+        # Verify - Branch manager called to get linked branch
+        mock_branch_mgr.get_linked_branches.assert_called_once_with(456)
+
+        # Verify - Jenkins job started with correct parameters
+        mock_jenkins.start_job.assert_called_once()
+        call_args = mock_jenkins.start_job.call_args
+        executor_path = call_args[0][0]
+        params = call_args[0][1]
+
+        # Verify executor path
+        assert executor_path == "MCP_Coder/executor-test"
+
+        # Verify job parameters
+        assert params["REPO_URL"] == "https://github.com/user/repo.git"
+        assert params["BRANCH_NAME"] == "456-implement-feature-y"  # From linked branch
+        assert params["GITHUB_CREDENTIALS_ID"] == "github-pat-456"
+
+        # Verify COMMAND contains expected elements for implement
+        command = params["COMMAND"]
+        assert "git checkout 456-implement-feature-y" in command
+        assert "git pull" in command
+        assert "mcp-coder --log-level DEBUG implement" in command
+        assert "--project-dir /workspace/repo" in command
+        assert "uv sync --extra dev" in command
+        assert "which mcp-coder" in command
+        assert "which claude" in command
+        # Implement workflow should NOT include issue number in command
+        assert "create-plan" not in command
+
+        # Verify - Job status checked
+        mock_jenkins.get_job_status.assert_called_once_with(54321)
+
+        # Verify - Issue labels updated
+        mock_issue_mgr.remove_labels.assert_called_once_with(
+            456, "status-05:plan-ready"
+        )
+        mock_issue_mgr.add_labels.assert_called_once_with(456, "status-06:implementing")
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
