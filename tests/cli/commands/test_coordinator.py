@@ -3023,3 +3023,192 @@ class TestCoordinatorRunIntegration:
         assert "status-02:awaiting-planning" in remove_calls[2][0][1]
         assert add_calls[2][0][0] == 103
         assert "status-03:planning" in add_calls[2][0][1]
+
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_end_to_end_ignore_labels_filtering(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_load_labels: MagicMock,
+    ) -> None:
+        """Test issues with ignore_labels are excluded.
+
+        This test verifies ignore_labels filtering:
+        1. Three issues total
+        2. One issue has "Overview" label (in ignore_labels)
+        3. Only 2 issues dispatched (Overview issue excluded)
+        4. Correct workflows dispatched for the 2 eligible issues
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Mock label configuration with "Overview" as ignore_label
+        mock_load_labels.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-03:planning", "category": "bot_busy"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-06:implementing", "category": "bot_busy"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+                {"name": "status-09:pr-creating", "category": "bot_busy"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock Jenkins client
+        mock_jenkins = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.start_job.return_value = 12345
+        mock_jenkins.get_job_status.return_value = JobStatus(
+            status="queued",
+            build_number=None,
+            duration_ms=None,
+            url=None,
+        )
+
+        # Setup - Mock IssueManager
+        mock_issue_mgr = MagicMock()
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+
+        # Setup - Mock 3 issues, where issue #102 has "Overview" label and should be excluded
+        mock_issue_mgr.list_issues.return_value = [
+            IssueData(
+                number=101,
+                title="Create PR for feature",
+                body="Ready for PR creation",
+                state="open",
+                labels=["status-08:ready-pr"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/101",
+                locked=False,
+            ),
+            IssueData(
+                number=102,
+                title="Overview issue - should be ignored",
+                body="This has Overview label",
+                state="open",
+                labels=["status-05:plan-ready", "Overview"],  # Has ignore label
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/102",
+                locked=False,
+            ),
+            IssueData(
+                number=103,
+                title="Plan new feature",
+                body="Awaiting planning",
+                state="open",
+                labels=["status-02:awaiting-planning"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/103",
+                locked=False,
+            ),
+        ]
+
+        # Setup - Mock IssueBranchManager
+        mock_branch_mgr = MagicMock()
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - Mock linked branches for issues that need them
+        def get_linked_branches_side_effect(issue_number: int) -> list[str]:
+            if issue_number == 101:  # status-08 (create-pr)
+                return ["101-feature-branch"]
+            else:  # status-02 (create-plan) - no branch needed
+                return []
+
+        mock_branch_mgr.get_linked_branches.side_effect = (
+            get_linked_branches_side_effect
+        )
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success)
+        assert result == 0
+
+        # Verify - CRITICAL: Only 2 jobs started (issue #102 with "Overview" excluded)
+        assert mock_jenkins.start_job.call_count == 2
+
+        # Verify - Job status checked 2 times (one per eligible issue)
+        assert mock_jenkins.get_job_status.call_count == 2
+
+        # Verify - Only 2 workflows dispatched (issues #101 and #103)
+        start_job_calls = mock_jenkins.start_job.call_args_list
+
+        # First workflow: Issue #101 (status-08:ready-pr) → create-pr
+        first_call_params = start_job_calls[0][0][1]
+        assert "101" in first_call_params["COMMAND"]
+        assert "create-pr" in first_call_params["COMMAND"]
+
+        # Second workflow: Issue #103 (status-02:awaiting-planning) → create-plan
+        second_call_params = start_job_calls[1][0][1]
+        assert "103" in second_call_params["COMMAND"]
+        assert "create-plan" in second_call_params["COMMAND"]
+
+        # Verify - Labels updated for only 2 issues (not the ignored one)
+        assert mock_issue_mgr.remove_labels.call_count == 2
+        assert mock_issue_mgr.add_labels.call_count == 2
+
+        # Verify - Correct label transitions
+        remove_calls = mock_issue_mgr.remove_labels.call_args_list
+        add_calls = mock_issue_mgr.add_labels.call_args_list
+
+        # Issue #101: status-08:ready-pr → status-09:pr-creating
+        assert remove_calls[0][0][0] == 101
+        assert "status-08:ready-pr" in remove_calls[0][0][1]
+        assert add_calls[0][0][0] == 101
+        assert "status-09:pr-creating" in add_calls[0][0][1]
+
+        # Issue #103: status-02:awaiting-planning → status-03:planning
+        assert remove_calls[1][0][0] == 103
+        assert "status-02:awaiting-planning" in remove_calls[1][0][1]
+        assert add_calls[1][0][0] == 103
+        assert "status-03:planning" in add_calls[1][0][1]
+
+        # Verify - Issue #102 was NOT processed (no label updates for it)
+        issue_numbers_processed = [call[0][0] for call in remove_calls]
+        assert 102 not in issue_numbers_processed
