@@ -1488,6 +1488,84 @@ class TestDispatchWorkflow:
         mock_issue_mgr.remove_labels.assert_not_called()
         mock_issue_mgr.add_labels.assert_not_called()
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_jenkins_failure(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test error handling when Jenkins job fails to start.
+
+        When Jenkins raises a JenkinsError during job triggering,
+        the exception should bubble up from dispatch_workflow().
+        Issue labels should NOT be updated when the job fails to start.
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+        from mcp_coder.utils.jenkins_operations.client import JenkinsError
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-02:awaiting-planning label
+        issue = IssueData(
+            number=999,
+            title="Feature with Jenkins failure",
+            body="This job will fail to start",
+            state="open",
+            labels=["status-02:awaiting-planning", "enhancement"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/999",
+            locked=False,
+        )
+
+        # Setup - Repo configuration
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-999",
+        }
+
+        # Setup - Mock Jenkins to raise JenkinsError when starting job
+        mock_jenkins.start_job.side_effect = JenkinsError(
+            "Failed to start job 'MCP_Coder/executor-test': Connection refused"
+        )
+
+        # Execute & Verify - should raise JenkinsError (bubbles up)
+        with pytest.raises(JenkinsError) as exc_info:
+            dispatch_workflow(
+                issue=issue,
+                workflow_name="create-plan",
+                repo_config=repo_config,
+                jenkins_client=mock_jenkins,
+                issue_manager=mock_issue_mgr,
+                branch_manager=mock_branch_mgr,
+                log_level="INFO",
+            )
+
+        # Verify error message contains useful information
+        error_msg = str(exc_info.value)
+        assert "Failed to start job" in error_msg
+        assert "MCP_Coder/executor-test" in error_msg
+
+        # Verify - Jenkins start_job was called
+        mock_jenkins.start_job.assert_called_once()
+
+        # Verify - Job status was NOT checked (error occurred before that)
+        mock_jenkins.get_job_status.assert_not_called()
+
+        # Verify - Issue labels were NOT updated (job never started)
+        mock_issue_mgr.remove_labels.assert_not_called()
+        mock_issue_mgr.add_labels.assert_not_called()
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
