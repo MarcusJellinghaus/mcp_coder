@@ -76,7 +76,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [step_3.md](steps/step_3.md)
 
 - [x] Add `WORKFLOW_MAPPING` constant to `coordinator.py`
-- [ ] Add `CREATE_PLAN_COMMAND_TEMPLATE` constant
+- [x] Add `CREATE_PLAN_COMMAND_TEMPLATE` constant
 - [ ] Add `IMPLEMENT_COMMAND_TEMPLATE` constant
 - [ ] Add `CREATE_PR_COMMAND_TEMPLATE` constant
 - [ ] Write test: `test_dispatch_workflow_create_plan()`

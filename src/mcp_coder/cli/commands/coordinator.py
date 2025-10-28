@@ -75,6 +75,16 @@ WORKFLOW_MAPPING = {
 }
 
 
+# Workflow command templates
+CREATE_PLAN_COMMAND_TEMPLATE = """git checkout main
+git pull
+which mcp-coder && mcp-coder --version
+which claude && claude --version
+uv sync --extra dev
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo
+"""
+
+
 def get_eligible_issues(
     issue_manager: IssueManager, log_level: str = "INFO"
 ) -> list[IssueData]:
