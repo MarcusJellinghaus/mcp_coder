@@ -75,7 +75,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Workflow Dispatcher
 **Details:** [step_3.md](steps/step_3.md)
 
-- [ ] Add `WORKFLOW_MAPPING` constant to `coordinator.py`
+- [x] Add `WORKFLOW_MAPPING` constant to `coordinator.py`
 - [ ] Add `CREATE_PLAN_COMMAND_TEMPLATE` constant
 - [ ] Add `IMPLEMENT_COMMAND_TEMPLATE` constant
 - [ ] Add `CREATE_PR_COMMAND_TEMPLATE` constant

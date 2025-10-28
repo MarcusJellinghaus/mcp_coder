@@ -55,6 +55,26 @@ PRIORITY_ORDER = [
 ]
 
 
+# Workflow configuration mapping
+WORKFLOW_MAPPING = {
+    "status-02:awaiting-planning": {
+        "workflow": "create-plan",
+        "branch_strategy": "main",
+        "next_label": "status-03:planning",
+    },
+    "status-05:plan-ready": {
+        "workflow": "implement",
+        "branch_strategy": "from_issue",
+        "next_label": "status-06:implementing",
+    },
+    "status-08:ready-pr": {
+        "workflow": "create-pr",
+        "branch_strategy": "from_issue",
+        "next_label": "status-09:pr-creating",
+    },
+}
+
+
 def get_eligible_issues(
     issue_manager: IssueManager, log_level: str = "INFO"
 ) -> list[IssueData]:
