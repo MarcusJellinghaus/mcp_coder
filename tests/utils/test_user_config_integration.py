@@ -75,7 +75,7 @@ port = 5432
                 assert config_path.name == "config.toml"
                 assert config_path.parent.parent.name == ".config"
                 expected_path = fake_home / ".config" / "mcp_coder" / "config.toml"
-            
+
             # Verify the full path construction
             assert config_path == expected_path
 
@@ -87,7 +87,7 @@ port = 5432
 
         assert path1 == path2
         assert path1.name == "config.toml"
-        
+
         # Verify platform-specific path structure
         if platform.system() == "Windows":
             assert path1.parent.name == ".mcp_coder"

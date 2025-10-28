@@ -32,7 +32,7 @@ class TestGetConfigFilePath:
             expected = Path.home() / ".config" / "mcp_coder" / "config.toml"
             assert result == expected
             assert "mcp_coder" in str(result)
-        
+
         # Common assertions
         assert result.name == "config.toml"
 
