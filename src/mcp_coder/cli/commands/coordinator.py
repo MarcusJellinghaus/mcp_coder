@@ -10,7 +10,7 @@ import os
 import sys
 from typing import Optional
 
-from workflows.label_config import build_label_lookups, load_labels_config
+from workflows.label_config import load_labels_config
 
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
 from ...utils.jenkins_operations.client import JenkinsClient
@@ -73,18 +73,62 @@ def get_eligible_issues(
     Raises:
         GithubException: If GitHub API errors occur
     """
-    # TODO: Implement issue filtering and sorting logic
-    # 1. Load label configuration (bot_pickup, ignore_labels)
-    # 2. Query all open issues via issue_manager.list_issues(state="open")
-    # 3. Filter issues:
-    #    - Must have exactly ONE bot_pickup label
-    #    - Must NOT have any ignore_labels
-    # 4. Sort filtered issues by priority:
-    #    - Create priority map: {label: index in PRIORITY_ORDER}
-    #    - Sort by priority (lower index = higher priority)
-    # 5. Log filtering results (count before/after)
-    # 6. Return sorted list
-    return []
+    # Load label configuration
+    # Get project_dir from issue_manager (inherited from BaseGitHubManager)
+    if issue_manager.project_dir is None:
+        raise ValueError("IssueManager must be initialized with project_dir")
+
+    config_path = issue_manager.project_dir / "workflows" / "config" / "labels.json"
+    labels_config = load_labels_config(config_path)
+
+    # Extract bot_pickup labels (labels with category="bot_pickup")
+    bot_pickup_labels = set()
+    for label in labels_config["workflow_labels"]:
+        if label["category"] == "bot_pickup":
+            bot_pickup_labels.add(label["name"])
+
+    # Extract ignore_labels set for filtering
+    ignore_labels_set = set(labels_config.get("ignore_labels", []))
+
+    # Query all open issues (exclude pull requests)
+    all_issues = issue_manager.list_issues(state="open", include_pull_requests=False)
+    logger.debug(f"Found {len(all_issues)} open issues")
+
+    # Filter issues
+    eligible_issues = []
+    for issue in all_issues:
+        issue_labels = set(issue["labels"])
+
+        # Count bot_pickup labels on this issue
+        bot_pickup_count = len(issue_labels & bot_pickup_labels)
+
+        # Skip if not exactly one bot_pickup label
+        if bot_pickup_count != 1:
+            continue
+
+        # Skip if has any ignore_labels
+        if issue_labels & ignore_labels_set:
+            continue
+
+        # Issue is eligible
+        eligible_issues.append(issue)
+
+    logger.debug(f"Filtered to {len(eligible_issues)} eligible issues")
+
+    # Sort by priority
+    priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
+
+    def get_priority(issue: IssueData) -> int:
+        """Get priority index for an issue (lower = higher priority)."""
+        for label in issue["labels"]:
+            if label in priority_map:
+                return priority_map[label]
+        # Should not happen if filtering worked correctly
+        return len(PRIORITY_ORDER)  # Lowest priority
+
+    eligible_issues.sort(key=get_priority)
+
+    return eligible_issues
 
 
 def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:

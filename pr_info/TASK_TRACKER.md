@@ -61,16 +61,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_get_eligible_issues_priority_order()`
 - [x] Write test: `test_get_eligible_issues_empty_result()`
 - [x] Implement `get_eligible_issues()` function signature
-- [ ] Implement label configuration loading
-- [ ] Implement issue querying via `IssueManager`
-- [ ] Implement filtering by bot_pickup labels (exactly one required)
-- [ ] Implement exclusion by ignore_labels
-- [ ] Implement priority sorting (status-08 → 05 → 02)
-- [ ] Implement logging for filtering results
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check (fast unit tests) and fix all issues
-- [ ] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Implement label configuration loading
+- [x] Implement issue querying via `IssueManager`
+- [x] Implement filtering by bot_pickup labels (exactly one required)
+- [x] Implement exclusion by ignore_labels
+- [x] Implement priority sorting (status-08 → 05 → 02)
+- [x] Implement logging for filtering results
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check (fast unit tests) and fix all issues
+- [x] Run mypy check and fix all issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Workflow Dispatcher
 **Details:** [step_3.md](steps/step_3.md)
