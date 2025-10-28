@@ -2,7 +2,7 @@
 
 import argparse
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -2542,3 +2542,282 @@ class TestCoordinatorRunIntegration:
         assert "status-02:awaiting-planning" in remove_calls[2][0][1]
         assert add_calls[2][0][0] == 103
         assert "status-03:planning" in add_calls[2][0][1]
+
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_end_to_end_all_repos_mode(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_load_labels: MagicMock,
+    ) -> None:
+        """Test --all mode with multiple repositories.
+
+        This test verifies the --all repos mode:
+        1. Config exists and lists multiple repositories
+        2. Both repositories configured correctly
+        3. Jenkins credentials available
+        4. Each repository has eligible issues
+        5. All issues from both repos dispatched
+        6. Exit code 0 (success)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for --all mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo=None,
+            all=True,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists with multiple repos
+        mock_create_config.return_value = False
+
+        # Setup - Mock label configuration
+        mock_load_labels.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-03:planning", "category": "bot_busy"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-06:implementing", "category": "bot_busy"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+                {"name": "status-09:pr-creating", "category": "bot_busy"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Mock different repo configurations for each repo
+        def load_repo_side_effect(repo_name: str) -> dict[str, str]:
+            if repo_name == "repo_one":
+                return {
+                    "repo_url": "https://github.com/user/repo_one.git",
+                    "executor_test_path": "RepoOne/executor-test",
+                    "github_credentials_id": "github-pat-123",
+                }
+            elif repo_name == "repo_two":
+                return {
+                    "repo_url": "https://github.com/user/repo_two.git",
+                    "executor_test_path": "RepoTwo/executor-test",
+                    "github_credentials_id": "github-pat-456",
+                }
+            else:
+                raise ValueError(f"Unknown repo: {repo_name}")
+
+        mock_load_repo.side_effect = load_repo_side_effect
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock Jenkins client
+        mock_jenkins = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+        mock_jenkins.start_job.return_value = 12345
+        mock_jenkins.get_job_status.return_value = JobStatus(
+            status="queued",
+            build_number=None,
+            duration_ms=None,
+            url=None,
+        )
+
+        # Setup - Mock IssueManager instances (one per repo)
+        mock_issue_mgr_repo_one = MagicMock()
+        mock_issue_mgr_repo_two = MagicMock()
+
+        # Track which manager gets created based on repo_url
+        def issue_mgr_side_effect(
+            repo_url: str, *args: Any, **kwargs: Any
+        ) -> MagicMock:
+            if "repo_one" in repo_url:
+                return mock_issue_mgr_repo_one
+            elif "repo_two" in repo_url:
+                return mock_issue_mgr_repo_two
+            else:
+                raise ValueError(f"Unexpected repo_url: {repo_url}")
+
+        mock_issue_mgr_class.side_effect = issue_mgr_side_effect
+
+        # Setup - Mock eligible issues for repo_one (2 issues)
+        mock_issue_mgr_repo_one.list_issues.return_value = [
+            IssueData(
+                number=201,
+                title="Repo One: Create PR",
+                body="Ready for PR creation",
+                state="open",
+                labels=["status-08:ready-pr"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo_one/issues/201",
+                locked=False,
+            ),
+            IssueData(
+                number=202,
+                title="Repo One: Plan feature",
+                body="Awaiting planning",
+                state="open",
+                labels=["status-02:awaiting-planning"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo_one/issues/202",
+                locked=False,
+            ),
+        ]
+
+        # Setup - Mock eligible issues for repo_two (1 issue)
+        mock_issue_mgr_repo_two.list_issues.return_value = [
+            IssueData(
+                number=301,
+                title="Repo Two: Implement feature",
+                body="Plan ready for implementation",
+                state="open",
+                labels=["status-05:plan-ready"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo_two/issues/301",
+                locked=False,
+            ),
+        ]
+
+        # Setup - Mock IssueBranchManager instances (one per repo)
+        mock_branch_mgr_repo_one = MagicMock()
+        mock_branch_mgr_repo_two = MagicMock()
+
+        # Track which manager gets created based on repo_url
+        def branch_mgr_side_effect(
+            repo_url: str, *args: Any, **kwargs: Any
+        ) -> MagicMock:
+            if "repo_one" in repo_url:
+                return mock_branch_mgr_repo_one
+            elif "repo_two" in repo_url:
+                return mock_branch_mgr_repo_two
+            else:
+                raise ValueError(f"Unexpected repo_url: {repo_url}")
+
+        mock_branch_mgr_class.side_effect = branch_mgr_side_effect
+
+        # Setup - Mock linked branches for issues that need them
+        def get_linked_branches_repo_one(issue_number: int) -> list[str]:
+            if issue_number == 201:  # status-08 (create-pr)
+                return ["201-feature-branch"]
+            else:  # status-02 (create-plan) - no branch needed
+                return []
+
+        def get_linked_branches_repo_two(issue_number: int) -> list[str]:
+            if issue_number == 301:  # status-05 (implement)
+                return ["301-feature-branch"]
+            else:
+                return []
+
+        mock_branch_mgr_repo_one.get_linked_branches.side_effect = (
+            get_linked_branches_repo_one
+        )
+        mock_branch_mgr_repo_two.get_linked_branches.side_effect = (
+            get_linked_branches_repo_two
+        )
+
+        # Setup - Mock the config file reading for --all mode
+        # Mock get_config_file_path to return a fake path
+        with patch(
+            "mcp_coder.cli.commands.coordinator.get_config_file_path"
+        ) as mock_get_config_path:
+            mock_get_config_path.return_value = Path("/fake/config.toml")
+
+            # Mock tomllib.load to return config with two repos
+            mock_config_data: dict[str, Any] = {
+                "coordinator": {"repos": {"repo_one": {}, "repo_two": {}}}
+            }
+
+            with (
+                patch("builtins.open", create=True) as mock_open,
+                patch("tomllib.load") as mock_tomllib_load,
+            ):
+                mock_tomllib_load.return_value = mock_config_data
+
+                # Execute
+                result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success)
+        assert result == 0
+
+        # Verify - Jenkins jobs started (3 times total: 2 from repo_one + 1 from repo_two)
+        assert mock_jenkins.start_job.call_count == 3
+
+        # Verify - Job status checked (3 times)
+        assert mock_jenkins.get_job_status.call_count == 3
+
+        # Verify - Both repos' IssueManager instances were used
+        assert mock_issue_mgr_repo_one.list_issues.call_count == 1
+        assert mock_issue_mgr_repo_two.list_issues.call_count == 1
+
+        # Verify - Labels removed for all 3 issues (2 from repo_one + 1 from repo_two)
+        assert mock_issue_mgr_repo_one.remove_labels.call_count == 2
+        assert mock_issue_mgr_repo_two.remove_labels.call_count == 1
+
+        # Verify - Labels added for all 3 issues
+        assert mock_issue_mgr_repo_one.add_labels.call_count == 2
+        assert mock_issue_mgr_repo_two.add_labels.call_count == 1
+
+        # Verify - Workflows dispatched in correct order (priority-based within each repo)
+        start_job_calls = mock_jenkins.start_job.call_args_list
+
+        # First call: repo_one issue #201 (status-08:ready-pr → create-pr)
+        first_call_params = start_job_calls[0][0][1]
+        assert "201" in first_call_params["COMMAND"]
+        assert "create-pr" in first_call_params["COMMAND"]
+
+        # Second call: repo_one issue #202 (status-02:awaiting-planning → create-plan)
+        second_call_params = start_job_calls[1][0][1]
+        assert "202" in second_call_params["COMMAND"]
+        assert "create-plan" in second_call_params["COMMAND"]
+
+        # Third call: repo_two issue #301 (status-05:plan-ready → implement)
+        third_call_params = start_job_calls[2][0][1]
+        assert "301" in third_call_params["COMMAND"]
+        assert "implement" in third_call_params["COMMAND"]
+
+        # Verify - Label transitions correct for repo_one issues
+        repo_one_remove_calls = mock_issue_mgr_repo_one.remove_labels.call_args_list
+        repo_one_add_calls = mock_issue_mgr_repo_one.add_labels.call_args_list
+
+        # Issue #201: status-08:ready-pr → status-09:pr-creating
+        assert repo_one_remove_calls[0][0][0] == 201
+        assert "status-08:ready-pr" in repo_one_remove_calls[0][0][1]
+        assert repo_one_add_calls[0][0][0] == 201
+        assert "status-09:pr-creating" in repo_one_add_calls[0][0][1]
+
+        # Issue #202: status-02:awaiting-planning → status-03:planning
+        assert repo_one_remove_calls[1][0][0] == 202
+        assert "status-02:awaiting-planning" in repo_one_remove_calls[1][0][1]
+        assert repo_one_add_calls[1][0][0] == 202
+        assert "status-03:planning" in repo_one_add_calls[1][0][1]
+
+        # Verify - Label transitions correct for repo_two issues
+        repo_two_remove_calls = mock_issue_mgr_repo_two.remove_labels.call_args_list
+        repo_two_add_calls = mock_issue_mgr_repo_two.add_labels.call_args_list
+
+        # Issue #301: status-05:plan-ready → status-06:implementing
+        assert repo_two_remove_calls[0][0][0] == 301
+        assert "status-05:plan-ready" in repo_two_remove_calls[0][0][1]
+        assert repo_two_add_calls[0][0][0] == 301
+        assert "status-06:implementing" in repo_two_add_calls[0][0][1]

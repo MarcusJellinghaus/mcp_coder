@@ -145,7 +145,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [step_6.md](steps/step_6.md)
 
 - [x] Write test: `test_end_to_end_single_repo_multiple_issues()`
-- [ ] Write test: `test_end_to_end_all_repos_mode()`
+- [x] Write test: `test_end_to_end_all_repos_mode()`
 - [ ] Write test: `test_end_to_end_priority_ordering()`
 - [ ] Write test: `test_end_to_end_ignore_labels_filtering()`
 - [ ] Write test: `test_end_to_end_fail_fast_on_jenkins_error()`
