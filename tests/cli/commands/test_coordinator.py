@@ -802,6 +802,121 @@ class TestGetEligibleIssues:
             state="open", include_pull_requests=False
         )
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    def test_get_eligible_issues_excludes_ignore_labels(
+        self, mock_load_config: MagicMock, mock_issue_manager_class: MagicMock
+    ) -> None:
+        """Test exclusion of issues with ignore_labels.
+
+        Issues that have any label from the ignore_labels list should be
+        excluded from the results, even if they have a valid bot_pickup label.
+        """
+        # Setup - Mock label configuration
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+            ],
+            "ignore_labels": ["Overview", "Blocked", "Needs-Discussion"],
+        }
+
+        # Setup - Mock IssueManager instance
+        mock_issue_manager = MagicMock()
+        mock_issue_manager_class.return_value = mock_issue_manager
+
+        # Mock issue list with mixed labels
+        mock_issue_manager.list_issues.return_value = [
+            # Issue with valid bot_pickup label and no ignore labels - should be included
+            IssueData(
+                number=1,
+                title="Valid Issue 1",
+                body="",
+                state="open",
+                labels=["status-02:awaiting-planning", "enhancement"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/1",
+                locked=False,
+            ),
+            # Issue with valid bot_pickup label but has "Overview" ignore label - should be excluded
+            IssueData(
+                number=2,
+                title="Overview Issue",
+                body="",
+                state="open",
+                labels=["status-05:plan-ready", "Overview"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/2",
+                locked=False,
+            ),
+            # Issue with valid bot_pickup label but has "Blocked" ignore label - should be excluded
+            IssueData(
+                number=3,
+                title="Blocked Issue",
+                body="",
+                state="open",
+                labels=["status-08:ready-pr", "bug", "Blocked"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/3",
+                locked=False,
+            ),
+            # Another valid issue with bot_pickup label and no ignore labels - should be included
+            IssueData(
+                number=4,
+                title="Valid Issue 2",
+                body="",
+                state="open",
+                labels=["status-08:ready-pr", "documentation"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/4",
+                locked=False,
+            ),
+            # Issue with bot_pickup label and "Needs-Discussion" ignore label - should be excluded
+            IssueData(
+                number=5,
+                title="Needs Discussion",
+                body="",
+                state="open",
+                labels=["status-02:awaiting-planning", "Needs-Discussion"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/5",
+                locked=False,
+            ),
+        ]
+
+        # Execute
+        from mcp_coder.cli.commands.coordinator import get_eligible_issues
+
+        result = get_eligible_issues(mock_issue_manager)
+
+        # Verify - only issues without ignore_labels
+        assert len(result) == 2
+        # Results should be sorted by priority (status-08 before status-02)
+        assert result[0]["number"] == 4  # status-08:ready-pr
+        assert result[1]["number"] == 1  # status-02:awaiting-planning
+
+        # Verify excluded issues
+        result_numbers = {issue["number"] for issue in result}
+        assert 2 not in result_numbers  # "Overview" label
+        assert 3 not in result_numbers  # "Blocked" label
+        assert 5 not in result_numbers  # "Needs-Discussion" label
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
