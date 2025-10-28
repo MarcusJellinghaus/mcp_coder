@@ -134,7 +134,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_coordinator_run_with_all_argument()`
 - [x] Write test: `test_coordinator_run_with_log_level()`
 - [x] Write test: `test_coordinator_run_requires_all_or_repo()`
-- [ ] Write test: `test_coordinator_run_all_and_repo_mutually_exclusive()`
+- [x] Write test: `test_coordinator_run_all_and_repo_mutually_exclusive()`
 - [ ] Manual verification: `mcp-coder coordinator run --help`
 - [ ] Run pylint check and fix all issues
 - [ ] Run pytest check (fast unit tests) and fix all issues

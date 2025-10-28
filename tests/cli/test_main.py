@@ -468,3 +468,11 @@ class TestCoordinatorRunCommand:
         # Should raise SystemExit when neither --all nor --repo is provided
         with pytest.raises(SystemExit):
             parser.parse_args(["coordinator", "run"])
+
+    def test_coordinator_run_all_and_repo_mutually_exclusive(self) -> None:
+        """Test error when both --all and --repo provided."""
+        parser = create_parser()
+
+        # Should raise SystemExit when both --all and --repo are provided
+        with pytest.raises(SystemExit):
+            parser.parse_args(["coordinator", "run", "--all", "--repo", "mcp_coder"])
