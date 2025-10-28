@@ -3640,3 +3640,95 @@ class TestCoordinatorRunIntegration:
             401, "status-02:awaiting-planning"
         )
         mock_issue_mgr.add_labels.assert_called_once_with(401, "status-03:planning")
+
+
+class TestCoordinatorRunEdgeCases:
+    """Edge case tests for coordinator run."""
+
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_no_open_issues(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_load_labels: MagicMock,
+    ) -> None:
+        """Test handling when repository has no open issues.
+
+        Verifies that:
+        1. When IssueManager.list_issues returns empty list
+        2. The function logs "No eligible issues" message
+        3. Returns exit code 0 (success, not an error condition)
+        4. No Jenkins jobs are triggered
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Mock label configuration
+        mock_load_labels.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-03:planning", "category": "bot_busy"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-06:implementing", "category": "bot_busy"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+                {"name": "status-09:pr-creating", "category": "bot_busy"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock IssueManager with NO open issues
+        mock_issue_mgr = MagicMock()
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+        mock_issue_mgr.list_issues.return_value = []  # Empty list - no open issues
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success - no issues is not an error)
+        assert result == 0
+
+        # Verify - IssueManager was created with correct repo_url
+        mock_issue_mgr_class.assert_called_once()
+        call_kwargs = mock_issue_mgr_class.call_args[1]
+        assert call_kwargs["repo_url"] == "https://github.com/user/mcp_coder.git"
+
+        # Verify - list_issues was called
+        mock_issue_mgr.list_issues.assert_called_once_with(
+            state="open", include_pull_requests=False
+        )
+
+        # Verify - No labels were updated (no issues to process)
+        mock_issue_mgr.remove_labels.assert_not_called()
+        mock_issue_mgr.add_labels.assert_not_called()
