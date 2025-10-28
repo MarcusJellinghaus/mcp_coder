@@ -37,7 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write tests for `BaseGitHubManager` with `project_dir` (existing behavior)
 - [x] Write tests for `BaseGitHubManager` with `repo_url` (new behavior)
 - [x] Write tests for error cases (neither, both parameters)
-- [ ] Run pylint check and fix all issues
+- [x] Run pylint check and fix all issues
 - [ ] Run pytest check (fast unit tests) and fix all issues
 - [ ] Run mypy check and fix all issues
 - [ ] Prepare git commit message for Step 0
