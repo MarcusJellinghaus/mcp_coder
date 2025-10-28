@@ -2174,6 +2174,49 @@ class TestExecuteCoordinatorRun:
         captured = capsys.readouterr()
         assert "Error:" in captured.err or "Failed" in captured.err
 
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_run_requires_all_or_repo(
+        self,
+        mock_create_config: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test error when neither --all nor --repo specified.
+
+        When args have neither all=True nor repo specified, execute_coordinator_run should:
+        1. Call create_default_config() which returns False (config exists)
+        2. Detect that no repository selection was provided
+        3. Print an error message to stderr
+        4. Return exit code 1
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args without all or repo
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo=None,
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 1 (error)
+        assert result == 1
+
+        # Verify - create_default_config was called
+        mock_create_config.assert_called_once()
+
+        # Verify - Error message printed to stderr
+        captured = capsys.readouterr()
+        assert "Error:" in captured.err
+        assert "--all" in captured.err or "--repo" in captured.err
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
