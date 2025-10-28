@@ -94,17 +94,20 @@ class IssueBranchManager(BaseGitHubManager):
         Token needs 'repo' scope for private repositories, 'public_repo' for public.
     """
 
-    def __init__(self, project_dir: Optional[Path] = None) -> None:
+    def __init__(
+        self, project_dir: Optional[Path] = None, repo_url: Optional[str] = None
+    ) -> None:
         """Initialize the IssueBranchManager.
 
         Args:
             project_dir: Path to the project directory containing git repository
+            repo_url: GitHub repository URL (e.g., "https://github.com/user/repo.git")
 
         Raises:
-            ValueError: If project_dir is None, directory doesn't exist,
+            ValueError: If neither or both parameters provided, directory doesn't exist,
                        is not a git repository, or GitHub token is not configured
         """
-        super().__init__(project_dir)
+        super().__init__(project_dir=project_dir, repo_url=repo_url)
 
     def _validate_issue_number(self, issue_number: int) -> bool:
         """Validate issue number.

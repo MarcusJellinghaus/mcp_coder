@@ -486,7 +486,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         Exception: Any unexpected errors (not caught, let bubble up)
     """
     try:
-        # Auto-create config on first run
+        # Step 1: Auto-create config on first run
         created = create_default_config()
         if created:
             config_path = get_config_file_path()
@@ -497,6 +497,102 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             print("Please update it with your Jenkins and repository information.")
             return 1  # Exit to let user configure
 
+        # Step 2: Determine repository list
+        if args.repo:
+            # Single repository mode
+            repo_names = [args.repo]
+        elif args.all:
+            # All repositories mode - extract from config
+            import tomllib
+
+            config_path = get_config_file_path()
+            with open(config_path, "rb") as f:
+                config_data = tomllib.load(f)
+
+            repos_section = config_data.get("coordinator", {}).get("repos", {})
+            repo_names = list(repos_section.keys())
+
+            if not repo_names:
+                print("No repositories configured in config file", file=sys.stderr)
+                logger.warning("No repositories found in config")
+                return 1
+        else:
+            # Should not reach here due to argparse mutually exclusive group
+            print("Error: Either --all or --repo must be specified", file=sys.stderr)
+            return 1
+
+        # Step 3: Get Jenkins credentials (shared across all repos)
+        server_url, username, api_token = get_jenkins_credentials()
+        jenkins_client = JenkinsClient(server_url, username, api_token)
+
+        # Step 4: Process each repository
+        for repo_name in repo_names:
+            logger.info(f"Processing repository: {repo_name}")
+
+            # Step 4a: Load and validate repo config
+            repo_config = load_repo_config(repo_name)
+            validate_repo_config(repo_name, repo_config)
+
+            # Type narrowing: validate_repo_config raises if any fields are None
+            validated_config: dict[str, str] = {
+                "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
+                "executor_test_path": repo_config["executor_test_path"],  # type: ignore[dict-item]
+                "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
+            }
+
+            # Step 4b: Create managers
+            issue_manager = IssueManager(repo_url=validated_config["repo_url"])
+            branch_manager = IssueBranchManager(repo_url=validated_config["repo_url"])
+
+            # Step 4c: Get eligible issues
+            eligible_issues = get_eligible_issues(issue_manager)
+            logger.info(f"Found {len(eligible_issues)} eligible issues")
+
+            # Step 4d: If no issues, continue to next repo
+            if not eligible_issues:
+                logger.info(f"No eligible issues for {repo_name}")
+                continue
+
+            # Step 4e: Dispatch workflows for each eligible issue (fail-fast)
+            for issue in eligible_issues:
+                # Find current bot_pickup label to determine workflow
+                current_label = None
+                for label in issue["labels"]:
+                    if label in WORKFLOW_MAPPING:
+                        current_label = label
+                        break
+
+                if not current_label:
+                    logger.error(
+                        f"Issue #{issue['number']} has no workflow label, skipping"
+                    )
+                    continue
+
+                workflow_config = WORKFLOW_MAPPING[current_label]
+                workflow_name = workflow_config["workflow"]
+
+                try:
+                    dispatch_workflow(
+                        issue=issue,
+                        workflow_name=workflow_name,
+                        repo_config=validated_config,
+                        jenkins_client=jenkins_client,
+                        issue_manager=issue_manager,
+                        branch_manager=branch_manager,
+                        log_level=args.log_level,
+                    )
+                except Exception as e:
+                    # Fail-fast: log error and exit immediately
+                    logger.error(f"Failed processing issue #{issue['number']}: {e}")
+                    print(
+                        f"Error: Failed to process issue #{issue['number']}: {e}",
+                        file=sys.stderr,
+                    )
+                    return 1
+
+            logger.info(f"Successfully processed all issues in {repo_name}")
+
+        # Step 5: Success - all repos processed
         return 0
 
     except ValueError as e:

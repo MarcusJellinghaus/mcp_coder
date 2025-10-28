@@ -1702,6 +1702,171 @@ class TestExecuteCoordinatorRun:
         assert "config.toml" in captured.out
         assert "Please update" in captured.out
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_run_single_repo_success(
+        self,
+        mock_create_config: MagicMock,
+        mock_dispatch_workflow: MagicMock,
+        mock_get_eligible_issues: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+    ) -> None:
+        """Test successful execution for single repository.
+
+        This test verifies the happy path:
+        1. Config exists (create_default_config returns False)
+        2. Repository config loaded and valid
+        3. Jenkins credentials available
+        4. 2 eligible issues found
+        5. dispatch_workflow called for each issue
+        6. Exit code 0 (success)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock Jenkins client
+        mock_jenkins = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+
+        # Setup - Mock IssueManager and IssueBranchManager
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - Mock 2 eligible issues
+        mock_get_eligible_issues.return_value = [
+            IssueData(
+                number=124,
+                title="Create PR for feature",
+                body="Ready for PR",
+                state="open",
+                labels=["status-08:ready-pr"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/124",
+                locked=False,
+            ),
+            IssueData(
+                number=123,
+                title="Implement feature",
+                body="Plan ready",
+                state="open",
+                labels=["status-05:plan-ready"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/123",
+                locked=False,
+            ),
+        ]
+
+        # Setup - Mock dispatch_workflow succeeds (no exception)
+        mock_dispatch_workflow.return_value = None
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success)
+        assert result == 0
+
+        # Verify - create_default_config was called
+        mock_create_config.assert_called_once()
+
+        # Verify - load_repo_config was called with correct repo name
+        mock_load_repo.assert_called_once_with("mcp_coder")
+
+        # Verify - get_jenkins_credentials was called
+        mock_get_creds.assert_called_once()
+
+        # Verify - JenkinsClient was created with correct credentials
+        mock_jenkins_class.assert_called_once_with(
+            "https://jenkins.example.com", "jenkins_user", "jenkins_token_123"
+        )
+
+        # Verify - IssueManager was created with repo_url
+        mock_issue_mgr_class.assert_called_once_with(
+            repo_url="https://github.com/user/mcp_coder.git"
+        )
+
+        # Verify - IssueBranchManager was created with repo_url
+        mock_branch_mgr_class.assert_called_once_with(
+            repo_url="https://github.com/user/mcp_coder.git"
+        )
+
+        # Verify - get_eligible_issues was called with IssueManager
+        mock_get_eligible_issues.assert_called_once_with(mock_issue_mgr)
+
+        # Verify - dispatch_workflow was called twice (once for each issue)
+        assert mock_dispatch_workflow.call_count == 2
+
+        # Verify - First dispatch_workflow call (issue #124)
+        first_call = mock_dispatch_workflow.call_args_list[0]
+        assert first_call[1]["issue"]["number"] == 124
+        assert first_call[1]["workflow_name"] == "create-pr"
+        assert first_call[1]["repo_config"] == {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+        assert first_call[1]["jenkins_client"] == mock_jenkins
+        assert first_call[1]["issue_manager"] == mock_issue_mgr
+        assert first_call[1]["branch_manager"] == mock_branch_mgr
+        assert first_call[1]["log_level"] == "INFO"
+
+        # Verify - Second dispatch_workflow call (issue #123)
+        second_call = mock_dispatch_workflow.call_args_list[1]
+        assert second_call[1]["issue"]["number"] == 123
+        assert second_call[1]["workflow_name"] == "implement"
+        assert second_call[1]["repo_config"] == {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+        assert second_call[1]["jenkins_client"] == mock_jenkins
+        assert second_call[1]["issue_manager"] == mock_issue_mgr
+        assert second_call[1]["branch_manager"] == mock_branch_mgr
+        assert second_call[1]["log_level"] == "INFO"
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
