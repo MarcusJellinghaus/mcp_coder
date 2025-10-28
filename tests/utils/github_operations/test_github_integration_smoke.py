@@ -112,6 +112,7 @@ class TestPullRequestManagerSmoke:
 
         try:
             # Create branch
+            assert pr_manager.project_dir is not None, "project_dir should not be None"
             if not branch_exists(pr_manager.project_dir, test_branch):
                 create_branch(test_branch, pr_manager.project_dir, from_branch="main")
 
@@ -163,6 +164,9 @@ class TestPullRequestManagerSmoke:
             try:
                 repo.git.checkout(original_branch)
                 # Delete the test branch locally and remotely
+                assert (
+                    pr_manager.project_dir is not None
+                ), "project_dir should not be None"
                 delete_branch(
                     test_branch, pr_manager.project_dir, force=True, delete_remote=True
                 )

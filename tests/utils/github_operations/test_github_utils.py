@@ -316,6 +316,7 @@ class TestPullRequestManagerIntegration:
 
             # Fetch latest to see all remote branches
             print("Fetching latest from remote...")
+            assert pr_manager.project_dir is not None, "project_dir should not be None"
             fetch_result = fetch_remote(pr_manager.project_dir)
             print(f"Fetch result: {fetch_result}")
 
@@ -336,6 +337,7 @@ class TestPullRequestManagerIntegration:
                 branch_exists_remotely = False
 
             # Check if the test branch already exists locally
+            assert pr_manager.project_dir is not None, "project_dir should not be None"
             branch_exists_locally = branch_exists(pr_manager.project_dir, test_branch)
             print(f"Branch {test_branch} exists locally: {branch_exists_locally}")
 
@@ -343,6 +345,9 @@ class TestPullRequestManagerIntegration:
                 # Branch exists remotely - checkout or create tracking branch
                 if branch_exists_locally:
                     print(f"Checking out existing local branch: {test_branch}")
+                    assert (
+                        pr_manager.project_dir is not None
+                    ), "project_dir should not be None"
                     checkout_result = checkout_branch(
                         test_branch, pr_manager.project_dir
                     )
@@ -367,6 +372,9 @@ class TestPullRequestManagerIntegration:
             elif branch_exists_locally:
                 # Branch exists locally but not remotely - just checkout
                 print(f"Checking out existing local branch: {test_branch}")
+                assert (
+                    pr_manager.project_dir is not None
+                ), "project_dir should not be None"
                 checkout_result = checkout_branch(test_branch, pr_manager.project_dir)
                 print(f"Checkout result: {checkout_result}")
                 if not checkout_result:
@@ -374,6 +382,9 @@ class TestPullRequestManagerIntegration:
             else:
                 # Branch doesn't exist - create new branch and push it
                 print(f"Creating new branch: {test_branch}")
+                assert (
+                    pr_manager.project_dir is not None
+                ), "project_dir should not be None"
                 create_result = create_branch(
                     test_branch, pr_manager.project_dir, from_branch="main"
                 )
@@ -391,6 +402,9 @@ class TestPullRequestManagerIntegration:
                     push_result = True
                 except Exception as push_error:
                     print(f"Manual push failed with: {push_error}")
+                    assert (
+                        pr_manager.project_dir is not None
+                    ), "project_dir should not be None"
                     push_result = push_branch(test_branch, pr_manager.project_dir)
                     print(f"Push branch result: {push_result}")
 
@@ -428,6 +442,7 @@ class TestPullRequestManagerIntegration:
             print(
                 "[DEBUG] Creating unique commit on test branch to avoid SHA collision..."
             )
+            assert pr_manager.project_dir is not None, "project_dir should not be None"
             test_file_path = pr_manager.project_dir / "test_commit_marker.txt"
             unique_timestamp = datetime.datetime.now().isoformat()
             test_file_path.write_text(f"Test commit at {unique_timestamp}\n")
