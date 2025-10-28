@@ -148,7 +148,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_end_to_end_all_repos_mode()`
 - [x] Write test: `test_end_to_end_priority_ordering()`
 - [x] Write test: `test_end_to_end_ignore_labels_filtering()`
-- [ ] Write test: `test_end_to_end_fail_fast_on_jenkins_error()`
+- [x] Write test: `test_end_to_end_fail_fast_on_jenkins_error()`
 - [ ] Write test: `test_end_to_end_fail_fast_on_missing_branch()`
 - [ ] Write test: `test_end_to_end_log_level_pass_through()`
 - [ ] Write test: `test_no_open_issues()`

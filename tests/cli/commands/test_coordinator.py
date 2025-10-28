@@ -3212,3 +3212,192 @@ class TestCoordinatorRunIntegration:
         # Verify - Issue #102 was NOT processed (no label updates for it)
         issue_numbers_processed = [call[0][0] for call in remove_calls]
         assert 102 not in issue_numbers_processed
+
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_end_to_end_fail_fast_on_jenkins_error(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_load_labels: MagicMock,
+    ) -> None:
+        """Test fail-fast when Jenkins job fails to start.
+
+        This test verifies fail-fast behavior:
+        1. Three eligible issues found
+        2. First issue dispatched successfully
+        3. Second issue triggers JenkinsError during job start
+        4. Processing stops immediately (fail-fast)
+        5. Third issue never processed
+        6. Exit code 1 (error)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+        from mcp_coder.utils.jenkins_operations.client import JenkinsError
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Mock label configuration
+        mock_load_labels.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-03:planning", "category": "bot_busy"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-06:implementing", "category": "bot_busy"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+                {"name": "status-09:pr-creating", "category": "bot_busy"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock Jenkins client
+        mock_jenkins = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+
+        # Setup - First job starts successfully, second job raises JenkinsError
+        mock_jenkins.start_job.side_effect = [
+            12345,  # First job succeeds
+            JenkinsError("Failed to start job: Connection refused"),  # Second fails
+        ]
+
+        # Setup - First job returns queued status
+        mock_jenkins.get_job_status.return_value = JobStatus(
+            status="queued",
+            build_number=None,
+            duration_ms=None,
+            url=None,
+        )
+
+        # Setup - Mock IssueManager
+        mock_issue_mgr = MagicMock()
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+
+        # Setup - Mock 3 issues: first succeeds, second fails, third never processed
+        mock_issue_mgr.list_issues.return_value = [
+            IssueData(
+                number=201,
+                title="First issue - succeeds",
+                body="This will dispatch successfully",
+                state="open",
+                labels=["status-08:ready-pr"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/201",
+                locked=False,
+            ),
+            IssueData(
+                number=202,
+                title="Second issue - Jenkins error",
+                body="This will trigger JenkinsError",
+                state="open",
+                labels=["status-05:plan-ready"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/202",
+                locked=False,
+            ),
+            IssueData(
+                number=203,
+                title="Third issue - never reached",
+                body="Should not be processed",
+                state="open",
+                labels=["status-02:awaiting-planning"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/203",
+                locked=False,
+            ),
+        ]
+
+        # Setup - Mock IssueBranchManager
+        mock_branch_mgr = MagicMock()
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - Mock linked branches for issues that need them
+        def get_linked_branches_side_effect(issue_number: int) -> list[str]:
+            if issue_number == 201:  # status-08 (create-pr)
+                return ["201-feature-branch"]
+            elif issue_number == 202:  # status-05 (implement)
+                return ["202-feature-branch"]
+            else:  # status-02 (create-plan) - no branch needed
+                return []
+
+        mock_branch_mgr.get_linked_branches.side_effect = (
+            get_linked_branches_side_effect
+        )
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 1 (error due to fail-fast)
+        assert result == 1
+
+        # Verify - CRITICAL: Only 2 jobs attempted (first succeeded, second failed)
+        assert mock_jenkins.start_job.call_count == 2
+
+        # Verify - Job status checked only once (for the first successful job)
+        assert mock_jenkins.get_job_status.call_count == 1
+
+        # Verify - Only first issue had labels updated (second failed before labels)
+        assert mock_issue_mgr.remove_labels.call_count == 1
+        assert mock_issue_mgr.add_labels.call_count == 1
+
+        # Verify - First issue labels updated correctly
+        remove_calls = mock_issue_mgr.remove_labels.call_args_list
+        add_calls = mock_issue_mgr.add_labels.call_args_list
+
+        # Issue #201: status-08:ready-pr → status-09:pr-creating
+        assert remove_calls[0][0][0] == 201
+        assert "status-08:ready-pr" in remove_calls[0][0][1]
+        assert add_calls[0][0][0] == 201
+        assert "status-09:pr-creating" in add_calls[0][0][1]
+
+        # Verify - Branches queried for first two issues only (fail-fast)
+        assert mock_branch_mgr.get_linked_branches.call_count == 2
+        branch_query_calls = mock_branch_mgr.get_linked_branches.call_args_list
+        assert branch_query_calls[0][0][0] == 201  # First issue
+        assert branch_query_calls[1][0][0] == 202  # Second issue (fails)
+
+        # Verify - Third issue never reached (fail-fast after second issue error)
+        issue_numbers_processed = [call[0][0] for call in remove_calls]
+        assert 202 not in issue_numbers_processed  # Failed before label update
+        assert 203 not in issue_numbers_processed  # Never reached
