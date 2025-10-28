@@ -45,12 +45,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Label Configuration Integration
 **Details:** [step_1.md](steps/step_1.md)
 
-- [ ] Add import statement in `src/mcp_coder/cli/commands/coordinator.py`
-- [ ] Import `load_labels_config` from `workflows.label_config`
-- [ ] Import `build_label_lookups` from `workflows.label_config`
-- [ ] Run pylint check and fix all issues
-- [ ] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Add import statement in `src/mcp_coder/cli/commands/coordinator.py`
+- [x] Import `load_labels_config` from `workflows.label_config`
+- [x] Import `build_label_lookups` from `workflows.label_config`
+- [x] Run pylint check and fix all issues
+- [x] Run mypy check and fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Issue Filtering Logic
 **Details:** [step_2.md](steps/step_2.md)

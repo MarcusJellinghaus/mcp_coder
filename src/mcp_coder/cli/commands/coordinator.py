@@ -10,6 +10,8 @@ import os
 import sys
 from typing import Optional
 
+from workflows.label_config import build_label_lookups, load_labels_config
+
 from ...utils.jenkins_operations.client import JenkinsClient
 from ...utils.jenkins_operations.models import JobStatus
 from ...utils.user_config import (
