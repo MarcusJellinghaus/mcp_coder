@@ -1059,6 +1059,48 @@ class TestGetEligibleIssues:
         assert "status-02:awaiting-planning" in result[4]["labels"]
         assert "status-02:awaiting-planning" in result[5]["labels"]
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    def test_get_eligible_issues_empty_result(
+        self, mock_load_config: MagicMock, mock_issue_manager_class: MagicMock
+    ) -> None:
+        """Test handling when no eligible issues found.
+
+        The function should return an empty list without error when:
+        - No issues are returned from GitHub
+        - All issues are filtered out (no bot_pickup labels, has ignore_labels, etc.)
+        """
+        # Setup - Mock label configuration
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Mock IssueManager instance
+        mock_issue_manager = MagicMock()
+        mock_issue_manager_class.return_value = mock_issue_manager
+
+        # Mock empty issue list (no open issues in repository)
+        mock_issue_manager.list_issues.return_value = []
+
+        # Execute
+        from mcp_coder.cli.commands.coordinator import get_eligible_issues
+
+        result = get_eligible_issues(mock_issue_manager)
+
+        # Verify - returns empty list without error
+        assert result == []
+        assert len(result) == 0
+
+        # Verify IssueManager.list_issues was called with correct params
+        mock_issue_manager.list_issues.assert_called_once_with(
+            state="open", include_pull_requests=False
+        )
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
