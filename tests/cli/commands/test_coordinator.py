@@ -1952,6 +1952,63 @@ class TestExecuteCoordinatorRun:
         # captured = capsys.readouterr()
         # Can verify log output if needed
 
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_run_missing_repo_config(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test error when repository not in config.
+
+        When load_repo_config returns all None values, execute_coordinator_run should:
+        1. Call create_default_config() which returns False (config exists)
+        2. Call load_repo_config() with the repository name
+        3. Detect that all required fields are None (repository not configured)
+        4. Print an error message to stderr
+        5. Return exit code 1
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="nonexistent_repo",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Repository not found - all values None
+        mock_load_repo.return_value = {
+            "repo_url": None,
+            "executor_test_path": None,
+            "github_credentials_id": None,
+        }
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 1 (error)
+        assert result == 1
+
+        # Verify - create_default_config was called
+        mock_create_config.assert_called_once()
+
+        # Verify - load_repo_config was called with correct repo name
+        mock_load_repo.assert_called_once_with("nonexistent_repo")
+
+        # Verify - Error message printed to stderr
+        captured = capsys.readouterr()
+        assert "Error:" in captured.err
+        assert "Config file:" in captured.err
+        assert "missing" in captured.err
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
