@@ -109,7 +109,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_execute_coordinator_run_requires_all_or_repo()`
 - [x] Implement `execute_coordinator_run()` function signature
 - [x] Implement config existence check and auto-creation
-- [ ] Implement repository list extraction (--all or --repo)
+- [x] Implement repository list extraction (--all or --repo)
 - [ ] Implement Jenkins credentials retrieval
 - [ ] Implement per-repository processing loop
 - [ ] Implement repository config loading and validation
