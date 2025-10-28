@@ -1310,6 +1310,109 @@ class TestDispatchWorkflow:
         )
         mock_issue_mgr.add_labels.assert_called_once_with(456, "status-06:implementing")
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_create_pr(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test dispatching create-pr workflow.
+
+        For create-pr workflow:
+        - Uses branch from issue (not main)
+        - Gets branch name via get_linked_branches()
+        - Formats command without issue number
+        - Triggers Jenkins job with correct parameters
+        - Updates issue labels (removes old, adds next)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-08:ready-pr label
+        issue = IssueData(
+            number=789,
+            title="Create PR for feature Z",
+            body="Ready to create pull request",
+            state="open",
+            labels=["status-08:ready-pr", "enhancement"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/789",
+            locked=False,
+        )
+
+        # Setup - Repo configuration
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-789",
+        }
+
+        # Setup - Mock branch manager to return linked branch
+        mock_branch_mgr.get_linked_branches.return_value = ["789-create-pr-feature-z"]
+
+        # Setup - Mock Jenkins responses
+        mock_jenkins.start_job.return_value = 11111  # Queue ID
+        mock_jenkins.get_job_status.return_value = MagicMock(status="queued")
+
+        # Execute
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="create-pr",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="WARNING",
+        )
+
+        # Verify - Branch manager called to get linked branch
+        mock_branch_mgr.get_linked_branches.assert_called_once_with(789)
+
+        # Verify - Jenkins job started with correct parameters
+        mock_jenkins.start_job.assert_called_once()
+        call_args = mock_jenkins.start_job.call_args
+        executor_path = call_args[0][0]
+        params = call_args[0][1]
+
+        # Verify executor path
+        assert executor_path == "MCP_Coder/executor-test"
+
+        # Verify job parameters
+        assert params["REPO_URL"] == "https://github.com/user/repo.git"
+        assert params["BRANCH_NAME"] == "789-create-pr-feature-z"  # From linked branch
+        assert params["GITHUB_CREDENTIALS_ID"] == "github-pat-789"
+
+        # Verify COMMAND contains expected elements for create-pr
+        command = params["COMMAND"]
+        assert "git checkout 789-create-pr-feature-z" in command
+        assert "git pull" in command
+        assert "mcp-coder --log-level WARNING create-pr" in command
+        assert "--project-dir /workspace/repo" in command
+        assert "uv sync --extra dev" in command
+        assert "which mcp-coder" in command
+        assert "which claude" in command
+        # Create-pr workflow should NOT include issue number in command
+        assert "create-plan" not in command
+        assert "implement" not in command
+
+        # Verify - Job status checked
+        mock_jenkins.get_job_status.assert_called_once_with(11111)
+
+        # Verify - Issue labels updated
+        mock_issue_mgr.remove_labels.assert_called_once_with(789, "status-08:ready-pr")
+        mock_issue_mgr.add_labels.assert_called_once_with(789, "status-09:pr-creating")
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:

@@ -81,7 +81,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add `CREATE_PR_COMMAND_TEMPLATE` constant
 - [x] Write test: `test_dispatch_workflow_create_plan()`
 - [x] Write test: `test_dispatch_workflow_implement()`
-- [ ] Write test: `test_dispatch_workflow_create_pr()`
+- [x] Write test: `test_dispatch_workflow_create_pr()`
 - [ ] Write test: `test_dispatch_workflow_missing_branch()`
 - [ ] Write test: `test_dispatch_workflow_jenkins_failure()`
 - [ ] Write test: `test_dispatch_workflow_label_update()`
