@@ -130,7 +130,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add coordinator run subparser in `create_parser()`
 - [x] Add mutually exclusive group (--all | --repo, required=True)
 - [x] Add routing logic in `main()` function
-- [ ] Write test: `test_coordinator_run_with_repo_argument()`
+- [x] Write test: `test_coordinator_run_with_repo_argument()`
 - [ ] Write test: `test_coordinator_run_with_all_argument()`
 - [ ] Write test: `test_coordinator_run_with_log_level()`
 - [ ] Write test: `test_coordinator_run_requires_all_or_repo()`
