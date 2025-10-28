@@ -135,11 +135,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_coordinator_run_with_log_level()`
 - [x] Write test: `test_coordinator_run_requires_all_or_repo()`
 - [x] Write test: `test_coordinator_run_all_and_repo_mutually_exclusive()`
-- [ ] Manual verification: `mcp-coder coordinator run --help`
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check (fast unit tests) and fix all issues
-- [ ] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 5
+- [x] Manual verification: `mcp-coder coordinator run --help`
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check (fast unit tests) and fix all issues
+- [x] Run mypy check and fix all issues
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: Integration Testing & Validation
 **Details:** [step_6.md](steps/step_6.md)
