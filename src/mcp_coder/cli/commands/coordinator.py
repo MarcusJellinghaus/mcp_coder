@@ -204,12 +204,24 @@ def get_eligible_issues(
     Raises:
         GithubException: If GitHub API errors occur
     """
-    # Load label configuration
-    # Get project_dir from issue_manager (inherited from BaseGitHubManager)
-    if issue_manager.project_dir is None:
-        raise ValueError("IssueManager must be initialized with project_dir")
+    # Load label configuration from centralized location
+    # For coordinator run with repo_url, use mcp_coder's workflows directory
+    # For coordinator with project_dir, use that project's workflows directory
+    from pathlib import Path
 
-    config_path = issue_manager.project_dir / "workflows" / "config" / "labels.json"
+    if issue_manager.project_dir is not None:
+        # Use project's local labels config
+        config_path = issue_manager.project_dir / "workflows" / "config" / "labels.json"
+    else:
+        # Use centralized labels config from mcp_coder workflows directory
+        # This file is in the same repo as this module
+        config_path = (
+            Path(__file__).parent.parent.parent.parent
+            / "workflows"
+            / "config"
+            / "labels.json"
+        )
+
     labels_config = load_labels_config(config_path)
 
     # Extract bot_pickup labels (labels with category="bot_pickup")
