@@ -15,6 +15,7 @@ from mcp_coder.cli.commands.coordinator import (
     load_repo_config,
     validate_repo_config,
 )
+from mcp_coder.utils.github_operations.issue_manager import IssueData
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 
 
@@ -694,6 +695,112 @@ class TestExecuteCoordinatorTest:
         assert "which claude" in command
         assert "claude mcp list" in command
         assert "source .venv/bin/activate" in command
+
+
+class TestGetEligibleIssues:
+    """Tests for get_eligible_issues function."""
+
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    def test_get_eligible_issues_filters_by_bot_pickup_labels(
+        self, mock_load_config: MagicMock, mock_issue_manager_class: MagicMock
+    ) -> None:
+        """Test filtering issues by bot_pickup labels.
+
+        Issues should have exactly ONE bot_pickup label to be eligible.
+        Issues without any bot_pickup labels or with multiple bot_pickup labels
+        should be excluded.
+        """
+        # Setup - Mock label configuration
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {"name": "status-01:created", "category": "human_action"},
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+                {"name": "status-03:planning", "category": "bot_busy"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Mock IssueManager instance
+        mock_issue_manager = MagicMock()
+        mock_issue_manager_class.return_value = mock_issue_manager
+
+        # Mock issue list with mixed labels
+        mock_issue_manager.list_issues.return_value = [
+            # Issue with valid bot_pickup label - should be included
+            IssueData(
+                number=1,
+                title="Issue 1",
+                body="",
+                state="open",
+                labels=["status-02:awaiting-planning", "enhancement"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/1",
+                locked=False,
+            ),
+            # Issue with no bot_pickup label - should be excluded
+            IssueData(
+                number=2,
+                title="Issue 2",
+                body="",
+                state="open",
+                labels=["status-01:created", "bug"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/2",
+                locked=False,
+            ),
+            # Issue with multiple bot_pickup labels - should be excluded
+            IssueData(
+                number=3,
+                title="Issue 3",
+                body="",
+                state="open",
+                labels=["status-02:awaiting-planning", "status-05:plan-ready"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/3",
+                locked=False,
+            ),
+            # Another valid issue with bot_pickup label - should be included
+            IssueData(
+                number=4,
+                title="Issue 4",
+                body="",
+                state="open",
+                labels=["status-08:ready-pr"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/4",
+                locked=False,
+            ),
+        ]
+
+        # Execute
+        from mcp_coder.cli.commands.coordinator import get_eligible_issues
+
+        result = get_eligible_issues(mock_issue_manager)
+
+        # Verify - only issues with exactly one bot_pickup label
+        assert len(result) == 2
+        assert result[0]["number"] == 4  # status-08 has highest priority
+        assert result[1]["number"] == 1  # status-02 has lower priority
+
+        # Verify IssueManager.list_issues was called with correct params
+        mock_issue_manager.list_issues.assert_called_once_with(
+            state="open", include_pull_requests=False
+        )
 
 
 @pytest.mark.jenkins_integration

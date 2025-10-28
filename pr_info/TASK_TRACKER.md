@@ -56,7 +56,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [step_2.md](steps/step_2.md)
 
 - [x] Add `PRIORITY_ORDER` constant to `coordinator.py`
-- [ ] Write test: `test_get_eligible_issues_filters_by_bot_pickup_labels()`
+- [x] Write test: `test_get_eligible_issues_filters_by_bot_pickup_labels()`
 - [ ] Write test: `test_get_eligible_issues_excludes_ignore_labels()`
 - [ ] Write test: `test_get_eligible_issues_priority_order()`
 - [ ] Write test: `test_get_eligible_issues_empty_result()`
