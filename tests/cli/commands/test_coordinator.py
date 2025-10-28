@@ -917,6 +917,148 @@ class TestGetEligibleIssues:
         assert 3 not in result_numbers  # "Blocked" label
         assert 5 not in result_numbers  # "Needs-Discussion" label
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    def test_get_eligible_issues_priority_order(
+        self, mock_load_config: MagicMock, mock_issue_manager_class: MagicMock
+    ) -> None:
+        """Test issues sorted by priority (08 → 05 → 02).
+
+        Issues should be sorted according to PRIORITY_ORDER:
+        1. status-08:ready-pr (highest priority)
+        2. status-05:plan-ready
+        3. status-02:awaiting-planning (lowest priority)
+        """
+        # Setup - Mock label configuration
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Mock IssueManager instance
+        mock_issue_manager = MagicMock()
+        mock_issue_manager_class.return_value = mock_issue_manager
+
+        # Mock issues in reverse priority order to verify sorting
+        mock_issue_manager.list_issues.return_value = [
+            # Issue with lowest priority - should be sorted last
+            IssueData(
+                number=101,
+                title="Awaiting planning issue 1",
+                body="",
+                state="open",
+                labels=["status-02:awaiting-planning"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/101",
+                locked=False,
+            ),
+            # Issue with medium priority
+            IssueData(
+                number=102,
+                title="Plan ready issue 1",
+                body="",
+                state="open",
+                labels=["status-05:plan-ready", "enhancement"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/102",
+                locked=False,
+            ),
+            # Another issue with lowest priority
+            IssueData(
+                number=103,
+                title="Awaiting planning issue 2",
+                body="",
+                state="open",
+                labels=["status-02:awaiting-planning", "bug"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/103",
+                locked=False,
+            ),
+            # Issue with highest priority - should be sorted first
+            IssueData(
+                number=104,
+                title="Ready for PR issue 1",
+                body="",
+                state="open",
+                labels=["status-08:ready-pr"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/104",
+                locked=False,
+            ),
+            # Another issue with highest priority
+            IssueData(
+                number=105,
+                title="Ready for PR issue 2",
+                body="",
+                state="open",
+                labels=["status-08:ready-pr", "documentation"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/105",
+                locked=False,
+            ),
+            # Another issue with medium priority
+            IssueData(
+                number=106,
+                title="Plan ready issue 2",
+                body="",
+                state="open",
+                labels=["status-05:plan-ready"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/106",
+                locked=False,
+            ),
+        ]
+
+        # Execute
+        from mcp_coder.cli.commands.coordinator import get_eligible_issues
+
+        result = get_eligible_issues(mock_issue_manager)
+
+        # Verify - all issues included and sorted by priority
+        assert len(result) == 6
+
+        # Verify priority order: status-08 issues first
+        assert result[0]["number"] == 104  # status-08:ready-pr
+        assert result[1]["number"] == 105  # status-08:ready-pr
+
+        # Then status-05 issues
+        assert result[2]["number"] == 102  # status-05:plan-ready
+        assert result[3]["number"] == 106  # status-05:plan-ready
+
+        # Finally status-02 issues (lowest priority)
+        assert result[4]["number"] == 101  # status-02:awaiting-planning
+        assert result[5]["number"] == 103  # status-02:awaiting-planning
+
+        # Verify all issues have their expected labels
+        assert "status-08:ready-pr" in result[0]["labels"]
+        assert "status-08:ready-pr" in result[1]["labels"]
+        assert "status-05:plan-ready" in result[2]["labels"]
+        assert "status-05:plan-ready" in result[3]["labels"]
+        assert "status-02:awaiting-planning" in result[4]["labels"]
+        assert "status-02:awaiting-planning" in result[5]["labels"]
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
