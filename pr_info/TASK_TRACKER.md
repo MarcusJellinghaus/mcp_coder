@@ -103,7 +103,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Write test: `test_execute_coordinator_run_creates_config_if_missing()`
 - [x] Write test: `test_execute_coordinator_run_single_repo_success()`
-- [ ] Write test: `test_execute_coordinator_run_no_eligible_issues()`
+- [x] Write test: `test_execute_coordinator_run_no_eligible_issues()`
 - [ ] Write test: `test_execute_coordinator_run_missing_repo_config()`
 - [ ] Write test: `test_execute_coordinator_run_dispatch_failure_fail_fast()`
 - [ ] Write test: `test_execute_coordinator_run_requires_all_or_repo()`

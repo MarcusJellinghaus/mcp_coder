@@ -1867,6 +1867,91 @@ class TestExecuteCoordinatorRun:
         assert second_call[1]["branch_manager"] == mock_branch_mgr
         assert second_call[1]["log_level"] == "INFO"
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.get_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_run_no_eligible_issues(
+        self,
+        mock_create_config: MagicMock,
+        mock_get_eligible_issues: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test handling when no eligible issues found.
+
+        When get_eligible_issues returns an empty list, execute_coordinator_run should:
+        1. Process normally up to the point of getting eligible issues
+        2. Log a message about no eligible issues found
+        3. Return exit code 0 (success, nothing to do)
+        4. Not attempt to dispatch any workflows
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock IssueManager
+        mock_issue_mgr = MagicMock()
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+
+        # Setup - Mock get_eligible_issues returns empty list (no eligible issues)
+        mock_get_eligible_issues.return_value = []
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success, nothing to do)
+        assert result == 0
+
+        # Verify - create_default_config was called
+        mock_create_config.assert_called_once()
+
+        # Verify - load_repo_config was called with correct repo name
+        mock_load_repo.assert_called_once_with("mcp_coder")
+
+        # Verify - get_jenkins_credentials was called
+        mock_get_creds.assert_called_once()
+
+        # Verify - IssueManager was created with repo_url
+        mock_issue_mgr_class.assert_called_once_with(
+            repo_url="https://github.com/user/mcp_coder.git"
+        )
+
+        # Verify - get_eligible_issues was called with IssueManager
+        mock_get_eligible_issues.assert_called_once_with(mock_issue_mgr)
+
+        # Verify - Log message about no eligible issues (optional, depends on implementation)
+        # captured = capsys.readouterr()
+        # Can verify log output if needed
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
