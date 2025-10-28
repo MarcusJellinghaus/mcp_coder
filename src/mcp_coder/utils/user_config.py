@@ -14,7 +14,7 @@ from .log_utils import log_function_call
 
 @log_function_call
 def get_config_file_path() -> Path:
-    """Get the path to the user configuration file.
+    r"""Get the path to the user configuration file.
 
     Returns:
         Path object pointing to platform-specific config location:
@@ -86,7 +86,7 @@ def get_config_value(section: str, key: str) -> Optional[str]:
 
 @log_function_call
 def create_default_config() -> bool:
-    """Create default configuration file with template content.
+    r"""Create default configuration file with template content.
 
     Creates ~/.mcp_coder/config.toml with example configuration
     including Jenkins settings and repository examples.
