@@ -29,11 +29,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Move `build_label_lookups()` from `workflows/validate_labels.py` to `workflows/label_config.py`
 - [x] Move `LabelLookups` TypedDict to `workflows/label_config.py`
 - [x] Update import in `workflows/validate_labels.py`
-- [ ] Add `repo_url` parameter support to `BaseGitHubManager.__init__()`
-- [ ] Implement `_init_with_project_dir()` helper method
-- [ ] Implement `_init_with_repo_url()` helper method
-- [ ] Update `_get_repository()` to work with both modes
-- [ ] Add validation for exactly one of (project_dir, repo_url)
+- [x] Add `repo_url` parameter support to `BaseGitHubManager.__init__()`
+- [x] Implement `_init_with_project_dir()` helper method
+- [x] Implement `_init_with_repo_url()` helper method
+- [x] Update `_get_repository()` to work with both modes
+- [x] Add validation for exactly one of (project_dir, repo_url)
 - [ ] Write tests for `BaseGitHubManager` with `project_dir` (existing behavior)
 - [ ] Write tests for `BaseGitHubManager` with `repo_url` (new behavior)
 - [ ] Write tests for error cases (neither, both parameters)
