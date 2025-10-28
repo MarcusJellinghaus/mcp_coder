@@ -2009,6 +2009,171 @@ class TestExecuteCoordinatorRun:
         assert "Config file:" in captured.err
         assert "missing" in captured.err
 
+    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.get_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_run_dispatch_failure_fail_fast(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_get_eligible_issues: MagicMock,
+        mock_dispatch_workflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test fail-fast on dispatch error.
+
+        When dispatch_workflow raises an exception, execute_coordinator_run should:
+        1. Process the first issue successfully
+        2. Encounter an error on the second issue
+        3. Stop processing immediately (fail-fast)
+        4. Return exit code 1
+        5. Not process the third issue
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock Jenkins client and managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - Mock 3 eligible issues
+        mock_get_eligible_issues.return_value = [
+            IssueData(
+                number=126,
+                title="First issue",
+                body="Test issue 1",
+                state="open",
+                labels=["status-08:ready-pr"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/126",
+                locked=False,
+            ),
+            IssueData(
+                number=125,
+                title="Second issue - will fail",
+                body="Test issue 2",
+                state="open",
+                labels=["status-05:plan-ready"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/125",
+                locked=False,
+            ),
+            IssueData(
+                number=124,
+                title="Third issue - should not be processed",
+                body="Test issue 3",
+                state="open",
+                labels=["status-02:plan-requested"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/124",
+                locked=False,
+            ),
+        ]
+
+        # Setup - Mock dispatch_workflow: succeeds on first call, raises on second
+        mock_dispatch_workflow.side_effect = [
+            None,  # First call succeeds
+            ValueError("Jenkins job failed to start"),  # Second call fails
+        ]
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 1 (error due to fail-fast)
+        assert result == 1
+
+        # Verify - create_default_config was called
+        mock_create_config.assert_called_once()
+
+        # Verify - load_repo_config was called with correct repo name
+        mock_load_repo.assert_called_once_with("mcp_coder")
+
+        # Verify - get_jenkins_credentials was called
+        mock_get_creds.assert_called_once()
+
+        # Verify - JenkinsClient was created with correct credentials
+        mock_jenkins_class.assert_called_once_with(
+            "https://jenkins.example.com", "jenkins_user", "jenkins_token_123"
+        )
+
+        # Verify - IssueManager was created with repo_url
+        mock_issue_mgr_class.assert_called_once_with(
+            repo_url="https://github.com/user/mcp_coder.git"
+        )
+
+        # Verify - IssueBranchManager was created with repo_url
+        mock_branch_mgr_class.assert_called_once_with(
+            repo_url="https://github.com/user/mcp_coder.git"
+        )
+
+        # Verify - get_eligible_issues was called with IssueManager
+        mock_get_eligible_issues.assert_called_once_with(mock_issue_mgr)
+
+        # Verify - dispatch_workflow was called exactly twice (fail-fast after 2nd)
+        assert mock_dispatch_workflow.call_count == 2
+
+        # Verify - First dispatch_workflow call (issue #126)
+        first_call = mock_dispatch_workflow.call_args_list[0]
+        assert first_call[1]["issue"]["number"] == 126
+        assert first_call[1]["workflow_name"] == "create-pr"
+
+        # Verify - Second dispatch_workflow call (issue #125 - fails)
+        second_call = mock_dispatch_workflow.call_args_list[1]
+        assert second_call[1]["issue"]["number"] == 125
+        assert second_call[1]["workflow_name"] == "implement"
+
+        # Verify - Error message printed
+        captured = capsys.readouterr()
+        assert "Error:" in captured.err or "Failed" in captured.err
+
 
 @pytest.mark.jenkins_integration
 class TestCoordinatorIntegration:
