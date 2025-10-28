@@ -27,8 +27,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [step_0.md](steps/step_0.md)
 
 - [x] Move `build_label_lookups()` from `workflows/validate_labels.py` to `workflows/label_config.py`
-- [ ] Move `LabelLookups` TypedDict to `workflows/label_config.py`
-- [ ] Update import in `workflows/validate_labels.py`
+- [x] Move `LabelLookups` TypedDict to `workflows/label_config.py`
+- [x] Update import in `workflows/validate_labels.py`
 - [ ] Add `repo_url` parameter support to `BaseGitHubManager.__init__()`
 - [ ] Implement `_init_with_project_dir()` helper method
 - [ ] Implement `_init_with_repo_url()` helper method
