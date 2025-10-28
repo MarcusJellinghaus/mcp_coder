@@ -14,21 +14,23 @@ Implement automated coordinator command that monitors GitHub issues and triggers
 
 ### Component Design
 
-**Modified Files (2):**
+**Modified Files (4):**
 1. `src/mcp_coder/cli/commands/coordinator.py` - Add coordinator run logic (~100 lines)
 2. `src/mcp_coder/cli/main.py` - Wire up CLI routing (~10 lines)
+3. `workflows/label_config.py` - Add `build_label_lookups()` function (~30 lines)
+4. `src/mcp_coder/utils/github_operations/base_manager.py` - Support `repo_url` parameter (~20 lines)
 
-**Extended Tests (1):**
+**Extended Tests (2):**
 1. `tests/cli/commands/test_coordinator.py` - Add TestCoordinatorRun class (~200 lines)
+2. `workflows/validate_labels.py` - Update import to use shared `build_label_lookups()`
 
-**Total New Code: ~310 lines**
+**Total New Code: ~360 lines**
 
 ### Key Functions Added
 
 ```python
-# 1. Label configuration (10 lines)
-def load_label_config() -> dict[str, list[str]]:
-    """Load workflow labels from labels.json."""
+# Note: Uses shared build_label_lookups() from workflows/label_config.py
+# No new label config function needed - reuse existing functionality
 
 # 2. Issue filtering (30 lines)
 def get_eligible_issues(issue_manager: IssueManager, log_level: str) -> list[IssueData]:
@@ -80,21 +82,36 @@ PRIORITY_ORDER = [
 ]
 ```
 
-**Command Template (Constant):**
+**Command Templates (Three separate constants for each workflow):**
 ```python
-WORKFLOW_COMMAND_TEMPLATE = """
-# Version checks
+# Template 1: create-plan (runs on main branch)
+CREATE_PLAN_COMMAND_TEMPLATE = """
+git checkout main
+git pull
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-
-# Environment setup
 uv sync --extra dev
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo
+"""
 
-# Claude MCP verification
-claude mcp list
+# Template 2: implement (runs on feature branch)
+IMPLEMENT_COMMAND_TEMPLATE = """
+git checkout {branch_name}
+git pull
+which mcp-coder && mcp-coder --version
+which claude && claude --version
+uv sync --extra dev
+mcp-coder --log-level {log_level} implement --project-dir /workspace/repo
+"""
 
-# Run workflow
-mcp-coder --log-level {log_level} {workflow_command}
+# Template 3: create-pr (runs on feature branch)
+CREATE_PR_COMMAND_TEMPLATE = """
+git checkout {branch_name}
+git pull
+which mcp-coder && mcp-coder --version
+which claude && claude --version
+uv sync --extra dev
+mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo
 """
 ```
 
@@ -108,8 +125,9 @@ mcp-coder --log-level {log_level} {workflow_command}
 - `get_jenkins_credentials()` - Jenkins authentication
 
 **New Integrations:**
-- Read `workflows/config/labels.json` for label definitions
+- Use `build_label_lookups()` from `workflows/label_config.py` for label filtering
 - Query GitHub issues via `IssueManager.list_issues(state="open")`
+- Instantiate managers with `repo_url` (using refactored `BaseGitHubManager`)
 - Filter issues by labels and exclusion rules
 - Map labels to workflows and trigger Jenkins jobs
 
@@ -126,10 +144,15 @@ mcp-coder --log-level {log_level} {workflow_command}
 
 ## Implementation Steps
 
-### Step 1: Label Configuration Loading (TDD)
-- **Test:** Load labels.json, parse bot_pickup/bot_busy/ignore_labels
-- **Implement:** `load_label_config()` function
-- **Duration:** 30 min
+### Step 0: Refactor Shared Components (TDD)
+- **Test:** Move `build_label_lookups()`, add `repo_url` support to `BaseGitHubManager`
+- **Implement:** Refactor shared functionality
+- **Duration:** 45 min
+
+### Step 1: Label Configuration Integration
+- **Test:** Use `build_label_lookups()` from shared module
+- **Implement:** Import and use existing functionality
+- **Duration:** 15 min
 
 ### Step 2: Issue Filtering Logic (TDD)
 - **Test:** Filter issues by labels, priority sorting, exclusions
@@ -156,7 +179,7 @@ mcp-coder --log-level {log_level} {workflow_command}
 - **Implement:** Full workflow validation
 - **Duration:** 45 min
 
-**Total Estimated Duration: 4-5 hours**
+**Total Estimated Duration: 4.5-5.5 hours**
 
 ## Testing Strategy
 
@@ -200,6 +223,9 @@ mcp-coder --log-level {log_level} {workflow_command}
 - `pr_info/steps/step_6.md` - Integration tests
 
 ### Modify:
+- `workflows/label_config.py` - Add `build_label_lookups()` function
+- `workflows/validate_labels.py` - Update import
+- `src/mcp_coder/utils/github_operations/base_manager.py` - Add `repo_url` support
 - `src/mcp_coder/cli/commands/coordinator.py` - Add ~100 lines
 - `src/mcp_coder/cli/main.py` - Add coordinator run subcommand
 - `tests/cli/commands/test_coordinator.py` - Add ~200 lines
@@ -232,3 +258,4 @@ mcp-coder --log-level {log_level} {workflow_command}
 - Issue #147: Implement `mcp-coder coordinator run`
 - Existing: `coordinator test` command (pattern to follow)
 - Labels: `workflows/config/labels.json` (label definitions)
+- Decisions: `pr_info/steps/decisions.md` (architectural decisions log)

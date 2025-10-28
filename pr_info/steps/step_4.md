@@ -107,9 +107,9 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
 
 **Imports:**
 ```python
-from pathlib import Path
 from ..utils.github_operations.issue_manager import IssueManager
 from ..utils.github_operations.issue_branch_manager import IssueBranchManager
+from ..utils.jenkins_operations.client import JenkinsClient
 ```
 
 **CLI Argument Parser (in main.py - Step 5):**
@@ -234,13 +234,14 @@ eligible_issues = [
    repo_names = list(repos_section.keys())
    ```
 
-3. **Manager Initialization:**
+3. **Manager Initialization with repo_url:**
    ```python
-   # Create project_dir Path from repo URL (use current dir as placeholder)
-   project_dir = Path.cwd()  # Or extract from config
+   # Use repo_url from config (no local git repo needed)
+   repo_url = validated_config["repo_url"]  # e.g., "https://github.com/user/mcp_coder.git"
    
-   issue_manager = IssueManager(project_dir)
-   branch_manager = IssueBranchManager(project_dir)
+   # Initialize managers with repo_url (uses refactored BaseGitHubManager)
+   issue_manager = IssueManager(repo_url=repo_url)
+   branch_manager = IssueBranchManager(repo_url=repo_url)
    jenkins_client = JenkinsClient(server_url, username, api_token)
    ```
 

@@ -1,58 +1,51 @@
-# Step 1: Label Configuration Loading (TDD)
+# Step 1: Label Configuration Integration
 
 ## Reference
 **Implementation Plan:** See `pr_info/steps/summary.md` for complete architectural overview.
+**Decisions:** See `pr_info/steps/decisions.md` for architectural decisions.
+**Prerequisites:** Step 0 must be complete (`build_label_lookups()` available in `label_config.py`).
 
 ## Objective
-Implement label configuration loading from `workflows/config/labels.json` to support workflow automation.
+Integrate existing `build_label_lookups()` function from shared module to support label filtering in coordinator.
 
 ## WHERE
 
-**Test File:**
-- `tests/cli/commands/test_coordinator.py`
-- Add new test class: `TestLoadLabelConfig`
-
 **Implementation File:**
 - `src/mcp_coder/cli/commands/coordinator.py`
-- Add function after existing helper functions (after `format_job_output`)
+- Import `build_label_lookups` from shared module
+- Use in `get_eligible_issues()` function
 
 ## WHAT
 
-### Test Class (TDD First)
+### Import Statement
 
 ```python
-class TestLoadLabelConfig:
-    """Tests for load_label_config function."""
-    
-    def test_load_label_config_success() -> None:
-        """Test loading valid label configuration."""
-        # Verify returns dict with bot_pickup, bot_busy, ignore_labels
-        
-    def test_load_label_config_file_not_found() -> None:
-        """Test error handling when labels.json missing."""
-        # Verify raises FileNotFoundError with helpful message
-        
-    def test_load_label_config_invalid_json() -> None:
-        """Test error handling for malformed JSON."""
-        # Verify raises ValueError with parsing error
+# In coordinator.py imports section
+from workflows.label_config import load_labels_config, build_label_lookups
 ```
 
-### Main Function Signature
+### Usage in get_eligible_issues()
 
 ```python
-def load_label_config() -> dict[str, list[str]]:
-    """Load workflow label configuration from labels.json.
+def get_eligible_issues(
+    issue_manager: IssueManager,
+    log_level: str = "INFO"
+) -> list[IssueData]:
+    """Get issues ready for automation, sorted by priority."""
     
-    Returns:
-        Dict with keys:
-        - "bot_pickup": List of labels that trigger automation (status-02, 05, 08)
-        - "bot_busy": List of labels for in-progress workflows (status-03, 06, 09)
-        - "ignore_labels": List of labels to skip (e.g., "Overview")
-        
-    Raises:
-        FileNotFoundError: If labels.json not found
-        ValueError: If JSON is invalid or missing required fields
-    """
+    # Load and parse label configuration
+    config_path = Path(__file__).parent.parent.parent.parent / "workflows" / "config" / "labels.json"
+    labels_config = load_labels_config(config_path)
+    label_lookups = build_label_lookups(labels_config)
+    
+    # Extract needed label sets
+    bot_pickup_labels = {
+        name for name, category in label_lookups["name_to_category"].items()
+        if category == "bot_pickup"
+    }
+    ignore_labels = set(labels_config.get("ignore_labels", []))
+    
+    # ... rest of filtering logic ...
 ```
 
 ## HOW
@@ -61,105 +54,91 @@ def load_label_config() -> dict[str, list[str]]:
 
 **Imports:**
 ```python
-import json
 from pathlib import Path
-from typing import Any
+from workflows.label_config import load_labels_config, build_label_lookups
 ```
 
-**File Location:**
+**Path Construction:**
 ```python
-# Relative to project root
-LABELS_FILE = Path(__file__).parent.parent.parent.parent / "workflows" / "config" / "labels.json"
-```
-
-**Usage in coordinator run:**
-```python
-def execute_coordinator_run(args: Namespace) -> int:
-    # Load label configuration
-    label_config = load_label_config()
-    bot_pickup_labels = label_config["bot_pickup"]
-    ignore_labels = label_config["ignore_labels"]
-    # ... use in filtering
+# In get_eligible_issues()
+config_path = Path(__file__).parent.parent.parent.parent / "workflows" / "config" / "labels.json"
 ```
 
 ## ALGORITHM
 
 ```
 1. Construct path to workflows/config/labels.json
-2. Check if file exists → raise FileNotFoundError if missing
-3. Read and parse JSON → raise ValueError if invalid
-4. Extract workflow_labels array
-5. Filter by category: bot_pickup, bot_busy
-6. Extract ignore_labels array
-7. Return dict with three lists
+2. Load config using load_labels_config(config_path)
+3. Build lookups using build_label_lookups(labels_config)
+4. Extract bot_pickup labels from name_to_category dict
+5. Extract ignore_labels from config
+6. Use these sets in filtering logic
 ```
 
 ## DATA
 
-### Input File Structure (labels.json)
-```json
-{
-  "workflow_labels": [
-    {"internal_id": "awaiting_planning", "name": "status-02:awaiting-planning", "category": "bot_pickup"},
-    {"internal_id": "planning", "name": "status-03:planning", "category": "bot_busy"},
-    {"internal_id": "plan_ready", "name": "status-05:plan-ready", "category": "bot_pickup"},
-    {"internal_id": "implementing", "name": "status-06:implementing", "category": "bot_busy"},
-    {"internal_id": "ready_pr", "name": "status-08:ready-pr", "category": "bot_pickup"},
-    {"internal_id": "pr_creating", "name": "status-09:pr-creating", "category": "bot_busy"}
-  ],
-  "ignore_labels": ["Overview"]
-}
+### LabelLookups Structure (from build_label_lookups)
+```python
+LabelLookups = TypedDict('LabelLookups', {
+    'id_to_name': dict[str, str],
+    'all_names': set[str],
+    'name_to_category': dict[str, str],  # <-- We use this
+    'name_to_id': dict[str, str]
+})
 ```
 
-### Return Value
+### Example Usage
 ```python
-{
-    "bot_pickup": [
-        "status-02:awaiting-planning",
-        "status-05:plan-ready", 
-        "status-08:ready-pr"
-    ],
-    "bot_busy": [
-        "status-03:planning",
-        "status-06:implementing",
-        "status-09:pr-creating"
-    ],
-    "ignore_labels": ["Overview"]
+label_lookups = build_label_lookups(labels_config)
+
+# Extract bot_pickup labels
+bot_pickup_labels = {
+    name for name, category in label_lookups["name_to_category"].items()
+    if category == "bot_pickup"
 }
+# Result: {"status-02:awaiting-planning", "status-05:plan-ready", "status-08:ready-pr"}
+
+# Extract ignore_labels
+ignore_labels = set(labels_config.get("ignore_labels", []))
+# Result: {"Overview"}
 ```
 
 ## Implementation Notes
 
-1. **Error Handling:** Use clear error messages for missing file or invalid JSON
+1. **Reuse:** Don't reimplement - use existing `build_label_lookups()` from Step 0
 2. **Path Resolution:** Use `Path(__file__)` for robust path construction
-3. **Validation:** Verify workflow_labels and ignore_labels keys exist
-4. **Simplicity:** No caching, no complex parsing - just read and filter
+3. **Error Handling:** `load_labels_config()` and `build_label_lookups()` handle errors
+4. **Simplicity:** Just import, call, and extract needed data
 
 ## LLM Prompt for Implementation
 
 ```
 Implement Step 1 of the coordinator run feature as described in pr_info/steps/summary.md.
 
-Task: Add label configuration loading to src/mcp_coder/cli/commands/coordinator.py
+See pr_info/steps/decisions.md for architectural decisions.
+Prerequisite: Step 0 must be complete (build_label_lookups available in label_config.py).
+
+Task: Integrate label configuration in coordinator.py
 
 Requirements:
-1. First write tests in tests/cli/commands/test_coordinator.py:
-   - TestLoadLabelConfig class with 3 test methods
-   - Test success case, file not found, invalid JSON
-   
-2. Then implement load_label_config() function:
-   - Read workflows/config/labels.json
-   - Parse and filter by category (bot_pickup, bot_busy)
-   - Return dict with three lists
-   - Handle errors with clear messages
+1. Add import in src/mcp_coder/cli/commands/coordinator.py:
+   from workflows.label_config import load_labels_config, build_label_lookups
 
-3. Run code quality checks:
-   - mcp__code-checker__run_pytest_check with fast unit tests
+2. In get_eligible_issues() function (Step 2):
+   - Construct path to labels.json
+   - Call load_labels_config(config_path)
+   - Call build_label_lookups(labels_config)
+   - Extract bot_pickup labels from name_to_category
+   - Extract ignore_labels from config
+   - Use these in filtering logic
+
+3. No new tests needed - using existing shared functions
+
+4. Run code quality checks:
    - mcp__code-checker__run_pylint_check
    - mcp__code-checker__run_mypy_check
 
-Follow the exact signatures and data structures in step_1.md.
-Use KISS principle - simple, readable code.
+Follow step_1.md. Use existing shared functionality - don't reimplement.
 ```
 
 ## Test Execution
@@ -174,9 +153,9 @@ mcp__code-checker__run_pytest_check(
 
 ## Success Criteria
 
-- ✅ All 3 tests pass
-- ✅ Function loads labels.json correctly
-- ✅ Returns proper dict structure
-- ✅ Error handling works (FileNotFoundError, ValueError)
+- ✅ Import statement added correctly
+- ✅ Label configuration integrated in get_eligible_issues()
+- ✅ Uses shared build_label_lookups() function
 - ✅ Pylint/mypy checks pass
 - ✅ Code follows existing coordinator.py style
+- ✅ No code duplication

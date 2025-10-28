@@ -112,6 +112,13 @@ def dispatch_workflow(
 ### Constants to Add
 
 ```python
+# Priority order for processing issues (highest to lowest)
+PRIORITY_ORDER = [
+    "status-08:ready-pr",
+    "status-05:plan-ready",
+    "status-02:awaiting-planning"
+]
+
 # Workflow configuration mapping
 WORKFLOW_MAPPING = {
     "status-02:awaiting-planning": {
@@ -131,19 +138,29 @@ WORKFLOW_MAPPING = {
     },
 }
 
-# Workflow command template
-WORKFLOW_COMMAND_TEMPLATE = """# Tool verification
+# Workflow command templates (three separate templates)
+CREATE_PLAN_COMMAND_TEMPLATE = """git checkout main
+git pull
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-
-# Environment setup
 uv sync --extra dev
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo
+"""
 
-# Claude MCP verification
-claude mcp list
+IMPLEMENT_COMMAND_TEMPLATE = """git checkout {branch_name}
+git pull
+which mcp-coder && mcp-coder --version
+which claude && claude --version
+uv sync --extra dev
+mcp-coder --log-level {log_level} implement --project-dir /workspace/repo
+"""
 
-# Run workflow
-mcp-coder --log-level {log_level} {workflow_command}
+CREATE_PR_COMMAND_TEMPLATE = """git checkout {branch_name}
+git pull
+which mcp-coder && mcp-coder --version
+which claude && claude --version
+uv sync --extra dev
+mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo
 """
 ```
 
@@ -192,11 +209,11 @@ def execute_coordinator_run(args: Namespace) -> int:
    - If branch_strategy == "main" → use "main"
    - If branch_strategy == "from_issue" → get_linked_branches()[0]
      - If no linked branches → raise ValueError
-3. Build workflow command string:
-   - For create-plan: "create-plan {issue_number}"
-   - For implement: "implement"
-   - For create-pr: "create-pr"
-4. Build full COMMAND using WORKFLOW_COMMAND_TEMPLATE
+3. Select appropriate command template:
+   - For create-plan: CREATE_PLAN_COMMAND_TEMPLATE
+   - For implement: IMPLEMENT_COMMAND_TEMPLATE  
+   - For create-pr: CREATE_PR_COMMAND_TEMPLATE
+4. Build full COMMAND by formatting selected template
 5. Build Jenkins job parameters dict
 6. Trigger Jenkins job via client.start_job()
 7. Verify job queued via client.get_job_status()
@@ -218,21 +235,30 @@ def execute_coordinator_run(args: Namespace) -> int:
 
 ### Jenkins Job Parameters
 ```python
+# Example for implement workflow
 {
     "REPO_URL": "https://github.com/user/repo.git",
-    "BRANCH_NAME": "123-feature-x",  # or "main" for create-plan
-    "COMMAND": """# Tool verification
+    "BRANCH_NAME": "123-feature-x",
+    "COMMAND": """git checkout 123-feature-x
+git pull
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-
-# Environment setup
 uv sync --extra dev
+mcp-coder --log-level INFO implement --project-dir /workspace/repo
+""",
+    "GITHUB_CREDENTIALS_ID": "github-pat"
+}
 
-# Claude MCP verification
-claude mcp list
-
-# Run workflow
-mcp-coder --log-level INFO implement
+# Example for create-plan workflow  
+{
+    "REPO_URL": "https://github.com/user/repo.git",
+    "BRANCH_NAME": "main",
+    "COMMAND": """git checkout main
+git pull
+which mcp-coder && mcp-coder --version
+which claude && claude --version
+uv sync --extra dev
+mcp-coder --log-level INFO create-plan 123 --project-dir /workspace/repo
 """,
     "GITHUB_CREDENTIALS_ID": "github-pat"
 }
@@ -257,14 +283,26 @@ mcp-coder --log-level INFO implement
        branch_name = branches[0]
    ```
 
-2. **Workflow Command Building:**
+2. **Command Template Selection:**
    ```python
    if workflow_config["workflow"] == "create-plan":
-       workflow_cmd = f"create-plan {issue['number']}"
+       command_template = CREATE_PLAN_COMMAND_TEMPLATE
+       command = command_template.format(
+           log_level=log_level,
+           issue_number=issue["number"]
+       )
    elif workflow_config["workflow"] == "implement":
-       workflow_cmd = "implement"
+       command_template = IMPLEMENT_COMMAND_TEMPLATE
+       command = command_template.format(
+           log_level=log_level,
+           branch_name=branch_name
+       )
    else:  # create-pr
-       workflow_cmd = "create-pr"
+       command_template = CREATE_PR_COMMAND_TEMPLATE
+       command = command_template.format(
+           log_level=log_level,
+           branch_name=branch_name
+       )
    ```
 
 3. **Job Status Verification:**
