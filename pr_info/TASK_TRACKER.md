@@ -36,7 +36,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add validation for exactly one of (project_dir, repo_url)
 - [x] Write tests for `BaseGitHubManager` with `project_dir` (existing behavior)
 - [x] Write tests for `BaseGitHubManager` with `repo_url` (new behavior)
-- [ ] Write tests for error cases (neither, both parameters)
+- [x] Write tests for error cases (neither, both parameters)
 - [ ] Run pylint check and fix all issues
 - [ ] Run pytest check (fast unit tests) and fix all issues
 - [ ] Run mypy check and fix all issues

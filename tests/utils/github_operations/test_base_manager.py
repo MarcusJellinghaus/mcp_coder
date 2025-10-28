@@ -888,3 +888,50 @@ class TestBaseGitHubManagerWithRepoUrl:
 
             # Verify get_repo was called with correct full name
             mock_github_client.get_repo.assert_called_once_with("test-owner/test-repo")
+
+
+class TestBaseGitHubManagerParameterValidation:
+    """Test suite for BaseGitHubManager parameter validation.
+
+    Tests error cases where neither or both parameters are provided,
+    which should raise ValueError.
+    """
+
+    def test_initialization_fails_with_neither_parameter(self) -> None:
+        """Test initialization fails when neither project_dir nor repo_url provided."""
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
+        ):
+            with pytest.raises(ValueError) as exc_info:
+                BaseGitHubManager()
+
+            assert "Exactly one of project_dir or repo_url must be provided" in str(
+                exc_info.value
+            )
+
+    def test_initialization_fails_with_both_parameters(self) -> None:
+        """Test initialization fails when both project_dir and repo_url provided."""
+        mock_path = Mock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_dir.return_value = True
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
+                return_value="fake_token",
+            ),
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
+        ):
+            with pytest.raises(ValueError) as exc_info:
+                BaseGitHubManager(
+                    project_dir=mock_path,
+                    repo_url="https://github.com/test-owner/test-repo.git",
+                )
+
+            assert "Exactly one of project_dir or repo_url must be provided" in str(
+                exc_info.value
+            )
