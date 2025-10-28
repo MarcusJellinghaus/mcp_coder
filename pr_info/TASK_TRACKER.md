@@ -127,9 +127,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Details:** [step_5.md](steps/step_5.md)
 
 - [x] Add import for `execute_coordinator_run` in `src/mcp_coder/cli/main.py`
-- [ ] Add coordinator run subparser in `create_parser()`
-- [ ] Add mutually exclusive group (--all | --repo, required=True)
-- [ ] Add routing logic in `main()` function
+- [x] Add coordinator run subparser in `create_parser()`
+- [x] Add mutually exclusive group (--all | --repo, required=True)
+- [x] Add routing logic in `main()` function
 - [ ] Write test: `test_coordinator_run_with_repo_argument()`
 - [ ] Write test: `test_coordinator_run_with_all_argument()`
 - [ ] Write test: `test_coordinator_run_with_log_level()`

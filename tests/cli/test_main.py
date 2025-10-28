@@ -371,5 +371,5 @@ class TestCoordinatorCommand:
         assert result == 1
         mock_logger.error.assert_called_with("Coordinator subcommand required")
         mock_print.assert_called_with(
-            "Error: Please specify a coordinator subcommand (e.g., 'test')"
+            "Error: Please specify a coordinator subcommand (e.g., 'test', 'run')"
         )
