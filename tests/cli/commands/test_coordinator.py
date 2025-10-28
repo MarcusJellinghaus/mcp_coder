@@ -3401,3 +3401,120 @@ class TestCoordinatorRunIntegration:
         issue_numbers_processed = [call[0][0] for call in remove_calls]
         assert 202 not in issue_numbers_processed  # Failed before label update
         assert 203 not in issue_numbers_processed  # Never reached
+
+    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_end_to_end_fail_fast_on_missing_branch(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_load_labels: MagicMock,
+    ) -> None:
+        """Test fail-fast when linked branch missing for implement/create-pr.
+
+        This test verifies fail-fast behavior when a required branch is missing:
+        1. Issue with status-05 (implement workflow) found
+        2. dispatch_workflow attempts to get linked branch
+        3. No linked branches found (empty list)
+        4. ValueError raised with helpful message
+        5. Processing stops immediately (fail-fast)
+        6. Exit code 1 (error)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Mock label configuration
+        mock_load_labels.return_value = {
+            "workflow_labels": [
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-03:planning", "category": "bot_busy"},
+                {"name": "status-05:plan-ready", "category": "bot_pickup"},
+                {"name": "status-06:implementing", "category": "bot_busy"},
+                {"name": "status-08:ready-pr", "category": "bot_pickup"},
+                {"name": "status-09:pr-creating", "category": "bot_busy"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock Jenkins client
+        mock_jenkins = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+
+        # Setup - Mock IssueManager
+        mock_issue_mgr = MagicMock()
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+
+        # Setup - Mock issue with status-05 (implement) - requires branch
+        mock_issue_mgr.list_issues.return_value = [
+            IssueData(
+                number=301,
+                title="Issue with missing branch",
+                body="This issue needs implement workflow but has no linked branch",
+                state="open",
+                labels=["status-05:plan-ready"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/301",
+                locked=False,
+            ),
+        ]
+
+        # Setup - Mock IssueBranchManager
+        mock_branch_mgr = MagicMock()
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - No linked branches (empty list) - this triggers ValueError
+        mock_branch_mgr.get_linked_branches.return_value = []
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 1 (error due to fail-fast on missing branch)
+        assert result == 1
+
+        # Verify - get_linked_branches was called for the issue
+        mock_branch_mgr.get_linked_branches.assert_called_once_with(301)
+
+        # Verify - No Jenkins job started (error before job dispatch)
+        assert mock_jenkins.start_job.call_count == 0
+
+        # Verify - No labels updated (error before label update)
+        assert mock_issue_mgr.remove_labels.call_count == 0
+        assert mock_issue_mgr.add_labels.call_count == 0

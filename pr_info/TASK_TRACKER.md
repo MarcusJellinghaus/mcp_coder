@@ -149,7 +149,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_end_to_end_priority_ordering()`
 - [x] Write test: `test_end_to_end_ignore_labels_filtering()`
 - [x] Write test: `test_end_to_end_fail_fast_on_jenkins_error()`
-- [ ] Write test: `test_end_to_end_fail_fast_on_missing_branch()`
+- [x] Write test: `test_end_to_end_fail_fast_on_missing_branch()`
 - [ ] Write test: `test_end_to_end_log_level_pass_through()`
 - [ ] Write test: `test_no_open_issues()`
 - [ ] Write test: `test_all_issues_have_bot_busy_labels()`
