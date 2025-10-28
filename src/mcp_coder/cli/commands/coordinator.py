@@ -126,8 +126,64 @@ def dispatch_workflow(
         ValueError: If linked branch missing for implement/create-pr
         JenkinsError: If job trigger or status check fails
     """
-    # TODO: Implement in next step
-    raise NotImplementedError("dispatch_workflow not yet implemented")
+    # Step 1: Find current workflow label from issue
+    current_label = None
+    for label in issue["labels"]:
+        if label in WORKFLOW_MAPPING:
+            current_label = label
+            break
+
+    if not current_label:
+        raise ValueError(f"No workflow label found on issue #{issue['number']}")
+
+    workflow_config = WORKFLOW_MAPPING[current_label]
+
+    # Step 2: Determine branch name based on branch_strategy
+    if workflow_config["branch_strategy"] == "main":
+        branch_name = "main"
+    else:  # from_issue
+        branches = branch_manager.get_linked_branches(issue["number"])
+        if not branches:
+            raise ValueError(f"No linked branch found for issue #{issue['number']}")
+        branch_name = branches[0]
+
+    # Step 3: Select appropriate command template and build command
+    if workflow_config["workflow"] == "create-plan":
+        command = CREATE_PLAN_COMMAND_TEMPLATE.format(
+            log_level=log_level, issue_number=issue["number"]
+        )
+    elif workflow_config["workflow"] == "implement":
+        command = IMPLEMENT_COMMAND_TEMPLATE.format(
+            log_level=log_level, branch_name=branch_name
+        )
+    else:  # create-pr
+        command = CREATE_PR_COMMAND_TEMPLATE.format(
+            log_level=log_level, branch_name=branch_name
+        )
+
+    # Step 4: Build Jenkins job parameters
+    params = {
+        "REPO_URL": repo_config["repo_url"],
+        "BRANCH_NAME": branch_name,
+        "COMMAND": command,
+        "GITHUB_CREDENTIALS_ID": repo_config["github_credentials_id"],
+    }
+
+    # Step 5: Trigger Jenkins job
+    queue_id = jenkins_client.start_job(repo_config["executor_test_path"], params)
+
+    # Step 6: Verify job queued
+    jenkins_client.get_job_status(queue_id)
+
+    # Step 7: Update issue labels (remove old, add new)
+    issue_manager.remove_labels(issue["number"], current_label)
+    issue_manager.add_labels(issue["number"], workflow_config["next_label"])
+
+    # Step 8: Log success
+    logger.info(
+        f"Successfully dispatched {workflow_config['workflow']} workflow for issue #{issue['number']}: "
+        f"removed '{current_label}', added '{workflow_config['next_label']}'"
+    )
 
 
 def get_eligible_issues(

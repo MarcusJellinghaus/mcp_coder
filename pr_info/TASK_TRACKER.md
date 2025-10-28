@@ -85,17 +85,17 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Write test: `test_dispatch_workflow_missing_branch()`
 - [x] Write test: `test_dispatch_workflow_jenkins_failure()`
 - [x] Write test: `test_dispatch_workflow_label_update()`
-- [ ] Implement `dispatch_workflow()` function signature
-- [ ] Implement branch name resolution logic
-- [ ] Implement command template selection
-- [ ] Implement Jenkins job parameter building
-- [ ] Implement Jenkins job triggering via `JenkinsClient.start_job()`
-- [ ] Implement job status verification via `JenkinsClient.get_job_status()`
-- [ ] Implement label update (remove old, add new)
-- [ ] Implement error handling for missing branch
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check (fast unit tests) and fix all issues
-- [ ] Run mypy check and fix all issues
+- [x] Implement `dispatch_workflow()` function signature
+- [x] Implement branch name resolution logic
+- [x] Implement command template selection
+- [x] Implement Jenkins job parameter building
+- [x] Implement Jenkins job triggering via `JenkinsClient.start_job()`
+- [x] Implement job status verification via `JenkinsClient.get_job_status()`
+- [x] Implement label update (remove old, add new)
+- [x] Implement error handling for missing branch
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check (fast unit tests) and fix all issues
+- [x] Run mypy check and fix all issues
 - [ ] Prepare git commit message for Step 3
 
 ### Step 4: Main Coordinator Runner
