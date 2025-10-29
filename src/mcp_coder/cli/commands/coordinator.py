@@ -10,7 +10,10 @@ import os
 import sys
 from typing import Optional
 
-from ...utils.github_operations.label_config import load_labels_config
+from ...utils.github_operations.label_config import (
+    get_labels_config_path,
+    load_labels_config,
+)
 
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
@@ -204,24 +207,9 @@ def get_eligible_issues(
     Raises:
         GithubException: If GitHub API errors occur
     """
-    # Load label configuration from centralized location
-    # For coordinator run with repo_url, use mcp_coder's workflows directory
-    # For coordinator with project_dir, use that project's workflows directory
-    from pathlib import Path
-
-    if issue_manager.project_dir is not None:
-        # Use project's local labels config
-        config_path = issue_manager.project_dir / "workflows" / "config" / "labels.json"
-    else:
-        # Use centralized labels config from mcp_coder workflows directory
-        # This file is in the same repo as this module
-        config_path = (
-            Path(__file__).parent.parent.parent.parent
-            / "workflows"
-            / "config"
-            / "labels.json"
-        )
-
+    # Load label configuration
+    # Tries project's local config first, falls back to package bundled config
+    config_path = get_labels_config_path(issue_manager.project_dir)
     labels_config = load_labels_config(config_path)
 
     # Extract bot_pickup labels (labels with category="bot_pickup")

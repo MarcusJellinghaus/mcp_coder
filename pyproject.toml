@@ -54,7 +54,10 @@ where = ["src"]
 "" = "src"
 
 [tool.setuptools.package-data]
-mcp_coder = ["prompts/*.md"]
+mcp_coder = [
+    "prompts/*.md",
+    "config/*.json"
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

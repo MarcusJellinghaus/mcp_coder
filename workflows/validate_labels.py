@@ -21,6 +21,7 @@ from mcp_coder.utils.github_operations.labels_manager import LabelsManager
 from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflows.utils import resolve_project_dir
 from mcp_coder.utils.github_operations.label_config import (
+    get_labels_config_path,
     load_labels_config,
     build_label_lookups,
     LabelLookups,
@@ -426,9 +427,10 @@ def main() -> None:
         logger.info("DRY RUN MODE: Changes will be previewed only")
     
     # Load configuration
+    # Tries project's local config first, falls back to package bundled config
     logger.info("Loading label configuration...")
-    config_path = project_dir / "workflows" / "config" / "labels.json"
     try:
+        config_path = get_labels_config_path(project_dir)
         labels_config = load_labels_config(config_path)
         logger.debug(f"Loaded {len(labels_config['workflow_labels'])} workflow labels")
     except FileNotFoundError as e:

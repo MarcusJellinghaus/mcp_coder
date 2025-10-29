@@ -1,7 +1,7 @@
 """Shared label configuration loading utilities."""
 import json
 from pathlib import Path
-from typing import Any, Dict, TypedDict
+from typing import Any, Dict, Optional, TypedDict
 
 
 class LabelLookups(TypedDict):
@@ -46,6 +46,41 @@ def build_label_lookups(labels_config: Dict[str, Any]) -> LabelLookups:
         name_to_category=name_to_category,
         name_to_id=name_to_id
     )
+
+
+def get_labels_config_path(project_dir: Optional[Path] = None) -> Path:
+    """Get path to labels.json configuration file.
+    
+    Resolution order:
+    1. Project's local workflows/config/labels.json (if project_dir provided and exists)
+    2. Package's bundled config (mcp_coder/config/labels.json)
+    
+    Args:
+        project_dir: Optional project directory to check for local config override
+        
+    Returns:
+        Path to labels.json file
+        
+    Example:
+        >>> config_path = get_labels_config_path(Path("/my/project"))
+        >>> labels = load_labels_config(config_path)
+    """
+    from importlib import resources
+    
+    # Check for project-local override
+    if project_dir is not None:
+        local_config = project_dir / "workflows" / "config" / "labels.json"
+        if local_config.exists():
+            return local_config
+    
+    # Fall back to package's bundled config
+    config_resource = resources.files('mcp_coder.config') / 'labels.json'
+    # Convert to Path - resources.files returns Traversable which may not be Path
+    if isinstance(config_resource, Path):
+        return config_resource
+    # For installed packages, we need to handle the resource differently
+    # The path might be inside a zip file, so we return it as-is
+    return Path(str(config_resource))
 
 
 def load_labels_config(config_path: Path) -> Dict[str, Any]:

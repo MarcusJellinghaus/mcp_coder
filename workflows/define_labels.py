@@ -16,7 +16,10 @@ from typing import Optional
 from mcp_coder.utils import get_github_repository_url
 from mcp_coder.utils.github_operations.labels_manager import LabelsManager
 from mcp_coder.utils.log_utils import setup_logging
-from mcp_coder.utils.github_operations.label_config import load_labels_config
+from mcp_coder.utils.github_operations.label_config import (
+    get_labels_config_path,
+    load_labels_config,
+)
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -286,8 +289,9 @@ def main() -> None:
         pass
     
     # Load labels from JSON config using shared module
-    config_path = project_dir / "workflows" / "config" / "labels.json"
+    # Tries project's local config first, falls back to package bundled config
     try:
+        config_path = get_labels_config_path(project_dir)
         labels_config = load_labels_config(config_path)
     except FileNotFoundError:
         logger.error(f"Configuration file not found: {config_path}")
