@@ -1,7 +1,11 @@
-"""Coordinator CLI command implementation.
+"""Coordinator CLI commands for automated workflow orchestration.
 
-This module provides the coordinator test command for triggering
-Jenkins-based integration tests for MCP Coder repositories.
+Provides two main commands:
+- coordinator test: Trigger Jenkins integration tests for repositories
+- coordinator run: Monitor GitHub issues and dispatch workflows based on labels
+
+The coordinator run command automates the issue → plan → implement → PR pipeline
+by filtering eligible issues and triggering appropriate Jenkins workflows.
 """
 
 import argparse
