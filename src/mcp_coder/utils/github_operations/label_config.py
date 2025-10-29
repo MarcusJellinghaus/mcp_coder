@@ -1,25 +1,43 @@
 """Label configuration loading utilities.
 
 This module provides functions to load and parse GitHub label configurations
-from JSON files. It supports both local project overrides and bundled package
-configurations.
+from JSON files. It supports two operational modes:
 
-Typical usage pattern:
-    # Load configuration for a project
+1. LOCAL MODE: Workflow scripts with local project directory
+   - Used by: define_labels.py, validate_labels.py, issue_stats.py
+   - Tries: project_dir/workflows/config/labels.json first
+   - Falls back to: bundled package config
+   - Use case: Development, testing, custom label configurations
+
+2. REMOTE MODE: Operations without local project (coordinator)
+   - Used by: coordinator run, remote GitHub operations via repo_url
+   - Always uses: bundled mcp_coder/config/labels.json
+   - Use case: Centralized automation, consistent labels across repos
+
+Usage patterns:
+
+    # LOCAL MODE: Workflow script with project directory
     config_path = get_labels_config_path(project_dir)
     labels_config = load_labels_config(config_path)
 
-    # Build lookup dictionaries if needed
+    # REMOTE MODE: Coordinator without project directory
+    config_path = get_labels_config_path(None)  # Uses bundled config
+    labels_config = load_labels_config(config_path)
+
+    # Build lookup dictionaries (both modes)
     label_lookups = build_label_lookups(labels_config)
 
-    # Access label information
+    # Access label information (both modes)
     bot_pickup_labels = {
         name for name, category in label_lookups["name_to_category"].items()
         if category == "bot_pickup"
     }
 
-The module tries local project configuration first (workflows/config/labels.json),
-then falls back to the bundled package configuration if local doesn't exist.
+Design rationale:
+- Workflows need flexibility for testing/customization
+- Coordinator needs consistency across multiple repositories
+- Single bundled source of truth ensures reliable automation
+- Backwards compatible with existing workflow scripts
 """
 
 import json
@@ -75,18 +93,50 @@ def build_label_lookups(labels_config: Dict[str, Any]) -> LabelLookups:
 def get_labels_config_path(project_dir: Optional[Path] = None) -> Path:
     """Get path to labels.json configuration file.
 
+    This function supports two operational modes:
+
+    MODE 1: Local project with custom labels (project_dir provided)
+    ----------------------------------------------------------------
+    Used by workflow scripts (define_labels.py, validate_labels.py, issue_stats.py)
+    that run in a local git repository and may want to customize labels.
+    
+    - If project_dir is provided AND local config exists:
+      Returns: project_dir/workflows/config/labels.json
+    - Otherwise falls back to bundled config (see MODE 2)
+
+    MODE 2: Remote operations without local project (project_dir=None)
+    -------------------------------------------------------------------
+    Used by coordinator and remote GitHub operations that work via repo_url
+    without a local git clone. These always use the bundled package config.
+    
+    - When project_dir is None:
+      Returns: bundled mcp_coder/config/labels.json from installed package
+    
+    WHY THIS DESIGN:
+    ----------------
+    - Workflows need flexibility: Allow customization for testing/development
+    - Coordinator needs consistency: Use standard labels across all repos
+    - Single source of truth: Bundled config ensures consistent behavior
+    - Backwards compatible: Existing workflows continue to work unchanged
+
     Resolution order:
     1. Project's local workflows/config/labels.json (if project_dir provided and exists)
-    2. Package's bundled config (mcp_coder/config/labels.json)
+    2. Package's bundled config (mcp_coder/config/labels.json) - ALWAYS works
 
     Args:
-        project_dir: Optional project directory to check for local config override
+        project_dir: Optional project directory to check for local config override.
+                    Pass None to always use bundled config (coordinator pattern).
 
     Returns:
-        Path to labels.json file
+        Path to labels.json file (either local override or bundled)
 
-    Example:
+    Examples:
+        # Workflow script with local project
         >>> config_path = get_labels_config_path(Path("/my/project"))
+        >>> labels = load_labels_config(config_path)
+        
+        # Coordinator without local project (repo_url mode)
+        >>> config_path = get_labels_config_path(None)  # Uses bundled config
         >>> labels = load_labels_config(config_path)
     """
     from importlib import resources
