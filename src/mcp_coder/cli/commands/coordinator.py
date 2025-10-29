@@ -185,27 +185,33 @@ def dispatch_workflow(
     # Step 5: Trigger Jenkins job
     queue_id = jenkins_client.start_job(repo_config["executor_test_path"], params)
 
-    # Step 6: Get job status to retrieve job URL
+    # Step 6: Get job status to retrieve build URL
     job_status = jenkins_client.get_job_status(queue_id)
     
-    # Build job link: either the build URL or the queue item URL
+    # Build Jenkins links: pipeline URL and build URL (if available)
+    jenkins_base_url = jenkins_client._client.server.rstrip("/")
+    # Convert job path to URL format: "Tests/mcp-coder-test" -> "Tests/job/mcp-coder-test"
+    job_path_parts = repo_config['executor_test_path'].split("/")
+    pipeline_url = f"{jenkins_base_url}/job/" + "/job/".join(job_path_parts)
+    
     if job_status.url:
-        job_link = job_status.url
+        # Build has started - show build URL
+        jenkins_link = f"Build: {job_status.url}"
     else:
-        # Construct queue item URL from Jenkins server URL and queue_id
-        jenkins_base_url = jenkins_client._client.server.rstrip("/")
-        job_link = f"{jenkins_base_url}/queue/item/{queue_id}/"
+        # Build still queued - show pipeline URL and queue item
+        queue_url = f"{jenkins_base_url}/queue/item/{queue_id}/"
+        jenkins_link = f"Pipeline: {pipeline_url} | Queue: {queue_url}"
 
     # Step 7: Update issue labels (remove old, add new)
     issue_manager.remove_labels(issue["number"], current_label)
     issue_manager.add_labels(issue["number"], workflow_config["next_label"])
 
-    # Step 8: Log success with issue and job links
+    # Step 8: Log success with issue and Jenkins links
     issue_url = issue["url"]
     logger.info(
         f"Successfully dispatched {workflow_config['workflow']} workflow for issue #{issue['number']}: "
         f"removed '{current_label}', added '{workflow_config['next_label']}' | "
-        f"Issue: {issue_url} | Job: {job_link}"
+        f"Issue: {issue_url} | {jenkins_link}"
     )
 
 
