@@ -1868,6 +1868,7 @@ class TestExecuteCoordinatorRun:
         assert second_call[1]["log_level"] == "INFO"
 
     @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
     @patch("mcp_coder.cli.commands.coordinator.IssueManager")
     @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
     @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
@@ -1880,6 +1881,7 @@ class TestExecuteCoordinatorRun:
         mock_get_creds: MagicMock,
         mock_load_repo: MagicMock,
         mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
         mock_load_labels: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -1969,12 +1971,14 @@ class TestExecuteCoordinatorRun:
         # captured = capsys.readouterr()
         # Can verify log output if needed
 
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
     @patch("mcp_coder.cli.commands.coordinator.create_default_config")
     def test_execute_coordinator_run_missing_repo_config(
         self,
         mock_create_config: MagicMock,
         mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test error when repository not in config.
@@ -2000,6 +2004,13 @@ class TestExecuteCoordinatorRun:
 
         # Setup - Config already exists
         mock_create_config.return_value = False
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
 
         # Setup - Repository not found - all values None
         mock_load_repo.return_value = {
@@ -3646,6 +3657,7 @@ class TestCoordinatorRunEdgeCases:
     """Edge case tests for coordinator run."""
 
     @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
     @patch("mcp_coder.cli.commands.coordinator.IssueManager")
     @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
@@ -3656,6 +3668,7 @@ class TestCoordinatorRunEdgeCases:
         mock_load_repo: MagicMock,
         mock_get_creds: MagicMock,
         mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
         mock_load_labels: MagicMock,
     ) -> None:
         """Test handling when repository has no open issues.
@@ -3734,6 +3747,7 @@ class TestCoordinatorRunEdgeCases:
         mock_issue_mgr.add_labels.assert_not_called()
 
     @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
     @patch("mcp_coder.cli.commands.coordinator.IssueManager")
     @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
     @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
@@ -3744,6 +3758,7 @@ class TestCoordinatorRunEdgeCases:
         mock_load_repo: MagicMock,
         mock_get_creds: MagicMock,
         mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
         mock_load_labels: MagicMock,
     ) -> None:
         """Test when all issues are already being processed.
