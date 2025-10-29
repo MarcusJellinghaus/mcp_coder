@@ -592,7 +592,10 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     )
                 except Exception as e:
                     # Fail-fast: log error and exit immediately
-                    logger.error(f"Failed processing issue #{issue['number']}: {e}")
+                    logger.error(
+                        f"Failed processing issue #{issue['number']}: {e}",
+                        exc_info=True,
+                    )
                     print(
                         f"Error: Failed to process issue #{issue['number']}: {e}",
                         file=sys.stderr,
