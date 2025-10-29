@@ -20,7 +20,11 @@ from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueMana
 from mcp_coder.utils.github_operations.labels_manager import LabelsManager
 from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflows.utils import resolve_project_dir
-from workflows.label_config import load_labels_config, build_label_lookups, LabelLookups
+from mcp_coder.utils.github_operations.label_config import (
+    load_labels_config,
+    build_label_lookups,
+    LabelLookups,
+)
 
 # Setup logger
 logger = logging.getLogger(__name__)

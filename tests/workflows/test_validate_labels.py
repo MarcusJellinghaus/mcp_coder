@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, Mock
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import EventData, IssueData
-from workflows.label_config import build_label_lookups
+from mcp_coder.utils.github_operations.label_config import build_label_lookups
 from workflows.validate_labels import (
     STALE_TIMEOUTS,
     calculate_elapsed_minutes,

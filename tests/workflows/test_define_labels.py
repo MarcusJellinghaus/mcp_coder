@@ -21,7 +21,7 @@ from workflows.define_labels import (
     parse_arguments,
     resolve_project_dir,
 )
-from workflows.label_config import load_labels_config
+from mcp_coder.utils.github_operations.label_config import load_labels_config
 
 # Note: labels_config_path fixture is defined in conftest.py
 

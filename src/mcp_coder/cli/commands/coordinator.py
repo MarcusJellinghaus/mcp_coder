@@ -10,7 +10,7 @@ import os
 import sys
 from typing import Optional
 
-from workflows.label_config import load_labels_config
+from ...utils.github_operations.label_config import load_labels_config
 
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
 from ...utils.github_operations.issue_manager import IssueData, IssueManager

@@ -16,7 +16,7 @@ from typing import Optional
 from mcp_coder.utils import get_github_repository_url
 from mcp_coder.utils.github_operations.labels_manager import LabelsManager
 from mcp_coder.utils.log_utils import setup_logging
-from workflows.label_config import load_labels_config
+from mcp_coder.utils.github_operations.label_config import load_labels_config
 
 # Setup logger
 logger = logging.getLogger(__name__)
