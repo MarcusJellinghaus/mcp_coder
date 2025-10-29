@@ -187,7 +187,14 @@ def dispatch_workflow(
 
     # Step 6: Get job status to retrieve job URL
     job_status = jenkins_client.get_job_status(queue_id)
-    job_url = job_status.url if job_status.url else "(Job URL pending)"
+    
+    # Build job link: either the build URL or the queue item URL
+    if job_status.url:
+        job_link = job_status.url
+    else:
+        # Construct queue item URL from Jenkins server URL and queue_id
+        jenkins_base_url = jenkins_client._client.server.rstrip("/")
+        job_link = f"{jenkins_base_url}/queue/item/{queue_id}/"
 
     # Step 7: Update issue labels (remove old, add new)
     issue_manager.remove_labels(issue["number"], current_label)
@@ -198,7 +205,7 @@ def dispatch_workflow(
     logger.info(
         f"Successfully dispatched {workflow_config['workflow']} workflow for issue #{issue['number']}: "
         f"removed '{current_label}', added '{workflow_config['next_label']}' | "
-        f"Issue: {issue_url} | Job: {job_url}"
+        f"Issue: {issue_url} | Job: {job_link}"
     )
 
 
@@ -544,13 +551,15 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
 
         # Step 4: Process each repository
         for repo_name in repo_names:
-            logger.info(f"{'='*80}")
-            logger.info(f"Processing repository: {repo_name}")
-            logger.info(f"{'='*80}")
-
             # Step 4a: Load and validate repo config
             repo_config = load_repo_config(repo_name)
             validate_repo_config(repo_name, repo_config)
+
+            # Log repository header with URL
+            repo_url = repo_config["repo_url"]
+            logger.info(f"{'='*80}")
+            logger.info(f"Processing repository: {repo_url}")
+            logger.info(f"{'='*80}")
 
             # Type narrowing: validate_repo_config raises if any fields are None
             validated_config: dict[str, str] = {
