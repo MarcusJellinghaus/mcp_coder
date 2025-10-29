@@ -78,7 +78,15 @@ WORKFLOW_MAPPING = {
 }
 
 
-# Workflow command templates
+# Command templates for Jenkins workflows
+# IMPORTANT: These templates assume Jenkins workspace clones repository to /workspace/repo
+# The --project-dir parameter must match the Jenkins workspace structure
+# All templates follow the pattern:
+#   1. Checkout appropriate branch (main for planning, feature branch for implementation/PR)
+#   2. Pull latest code
+#   3. Verify tool versions
+#   4. Sync dependencies
+#   5. Execute mcp-coder command
 CREATE_PLAN_COMMAND_TEMPLATE = """git checkout main
 git pull
 which mcp-coder && mcp-coder --version
