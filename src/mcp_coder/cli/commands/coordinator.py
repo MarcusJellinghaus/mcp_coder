@@ -221,7 +221,7 @@ def get_eligible_issues(
     # Uses bundled package config (coordinator operates without local project context)
     from importlib import resources
     from pathlib import Path
-    
+
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))
     labels_config = load_labels_config(config_path)

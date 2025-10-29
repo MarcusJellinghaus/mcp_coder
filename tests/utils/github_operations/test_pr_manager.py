@@ -24,7 +24,9 @@ class TestPullRequestManagerUnit:
 
     def test_initialization_requires_project_dir(self) -> None:
         """Test that None project_dir raises ValueError."""
-        with pytest.raises(ValueError, match="Exactly one of project_dir or repo_url must be provided"):
+        with pytest.raises(
+            ValueError, match="Exactly one of project_dir or repo_url must be provided"
+        ):
             PullRequestManager(None)
 
     def test_initialization_requires_git_repository(self, tmp_path: Path) -> None:

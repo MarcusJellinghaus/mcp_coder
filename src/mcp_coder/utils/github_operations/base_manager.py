@@ -120,7 +120,21 @@ class BaseGitHubManager:
         if (project_dir is None) == (repo_url is None):
             raise ValueError("Exactly one of project_dir or repo_url must be provided")
 
-        # Get GitHub token
+        # Initialize attributes that may be set by helper methods
+        self.project_dir: Optional[Path] = None
+        self._repo: Optional[git.Repo] = None
+        self._repo_owner: Optional[str] = None
+        self._repo_name: Optional[str] = None
+        self._repo_full_name: Optional[str] = None
+
+        # Validate directory/repository BEFORE checking token
+        # This ensures more specific error messages appear first
+        if project_dir is not None:
+            self._init_with_project_dir(project_dir)
+        else:
+            self._init_with_repo_url(repo_url)  # type: ignore[arg-type]
+
+        # Get GitHub token (after directory/repository validation)
         github_token = user_config.get_config_value("github", "token")
         if not github_token:
             raise ValueError(
@@ -132,19 +146,6 @@ class BaseGitHubManager:
         self.github_token = github_token
         self._github_client = Github(github_token)
         self._repository: Optional[Repository] = None
-
-        # Initialize attributes that may be set by helper methods
-        self.project_dir: Optional[Path] = None
-        self._repo: Optional[git.Repo] = None
-        self._repo_owner: Optional[str] = None
-        self._repo_name: Optional[str] = None
-        self._repo_full_name: Optional[str] = None
-
-        # Initialize based on mode
-        if project_dir is not None:
-            self._init_with_project_dir(project_dir)
-        else:
-            self._init_with_repo_url(repo_url)  # type: ignore[arg-type]
 
     def _init_with_project_dir(self, project_dir: Path) -> None:
         """Initialize with local git repository (existing behavior).

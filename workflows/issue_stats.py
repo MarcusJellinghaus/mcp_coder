@@ -14,11 +14,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from mcp_coder.utils import get_github_repository_url
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
-from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.utils.github_operations.label_config import (
     get_labels_config_path,
     load_labels_config,
 )
+from mcp_coder.utils.log_utils import setup_logging
 
 # Setup logger
 logger = logging.getLogger(__name__)

@@ -99,7 +99,7 @@ def get_labels_config_path(project_dir: Optional[Path] = None) -> Path:
     ----------------------------------------------------------------
     Used by workflow scripts (define_labels.py, validate_labels.py, issue_stats.py)
     that run in a local git repository and may want to customize labels.
-    
+
     - If project_dir is provided AND local config exists:
       Returns: project_dir/workflows/config/labels.json
     - Otherwise falls back to bundled config (see MODE 2)
@@ -108,10 +108,10 @@ def get_labels_config_path(project_dir: Optional[Path] = None) -> Path:
     -------------------------------------------------------------------
     Used by coordinator and remote GitHub operations that work via repo_url
     without a local git clone. These always use the bundled package config.
-    
+
     - When project_dir is None:
       Returns: bundled mcp_coder/config/labels.json from installed package
-    
+
     WHY THIS DESIGN:
     ----------------
     - Workflows need flexibility: Allow customization for testing/development
@@ -134,7 +134,7 @@ def get_labels_config_path(project_dir: Optional[Path] = None) -> Path:
         # Workflow script with local project
         >>> config_path = get_labels_config_path(Path("/my/project"))
         >>> labels = load_labels_config(config_path)
-        
+
         # Coordinator without local project (repo_url mode)
         >>> config_path = get_labels_config_path(None)  # Uses bundled config
         >>> labels = load_labels_config(config_path)
