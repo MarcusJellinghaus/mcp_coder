@@ -12,10 +12,7 @@ from typing import Optional
 
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
-from ...utils.github_operations.label_config import (
-    get_labels_config_path,
-    load_labels_config,
-)
+from ...utils.github_operations.label_config import load_labels_config
 from ...utils.jenkins_operations.client import JenkinsClient
 from ...utils.jenkins_operations.models import JobStatus
 from ...utils.user_config import (
@@ -217,8 +214,12 @@ def get_eligible_issues(
         GithubException: If GitHub API errors occur
     """
     # Load label configuration
-    # Tries project's local config first, falls back to package bundled config
-    config_path = get_labels_config_path(issue_manager.project_dir)
+    # Uses bundled package config (coordinator operates without local project context)
+    from importlib import resources
+    from pathlib import Path
+    
+    config_resource = resources.files("mcp_coder.config") / "labels.json"
+    config_path = Path(str(config_resource))
     labels_config = load_labels_config(config_path)
 
     # Extract bot_pickup labels (labels with category="bot_pickup")
