@@ -185,17 +185,20 @@ def dispatch_workflow(
     # Step 5: Trigger Jenkins job
     queue_id = jenkins_client.start_job(repo_config["executor_test_path"], params)
 
-    # Step 6: Verify job queued
-    jenkins_client.get_job_status(queue_id)
+    # Step 6: Get job status to retrieve job URL
+    job_status = jenkins_client.get_job_status(queue_id)
+    job_url = job_status.url if job_status.url else "(Job URL pending)"
 
     # Step 7: Update issue labels (remove old, add new)
     issue_manager.remove_labels(issue["number"], current_label)
     issue_manager.add_labels(issue["number"], workflow_config["next_label"])
 
-    # Step 8: Log success
+    # Step 8: Log success with issue and job links
+    issue_url = issue["url"]
     logger.info(
         f"Successfully dispatched {workflow_config['workflow']} workflow for issue #{issue['number']}: "
-        f"removed '{current_label}', added '{workflow_config['next_label']}'"
+        f"removed '{current_label}', added '{workflow_config['next_label']}' | "
+        f"Issue: {issue_url} | Job: {job_url}"
     )
 
 
@@ -541,7 +544,9 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
 
         # Step 4: Process each repository
         for repo_name in repo_names:
+            logger.info(f"{'='*80}")
             logger.info(f"Processing repository: {repo_name}")
+            logger.info(f"{'='*80}")
 
             # Step 4a: Load and validate repo config
             repo_config = load_repo_config(repo_name)

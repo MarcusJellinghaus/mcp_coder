@@ -285,9 +285,8 @@ def main() -> int:
     setup_logging(args.log_level)
 
     try:
-        logger.info("Starting mcp-coder CLI")
         logger.info(
-            f"Parsed arguments: command={args.command}, log_level={args.log_level}"
+            f"Starting mcp-coder CLI: command={args.command}, log_level={args.log_level}"
         )
 
         # Handle case when no command is provided
