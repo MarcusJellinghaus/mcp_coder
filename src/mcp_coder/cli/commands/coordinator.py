@@ -59,6 +59,8 @@ PRIORITY_ORDER = [
 
 
 # Workflow configuration mapping
+# IMPORTANT: Label names must match those defined in config/labels.json
+# Uses GitHub API label names directly (not internal_ids) for simpler code
 WORKFLOW_MAPPING = {
     "status-02:awaiting-planning": {
         "workflow": "create-plan",

@@ -171,7 +171,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Update `.mcp.json` PYTHONPATH to `"${MCP_CODER_PROJECT_DIR}/src"`
 - [x] Add documentation comment before `CREATE_PLAN_COMMAND_TEMPLATE`
-- [ ] Add documentation comment before `WORKFLOW_MAPPING`
+- [x] Add documentation comment before `WORKFLOW_MAPPING`
 - [ ] Add module docstring to `src/mcp_coder/utils/github_operations/label_config.py`
 - [ ] Verify no code logic changes (documentation only)
 - [ ] Verify existing tests still pass
