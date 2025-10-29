@@ -169,7 +169,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 7: Code Review Follow-up
 **Details:** [step_7.md](steps/step_7.md)
 
-- [ ] Update `.mcp.json` PYTHONPATH to `"${MCP_CODER_PROJECT_DIR}/src"`
+- [x] Update `.mcp.json` PYTHONPATH to `"${MCP_CODER_PROJECT_DIR}/src"`
 - [ ] Add documentation comment before `CREATE_PLAN_COMMAND_TEMPLATE`
 - [ ] Add documentation comment before `WORKFLOW_MAPPING`
 - [ ] Add module docstring to `src/mcp_coder/utils/github_operations/label_config.py`

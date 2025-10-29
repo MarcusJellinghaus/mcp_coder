@@ -16,7 +16,7 @@
         "INFO"
       ],
       "env": {
-        "PYTHONPATH": "${MCP_CODER_PROJECT_DIR}\\src;${MCP_CODER_PROJECT_DIR}"
+        "PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"
       }
     },
     "filesystem": {
