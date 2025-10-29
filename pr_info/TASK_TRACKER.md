@@ -166,6 +166,17 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run all CLI tests: `pytest tests/cli/test_main.py -v`
 - [x] Prepare git commit message for Step 6
 
+### Step 7: Code Review Follow-up
+**Details:** [step_7.md](steps/step_7.md)
+
+- [ ] Update `.mcp.json` PYTHONPATH to `"${MCP_CODER_PROJECT_DIR}/src"`
+- [ ] Add documentation comment before `CREATE_PLAN_COMMAND_TEMPLATE`
+- [ ] Add documentation comment before `WORKFLOW_MAPPING`
+- [ ] Add module docstring to `src/mcp_coder/utils/github_operations/label_config.py`
+- [ ] Verify no code logic changes (documentation only)
+- [ ] Verify existing tests still pass
+- [ ] Prepare git commit message for Step 7
+
 ---
 
 ## Pull Request

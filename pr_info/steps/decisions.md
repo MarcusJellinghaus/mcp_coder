@@ -133,3 +133,109 @@ mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo
 **Impact**:
 - Add three template constants to `coordinator.py`
 - `dispatch_workflow()` selects appropriate template based on workflow type
+
+---
+
+## Decision 7: Code Review Follow-up Decisions
+**Date**: 2025-10-29  
+**Context**: Post-implementation code review identified areas for clarification and improvement
+
+### Decision 7.1: Hardcoded `/workspace/repo` Path Strategy
+**Decision**: Keep `/workspace/repo` hardcoded in command templates (KISS approach)  
+**Rationale**:
+- Simple operational requirement: Jenkins workspace structure must be consistent
+- Matches existing `DEFAULT_TEST_COMMAND` pattern in codebase
+- Can be made configurable in future if multiple workspace paths needed
+- KISS principle - avoid premature flexibility
+
+**Impact**:
+- Add documentation comment explaining Jenkins workspace requirement
+- No configuration parameter needed initially
+
+### Decision 7.2: PYTHONPATH Configuration for Cross-Platform Support
+**Decision**: Use forward slashes and single path in `.mcp.json`: `"${MCP_CODER_PROJECT_DIR}/src"`  
+**Rationale**:
+- Must support both Windows and Linux
+- Python accepts forward slashes on all platforms
+- After refactoring `build_label_lookups()` to `src/mcp_coder/...`, only `src/` in PYTHONPATH is needed
+- Simpler than maintaining platform-specific configurations
+
+**Impact**:
+- Change `.mcp.json` PYTHONPATH from `"${MCP_CODER_PROJECT_DIR}\\src;${MCP_CODER_PROJECT_DIR}"` to `"${MCP_CODER_PROJECT_DIR}/src"`
+- Works cross-platform without conditional logic
+
+### Decision 7.3: Package Data Verification
+**Decision**: Trust setuptools package data mechanism, no additional test needed  
+**Rationale**:
+- Package data is standard setuptools feature with well-tested behavior
+- If package builds successfully, `config/*.json` will be included
+- Can be verified in manual installation testing
+- KISS principle - avoid test for framework behavior
+
+**Impact**:
+- No additional test file needed
+- Manual verification during release testing sufficient
+
+### Decision 7.4: Error Message Verbosity
+**Decision**: Keep current simpler error messages  
+**Rationale**:
+- Current messages are clear enough for users familiar with config structure
+- Avoid over-verbose output
+- Users can refer to documentation for configuration examples
+- KISS principle
+
+**Impact**:
+- No changes to error message formatting
+
+### Decision 7.5: Label Configuration Loading Pattern
+**Decision**: Keep current two-call pattern, add module docstring documentation  
+**Rationale**:
+- Two-line pattern (`get_labels_config_path()` + `load_labels_config()`) is explicit and clear
+- No hidden behavior or magic
+- Adding helper function creates one more API to maintain
+- Documentation makes pattern clear for future developers
+- KISS principle
+
+**Impact**:
+- Add comprehensive module docstring to `label_config.py` with usage examples
+- No new helper functions
+
+### Decision 7.6: Edge Case Test Coverage
+**Decision**: Skip additional edge case tests for now  
+**Rationale**:
+- Current test coverage is comprehensive (>85%)
+- Edge cases identified are unlikely scenarios
+- Can be added if issues arise in production
+- KISS principle - test what matters most
+
+**Impact**:
+- No additional test cases for:
+  - Invalid JSON in bundled labels.json (framework validation)
+  - Concurrent coordinator runs (documented as out-of-scope)
+  - Network failures (already covered by error handling decorator)
+
+### Decision 7.7: Label Names vs Internal IDs in Code
+**Decision**: Use GitHub API label names directly in Python code (not internal_ids)  
+**Rationale**:
+- GitHub API works with label names (visible label text)
+- Issue queries return names, add/remove operations use names
+- Using names avoids constant translation internal_id ↔ name
+- Simpler code with less indirection
+- Label names rarely change in practice
+- KISS principle
+
+**Impact**:
+- `WORKFLOW_MAPPING` uses label names like `"status-02:awaiting-planning"`
+- Add comment explaining design decision and relationship to config
+- Internal IDs remain useful for human-readable references in documentation
+
+### Decision 7.8: Documentation for Hard-Coded Values
+**Decision**: Add simple comment explaining label name dependency  
+**Rationale**:
+- Makes implicit dependency explicit
+- Helps future maintainers understand relationship to config
+- Simple one-line comment sufficient
+- KISS principle
+
+**Impact**:
+- Add comment to `WORKFLOW_MAPPING`: "Label names must match those defined in config/labels.json"
