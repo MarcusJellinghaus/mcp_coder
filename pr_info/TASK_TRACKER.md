@@ -40,7 +40,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues
 - [x] Run pytest check (fast unit tests) and fix all issues
 - [x] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 0
+- [x] Prepare git commit message for Step 0
 
 ### Step 1: Label Configuration Integration
 **Details:** [step_1.md](steps/step_1.md)
@@ -96,7 +96,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run pylint check and fix all issues
 - [x] Run pytest check (fast unit tests) and fix all issues
 - [x] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Main Coordinator Runner
 **Details:** [step_4.md](steps/step_4.md)
@@ -176,6 +176,18 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Verify no code logic changes (documentation only)
 - [x] Verify existing tests still pass
 - [x] Prepare git commit message for Step 7
+
+### Step 8: Code Review Discussion Follow-up
+**Details:** [step_8.md](steps/step_8.md)
+
+- [ ] Add `exc_info=True` to exception logging in `execute_coordinator_run()`
+- [ ] Create `tests/cli/commands/conftest.py` with `mock_labels_config` fixture
+- [ ] Fix path separator in `.mcp.json` line 25 (backslash → forward slash)
+- [ ] Run all coordinator tests: `pytest tests/cli/commands/test_coordinator.py -v`
+- [ ] Run all CLI tests: `pytest tests/cli/test_main.py -v`
+- [ ] Run fast unit tests to verify no breakage
+- [ ] Verify no functional changes - quality improvements only
+- [ ] Prepare git commit message for Step 8
 
 ---
 

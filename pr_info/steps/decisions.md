@@ -239,3 +239,104 @@ mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo
 
 **Impact**:
 - Add comment to `WORKFLOW_MAPPING`: "Label names must match those defined in config/labels.json"
+
+
+---
+
+## Decision 8: Code Review Discussion Decisions
+**Date**: 2025-10-29  
+**Context**: Post-implementation code review discussion identified additional clarifications and minor improvements
+
+### Decision 8.1: Hardcoded Workspace Path Validation
+**Decision**: Keep `/workspace/repo` hardcoded without additional validation (KISS approach)  
+**Rationale**:
+- This is an operational requirement, similar to existing `DEFAULT_TEST_COMMAND` pattern
+- Documentation comments already explain the requirement clearly
+- Adding validation would increase complexity without significant benefit
+- Jenkins job failures will be clear if workspace structure is wrong
+- KISS principle - avoid premature complexity
+
+**Impact**:
+- No code changes
+- Existing documentation comments are sufficient
+- Operational requirement: Jenkins workspace must use `/workspace/repo` structure
+
+### Decision 8.2: Race Condition Handling Strategy
+**Decision**: Accept race condition as documented operational requirement  
+**Rationale**:
+- KISS principle - avoid complex locking mechanisms
+- Adding runtime warnings adds complexity and false positives
+- Simple operational requirement: don't run multiple coordinator instances simultaneously
+- Can be enhanced later if needed (file locks, distributed locks)
+- Current approach matches project's simplicity goals
+
+**Impact**:
+- No code changes
+- Document in operational guidelines: only run one `coordinator run` instance at a time
+- Future enhancement possible if race conditions become problematic
+
+### Decision 8.3: Error Logging with Stack Traces
+**Decision**: Add `exc_info=True` to exception logging for better debugging  
+**Rationale**:
+- Preserves full stack traces for debugging production issues
+- More explicit than `logger.exception()` about intent
+- Standard Python practice for error logging
+- Critical for diagnosing unexpected failures
+- No downside - stack traces only appear in logs, not user output
+
+**Impact**:
+- Modify exception handlers in `execute_coordinator_run()` to use `exc_info=True`
+- Better debugging capability for production issues
+
+### Decision 8.4: Test Fixture for Label Configuration Mocks
+**Decision**: Create pytest fixture for mock labels config to reduce duplication  
+**Rationale**:
+- Label configuration mock setup is repeated across multiple test classes
+- DRY principle - easier to maintain if config structure changes
+- Standard pytest pattern for shared test data
+- Improves test maintainability without sacrificing readability
+
+**Impact**:
+- Create `tests/cli/commands/conftest.py` with `mock_labels_config` fixture
+- Refactor test classes to use fixture instead of inline mock setup
+- Tests remain clear but more maintainable
+
+### Decision 8.5: Cross-Platform Path Consistency in .mcp.json
+**Decision**: Use forward slashes for all paths in `.mcp.json`, including command paths  
+**Rationale**:
+- Python and most tools accept forward slashes on all platforms (Windows, Linux, macOS)
+- Consistent with PYTHONPATH fix already implemented
+- Simpler than maintaining platform-specific configurations
+- Matches cross-platform best practices
+
+**Impact**:
+- Change `.mcp.json` line 25 from `${MCP_CODER_VENV_DIR}\\Scripts\\` to `${MCP_CODER_VENV_DIR}/Scripts/`
+- Consistent path separator usage throughout config file
+
+### Decision 8.6: Memory Management in Single-Run Design
+**Decision**: Keep as-is - Python GC handles cleanup, no explicit documentation needed  
+**Rationale**:
+- Command is designed for single-run execution (not long-running daemon)
+- Python's garbage collector handles cleanup appropriately
+- Adding documentation would be redundant given obvious single-run design
+- No evidence of actual memory leak issues
+- KISS principle - avoid documenting non-issues
+
+**Impact**:
+- No code changes
+- No additional documentation needed
+- Design is clear from command structure and help text
+
+### Decision 8.7: Label Name Validation at Startup
+**Decision**: Keep as-is - no startup validation for WORKFLOW_MAPPING labels  
+**Rationale**:
+- Existing comment explains relationship to config clearly
+- Mismatched labels will fail during processing with clear error messages
+- Adding validation adds complexity for unlikely configuration error
+- Failed label operations provide clear error context
+- KISS principle - avoid defensive programming for clear failure cases
+
+**Impact**:
+- No code changes
+- Existing comment: "Label names must match those defined in config/labels.json"
+- Configuration errors will be caught during normal operation

@@ -194,7 +194,13 @@ mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo
 - **Configuration:** Fix cross-platform PYTHONPATH
 - **Duration:** 15 min
 
-**Total Estimated Duration: 5-6 hours**
+### Step 8: Code Review Discussion Follow-up
+- **Quality:** Improve error logging with stack traces
+- **Testing:** Create pytest fixture for mock labels config
+- **Configuration:** Fix remaining path separator inconsistencies
+- **Duration:** 15 min
+
+**Total Estimated Duration: 5.5-6.5 hours**
 
 ## Testing Strategy
 
@@ -242,9 +248,11 @@ mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo
 - `pr_info/steps/step_5.md` - CLI integration
 - `pr_info/steps/step_6.md` - Integration tests
 - `pr_info/steps/step_7.md` - Code review follow-up
+- `pr_info/steps/step_8.md` - Code review discussion follow-up
 - `pr_info/steps/decisions.md` - Architectural decisions
 - `src/mcp_coder/config/__init__.py` - Package marker
 - `src/mcp_coder/config/labels.json` - Bundled label config
+- `tests/cli/commands/conftest.py` - Shared test fixtures
 
 ### Modify:
 - `src/mcp_coder/utils/github_operations/label_config.py` - Refactored from workflows/label_config.py
