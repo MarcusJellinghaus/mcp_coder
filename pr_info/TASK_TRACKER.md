@@ -182,12 +182,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Add `exc_info=True` to exception logging in `execute_coordinator_run()`
 - [x] Create `tests/cli/commands/conftest.py` with `mock_labels_config` fixture
-- [ ] Fix path separator in `.mcp.json` line 25 (backslash → forward slash)
-- [ ] Run all coordinator tests: `pytest tests/cli/commands/test_coordinator.py -v`
-- [ ] Run all CLI tests: `pytest tests/cli/test_main.py -v`
-- [ ] Run fast unit tests to verify no breakage
-- [ ] Verify no functional changes - quality improvements only
-- [ ] Prepare git commit message for Step 8
+- [x] Fix path separator in `.mcp.json` line 25 (backslash → forward slash)
+- [x] Run all coordinator tests: `pytest tests/cli/commands/test_coordinator.py -v`
+- [x] Run all CLI tests: `pytest tests/cli/test_main.py -v`
+- [x] Run fast unit tests to verify no breakage
+- [x] Verify no functional changes - quality improvements only
+- [x] Prepare git commit message for Step 8
 
 ---
 
