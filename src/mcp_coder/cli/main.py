@@ -162,6 +162,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         default=None,
         help="Project directory path (default: current directory)",
     )
+    auto_parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
 
     # commit clipboard command - Step 6
     clipboard_parser = commit_subparsers.add_parser(

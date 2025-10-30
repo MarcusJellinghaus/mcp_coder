@@ -67,7 +67,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_parse_llm.assert_called_once_with("claude_code_cli")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli")
+        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli", None)
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")

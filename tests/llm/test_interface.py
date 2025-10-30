@@ -27,6 +27,7 @@ class TestAskLLM:
             timeout=30,
             env_vars=None,
             cwd=None,
+            mcp_config=None,
         )
         assert result == "Test response from Claude"
 
@@ -154,6 +155,7 @@ class TestAskLLM:
             timeout=30,
             env_vars=None,
             cwd=None,
+            mcp_config=None,
         )
         assert result == "API response with session"
 
@@ -188,6 +190,7 @@ class TestAskLLM:
             timeout=30,
             env_vars=test_env_vars,
             cwd=None,
+            mcp_config=None,
         )
         assert result == "Response with env vars"
 
@@ -305,6 +308,7 @@ class TestIntegration:
             timeout=25,
             env_vars=None,
             cwd=None,
+            mcp_config=None,
         )
         assert result == "Full chain response"
 
