@@ -217,7 +217,12 @@ class TestAskClaudeCode:
         result = ask_claude_code("Test question", method="cli", timeout=30)
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question", session_id=None, timeout=30, env_vars=None, cwd=None, mcp_config=None
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
         )
         assert result == "CLI response"
 
@@ -235,7 +240,12 @@ class TestAskClaudeCode:
         result = ask_claude_code("Test question")
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question", session_id=None, timeout=30, env_vars=None, cwd=None, mcp_config=None
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
         )
         assert result == "Default CLI response"
 
@@ -253,7 +263,12 @@ class TestAskClaudeCode:
         result = ask_claude_code("Test question", method="api", timeout=30)
 
         mock_ask_claude_code_api.assert_called_once_with(
-            "Test question", session_id=None, timeout=30, env_vars=None, cwd=None, mcp_config=None
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
         )
         assert result == "API response"
 
@@ -286,7 +301,12 @@ class TestAskClaudeCode:
         result = ask_claude_code("Test question", timeout=45)
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question", session_id=None, timeout=45, env_vars=None, cwd=None, mcp_config=None
+            "Test question",
+            session_id=None,
+            timeout=45,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
         )
         assert result == "Custom timeout response"
 
@@ -384,7 +404,12 @@ class TestPromptLLM:
         result = prompt_llm("Test question", method="cli")
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question", session_id=None, timeout=30, env_vars=None, cwd=None, mcp_config=None
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
         )
         assert isinstance(result, dict)
         assert result["version"] == "1.0"
@@ -412,7 +437,12 @@ class TestPromptLLM:
         result = prompt_llm("Test question", method="api")
 
         mock_ask_claude_code_api.assert_called_once_with(
-            "Test question", session_id=None, timeout=30, env_vars=None, cwd=None, mcp_config=None
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
         )
         assert isinstance(result, dict)
         assert result["method"] == "api"
@@ -465,7 +495,12 @@ class TestPromptLLM:
         result = prompt_llm("Follow up", method="api", session_id="api-session")
 
         mock_ask_claude_code_api.assert_called_once_with(
-            "Follow up", session_id="api-session", timeout=30, env_vars=None, cwd=None, mcp_config=None
+            "Follow up",
+            session_id="api-session",
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
         )
         assert result["session_id"] == "api-session"
 
@@ -543,7 +578,12 @@ class TestPromptLLM:
         result = prompt_llm("Test", timeout=60)
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Test", session_id=None, timeout=60, env_vars=None, cwd=None, mcp_config=None
+            "Test",
+            session_id=None,
+            timeout=60,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
         )
         assert result["text"] == "Response with custom timeout"
 
@@ -566,7 +606,12 @@ class TestPromptLLM:
         result = prompt_llm("Test question")
 
         mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question", session_id=None, timeout=30, env_vars=None, cwd=None, mcp_config=None
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
         )
         assert result["provider"] == "claude"
         assert result["method"] == "cli"

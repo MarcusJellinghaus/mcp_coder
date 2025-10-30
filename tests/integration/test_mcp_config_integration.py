@@ -56,7 +56,10 @@ class TestMcpConfigIntegration:
         return mock_result
 
     def test_implement_with_mcp_config_argument(
-        self, temp_mcp_config: str, mock_subprocess_success: CommandResult, tmp_path: Path
+        self,
+        temp_mcp_config: str,
+        mock_subprocess_success: CommandResult,
+        tmp_path: Path,
     ) -> None:
         """Verify implement command accepts and uses --mcp-config.
 
@@ -75,7 +78,7 @@ class TestMcpConfigIntegration:
         test_project = tmp_path / "test_project"
         test_project.mkdir()
         (test_project / ".git").mkdir()
-        
+
         with (
             patch(
                 "mcp_coder.workflows.implement.core.run_implement_workflow"
