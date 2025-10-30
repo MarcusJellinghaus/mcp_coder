@@ -35,12 +35,15 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         # Parse LLM method using shared utility
         provider, method = parse_llm_method_from_args(args.llm_method)
 
+        # Extract mcp_config from args
+        mcp_config = getattr(args, "mcp_config", None)
+
         # Import here to avoid circular dependency during module load
         from ...workflows.create_plan import run_create_plan_workflow
 
         # Run the create-plan workflow
         return run_create_plan_workflow(
-            args.issue_number, project_dir, provider, method
+            args.issue_number, project_dir, provider, method, mcp_config
         )
 
     except KeyboardInterrupt:

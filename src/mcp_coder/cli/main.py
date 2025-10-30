@@ -128,6 +128,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         metavar="FORMAT",
         help="Output format: text (default) or json (includes session_id)",
     )
+    prompt_parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
 
     # Commit commands - Step 5
     commit_parser = subparsers.add_parser("commit", help="Git commit operations")
@@ -184,6 +190,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         default="claude_code_cli",
         help="LLM method to use (default: claude_code_cli)",
     )
+    implement_parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
 
     # Create plan command - Generate implementation plan from GitHub issue
     create_plan_parser = subparsers.add_parser(
@@ -204,6 +216,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         default="claude_code_cli",
         help="LLM method to use (default: claude_code_cli)",
     )
+    create_plan_parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
 
     # Create PR command - Step 3
     create_pr_parser = subparsers.add_parser(
@@ -220,6 +238,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         choices=["claude_code_cli", "claude_code_api"],
         default="claude_code_cli",
         help="LLM method to use (default: claude_code_cli)",
+    )
+    create_pr_parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
     )
 
     # Coordinator commands - Jenkins-based integration testing

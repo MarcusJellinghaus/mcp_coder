@@ -107,6 +107,7 @@ def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional
     timeout: int = 300,
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
+    mcp_config: str | None = None,
 ) -> tuple[str, dict[Any, Any]]:
     """Call LLM and capture both text response and comprehensive data.
 
@@ -117,6 +118,7 @@ def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional
         timeout: Request timeout in seconds
         env_vars: Optional environment variables for the subprocess
         cwd: Optional working directory for the LLM subprocess
+        mcp_config: Optional path to MCP configuration file
 
     Returns:
         Tuple of (response_text, comprehensive_data_dict)
@@ -181,6 +183,7 @@ def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional
                 timeout=timeout,
                 env_vars=env_vars,
                 project_dir=cwd,
+                mcp_config=mcp_config,
             )
             return response_text, {}
         except subprocess.TimeoutExpired as e:
@@ -373,6 +376,7 @@ def check_and_fix_mypy(
     provider: str,
     method: str,
     env_vars: dict[str, str] | None = None,
+    mcp_config: str | None = None,
 ) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean.
 
@@ -382,6 +386,7 @@ def check_and_fix_mypy(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         env_vars: Optional environment variables for the subprocess
+        mcp_config: Optional path to MCP configuration file
     """
     logger.info("Running mypy type checking...")
 
@@ -443,6 +448,7 @@ def check_and_fix_mypy(
                         timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
                         env_vars=env_vars,
                         cwd=str(project_dir),
+                        mcp_config=mcp_config,
                     )
                 )
 
@@ -507,7 +513,7 @@ Mypy fix generated on: {datetime.now().isoformat()}
 
 
 def process_single_task(
-    project_dir: Path, provider: str, method: str
+    project_dir: Path, provider: str, method: str, mcp_config: str | None = None
 ) -> tuple[bool, str]:
     """Process a single implementation task.
 
@@ -515,6 +521,7 @@ def process_single_task(
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
+        mcp_config: Optional path to MCP configuration file
 
     Returns:
         Tuple of (success, reason) where:
@@ -560,6 +567,7 @@ Please implement this task step by step."""
             timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
             cwd=cwd,
+            mcp_config=mcp_config,
         )
 
         if not response or not response.strip():
@@ -624,7 +632,9 @@ Generated on: {datetime.now().isoformat()}"""
 
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
     if RUN_MYPY_AFTER_EACH_TASK:
-        if not check_and_fix_mypy(project_dir, step_num, provider, method, env_vars):
+        if not check_and_fix_mypy(
+            project_dir, step_num, provider, method, env_vars, mcp_config
+        ):
             logger.warning(
                 "Mypy check failed or found unresolved issues - continuing anyway"
             )

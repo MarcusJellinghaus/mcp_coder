@@ -24,6 +24,7 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
     project_dir: str | None = None,
+    mcp_config: str | None = None,
 ) -> str:
     """
     Ask a question to an LLM provider using the specified method.
@@ -44,6 +45,7 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to the LLM subprocess
         project_dir: Optional project directory to use as working directory for the LLM subprocess
+        mcp_config: Optional path to MCP configuration file
 
     Returns:
         The LLM's response text as a string
@@ -85,6 +87,7 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
             timeout=timeout,
             env_vars=env_vars,
             cwd=project_dir,
+            mcp_config=mcp_config,
         )
     else:
         raise ValueError(
@@ -100,6 +103,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
     project_dir: str | None = None,
+    mcp_config: str | None = None,
 ) -> LLMResponseDict:
     """
     Ask a question to an LLM provider with full session management.
@@ -117,6 +121,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to the LLM subprocess
         project_dir: Optional project directory to use as working directory for the LLM subprocess
+        mcp_config: Optional path to MCP configuration file
 
     Returns:
         LLMResponseDict containing:
@@ -174,6 +179,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
                 timeout=timeout,
                 env_vars=env_vars,
                 cwd=project_dir,
+                mcp_config=mcp_config,
             )
         elif method == "api":
             return ask_claude_code_api(
@@ -182,6 +188,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
                 timeout=timeout,
                 env_vars=env_vars,
                 cwd=project_dir,
+                mcp_config=mcp_config,
             )
         else:
             raise ValueError(

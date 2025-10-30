@@ -216,7 +216,10 @@ def format_initial_prompt(prompt_template: str, issue_data: IssueData) -> str:
 
 
 def run_planning_prompts(
-    project_dir: Path, issue_data: IssueData, llm_method: str
+    project_dir: Path,
+    issue_data: IssueData,
+    llm_method: str,
+    mcp_config: Optional[str] = None,
 ) -> bool:
     """Execute three planning prompts with session continuation.
 
@@ -224,6 +227,7 @@ def run_planning_prompts(
         project_dir: Path to the project directory
         issue_data: IssueData object with issue details
         llm_method: LLM method string (e.g., "claude_code_cli")
+        mcp_config: Optional path to MCP configuration file
 
     Returns:
         True if all prompts succeed, False on error
@@ -281,6 +285,7 @@ def run_planning_prompts(
             timeout=600,
             env_vars=env_vars,
             project_dir=str(project_dir),
+            mcp_config=mcp_config,
         )
 
         if not response_1 or not response_1.get("text"):
@@ -331,6 +336,7 @@ def run_planning_prompts(
             timeout=600,
             env_vars=env_vars,
             project_dir=str(project_dir),
+            mcp_config=mcp_config,
         )
 
         if not response_2 or not response_2.get("text"):
@@ -375,6 +381,7 @@ def run_planning_prompts(
             timeout=600,
             env_vars=env_vars,
             project_dir=str(project_dir),
+            mcp_config=mcp_config,
         )
 
         if not response_3 or not response_3.get("text"):
@@ -482,7 +489,11 @@ def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
 
 
 def run_create_plan_workflow(
-    issue_number: int, project_dir: Path, provider: str, method: str
+    issue_number: int,
+    project_dir: Path,
+    provider: str,
+    method: str,
+    mcp_config: Optional[str] = None,
 ) -> int:
     """Main workflow orchestration function - creates implementation plan for GitHub issue.
 
@@ -491,6 +502,7 @@ def run_create_plan_workflow(
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
+        mcp_config: Optional path to MCP configuration file
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -535,7 +547,7 @@ def run_create_plan_workflow(
 
     # Step 6: Generate implementation plan
     logger.info("Step 6/7: Generating implementation plan...")
-    if not run_planning_prompts(project_dir, issue_data, llm_method):
+    if not run_planning_prompts(project_dir, issue_data, llm_method, mcp_config):
         logger.error("Planning prompts execution failed")
         return 1
 

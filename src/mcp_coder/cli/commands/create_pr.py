@@ -36,8 +36,11 @@ def execute_create_pr(args: argparse.Namespace) -> int:
         # Parse LLM method using shared utility
         provider, method = parse_llm_method_from_args(args.llm_method)
 
+        # Extract mcp_config from args
+        mcp_config = getattr(args, "mcp_config", None)
+
         # Run the create-pr workflow
-        return run_create_pr_workflow(project_dir, provider, method)
+        return run_create_pr_workflow(project_dir, provider, method, mcp_config)
 
     except KeyboardInterrupt:
         print("Operation cancelled by user.")

@@ -135,11 +135,12 @@ def execute_prompt(
             ):
                 print("Using explicit session ID (ignoring file-based continuation)")
 
-        # Get user-specified timeout, llm_method, and output_format
+        # Get user-specified timeout, llm_method, output_format, and mcp_config
         timeout = getattr(args, "timeout", 30)
         llm_method = getattr(args, "llm_method", "claude_code_api")
         verbosity = getattr(args, "verbosity", "just-text")
         output_format = getattr(args, "output_format", "text")
+        mcp_config = getattr(args, "mcp_config", None)
 
         # Route to appropriate method based on output_format and verbosity
         if output_format == "json":
@@ -155,6 +156,7 @@ def execute_prompt(
                 session_id=resume_session_id,
                 env_vars=env_vars,
                 project_dir=str(project_dir),
+                mcp_config=mcp_config,
             )
             # Output complete response as JSON (includes session_id)
             formatted_output = json.dumps(response_dict, indent=2, default=str)
@@ -169,6 +171,7 @@ def execute_prompt(
                 session_id=resume_session_id,
                 env_vars=env_vars,
                 project_dir=str(project_dir),
+                mcp_config=mcp_config,
             )
 
             # Simple text output with tool summary
