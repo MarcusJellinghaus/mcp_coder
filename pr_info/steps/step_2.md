@@ -29,8 +29,8 @@ Update `build_cli_command()` and `ask_claude_code_cli()` functions to accept and
 def build_cli_command(
     claude_cmd: str,
     prompt: str,
-    session_id: Optional[str] = None,
-    mcp_config: Optional[str] = None
+    session_id: str | None = None,
+    mcp_config: str | None = None
 ) -> list[str]:
     """
     Build Claude CLI command with optional MCP config.
@@ -47,9 +47,9 @@ def build_cli_command(
 
 def ask_claude_code_cli(
     prompt: str,
-    project_dir: Optional[Path] = None,
-    session_id: Optional[str] = None,
-    mcp_config: Optional[str] = None
+    project_dir: Path | None = None,
+    session_id: str | None = None,
+    mcp_config: str | None = None
 ) -> LlmResponse:
     """
     Ask Claude Code CLI a question.
@@ -148,7 +148,7 @@ command = build_cli_command(
 ### Input Data
 ```python
 # Function parameters
-mcp_config: Optional[str] = None | ".mcp.linux.json" | "/absolute/path/.mcp.json"
+mcp_config: str | None = None | ".mcp.linux.json" | "/absolute/path/.mcp.json"
 ```
 
 ### Output Data

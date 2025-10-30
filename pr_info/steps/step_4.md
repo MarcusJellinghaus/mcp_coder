@@ -44,34 +44,34 @@ prompt_parser.add_argument(
 # prompt.py
 def prompt_command(
     prompt_text: str,
-    project_dir: Optional[Path] = None,
-    session_id: Optional[str] = None,
-    mcp_config: Optional[str] = None
+    project_dir: Path | None = None,
+    session_id: str | None = None,
+    mcp_config: str | None = None
 ) -> None:
     """Execute prompt command with optional MCP config"""
 
 # implement.py
 def implement_command(
     issue_number: str,
-    project_dir: Optional[Path] = None,
-    session_id: Optional[str] = None,
-    mcp_config: Optional[str] = None
+    project_dir: Path | None = None,
+    session_id: str | None = None,
+    mcp_config: str | None = None
 ) -> None:
     """Execute implement command with optional MCP config"""
 
 # create_plan.py
 def create_plan_command(
     issue_number: str,
-    project_dir: Optional[Path] = None,
-    mcp_config: Optional[str] = None
+    project_dir: Path | None = None,
+    mcp_config: str | None = None
 ) -> None:
     """Execute create-plan command with optional MCP config"""
 
 # create_pr.py
 def create_pr_command(
     issue_number: str,
-    project_dir: Optional[Path] = None,
-    mcp_config: Optional[str] = None
+    project_dir: Path | None = None,
+    mcp_config: str | None = None
 ) -> None:
     """Execute create-pr command with optional MCP config"""
 ```
@@ -156,9 +156,9 @@ if args.command == "prompt":
 # Update function signature
 def prompt_command(
     prompt_text: str,
-    project_dir: Optional[Path] = None,
-    session_id: Optional[str] = None,
-    mcp_config: Optional[str] = None  # NEW PARAMETER
+    project_dir: Path | None = None,
+    session_id: str | None = None,
+    mcp_config: str | None = None  # NEW PARAMETER
 ) -> None:
     """Send a prompt to Claude Code CLI"""
     
