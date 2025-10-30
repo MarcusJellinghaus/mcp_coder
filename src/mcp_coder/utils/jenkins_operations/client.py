@@ -203,12 +203,25 @@ class JenkinsClient:
                 url = executable.get("url")
 
                 # Get build info for status and duration
-                # Extract job name from queue item for get_build_info call
-                # The task dict has a 'name' field with the job name
-                task_dict: dict[str, Any] = item.get("task", {})
-                job_name = task_dict.get("name", "")
+                # Extract full job path from the URL in the executable dict
+                # The URL format is: http://server/job/Folder/job/JobName/BUILD_NUMBER/
+                # We need to extract "Folder/JobName" from this URL
+                if url and isinstance(url, str) and isinstance(self._client.server, str):
+                    # Parse the job path from URL by removing base URL and build number
+                    # Example: "http://server/job/Folder/job/JobName/123/" -> "Folder/JobName"
+                    base_url = self._client.server.rstrip("/")
+                    job_url_part = url.replace(base_url, "").rstrip("/")
+                    # Remove the build number suffix (e.g., "/123")
+                    job_url_part = job_url_part.rsplit("/", 1)[0]
+                    # Remove "/job/" prefixes to get the path format for get_build_info
+                    # "/job/Folder/job/JobName" -> "Folder/JobName"
+                    job_path = job_url_part.replace("/job/", "/").lstrip("/")
+                else:
+                    # Fallback to task name if URL not available or mocked
+                    task_dict: dict[str, Any] = item.get("task", {})
+                    job_path = task_dict.get("name", "")
 
-                build_info = self._client.get_build_info(job_name, build_number)
+                build_info = self._client.get_build_info(job_path, build_number)
 
                 result = build_info.get("result")
                 duration = build_info.get("duration")
