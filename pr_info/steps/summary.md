@@ -75,8 +75,8 @@ Add `--mcp-config` CLI parameter to mcp-coder that passes through to Claude CLI 
 8. `.gitignore` - Add config patterns
 
 ### Files to Create (Tests - 2 total)
-1. `tests/unit/llm/providers/claude/test_claude_mcp_config.py` - Command building tests
-2. `tests/integration/test_mcp_config_integration.py` - End-to-end CLI tests
+1. `tests/unit/llm/providers/claude/test_claude_mcp_config.py` - Command building tests (4 unit tests)
+2. `tests/integration/test_mcp_config_integration.py` - End-to-end CLI tests (4 minimal integration tests)
 
 ### No New Modules
 - All changes fit within existing module structure
@@ -107,9 +107,16 @@ Add `--mcp-config` CLI parameter to mcp-coder that passes through to Claude CLI 
 - **Claude CLI validation** - Errors handled by existing robust code
 
 ### Testing Coverage
-- Unit tests verify command construction
-- Integration tests verify end-to-end flow
+- Unit tests verify command construction (4 tests)
+- Integration tests verify end-to-end flow with minimal approach (4 tests covering implement + prompt commands)
 - Existing tests ensure no regression
+
+### Key Decisions (see Decisions.md for full details)
+- Use `str | None` type hint syntax (Python 3.10+ PEP 604)
+- Minimal integration tests: Test `implement` (most complex) and `prompt` (simplest) commands
+- Two separate test files maintained (unit + integration)
+- Hardcoded coordinator path `/workspace/repo/.mcp.linux.json` confirmed correct
+- No manual testing required - automated tests sufficient
 
 ## Success Metrics
 - [ ] `mcp-coder --mcp-config .mcp.linux.json create-plan 123` works

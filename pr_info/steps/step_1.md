@@ -105,8 +105,8 @@ def mock_claude_executable() -> str:
 ```python
 # Test parameters
 prompt: str = "Test prompt"
-session_id: Optional[str] = None | "abc123"
-mcp_config: Optional[str] = None | ".mcp.linux.json"
+session_id: str | None = None | "abc123"
+mcp_config: str | None = None | ".mcp.linux.json"
 claude_cmd: str = "claude"
 ```
 

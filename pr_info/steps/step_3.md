@@ -26,27 +26,20 @@ Create integration tests that verify end-to-end flow from CLI argument parsing t
 
 ### Main Test Functions
 
-```python
-def test_create_plan_with_mcp_config_argument() -> None:
-    """Verify create-plan command accepts and uses --mcp-config"""
+**Minimal Test Approach:** Test two representative commands (implement = most complex, prompt = simplest) to prove the pattern works without redundant tests.
 
+```python
 def test_implement_with_mcp_config_argument() -> None:
-    """Verify implement command accepts and uses --mcp-config"""
+    """Verify implement command (most complex) accepts and uses --mcp-config"""
 
 def test_prompt_with_mcp_config_argument() -> None:
-    """Verify prompt command accepts and uses --mcp-config"""
-
-def test_create_pr_with_mcp_config_argument() -> None:
-    """Verify create-pr command accepts and uses --mcp-config"""
+    """Verify prompt command (simplest) accepts and uses --mcp-config"""
 
 def test_mcp_config_not_required() -> None:
     """Verify commands work without --mcp-config (backward compatibility)"""
 
 def test_mcp_config_with_relative_path() -> None:
     """Verify relative paths work for --mcp-config"""
-
-def test_mcp_config_with_absolute_path() -> None:
-    """Verify absolute paths work for --mcp-config"""
 ```
 
 ## HOW
@@ -60,10 +53,8 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch, MagicMock, call
 from mcp_coder.cli.main import main
-from mcp_coder.cli.commands.create_plan import create_plan_command
 from mcp_coder.cli.commands.implement import implement_command
 from mcp_coder.cli.commands.prompt import prompt_command
-from mcp_coder.cli.commands.create_pr import create_pr_command
 ```
 
 ### Test Fixtures
@@ -94,10 +85,10 @@ def temp_mcp_config(tmp_path):
 
 ## ALGORITHM
 
-### Test Case: create-plan with MCP Config
+### Test Case: implement with MCP Config
 ```
 1. Mock subprocess.run to capture command
-2. Call create_plan_command with mcp_config parameter
+2. Call implement_command with mcp_config parameter
 3. Assert subprocess.run called
 4. Extract command from call args
 5. Assert "--mcp-config" in command
@@ -169,13 +160,10 @@ mock_response = {
 ## Implementation Checklist
 - [ ] Create integration test file
 - [ ] Implement fixtures for mocking
-- [ ] Implement test_create_plan_with_mcp_config_argument()
 - [ ] Implement test_implement_with_mcp_config_argument()
 - [ ] Implement test_prompt_with_mcp_config_argument()
-- [ ] Implement test_create_pr_with_mcp_config_argument()
 - [ ] Implement test_mcp_config_not_required()
 - [ ] Implement test_mcp_config_with_relative_path()
-- [ ] Implement test_mcp_config_with_absolute_path()
 - [ ] Run tests (should FAIL - CLI implementation not done yet)
 
 ## Testing Notes

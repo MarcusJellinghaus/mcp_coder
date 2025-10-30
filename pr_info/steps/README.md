@@ -11,6 +11,7 @@
 6. **Step 6:** Update .gitignore + final verification ✅ All pass
 
 ### Files Modified (8 total)
+**Note:** Using `str | None` type hint syntax throughout (Python 3.10+ PEP 604)
 ```
 src/mcp_coder/cli/main.py                                    [Step 4]
 src/mcp_coder/llm/providers/claude/claude_code_cli.py        [Step 2]
@@ -24,9 +25,14 @@ src/mcp_coder/cli/commands/coordinator.py                    [Step 5]
 
 ### Files Created (2 total)
 ```
-tests/unit/llm/providers/claude/test_claude_mcp_config.py   [Step 1]
-tests/integration/test_mcp_config_integration.py             [Step 3]
+tests/unit/llm/providers/claude/test_claude_mcp_config.py   [Step 1] - 4 unit tests
+tests/integration/test_mcp_config_integration.py             [Step 3] - 4 integration tests (minimal approach)
 ```
+
+**Minimal Integration Test Approach:**
+- Tests `implement` command (most complex) and `prompt` command (simplest)
+- Proves pattern works without testing all 4 commands
+- Total 4 integration tests: 2 command tests + backward compatibility + path handling
 
 ### Core Changes Summary
 
