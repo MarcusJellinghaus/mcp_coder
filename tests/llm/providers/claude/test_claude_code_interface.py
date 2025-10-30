@@ -124,7 +124,7 @@ class TestAskClaudeCodeSessionSupport:
         response = ask_claude_code("Test", method="api")
 
         mock_api.assert_called_once_with(
-            "Test", session_id=None, timeout=30, env_vars=None, cwd=None
+            "Test", session_id=None, timeout=30, env_vars=None, cwd=None, mcp_config=None
         )
         assert response == "API default"
 
@@ -144,7 +144,7 @@ class TestAskClaudeCodeSessionSupport:
         ask_claude_code("Test", method="cli", timeout=60)
 
         mock_cli.assert_called_once_with(
-            "Test", session_id=None, timeout=60, env_vars=None, cwd=None
+            "Test", session_id=None, timeout=60, env_vars=None, cwd=None, mcp_config=None
         )
 
     @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
@@ -165,7 +165,7 @@ class TestAskClaudeCodeSessionSupport:
 
         assert response == "CLI response with env vars"
         mock_cli.assert_called_once_with(
-            "Test", session_id=None, timeout=30, env_vars=test_env_vars, cwd=None
+            "Test", session_id=None, timeout=30, env_vars=test_env_vars, cwd=None, mcp_config=None
         )
 
 

@@ -224,6 +224,7 @@ class TestExecutePrompt:
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             project_dir=mock.ANY,
+            mcp_config=None,
         )
         captured = capsys.readouterr()
         assert "Warning: No session_id found" in captured.out

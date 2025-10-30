@@ -56,7 +56,7 @@ class TestMcpConfigIntegration:
         return mock_result
 
     def test_implement_with_mcp_config_argument(
-        self, temp_mcp_config: str, mock_subprocess_success: CommandResult
+        self, temp_mcp_config: str, mock_subprocess_success: CommandResult, tmp_path: Path
     ) -> None:
         """Verify implement command accepts and uses --mcp-config.
 
@@ -69,7 +69,13 @@ class TestMcpConfigIntegration:
         Args:
             temp_mcp_config: Fixture providing temporary config file path
             mock_subprocess_success: Fixture providing mocked subprocess result
+            tmp_path: pytest temporary directory fixture
         """
+        # Create a valid test project directory with .git
+        test_project = tmp_path / "test_project"
+        test_project.mkdir()
+        (test_project / ".git").mkdir()
+        
         with (
             patch(
                 "mcp_coder.workflows.implement.core.run_implement_workflow"
@@ -80,17 +86,15 @@ class TestMcpConfigIntegration:
             patch(
                 "mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable"
             ) as mock_find,
-            patch("mcp_coder.workflows.utils.resolve_project_dir") as mock_resolve,
         ):
             # Setup mocks
             mock_find.return_value = "claude"
             mock_execute.return_value = mock_subprocess_success
-            mock_resolve.return_value = Path("/test/project")
             mock_workflow.return_value = 0
 
             # Create args with mcp_config parameter
             args = argparse.Namespace(
-                project_dir="/test/project",
+                project_dir=str(test_project),
                 llm_method="claude_code_cli",
                 mcp_config=temp_mcp_config,
             )
