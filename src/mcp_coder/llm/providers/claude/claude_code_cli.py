@@ -118,6 +118,8 @@ def build_cli_command(
         command.extend(["--resume", session_id])
 
     # Add MCP config flags if mcp_config provided
+    # --strict-mcp-config ensures Claude only uses servers from the specified config,
+    # preventing fallback to default MCP configurations
     if mcp_config:
         command.extend(["--mcp-config", mcp_config, "--strict-mcp-config"])
 
