@@ -74,30 +74,28 @@ class TestMcpConfigIntegration:
             mock_subprocess_success: Fixture providing mocked subprocess result
             tmp_path: pytest temporary directory fixture
         """
-        # Create a valid test project directory with .git
-        test_project = tmp_path / "test_project"
-        test_project.mkdir()
-        (test_project / ".git").mkdir()
-
+        # Mock workflow execution - we're only testing CLI argument passing
+        # NOT the actual workflow logic
         with (
             patch(
-                "mcp_coder.workflows.implement.core.run_implement_workflow"
+                "mcp_coder.cli.commands.implement.run_implement_workflow"
             ) as mock_workflow,
             patch(
-                "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
-            ) as mock_execute,
+                "mcp_coder.cli.commands.implement.resolve_project_dir"
+            ) as mock_resolve,
             patch(
-                "mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable"
-            ) as mock_find,
+                "mcp_coder.cli.commands.implement.parse_llm_method_from_args"
+            ) as mock_parse_llm,
         ):
             # Setup mocks
-            mock_find.return_value = "claude"
-            mock_execute.return_value = mock_subprocess_success
             mock_workflow.return_value = 0
+            mock_resolve.return_value = tmp_path
+            mock_parse_llm.return_value = ("claude", "code_cli")
 
             # Create args with mcp_config parameter
+            # Use tmp_path directly (we don't need a real git repo for this test)
             args = argparse.Namespace(
-                project_dir=str(test_project),
+                project_dir=str(tmp_path),
                 llm_method="claude_code_cli",
                 mcp_config=temp_mcp_config,
             )
