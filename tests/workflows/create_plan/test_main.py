@@ -438,6 +438,6 @@ class TestMain:
         mock_check.assert_called_once_with(tmp_path, 123)
         mock_manage.assert_called_once_with(tmp_path, 123, "Test Issue")
         mock_prompts.assert_called_once_with(
-            tmp_path, mock_issue_data, "claude_code_cli"
+            tmp_path, mock_issue_data, "claude_code_cli", None
         )
         assert result == 0

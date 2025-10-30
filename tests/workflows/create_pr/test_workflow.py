@@ -44,7 +44,7 @@ class TestRunCreatePrWorkflow:
         # Verify
         assert result == 0
         mock_prereqs.assert_called_once_with(Path("/test"))
-        mock_generate.assert_called_once_with(Path("/test"), "claude", "cli")
+        mock_generate.assert_called_once_with(Path("/test"), "claude", "cli", None)
         mock_create_pr.assert_called_once_with(Path("/test"), "Test Title", "Test Body")
         mock_cleanup.assert_called_once_with(Path("/test"))
         mock_commit.assert_called_once()
@@ -95,4 +95,4 @@ class TestRunCreatePrWorkflow:
         result = run_create_pr_workflow(Path("/test"), "claude", "cli")
 
         assert result == 1
-        mock_generate.assert_called_once_with(Path("/test"), "claude", "cli")
+        mock_generate.assert_called_once_with(Path("/test"), "claude", "cli", None)

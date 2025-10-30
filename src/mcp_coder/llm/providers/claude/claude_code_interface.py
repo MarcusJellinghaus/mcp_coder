@@ -11,6 +11,7 @@ def ask_claude_code(  # pylint: disable=too-many-positional-arguments
     timeout: int = 30,
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
+    mcp_config: str | None = None,
 ) -> str:
     """
     Ask Claude a question using the specified implementation method.
@@ -28,6 +29,7 @@ def ask_claude_code(  # pylint: disable=too-many-positional-arguments
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to the LLM subprocess
         cwd: Optional working directory for the LLM subprocess
+        mcp_config: Optional path to MCP configuration file
 
     Returns:
         Claude's response text as a string
@@ -55,12 +57,22 @@ def ask_claude_code(  # pylint: disable=too-many-positional-arguments
 
     if method == "cli":
         result = ask_claude_code_cli(
-            question, session_id=session_id, timeout=timeout, env_vars=env_vars, cwd=cwd
+            question,
+            session_id=session_id,
+            timeout=timeout,
+            env_vars=env_vars,
+            cwd=cwd,
+            mcp_config=mcp_config,
         )
         return result["text"]  # Extract text from LLMResponseDict
     elif method == "api":
         result = ask_claude_code_api(
-            question, session_id=session_id, timeout=timeout, env_vars=env_vars, cwd=cwd
+            question,
+            session_id=session_id,
+            timeout=timeout,
+            env_vars=env_vars,
+            cwd=cwd,
+            mcp_config=mcp_config,
         )
         return result["text"]  # Extract text from LLMResponseDict
     else:

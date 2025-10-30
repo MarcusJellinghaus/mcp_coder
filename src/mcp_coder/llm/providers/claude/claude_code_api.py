@@ -407,6 +407,7 @@ def ask_claude_code_api(
     timeout: float = 30.0,
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
+    mcp_config: str | None = None,
 ) -> LLMResponseDict:
     """
     Ask Claude a question via Python SDK with native session support.
@@ -420,6 +421,7 @@ def ask_claude_code_api(
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to Claude Code SDK
         cwd: Optional working directory for Claude Code SDK subprocess
+        mcp_config: Optional path to MCP configuration file (not used for API method, for interface consistency)
 
     Returns:
         LLMResponseDict with complete response data including session_id

@@ -53,6 +53,7 @@ class MockClaudeCLI:
         timeout: int = 30,
         cwd: Optional[str] = None,
         env_vars: Optional[Dict[str, str]] = None,
+        mcp_config: Optional[str] = None,
     ) -> LLMResponseDict:
         """Simulate CLI call."""
         self.call_count += 1
@@ -105,6 +106,7 @@ class MockClaudeAPI:
         timeout: int = 30,
         env_vars: Optional[Dict[str, str]] = None,
         cwd: Optional[str] = None,
+        mcp_config: Optional[str] = None,
     ) -> LLMResponseDict:
         """Simulate API call."""
         self.call_count += 1

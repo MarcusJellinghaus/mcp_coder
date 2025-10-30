@@ -666,7 +666,13 @@ Current task from TASK_TRACKER.md: Step 2: Implement feature X
 
 Please implement this task step by step."""
         mock_llm_call.assert_called_once_with(
-            expected_prompt, "claude", "api", timeout=1800, env_vars=ANY, cwd=ANY
+            expected_prompt,
+            "claude",
+            "api",
+            timeout=1800,
+            env_vars=ANY,
+            cwd=ANY,
+            mcp_config=None,
         )
 
         # Verify conversation saved with comprehensive data
@@ -681,7 +687,9 @@ Please implement this task step by step."""
 
         # Verify processing steps
         mock_get_status.assert_called_once_with(project_dir)
-        mock_check_mypy.assert_called_once_with(project_dir, 2, "claude", "api", ANY)
+        mock_check_mypy.assert_called_once_with(
+            project_dir, 2, "claude", "api", ANY, None
+        )
         mock_run_formatters.assert_called_once_with(project_dir)
         mock_commit.assert_called_once_with(project_dir, "claude", "api")
         mock_push.assert_called_once_with(project_dir)

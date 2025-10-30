@@ -297,7 +297,7 @@ def check_prerequisites(project_dir: Path) -> bool:
 
 
 def generate_pr_summary(
-    project_dir: Path, provider: str, method: str
+    project_dir: Path, provider: str, method: str, mcp_config: str | None = None
 ) -> Tuple[str, str]:
     """Generate PR title and body using LLM and git diff.
 
@@ -305,6 +305,7 @@ def generate_pr_summary(
         project_dir: Path to project directory
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
+        mcp_config: Optional path to MCP configuration file
 
     Returns:
         Tuple of (title, body) strings
@@ -338,7 +339,11 @@ def generate_pr_summary(
     logger.info(f"Calling LLM for PR summary using {provider}/{method}...")
     try:
         llm_response = ask_llm(
-            full_prompt, provider=provider, method=method, timeout=300
+            full_prompt,
+            provider=provider,
+            method=method,
+            timeout=300,
+            mcp_config=mcp_config,
         )
 
         if not llm_response or not llm_response.strip():
@@ -457,13 +462,16 @@ def log_step(message: str) -> None:
     logger.info(message)
 
 
-def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int:
+def run_create_pr_workflow(
+    project_dir: Path, provider: str, method: str, mcp_config: str | None = None
+) -> int:
     """Main workflow orchestration function - creates PR and cleans up repository.
 
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
+        mcp_config: Optional path to MCP configuration file
 
     Returns:
         int: Exit code (0 for success, 1 for failure)
@@ -480,7 +488,7 @@ def run_create_pr_workflow(project_dir: Path, provider: str, method: str) -> int
     # Step 2: Generate PR summary
     log_step("Step 2/5: Generating PR summary...")
     try:
-        title, body = generate_pr_summary(project_dir, provider, method)
+        title, body = generate_pr_summary(project_dir, provider, method, mcp_config)
     except (ValueError, FileNotFoundError) as e:
         logger.error(f"Failed to generate PR summary: {e}")
         return 1

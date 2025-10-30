@@ -43,6 +43,29 @@ MCP Coder uses TOML configuration files for storing credentials and settings. Co
 - Jenkins integration (coordinator commands)
 - Repository definitions for integration testing
 
+### MCP Configuration Files
+
+MCP Coder supports platform-specific MCP (Model Context Protocol) configuration files to define which MCP servers Claude Code can use:
+
+- `.mcp.linux.json` - Linux environments
+- `.mcp.windows.json` - Windows environments
+- `.mcp.macos.json` - macOS environments
+
+These files should be placed in your project root and added to `.gitignore`.
+
+**Using MCP config with commands:**
+
+```bash
+# All commands support --mcp-config flag
+mcp-coder prompt "Analyze code" --mcp-config .mcp.linux.json
+mcp-coder implement --mcp-config .mcp.linux.json
+mcp-coder create-plan 123 --mcp-config .mcp.linux.json
+mcp-coder create-pr --mcp-config .mcp.linux.json
+mcp-coder commit auto --mcp-config .mcp.linux.json
+```
+
+**Note:** Using `--mcp-config` automatically enables strict mode, ensuring Claude only uses servers from your specified configuration.
+
 ### Configuration File Location
 
 **Windows:**

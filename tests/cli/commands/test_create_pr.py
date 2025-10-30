@@ -67,7 +67,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_parse_llm.assert_called_once_with("claude_code_cli")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli")
+        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli", None)
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
@@ -94,7 +94,7 @@ class TestExecuteCreatePr:
 
         assert result == 0
         mock_parse_llm.assert_called_once_with("claude_code_api")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude", "api")
+        mock_run_workflow.assert_called_once_with(project_dir, "claude", "api", None)
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
@@ -122,7 +122,7 @@ class TestExecuteCreatePr:
         assert result == 1
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_parse_llm.assert_called_once_with("claude_code_cli")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli")
+        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli", None)
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     def test_execute_create_pr_invalid_project_dir(
@@ -169,7 +169,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_resolve_dir.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude_code_cli")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli")
+        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli", None)
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
@@ -195,7 +195,7 @@ class TestExecuteCreatePr:
         result = execute_create_pr(args_cli)
         assert result == 0
         mock_parse_llm.assert_called_with("claude_code_cli")
-        mock_run_workflow.assert_called_with(project_dir, "claude", "cli")
+        mock_run_workflow.assert_called_with(project_dir, "claude", "cli", None)
 
         # Reset mocks
         mock_resolve_dir.reset_mock()
@@ -210,7 +210,7 @@ class TestExecuteCreatePr:
         result = execute_create_pr(args_api)
         assert result == 0
         mock_parse_llm.assert_called_with("claude_code_api")
-        mock_run_workflow.assert_called_with(project_dir, "claude", "api")
+        mock_run_workflow.assert_called_with(project_dir, "claude", "api", None)
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")

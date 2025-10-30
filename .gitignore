@@ -27,6 +27,11 @@ venv/
 .ruff_cache/
 # /.mcp.json
 # .claude/settings.local.json
+
+# Platform-specific MCP configurations
+.mcp.linux.json
+.mcp.windows.json
+.mcp.macos.json
 checks_output.txt
 bash.exe.stackdump
 /.mcp-coder/responses
