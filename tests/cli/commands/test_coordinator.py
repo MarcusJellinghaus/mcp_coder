@@ -171,11 +171,14 @@ class TestValidateRepoConfig:
 class TestGetJenkinsCredentials:
     """Tests for get_jenkins_credentials function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
     def test_get_jenkins_credentials_from_env(
-        self, mock_get_config: MagicMock, monkeypatch: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test loading credentials from environment variables."""
+        """Test loading credentials from environment variables.
+        
+        Note: get_config_value now handles environment variables internally,
+        so we don't mock it - we want the real function to run and check env vars.
+        """
         # Setup
         monkeypatch.setenv("JENKINS_URL", "https://jenkins.example.com")
         monkeypatch.setenv("JENKINS_USER", "testuser")
@@ -188,9 +191,6 @@ class TestGetJenkinsCredentials:
         assert server_url == "https://jenkins.example.com"
         assert username == "testuser"
         assert api_token == "testtoken123"
-
-        # Verify config was not called (env vars take priority)
-        mock_get_config.assert_not_called()
 
     @patch("mcp_coder.cli.commands.coordinator.get_config_value")
     def test_get_jenkins_credentials_from_config(

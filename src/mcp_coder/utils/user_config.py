@@ -4,6 +4,7 @@ This module provides functions to read user configuration from TOML files
 located in user-specific configuration directories.
 """
 
+import os
 import platform
 import tomllib
 from pathlib import Path
@@ -29,13 +30,24 @@ def get_config_file_path() -> Path:
 
 
 @log_function_call
-def get_config_value(section: str, key: str) -> Optional[str]:
-    """Read a configuration value from the user config file.
+def get_config_value(
+    section: str, key: str, env_var: Optional[str] = None
+) -> Optional[str]:
+    """Read a configuration value from environment or config file.
+
+    Priority: Environment variable > Config file > None
 
     Args:
         section: The TOML section name (supports dot notation for nested sections,
                 e.g., 'coordinator.repos.mcp_coder')
         key: The configuration key within the section
+        env_var: Optional environment variable name to check first.
+                If not provided, attempts to construct from section and key.
+                For known mappings, uses standardized names:
+                - ('github', 'token') -> GITHUB_TOKEN
+                - ('jenkins', 'server_url') -> JENKINS_URL
+                - ('jenkins', 'username') -> JENKINS_USER
+                - ('jenkins', 'api_token') -> JENKINS_TOKEN
 
     Returns:
         The configuration value as a string, or None if not found
@@ -45,12 +57,26 @@ def get_config_value(section: str, key: str) -> Optional[str]:
         No exceptions are raised for missing resources.
 
     Examples:
-        # Top-level section
-        get_config_value('jenkins', 'server_url')
+        # Top-level section with automatic env var detection
+        get_config_value('jenkins', 'server_url')  # Checks JENKINS_URL first
+
+        # Explicit environment variable name
+        get_config_value('github', 'token', env_var='GITHUB_TOKEN')
 
         # Nested section using dot notation
         get_config_value('coordinator.repos.mcp_coder', 'repo_url')
     """
+    # Step 1: Check environment variable first (highest priority)
+    if env_var is None:
+        # Attempt to construct standard environment variable name
+        env_var = _get_standard_env_var(section, key)
+
+    if env_var:
+        env_value = os.getenv(env_var)
+        if env_value:
+            return env_value
+
+    # Step 2: Fall back to config file
     config_path = get_config_file_path()
 
     # Return None if config file doesn't exist
@@ -84,6 +110,36 @@ def get_config_value(section: str, key: str) -> Optional[str]:
         return None
 
 
+def _get_standard_env_var(section: str, key: str) -> Optional[str]:
+    """Get standard environment variable name for known config keys.
+
+    Maps common config keys to their standardized environment variable names.
+    This allows automatic environment variable detection for known keys.
+
+    Args:
+        section: TOML section name
+        key: Configuration key
+
+    Returns:
+        Standard environment variable name, or None if no mapping exists
+
+    Examples:
+        _get_standard_env_var('github', 'token') -> 'GITHUB_TOKEN'
+        _get_standard_env_var('jenkins', 'server_url') -> 'JENKINS_URL'
+        _get_standard_env_var('unknown', 'key') -> None
+    """
+    # Known environment variable mappings
+    mappings = {
+        ("github", "token"): "GITHUB_TOKEN",
+        ("github", "test_repo_url"): "GITHUB_TEST_REPO_URL",
+        ("jenkins", "server_url"): "JENKINS_URL",
+        ("jenkins", "username"): "JENKINS_USER",
+        ("jenkins", "api_token"): "JENKINS_TOKEN",
+    }
+
+    return mappings.get((section, key))
+
+
 @log_function_call
 def create_default_config() -> bool:
     r"""Create default configuration file with template content.
@@ -109,6 +165,11 @@ def create_default_config() -> bool:
     # Define template content
     template = """# MCP Coder Configuration
 # Update with your actual credentials and repository information
+
+[github]
+# GitHub authentication
+# Environment variable (higher priority): GITHUB_TOKEN
+token = "ghp_your_github_personal_access_token_here"
 
 [jenkins]
 # Jenkins server configuration

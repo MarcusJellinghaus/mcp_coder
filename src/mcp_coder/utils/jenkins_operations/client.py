@@ -26,7 +26,6 @@ Example:
     Job #42: SUCCESS (1234ms)
 """
 
-import os
 from typing import Any, Optional, cast
 
 import structlog
@@ -76,20 +75,10 @@ def _get_jenkins_config() -> dict[str, Optional[str]]:
         test_job is NOT included here - it's only for integration tests
         and is handled separately in the test fixture.
     """
-    # Check environment variables first (priority)
-    server_url = os.getenv("JENKINS_URL")
-    username = os.getenv("JENKINS_USER")
-    api_token = os.getenv("JENKINS_TOKEN")
-
-    # Fall back to config file for missing values
-    if server_url is None:
-        server_url = get_config_value("jenkins", "server_url")
-
-    if username is None:
-        username = get_config_value("jenkins", "username")
-
-    if api_token is None:
-        api_token = get_config_value("jenkins", "api_token")
+    # get_config_value automatically checks environment variables first
+    server_url = get_config_value("jenkins", "server_url")
+    username = get_config_value("jenkins", "username")
+    api_token = get_config_value("jenkins", "api_token")
 
     return {
         "server_url": server_url,
