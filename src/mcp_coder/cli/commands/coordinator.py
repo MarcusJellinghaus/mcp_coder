@@ -10,7 +10,6 @@ by filtering eligible issues and triggering appropriate Jenkins workflows.
 
 import argparse
 import logging
-import os
 import sys
 from typing import Optional
 from urllib.parse import quote
@@ -370,10 +369,10 @@ def get_jenkins_credentials() -> tuple[str, str, str]:
     Raises:
         ValueError: If any required credential is missing
     """
-    # Priority: env vars > config file
-    server_url = os.getenv("JENKINS_URL") or get_config_value("jenkins", "server_url")
-    username = os.getenv("JENKINS_USER") or get_config_value("jenkins", "username")
-    api_token = os.getenv("JENKINS_TOKEN") or get_config_value("jenkins", "api_token")
+    # get_config_value automatically checks environment variables first
+    server_url = get_config_value("jenkins", "server_url")
+    username = get_config_value("jenkins", "username")
+    api_token = get_config_value("jenkins", "api_token")
 
     # Check for missing credentials
     missing = []
