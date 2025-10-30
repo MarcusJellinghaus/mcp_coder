@@ -66,7 +66,7 @@ class TestGetJenkinsConfig:
         self, mock_config_path: MagicMock, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
         """Test environment variables take priority over config file.
-        
+
         Note: get_config_value now handles environment variables internally,
         so we must let the real function run. We mock the config file instead.
         """

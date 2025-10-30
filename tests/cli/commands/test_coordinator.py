@@ -175,7 +175,7 @@ class TestGetJenkinsCredentials:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test loading credentials from environment variables.
-        
+
         Note: get_config_value now handles environment variables internally,
         so we don't mock it - we want the real function to run and check env vars.
         """
