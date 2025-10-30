@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Step 1 commit preparation: Prepare git commit message
 
 ### [Step 2: Implement Command Building with MCP Config Parameter](steps/step_2.md)
-- [ ] Step 2 implementation: Add mcp_config parameter to build_cli_command and ask_claude_code_cli
-- [ ] Step 2 quality checks: Run pylint, pytest, mypy and fix all issues
-- [ ] Step 2 commit preparation: Prepare git commit message
+- [x] Step 2 implementation: Add mcp_config parameter to build_cli_command and ask_claude_code_cli
+- [x] Step 2 quality checks: Run pylint, pytest, mypy and fix all issues
+- [x] Step 2 commit preparation: Prepare git commit message
 
 ### [Step 3: Write Integration Tests for CLI Argument Parsing](steps/step_3.md)
 - [ ] Step 3 implementation: Create integration tests for --mcp-config CLI argument

@@ -75,17 +75,21 @@ def parse_cli_json_string(json_str: str) -> ParsedCliResponse:
     )
 
 
-def build_cli_command(session_id: str | None, claude_cmd: str) -> list[str]:
+def build_cli_command(
+    session_id: str | None, claude_cmd: str, mcp_config: str | None = None
+) -> list[str]:
     """Build CLI command arguments for stdin input (pure function).
 
     Uses stdin for prompt input to avoid Windows command-line length limits (~8191 chars).
     The prompt is passed via stdin using the -p "" pattern.
 
     If session_id is provided, uses --resume flag to continue Claude's native session.
+    If mcp_config is provided, uses --mcp-config and --strict-mcp-config flags.
 
     Args:
         session_id: Optional Claude session ID to resume previous conversation
         claude_cmd: Path to claude executable
+        mcp_config: Optional path to MCP config file
 
     Returns:
         Command list ready for subprocess execution with stdin
@@ -96,6 +100,9 @@ def build_cli_command(session_id: str | None, claude_cmd: str) -> list[str]:
 
         >>> cmd = build_cli_command("abc123", "claude")
         >>> assert "--resume" in cmd and "abc123" in cmd
+
+        >>> cmd = build_cli_command(None, "claude", ".mcp.json")
+        >>> assert "--mcp-config" in cmd and ".mcp.json" in cmd
     """
     # Input validation
     if not claude_cmd or not claude_cmd.strip():
@@ -109,6 +116,10 @@ def build_cli_command(session_id: str | None, claude_cmd: str) -> list[str]:
     # Resume Claude's native session if session_id provided
     if session_id:
         command.extend(["--resume", session_id])
+
+    # Add MCP config flags if mcp_config provided
+    if mcp_config:
+        command.extend(["--mcp-config", mcp_config, "--strict-mcp-config"])
 
     return command
 
@@ -168,6 +179,7 @@ def ask_claude_code_cli(
     timeout: int = 30,
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
+    mcp_config: str | None = None,
 ) -> LLMResponseDict:
     """Ask Claude via CLI with native session support.
 
@@ -180,6 +192,7 @@ def ask_claude_code_cli(
         timeout: Timeout in seconds (default: 30)
         env_vars: Optional environment variables for the subprocess
         cwd: Optional working directory for the subprocess
+        mcp_config: Optional path to MCP config file
 
     Returns:
         LLMResponseDict with complete response data including session_id
@@ -206,8 +219,8 @@ def ask_claude_code_cli(
     # Find executable
     claude_cmd = _find_claude_executable()
 
-    # Build command with optional --resume (pure function)
-    command = build_cli_command(session_id, claude_cmd)
+    # Build command with optional --resume and --mcp-config (pure function)
+    command = build_cli_command(session_id, claude_cmd, mcp_config)
 
     # Execute command with stdin input (I/O)
     # This avoids Windows command-line length limits by passing prompt via stdin
