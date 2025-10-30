@@ -13,6 +13,7 @@ import logging
 import os
 import sys
 from typing import Optional
+from urllib.parse import quote
 
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
@@ -191,16 +192,17 @@ def dispatch_workflow(
     # Build Jenkins links: pipeline URL and build URL (if available)
     jenkins_base_url = jenkins_client._client.server.rstrip("/")
     # Convert job path to URL format: "Tests/mcp-coder-test" -> "Tests/job/mcp-coder-test"
+    # URL-encode each part to handle spaces and special characters
     job_path_parts = repo_config['executor_test_path'].split("/")
-    pipeline_url = f"{jenkins_base_url}/job/" + "/job/".join(job_path_parts)
+    encoded_parts = [quote(part, safe='') for part in job_path_parts]
+    pipeline_url = f"{jenkins_base_url}/job/" + "/job/".join(encoded_parts)
     
     if job_status.url:
         # Build has started - show build URL
         jenkins_link = f"Build: {job_status.url}"
     else:
-        # Build still queued - show pipeline URL and queue item
-        queue_url = f"{jenkins_base_url}/queue/item/{queue_id}/"
-        jenkins_link = f"Pipeline: {pipeline_url} | Queue: {queue_url}"
+        # Build still queued - show pipeline URL only
+        jenkins_link = f"Pipeline: {pipeline_url}"
 
     # Step 7: Update issue labels (remove old, add new)
     issue_manager.remove_labels(issue["number"], current_label)
