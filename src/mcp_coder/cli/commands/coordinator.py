@@ -188,15 +188,15 @@ def dispatch_workflow(
 
     # Step 6: Get job status to retrieve build URL
     job_status = jenkins_client.get_job_status(queue_id)
-    
+
     # Build Jenkins links: pipeline URL and build URL (if available)
     jenkins_base_url = jenkins_client._client.server.rstrip("/")
     # Convert job path to URL format: "Tests/mcp-coder-test" -> "Tests/job/mcp-coder-test"
     # URL-encode each part to handle spaces and special characters
-    job_path_parts = repo_config['executor_test_path'].split("/")
-    encoded_parts = [quote(part, safe='') for part in job_path_parts]
+    job_path_parts = repo_config["executor_test_path"].split("/")
+    encoded_parts = [quote(part, safe="") for part in job_path_parts]
     pipeline_url = f"{jenkins_base_url}/job/" + "/job/".join(encoded_parts)
-    
+
     if job_status.url:
         # Build has started - show build URL
         jenkins_link = f"Build: {job_status.url}"

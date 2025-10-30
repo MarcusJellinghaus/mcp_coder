@@ -206,7 +206,11 @@ class JenkinsClient:
                 # Extract full job path from the URL in the executable dict
                 # The URL format is: http://server/job/Folder/job/JobName/BUILD_NUMBER/
                 # We need to extract "Folder/JobName" from this URL
-                if url and isinstance(url, str) and isinstance(self._client.server, str):
+                if (
+                    url
+                    and isinstance(url, str)
+                    and isinstance(self._client.server, str)
+                ):
                     # Parse the job path from URL by removing base URL and build number
                     # Example: "http://server/job/Folder/job/JobName/123/" -> "Folder/JobName"
                     base_url = self._client.server.rstrip("/")

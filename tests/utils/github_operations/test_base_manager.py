@@ -314,13 +314,20 @@ class TestBaseGitHubManagerWithProjectDir:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
+        mock_repo = Mock(spec=git.Repo)
+
         with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git.Repo"
+            ) as mock_repo_class,
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value=None,  # No token configured
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
+            mock_repo_class.return_value = mock_repo
+
             with pytest.raises(ValueError) as exc_info:
                 BaseGitHubManager(project_dir=mock_path)
 
