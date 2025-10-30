@@ -25,8 +25,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### [Step 1: Write Unit Tests for Command Building Logic](steps/step_1.md)
 - [x] Step 1 implementation: Create unit tests for mcp_config parameter
-- [ ] Step 1 quality checks: Run pylint, pytest, mypy and fix all issues
-- [ ] Step 1 commit preparation: Prepare git commit message
+- [x] Step 1 quality checks: Run pylint, pytest, mypy and fix all issues
+- [x] Step 1 commit preparation: Prepare git commit message
 
 ### [Step 2: Implement Command Building with MCP Config Parameter](steps/step_2.md)
 - [ ] Step 2 implementation: Add mcp_config parameter to build_cli_command and ask_claude_code_cli
