@@ -41,7 +41,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### [Step 4: Implement CLI Argument and Thread Through Commands](steps/step_4.md)
 - [x] Step 4 implementation: Add --mcp-config argument to CLI parsers and thread through commands
 - [x] Step 4 quality checks: Run pylint, pytest, mypy and fix all issues
-- [ ] Step 4 commit preparation: Prepare git commit message
+- [x] Step 4 commit preparation: Prepare git commit message
 
 ### [Step 5: Update Coordinator Templates](steps/step_5.md)
 - [x] Step 5 implementation: Update coordinator templates with hardcoded --mcp-config path
