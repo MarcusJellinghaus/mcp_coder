@@ -34,9 +34,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Step 2 commit preparation: Prepare git commit message
 
 ### [Step 3: Write Integration Tests for CLI Argument Parsing](steps/step_3.md)
-- [ ] Step 3 implementation: Create integration tests for --mcp-config CLI argument
-- [ ] Step 3 quality checks: Run pylint, pytest, mypy and fix all issues
-- [ ] Step 3 commit preparation: Prepare git commit message
+- [x] Step 3 implementation: Create integration tests for --mcp-config CLI argument
+- [x] Step 3 quality checks: Run pylint, pytest, mypy and fix all issues
+- [x] Step 3 commit preparation: Prepare git commit message
 
 ### [Step 4: Implement CLI Argument and Thread Through Commands](steps/step_4.md)
 - [ ] Step 4 implementation: Add --mcp-config argument to CLI parsers and thread through commands
