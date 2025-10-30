@@ -1,6 +1,7 @@
 """Tests for Jenkins client module."""
 
 import os
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -63,7 +64,10 @@ class TestGetJenkinsConfig:
 
     @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_config_env_priority(
-        self, mock_config_path: MagicMock, monkeypatch: pytest.MonkeyPatch, tmp_path
+        self,
+        mock_config_path: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
     ) -> None:
         """Test environment variables take priority over config file.
 
