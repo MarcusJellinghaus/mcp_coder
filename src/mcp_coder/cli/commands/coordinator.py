@@ -96,7 +96,7 @@ git pull
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra dev
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config /workspace/repo/.mcp.linux.json
 """
 
 IMPLEMENT_COMMAND_TEMPLATE = """git checkout {branch_name}
@@ -104,7 +104,7 @@ git pull
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra dev
-mcp-coder --log-level {log_level} implement --project-dir /workspace/repo
+mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config /workspace/repo/.mcp.linux.json
 """
 
 CREATE_PR_COMMAND_TEMPLATE = """git checkout {branch_name}
@@ -112,7 +112,7 @@ git pull
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra dev
-mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo
+mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config /workspace/repo/.mcp.linux.json
 """
 
 

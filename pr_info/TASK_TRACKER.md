@@ -44,9 +44,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [ ] Step 4 commit preparation: Prepare git commit message
 
 ### [Step 5: Update Coordinator Templates](steps/step_5.md)
-- [ ] Step 5 implementation: Update coordinator templates with hardcoded --mcp-config path
-- [ ] Step 5 quality checks: Run pylint, pytest, mypy and fix all issues
-- [ ] Step 5 commit preparation: Prepare git commit message
+- [x] Step 5 implementation: Update coordinator templates with hardcoded --mcp-config path
+- [x] Step 5 quality checks: Run pylint, pytest, mypy and fix all issues
+- [x] Step 5 commit preparation: Prepare git commit message
 
 ### [Step 6: Update .gitignore and Final Verification](steps/step_6.md)
 - [ ] Step 6 implementation: Add platform-specific MCP config patterns to .gitignore
