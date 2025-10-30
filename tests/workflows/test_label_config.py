@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from workflows.label_config import load_labels_config
+from mcp_coder.utils.github_operations.label_config import load_labels_config
 
 
 def test_load_labels_config_valid() -> None:

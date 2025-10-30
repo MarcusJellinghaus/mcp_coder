@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.utils.github_operations.label_config import load_labels_config
 from tests.utils.conftest import git_repo
 from workflows.define_labels import (
     apply_labels,
@@ -21,7 +22,6 @@ from workflows.define_labels import (
     parse_arguments,
     resolve_project_dir,
 )
-from workflows.label_config import load_labels_config
 
 # Note: labels_config_path fixture is defined in conftest.py
 

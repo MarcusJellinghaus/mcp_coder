@@ -72,6 +72,10 @@ class PullRequestManager(BaseGitHubManager):
 
         # Store repository URL for compatibility with existing code
         # At this point, project_dir is guaranteed to be valid (checked by super().__init__)
+        # Assert that project_dir is not None for type checker
+        assert (
+            self.project_dir is not None
+        ), "project_dir must be set after initialization"
         self.repository_url = get_github_repository_url(self.project_dir)
         if self.repository_url is None:
             raise ValueError(
@@ -399,6 +403,8 @@ class PullRequestManager(BaseGitHubManager):
             Default branch name (typically "main" or "master") or empty string on failure
         """
         try:
+            # project_dir is guaranteed to be non-None for PullRequestManager
+            assert self.project_dir is not None, "project_dir must be set"
             default_branch = get_default_branch_name(self.project_dir)
             return default_branch or ""
         except Exception as e:

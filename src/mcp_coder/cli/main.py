@@ -6,7 +6,7 @@ import sys
 
 from ..utils.log_utils import setup_logging
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
-from .commands.coordinator import execute_coordinator_test
+from .commands.coordinator import execute_coordinator_run, execute_coordinator_test
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.help import execute_help, get_help_text
@@ -245,6 +245,23 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="Git branch to test (e.g., feature-x, main)",
     )
 
+    # coordinator run command
+    run_parser = coordinator_subparsers.add_parser(
+        "run", help="Monitor and dispatch workflows for GitHub issues"
+    )
+
+    # Mutually exclusive group: --all OR --repo (one required)
+    run_group = run_parser.add_mutually_exclusive_group(required=True)
+    run_group.add_argument(
+        "--all", action="store_true", help="Process all repositories from config"
+    )
+    run_group.add_argument(
+        "--repo",
+        type=str,
+        metavar="NAME",
+        help="Process single repository (e.g., mcp_coder)",
+    )
+
     return parser
 
 
@@ -268,9 +285,8 @@ def main() -> int:
     setup_logging(args.log_level)
 
     try:
-        logger.info("Starting mcp-coder CLI")
         logger.info(
-            f"Parsed arguments: command={args.command}, log_level={args.log_level}"
+            f"Starting mcp-coder CLI: command={args.command}, log_level={args.log_level}"
         )
 
         # Handle case when no command is provided
@@ -302,14 +318,24 @@ def main() -> int:
         elif args.command == "create-pr":
             return execute_create_pr(args)
         elif args.command == "coordinator":
-            if (
-                hasattr(args, "coordinator_subcommand")
-                and args.coordinator_subcommand == "test"
-            ):
-                return execute_coordinator_test(args)
+            if hasattr(args, "coordinator_subcommand") and args.coordinator_subcommand:
+                if args.coordinator_subcommand == "test":
+                    return execute_coordinator_test(args)
+                elif args.coordinator_subcommand == "run":
+                    return execute_coordinator_run(args)
+                else:
+                    logger.error(
+                        f"Unknown coordinator subcommand: {args.coordinator_subcommand}"
+                    )
+                    print(
+                        f"Error: Unknown coordinator subcommand '{args.coordinator_subcommand}'"
+                    )
+                    return 1
             else:
                 logger.error("Coordinator subcommand required")
-                print("Error: Please specify a coordinator subcommand (e.g., 'test')")
+                print(
+                    "Error: Please specify a coordinator subcommand (e.g., 'test', 'run')"
+                )
                 return 1
 
         # Other commands will be implemented in later steps

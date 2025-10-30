@@ -371,5 +371,108 @@ class TestCoordinatorCommand:
         assert result == 1
         mock_logger.error.assert_called_with("Coordinator subcommand required")
         mock_print.assert_called_with(
-            "Error: Please specify a coordinator subcommand (e.g., 'test')"
+            "Error: Please specify a coordinator subcommand (e.g., 'test', 'run')"
         )
+
+
+class TestCoordinatorRunCommand:
+    """Tests for coordinator run CLI integration."""
+
+    @patch("mcp_coder.cli.main.execute_coordinator_run")
+    def test_coordinator_run_with_repo_argument(self, mock_execute: Mock) -> None:
+        """Test CLI routing for --repo mode."""
+        # Setup
+        mock_execute.return_value = 0
+
+        # Execute
+        with patch(
+            "sys.argv",
+            ["mcp-coder", "coordinator", "run", "--repo", "mcp_coder"],
+        ):
+            result = main()
+
+        # Verify
+        assert result == 0
+        mock_execute.assert_called_once()
+
+        # Check args passed to handler
+        call_args = mock_execute.call_args[0][0]
+        assert call_args.command == "coordinator"
+        assert call_args.coordinator_subcommand == "run"
+        assert call_args.repo == "mcp_coder"
+        assert call_args.all is False
+        assert call_args.log_level == "INFO"  # default
+
+    @patch("mcp_coder.cli.main.execute_coordinator_run")
+    def test_coordinator_run_with_all_argument(self, mock_execute: Mock) -> None:
+        """Test CLI routing for --all mode."""
+        # Setup
+        mock_execute.return_value = 0
+
+        # Execute
+        with patch(
+            "sys.argv",
+            ["mcp-coder", "coordinator", "run", "--all"],
+        ):
+            result = main()
+
+        # Verify
+        assert result == 0
+        mock_execute.assert_called_once()
+
+        # Check args passed to handler
+        call_args = mock_execute.call_args[0][0]
+        assert call_args.command == "coordinator"
+        assert call_args.coordinator_subcommand == "run"
+        assert call_args.all is True
+        assert call_args.repo is None
+        assert call_args.log_level == "INFO"  # default
+
+    @patch("mcp_coder.cli.main.execute_coordinator_run")
+    def test_coordinator_run_with_log_level(self, mock_execute: Mock) -> None:
+        """Test log level pass-through."""
+        # Setup
+        mock_execute.return_value = 0
+
+        # Execute
+        with patch(
+            "sys.argv",
+            [
+                "mcp-coder",
+                "--log-level",
+                "DEBUG",
+                "coordinator",
+                "run",
+                "--repo",
+                "mcp_coder",
+            ],
+        ):
+            result = main()
+
+        # Verify
+        assert result == 0
+        mock_execute.assert_called_once()
+
+        # Check args passed to handler
+        call_args = mock_execute.call_args[0][0]
+        assert call_args.command == "coordinator"
+        assert call_args.coordinator_subcommand == "run"
+        assert call_args.repo == "mcp_coder"
+        assert call_args.all is False
+        assert call_args.log_level == "DEBUG"
+
+    def test_coordinator_run_requires_all_or_repo(self) -> None:
+        """Test error when neither --all nor --repo provided."""
+        parser = create_parser()
+
+        # Should raise SystemExit when neither --all nor --repo is provided
+        with pytest.raises(SystemExit):
+            parser.parse_args(["coordinator", "run"])
+
+    def test_coordinator_run_all_and_repo_mutually_exclusive(self) -> None:
+        """Test error when both --all and --repo provided."""
+        parser = create_parser()
+
+        # Should raise SystemExit when both --all and --repo are provided
+        with pytest.raises(SystemExit):
+            parser.parse_args(["coordinator", "run", "--all", "--repo", "mcp_coder"])

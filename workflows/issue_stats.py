@@ -14,8 +14,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from mcp_coder.utils import get_github_repository_url
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.utils.github_operations.label_config import (
+    get_labels_config_path,
+    load_labels_config,
+)
 from mcp_coder.utils.log_utils import setup_logging
-from workflows.label_config import load_labels_config
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -395,9 +398,10 @@ def main() -> None:
         sys.exit(1)
     
     # Load configuration
+    # Tries project's local config first, falls back to package bundled config
     logger.info("Loading label configuration...")
-    config_path = project_dir / "workflows" / "config" / "labels.json"
     try:
+        config_path = get_labels_config_path(project_dir)
         labels_config = load_labels_config(config_path)
         logger.debug(f"Loaded {len(labels_config['workflow_labels'])} workflow labels")
     except FileNotFoundError as e:

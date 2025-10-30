@@ -11,27 +11,24 @@ import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional
 
 from github import GithubException
 
 from mcp_coder.utils import get_github_repository_url
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.utils.github_operations.label_config import (
+    LabelLookups,
+    build_label_lookups,
+    get_labels_config_path,
+    load_labels_config,
+)
 from mcp_coder.utils.github_operations.labels_manager import LabelsManager
 from mcp_coder.utils.log_utils import setup_logging
 from mcp_coder.workflows.utils import resolve_project_dir
-from workflows.label_config import load_labels_config
 
 # Setup logger
 logger = logging.getLogger(__name__)
-
-
-class LabelLookups(TypedDict):
-    """TypedDict for label lookup data structures."""
-    id_to_name: dict[str, str]        # internal_id -> label_name
-    all_names: set[str]               # All workflow label names
-    name_to_category: dict[str, str]  # label_name -> category
-    name_to_id: dict[str, str]        # label_name -> internal_id
 
 
 # Timeout thresholds in minutes for bot_busy labels
@@ -40,42 +37,6 @@ STALE_TIMEOUTS = {
     "planning": 15,
     "pr_creating": 15
 }
-
-
-def build_label_lookups(labels_config: Dict[str, Any]) -> LabelLookups:
-    """Build lookup dictionaries from label configuration.
-    
-    Args:
-        labels_config: Loaded label configuration from JSON
-        
-    Returns:
-        LabelLookups TypedDict with all lookup structures
-    """
-    # Initialize empty data structures
-    id_to_name: dict[str, str] = {}
-    all_names: set[str] = set()
-    name_to_category: dict[str, str] = {}
-    name_to_id: dict[str, str] = {}
-    
-    # Loop through workflow labels and populate all lookups
-    for label in labels_config["workflow_labels"]:
-        internal_id = label["internal_id"]
-        label_name = label["name"]
-        category = label["category"]
-        
-        # Populate all lookup structures
-        id_to_name[internal_id] = label_name
-        all_names.add(label_name)
-        name_to_category[label_name] = category
-        name_to_id[label_name] = internal_id
-    
-    # Return LabelLookups TypedDict
-    return LabelLookups(
-        id_to_name=id_to_name,
-        all_names=all_names,
-        name_to_category=name_to_category,
-        name_to_id=name_to_id
-    )
 
 
 def calculate_elapsed_minutes(timestamp_str: str) -> int:
@@ -466,9 +427,10 @@ def main() -> None:
         logger.info("DRY RUN MODE: Changes will be previewed only")
     
     # Load configuration
+    # Tries project's local config first, falls back to package bundled config
     logger.info("Loading label configuration...")
-    config_path = project_dir / "workflows" / "config" / "labels.json"
     try:
+        config_path = get_labels_config_path(project_dir)
         labels_config = load_labels_config(config_path)
         logger.debug(f"Loaded {len(labels_config['workflow_labels'])} workflow labels")
     except FileNotFoundError as e:

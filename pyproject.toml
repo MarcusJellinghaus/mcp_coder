@@ -54,7 +54,10 @@ where = ["src"]
 "" = "src"
 
 [tool.setuptools.package-data]
-mcp_coder = ["prompts/*.md"]
+mcp_coder = [
+    "prompts/*.md",
+    "config/*.json"
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -91,6 +94,10 @@ target-version = ["py311"]
 profile = "black"
 line_length = 88
 float_to_top = true
+
+[tool.pylint.main]
+# Add project root to Python path so pylint can find workflows module
+init-hook = 'import sys; sys.path.insert(0, ".")'
 
 [tool.pylint.messages_control]
 # W1203: Disable lazy % formatting - project prefers f-strings for readability
