@@ -22,3 +22,38 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### [Step 1: Write Unit Tests for Command Building Logic](steps/step_1.md)
+- [ ] Step 1 implementation: Create unit tests for mcp_config parameter
+- [ ] Step 1 quality checks: Run pylint, pytest, mypy and fix all issues
+- [ ] Step 1 commit preparation: Prepare git commit message
+
+### [Step 2: Implement Command Building with MCP Config Parameter](steps/step_2.md)
+- [ ] Step 2 implementation: Add mcp_config parameter to build_cli_command and ask_claude_code_cli
+- [ ] Step 2 quality checks: Run pylint, pytest, mypy and fix all issues
+- [ ] Step 2 commit preparation: Prepare git commit message
+
+### [Step 3: Write Integration Tests for CLI Argument Parsing](steps/step_3.md)
+- [ ] Step 3 implementation: Create integration tests for --mcp-config CLI argument
+- [ ] Step 3 quality checks: Run pylint, pytest, mypy and fix all issues
+- [ ] Step 3 commit preparation: Prepare git commit message
+
+### [Step 4: Implement CLI Argument and Thread Through Commands](steps/step_4.md)
+- [ ] Step 4 implementation: Add --mcp-config argument to CLI parsers and thread through commands
+- [ ] Step 4 quality checks: Run pylint, pytest, mypy and fix all issues
+- [ ] Step 4 commit preparation: Prepare git commit message
+
+### [Step 5: Update Coordinator Templates](steps/step_5.md)
+- [ ] Step 5 implementation: Update coordinator templates with hardcoded --mcp-config path
+- [ ] Step 5 quality checks: Run pylint, pytest, mypy and fix all issues
+- [ ] Step 5 commit preparation: Prepare git commit message
+
+### [Step 6: Update .gitignore and Final Verification](steps/step_6.md)
+- [ ] Step 6 implementation: Add platform-specific MCP config patterns to .gitignore
+- [ ] Step 6 quality checks: Run pylint, pytest, mypy and fix all issues
+- [ ] Step 6 commit preparation: Prepare git commit message
+
+### Pull Request
+- [ ] Review all changes and ensure requirements met
+- [ ] Prepare PR summary with all commits and changes
+- [ ] Create pull request
