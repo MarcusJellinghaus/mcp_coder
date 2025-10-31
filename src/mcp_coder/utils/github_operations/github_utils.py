@@ -13,6 +13,8 @@ def parse_github_url(url: str) -> Optional[Tuple[str, str]]:
     Supports multiple GitHub URL formats:
     - HTTPS: https://github.com/owner/repo
     - HTTPS with .git: https://github.com/owner/repo.git
+    - HTTPS with credentials: https://token@github.com/owner/repo.git
+    - HTTPS with user:pass: https://user:pass@github.com/owner/repo.git
     - SSH: git@github.com:owner/repo.git
     - Short format: owner/repo
 
@@ -24,6 +26,8 @@ def parse_github_url(url: str) -> Optional[Tuple[str, str]]:
 
     Examples:
         >>> parse_github_url("https://github.com/user/repo")
+        ('user', 'repo')
+        >>> parse_github_url("https://token@github.com/user/repo.git")
         ('user', 'repo')
         >>> parse_github_url("git@github.com:user/repo.git")
         ('user', 'repo')
@@ -37,11 +41,11 @@ def parse_github_url(url: str) -> Optional[Tuple[str, str]]:
 
     # Pattern to match GitHub URLs in various formats
     # HTTPS: https://github.com/owner/repo(.git)?
+    # HTTPS with credentials: https://[user[:pass]@]github.com/owner/repo(.git)?
     # SSH: git@github.com:owner/repo(.git)?
     # Short: owner/repo
-    github_pattern = (
-        r"(?:https://github\.com/|git@github\.com:|^)([^/]+)/([^/\.]+)(?:\.git)?/?$"
-    )
+    # The (?:[^@]+@)? part matches optional credentials (anything before @)
+    github_pattern = r"(?:https://(?:[^@]+@)?github\.com/|git@github\.com:|^)([^/]+)/([^/\.]+)(?:\.git)?/?$"
     match = re.match(github_pattern, url.strip())
 
     if not match:
