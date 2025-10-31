@@ -109,6 +109,33 @@ class TestGitHubUtils:
         result = parse_github_url("user/repo")
         assert result == ("user", "repo")
 
+    def test_parse_github_url_https_with_token(self) -> None:
+        """Test parsing HTTPS URLs with token as username."""
+        result = parse_github_url("https://token@github.com/user/repo.git")
+        assert result == ("user", "repo")
+
+    def test_parse_github_url_https_with_username(self) -> None:
+        """Test parsing HTTPS URLs with username only."""
+        result = parse_github_url("https://username@github.com/user/repo")
+        assert result == ("user", "repo")
+
+    def test_parse_github_url_https_with_username_password(self) -> None:
+        """Test parsing HTTPS URLs with username and password."""
+        result = parse_github_url("https://username:password@github.com/user/repo.git")
+        assert result == ("user", "repo")
+
+    def test_parse_github_url_https_with_special_chars_in_credentials(self) -> None:
+        """Test parsing HTTPS URLs with special characters in credentials."""
+        # Test with asterisks (like the actual error case)
+        result = parse_github_url(
+            "https://****@github.com/MarcusJellinghaus/mcp_coder.git"
+        )
+        assert result == ("MarcusJellinghaus", "mcp_coder")
+
+        # Test with complex token-like string
+        result = parse_github_url("https://ghp_abc123xyz789@github.com/owner/repo.git")
+        assert result == ("owner", "repo")
+
     def test_parse_github_url_invalid(self) -> None:
         """Test parsing invalid URLs returns None."""
         assert parse_github_url("invalid-url") is None
