@@ -27,6 +27,16 @@ from .subprocess_runner import (
     execute_subprocess,
 )
 from .user_config import create_default_config, get_config_file_path, get_config_value
+from .version import (
+    InvalidVersionFormatError,
+    VersionError,
+    VersionMismatchError,
+    format_version,
+    get_package_version,
+    is_prerelease,
+    parse_version,
+    validate_tag_version,
+)
 
 # Layer 2: Operations (depend on Layer 1)
 from .git_operations import (
@@ -100,6 +110,15 @@ __all__ = [
     "create_default_config",
     "get_config_file_path",
     "get_config_value",
+    # Version management
+    "InvalidVersionFormatError",
+    "VersionError",
+    "VersionMismatchError",
+    "format_version",
+    "get_package_version",
+    "is_prerelease",
+    "parse_version",
+    "validate_tag_version",
     # Subprocess operations
     "CommandOptions",
     "CommandResult",
