@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 
+from .. import __version__
 from ..utils.log_utils import setup_logging
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.coordinator import execute_coordinator_run, execute_coordinator_test
@@ -37,7 +38,7 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s 0.1.0",
+        version=f"%(prog)s {__version__}",
     )
 
     parser.add_argument(
