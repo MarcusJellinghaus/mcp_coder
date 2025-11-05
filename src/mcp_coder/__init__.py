@@ -51,7 +51,14 @@ from .utils.subprocess_runner import (
     execute_subprocess,
 )
 
-__version__ = "0.1.0"
+# Version is automatically determined from git tags via setuptools-scm
+try:
+    from importlib.metadata import version
+
+    __version__ = version("mcp-coder")
+except Exception:
+    # Fallback for development/editable installs without proper metadata
+    __version__ = "0.0.0.dev0+unknown"
 
 __all__ = [
     # Core LLM interfaces

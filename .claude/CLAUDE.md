@@ -21,7 +21,7 @@
 
 ## 🔴 CRITICAL: Code Quality Requirements
 
-**MANDATORY**: After making ANY code changes, you MUST run ALL THREE code quality checks using the EXACT MCP tool names below:
+**MANDATORY**: After making ANY code changes (after EACH edit), you MUST run ALL THREE code quality checks using the EXACT MCP tool names below:
 
 ```
 mcp__code-checker__run_pylint_check
@@ -114,6 +114,22 @@ mcp__filesystem__edit_file
 **IMMEDIATELY ALERT** if MCP tools are not accessible - this blocks all work until resolved.
 
 ## 🔄 Git Operations
+
+**MANDATORY: Before ANY commit:**
+
+```bash
+# ALWAYS run format_all before committing
+./tools/format_all.sh
+
+# Then verify formatting worked
+git diff  # Should show formatting changes if any
+```
+
+**Format all code before committing:**
+- Run `./tools/format_all.sh` to format with black and isort
+- Review the changes to ensure they're formatting-only
+- Stage the formatted files
+- Then commit
 
 **ALLOWED git operations via Bash tool:**
 

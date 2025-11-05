@@ -17,6 +17,8 @@ venv/
 
 # Package info
 *.egg-info/
+build/
+dist/
 
 # Default log folder used by mcp servers
 /logs/
