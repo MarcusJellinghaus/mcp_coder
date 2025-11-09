@@ -303,27 +303,6 @@ PermissionError: [Errno 13] Permission denied: '/home/user/.mcp_coder/config.tom
 - ❌ Never commit config file to git
 - ❌ Never share API tokens
 
-### File Permissions
-
-Ensure config file is readable only by you:
-
-**Linux/macOS:**
-```bash
-chmod 600 ~/.config/mcp_coder/config.toml
-```
-
-**Windows:**
-File is automatically created in user profile (protected by OS).
-
-### Git Ignore
-
-Add to `.gitignore`:
-```gitignore
-# MCP Coder config (contains secrets)
-.mcp_coder/
-config.toml
-```
-
 ## Adding New Repositories
 
 1. Identify repository details:
