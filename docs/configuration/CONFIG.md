@@ -50,18 +50,18 @@ api_token = "your-jenkins-api-token"
 
 [coordinator.repos.repo_a]
 repo_url = "https://github.com/your-org/repo_a.git"
-test_job_path = "jenkins_folder_a/test-job-a"
+executor_test_path = "jenkins_folder_a/test-job-a"
 github_credentials_id = "github-general-pat"
 
 [coordinator.repos.repo_b]
 repo_url = "https://github.com/your-org/repo_b.git"
-test_job_path = "jenkins_folder_b/test-job-b"
+executor_test_path = "jenkins_folder_b/test-job-b"
 github_credentials_id = "github-general-pat"
 
 # Add more repositories as needed:
 # [coordinator.repos.your_repo_name]
 # repo_url = "https://github.com/your-org/your_repo.git"
-# test_job_path = "Folder/job-name"
+# executor_test_path = "Folder/job-name"
 # github_credentials_id = "github-credentials-id"
 ```
 
@@ -102,14 +102,14 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `repo_url` | string | Git repository HTTPS URL | Yes |
-| `test_job_path` | string | Jenkins job path (folder/job-name) | Yes |
-| `github_credentials_id` | string | Jenkins GitHub credentials ID | Yes |
+| `executor_test_path` | string | Jenkins job path (folder/job-name) | Yes |
+| `github_credentials_id` | string | Jenkins GitHub credentials ID (see setup below) | Yes |
 
 **Example:**
 ```toml
 [coordinator.repos.my_project]
 repo_url = "https://github.com/myorg/my_project.git"
-test_job_path = "MyProject/integration-tests"
+executor_test_path = "MyProject/integration-tests"
 github_credentials_id = "github-pat-token"
 ```
 
@@ -117,6 +117,46 @@ github_credentials_id = "github-pat-token"
 - Use lowercase with underscores (e.g., `mcp_coder`, `my_project`)
 - Must match the repo_name used in CLI commands
 - Can be different from actual GitHub repo name
+
+### GitHub Credentials Setup
+
+For Jenkins to access GitHub repositories, you need to set up GitHub credentials in Jenkins:
+
+#### 1. Create GitHub Personal Access Token
+
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token (classic)"
+3. Select appropriate scopes (minimum: `repo` for private repos, `public_repo` for public repos)
+4. Copy the generated token (save it securely - you won't see it again)
+
+#### 2. Store Token in Jenkins
+
+1. In Jenkins web UI, go to **Manage Jenkins** → **Manage Credentials**
+2. Select appropriate domain (usually "Global")
+3. Click **Add Credentials**
+4. Choose **Username with password** credential type:
+   - **Username**: Your GitHub username
+   - **Password**: The GitHub personal access token (from step 1)
+   - **ID**: Enter a descriptive ID (e.g., `github-general-pat`, `github-mcp-coder`)
+   - **Description**: Optional description (e.g., "GitHub PAT for MCP Coder repos")
+5. Click **Create**
+
+#### 3. Use Credentials ID in Configuration
+
+Use the **ID** from step 2 as the `github_credentials_id` in your repository configuration:
+
+```toml
+[coordinator.repos.my_project]
+repo_url = "https://github.com/myorg/my_project.git"
+executor_test_path = "MyProject/integration-tests"
+github_credentials_id = "github-general-pat"  # ← The ID from Jenkins
+```
+
+**Security Notes:**
+- Use descriptive but not sensitive credential IDs
+- Regularly rotate GitHub tokens
+- Use minimum required token scopes
+- Consider using different tokens for different repositories if needed
 
 ## Environment Variable Overrides
 
@@ -251,14 +291,14 @@ Add it to config file under [coordinator.repos.nonexistent_repo]
 ```toml
 [coordinator.repos.nonexistent_repo]
 repo_url = "https://github.com/your-org/repo.git"
-test_job_path = "Folder/job-name"
+executor_test_path = "Folder/job-name"
 github_credentials_id = "github-credentials-id"
 ```
 
 ### Error: Missing required field
 
 ```
-Error: Repository 'mcp_coder' missing required field 'test_job_path'
+Error: Repository 'mcp_coder' missing required field 'executor_test_path'
 ```
 
 **Solution:** Ensure all three fields are present in repository config.
@@ -314,7 +354,7 @@ PermissionError: [Errno 13] Permission denied: '/home/user/.mcp_coder/config.tom
    ```toml
    [coordinator.repos.new_repo]
    repo_url = "https://github.com/org/new_repo.git"
-   test_job_path = "NewRepo/test-job"
+   executor_test_path = "NewRepo/test-job"
    github_credentials_id = "github-credentials"
    ```
 
