@@ -29,6 +29,12 @@ from mcp_coder.utils.log_utils import setup_logging
 # Setup logger
 logger = logging.getLogger(__name__)
 
+# Timeout for Implementation Plan Creation prompt (15 minutes)
+# This prompt requires more time than the standard 600s timeout used by other prompts
+# because it generates detailed multi-file implementation plans with pseudocode and algorithms.
+# See issue #173 for context.
+PROMPT_3_TIMEOUT = 900  # 15 minutes
+
 
 def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, IssueData]:
     """Validate prerequisites for plan creation workflow.
