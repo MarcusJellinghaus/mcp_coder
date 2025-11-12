@@ -376,7 +376,7 @@ def run_planning_prompts(
     # Execute third prompt with session continuation
     logger.info("Executing prompt 3: Implementation Plan Creation...")
     logger.debug(
-        f"Sending {len(prompt_3)} chars to LLM with session_id={session_id[:16]}... timeout=600s"
+        f"Sending {len(prompt_3)} chars to LLM with session_id={session_id[:16]}... timeout={PROMPT_3_TIMEOUT}s"
     )
     try:
         response_3 = prompt_llm(
@@ -384,7 +384,7 @@ def run_planning_prompts(
             provider=provider,
             method=method,
             session_id=session_id,
-            timeout=600,
+            timeout=PROMPT_3_TIMEOUT,
             env_vars=env_vars,
             project_dir=str(project_dir),
             mcp_config=mcp_config,
