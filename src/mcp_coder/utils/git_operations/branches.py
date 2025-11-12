@@ -1,6 +1,5 @@
 """Branch operations for git repositories."""
 
-import logging
 from pathlib import Path
 from typing import Optional
 
@@ -21,12 +20,14 @@ def get_current_branch_name(project_dir: Path) -> Optional[str]:
     Returns:
         Current branch name as string, or None if:
         - Directory is not a git repository
-        - Repository is in detached HEAD state
+        - Repository is in detached HEAD state and no remote branch can be inferred
         - Error occurs during branch detection
 
     Note:
         Uses existing is_git_repository() validation and follows
         established error handling patterns from other functions.
+        In Jenkins/CI environments with detached HEAD, attempts to infer
+        the branch by checking which remote branches point to current commit.
     """
     logger.debug("Getting current branch name for %s", project_dir)
 
@@ -43,9 +44,39 @@ def get_current_branch_name(project_dir: Path) -> Optional[str]:
             return current_branch
 
     except TypeError:
-        # Detached HEAD state - repo.active_branch raises TypeError
-        logger.debug("Repository is in detached HEAD state")
-        return None
+        # Detached HEAD state - try to infer branch from remote refs
+        logger.debug("Repository is in detached HEAD state, attempting to infer branch")
+        try:
+            with _safe_repo_context(project_dir) as repo:
+                # Get current commit hash
+                current_commit = repo.head.commit.hexsha
+                logger.debug("Current commit: %s", current_commit)
+
+                # Check if origin remote exists
+                if "origin" not in [remote.name for remote in repo.remotes]:
+                    logger.debug("No origin remote found")
+                    return None
+
+                # Check which remote branches point to current commit
+                for ref in repo.remotes.origin.refs:
+                    if ref.commit.hexsha == current_commit:
+                        # Extract branch name from ref (e.g., "origin/feature" -> "feature")
+                        branch_name = ref.name.replace("origin/", "")
+                        # Skip HEAD ref
+                        if branch_name != "HEAD":
+                            logger.debug(
+                                "Inferred current branch from remote ref: %s",
+                                branch_name,
+                            )
+                            return branch_name
+
+                logger.debug("Could not infer branch from remote refs")
+                return None
+
+        except Exception as e:
+            logger.debug("Error inferring branch from detached HEAD: %s", e)
+            return None
+
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting current branch name: %s", e)
         return None
@@ -126,29 +157,52 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
 
 def _check_local_default_branches(repo: Repo) -> Optional[str]:
     """
-    Check for common default branch names in local repository.
+    Check for common default branch names in local and remote repository.
 
     Args:
         repo: GitPython repository object
 
     Returns:
         First found default branch name ("main" or "master"), or None
+
+    Note:
+        First checks local branches, then falls back to remote branches if
+        no local branches exist (common in Jenkins/CI detached HEAD scenarios).
     """
     # Check for common default branch names
     default_candidates = ["main", "master"]
 
     try:
-        # Get list of all branch names
+        # Get list of all local branch names
         branch_names = [branch.name for branch in repo.branches]
         logger.debug("Available local branches: %s", branch_names)
 
-        # Check for default candidates in order of preference
+        # Check for default candidates in local branches
         for candidate in default_candidates:
             if candidate in branch_names:
                 logger.debug("Found local default branch: %s", candidate)
                 return candidate
 
-        logger.debug("No common default branches found in local repository")
+        # If no local branches exist, check remote branches (Jenkins/CI scenario)
+        if not branch_names:
+            logger.debug("No local branches found, checking remote branches")
+
+            # Check if origin remote exists
+            if "origin" in [remote.name for remote in repo.remotes]:
+                remote_branches = [
+                    ref.name.replace("origin/", "")
+                    for ref in repo.remotes.origin.refs
+                    if ref.name != "origin/HEAD"
+                ]
+                logger.debug("Available remote branches: %s", remote_branches)
+
+                # Check for default candidates in remote branches
+                for candidate in default_candidates:
+                    if candidate in remote_branches:
+                        logger.debug("Found remote default branch: %s", candidate)
+                        return candidate
+
+        logger.debug("No common default branches found in local or remote repository")
         return None
 
     except GitCommandError as e:
