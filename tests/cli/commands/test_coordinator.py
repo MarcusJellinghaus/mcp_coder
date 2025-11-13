@@ -87,6 +87,42 @@ class TestLoadRepoConfig:
         assert result["executor_test_path"] is None
         assert result["github_credentials_id"] is None
 
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_load_repo_config_defaults_executor_os(
+        self, mock_get_config: MagicMock
+    ) -> None:
+        """Test executor_os defaults to 'linux' when not specified."""
+
+        # Setup
+        def config_side_effect(section: str, key: str) -> str | None:
+            config_map = {
+                (
+                    "coordinator.repos.test_repo",
+                    "repo_url",
+                ): "https://github.com/test/repo.git",
+                (
+                    "coordinator.repos.test_repo",
+                    "executor_job_path",
+                ): "Tests/test",
+                (
+                    "coordinator.repos.test_repo",
+                    "github_credentials_id",
+                ): "cred-id",
+                (
+                    "coordinator.repos.test_repo",
+                    "executor_os",
+                ): None,  # Not in config
+            }
+            return config_map.get((section, key))
+
+        mock_get_config.side_effect = config_side_effect
+
+        # Execute
+        config = load_repo_config("test_repo")
+
+        # Verify
+        assert config["executor_os"] == "linux"
+
 
 class TestValidateRepoConfig:
     """Tests for validate_repo_config function."""
