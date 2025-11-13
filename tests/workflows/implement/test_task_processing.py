@@ -669,7 +669,7 @@ Please implement this task step by step."""
             expected_prompt,
             "claude",
             "api",
-            timeout=1800,
+            timeout=3600,
             env_vars=ANY,
             cwd=ANY,
             mcp_config=None,
