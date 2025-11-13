@@ -104,44 +104,36 @@ def dispatch_workflow(
 ```
 1. Load and validate repo config (existing)
 2. Get executor_os from validated_config
-3. If executor_os == "windows":
-   - command = DEFAULT_TEST_COMMAND_WINDOWS
-4. Else (linux or default):
-   - command = DEFAULT_TEST_COMMAND
-5. Continue with existing logic (build params, start job, etc.)
+3. Select template using dictionary mapping:
+   - TEST_COMMAND_TEMPLATES = {"windows": DEFAULT_TEST_COMMAND_WINDOWS, "linux": DEFAULT_TEST_COMMAND}
+   - command = TEST_COMMAND_TEMPLATES[executor_os]
+4. Continue with existing logic (build params, start job, etc.)
 ```
 
 ### Template Selection in `dispatch_workflow()`
 ```
 1. Determine workflow type (create-plan, implement, create-pr) - existing
 2. Get executor_os from repo_config
-3. Select appropriate template based on workflow AND OS:
-   - If workflow == "create-plan":
-     - If os == "windows": CREATE_PLAN_COMMAND_WINDOWS
-     - Else: CREATE_PLAN_COMMAND_TEMPLATE
-   - If workflow == "implement":
-     - If os == "windows": IMPLEMENT_COMMAND_WINDOWS
-     - Else: IMPLEMENT_COMMAND_TEMPLATE
-   - If workflow == "create-pr":
-     - If os == "windows": CREATE_PR_COMMAND_WINDOWS
-     - Else: CREATE_PR_COMMAND_TEMPLATE
+3. Select appropriate template using dictionary mapping:
+   - WORKFLOW_TEMPLATES = {
+       "create-plan": {"windows": CREATE_PLAN_COMMAND_WINDOWS, "linux": CREATE_PLAN_COMMAND_TEMPLATE},
+       "implement": {"windows": IMPLEMENT_COMMAND_WINDOWS, "linux": IMPLEMENT_COMMAND_TEMPLATE},
+       "create-pr": {"windows": CREATE_PR_COMMAND_WINDOWS, "linux": CREATE_PR_COMMAND_TEMPLATE}
+     }
+   - template = WORKFLOW_TEMPLATES[workflow_config["workflow"]][executor_os]
 4. Format template with parameters (existing)
 5. Continue with existing logic
 ```
 
-### Test Algorithm
+### Test Algorithm (Using Parametrized Tests)
 ```
-# Test Windows template selection
-1. Mock repo config with executor_os = "windows"
-2. Mock Jenkins client to capture command parameter
-3. Call function (execute_coordinator_test or dispatch_workflow)
-4. Assert Windows template was used
-
-# Test Linux template selection
-1. Mock repo config with executor_os = "linux"
-2. Mock Jenkins client to capture command parameter
-3. Call function
-4. Assert Linux template was used
+# Parametrized test for template selection
+1. Define test parameters: [("windows", WINDOWS_TEMPLATE), ("linux", LINUX_TEMPLATE)]
+2. For each (executor_os, expected_template):
+   a. Mock repo config with executor_os
+   b. Mock Jenkins client to capture command parameter
+   c. Call function (execute_coordinator_test or dispatch_workflow)
+   d. Assert expected_template was used
 ```
 
 ## DATA
@@ -175,15 +167,29 @@ For `dispatch_workflow()`:
 
 1. Open `tests/cli/commands/test_coordinator.py`
 
-2. Add test for Windows template selection in `execute_coordinator_test`:
+2. Add parametrized test for template selection in `execute_coordinator_test`:
    ```python
-   def test_execute_coordinator_test_windows_template(monkeypatch):
-       """Test Windows template is selected for Windows executor."""
+   import pytest
+   
+   @pytest.mark.parametrize("executor_os,expected_template_name", [
+       ("windows", "DEFAULT_TEST_COMMAND_WINDOWS"),
+       ("linux", "DEFAULT_TEST_COMMAND"),
+   ])
+   def test_execute_coordinator_test_template_selection(monkeypatch, executor_os, expected_template_name):
+       """Test correct template is selected based on executor_os."""
        from mcp_coder.cli.commands.coordinator import (
            execute_coordinator_test,
+           DEFAULT_TEST_COMMAND,
            DEFAULT_TEST_COMMAND_WINDOWS,
        )
        import argparse
+       
+       # Map template names to actual templates
+       template_map = {
+           "DEFAULT_TEST_COMMAND_WINDOWS": DEFAULT_TEST_COMMAND_WINDOWS,
+           "DEFAULT_TEST_COMMAND": DEFAULT_TEST_COMMAND,
+       }
+       expected_template = template_map[expected_template_name]
        
        # Mock config
        def mock_load_config(repo_name):
@@ -191,7 +197,7 @@ For `dispatch_workflow()`:
                "repo_url": "https://github.com/test/repo.git",
                "executor_job_path": "Tests/test",  # RENAMED field
                "github_credentials_id": "cred-id",
-               "executor_os": "windows",
+               "executor_os": executor_os,
            }
        
        # Mock validation (no-op)
@@ -242,90 +248,29 @@ For `dispatch_workflow()`:
        args = argparse.Namespace(repo_name="test_repo", branch_name="main")
        execute_coordinator_test(args)
        
-       # Assert Windows template was used
-       assert captured_params["COMMAND"] == DEFAULT_TEST_COMMAND_WINDOWS
+       # Assert correct template was used
+       assert captured_params["COMMAND"] == expected_template
    ```
 
-3. Add test for Linux template selection:
-   ```python
-   def test_execute_coordinator_test_linux_template(monkeypatch):
-       """Test Linux template is selected for Linux executor."""
-       from mcp_coder.cli.commands.coordinator import (
-           execute_coordinator_test,
-           DEFAULT_TEST_COMMAND,
-       )
-       import argparse
-       
-       # Mock config with linux OS
-       def mock_load_config(repo_name):
-           return {
-               "repo_url": "https://github.com/test/repo.git",
-               "executor_job_path": "Tests/test",  # RENAMED field
-               "github_credentials_id": "cred-id",
-               "executor_os": "linux",
-           }
-       
-       # Mock validation
-       def mock_validate(repo_name, config):
-           pass
-       
-       # Capture Jenkins params
-       captured_params = {}
-       
-       class MockJenkinsClient:
-           def __init__(self, *args, **kwargs):
-               pass
-           
-           def start_job(self, job_path, params):
-               captured_params.update(params)
-               return 12345
-           
-           def get_job_status(self, queue_id):
-               from mcp_coder.utils.jenkins_operations.models import JobStatus
-               return JobStatus(queue_id=queue_id, status="queued", url=None)
-       
-       def mock_get_creds():
-           return ("http://jenkins.example.com", "user", "token")
-       
-       monkeypatch.setattr(
-           "mcp_coder.cli.commands.coordinator.load_repo_config",
-           mock_load_config
-       )
-       monkeypatch.setattr(
-           "mcp_coder.cli.commands.coordinator.validate_repo_config",
-           mock_validate
-       )
-       monkeypatch.setattr(
-           "mcp_coder.cli.commands.coordinator.JenkinsClient",
-           MockJenkinsClient
-       )
-       monkeypatch.setattr(
-           "mcp_coder.cli.commands.coordinator.get_jenkins_credentials",
-           mock_get_creds
-       )
-       monkeypatch.setattr(
-           "mcp_coder.cli.commands.coordinator.create_default_config",
-           lambda: False
-       )
-       
-       # Execute
-       args = argparse.Namespace(repo_name="test_repo", branch_name="main")
-       execute_coordinator_test(args)
-       
-       # Assert Linux template was used
-       assert captured_params["COMMAND"] == DEFAULT_TEST_COMMAND
-   ```
-
-4. Run tests (should fail):
+3. Run tests (should fail):
    ```bash
    mcp__code-checker__run_pytest_check(
-       extra_args=["-n", "auto", "-m", "not git_integration and not claude_integration and not formatter_integration and not github_integration", "-k", "test_execute_coordinator_test_windows_template or test_execute_coordinator_test_linux_template"]
+       extra_args=["-n", "auto", "-m", "not git_integration and not claude_integration and not formatter_integration and not github_integration", "-k", "test_execute_coordinator_test_template_selection"]
    )
    ```
 
 ### Part 2: Implement Functionality
 
-5. Open `src/mcp_coder/cli/commands/coordinator.py`
+4. Open `src/mcp_coder/cli/commands/coordinator.py`
+
+5. Add template mapping dictionary at module level (after template constants, before functions):
+   ```python
+   # Template selection mapping for execute_coordinator_test
+   TEST_COMMAND_TEMPLATES = {
+       "windows": DEFAULT_TEST_COMMAND_WINDOWS,
+       "linux": DEFAULT_TEST_COMMAND,
+   }
+   ```
 
 6. Update `execute_coordinator_test()` - find this section (around line 370):
    ```python
@@ -341,11 +286,9 @@ For `dispatch_workflow()`:
    
    Replace with:
    ```python
-   # Select template based on OS
-   if validated_config["executor_os"] == "windows":
-       test_command = DEFAULT_TEST_COMMAND_WINDOWS
-   else:
-       test_command = DEFAULT_TEST_COMMAND
+   # Select template based on OS using dictionary mapping
+   executor_os = validated_config["executor_os"]
+   test_command = TEST_COMMAND_TEMPLATES[executor_os]
    
    # Build job parameters
    params = {
@@ -357,7 +300,26 @@ For `dispatch_workflow()`:
    }
    ```
 
-7. Update `dispatch_workflow()` - find this section (around line 160):
+7. Add workflow template mapping dictionary at module level (after TEST_COMMAND_TEMPLATES):
+   ```python
+   # Template selection mapping for dispatch_workflow
+   WORKFLOW_TEMPLATES = {
+       "create-plan": {
+           "windows": CREATE_PLAN_COMMAND_WINDOWS,
+           "linux": CREATE_PLAN_COMMAND_TEMPLATE,
+       },
+       "implement": {
+           "windows": IMPLEMENT_COMMAND_WINDOWS,
+           "linux": IMPLEMENT_COMMAND_TEMPLATE,
+       },
+       "create-pr": {
+           "windows": CREATE_PR_COMMAND_WINDOWS,
+           "linux": CREATE_PR_COMMAND_TEMPLATE,
+       },
+   }
+   ```
+
+8. Update `dispatch_workflow()` - find this section (around line 160):
    ```python
    # Step 3: Select appropriate command template and build command
    if workflow_config["workflow"] == "create-plan":
@@ -376,42 +338,32 @@ For `dispatch_workflow()`:
    
    Replace with:
    ```python
-   # Step 3: Select appropriate command template based on workflow and OS
+   # Step 3: Select appropriate command template based on workflow and OS using dictionary mapping
    executor_os = repo_config.get("executor_os", "linux")
+   workflow_name = workflow_config["workflow"]
+   template = WORKFLOW_TEMPLATES[workflow_name][executor_os]
    
-   if workflow_config["workflow"] == "create-plan":
-       if executor_os == "windows":
-           template = CREATE_PLAN_COMMAND_WINDOWS
-       else:
-           template = CREATE_PLAN_COMMAND_TEMPLATE
+   if workflow_name == "create-plan":
        command = template.format(log_level=log_level, issue_number=issue["number"])
-   elif workflow_config["workflow"] == "implement":
-       if executor_os == "windows":
-           template = IMPLEMENT_COMMAND_WINDOWS
-       else:
-           template = IMPLEMENT_COMMAND_TEMPLATE
+   elif workflow_name == "implement":
        command = template.format(log_level=log_level, branch_name=branch_name)
    else:  # create-pr
-       if executor_os == "windows":
-           template = CREATE_PR_COMMAND_WINDOWS
-       else:
-           template = CREATE_PR_COMMAND_TEMPLATE
        command = template.format(log_level=log_level, branch_name=branch_name)
    ```
 
-8. Run tests again (should pass):
+9. Run tests again (should pass):
    ```bash
    mcp__code-checker__run_pytest_check(
        extra_args=["-n", "auto", "-m", "not git_integration and not claude_integration and not formatter_integration and not github_integration"]
    )
    ```
 
-9. Run all code quality checks:
-   ```bash
-   mcp__code-checker__run_all_checks(
-       extra_args=["-n", "auto", "-m", "not git_integration and not claude_integration and not formatter_integration and not github_integration"]
-   )
-   ```
+10. Run all code quality checks:
+    ```bash
+    mcp__code-checker__run_all_checks(
+        extra_args=["-n", "auto", "-m", "not git_integration and not claude_integration and not formatter_integration and not github_integration"]
+    )
+    ```
 
 ## Testing
 
