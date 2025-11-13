@@ -50,6 +50,120 @@ source .venv/bin/activate
 which mcp-coder && mcp-coder --version
 """
 
+# Windows equivalent of DEFAULT_TEST_COMMAND
+DEFAULT_TEST_COMMAND_WINDOWS = """@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+cd
+dir
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    echo Activating virtual environment...
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+echo %VIRTUAL_ENV%
+where python
+python --version
+pip list
+
+echo Tools in current environment ===================
+claude --version
+where mcp-coder
+mcp-coder --version
+where mcp-code-checker
+mcp-code-checker --version
+where mcp-server-filesystem
+mcp-server-filesystem --version
+where mcp-config
+mcp-config --version
+
+echo llm verification =====================================
+mcp-coder verify
+claude --mcp-config .mcp.json --strict-mcp-config mcp list 
+claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
+
+mcp-coder --log-level debug prompt "What is 1 + 1?"
+mcp-coder --log-level debug prompt "Which MCP server can you use?"
+"""
+
+# Windows workflow command templates
+CREATE_PLAN_COMMAND_WINDOWS = """@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+echo command execution  =====================================
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+"""
+
+IMPLEMENT_COMMAND_WINDOWS = """@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+echo command execution  =====================================
+mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+"""
+
+CREATE_PR_COMMAND_WINDOWS = """@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+echo command execution  =====================================
+mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+"""
+
 
 # Priority order for processing issues (highest to lowest)
 PRIORITY_ORDER = [

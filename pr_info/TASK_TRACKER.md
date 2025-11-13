@@ -25,14 +25,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 1: Add Windows Template Constants ([details](steps/step_1.md))
 
-- [ ] Add `DEFAULT_TEST_COMMAND_WINDOWS` constant to `src/mcp_coder/cli/commands/coordinator.py`
-- [ ] Add `CREATE_PLAN_COMMAND_WINDOWS` constant
-- [ ] Add `IMPLEMENT_COMMAND_WINDOWS` constant
-- [ ] Add `CREATE_PR_COMMAND_WINDOWS` constant
-- [ ] Run pylint check using `mcp__code-checker__run_pylint_check`
-- [ ] Run mypy check using `mcp__code-checker__run_mypy_check`
-- [ ] Fix all issues found (if any)
-- [ ] Prepare git commit message for Step 1
+- [x] Add `DEFAULT_TEST_COMMAND_WINDOWS` constant to `src/mcp_coder/cli/commands/coordinator.py`
+- [x] Add `CREATE_PLAN_COMMAND_WINDOWS` constant
+- [x] Add `IMPLEMENT_COMMAND_WINDOWS` constant
+- [x] Add `CREATE_PR_COMMAND_WINDOWS` constant
+- [x] Run pylint check using `mcp__code-checker__run_pylint_check`
+- [x] Run mypy check using `mcp__code-checker__run_mypy_check`
+- [x] Fix all issues found (if any)
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update Config Loading and Validation - TDD ([details](steps/step_2.md))
 
