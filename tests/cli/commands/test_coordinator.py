@@ -184,6 +184,21 @@ class TestValidateRepoConfig:
         ):
             validate_repo_config("test_repo", config)
 
+    def test_validate_repo_config_valid_executor_os(self) -> None:
+        """Test validation passes for valid executor_os values (case-insensitive)."""
+        # Test both lowercase (normalized) values
+        for os_value in ["windows", "linux"]:
+            # Setup
+            config: dict[str, Optional[str]] = {
+                "repo_url": "https://github.com/test/repo.git",
+                "executor_job_path": "Tests/test",
+                "github_credentials_id": "cred-id",
+                "executor_os": os_value,  # Already normalized to lowercase by load_repo_config
+            }
+
+            # Execute & Verify - Should not raise
+            validate_repo_config("test_repo", config)
+
 
 class TestGetJenkinsCredentials:
     """Tests for get_jenkins_credentials function."""
