@@ -37,7 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Update Config Loading and Validation - TDD ([details](steps/step_2.md))
 
 **Part 1: Write Tests First**
-- [ ] Add `test_validate_repo_config_invalid_executor_os` to `tests/cli/commands/test_coordinator.py`
+- [x] Add `test_validate_repo_config_invalid_executor_os` to `tests/cli/commands/test_coordinator.py`
 - [ ] Add `test_validate_repo_config_valid_executor_os` test
 - [ ] Add `test_load_repo_config_defaults_executor_os` test
 - [ ] Add `test_load_repo_config_normalizes_executor_os` test
