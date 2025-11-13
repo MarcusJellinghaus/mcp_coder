@@ -23,7 +23,7 @@ Add Windows batch script support to coordinator commands, enabling execution on 
 ```toml
 [coordinator.repos.windows_project]
 repo_url = "https://github.com/company/windows-app.git"
-executor_test_path = "Windows/Executor/Test"
+executor_job_path = "Windows/Executor/Test"  # RENAMED from executor_test_path
 executor_os = "windows"  # NEW FIELD
 github_credentials_id = "github-pat"
 ```
@@ -64,11 +64,15 @@ else:
 
 ### 3. Key Design Decisions
 
-1. **No field renaming**: Keep `executor_test_path` (backward compatible)
-2. **No template renaming**: Keep existing Linux templates unchanged
-3. **Defaults to Linux**: If `executor_os` not specified, uses Linux templates
-4. **Runtime validation**: Windows scripts validate `%VENV_BASE_DIR%` environment variable
-5. **Fail-fast validation**: Config validation ensures `executor_os` is valid at load time
+1. **Field rename**: `executor_test_path` → `executor_job_path` (breaking change, clearer naming)
+2. **Jenkins parameter rename**: `EXECUTOR_TEST_PATH` → `EXECUTOR_JOB_PATH` (consistency)
+3. **Case-insensitive OS validation**: Accept "Windows"/"Linux" and normalize to lowercase
+4. **No template renaming**: Keep existing Linux templates unchanged
+5. **Defaults to Linux**: If `executor_os` not specified, uses Linux templates
+6. **Runtime validation**: Windows scripts validate `%VENV_BASE_DIR%` environment variable (set by Jenkins pipeline)
+7. **Fail-fast validation**: Config validation ensures `executor_os` is valid at load time
+8. **MCP config standardization**: Both Windows and Linux use `.mcp.json` (Linux will be updated from `.mcp.linux.json`)
+9. **Git operations**: Windows approach (Jenkins handles checkout) is preferred; Linux will be updated later to match
 
 ### 4. Windows Template Characteristics
 
@@ -79,8 +83,8 @@ else:
 - Use `where` instead of `which`
 - Use `if "%VAR%"==""` for validation
 - Use `exit /b 1` for error exits
-- Use `.mcp.json` (not `.mcp.linux.json`)
-- No git commands (Jenkins handles checkout)
+- Use `.mcp.json` (standardized for both Windows and Linux)
+- No git commands (Jenkins handles checkout) - this is the preferred approach
 
 ## Files to be Created or Modified
 
@@ -88,17 +92,18 @@ else:
 
 1. **src/mcp_coder/cli/commands/coordinator.py**
    - Add 4 Windows template constants
-   - Update `load_repo_config()` to load `executor_os`
-   - Update `validate_repo_config()` to validate `executor_os`
-   - Update `execute_coordinator_test()` to select template
-   - Update `dispatch_workflow()` to select templates
+   - Update `load_repo_config()` to load `executor_os` and rename field to `executor_job_path`
+   - Update `validate_repo_config()` to validate `executor_os` (case-insensitive) and use `executor_job_path`
+   - Update `execute_coordinator_test()` to select template and use `EXECUTOR_JOB_PATH` parameter
+   - Update `dispatch_workflow()` to select templates and use `executor_job_path`
 
 2. **src/mcp_coder/utils/user_config.py**
-   - Update `create_default_config()` template with `executor_os` example
+   - Update `create_default_config()` template with `executor_os` and `executor_job_path` (renamed field)
 
 3. **tests/cli/commands/test_coordinator.py**
-   - Add tests for `executor_os` validation
+   - Add tests for `executor_os` validation (including case-insensitivity)
    - Add tests for Windows template selection
+   - Update existing tests to use `executor_job_path` instead of `executor_test_path`
 
 ### Files to Create
 
@@ -130,21 +135,22 @@ Each step follows Test-Driven Development:
 ## Backward Compatibility
 
 - Existing configs without `executor_os` work unchanged (default: `"linux"`)
-- No breaking changes to existing field names
+- **BREAKING CHANGE**: `executor_test_path` renamed to `executor_job_path` - users must update configs
+- **BREAKING CHANGE**: Jenkins parameter `EXECUTOR_TEST_PATH` renamed to `EXECUTOR_JOB_PATH`
 - All existing Linux functionality preserved
 
 ## Validation Rules
 
-1. `executor_os` must be `"windows"` or `"linux"` (case-sensitive)
+1. `executor_os` must be `"windows"` or `"linux"` (case-insensitive, normalized to lowercase)
 2. `executor_os` defaults to `"linux"` if not specified
-3. `executor_test_path` still required (no change)
-4. Windows scripts validate `%VENV_BASE_DIR%` at runtime
+3. `executor_job_path` is required (renamed from `executor_test_path`)
+4. Windows scripts validate `%VENV_BASE_DIR%` at runtime (set by Jenkins pipeline)
 
 ## Error Messages
 
 **Invalid executor_os**:
 ```
-Config file: /path/config.toml - section [coordinator.repos.repo_name] - value for field 'executor_os' invalid. Must be 'windows' or 'linux'
+Config file: /path/config.toml - section [coordinator.repos.repo_name] - value for field 'executor_os' invalid: got 'macos'. Must be 'windows' or 'linux' (case-insensitive)
 ```
 
 **Runtime error (Windows only)**:

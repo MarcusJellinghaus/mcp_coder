@@ -19,7 +19,8 @@ Execute in order:
 
 - **KISS**: Minimal changes, no unnecessary complexity
 - **TDD**: Write tests first, then implement (Steps 2-3)
-- **Backward Compatible**: Defaults to Linux, no breaking changes
+- **Mostly Backward Compatible**: Defaults to Linux for `executor_os` field
+- **Breaking Changes**: Field rename `executor_test_path` → `executor_job_path` and Jenkins parameter `EXECUTOR_TEST_PATH` → `EXECUTOR_JOB_PATH`
 - **Self-Contained**: Each step has complete implementation instructions
 
 ## Files Modified
@@ -40,10 +41,11 @@ Execute in order:
 
 ## Architecture Summary
 
-### New Configuration Field
+### Configuration Changes
 ```toml
 [coordinator.repos.my_repo]
-executor_os = "windows"  # or "linux" (default)
+executor_job_path = "Tests/my-job"  # RENAMED from executor_test_path
+executor_os = "windows"  # or "linux" (default, case-insensitive)
 ```
 
 ### Template Selection
@@ -57,12 +59,12 @@ else:
 ## Implementation Time Estimate
 
 - **Step 1**: 10 minutes (copy-paste templates)
-- **Step 2**: 20 minutes (TDD: tests + config validation)
-- **Step 3**: 30 minutes (TDD: tests + template selection)
-- **Step 4**: 5 minutes (update config template)
-- **Step 5**: 15 minutes (run all quality checks)
+- **Step 2**: 30 minutes (TDD: tests + config validation + field rename)
+- **Step 3**: 35 minutes (TDD: tests + template selection + parameter rename)
+- **Step 4**: 10 minutes (update config template with renames)
+- **Step 5**: 20 minutes (run all quality checks + existing test updates)
 
-**Total**: ~1.5 hours
+**Total**: ~1.75-2 hours
 
 ## Quality Gates
 
@@ -93,13 +95,15 @@ Each step includes:
 ## Success Criteria
 
 Implementation is complete when:
-1. All tests pass (pytest)
+1. All tests pass (pytest) - including updated tests for field rename
 2. All quality checks pass (pylint, mypy)
-3. Windows templates selected when `executor_os = "windows"`
+3. Windows templates selected when `executor_os = "windows"` (case-insensitive)
 4. Linux templates selected by default
-5. Invalid `executor_os` values rejected with clear error
-6. Config template documents new field
-7. No regressions in existing functionality
+5. Invalid `executor_os` values rejected with clear error showing actual value
+6. Config template documents new fields and renames
+7. Field renamed: `executor_test_path` → `executor_job_path`
+8. Jenkins parameter renamed: `EXECUTOR_TEST_PATH` → `EXECUTOR_JOB_PATH`
+9. Existing tests updated for field rename
 
 ## Validation Commands
 

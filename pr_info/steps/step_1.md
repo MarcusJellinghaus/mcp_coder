@@ -45,12 +45,12 @@ Windows template for create-pr workflow.
 All templates follow Windows batch script conventions:
 - Start with `@echo ON`
 - Use `%WORKSPACE%` for Jenkins workspace path
-- Use `%VENV_BASE_DIR%` for virtual environment base directory
+- Use `%VENV_BASE_DIR%` for virtual environment base directory (set by Jenkins pipeline)
 - Validate `%VENV_BASE_DIR%` with error handling
 - Use `\.venv\Scripts\activate.bat` for virtual env activation
 - Use `where` instead of `which` for command location
 - Use `exit /b 1` for error exits
-- Use `.mcp.json` for MCP config (not `.mcp.linux.json`)
+- Use `.mcp.json` for MCP config (standardized for both Windows and Linux)
 
 ## ALGORITHM
 
@@ -175,6 +175,8 @@ mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\repo --mc
 ```
 
 ### Key Differences from Linux Templates
+
+**Note:** `%VENV_BASE_DIR%` should be set by the Jenkins pipeline. This is the directory containing the Python virtual environment.
 
 | Aspect | Linux | Windows |
 |--------|-------|---------|
