@@ -167,6 +167,23 @@ class TestValidateRepoConfig:
         assert "Config file:" in error_msg
         assert "values for fields 'repo_url', 'executor_test_path' missing" in error_msg
 
+    def test_validate_repo_config_invalid_executor_os(self) -> None:
+        """Test validation fails for invalid executor_os values."""
+        # Setup
+        config: dict[str, Optional[str]] = {
+            "repo_url": "https://github.com/test/repo.git",
+            "executor_job_path": "Tests/test",
+            "github_credentials_id": "cred-id",
+            "executor_os": "macos",  # Invalid value (already normalized to lowercase)
+        }
+
+        # Execute & Verify
+        with pytest.raises(
+            ValueError,
+            match=r"executor_os.*invalid.*got.*macos.*windows.*linux.*case-insensitive",
+        ):
+            validate_repo_config("test_repo", config)
+
 
 class TestGetJenkinsCredentials:
     """Tests for get_jenkins_credentials function."""
