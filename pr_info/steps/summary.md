@@ -55,11 +55,14 @@ CREATE_PR_COMMAND_WINDOWS
 
 **Template Selection Logic**:
 ```python
-# Simple conditional based on executor_os
-if repo_config["executor_os"] == "windows":
-    template = WINDOWS_TEMPLATE
-else:
-    template = LINUX_TEMPLATE  # default
+# Dictionary-based mapping for cleaner selection
+WORKFLOW_TEMPLATES = {
+    "workflow_name": {
+        "windows": WINDOWS_TEMPLATE,
+        "linux": LINUX_TEMPLATE,
+    }
+}
+template = WORKFLOW_TEMPLATES[workflow][executor_os]
 ```
 
 ### 3. Key Design Decisions

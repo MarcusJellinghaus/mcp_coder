@@ -236,20 +236,18 @@ Verify existing functionality unchanged:
 
 ## Validation Checklist
 
-Before marking implementation complete:
+Before marking implementation complete (integration-level checks only):
 
-- [ ] All unit tests pass
+- [ ] All unit tests pass (pytest)
 - [ ] Pylint check passes (no errors)
 - [ ] Mypy check passes (no type errors)
 - [ ] All combined checks pass
-- [ ] Windows templates selected when `executor_os = "windows"`
-- [ ] Linux templates selected when `executor_os = "linux"`
-- [ ] Linux templates selected when `executor_os` not specified (default)
-- [ ] Validation rejects invalid `executor_os` values
-- [ ] Error messages are clear and helpful
-- [ ] Config template includes `executor_os` documentation
+- [ ] Manual verification: Windows templates selected for Windows config
+- [ ] Manual verification: Linux templates selected for Linux config
+- [ ] Manual verification: Defaults to Linux when `executor_os` not specified
+- [ ] Manual verification: Invalid `executor_os` rejected with clear error
 - [ ] No regressions in existing functionality
-- [ ] Backward compatibility maintained
+- [ ] Backward compatibility maintained (existing configs work)
 
 ## LLM Prompt for Implementation
 

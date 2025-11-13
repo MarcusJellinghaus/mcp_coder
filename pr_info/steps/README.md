@@ -50,10 +50,14 @@ executor_os = "windows"  # or "linux" (default, case-insensitive)
 
 ### Template Selection
 ```python
-if executor_os == "windows":
-    template = WINDOWS_TEMPLATE
-else:
-    template = LINUX_TEMPLATE  # default
+# Dictionary-based mapping for cleaner selection
+WORKFLOW_TEMPLATES = {
+    "workflow_name": {
+        "windows": WINDOWS_TEMPLATE,
+        "linux": LINUX_TEMPLATE,
+    }
+}
+template = WORKFLOW_TEMPLATES[workflow][executor_os]
 ```
 
 ## Implementation Time Estimate
@@ -116,13 +120,6 @@ rm ~/.config/mcp_coder/config.toml  # Remove old config
 mcp-coder coordinator test mcp_coder main  # Triggers new config creation
 cat ~/.config/mcp_coder/config.toml  # Verify executor_os in template
 ```
-
-## Rollback Plan
-
-If issues occur:
-1. Revert changes to modified files
-2. Config field is optional (defaults to "linux")
-3. No database migrations or breaking changes
 
 ## Support
 
