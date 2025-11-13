@@ -29,6 +29,11 @@ from mcp_coder.utils.log_utils import setup_logging
 # Setup logger
 logger = logging.getLogger(__name__)
 
+# Timeout for Implementation Plan Creation prompt (15 minutes)
+# This prompt requires more time than the standard 600s timeout used by other prompts
+# because it generates detailed multi-file implementation plans with pseudocode and algorithms.
+PROMPT_3_TIMEOUT = 900  # 15 minutes
+
 
 def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, IssueData]:
     """Validate prerequisites for plan creation workflow.
@@ -370,7 +375,7 @@ def run_planning_prompts(
     # Execute third prompt with session continuation
     logger.info("Executing prompt 3: Implementation Plan Creation...")
     logger.debug(
-        f"Sending {len(prompt_3)} chars to LLM with session_id={session_id[:16]}... timeout=600s"
+        f"Sending {len(prompt_3)} chars to LLM with session_id={session_id[:16]}... timeout={PROMPT_3_TIMEOUT}s"
     )
     try:
         response_3 = prompt_llm(
@@ -378,7 +383,7 @@ def run_planning_prompts(
             provider=provider,
             method=method,
             session_id=session_id,
-            timeout=600,
+            timeout=PROMPT_3_TIMEOUT,
             env_vars=env_vars,
             project_dir=str(project_dir),
             mcp_config=mcp_config,
