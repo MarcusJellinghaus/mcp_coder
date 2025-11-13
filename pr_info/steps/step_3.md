@@ -189,7 +189,7 @@ For `dispatch_workflow()`:
        def mock_load_config(repo_name):
            return {
                "repo_url": "https://github.com/test/repo.git",
-               "executor_test_path": "Tests/test",
+               "executor_job_path": "Tests/test",  # RENAMED field
                "github_credentials_id": "cred-id",
                "executor_os": "windows",
            }
@@ -260,7 +260,7 @@ For `dispatch_workflow()`:
        def mock_load_config(repo_name):
            return {
                "repo_url": "https://github.com/test/repo.git",
-               "executor_test_path": "Tests/test",
+               "executor_job_path": "Tests/test",  # RENAMED field
                "github_credentials_id": "cred-id",
                "executor_os": "linux",
            }
@@ -334,6 +334,7 @@ For `dispatch_workflow()`:
        "REPO_URL": validated_config["repo_url"],
        "BRANCH_NAME": args.branch_name,
        "COMMAND": DEFAULT_TEST_COMMAND,  # OLD: Hardcoded
+       "EXECUTOR_TEST_PATH": validated_config["executor_test_path"],  # OLD field name
        "GITHUB_CREDENTIALS_ID": validated_config["github_credentials_id"],
    }
    ```
@@ -351,6 +352,7 @@ For `dispatch_workflow()`:
        "REPO_URL": validated_config["repo_url"],
        "BRANCH_NAME": args.branch_name,
        "COMMAND": test_command,  # NEW: OS-aware selection
+       "EXECUTOR_JOB_PATH": validated_config["executor_job_path"],  # RENAMED parameter and field
        "GITHUB_CREDENTIALS_ID": validated_config["github_credentials_id"],
    }
    ```

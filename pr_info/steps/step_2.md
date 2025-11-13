@@ -6,10 +6,11 @@ Reference: `pr_info/steps/summary.md`
 This step adds support for loading and validating the new `executor_os` configuration field. Follows TDD approach: write tests first, then implement.
 
 ## Objective
-1. Write tests for `executor_os` validation
-2. Update `load_repo_config()` to load `executor_os` field
-3. Update `validate_repo_config()` to validate `executor_os` values
-4. Ensure backward compatibility (defaults to "linux")
+1. Write tests for `executor_os` validation (case-insensitive)
+2. Update `load_repo_config()` to load `executor_os` field (with case normalization)
+3. Update `validate_repo_config()` to validate `executor_os` values (case-insensitive)
+4. Rename field: `executor_test_path` → `executor_job_path` (breaking change)
+5. Ensure backward compatibility for `executor_os` (defaults to "linux")
 
 ## WHERE
 
@@ -59,32 +60,32 @@ def test_load_repo_config_defaults_executor_os() -> None:
 ### Implementation Functions
 
 #### Modified: `load_repo_config()`
-Load `executor_os` from config with default.
+Load `executor_os` from config with default and normalize to lowercase. Rename field from `executor_test_path` to `executor_job_path`.
 
 **Signature**: (unchanged)
 ```python
 def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
 ```
 
-**Returns**: Add `executor_os` to returned dict
+**Returns**: Updated dict with renamed field and new `executor_os`
 ```python
 {
     "repo_url": str | None,
-    "executor_test_path": str | None,
+    "executor_job_path": str | None,  # RENAMED from executor_test_path
     "github_credentials_id": str | None,
-    "executor_os": str  # Always present, defaults to "linux"
+    "executor_os": str  # Always present, defaults to "linux", normalized to lowercase
 }
 ```
 
 #### Modified: `validate_repo_config()`
-Validate `executor_os` is "windows" or "linux".
+Validate `executor_os` is "windows" or "linux" (case-insensitive). Use renamed field `executor_job_path`.
 
 **Signature**: (unchanged)
 ```python
 def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> None:
 ```
 
-**Raises**: `ValueError` if `executor_os` invalid
+**Raises**: `ValueError` if `executor_os` invalid (shows original value in error)
 
 ## HOW
 
@@ -94,29 +95,31 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
 
 **Config Access**: Use existing `get_config_value()` function
 
-**Error Format**: Follow existing error message pattern:
+**Error Format**: Follow existing error message pattern with actual invalid value:
 ```
-Config file: {path} - section [{section}] - value for field '{field}' invalid. Must be 'windows' or 'linux'
+Config file: {path} - section [{section}] - value for field '{field}' invalid: got '{actual_value}'. Must be 'windows' or 'linux' (case-insensitive)
 ```
 
 ## ALGORITHM
 
 ### `load_repo_config()` Modification
 ```
-1. Load existing fields (repo_url, executor_test_path, github_credentials_id)
+1. Load existing fields (repo_url, executor_job_path, github_credentials_id) - note field rename
 2. Load executor_os from config
 3. If executor_os is None, default to "linux"
-4. Return dict with all four fields
+4. If executor_os is not None, normalize to lowercase (e.g., "Windows" → "windows")
+5. Return dict with all four fields
 ```
 
 ### `validate_repo_config()` Modification
 ```
-1. Validate existing required fields (current logic)
-2. Get executor_os from config (always present after load)
-3. If executor_os not in ["windows", "linux"]:
-   - Build error message with config path and section
+1. Update required fields list: use "executor_job_path" instead of "executor_test_path"
+2. Validate existing required fields (current logic)
+3. Get executor_os from config (always present after load, already normalized to lowercase)
+4. If executor_os not in ["windows", "linux"]:
+   - Build error message with config path, section, and actual invalid value
    - Raise ValueError
-4. Continue with existing validation
+5. Continue with existing validation
 ```
 
 ### Test Algorithm
@@ -144,19 +147,19 @@ Config file: {path} - section [{section}] - value for field '{field}' invalid. M
 ```python
 {
     "repo_url": "https://github.com/user/repo.git",
-    "executor_test_path": "Tests/executor-test",
+    "executor_job_path": "Tests/executor-test",  # RENAMED from executor_test_path
     "github_credentials_id": "github-pat",
-    "executor_os": "linux"  # NEW: Always present, defaults to "linux"
+    "executor_os": "linux"  # NEW: Always present, defaults to "linux", normalized to lowercase
 }
 ```
 
-### Valid Values
-- `"windows"` - Use Windows batch script templates
-- `"linux"` - Use Linux bash script templates (default)
+### Valid Values (Case-Insensitive)
+- `"windows"` / `"Windows"` / `"WINDOWS"` → normalized to `"windows"` - Use Windows batch script templates
+- `"linux"` / `"Linux"` / `"LINUX"` → normalized to `"linux"` - Use Linux bash script templates (default)
 
 ### Error Message Format
 ```
-Config file: /home/user/.config/mcp_coder/config.toml - section [coordinator.repos.my_repo] - value for field 'executor_os' invalid. Must be 'windows' or 'linux'
+Config file: /home/user/.config/mcp_coder/config.toml - section [coordinator.repos.my_repo] - value for field 'executor_os' invalid: got 'macos'. Must be 'windows' or 'linux' (case-insensitive)
 ```
 
 ## Implementation Steps
@@ -172,27 +175,28 @@ Config file: /home/user/.config/mcp_coder/config.toml - section [coordinator.rep
        
        config = {
            "repo_url": "https://github.com/test/repo.git",
-           "executor_test_path": "Tests/test",
+           "executor_job_path": "Tests/test",  # RENAMED field
            "github_credentials_id": "cred-id",
-           "executor_os": "macos",  # Invalid value
+           "executor_os": "macos",  # Invalid value (already normalized to lowercase)
        }
        
-       with pytest.raises(ValueError, match="executor_os.*invalid.*windows.*linux"):
+       with pytest.raises(ValueError, match="executor_os.*invalid.*got.*macos.*windows.*linux.*case-insensitive"):
            validate_repo_config("test_repo", config)
    ```
 
 3. Add test function `test_validate_repo_config_valid_executor_os`:
    ```python
    def test_validate_repo_config_valid_executor_os():
-       """Test validation passes for valid executor_os values."""
+       """Test validation passes for valid executor_os values (case-insensitive)."""
        from mcp_coder.cli.commands.coordinator import validate_repo_config
        
+       # Test both lowercase (normalized) values
        for os_value in ["windows", "linux"]:
            config = {
                "repo_url": "https://github.com/test/repo.git",
-               "executor_test_path": "Tests/test",
+               "executor_job_path": "Tests/test",  # RENAMED field
                "github_credentials_id": "cred-id",
-               "executor_os": os_value,
+               "executor_os": os_value,  # Already normalized to lowercase by load_repo_config
            }
            
            # Should not raise
@@ -208,7 +212,7 @@ Config file: /home/user/.config/mcp_coder/config.toml - section [coordinator.rep
        def mock_get_config(section, key):
            values = {
                "repo_url": "https://github.com/test/repo.git",
-               "executor_test_path": "Tests/test",
+               "executor_job_path": "Tests/test",  # RENAMED field
                "github_credentials_id": "cred-id",
                "executor_os": None,  # Not in config
            }
@@ -221,6 +225,30 @@ Config file: /home/user/.config/mcp_coder/config.toml - section [coordinator.rep
        
        config = load_repo_config("test_repo")
        assert config["executor_os"] == "linux"
+   ```
+
+5. Add test function `test_load_repo_config_normalizes_executor_os`:
+   ```python
+   def test_load_repo_config_normalizes_executor_os(monkeypatch):
+       """Test executor_os is normalized to lowercase."""
+       from mcp_coder.cli.commands.coordinator import load_repo_config
+       
+       def mock_get_config(section, key):
+           values = {
+               "repo_url": "https://github.com/test/repo.git",
+               "executor_job_path": "Tests/test",
+               "github_credentials_id": "cred-id",
+               "executor_os": "Windows",  # Mixed case
+           }
+           return values.get(key)
+       
+       monkeypatch.setattr(
+           "mcp_coder.cli.commands.coordinator.get_config_value",
+           mock_get_config
+       )
+       
+       config = load_repo_config("test_repo")
+       assert config["executor_os"] == "windows"  # Normalized to lowercase
    ```
 
 5. Run tests (should fail):
@@ -243,21 +271,27 @@ Config file: /home/user/.config/mcp_coder/config.toml - section [coordinator.rep
            repo_name: Name of repository to load (e.g., "mcp_coder")
        
        Returns:
-           Dictionary with repo_url, executor_test_path, github_credentials_id, executor_os
-           Values may be None except executor_os which defaults to "linux"
+           Dictionary with repo_url, executor_job_path, github_credentials_id, executor_os
+           Values may be None except executor_os which defaults to "linux" (normalized to lowercase)
        """
        section = f"coordinator.repos.{repo_name}"
        
        repo_url = get_config_value(section, "repo_url")
-       executor_test_path = get_config_value(section, "executor_test_path")
+       executor_job_path = get_config_value(section, "executor_job_path")  # RENAMED field
        github_credentials_id = get_config_value(section, "github_credentials_id")
-       executor_os = get_config_value(section, "executor_os") or "linux"  # NEW: Default to linux
+       
+       # NEW: Load executor_os with default and normalize to lowercase
+       executor_os = get_config_value(section, "executor_os")
+       if executor_os:
+           executor_os = executor_os.lower()  # Normalize to lowercase
+       else:
+           executor_os = "linux"  # Default
        
        return {
            "repo_url": repo_url,
-           "executor_test_path": executor_test_path,
+           "executor_job_path": executor_job_path,  # RENAMED field
            "github_credentials_id": github_credentials_id,
-           "executor_os": executor_os,  # NEW: Always present
+           "executor_os": executor_os,  # NEW: Always present, normalized to lowercase
        }
    ```
 
@@ -273,8 +307,8 @@ Config file: /home/user/.config/mcp_coder/config.toml - section [coordinator.rep
        Raises:
            ValueError: If any required fields are missing or invalid
        """
-       # Validate required fields (existing logic)
-       required_fields = ["repo_url", "executor_test_path", "github_credentials_id"]
+       # Validate required fields (existing logic with RENAMED field)
+       required_fields = ["repo_url", "executor_job_path", "github_credentials_id"]  # RENAMED field
        missing_fields = []
        
        for field in required_fields:
@@ -302,7 +336,7 @@ Config file: /home/user/.config/mcp_coder/config.toml - section [coordinator.rep
            
            raise ValueError(error_msg)
        
-       # NEW: Validate executor_os field
+       # NEW: Validate executor_os field (already normalized to lowercase by load_repo_config)
        executor_os = config.get("executor_os", "linux")
        if executor_os not in ["windows", "linux"]:
            config_path = get_config_file_path()
@@ -310,7 +344,8 @@ Config file: /home/user/.config/mcp_coder/config.toml - section [coordinator.rep
            error_msg = (
                f"Config file: {config_path} - "
                f"section [{section_name}] - "
-               f"value for field 'executor_os' invalid. Must be 'windows' or 'linux'"
+               f"value for field 'executor_os' invalid: got '{executor_os}'. "
+               f"Must be 'windows' or 'linux' (case-insensitive)"
            )
            raise ValueError(error_msg)
    ```

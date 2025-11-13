@@ -71,22 +71,22 @@ The `[coordinator.repos.*]` sections should include:
 ```toml
 [coordinator.repos.mcp_coder]
 repo_url = "https://github.com/your-org/mcp_coder.git"
-executor_test_path = "Tests/mcp-coder-coordinator-test"
+executor_job_path = "Tests/mcp-coder-coordinator-test"
 github_credentials_id = "github-general-pat"
-# executor_os: "windows" or "linux" (default: "linux")
+# executor_os: "windows" or "linux" (default: "linux", case-insensitive)
 # Use "windows" for Windows Jenkins executors, "linux" for Linux/container executors
 executor_os = "linux"
 
 [coordinator.repos.mcp_server_filesystem]
 repo_url = "https://github.com/your-org/mcp_server_filesystem.git"
-executor_test_path = "Tests/mcp-filesystem-coordinator-test"
+executor_job_path = "Tests/mcp-filesystem-coordinator-test"
 github_credentials_id = "github-general-pat"
 executor_os = "linux"
 
 # Example Windows executor configuration:
 # [coordinator.repos.windows_project]
 # repo_url = "https://github.com/your-org/windows-app.git"
-# executor_test_path = "Windows/Executor/Test"
+# executor_job_path = "Windows/Executor/Test"
 # github_credentials_id = "github-general-pat"
 # executor_os = "windows"
 ```
@@ -138,7 +138,7 @@ executor_os = "linux"
 # Add more repositories as needed:
 # [coordinator.repos.your_repo_name]
 # repo_url = "https://github.com/your-org/your_repo.git"
-# executor_test_path = "Tests/your-repo-coordinator-test"
+# executor_job_path = "Tests/your-repo-coordinator-test"
 # github_credentials_id = "github-credentials-id"
 # executor_os = "linux"
 """
@@ -156,13 +156,17 @@ executor_os = "linux"
    ```python
    [coordinator.repos.mcp_coder]
    repo_url = "https://github.com/your-org/mcp_coder.git"
-   executor_test_path = "Tests/mcp-coder-coordinator-test"
+   executor_test_path = "Tests/mcp-coder-coordinator-test"  # OLD field name
    github_credentials_id = "github-general-pat"
    ```
 
-5. After `github_credentials_id`, add:
+5. Rename the field and add `executor_os`:
    ```toml
-   # executor_os: "windows" or "linux" (default: "linux")
+   [coordinator.repos.mcp_coder]
+   repo_url = "https://github.com/your-org/mcp_coder.git"
+   executor_job_path = "Tests/mcp-coder-coordinator-test"  # RENAMED from executor_test_path
+   github_credentials_id = "github-general-pat"
+   # executor_os: "windows" or "linux" (default: "linux", case-insensitive)
    # Use "windows" for Windows Jenkins executors, "linux" for Linux/container executors
    executor_os = "linux"
    ```
@@ -171,7 +175,7 @@ executor_os = "linux"
    ```toml
    [coordinator.repos.mcp_server_filesystem]
    repo_url = "https://github.com/your-org/mcp_server_filesystem.git"
-   executor_test_path = "Tests/mcp-filesystem-coordinator-test"
+   executor_job_path = "Tests/mcp-filesystem-coordinator-test"  # RENAMED
    github_credentials_id = "github-general-pat"
    executor_os = "linux"
    ```
@@ -181,17 +185,17 @@ executor_os = "linux"
    # Example Windows executor configuration:
    # [coordinator.repos.windows_project]
    # repo_url = "https://github.com/your-org/windows-app.git"
-   # executor_test_path = "Windows/Executor/Test"
+   # executor_job_path = "Windows/Executor/Test"  # RENAMED field
    # github_credentials_id = "github-general-pat"
    # executor_os = "windows"
    ```
 
-8. Update the final template comment to include `executor_os`:
+8. Update the final template comment with renamed field:
    ```toml
    # Add more repositories as needed:
    # [coordinator.repos.your_repo_name]
    # repo_url = "https://github.com/your-org/your_repo.git"
-   # executor_test_path = "Tests/your-repo-coordinator-test"
+   # executor_job_path = "Tests/your-repo-coordinator-test"  # RENAMED field
    # github_credentials_id = "github-credentials-id"
    # executor_os = "linux"
    ```
