@@ -33,7 +33,7 @@ from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 # Constants
 PR_INFO_DIR = "pr_info"
 CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
-LLM_IMPLEMENTATION_TIMEOUT_SECONDS = 1800  # 30 minutes
+LLM_IMPLEMENTATION_TIMEOUT_SECONDS = 3600  # 60 minutes
 
 # Mypy checking behavior
 RUN_MYPY_AFTER_EACH_TASK = False  # If False, mypy runs once after all tasks complete
