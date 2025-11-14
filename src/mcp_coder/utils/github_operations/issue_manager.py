@@ -293,6 +293,157 @@ class IssueManager(BaseGitHubManager):
         )
 
     @log_function_call
+    def update_workflow_label(
+        self,
+        from_label_id: str,
+        to_label_id: str,
+        branch_name: Optional[str] = None,
+    ) -> bool:
+        """Update workflow label after successful workflow completion.
+
+        This method handles complete label transition workflow:
+        1. Extract issue number from branch name (or detect current branch)
+        2. Verify branch is linked to the issue via GitHub API
+        3. Look up actual label names from internal IDs
+        4. Perform label transition (remove old, add new)
+
+        Non-blocking: All errors are caught, logged, and return False.
+        Workflow success is never affected by label update failures.
+
+        Args:
+            from_label_id: Internal ID of source label (e.g., "implementing")
+            to_label_id: Internal ID of target label (e.g., "code_review")
+            branch_name: Optional branch name. If None, detects current branch.
+
+        Returns:
+            True if label updated successfully, False otherwise
+
+        Example:
+            >>> manager = IssueManager(project_dir)
+            >>> success = manager.update_workflow_label("implementing", "code_review")
+            >>> if success:
+            ...     print("Label updated")
+        """
+        try:
+            # Step 1: Get branch name (provided or auto-detect)
+            actual_branch_name: str
+            if branch_name is None:
+                # project_dir can be None if initialized with repo_url
+                if self.project_dir is None:
+                    logger.error(
+                        "Cannot auto-detect branch name without project_dir. "
+                        "Please provide branch_name parameter."
+                    )
+                    return False
+                detected_branch = get_current_branch_name(self.project_dir)
+                if detected_branch is None:
+                    logger.error(
+                        "Failed to detect current branch name. "
+                        "Please provide branch_name parameter."
+                    )
+                    return False
+                actual_branch_name = detected_branch
+            else:
+                actual_branch_name = branch_name
+
+            # Step 2: Extract issue number from branch name using regex
+            match = re.match(r"^(\d+)-", actual_branch_name)
+            if not match:
+                logger.warning(
+                    f"Branch '{actual_branch_name}' does not follow {{issue_number}}-title pattern"
+                )
+                return False
+
+            issue_number = int(match.group(1))
+
+            # Step 3: Verify branch is linked to the issue
+            # Construct repo_url from _repo_full_name if available, otherwise use project_dir
+            repo_url = None
+            if self._repo_full_name is not None:
+                repo_url = f"https://github.com/{self._repo_full_name}.git"
+
+            branch_manager = IssueBranchManager(
+                project_dir=self.project_dir, repo_url=repo_url
+            )
+            linked_branches = branch_manager.get_linked_branches(issue_number)
+
+            if actual_branch_name not in linked_branches:
+                logger.warning(
+                    f"Branch '{actual_branch_name}' is not linked to issue #{issue_number}. "
+                    f"Linked branches: {linked_branches}"
+                )
+                return False
+
+            # Step 4: Load label config and build lookups
+            # project_dir is required for label config
+            if self.project_dir is None:
+                logger.error(
+                    "Cannot load label config without project_dir. "
+                    "Label update is not supported for repo_url mode."
+                )
+                return False
+
+            config_path = get_labels_config_path(self.project_dir)
+            label_config = load_labels_config(config_path)
+            label_lookups = build_label_lookups(label_config)
+
+            # Step 5: Lookup actual label names from internal IDs
+            from_label_name = label_lookups["id_to_name"].get(from_label_id)
+            to_label_name = label_lookups["id_to_name"].get(to_label_id)
+
+            if not from_label_name:
+                logger.error(
+                    f"Label ID '{from_label_id}' not found in configuration. "
+                    f"Available IDs: {list(label_lookups['id_to_name'].keys())}"
+                )
+                return False
+
+            if not to_label_name:
+                logger.error(
+                    f"Label ID '{to_label_id}' not found in configuration. "
+                    f"Available IDs: {list(label_lookups['id_to_name'].keys())}"
+                )
+                return False
+
+            # Step 6: Get current issue labels
+            issue_data = self.get_issue(issue_number)
+            if issue_data["number"] == 0:
+                logger.error(f"Failed to get issue #{issue_number}")
+                return False
+
+            current_labels = set(issue_data["labels"])
+
+            # Step 7: Check if already in target state (idempotent)
+            if to_label_name in current_labels:
+                if from_label_name not in current_labels:
+                    # Already transitioned, nothing to do
+                    logger.debug(
+                        f"Issue #{issue_number} already has label '{to_label_name}' "
+                        f"without '{from_label_name}'. No action needed."
+                    )
+                    return True
+                # else: Has both labels, proceed with removal of old label
+
+            # Step 8: Compute new label set
+            new_labels = (current_labels - {from_label_name}) | {to_label_name}
+
+            # Step 9: Apply label transition
+            result = self.set_labels(issue_number, *new_labels)
+            if result["number"] == 0:
+                logger.error(f"Failed to update labels for issue #{issue_number}")
+                return False
+
+            logger.info(
+                f"Successfully updated issue #{issue_number} label: "
+                f"{from_label_name} → {to_label_name}"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"Unexpected error updating workflow label: {e}")
+            return False
+
+    @log_function_call
     def get_issue_events(
         self, issue_number: int, filter_by_type: Optional[IssueEventType] = None
     ) -> List[EventData]:
