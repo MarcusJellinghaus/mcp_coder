@@ -37,7 +37,7 @@ See [pr_info/steps/step_1.md](steps/step_1.md)
 ### Step 2: Implement Core Label Update Method in IssueManager
 See [pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Add required imports to `issue_manager.py`
+- [x] Add required imports to `issue_manager.py`
 - [ ] Implement `update_workflow_label()` method in IssueManager class
 - [ ] Add complete docstring with Args, Returns, Example
 - [ ] Implement branch name regex extraction logic
