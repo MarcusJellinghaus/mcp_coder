@@ -32,6 +32,7 @@ from .task_processing import (
 
 # Constants
 PR_INFO_DIR = "pr_info"
+LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS = 600  # 10 minutes
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -87,7 +88,7 @@ def prepare_task_tracker(
             prompt_template,
             provider=provider,
             method=method,
-            timeout=300,
+            timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
             project_dir=str(project_dir),
             mcp_config=mcp_config,
