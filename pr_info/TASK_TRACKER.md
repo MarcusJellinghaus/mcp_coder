@@ -74,31 +74,31 @@ See [pr_info/steps/step_3.md](steps/step_3.md)
 ### Step 4: Integrate Label Updates into Workflow Success Paths
 See [pr_info/steps/step_4.md](steps/step_4.md)
 
-- [ ] Add label update logic to `run_implement_workflow()` (implementing → code_review)
-- [ ] Add label update logic to `run_create_plan_workflow()` (planning → plan_review)
-- [ ] Add label update logic to `run_create_pr_workflow()` (pr_creating → pr_created)
-- [ ] Verify lazy import pattern used (import inside if block)
-- [ ] Verify identical error handling structure across all three
-- [ ] Verify consistent logging format with ✓/✗ symbols
-- [ ] Verify non-blocking behavior (workflow always succeeds)
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check (fast unit tests) and fix all issues
-- [ ] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 4
+- [x] Add label update logic to `run_implement_workflow()` (implementing → code_review)
+- [x] Add label update logic to `run_create_plan_workflow()` (planning → plan_review)
+- [x] Add label update logic to `run_create_pr_workflow()` (pr_creating → pr_created)
+- [x] Verify lazy import pattern used (import inside if block)
+- [x] Verify identical error handling structure across all three
+- [x] Verify consistent logging format with ✓/✗ symbols
+- [x] Verify non-blocking behavior (workflow always succeeds)
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check (fast unit tests) and fix all issues
+- [x] Run mypy check and fix all issues
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Final Validation and Documentation
 See [pr_info/steps/step_5.md](steps/step_5.md)
 
-- [ ] Run all label update unit tests
-- [ ] Run all IssueManager tests (regression check)
-- [ ] Run full fast unit test suite
-- [ ] Run mypy type checking (strict mode)
-- [ ] Run pylint code quality check
-- [ ] Verify CLI help text displays correctly for all commands
-- [ ] Test flag parsing works (dry run)
-- [ ] Review all code changes for quality
-- [ ] Verify all issue #143 success criteria met
-- [ ] Prepare final git commit message
+- [x] Run all label update unit tests
+- [x] Run all IssueManager tests (regression check)
+- [x] Run full fast unit test suite
+- [x] Run mypy type checking (strict mode)
+- [x] Run pylint code quality check
+- [x] Verify CLI help text displays correctly for all commands
+- [x] Test flag parsing works (dry run)
+- [x] Review all code changes for quality
+- [x] Verify all issue #143 success criteria met
+- [x] Prepare final git commit message
 
 ---
 
