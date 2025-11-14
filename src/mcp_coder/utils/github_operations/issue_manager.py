@@ -5,12 +5,20 @@ GitHub issues through the PyGithub library.
 """
 
 import logging
+import re
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional, TypedDict
 
 from github.GithubException import GithubException
 
+from mcp_coder.utils.git_operations.branches import get_current_branch_name
+from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
+from mcp_coder.utils.github_operations.label_config import (
+    build_label_lookups,
+    get_labels_config_path,
+    load_labels_config,
+)
 from mcp_coder.utils.log_utils import log_function_call
 
 from .base_manager import BaseGitHubManager, _handle_github_errors
