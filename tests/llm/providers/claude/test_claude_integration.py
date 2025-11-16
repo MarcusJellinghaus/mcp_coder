@@ -39,7 +39,7 @@ def ask_function(method: str) -> Callable[..., Any]:
 class TestCriticalPathIntegration:
     """Critical path integration tests - minimal set covering all major code paths."""
 
-    @pytest.mark.claude_integration
+    @pytest.mark.claude_cli_integration
     def test_basic_cli_api_integration(self) -> None:
         """Test both CLI and API paths work end-to-end.
 
@@ -73,7 +73,7 @@ class TestCriticalPathIntegration:
         assert len(api_result) > 0
         assert "yes" in api_result.lower()
 
-    @pytest.mark.claude_integration
+    @pytest.mark.claude_cli_integration
     def test_session_continuity(self) -> None:
         """Test session management through the full stack (CLI method)."""
         # Prepare environment variables for MCP servers
@@ -99,7 +99,7 @@ class TestCriticalPathIntegration:
         assert "elephant" in result2["text"].lower()
         assert result2["session_id"] == session_id
 
-    @pytest.mark.claude_integration
+    @pytest.mark.claude_api_integration
     def test_session_continuity_api(self) -> None:
         """Test session management through the full stack (API method)."""
         # Prepare environment variables for MCP servers
@@ -137,7 +137,7 @@ class TestCriticalPathIntegration:
 class TestEnvironmentVariablePropagation:
     """Test environment variable propagation through the full stack."""
 
-    @pytest.mark.claude_integration
+    @pytest.mark.claude_cli_integration
     def test_env_vars_propagation(self) -> None:
         """Verify env_vars propagate to Claude Code in both CLI and API methods.
 
