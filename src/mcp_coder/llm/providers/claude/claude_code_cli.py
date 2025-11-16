@@ -168,7 +168,7 @@ def _find_claude_executable() -> str:
         FileNotFoundError: If Claude Code CLI is not found
     """
     result = find_claude_executable(
-        test_execution=True, return_none_if_not_found=False, fast_mode=False
+        test_execution=True, return_none_if_not_found=False, fast_mode=True
     )
     if result is None:
         raise FileNotFoundError("Claude Code CLI not found")

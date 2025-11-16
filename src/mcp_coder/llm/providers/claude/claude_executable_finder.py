@@ -19,7 +19,21 @@ def _get_claude_search_paths() -> List[str]:
     paths_list: List[str] = []
 
     # First check PATH (highest priority)
-    claude_from_path = shutil.which("claude")
+    # On Windows, prefer .exe to avoid wrapper scripts (.bat/.cmd)
+    # which can cause process tree cleanup issues
+    if os.name == "nt":
+        # First try to find claude.exe specifically
+        claude_from_path = shutil.which("claude.exe")
+        if claude_from_path is None:
+            # Fallback to generic search, but filter out wrapper scripts
+            claude_from_path = shutil.which("claude")
+            if claude_from_path and claude_from_path.lower().endswith((".bat", ".cmd")):
+                # Skip .bat/.cmd wrappers - they cause nested subprocess issues
+                claude_from_path = None
+    else:
+        # On Unix-like systems, use standard search
+        claude_from_path = shutil.which("claude")
+
     if claude_from_path is not None:
         paths_list.append(claude_from_path)
 
