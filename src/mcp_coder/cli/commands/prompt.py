@@ -55,7 +55,7 @@ from ...llm.storage import (
     find_latest_session,
     store_session,
 )
-from ..utils import parse_llm_method_from_args
+from ..utils import parse_llm_method_from_args, resolve_mcp_config_path
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +141,7 @@ def execute_prompt(
         verbosity = getattr(args, "verbosity", "just-text")
         output_format = getattr(args, "output_format", "text")
         mcp_config = getattr(args, "mcp_config", None)
+        mcp_config = resolve_mcp_config_path(mcp_config)
 
         # Route to appropriate method based on output_format and verbosity
         if output_format == "json":

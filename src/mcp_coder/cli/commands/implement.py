@@ -11,7 +11,7 @@ from pathlib import Path
 
 from ...workflows.implement.core import run_implement_workflow
 from ...workflows.utils import resolve_project_dir
-from ..utils import parse_llm_method_from_args
+from ..utils import parse_llm_method_from_args, resolve_mcp_config_path
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +36,9 @@ def execute_implement(args: argparse.Namespace) -> int:
         # Parse LLM method using shared utility
         provider, method = parse_llm_method_from_args(args.llm_method)
 
-        # Extract mcp_config from args
+        # Extract and resolve mcp_config path to absolute path
         mcp_config = getattr(args, "mcp_config", None)
+        mcp_config = resolve_mcp_config_path(mcp_config)
 
         # Run the implement workflow
         return run_implement_workflow(project_dir, provider, method, mcp_config)
