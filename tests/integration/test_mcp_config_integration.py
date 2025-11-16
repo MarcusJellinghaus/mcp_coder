@@ -238,52 +238,64 @@ class TestMcpConfigIntegration:
         relative_config = ".mcp.test.json"
         (tmp_path / relative_config).write_text('{"mcpServers": {}}')
 
-        with (
-            patch(
-                "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
-            ) as mock_execute,
-            patch(
-                "mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable"
-            ) as mock_find,
-            patch("mcp_coder.cli.commands.prompt.Path.cwd") as mock_cwd,
-        ):
-            # Setup mocks
-            mock_find.return_value = "claude"
-            mock_execute.return_value = mock_subprocess_success
-            mock_cwd.return_value = tmp_path
+        import os
 
-            # Create args with relative mcp_config path
-            args = argparse.Namespace(
-                prompt="Test question",
-                project_dir=None,
-                llm_method="claude_code_cli",
-                verbosity="just-text",
-                output_format="text",
-                store_response=False,
-                timeout=60,
-                session_id=None,
-                continue_session=False,
-                continue_session_from=None,
-                mcp_config=relative_config,
-            )
+        original_cwd = os.getcwd()
+        try:
+            # Change to tmp_path directory so relative path resolution works
+            os.chdir(tmp_path)
 
-            # Execute command
-            result = execute_prompt(args)
+            with (
+                patch(
+                    "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
+                ) as mock_execute,
+                patch(
+                    "mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable"
+                ) as mock_find,
+            ):
+                # Setup mocks
+                mock_find.return_value = "claude"
+                mock_execute.return_value = mock_subprocess_success
 
-            # Verify command succeeded
-            assert result == 0
+                # Create args with relative mcp_config path
+                args = argparse.Namespace(
+                    prompt="Test question",
+                    project_dir=None,
+                    llm_method="claude_code_cli",
+                    verbosity="just-text",
+                    output_format="text",
+                    store_response=False,
+                    timeout=60,
+                    session_id=None,
+                    continue_session=False,
+                    continue_session_from=None,
+                    mcp_config=relative_config,
+                )
 
-            # Verify execute_subprocess was called
-            assert mock_execute.called
+                # Execute command
+                result = execute_prompt(args)
 
-            # Verify command contains the relative path
-            call_args = mock_execute.call_args
-            command = call_args[0][0]
+                # Verify command succeeded
+                assert result == 0
 
-            assert "--mcp-config" in command
-            assert relative_config in command
+                # Verify execute_subprocess was called
+                assert mock_execute.called
 
-            # NOTE: This test will FAIL until Step 4 implements CLI argument
+                # Verify command contains an absolute path (relative path was resolved)
+                call_args = mock_execute.call_args
+                command = call_args[0][0]
+
+                assert "--mcp-config" in command
+                # The path should be absolute now
+                mcp_config_index = command.index("--mcp-config") + 1
+                resolved_path = command[mcp_config_index]
+                assert Path(resolved_path).is_absolute()
+
+        finally:
+            # Restore original working directory
+            os.chdir(original_cwd)
+
+            # NOTE: This test verifies that relative paths are resolved to absolute paths
 
 
 class TestMcpConfigCLIParser:

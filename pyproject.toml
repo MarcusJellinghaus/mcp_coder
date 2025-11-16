@@ -62,6 +62,7 @@ mcp_coder = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
+    "claude_integration: tests that make actual API calls to Claude (CLI or API, slow)",
     "claude_cli_integration: tests that use real Claude CLI executable (slow)",
     "claude_api_integration: tests that make actual API calls to Claude API (slow)",
     "git_integration: tests with file system git operations (repos, commits)", 
