@@ -18,7 +18,7 @@ from ...utils.git_operations import (
     is_git_repository,
     stage_all_changes,
 )
-from ..utils import parse_llm_method_from_args
+from ..utils import parse_llm_method_from_args, resolve_mcp_config_path
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     success, commit_message, error = generate_commit_message_with_llm(
         project_dir, provider, method
     )
+    # Note: mcp_config support for commit message generation will be added in future update
     if not success:
         print(f"Error: {error}", file=sys.stderr)
         return 2

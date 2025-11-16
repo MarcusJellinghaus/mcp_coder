@@ -18,6 +18,7 @@ class TestExecuteCreatePlan:
         args.issue_number = 123
         args.project_dir = "/test/project"
         args.llm_method = "claude_code_cli"
+        args.mcp_config = None  # Set to None instead of leaving as MagicMock
         return args
 
     def test_execute_create_plan_success(self, mock_args: MagicMock) -> None:
