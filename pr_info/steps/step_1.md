@@ -111,13 +111,14 @@ FUNCTION resolve_execution_dir(execution_dir):
 
 ## Test Requirements
 
+**Note:** Use pytest parametrize and focus on essential tests (KISS principle - Decision #8).
+
 ### Test Cases
 1. **Test None input** → Returns `Path.cwd()`
 2. **Test absolute path** → Returns validated absolute path
 3. **Test relative path** → Resolves to CWD + relative path
 4. **Test non-existent path** → Raises `ValueError`
 5. **Test existing directory** → Returns resolved path
-6. **Test symlinks** → Resolves to real path
 
 ### Test Structure
 ```python
@@ -148,6 +149,9 @@ class TestResolveExecutionDir:
 - Reuses Python's `pathlib` for path operations
 - Clear error messages
 
+### Error Handling Consistency
+**Important:** Review existing `resolve_project_dir()` function and match its error handling pattern for consistency across the codebase (Decision #7 in Decisions.md).
+
 ### Why This Design
 1. **Centralized validation**: All commands use same logic
 2. **Type safety**: Returns `Path` object consistently
@@ -167,5 +171,5 @@ class TestResolveExecutionDir:
 
 ## Estimated Complexity
 - Lines of code: ~15 lines
-- Test lines: ~60 lines
+- Test lines: ~40 lines (reduced with parametrize)
 - Complexity: Low (straightforward path validation)

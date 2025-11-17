@@ -2,12 +2,13 @@
 
 ## LLM Prompt
 ```
-You are implementing Step 3 of the execution-dir feature.
+You are implementing Step 3 (reordered to Step 6) of the execution-dir feature.
 
 Reference documents:
 - Summary: pr_info/steps/summary.md
-- Previous steps: pr_info/steps/step_1.md, pr_info/steps/step_2.md (completed)
+- Previous steps: step_1.md, step_2.md, step_5.md, step_6.md, step_7.md (completed)
 - This step: pr_info/steps/step_3.md
+- Note: Steps reordered - workflows updated before command handlers (Decision #2)
 
 Task: Update prompt and commit command handlers to extract and use execution_dir.
 
@@ -57,8 +58,15 @@ def execute_prompt(args: argparse.Namespace) -> int:
     from ..utils import resolve_execution_dir
     execution_dir = resolve_execution_dir(args.execution_dir)
     
-    # Pass to LLM interface (will be updated in step 5)
-    # For now, just extract and validate
+    # Log once at entry point (Decision #9)
+    logger.debug(f"Execution directory: {execution_dir}")
+    
+    # Pass to workflow/LLM interface (already updated in Step 5/7)
+    response = prompt_llm(
+        ...,
+        execution_dir=str(execution_dir),
+        ...
+    )
 ```
 
 **In `commit.py`:**
@@ -77,8 +85,15 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     from ..utils import resolve_execution_dir
     execution_dir = resolve_execution_dir(args.execution_dir)
     
-    # Pass to LLM interface (will be updated in step 5)
-    # For now, just extract and validate
+    # Log once at entry point (Decision #9)
+    logger.debug(f"Execution directory: {execution_dir}")
+    
+    # Pass to LLM interface (already updated in Step 5)
+    response = ask_llm(
+        ...,
+        execution_dir=str(execution_dir),
+        ...
+    )
 ```
 
 ## HOW
@@ -116,13 +131,13 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 FUNCTION execute_prompt(args):
     TRY:
         execution_dir = resolve_execution_dir(args.execution_dir)
-        Log: "Using execution directory: {execution_dir}"
+        Log once: "Execution directory: {execution_dir}" (Decision #9)
     CATCH ValueError as e:
         Log error: "Invalid execution directory"
         Return 1
     
-    # Continue with existing logic
-    # Store execution_dir for Step 5 integration
+    # Pass execution_dir to LLM interface
+    response = prompt_llm(..., execution_dir=str(execution_dir))
     
 FUNCTION execute_commit_auto(args):
     # Same pattern as above
@@ -189,11 +204,14 @@ class TestCommitAutoExecutionDir:
 - Clear separation: validation vs. usage
 - Consistent pattern across both commands
 
+### Logging Strategy (Decision #9)
+**Important:** Log execution_dir once at command handler entry point only. Do not log at workflow or LLM interface layers.
+
 ### Why This Design
 1. **Early validation**: Catch errors before LLM calls
-2. **Clear logging**: Users know what directory is being used
+2. **Clear logging**: Users know what directory is being used (logged once)
 3. **Graceful errors**: Invalid paths return proper error codes
-4. **Future-ready**: Prepared for Step 5 integration
+4. **Ready for integration**: Workflows and LLM interface already accept execution_dir
 
 ### Current State vs. After This Step
 
@@ -225,19 +243,10 @@ def execute_prompt(args):
 5. Run pylint on modified files
 
 ## Dependencies
-- Depends on: Step 1 (resolve_execution_dir utility)
-- Used by: Step 5 (LLM interface integration)
+- Depends on: Step 1 (resolve_execution_dir utility), Steps 5 & 7 (LLM interface and workflows ready)
+- Note: Reordered after workflow updates (Decision #2)
 
 ## Estimated Complexity
 - Lines of code: ~30 lines (15 per command)
-- Test lines: ~120 lines (60 per command)
+- Test lines: ~80 lines (reduced with parametrize - Decision #8)
 - Complexity: Low (straightforward extraction and validation)
-
-## Logging Strategy
-Add debug logging for visibility:
-```python
-logger.debug(f"Execution directory resolved to: {execution_dir}")
-logger.debug(f"Project directory: {project_dir}")
-```
-
-This helps troubleshoot the separation of concerns.

@@ -72,7 +72,7 @@ We're separating two distinct responsibilities that were previously conflated:
 
 ### TDD Approach
 Each step follows Test-Driven Development:
-1. Write tests first (unit tests for new functionality)
+1. Write tests first (focus on essential tests with KISS principle)
 2. Implement functionality to pass tests
 3. Update integration points
 4. Verify with existing tests
@@ -81,19 +81,19 @@ Each step follows Test-Driven Development:
 ```
 CLI (--execution-dir flag)
   ↓
-Command Handlers (extract from args)
-  ↓
-Workflow Layer (pass to LLM)
+Workflow Layer (accept parameter)
   ↓
 LLM Interface (add parameter)
   ↓
 Claude Provider (use as subprocess cwd)
+  ↓
+Command Handlers (extract from args and pass to workflows)
 ```
 
 ### Risk Mitigation
 - **Breaking Changes**: None - new parameter is optional
 - **Default Behavior**: Uses shell's CWD (explicit and intuitive)
-- **Testing**: Comprehensive unit tests at each layer
+- **Testing**: Essential unit tests at each layer (KISS)
 - **Documentation**: Clear examples and use cases
 
 ## Files to Modify
@@ -126,6 +126,7 @@ tests/cli/commands/test_create_pr.py                # Create-pr command tests
 tests/llm/test_interface.py                         # LLM interface tests
 tests/llm/providers/claude/test_claude_code_cli.py  # CLI provider tests
 tests/llm/providers/claude/test_claude_code_api.py  # API provider tests
+tests/integration/test_execution_dir_integration.py # Integration tests
 ```
 
 ### Documentation Files
@@ -136,13 +137,15 @@ docs/architecture/ARCHITECTURE.md                   # Update with new parameter
 
 ## Implementation Steps
 
+**Note:** Steps reordered to update workflows before command handlers, avoiding temporary type errors (see Decisions.md).
+
 1. **Step 1**: Add path resolution utility for execution directory
 2. **Step 2**: Update CLI argument parsing
-3. **Step 3**: Update command handlers (prompt, commit)
-4. **Step 4**: Update command handlers (implement, create-plan, create-pr)
-5. **Step 5**: Update LLM interface layer
-6. **Step 6**: Update Claude provider layer
-7. **Step 7**: Update workflow layers
+3. **Step 5**: Update LLM interface layer (reordered)
+4. **Step 6**: Update Claude provider documentation (reordered)
+5. **Step 7**: Update workflow layers (reordered)
+6. **Step 3**: Update command handlers (prompt, commit) (reordered)
+7. **Step 4**: Update command handlers (implement, create-plan, create-pr) (reordered)
 8. **Step 8**: Integration testing and documentation
 
 ## Expected Outcomes
@@ -152,12 +155,14 @@ docs/architecture/ARCHITECTURE.md                   # Update with new parameter
 - ✅ Can keep MCP configs in workspace while working on different projects
 - ✅ Clear separation between execution and project contexts
 - ✅ Flexible workflow configurations
+- ✅ MCP config in execution_dir takes precedence
 
 ### Code Quality
 - ✅ Clear parameter naming throughout codebase
 - ✅ Minimal changes to existing functionality
-- ✅ Comprehensive test coverage
+- ✅ Focused test coverage (KISS principle)
 - ✅ Well-documented architectural decision
+- ✅ Consistent error handling matching resolve_project_dir()
 
 ### Example Usage
 ```bash

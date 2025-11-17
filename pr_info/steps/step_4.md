@@ -2,12 +2,13 @@
 
 ## LLM Prompt
 ```
-You are implementing Step 4 of the execution-dir feature.
+You are implementing Step 4 (reordered to Step 7) of the execution-dir feature.
 
 Reference documents:
 - Summary: pr_info/steps/summary.md
-- Previous steps: pr_info/steps/step_1.md through step_3.md (completed)
+- Previous steps: step_1.md, step_2.md, step_5.md, step_6.md, step_7.md, step_3.md (completed)
 - This step: pr_info/steps/step_4.md
+- Note: Steps reordered - workflows updated before command handlers (Decision #2)
 
 Task: Update implement, create-plan, and create-pr command handlers to extract and pass execution_dir to workflow layer.
 
@@ -201,6 +202,9 @@ class TestImplementExecutionDir:
 3. **Separation**: Clear distinction between project and execution
 4. **Preparation**: Ready for workflow layer updates in Step 7
 
+### Logging Strategy (Decision #9)
+**Important:** Log execution_dir once at command handler entry point only.
+
 ### Command-Specific Notes
 
 **implement.py:**
@@ -229,12 +233,12 @@ class TestImplementExecutionDir:
 5. Verify existing tests still pass
 
 ## Dependencies
-- Depends on: Step 1 (resolve_execution_dir)
-- Prepares for: Step 7 (workflow layer updates)
+- Depends on: Step 1 (resolve_execution_dir), Steps 5 & 7 (LLM interface and workflows ready)
+- Note: Reordered after workflow updates (Decision #2)
 
 ## Estimated Complexity
 - Lines of code: ~45 lines (15 per command)
-- Test lines: ~180 lines (60 per command)
+- Test lines: ~120 lines (reduced with parametrize - Decision #8)
 - Complexity: Low (repetitive pattern application)
 
 ## Workflow Function Signatures (Will be updated in Step 7)
