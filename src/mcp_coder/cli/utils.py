@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "parse_llm_method_from_args",
     "resolve_mcp_config_path",
+    "resolve_execution_dir",
 ]
 
 
@@ -85,3 +86,49 @@ def resolve_mcp_config_path(mcp_config: str | None) -> str | None:
 
     logger.debug(f"Resolved MCP config path: {mcp_config} -> {mcp_config_path}")
     return str(mcp_config_path)
+
+
+def resolve_execution_dir(execution_dir: str | None) -> Path:
+    """Resolve execution directory path to absolute Path object.
+
+    Args:
+        execution_dir: Optional execution directory path
+                      - None: Returns current working directory
+                      - Absolute path: Validates and returns as Path
+                      - Relative path: Resolves relative to CWD
+
+    Returns:
+        Path: Absolute path to execution directory
+
+    Raises:
+        ValueError: If specified directory doesn't exist
+
+    Examples:
+        >>> resolve_execution_dir(None)
+        PosixPath('/current/working/dir')
+
+        >>> resolve_execution_dir('/absolute/path')
+        PosixPath('/absolute/path')
+
+        >>> resolve_execution_dir('./relative')
+        PosixPath('/current/working/dir/relative')
+    """
+    if execution_dir is None:
+        return Path.cwd()
+
+    path = Path(execution_dir)
+
+    # Convert relative paths to absolute
+    if not path.is_absolute():
+        path = Path.cwd() / path
+
+    # Validate that the directory exists
+    if not path.exists():
+        raise ValueError(
+            f"Execution directory does not exist: {path}\n"
+            f"  Original path: {execution_dir}\n"
+            f"  Current directory: {Path.cwd()}"
+        )
+
+    logger.debug(f"Resolved execution directory: {execution_dir} -> {path}")
+    return path.resolve()
