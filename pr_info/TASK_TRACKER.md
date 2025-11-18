@@ -48,58 +48,53 @@ absolute paths, relative paths, and error cases.
 **Complexity:** Low  
 **Estimated Lines:** ~120 total (20 implementation + 100 tests)
 
----
+**Commit Message:**
+```
+feat(cli): Add --execution-dir argument to CLI commands
 
-### Step 3: Update Command Handlers (Prompt, Commit) ⏳
-**Status:** Not Started  
-**File:** `pr_info/steps/step_3.md`  
-**Summary:** Update prompt and commit command handlers to extract and validate execution_dir
-
-**Key Deliverables:**
-- [ ] `src/mcp_coder/cli/commands/prompt.py` - Extract and validate execution_dir
-- [ ] `src/mcp_coder/cli/commands/commit.py` - Extract and validate execution_dir
-- [ ] `tests/cli/commands/test_prompt.py` - Add execution_dir tests
-- [ ] `tests/cli/commands/test_commit.py` - Add execution_dir tests
-- [ ] Error handling for invalid paths
-
-**Complexity:** Low  
-**Estimated Lines:** ~150 total (30 implementation + 120 tests)
+Add --execution-dir flag to all commands that invoke Claude (prompt,
+commit auto, implement, create-plan, create-pr) to control Claude's
+working directory. Includes comprehensive test coverage with 8 test cases
+verifying argument parsing across all affected commands.
+```
 
 ---
 
-### Step 4: Update Command Handlers (Implement, Create-Plan, Create-PR) ⏳
-**Status:** Not Started  
-**File:** `pr_info/steps/step_4.md`  
-**Summary:** Update remaining command handlers to extract and pass execution_dir to workflows
-
-**Key Deliverables:**
-- [ ] `src/mcp_coder/cli/commands/implement.py` - Extract and pass execution_dir
-- [ ] `src/mcp_coder/cli/commands/create_plan.py` - Extract and pass execution_dir
-- [ ] `src/mcp_coder/cli/commands/create_pr.py` - Extract and pass execution_dir
-- [ ] Tests for all three commands
-- [ ] Consistent error handling pattern
-
-**Complexity:** Low  
-**Estimated Lines:** ~225 total (45 implementation + 180 tests)
-
----
-
-### Step 5: Update LLM Interface Layer ⏳
-**Status:** Not Started  
+### Step 5: Update LLM Interface Layer ✅
+**Status:** Complete  
 **File:** `pr_info/steps/step_5.md`  
 **Summary:** Add execution_dir parameter to ask_llm() and prompt_llm() functions
 
 **Key Deliverables:**
-- [ ] `src/mcp_coder/llm/interface.py` - Add execution_dir parameter
-- [ ] Update `ask_llm()` function signature
-- [ ] Update `prompt_llm()` function signature
-- [ ] `tests/llm/test_interface.py` - Add execution_dir tests
-- [ ] Pass execution_dir as cwd to providers
+- [x] `src/mcp_coder/llm/interface.py` - Add execution_dir parameter
+- [x] Update `ask_llm()` function signature
+- [x] Update `prompt_llm()` function signature
+- [x] `tests/llm/test_interface.py` - Add execution_dir tests
+- [x] Pass execution_dir as cwd to providers
 
 **Key Concept:** Separate `project_dir` (env vars) from `execution_dir` (subprocess cwd)
 
 **Complexity:** Low  
 **Estimated Lines:** ~90 total (10 implementation + 80 tests)
+
+**Note:** Step 5 moved before steps 3-4 per Decision #2 - workflows and interface must be updated before command handlers can use them.
+
+**Commit Message:**
+```
+feat(llm): Add execution_dir parameter to LLM interface
+
+Add execution_dir parameter to ask_llm() and prompt_llm() to separate
+execution context from project directory. Parameter is passed as cwd to
+Claude providers, enabling proper workspace support. Includes comprehensive
+test coverage with 43 tests verifying parameter handling across CLI and API
+methods.
+
+Key changes:
+- ask_llm(): Add execution_dir parameter, pass as cwd to provider
+- prompt_llm(): Add execution_dir parameter for both CLI and API methods
+- Update docstrings to clarify project_dir vs execution_dir semantics
+- All 43 tests pass, type checking and linting clean
+```
 
 ---
 
@@ -141,6 +136,44 @@ absolute paths, relative paths, and error cases.
 
 **Complexity:** Medium  
 **Estimated Lines:** ~190 total (40 implementation + 150 tests)
+
+---
+
+### Step 3: Update Command Handlers (Prompt, Commit) ⏳
+**Status:** Not Started  
+**File:** `pr_info/steps/step_3.md`  
+**Summary:** Update prompt and commit command handlers to extract and validate execution_dir
+
+**Key Deliverables:**
+- [ ] `src/mcp_coder/cli/commands/prompt.py` - Extract and validate execution_dir
+- [ ] `src/mcp_coder/cli/commands/commit.py` - Extract and validate execution_dir
+- [ ] `tests/cli/commands/test_prompt.py` - Add execution_dir tests
+- [ ] `tests/cli/commands/test_commit.py` - Add execution_dir tests
+- [ ] Error handling for invalid paths
+
+**Complexity:** Low  
+**Estimated Lines:** ~150 total (30 implementation + 120 tests)
+
+**Note:** Step 3 moved after steps 5-7 per Decision #2 - command handlers depend on LLM interface and workflows having execution_dir support.
+
+---
+
+### Step 4: Update Command Handlers (Implement, Create-Plan, Create-PR) ⏳
+**Status:** Not Started  
+**File:** `pr_info/steps/step_4.md`  
+**Summary:** Update remaining command handlers to extract and pass execution_dir to workflows
+
+**Key Deliverables:**
+- [ ] `src/mcp_coder/cli/commands/implement.py` - Extract and pass execution_dir
+- [ ] `src/mcp_coder/cli/commands/create_plan.py` - Extract and pass execution_dir
+- [ ] `src/mcp_coder/cli/commands/create_pr.py` - Extract and pass execution_dir
+- [ ] Tests for all three commands
+- [ ] Consistent error handling pattern
+
+**Complexity:** Low  
+**Estimated Lines:** ~225 total (45 implementation + 180 tests)
+
+**Note:** Step 4 moved after steps 5-7 per Decision #2 - command handlers depend on workflows having execution_dir support.
 
 ---
 
@@ -240,28 +273,28 @@ absolute paths, relative paths, and error cases.
 
 ---
 
-## Dependencies Between Steps
+## Dependencies Between Steps - ACTUAL IMPLEMENTATION ORDER
 
 ```
-Step 1 (Path Resolution)
+Step 1 (Path Resolution) ✅ COMPLETE
   ↓
-Step 2 (CLI Parsing)
+Step 2 (CLI Parsing) ✅ COMPLETE
   ↓
-Step 3 (Prompt/Commit Handlers) ← Depends on Step 1
+Step 5 (LLM Interface) ← Add execution_dir to ask_llm/prompt_llm
   ↓
-Step 4 (Other Handlers) ← Depends on Step 1
+Step 6 (Provider Documentation) ← Document cwd vs project_dir
   ↓
-Step 5 (LLM Interface) ← Depends on Steps 3-4
+Step 7 (Workflows) ← Update workflows to use execution_dir
   ↓
-Step 6 (Documentation) ← Depends on Step 5
+Step 3 (Prompt/Commit Handlers) ← Extract execution_dir and pass to LLM/workflows
   ↓
-Step 7 (Workflows) ← Depends on Step 5
+Step 4 (Other Handlers) ← Extract execution_dir and pass to workflows
   ↓
-Step 8 (Integration + Docs) ← Depends on Steps 1-7
+Step 8 (Integration + Docs) ← End-to-end testing
 ```
 
 **Sequential Implementation Required:** Yes  
-**Parallel Work Possible:** Steps 3-4 could be done in parallel after Step 2
+**Rationale for Reordering:** Per Decision #2, the infrastructure (LLM interface and workflows) must support execution_dir before command handlers can use it. This prevents breaking changes and ensures clean integration.
 
 ---
 
