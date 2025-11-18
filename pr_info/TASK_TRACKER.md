@@ -27,16 +27,16 @@ absolute paths, relative paths, and error cases.
 
 ---
 
-### Step 2: Update CLI Argument Parsing ⏳
-**Status:** Not Started  
+### Step 2: Update CLI Argument Parsing ✅
+**Status:** Complete  
 **File:** `pr_info/steps/step_2.md`  
 **Summary:** Add --execution-dir argument to all commands that invoke Claude
 
 **Key Deliverables:**
-- [ ] `src/mcp_coder/cli/main.py` - Add `--execution-dir` to 5 command parsers
-- [ ] `tests/cli/test_main.py` - Add `TestExecutionDirArgument` test class
-- [ ] 8 test cases verifying argument parsing
-- [ ] Help text shows flag for all affected commands
+- [x] `src/mcp_coder/cli/main.py` - Add `--execution-dir` to 5 command parsers
+- [x] `tests/cli/test_main.py` - Add `TestExecutionDirArgument` test class
+- [x] 8 test cases verifying argument parsing
+- [x] Help text shows flag for all affected commands
 
 **Commands Updated:**
 - prompt
