@@ -9,7 +9,7 @@ PR creation workflow.
 import logging
 import shutil
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.interface import ask_llm
@@ -297,7 +297,11 @@ def check_prerequisites(project_dir: Path) -> bool:
 
 
 def generate_pr_summary(
-    project_dir: Path, provider: str, method: str, mcp_config: str | None = None
+    project_dir: Path,
+    provider: str,
+    method: str,
+    mcp_config: str | None = None,
+    execution_dir: Optional[Path] = None,
 ) -> Tuple[str, str]:
     """Generate PR title and body using LLM and git diff.
 
@@ -306,6 +310,7 @@ def generate_pr_summary(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess
 
     Returns:
         Tuple of (title, body) strings
@@ -343,6 +348,7 @@ def generate_pr_summary(
             provider=provider,
             method=method,
             timeout=300,
+            execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
         )
 
@@ -463,7 +469,11 @@ def log_step(message: str) -> None:
 
 
 def run_create_pr_workflow(
-    project_dir: Path, provider: str, method: str, mcp_config: str | None = None
+    project_dir: Path,
+    provider: str,
+    method: str,
+    mcp_config: str | None = None,
+    execution_dir: Optional[Path] = None,
 ) -> int:
     """Main workflow orchestration function - creates PR and cleans up repository.
 
@@ -472,6 +482,7 @@ def run_create_pr_workflow(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess
 
     Returns:
         int: Exit code (0 for success, 1 for failure)
@@ -488,7 +499,9 @@ def run_create_pr_workflow(
     # Step 2: Generate PR summary
     log_step("Step 2/5: Generating PR summary...")
     try:
-        title, body = generate_pr_summary(project_dir, provider, method, mcp_config)
+        title, body = generate_pr_summary(
+            project_dir, provider, method, mcp_config, execution_dir
+        )
     except (ValueError, FileNotFoundError) as e:
         logger.error(f"Failed to generate PR summary: {e}")
         return 1

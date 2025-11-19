@@ -688,7 +688,7 @@ Please implement this task step by step."""
         # Verify processing steps
         mock_get_status.assert_called_once_with(project_dir)
         mock_check_mypy.assert_called_once_with(
-            project_dir, 2, "claude", "api", ANY, None
+            project_dir, 2, "claude", "api", ANY, None, None
         )
         mock_run_formatters.assert_called_once_with(project_dir)
         mock_commit.assert_called_once_with(project_dir, "claude", "api")

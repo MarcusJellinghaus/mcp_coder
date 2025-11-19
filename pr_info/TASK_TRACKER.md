@@ -131,18 +131,18 @@ All unit tests pass (66 tests).
 
 ---
 
-### Step 7: Update Workflow Layers ⏳
-**Status:** Not Started  
+### Step 7: Update Workflow Layers ✅
+**Status:** Complete  
 **File:** `pr_info/steps/step_7.md`  
 **Summary:** Update workflow functions to accept and pass execution_dir to LLM calls
 
 **Key Deliverables:**
-- [ ] `src/mcp_coder/workflows/implement/core.py` - Add execution_dir parameter
-- [ ] `src/mcp_coder/workflows/create_plan.py` - Add execution_dir parameter
-- [ ] `src/mcp_coder/workflows/create_pr/core.py` - Add execution_dir parameter
-- [ ] Update all LLM calls in workflows
-- [ ] Update workflow tests
-- [ ] Propagate parameter through sub-functions
+- [x] `src/mcp_coder/workflows/implement/core.py` - Add execution_dir parameter
+- [x] `src/mcp_coder/workflows/create_plan.py` - Add execution_dir parameter
+- [x] `src/mcp_coder/workflows/create_pr/core.py` - Add execution_dir parameter
+- [x] Update all LLM calls in workflows
+- [x] Update workflow tests
+- [x] Propagate parameter through sub-functions
 
 **Functions Updated:**
 - `prepare_task_tracker()`

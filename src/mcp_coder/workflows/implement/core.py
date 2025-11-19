@@ -39,7 +39,11 @@ logger = logging.getLogger(__name__)
 
 
 def prepare_task_tracker(
-    project_dir: Path, provider: str, method: str, mcp_config: Optional[str] = None
+    project_dir: Path,
+    provider: str,
+    method: str,
+    mcp_config: Optional[str] = None,
+    execution_dir: Optional[Path] = None,
 ) -> bool:
     """Prepare task tracker by populating it if it has no implementation steps.
 
@@ -48,6 +52,8 @@ def prepare_task_tracker(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess.
+            Default: None (uses caller's working directory)
 
     Returns:
         bool: True if task tracker is ready (already had tasks or successfully updated), False on error
@@ -91,6 +97,7 @@ def prepare_task_tracker(
             timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
             project_dir=str(project_dir),
+            execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
         )
 
@@ -213,7 +220,11 @@ def log_progress_summary(project_dir: Path) -> None:
 
 
 def run_implement_workflow(
-    project_dir: Path, provider: str, method: str, mcp_config: Optional[str] = None
+    project_dir: Path,
+    provider: str,
+    method: str,
+    mcp_config: Optional[str] = None,
+    execution_dir: Optional[Path] = None,
 ) -> int:
     """Main workflow orchestration function - processes all implementation tasks in sequence.
 
@@ -222,6 +233,7 @@ def run_implement_workflow(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -243,7 +255,9 @@ def run_implement_workflow(
         return 1
 
     # Step 2: Prepare task tracker if needed
-    if not prepare_task_tracker(project_dir, provider, method, mcp_config):
+    if not prepare_task_tracker(
+        project_dir, provider, method, mcp_config, execution_dir
+    ):
         return 1
 
     # Step 3: Show initial progress summary
@@ -254,7 +268,9 @@ def run_implement_workflow(
     error_occurred = False
 
     while True:
-        success, reason = process_single_task(project_dir, provider, method, mcp_config)
+        success, reason = process_single_task(
+            project_dir, provider, method, mcp_config, execution_dir
+        )
 
         if not success:
             if reason == "no_tasks":
@@ -279,7 +295,13 @@ def run_implement_workflow(
 
         # Use step number 0 for final mypy check conversation
         if not check_and_fix_mypy(
-            project_dir, 0, provider, method, env_vars, mcp_config
+            project_dir,
+            0,
+            provider,
+            method,
+            env_vars,
+            mcp_config,
+            execution_dir=execution_dir,
         ):
             logger.warning(
                 "Final mypy check found unresolved issues - continuing anyway"

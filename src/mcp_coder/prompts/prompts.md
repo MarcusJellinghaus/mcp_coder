@@ -139,6 +139,8 @@ You are implementing tasks from a task tracker. Follow these steps in order:
 - Work on EXACTLY ONE task per run - do not pick additional tasks
 - You MUST complete Step 5 (mark task as `[x]`) before finishing
 - The checkbox update is non-negotiable and required for workflow progression
+
+**Always use the MCP tools**
 ```
 
 ### Mypy Type Fixes

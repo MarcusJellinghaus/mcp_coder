@@ -225,6 +225,7 @@ def run_planning_prompts(
     issue_data: IssueData,
     llm_method: str,
     mcp_config: Optional[str] = None,
+    execution_dir: Optional[Path] = None,
 ) -> bool:
     """Execute three planning prompts with session continuation.
 
@@ -233,6 +234,7 @@ def run_planning_prompts(
         issue_data: IssueData object with issue details
         llm_method: LLM method string (e.g., "claude_code_cli")
         mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess
 
     Returns:
         True if all prompts succeed, False on error
@@ -290,6 +292,7 @@ def run_planning_prompts(
             timeout=600,
             env_vars=env_vars,
             project_dir=str(project_dir),
+            execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
         )
 
@@ -341,6 +344,7 @@ def run_planning_prompts(
             timeout=600,
             env_vars=env_vars,
             project_dir=str(project_dir),
+            execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
         )
 
@@ -386,6 +390,7 @@ def run_planning_prompts(
             timeout=PROMPT_3_TIMEOUT,
             env_vars=env_vars,
             project_dir=str(project_dir),
+            execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
         )
 
@@ -499,6 +504,7 @@ def run_create_plan_workflow(
     provider: str,
     method: str,
     mcp_config: Optional[str] = None,
+    execution_dir: Optional[Path] = None,
 ) -> int:
     """Main workflow orchestration function - creates implementation plan for GitHub issue.
 
@@ -508,6 +514,7 @@ def run_create_plan_workflow(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -552,7 +559,9 @@ def run_create_plan_workflow(
 
     # Step 6: Generate implementation plan
     logger.info("Step 6/7: Generating implementation plan...")
-    if not run_planning_prompts(project_dir, issue_data, llm_method, mcp_config):
+    if not run_planning_prompts(
+        project_dir, issue_data, llm_method, mcp_config, execution_dir
+    ):
         logger.error("Planning prompts execution failed")
         return 1
 

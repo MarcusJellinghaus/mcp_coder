@@ -73,6 +73,58 @@ class TestMain:
 
         assert result == 0
 
+    def test_main_execution_dir_passed_to_prompts(
+        self, mock_issue_data: IssueData, tmp_path: Path
+    ) -> None:
+        """Test execution_dir parameter is passed to run_planning_prompts."""
+        # Create .git directory
+        (tmp_path / ".git").mkdir()
+
+        # Create execution_dir
+        exec_dir = tmp_path / "execution"
+        exec_dir.mkdir()
+
+        with patch(
+            "mcp_coder.workflows.create_plan.check_prerequisites",
+            return_value=(True, mock_issue_data),
+        ):
+            with patch(
+                "mcp_coder.workflows.create_plan.manage_branch",
+                return_value="feature-branch",
+            ):
+                with patch(
+                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    return_value=True,
+                ):
+                    with patch(
+                        "mcp_coder.workflows.create_plan.run_planning_prompts",
+                        return_value=True,
+                    ) as mock_prompts:
+                        with patch(
+                            "mcp_coder.workflows.create_plan.validate_output_files",
+                            return_value=True,
+                        ):
+                            with patch(
+                                "mcp_coder.workflows.create_plan.commit_all_changes",
+                                return_value={
+                                    "success": True,
+                                    "commit_hash": "abc123",
+                                },
+                            ):
+                                with patch(
+                                    "mcp_coder.workflows.create_plan.git_push",
+                                    return_value={"success": True},
+                                ):
+                                    result = run_create_plan_workflow(
+                                        123, tmp_path, "claude", "cli", None, exec_dir
+                                    )
+
+        assert result == 0
+        # Verify execution_dir was passed to run_planning_prompts
+        mock_prompts.assert_called_once_with(
+            tmp_path, mock_issue_data, "claude_code_cli", None, exec_dir
+        )
+
     def test_main_prerequisites_fail(self, tmp_path: Path) -> None:
         """Test main function when prerequisites validation fails."""
         # Create .git directory
@@ -438,6 +490,6 @@ class TestMain:
         mock_check.assert_called_once_with(tmp_path, 123)
         mock_manage.assert_called_once_with(tmp_path, 123, "Test Issue")
         mock_prompts.assert_called_once_with(
-            tmp_path, mock_issue_data, "claude_code_cli", None
+            tmp_path, mock_issue_data, "claude_code_cli", None, None
         )
         assert result == 0
