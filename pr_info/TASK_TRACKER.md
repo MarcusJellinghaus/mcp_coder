@@ -155,22 +155,47 @@ All unit tests pass (66 tests).
 
 ---
 
-### Step 3: Update Command Handlers (Prompt, Commit) ⏳
-**Status:** Not Started  
+### Step 3: Update Command Handlers (Prompt, Commit) ✅
+**Status:** Complete  
 **File:** `pr_info/steps/step_3.md`  
 **Summary:** Update prompt and commit command handlers to extract and validate execution_dir
 
 **Key Deliverables:**
-- [ ] `src/mcp_coder/cli/commands/prompt.py` - Extract and validate execution_dir
-- [ ] `src/mcp_coder/cli/commands/commit.py` - Extract and validate execution_dir
-- [ ] `tests/cli/commands/test_prompt.py` - Add execution_dir tests
-- [ ] `tests/cli/commands/test_commit.py` - Add execution_dir tests
-- [ ] Error handling for invalid paths
+- [x] `src/mcp_coder/cli/commands/prompt.py` - Extract and validate execution_dir
+- [x] `src/mcp_coder/cli/commands/commit.py` - Extract and validate execution_dir
+- [x] `tests/cli/commands/test_prompt.py` - Add execution_dir tests
+- [x] `tests/cli/commands/test_commit.py` - Add execution_dir tests
+- [x] Error handling for invalid paths
+- [x] `src/mcp_coder/utils/commit_operations.py` - Add execution_dir parameter
+- [x] Updated all existing test assertions to include execution_dir
 
 **Complexity:** Low  
 **Estimated Lines:** ~150 total (30 implementation + 120 tests)
 
 **Note:** Step 3 moved after steps 5-7 per Decision #2 - command handlers depend on LLM interface and workflows having execution_dir support.
+
+**Commit Message:**
+```
+feat(cli): Add execution_dir to prompt and commit command handlers
+
+Update prompt and commit auto command handlers to extract and validate
+execution_dir from CLI args, passing it through to LLM interface layer.
+
+Changes:
+- prompt.py: Extract execution_dir, validate, and pass to ask_llm/prompt_llm
+- commit.py: Extract execution_dir, validate, and pass to generate_commit_message_with_llm
+- commit_operations.py: Add execution_dir parameter to generate_commit_message_with_llm
+- test_prompt.py: Add 5 test cases for execution_dir handling
+- test_commit.py: Add 4 test cases for execution_dir handling
+- Updated all existing test assertions to include execution_dir parameter
+
+Error handling:
+- Invalid execution_dir returns error code 1
+- Clear error messages for validation failures
+- Logging at command handler entry point (Decision #9)
+
+All 1137 tests pass, type checking and linting clean.
+```
 
 ---
 

@@ -55,7 +55,7 @@ from ...llm.storage import (
     find_latest_session,
     store_session,
 )
-from ..utils import parse_llm_method_from_args, resolve_mcp_config_path
+from ..utils import parse_llm_method_from_args, resolve_execution_dir, resolve_mcp_config_path
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,16 @@ def execute_prompt(
     logger.info("Executing prompt command")
 
     try:
+        # Extract and validate execution_dir
+        try:
+            execution_dir = resolve_execution_dir(
+                getattr(args, "execution_dir", None)
+            )
+            logger.debug(f"Execution directory: {execution_dir}")
+        except ValueError as e:
+            logger.error(f"Invalid execution directory: {e}")
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
         # Prepare environment variables for LLM subprocess
         try:
             # Get project directory from args or use current directory
@@ -157,6 +167,7 @@ def execute_prompt(
                 session_id=resume_session_id,
                 env_vars=env_vars,
                 project_dir=str(project_dir),
+                execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
             )
             # Output complete response as JSON (includes session_id)
@@ -172,6 +183,7 @@ def execute_prompt(
                 session_id=resume_session_id,
                 env_vars=env_vars,
                 project_dir=str(project_dir),
+                execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
             )
 
