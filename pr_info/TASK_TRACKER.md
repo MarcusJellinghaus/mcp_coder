@@ -16,15 +16,6 @@
 **Complexity:** Low  
 **Estimated Lines:** ~75 total (15 implementation + 60 tests)
 
-**Commit Message:**
-```
-feat(cli): Add resolve_execution_dir utility function
-
-Implement path resolution utility for execution directory handling with
-validation and CWD resolution. Includes comprehensive test coverage for
-absolute paths, relative paths, and error cases.
-```
-
 ---
 
 ### Step 2: Update CLI Argument Parsing ✅
@@ -48,16 +39,6 @@ absolute paths, relative paths, and error cases.
 **Complexity:** Low  
 **Estimated Lines:** ~120 total (20 implementation + 100 tests)
 
-**Commit Message:**
-```
-feat(cli): Add --execution-dir argument to CLI commands
-
-Add --execution-dir flag to all commands that invoke Claude (prompt,
-commit auto, implement, create-plan, create-pr) to control Claude's
-working directory. Includes comprehensive test coverage with 8 test cases
-verifying argument parsing across all affected commands.
-```
-
 ---
 
 ### Step 5: Update LLM Interface Layer ✅
@@ -79,23 +60,6 @@ verifying argument parsing across all affected commands.
 
 **Note:** Step 5 moved before steps 3-4 per Decision #2 - workflows and interface must be updated before command handlers can use them.
 
-**Commit Message:**
-```
-feat(llm): Add execution_dir parameter to LLM interface
-
-Add execution_dir parameter to ask_llm() and prompt_llm() to separate
-execution context from project directory. Parameter is passed as cwd to
-Claude providers, enabling proper workspace support. Includes comprehensive
-test coverage with 43 tests verifying parameter handling across CLI and API
-methods.
-
-Key changes:
-- ask_llm(): Add execution_dir parameter, pass as cwd to provider
-- prompt_llm(): Add execution_dir parameter for both CLI and API methods
-- Update docstrings to clarify project_dir vs execution_dir semantics
-- All 43 tests pass, type checking and linting clean
-```
-
 ---
 
 ### Step 6: Update Claude Provider Documentation ✅
@@ -112,22 +76,6 @@ Key changes:
 
 **Complexity:** Very Low (documentation only)  
 **Estimated Lines:** ~30 total (docstring updates)
-
-**Commit Message:**
-```
-docs(llm): Clarify cwd parameter in Claude provider docstrings
-
-Update documentation in Claude provider files to clarify that the `cwd`
-parameter controls subprocess execution directory, not project location.
-
-Changes:
-- claude_code_cli.py: Simplified cwd docstring and inline comments
-- claude_code_api.py: Clarified cwd purpose across all async/sync functions
-- claude_code_interface.py: Updated cwd documentation for consistency
-
-This is a documentation-only change with no behavior modifications.
-All unit tests pass (66 tests).
-```
 
 ---
 
@@ -174,42 +122,19 @@ All unit tests pass (66 tests).
 
 **Note:** Step 3 moved after steps 5-7 per Decision #2 - command handlers depend on LLM interface and workflows having execution_dir support.
 
-**Commit Message:**
-```
-feat(cli): Add execution_dir to prompt and commit command handlers
-
-Update prompt and commit auto command handlers to extract and validate
-execution_dir from CLI args, passing it through to LLM interface layer.
-
-Changes:
-- prompt.py: Extract execution_dir, validate, and pass to ask_llm/prompt_llm
-- commit.py: Extract execution_dir, validate, and pass to generate_commit_message_with_llm
-- commit_operations.py: Add execution_dir parameter to generate_commit_message_with_llm
-- test_prompt.py: Add 5 test cases for execution_dir handling
-- test_commit.py: Add 4 test cases for execution_dir handling
-- Updated all existing test assertions to include execution_dir parameter
-
-Error handling:
-- Invalid execution_dir returns error code 1
-- Clear error messages for validation failures
-- Logging at command handler entry point (Decision #9)
-
-All 1137 tests pass, type checking and linting clean.
-```
-
 ---
 
-### Step 4: Update Command Handlers (Implement, Create-Plan, Create-PR) ⏳
-**Status:** Not Started  
+### Step 4: Update Command Handlers (Implement, Create-Plan, Create-PR) ✅
+**Status:** Complete  
 **File:** `pr_info/steps/step_4.md`  
 **Summary:** Update remaining command handlers to extract and pass execution_dir to workflows
 
 **Key Deliverables:**
-- [ ] `src/mcp_coder/cli/commands/implement.py` - Extract and pass execution_dir
-- [ ] `src/mcp_coder/cli/commands/create_plan.py` - Extract and pass execution_dir
-- [ ] `src/mcp_coder/cli/commands/create_pr.py` - Extract and pass execution_dir
-- [ ] Tests for all three commands
-- [ ] Consistent error handling pattern
+- [x] `src/mcp_coder/cli/commands/implement.py` - Extract and pass execution_dir
+- [x] `src/mcp_coder/cli/commands/create_plan.py` - Extract and pass execution_dir
+- [x] `src/mcp_coder/cli/commands/create_pr.py` - Extract and pass execution_dir
+- [x] Tests for all three commands
+- [x] Consistent error handling pattern
 
 **Complexity:** Low  
 **Estimated Lines:** ~225 total (45 implementation + 180 tests)

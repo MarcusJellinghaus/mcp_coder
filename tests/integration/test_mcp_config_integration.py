@@ -98,6 +98,7 @@ class TestMcpConfigIntegration:
                 project_dir=str(tmp_path),
                 llm_method="claude_code_cli",
                 mcp_config=temp_mcp_config,
+                execution_dir=None,
             )
 
             # Execute command

@@ -9,7 +9,11 @@ import logging
 import sys
 
 from ...workflows.utils import resolve_project_dir
-from ..utils import parse_llm_method_from_args, resolve_mcp_config_path
+from ..utils import (
+    parse_llm_method_from_args,
+    resolve_execution_dir,
+    resolve_mcp_config_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +25,7 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         args: Parsed command line arguments with:
             - issue_number: GitHub issue number (int)
             - project_dir: Optional project directory path
+            - execution_dir: Optional execution directory (NEW)
             - llm_method: LLM method to use ('claude_code_cli' or 'claude_code_api')
 
     Returns:
@@ -31,6 +36,13 @@ def execute_create_plan(args: argparse.Namespace) -> int:
 
         # Resolve project directory with validation
         project_dir = resolve_project_dir(args.project_dir)
+
+        # Resolve execution directory
+        execution_dir = resolve_execution_dir(args.execution_dir)
+
+        # Log both directories for clarity
+        logger.debug(f"Project directory: {project_dir}")
+        logger.debug(f"Execution directory: {execution_dir}")
 
         # Parse LLM method using shared utility
         provider, method = parse_llm_method_from_args(args.llm_method)
@@ -44,8 +56,14 @@ def execute_create_plan(args: argparse.Namespace) -> int:
 
         # Run the create-plan workflow
         return run_create_plan_workflow(
-            args.issue_number, project_dir, provider, method, mcp_config
+            args.issue_number, project_dir, provider, method, mcp_config, execution_dir
         )
+
+    except ValueError as e:
+        # Handle invalid execution_dir
+        logger.error(f"Invalid execution directory: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
 
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")
