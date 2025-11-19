@@ -43,9 +43,10 @@ This runs:
 
 **Available markers in pyproject.toml:**
 - `git_integration`: File system git operations (repos, commits)
-- `claude_integration`: Claude CLI/API tests (network, auth needed) 
+- `claude_api_integration`: Claude API tests 
+- `claude_cli_integration`: Claude CLI tests
 - `formatter_integration`: Code formatter integration (black, isort)
-- `github_integration`: GitHub API access (network, auth needed)
+- `github_integration`: GitHub API access
 
 **RECOMMENDED USAGE:**
 - **Fast unit tests (recommended)**: Use `-m` with `not` expressions to exclude slow integration tests
@@ -55,7 +56,7 @@ This runs:
 **Examples:**
 ```python
 # RECOMMENDED: Fast unit tests (excludes all integration tests)
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_integration and not formatter_integration and not github_integration"])
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"])
 
 # All tests including slow integration tests (not recommended for regular development)
 mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])
