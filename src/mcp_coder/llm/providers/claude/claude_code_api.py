@@ -221,7 +221,9 @@ def _create_claude_client(
     Args:
         session_id: Optional Claude session ID to resume conversation
         env: Optional environment variables to pass to Claude Code SDK
-        cwd: Optional working directory for Claude Code SDK subprocess
+        cwd: Optional working directory for the Claude subprocess.
+            Controls where Claude executes and discovers config files.
+            Default: None (uses caller's current working directory)
 
     Returns:
         ClaudeCodeOptions object configured for basic usage or session resumption
@@ -319,7 +321,9 @@ async def _ask_claude_code_api_async(
         timeout: Timeout in seconds for the request (default: 30)
         session_id: Optional Claude session ID to resume conversation
         env_vars: Optional environment variables to pass to Claude Code SDK
-        cwd: Optional working directory for Claude Code SDK subprocess
+        cwd: Optional working directory for the Claude subprocess.
+            Controls where Claude executes and discovers config files.
+            Default: None (uses caller's current working directory)
 
     Returns:
         Claude's response as a string (concatenated text from all TextBlocks)
@@ -420,7 +424,9 @@ def ask_claude_code_api(
         session_id: Optional Claude session ID to resume conversation
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to Claude Code SDK
-        cwd: Optional working directory for Claude Code SDK subprocess
+        cwd: Optional working directory for the Claude subprocess.
+            Controls where Claude executes and discovers config files.
+            Default: None (uses caller's current working directory)
         mcp_config: Optional path to MCP configuration file (not used for API method, for interface consistency)
 
     Returns:
@@ -496,7 +502,9 @@ async def ask_claude_code_api_detailed(
         timeout: Timeout in seconds for the request (default: 30)
         session_id: Optional Claude session ID to resume conversation
         env_vars: Optional environment variables to pass to Claude Code SDK
-        cwd: Optional working directory for Claude Code SDK subprocess
+        cwd: Optional working directory for the Claude subprocess.
+            Controls where Claude executes and discovers config files.
+            Default: None (uses caller's current working directory)
 
     Returns:
         Dictionary containing:
@@ -639,7 +647,9 @@ def ask_claude_code_api_detailed_sync(
         timeout: Timeout in seconds for the request (default: 30)
         session_id: Optional Claude session ID to resume conversation
         env_vars: Optional environment variables to pass to Claude Code SDK
-        cwd: Optional working directory for Claude Code SDK subprocess
+        cwd: Optional working directory for the Claude subprocess.
+            Controls where Claude executes and discovers config files.
+            Default: None (uses caller's current working directory)
 
     Returns:
         Dictionary with detailed response information

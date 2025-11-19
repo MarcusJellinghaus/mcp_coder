@@ -98,20 +98,36 @@ Key changes:
 
 ---
 
-### Step 6: Update Claude Provider Documentation ⏳
-**Status:** Not Started  
+### Step 6: Update Claude Provider Documentation ✅
+**Status:** Complete  
 **File:** `pr_info/steps/step_6.md`  
 **Summary:** Update docstrings to clarify cwd parameter usage in Claude providers
 
 **Key Deliverables:**
-- [ ] `src/mcp_coder/llm/providers/claude/claude_code_cli.py` - Update docstring
-- [ ] `src/mcp_coder/llm/providers/claude/claude_code_api.py` - Update docstring
-- [ ] `src/mcp_coder/llm/providers/claude/claude_code_interface.py` - Update docstring
-- [ ] Clarify cwd vs project_dir distinction
-- [ ] Add inline comments where helpful
+- [x] `src/mcp_coder/llm/providers/claude/claude_code_cli.py` - Update docstring
+- [x] `src/mcp_coder/llm/providers/claude/claude_code_api.py` - Update docstring
+- [x] `src/mcp_coder/llm/providers/claude/claude_code_interface.py` - Update docstring
+- [x] Clarify cwd vs project_dir distinction
+- [x] Add inline comments where helpful
 
 **Complexity:** Very Low (documentation only)  
 **Estimated Lines:** ~30 total (docstring updates)
+
+**Commit Message:**
+```
+docs(llm): Clarify cwd parameter in Claude provider docstrings
+
+Update documentation in Claude provider files to clarify that the `cwd`
+parameter controls subprocess execution directory, not project location.
+
+Changes:
+- claude_code_cli.py: Simplified cwd docstring and inline comments
+- claude_code_api.py: Clarified cwd purpose across all async/sync functions
+- claude_code_interface.py: Updated cwd documentation for consistency
+
+This is a documentation-only change with no behavior modifications.
+All unit tests pass (66 tests).
+```
 
 ---
 

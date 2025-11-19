@@ -28,7 +28,9 @@ def ask_claude_code(  # pylint: disable=too-many-positional-arguments
         session_id: Optional session ID to resume previous conversation
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to the LLM subprocess
-        cwd: Optional working directory for the LLM subprocess
+        cwd: Optional working directory for the LLM subprocess.
+            Controls Claude's execution context and config file discovery.
+            Default: None (subprocess uses caller's working directory)
         mcp_config: Optional path to MCP configuration file
 
     Returns:
