@@ -18,7 +18,11 @@ from ...utils.git_operations import (
     is_git_repository,
     stage_all_changes,
 )
-from ..utils import parse_llm_method_from_args, resolve_mcp_config_path
+from ..utils import (
+    parse_llm_method_from_args,
+    resolve_execution_dir,
+    resolve_mcp_config_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +30,15 @@ logger = logging.getLogger(__name__)
 def execute_commit_auto(args: argparse.Namespace) -> int:
     """Execute commit auto command with optional preview. Returns exit code."""
     logger.info("Starting commit auto with preview=%s", args.preview)
+
+    # Extract and validate execution_dir
+    try:
+        execution_dir = resolve_execution_dir(getattr(args, "execution_dir", None))
+        logger.debug(f"Execution directory: {execution_dir}")
+    except ValueError as e:
+        logger.error(f"Invalid execution directory: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
 
     project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
 
@@ -38,7 +51,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     # 2. Parse LLM method and generate commit message
     provider, method = parse_llm_method_from_args(args.llm_method)
     success, commit_message, error = generate_commit_message_with_llm(
-        project_dir, provider, method
+        project_dir, provider, method, execution_dir=str(execution_dir)
     )
     # Note: mcp_config support for commit message generation will be added in future update
     if not success:

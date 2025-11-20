@@ -5,6 +5,7 @@ import sys
 from io import StringIO
 from pathlib import Path
 from typing import Any
+from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -59,7 +60,9 @@ class TestExecuteCommitAuto:
         # Verify function calls
         mock_validate.assert_called_once()
         mock_parse_llm.assert_called_once_with("claude_code_api")
-        mock_generate.assert_called_once_with(Path.cwd(), "claude", "api")
+        mock_generate.assert_called_once_with(
+            Path.cwd(), "claude", "api", execution_dir=mock.ANY
+        )
         mock_commit.assert_called_once_with("feat: add new feature", Path.cwd())
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
@@ -707,3 +710,155 @@ class TestGenerateCommitMessageWithLLMExtended:
         error_str: str = error or ""
         assert "LLM generated a commit message with empty first line" in error_str
         assert "invalid for git commits" in error_str
+
+
+class TestCommitAutoExecutionDir:
+    """Tests for execution_dir handling in commit auto command."""
+
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
+    def test_default_execution_dir_uses_cwd(
+        self,
+        mock_commit: Mock,
+        mock_generate: Mock,
+        mock_parse_llm: Mock,
+        mock_validate: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test default execution_dir should use current working directory."""
+        # Setup mocks
+        mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
+        mock_generate.return_value = (True, "feat: add new feature", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc1234",
+            "error": None,
+        }
+
+        args = argparse.Namespace(
+            preview=False,
+            llm_method="claude_code_api",
+            project_dir=None,
+            execution_dir=None,  # No explicit execution_dir
+        )
+
+        result = execute_commit_auto(args)
+
+        assert result == 0
+        # Verify generate_commit_message_with_llm was called
+        # Note: The actual execution_dir handling will be added to the function
+        mock_generate.assert_called_once()
+
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
+    def test_explicit_execution_dir_validated(
+        self,
+        mock_commit: Mock,
+        mock_generate: Mock,
+        mock_parse_llm: Mock,
+        mock_validate: Mock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test explicit execution_dir should be validated and used."""
+        # Setup mocks
+        mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
+        mock_generate.return_value = (True, "feat: add new feature", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc1234",
+            "error": None,
+        }
+
+        # Create a valid temporary directory
+        execution_dir = tmp_path / "exec_dir"
+        execution_dir.mkdir()
+
+        args = argparse.Namespace(
+            preview=False,
+            llm_method="claude_code_api",
+            project_dir=None,
+            execution_dir=str(execution_dir),
+        )
+
+        result = execute_commit_auto(args)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert "SUCCESS: Commit created: abc1234" in captured_out
+
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    def test_invalid_execution_dir_returns_error(
+        self,
+        mock_validate: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test invalid execution_dir should return error code 1."""
+        mock_validate.return_value = (True, None)
+
+        args = argparse.Namespace(
+            preview=False,
+            llm_method="claude_code_api",
+            project_dir=None,
+            execution_dir="/nonexistent/invalid/path",
+        )
+
+        result = execute_commit_auto(args)
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "Error" in captured.err
+        assert "execution directory" in captured.err.lower()
+
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
+    @patch("builtins.input")
+    def test_execution_dir_with_preview_mode(
+        self,
+        mock_input: Mock,
+        mock_commit: Mock,
+        mock_generate: Mock,
+        mock_parse_llm: Mock,
+        mock_validate: Mock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test execution_dir works with preview mode (no conflicts)."""
+        # Setup mocks
+        mock_validate.return_value = (True, None)
+        mock_parse_llm.return_value = ("claude", "api")
+        mock_generate.return_value = (True, "feat: add new feature", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc1234",
+            "error": None,
+        }
+        mock_input.return_value = "y"
+
+        # Create a valid temporary directory
+        execution_dir = tmp_path / "exec_dir"
+        execution_dir.mkdir()
+
+        args = argparse.Namespace(
+            preview=True,
+            llm_method="claude_code_api",
+            project_dir=None,
+            execution_dir=str(execution_dir),
+        )
+
+        result = execute_commit_auto(args)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        captured_out: str = captured.out or ""
+        assert "Generated commit message:" in captured_out
+        assert "SUCCESS: Commit created: abc1234" in captured_out

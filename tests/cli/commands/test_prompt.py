@@ -38,6 +38,7 @@ class TestExecutePrompt:
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             project_dir=mock.ANY,
+            execution_dir=mock.ANY,
             mcp_config=None,
         )
         captured = capsys.readouterr()
@@ -101,6 +102,7 @@ class TestExecutePrompt:
             session_id="previous-session-456",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             project_dir=mock.ANY,
+            execution_dir=mock.ANY,
             mcp_config=None,
         )
         captured = capsys.readouterr()
@@ -138,6 +140,7 @@ class TestExecutePrompt:
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             project_dir=mock.ANY,
+            execution_dir=mock.ANY,
             mcp_config=None,
         )
         captured = capsys.readouterr()
@@ -180,6 +183,7 @@ class TestExecutePrompt:
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             project_dir=mock.ANY,
+            execution_dir=mock.ANY,
             mcp_config=None,
         )
         captured = capsys.readouterr()
@@ -224,6 +228,7 @@ class TestExecutePrompt:
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             project_dir=mock.ANY,
+            execution_dir=mock.ANY,
             mcp_config=None,
         )
         captured = capsys.readouterr()
@@ -314,6 +319,7 @@ class TestExecutePrompt:
             session_id=None,
             env_vars=mock_env_vars,
             project_dir=mock.ANY,
+            execution_dir=mock.ANY,
             mcp_config=None,
         )
         captured = capsys.readouterr()
@@ -349,7 +355,172 @@ class TestExecutePrompt:
             session_id=None,
             env_vars=None,
             project_dir=mock.ANY,
+            execution_dir=mock.ANY,
             mcp_config=None,
         )
         captured = capsys.readouterr()
         assert "Response without env vars." in captured.out
+
+
+class TestPromptExecutionDir:
+    """Tests for execution_dir handling in prompt command."""
+
+    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+    @patch("mcp_coder.cli.commands.prompt.ask_llm")
+    def test_default_execution_dir_uses_cwd(
+        self,
+        mock_ask_llm: Mock,
+        mock_prepare_env: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test default execution_dir should use current working directory."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
+        mock_ask_llm.return_value = "Response with default execution_dir."
+
+        args = argparse.Namespace(
+            prompt="Test prompt",
+            execution_dir=None,  # No explicit execution_dir
+        )
+
+        result = execute_prompt(args)
+
+        assert result == 0
+        # Verify execution_dir was passed to ask_llm and equals CWD
+        call_kwargs = mock_ask_llm.call_args[1]
+        assert "execution_dir" in call_kwargs
+        assert call_kwargs["execution_dir"] == str(Path.cwd())
+        captured = capsys.readouterr()
+        assert "Response with default execution_dir." in captured.out
+
+    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+    @patch("mcp_coder.cli.commands.prompt.ask_llm")
+    def test_explicit_execution_dir_absolute(
+        self,
+        mock_ask_llm: Mock,
+        mock_prepare_env: Mock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test explicit absolute execution_dir should be validated and used."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
+        mock_ask_llm.return_value = "Response with explicit execution_dir."
+
+        # Create a valid temporary directory
+        execution_dir = tmp_path / "exec_dir"
+        execution_dir.mkdir()
+
+        args = argparse.Namespace(
+            prompt="Test prompt",
+            execution_dir=str(execution_dir),
+        )
+
+        result = execute_prompt(args)
+
+        assert result == 0
+        # Verify execution_dir was validated and passed to ask_llm
+        call_kwargs = mock_ask_llm.call_args[1]
+        assert "execution_dir" in call_kwargs
+        assert call_kwargs["execution_dir"] == str(execution_dir)
+        captured = capsys.readouterr()
+        assert "Response with explicit execution_dir." in captured.out
+
+    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+    @patch("mcp_coder.cli.commands.prompt.ask_llm")
+    def test_explicit_execution_dir_relative(
+        self,
+        mock_ask_llm: Mock,
+        mock_prepare_env: Mock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test explicit relative execution_dir should be resolved to CWD."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
+        mock_ask_llm.return_value = "Response with relative execution_dir."
+
+        # Create a valid temporary directory structure
+        base_dir = tmp_path / "base"
+        base_dir.mkdir()
+        rel_dir = base_dir / "relative"
+        rel_dir.mkdir()
+
+        # Change to base directory so relative path works
+        monkeypatch.chdir(base_dir)
+
+        args = argparse.Namespace(
+            prompt="Test prompt",
+            execution_dir="relative",  # Relative path
+        )
+
+        result = execute_prompt(args)
+
+        assert result == 0
+        # Verify execution_dir was resolved to absolute path
+        call_kwargs = mock_ask_llm.call_args[1]
+        assert "execution_dir" in call_kwargs
+        assert call_kwargs["execution_dir"] == str(rel_dir)
+        captured = capsys.readouterr()
+        assert "Response with relative execution_dir." in captured.out
+
+    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+    def test_invalid_execution_dir_returns_error(
+        self,
+        mock_prepare_env: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test invalid execution_dir should return error code 1."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
+
+        args = argparse.Namespace(
+            prompt="Test prompt",
+            execution_dir="/nonexistent/invalid/path",
+        )
+
+        result = execute_prompt(args)
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "Error" in captured.err
+        assert "execution directory" in captured.err.lower()
+
+    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+    @patch("mcp_coder.cli.commands.prompt.ask_llm")
+    def test_execution_dir_with_all_other_args(
+        self,
+        mock_ask_llm: Mock,
+        mock_prepare_env: Mock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test execution_dir works with all other args (no conflicts)."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
+        mock_ask_llm.return_value = "Response with all args."
+
+        # Create valid directories
+        execution_dir = tmp_path / "exec_dir"
+        execution_dir.mkdir()
+        project_dir = tmp_path / "project_dir"
+        project_dir.mkdir()
+
+        args = argparse.Namespace(
+            prompt="Test prompt",
+            execution_dir=str(execution_dir),
+            project_dir=str(project_dir),
+            timeout=60,
+            llm_method="claude_code_api",
+            verbosity="just-text",
+            session_id="test-session-123",
+            mcp_config=None,
+        )
+
+        result = execute_prompt(args)
+
+        assert result == 0
+        # Verify all arguments were passed correctly
+        call_kwargs = mock_ask_llm.call_args[1]
+        assert call_kwargs["execution_dir"] == str(execution_dir)
+        assert call_kwargs["project_dir"] == str(project_dir)
+        assert call_kwargs["timeout"] == 60
+        assert call_kwargs["session_id"] == "test-session-123"
+        captured = capsys.readouterr()
+        assert "Response with all args." in captured.out

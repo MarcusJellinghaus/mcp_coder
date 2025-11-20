@@ -21,7 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
-    project_dir: Path, provider: str = "claude", method: str = "api"
+    project_dir: Path,
+    provider: str = "claude",
+    method: str = "api",
+    execution_dir: Optional[str] = None,
 ) -> Tuple[bool, str, Optional[str]]:
     """Generate commit message using LLM. Returns (success, message, error).
 
@@ -29,6 +32,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
+        execution_dir: Optional execution directory for Claude subprocess
 
     Returns:
         Tuple of (success, commit_message, error_message)
@@ -109,6 +113,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
             timeout=LLM_COMMIT_TIMEOUT_SECONDS,
             env_vars=env_vars,
             project_dir=str(project_dir),
+            execution_dir=execution_dir,
         )
 
         if not response or not response.strip():

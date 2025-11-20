@@ -193,7 +193,13 @@ def ask_claude_code_cli(
         session_id: Optional Claude session ID to resume previous conversation
         timeout: Timeout in seconds (default: 30)
         env_vars: Optional environment variables for the subprocess
-        cwd: Optional working directory for the subprocess
+        cwd: Optional working directory for the Claude subprocess.
+            This controls where Claude executes, which affects:
+            - Where .mcp.json config files are discovered
+            - Resolution of relative file paths in prompts
+            - Where Claude looks for local context files
+            Note: This is separate from project_dir (which sets MCP_CODER_PROJECT_DIR).
+            Default: None (subprocess uses caller's current working directory)
         mcp_config: Optional path to MCP config file
 
     Returns:
@@ -225,15 +231,17 @@ def ask_claude_code_cli(
     command = build_cli_command(session_id, claude_cmd, mcp_config)
 
     # Execute command with stdin input (I/O)
-    # This avoids Windows command-line length limits by passing prompt via stdin
+    # cwd parameter controls where Claude subprocess runs
+    # This affects .mcp.json discovery and relative path resolution
     logger.debug(
-        f"Executing CLI command with stdin (prompt_len={len(question)}, session_id={session_id})"
+        f"Executing CLI command with stdin (prompt_len={len(question)}, "
+        f"session_id={session_id}, cwd={cwd})"
     )
     options = CommandOptions(
         timeout_seconds=timeout,
         input_data=question,  # Pass question via stdin
         env=env_vars,
-        cwd=cwd,  # Set working directory to match MCP server configuration
+        cwd=cwd,  # Set working directory for Claude subprocess execution
     )
     result = execute_subprocess(command, options)
 

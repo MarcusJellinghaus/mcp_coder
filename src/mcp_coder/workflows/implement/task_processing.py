@@ -182,7 +182,7 @@ def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional
                 method=method,
                 timeout=timeout,
                 env_vars=env_vars,
-                project_dir=cwd,
+                execution_dir=cwd,
                 mcp_config=mcp_config,
             )
             return response_text, {}
@@ -377,6 +377,7 @@ def check_and_fix_mypy(
     method: str,
     env_vars: dict[str, str] | None = None,
     mcp_config: str | None = None,
+    execution_dir: Optional[Path] = None,
 ) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean.
 
@@ -387,6 +388,7 @@ def check_and_fix_mypy(
         method: LLM method (e.g., 'cli' or 'api')
         env_vars: Optional environment variables for the subprocess
         mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess
     """
     logger.info("Running mypy type checking...")
 
@@ -447,7 +449,7 @@ def check_and_fix_mypy(
                         method,
                         timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
                         env_vars=env_vars,
-                        cwd=str(project_dir),
+                        cwd=str(execution_dir) if execution_dir else str(project_dir),
                         mcp_config=mcp_config,
                     )
                 )
@@ -513,7 +515,11 @@ Mypy fix generated on: {datetime.now().isoformat()}
 
 
 def process_single_task(
-    project_dir: Path, provider: str, method: str, mcp_config: str | None = None
+    project_dir: Path,
+    provider: str,
+    method: str,
+    mcp_config: str | None = None,
+    execution_dir: Optional[Path] = None,
 ) -> tuple[bool, str]:
     """Process a single implementation task.
 
@@ -522,6 +528,7 @@ def process_single_task(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess
 
     Returns:
         Tuple of (success, reason) where:
@@ -532,7 +539,7 @@ def process_single_task(
     env_vars = prepare_llm_environment(project_dir)
 
     # Set working directory for LLM subprocess
-    cwd = str(project_dir)
+    cwd = str(execution_dir) if execution_dir else str(project_dir)
 
     # Get next incomplete task
     next_task = get_next_task(project_dir)
@@ -633,7 +640,7 @@ Generated on: {datetime.now().isoformat()}"""
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
     if RUN_MYPY_AFTER_EACH_TASK:
         if not check_and_fix_mypy(
-            project_dir, step_num, provider, method, env_vars, mcp_config
+            project_dir, step_num, provider, method, env_vars, mcp_config, execution_dir
         ):
             logger.warning(
                 "Mypy check failed or found unresolved issues - continuing anyway"

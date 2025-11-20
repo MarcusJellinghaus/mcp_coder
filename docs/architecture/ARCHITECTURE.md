@@ -114,11 +114,38 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **AI Delegation**: mcp_coder provides context, Claude Code creates content
 - **Tool Abstraction**: Claude Code handles all MCP server interactions
 - **Human-AI Collaboration**: Strategic review points (plan review, code review)
+- **Execution Context Separation**: Distinct project and execution directories for flexible workspace configurations
 
 ### Architecture Patterns
 - **Provider Abstraction**: Extensible LLM interface supporting multiple providers
 - **Command Pattern**: CLI subcommand structure with consistent interfaces
 - **MCP Integration**: Specialized servers for file operations and quality checks
+- **Context Separation Pattern**: Separation of execution directory (where Claude runs) from project directory (where code lives)
+
+### Execution Context Management
+
+**Design Decision**: Separate execution directory from project directory
+
+mcp-coder distinguishes between:
+- **Project Directory** (`project_dir`): Where source files live and git operations occur
+- **Execution Directory** (`execution_dir`): Where Claude subprocess runs
+
+**Implementation**:
+- CLI flag: `--execution-dir` controls Claude's working directory
+- Default: Uses shell's current working directory
+- Use case: Access workspace configs while modifying different projects
+
+**Example**:
+```bash
+cd /home/user/workspace  # Has .mcp.json
+mcp-coder implement --project-dir /path/to/project
+# Claude runs in workspace, modifies project files
+```
+
+**Benefits**:
+- Share MCP configurations across multiple projects
+- Support CI/CD environments with separate checkout and execution contexts
+- Flexible workspace organization for development teams
 
 ---
 
@@ -209,6 +236,16 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 3. **Claude Code** → **MCP servers**: Read issue content, analyze codebase
 4. **Claude Code** → **mcp_coder**: Returns structured implementation plan
 5. **mcp_coder** → **GitHub**: Posts plan as comment, changes label to `status:plan-review`
+
+### Scenario 4: Separate Execution and Project Contexts
+1. User has workspace with shared MCP configurations
+2. Runs `mcp-coder implement --project-dir /project --execution-dir /workspace`
+3. mcp_coder prepares environment:
+   - Sets `MCP_CODER_PROJECT_DIR=/project`
+   - Executes Claude with `cwd=/workspace`
+4. Claude discovers `.mcp.json` in workspace
+5. Claude modifies files in project directory
+6. Git operations target project directory
 
 ### Scenario 2: Code Implementation Execution
 1. Human approves plan → label changed to `status:plan-ready`

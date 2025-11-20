@@ -151,6 +151,9 @@ class TestPrepareTaskTracker:
         mock_get_prompt.assert_called_once()
         # No longer need to parse LLM method - using structured parameters
         mock_ask_llm.assert_called_once()
+        # Verify execution_dir parameter is passed as None by default
+        call_kwargs = mock_ask_llm.call_args[1]
+        assert call_kwargs.get("execution_dir") is None
         mock_get_status.assert_called_once_with(tmp_path)
         mock_commit.assert_called_once()
 
@@ -344,6 +347,102 @@ class TestLogProgressSummary:
         )
 
 
+class TestPrepareTaskTrackerExecutionDir:
+    """Test execution_dir parameter in prepare_task_tracker."""
+
+    @patch("mcp_coder.workflows.implement.core.commit_all_changes")
+    @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    def test_execution_dir_passed_to_ask_llm(
+        self,
+        mock_prepare_env: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_has_tasks: MagicMock,
+        mock_commit: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test execution_dir is passed to ask_llm call."""
+        # Create steps directory
+        steps_dir = tmp_path / "pr_info" / "steps"
+        steps_dir.mkdir(parents=True)
+
+        # Setup mocks
+        mock_has_tasks.side_effect = [False, True]
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
+        mock_get_prompt.return_value = "Task tracker update prompt"
+        mock_ask_llm.return_value = "LLM updated the task tracker"
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": ["pr_info/TASK_TRACKER.md"],
+            "untracked": [],
+        }
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
+
+        # Create execution_dir
+        exec_dir = tmp_path / "execution"
+        exec_dir.mkdir()
+
+        # Call with execution_dir
+        result = prepare_task_tracker(tmp_path, "claude", "cli", execution_dir=exec_dir)
+
+        assert result is True
+        # Verify execution_dir was passed to ask_llm
+        call_kwargs = mock_ask_llm.call_args[1]
+        assert call_kwargs.get("execution_dir") == str(exec_dir)
+
+    @patch("mcp_coder.workflows.implement.core.commit_all_changes")
+    @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    def test_execution_dir_none_uses_default(
+        self,
+        mock_prepare_env: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_has_tasks: MagicMock,
+        mock_commit: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test execution_dir=None passes None to ask_llm."""
+        # Create steps directory
+        steps_dir = tmp_path / "pr_info" / "steps"
+        steps_dir.mkdir(parents=True)
+
+        # Setup mocks
+        mock_has_tasks.side_effect = [False, True]
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
+        mock_get_prompt.return_value = "Task tracker update prompt"
+        mock_ask_llm.return_value = "LLM updated the task tracker"
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": ["pr_info/TASK_TRACKER.md"],
+            "untracked": [],
+        }
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
+
+        # Call with execution_dir=None (default)
+        result = prepare_task_tracker(tmp_path, "claude", "cli", execution_dir=None)
+
+        assert result is True
+        # Verify execution_dir was passed as None
+        call_kwargs = mock_ask_llm.call_args[1]
+        assert call_kwargs.get("execution_dir") is None
+
+
 class TestRunImplementWorkflow:
     """Test run_implement_workflow function."""
 
@@ -377,8 +476,14 @@ class TestRunImplementWorkflow:
         mock_check_git.assert_called_once()
         mock_check_branch.assert_called_once()
         mock_check_prereq.assert_called_once()
-        mock_prepare_tracker.assert_called_once()
+        # Verify prepare_task_tracker was called with None for execution_dir
+        mock_prepare_tracker.assert_called_once_with(
+            Path("/test/project"), "claude", "cli", None, None
+        )
         assert mock_process_task.call_count == 2
+        # Verify process_task was called with None for execution_dir
+        first_call_args = mock_process_task.call_args_list[0][0]
+        assert first_call_args == (Path("/test/project"), "claude", "cli", None, None)
         assert mock_log_progress.call_count >= 2  # Initial + final progress
 
     @patch("mcp_coder.workflows.implement.core.check_git_clean")

@@ -24,6 +24,7 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
     project_dir: str | None = None,
+    execution_dir: str | None = None,
     mcp_config: str | None = None,
 ) -> str:
     """
@@ -44,7 +45,8 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
                    for full session management capabilities.
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to the LLM subprocess
-        project_dir: Optional project directory to use as working directory for the LLM subprocess
+        project_dir: Optional project directory for MCP_CODER_PROJECT_DIR env var
+        execution_dir: Optional working directory for LLM subprocess (default: current directory)
         mcp_config: Optional path to MCP configuration file
 
     Returns:
@@ -86,7 +88,7 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
             session_id=session_id,
             timeout=timeout,
             env_vars=env_vars,
-            cwd=project_dir,
+            cwd=execution_dir,
             mcp_config=mcp_config,
         )
     else:
@@ -103,6 +105,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
     project_dir: str | None = None,
+    execution_dir: str | None = None,
     mcp_config: str | None = None,
 ) -> LLMResponseDict:
     """
@@ -120,7 +123,8 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
         session_id: Optional session ID to resume previous conversation
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to the LLM subprocess
-        project_dir: Optional project directory to use as working directory for the LLM subprocess
+        project_dir: Optional project directory for MCP_CODER_PROJECT_DIR env var
+        execution_dir: Optional working directory for LLM subprocess (default: current directory)
         mcp_config: Optional path to MCP configuration file
 
     Returns:
@@ -178,7 +182,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
                 session_id=session_id,
                 timeout=timeout,
                 env_vars=env_vars,
-                cwd=project_dir,
+                cwd=execution_dir,
                 mcp_config=mcp_config,
             )
         elif method == "api":
@@ -187,7 +191,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
                 session_id=session_id,
                 timeout=timeout,
                 env_vars=env_vars,
-                cwd=project_dir,
+                cwd=execution_dir,
                 mcp_config=mcp_config,
             )
         else:

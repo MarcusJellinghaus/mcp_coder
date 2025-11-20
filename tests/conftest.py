@@ -307,3 +307,32 @@ def create_github_manager(manager_class: Type[T], github_setup: GitHubTestSetup)
     # No mocking - let the manager use real config system
     # The BaseGitHubManager will read from environment variables or config file
     return manager_class(github_setup["project_dir"])  # type: ignore[call-arg]
+
+
+@pytest.fixture
+def require_claude_cli() -> None:
+    """Skip test if Claude CLI is not installed.
+
+    This fixture checks if Claude Code CLI is available on the system.
+    Tests that require actual Claude CLI executable should use this fixture.
+
+    Usage:
+        @pytest.mark.claude_cli_integration
+        def test_something(require_claude_cli):
+            # Test code that needs Claude CLI
+            pass
+
+    Raises:
+        pytest.skip: When Claude CLI is not found on the system
+    """
+    from mcp_coder.llm.providers.claude.claude_executable_finder import (
+        find_claude_executable,
+    )
+
+    try:
+        find_claude_executable()
+    except FileNotFoundError as e:
+        pytest.skip(
+            f"Claude CLI not installed: {e}\n"
+            "Install with: npm install -g @anthropic-ai/claude-code"
+        )

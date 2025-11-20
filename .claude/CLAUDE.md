@@ -6,18 +6,21 @@
 
 ## 🔴 CRITICAL: ALWAYS Use MCP Tools
 
-**MANDATORY**: You MUST use MCP tools for ALL operations when available. DO NOT use standard Claude tools:
+**MANDATORY**: You MUST use MCP tools for ALL operations when available. DO NOT use standard Claude tools.
 
-**✅ ALWAYS USE:**
-- `mcp__code-checker__run_pylint_check` (NOT `Bash` with pylint commands)
-- `mcp__code-checker__run_pytest_check` (NOT `Bash` with pytest commands) 
-- `mcp__code-checker__run_mypy_check` (NOT `Bash` with mypy commands)
-- `mcp__filesystem__*` tools (NOT `Read`, `Write`, `Edit`, `MultiEdit`)
+**BEFORE EVERY TOOL USE, ASK: "Does an MCP version exist?"**
 
-**❌ NEVER USE when MCP alternatives exist:**
-- `Bash` for code quality checks
-- `Read`, `Write`, `Edit`, `MultiEdit` for file operations
-- Direct command execution when MCP wrapper available
+### Tool Mapping Reference:
+
+| Task | ❌ NEVER USE | ✅ USE MCP TOOL |
+|------|--------------|------------------|
+| Read file | `Read()` | `mcp__filesystem__read_file()` |
+| Edit file | `Edit()` | `mcp__filesystem__edit_file()` |
+| Write file | `Write()` | `mcp__filesystem__save_file()` |
+| Run pytest | `Bash("pytest ...")` | `mcp__code-checker__run_pytest_check()` |
+| Run pylint | `Bash("pylint ...")` | `mcp__code-checker__run_pylint_check()` |
+| Run mypy | `Bash("mypy ...")` | `mcp__code-checker__run_mypy_check()` |
+| Git operations | ✅ `Bash("git ...")` | ✅ `Bash("git ...")` (allowed) |
 
 ## 🔴 CRITICAL: Code Quality Requirements
 
@@ -43,9 +46,10 @@ This runs:
 
 **Available markers in pyproject.toml:**
 - `git_integration`: File system git operations (repos, commits)
-- `claude_integration`: Claude CLI/API tests (network, auth needed) 
+- `claude_api_integration`: Claude API tests 
+- `claude_cli_integration`: Claude CLI tests
 - `formatter_integration`: Code formatter integration (black, isort)
-- `github_integration`: GitHub API access (network, auth needed)
+- `github_integration`: GitHub API access
 
 **RECOMMENDED USAGE:**
 - **Fast unit tests (recommended)**: Use `-m` with `not` expressions to exclude slow integration tests
@@ -55,7 +59,7 @@ This runs:
 **Examples:**
 ```python
 # RECOMMENDED: Fast unit tests (excludes all integration tests)
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_integration and not formatter_integration and not github_integration"])
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"])
 
 # All tests including slow integration tests (not recommended for regular development)
 mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])
@@ -85,6 +89,22 @@ mcp__filesystem__edit_file
 ```
 
 **⚠️ ABSOLUTELY FORBIDDEN:** Using `Read`, `Write`, `Edit`, `MultiEdit` tools when MCP filesystem tools are available.
+
+### Quick Examples:
+
+```python
+# ❌ WRONG - Standard tools
+Read(file_path="src/example.py")
+Edit(file_path="src/example.py", old_string="...", new_string="...")
+Write(file_path="src/new.py", content="...")
+Bash("pytest tests/")
+
+# ✅ CORRECT - MCP tools
+mcp__filesystem__read_file(file_path="src/example.py")
+mcp__filesystem__edit_file(file_path="src/example.py", edits=[...])
+mcp__filesystem__save_file(file_path="src/new.py", content="...")
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])
+```
 
 **WHY MCP TOOLS ARE MANDATORY:**
 - Proper security and access control
@@ -144,3 +164,34 @@ git commit
 - Use standard commit message format without advertising footers
 - Focus on clear, descriptive commit messages
 - No required Claude Code attribution or links
+
+---
+
+## 📂 Execution Directory Flag
+
+When working with mcp-coder, you may encounter `--execution-dir`:
+
+**Purpose**: Controls where Claude subprocess executes (separate from project location)
+
+**Usage**:
+- Default: Uses shell's current working directory
+- Explicit: `--execution-dir /path/to/execution/context`
+- Relative: `--execution-dir ./subdir` (resolves to CWD)
+
+**Common Scenario**:
+User has workspace with `.mcp.json` config, wants to work on separate project:
+```bash
+cd /home/user/workspace
+mcp-coder implement --project-dir /path/to/project
+# Claude runs in workspace, modifies project
+```
+
+**When Implementing**:
+- Respect both `project_dir` and `execution_dir` parameters
+- Use `project_dir` for file operations and git
+- Use `execution_dir` for config discovery
+- Never conflate the two concepts
+
+**Key Distinction**:
+- `execution_dir`: Where Claude subprocess runs (determines config discovery location)
+- `project_dir`: Where source code lives (determines git operations and file modifications)
