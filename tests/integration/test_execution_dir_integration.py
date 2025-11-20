@@ -372,7 +372,8 @@ class TestSubprocessCwdParameter:
         tmp_path: Path,
     ) -> None:
         """Test create-plan workflow passes execution_dir to LLM calls."""
-        from mcp_coder.workflows.create_plan import IssueData, run_create_plan_workflow
+        from mcp_coder.utils.github_operations.issue_manager import IssueData
+        from mcp_coder.workflows.create_plan import run_create_plan_workflow
 
         # Setup
         execution_dir = tmp_path / "execution"
@@ -381,12 +382,19 @@ class TestSubprocessCwdParameter:
         project_dir.mkdir()
         (project_dir / ".git").mkdir()
 
-        mock_issue_data = IssueData(
-            number=123,
-            title="Test Issue",
-            body="Test body",
-            labels=[],
-        )
+        mock_issue_data: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": "open",
+            "labels": [],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "url": "https://github.com/test/repo/issues/123",
+            "locked": False,
+        }
         mock_check_prereq.return_value = (True, mock_issue_data)
         mock_manage_branch.return_value = "feature-branch"
         mock_verify_steps.return_value = True
