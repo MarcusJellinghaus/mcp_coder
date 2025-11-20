@@ -16,7 +16,9 @@
       "mcp__filesystem__delete_this_file",
       "mcp__filesystem__move_file",
       "mcp__filesystem__edit_file",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "WebFetch(domain:docs.astral.sh)",
+      "WebSearch"
     ]
   },
   "enableAllProjectMcpServers": true,
