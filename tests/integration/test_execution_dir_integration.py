@@ -197,6 +197,7 @@ class TestExecutionDirResolution:
 
 @pytest.mark.integration
 @pytest.mark.execution_dir
+@pytest.mark.claude_cli_integration
 class TestSubprocessCwdParameter:
     """Test that subprocess actually receives correct cwd parameter.
 
@@ -210,6 +211,7 @@ class TestSubprocessCwdParameter:
         self,
         mock_prepare_env: MagicMock,
         mock_execute_subprocess: MagicMock,
+        require_claude_cli: None,
         tmp_path: Path,
     ) -> None:
         """Test prompt command passes execution_dir as cwd to subprocess."""
@@ -262,6 +264,7 @@ class TestSubprocessCwdParameter:
         self,
         mock_prepare_env: MagicMock,
         mock_execute_subprocess: MagicMock,
+        require_claude_cli: None,
     ) -> None:
         """Test prompt command with None execution_dir passes None to subprocess."""
         from mcp_coder.cli.commands.prompt import execute_prompt
@@ -314,6 +317,7 @@ class TestSubprocessCwdParameter:
         mock_check_prereq: MagicMock,
         mock_prepare_tracker: MagicMock,
         mock_process_task: MagicMock,
+        require_claude_cli: None,
         tmp_path: Path,
     ) -> None:
         """Test implement workflow passes execution_dir to task processing."""
@@ -364,6 +368,7 @@ class TestSubprocessCwdParameter:
         mock_commit: MagicMock,
         mock_validate: MagicMock,
         mock_execute_subprocess: MagicMock,
+        require_claude_cli: None,
         tmp_path: Path,
     ) -> None:
         """Test create-plan workflow passes execution_dir to LLM calls."""
@@ -426,6 +431,7 @@ class TestSubprocessCwdParameter:
         mock_validate_git: MagicMock,
         mock_get_diff: MagicMock,
         mock_execute_subprocess: MagicMock,
+        require_claude_cli: None,
         tmp_path: Path,
     ) -> None:
         """Test commit auto command passes execution_dir to LLM subprocess."""
@@ -476,6 +482,7 @@ class TestSubprocessCwdParameter:
     def test_llm_interface_passes_execution_dir_to_provider(
         self,
         mock_execute_subprocess: MagicMock,
+        require_claude_cli: None,
         tmp_path: Path,
     ) -> None:
         """Test LLM interface layer passes execution_dir to provider."""
@@ -516,6 +523,7 @@ class TestSubprocessCwdParameter:
     def test_execution_dir_separate_from_project_dir_in_subprocess(
         self,
         mock_execute_subprocess: MagicMock,
+        require_claude_cli: None,
         tmp_path: Path,
     ) -> None:
         """Test that execution_dir and project_dir are truly separate in subprocess."""
