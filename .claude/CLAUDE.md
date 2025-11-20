@@ -145,3 +145,34 @@ git commit
 - Use standard commit message format without advertising footers
 - Focus on clear, descriptive commit messages
 - No required Claude Code attribution or links
+
+---
+
+## 📂 Execution Directory Flag
+
+When working with mcp-coder, you may encounter `--execution-dir`:
+
+**Purpose**: Controls where Claude subprocess executes (separate from project location)
+
+**Usage**:
+- Default: Uses shell's current working directory
+- Explicit: `--execution-dir /path/to/execution/context`
+- Relative: `--execution-dir ./subdir` (resolves to CWD)
+
+**Common Scenario**:
+User has workspace with `.mcp.json` config, wants to work on separate project:
+```bash
+cd /home/user/workspace
+mcp-coder implement --project-dir /path/to/project
+# Claude runs in workspace, modifies project
+```
+
+**When Implementing**:
+- Respect both `project_dir` and `execution_dir` parameters
+- Use `project_dir` for file operations and git
+- Use `execution_dir` for config discovery
+- Never conflate the two concepts
+
+**Key Distinction**:
+- `execution_dir`: Where Claude subprocess runs (determines config discovery location)
+- `project_dir`: Where source code lives (determines git operations and file modifications)
