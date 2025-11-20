@@ -391,9 +391,7 @@ class TestPrepareTaskTrackerExecutionDir:
         exec_dir.mkdir()
 
         # Call with execution_dir
-        result = prepare_task_tracker(
-            tmp_path, "claude", "cli", execution_dir=exec_dir
-        )
+        result = prepare_task_tracker(tmp_path, "claude", "cli", execution_dir=exec_dir)
 
         assert result is True
         # Verify execution_dir was passed to ask_llm

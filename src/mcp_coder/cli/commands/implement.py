@@ -53,7 +53,9 @@ def execute_implement(args: argparse.Namespace) -> int:
         mcp_config = resolve_mcp_config_path(mcp_config)
 
         # Run the implement workflow
-        return run_implement_workflow(project_dir, provider, method, mcp_config, execution_dir)
+        return run_implement_workflow(
+            project_dir, provider, method, mcp_config, execution_dir
+        )
 
     except ValueError as e:
         # Handle invalid execution_dir

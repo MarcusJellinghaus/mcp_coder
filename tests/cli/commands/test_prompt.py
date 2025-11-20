@@ -376,7 +376,7 @@ class TestPromptExecutionDir:
         """Test default execution_dir should use current working directory."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_ask_llm.return_value = "Response with default execution_dir."
-        
+
         args = argparse.Namespace(
             prompt="Test prompt",
             execution_dir=None,  # No explicit execution_dir
@@ -404,11 +404,11 @@ class TestPromptExecutionDir:
         """Test explicit absolute execution_dir should be validated and used."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_ask_llm.return_value = "Response with explicit execution_dir."
-        
+
         # Create a valid temporary directory
         execution_dir = tmp_path / "exec_dir"
         execution_dir.mkdir()
-        
+
         args = argparse.Namespace(
             prompt="Test prompt",
             execution_dir=str(execution_dir),
@@ -437,16 +437,16 @@ class TestPromptExecutionDir:
         """Test explicit relative execution_dir should be resolved to CWD."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_ask_llm.return_value = "Response with relative execution_dir."
-        
+
         # Create a valid temporary directory structure
         base_dir = tmp_path / "base"
         base_dir.mkdir()
         rel_dir = base_dir / "relative"
         rel_dir.mkdir()
-        
+
         # Change to base directory so relative path works
         monkeypatch.chdir(base_dir)
-        
+
         args = argparse.Namespace(
             prompt="Test prompt",
             execution_dir="relative",  # Relative path
@@ -470,7 +470,7 @@ class TestPromptExecutionDir:
     ) -> None:
         """Test invalid execution_dir should return error code 1."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        
+
         args = argparse.Namespace(
             prompt="Test prompt",
             execution_dir="/nonexistent/invalid/path",
@@ -495,13 +495,13 @@ class TestPromptExecutionDir:
         """Test execution_dir works with all other args (no conflicts)."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_ask_llm.return_value = "Response with all args."
-        
+
         # Create valid directories
         execution_dir = tmp_path / "exec_dir"
         execution_dir.mkdir()
         project_dir = tmp_path / "project_dir"
         project_dir.mkdir()
-        
+
         args = argparse.Namespace(
             prompt="Test prompt",
             execution_dir=str(execution_dir),

@@ -87,7 +87,6 @@ class TestParseLLMMethodFromArgs:
             parse_llm_method_from_args("invalid")
 
 
-
 class TestResolveExecutionDir:
     """Test cases for resolve_execution_dir function."""
 
@@ -107,7 +106,9 @@ class TestResolveExecutionDir:
         result = resolve_execution_dir(str(tmp_path))
         assert result == tmp_path.resolve()
 
-    def test_existing_relative_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_existing_relative_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Relative paths should resolve relative to CWD."""
         from mcp_coder.cli.utils import resolve_execution_dir
 
@@ -132,9 +133,7 @@ class TestResolveExecutionDir:
         "dir_name",
         ["simple", "with-dash", "with_underscore", "nested/path"],
     )
-    def test_various_directory_names(
-        self, tmp_path: Path, dir_name: str
-    ) -> None:
+    def test_various_directory_names(self, tmp_path: Path, dir_name: str) -> None:
         """Test various valid directory name patterns."""
         from mcp_coder.cli.utils import resolve_execution_dir
 

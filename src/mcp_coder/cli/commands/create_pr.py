@@ -53,7 +53,9 @@ def execute_create_pr(args: argparse.Namespace) -> int:
         mcp_config = resolve_mcp_config_path(mcp_config)
 
         # Run the create-pr workflow
-        return run_create_pr_workflow(project_dir, provider, method, mcp_config, execution_dir)
+        return run_create_pr_workflow(
+            project_dir, provider, method, mcp_config, execution_dir
+        )
 
     except ValueError as e:
         # Handle invalid execution_dir

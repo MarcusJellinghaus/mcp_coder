@@ -181,7 +181,7 @@ class TestExecutionDirResolution:
         self, tmp_path: Path
     ) -> None:
         """Test that file path returns the path (files don't raise errors).
-        
+
         Note: The implementation doesn't explicitly check if the path is a file.
         It only checks if the path exists. This test documents the current behavior.
         """
@@ -199,7 +199,7 @@ class TestExecutionDirResolution:
 @pytest.mark.execution_dir
 class TestSubprocessCwdParameter:
     """Test that subprocess actually receives correct cwd parameter.
-    
+
     These tests verify the complete flow from command handler through to
     the actual subprocess execution, ensuring execution_dir is used as cwd.
     """
@@ -220,12 +220,14 @@ class TestSubprocessCwdParameter:
         execution_dir.mkdir()
 
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
-        
+
         # Create proper subprocess result mock with all required attributes
         # The CLI returns JSON, so we need to mock valid JSON output
         mock_result = MagicMock()
         mock_result.return_code = 0
-        mock_result.stdout = '{"result": "Claude response", "session_id": "test-session-123"}'
+        mock_result.stdout = (
+            '{"result": "Claude response", "session_id": "test-session-123"}'
+        )
         mock_result.stderr = ""
         mock_result.timed_out = False
         mock_execute_subprocess.return_value = mock_result
@@ -266,12 +268,14 @@ class TestSubprocessCwdParameter:
 
         # Setup
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        
+
         # Create proper subprocess result mock with all required attributes
-        # The CLI returns JSON, so we need to mock valid JSON output  
+        # The CLI returns JSON, so we need to mock valid JSON output
         mock_result = MagicMock()
         mock_result.return_code = 0
-        mock_result.stdout = '{"result": "Claude response", "session_id": "test-session-456"}'
+        mock_result.stdout = (
+            '{"result": "Claude response", "session_id": "test-session-456"}'
+        )
         mock_result.stderr = ""
         mock_result.timed_out = False
         mock_execute_subprocess.return_value = mock_result
@@ -323,7 +327,7 @@ class TestSubprocessCwdParameter:
 
         # Need to create .git directory for git checks
         (project_dir / ".git").mkdir()
-        
+
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
         mock_process_task.return_value = (False, "no_tasks")  # No more tasks
@@ -363,8 +367,7 @@ class TestSubprocessCwdParameter:
         tmp_path: Path,
     ) -> None:
         """Test create-plan workflow passes execution_dir to LLM calls."""
-        from mcp_coder.workflows.create_plan import run_create_plan_workflow
-        from mcp_coder.workflows.create_plan import IssueData
+        from mcp_coder.workflows.create_plan import IssueData, run_create_plan_workflow
 
         # Setup
         execution_dir = tmp_path / "execution"
@@ -390,7 +393,9 @@ class TestSubprocessCwdParameter:
         # The CLI returns JSON, so we need to mock valid JSON output
         mock_result = MagicMock()
         mock_result.return_code = 0
-        mock_result.stdout = '{"result": "Plan generated", "session_id": "plan-session-789"}'
+        mock_result.stdout = (
+            '{"result": "Plan generated", "session_id": "plan-session-789"}'
+        )
         mock_result.stderr = ""
         mock_result.timed_out = False
         mock_execute_subprocess.return_value = mock_result
@@ -432,7 +437,7 @@ class TestSubprocessCwdParameter:
 
         mock_validate_git.return_value = (True, None)
         mock_get_diff.return_value = "diff output"
-        
+
         # Create proper subprocess result mock with all required attributes
         # The CLI returns JSON, so we need to mock valid JSON output
         mock_result = MagicMock()
@@ -484,7 +489,9 @@ class TestSubprocessCwdParameter:
         # The CLI returns JSON, so we need to mock valid JSON output
         mock_result = MagicMock()
         mock_result.return_code = 0
-        mock_result.stdout = '{"result": "LLM response", "session_id": "llm-session-abc"}'
+        mock_result.stdout = (
+            '{"result": "LLM response", "session_id": "llm-session-abc"}'
+        )
         mock_result.stderr = ""
         mock_result.timed_out = False
         mock_execute_subprocess.return_value = mock_result
@@ -524,7 +531,9 @@ class TestSubprocessCwdParameter:
         # The CLI returns JSON, so we need to mock valid JSON output
         mock_result = MagicMock()
         mock_result.return_code = 0
-        mock_result.stdout = '{"result": "LLM response", "session_id": "sep-session-xyz"}'
+        mock_result.stdout = (
+            '{"result": "LLM response", "session_id": "sep-session-xyz"}'
+        )
         mock_result.stderr = ""
         mock_result.timed_out = False
         mock_execute_subprocess.return_value = mock_result
@@ -541,13 +550,15 @@ class TestSubprocessCwdParameter:
         # Verify
         assert result == "LLM response"
         assert mock_execute_subprocess.called
-        
+
         # Verify subprocess got execution_dir as cwd (not project_dir)
         call_kwargs = mock_execute_subprocess.call_args[1]
         assert call_kwargs["options"].cwd == str(execution_dir)
         assert call_kwargs["options"].cwd != str(project_dir)
-        
+
         # Verify project_dir is in environment variables (not cwd)
-        assert "env" in call_kwargs["options"].__dict__ or "env" in dir(call_kwargs["options"])
+        assert "env" in call_kwargs["options"].__dict__ or "env" in dir(
+            call_kwargs["options"]
+        )
         # The env vars should contain project_dir, not execution_dir
         # (This validates separation of concerns)

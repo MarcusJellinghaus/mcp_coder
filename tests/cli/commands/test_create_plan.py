@@ -49,7 +49,12 @@ class TestExecuteCreatePlan:
                     mock_resolve.assert_called_once_with("/test/project")
                     mock_parse.assert_called_once_with("claude_code_cli")
                     mock_workflow.assert_called_once_with(
-                        123, test_project_dir, "claude", "cli", mock_args.mcp_config, mock.ANY
+                        123,
+                        test_project_dir,
+                        "claude",
+                        "cli",
+                        mock_args.mcp_config,
+                        mock.ANY,
                     )
 
     def test_execute_create_plan_error_handling(self, mock_args: MagicMock) -> None:

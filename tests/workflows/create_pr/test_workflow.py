@@ -44,7 +44,9 @@ class TestRunCreatePrWorkflow:
         # Verify
         assert result == 0
         mock_prereqs.assert_called_once_with(Path("/test"))
-        mock_generate.assert_called_once_with(Path("/test"), "claude", "cli", None, None)
+        mock_generate.assert_called_once_with(
+            Path("/test"), "claude", "cli", None, None
+        )
         mock_create_pr.assert_called_once_with(Path("/test"), "Test Title", "Test Body")
         mock_cleanup.assert_called_once_with(Path("/test"))
         mock_commit.assert_called_once()
@@ -95,7 +97,9 @@ class TestRunCreatePrWorkflow:
         result = run_create_pr_workflow(Path("/test"), "claude", "cli")
 
         assert result == 1
-        mock_generate.assert_called_once_with(Path("/test"), "claude", "cli", None, None)
+        mock_generate.assert_called_once_with(
+            Path("/test"), "claude", "cli", None, None
+        )
 
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
@@ -129,9 +133,7 @@ class TestRunCreatePrWorkflow:
         mock_clean.return_value = True  # Clean directory, no commit needed
 
         # Execute with execution_dir
-        result = run_create_pr_workflow(
-            tmp_path, "claude", "cli", None, exec_dir
-        )
+        result = run_create_pr_workflow(tmp_path, "claude", "cli", None, exec_dir)
 
         # Verify
         assert result == 0

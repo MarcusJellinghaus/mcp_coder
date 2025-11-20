@@ -18,7 +18,11 @@ from ...utils.git_operations import (
     is_git_repository,
     stage_all_changes,
 )
-from ..utils import parse_llm_method_from_args, resolve_execution_dir, resolve_mcp_config_path
+from ..utils import (
+    parse_llm_method_from_args,
+    resolve_execution_dir,
+    resolve_mcp_config_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +33,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 
     # Extract and validate execution_dir
     try:
-        execution_dir = resolve_execution_dir(
-            getattr(args, "execution_dir", None)
-        )
+        execution_dir = resolve_execution_dir(getattr(args, "execution_dir", None))
         logger.debug(f"Execution directory: {execution_dir}")
     except ValueError as e:
         logger.error(f"Invalid execution directory: {e}")

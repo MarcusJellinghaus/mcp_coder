@@ -56,7 +56,9 @@ class TestExecuteImplement:
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
-            project_dir="/test/project", llm_method="claude_code_api", execution_dir=None
+            project_dir="/test/project",
+            llm_method="claude_code_api",
+            execution_dir=None,
         )
 
         result = execute_implement(args)
@@ -64,7 +66,9 @@ class TestExecuteImplement:
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_parse_llm.assert_called_once_with("claude_code_api")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude", "api", None, mock.ANY)
+        mock_run_workflow.assert_called_once_with(
+            project_dir, "claude", "api", None, mock.ANY
+        )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -84,7 +88,9 @@ class TestExecuteImplement:
         mock_run_workflow.return_value = 1
 
         args = argparse.Namespace(
-            project_dir="/test/project", llm_method="claude_code_api", execution_dir=None
+            project_dir="/test/project",
+            llm_method="claude_code_api",
+            execution_dir=None,
         )
 
         result = execute_implement(args)
@@ -92,7 +98,9 @@ class TestExecuteImplement:
         assert result == 1
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_parse_llm.assert_called_once_with("claude_code_api")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude", "api", None, mock.ANY)
+        mock_run_workflow.assert_called_once_with(
+            project_dir, "claude", "api", None, mock.ANY
+        )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     def test_execute_implement_resolve_dir_failure(
@@ -103,7 +111,9 @@ class TestExecuteImplement:
         mock_resolve_dir.side_effect = SystemExit(1)
 
         args = argparse.Namespace(
-            project_dir="/invalid/path", llm_method="claude_code_api", execution_dir=None
+            project_dir="/invalid/path",
+            llm_method="claude_code_api",
+            execution_dir=None,
         )
 
         with pytest.raises(SystemExit) as exc_info:
@@ -129,14 +139,18 @@ class TestExecuteImplement:
         mock_parse_llm.return_value = ("claude", "cli")
         mock_run_workflow.return_value = 0
 
-        args = argparse.Namespace(project_dir=None, llm_method="claude_code_cli", execution_dir=None)
+        args = argparse.Namespace(
+            project_dir=None, llm_method="claude_code_cli", execution_dir=None
+        )
 
         result = execute_implement(args)
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude_code_cli")
-        mock_run_workflow.assert_called_once_with(project_dir, "claude", "cli", None, mock.ANY)
+        mock_run_workflow.assert_called_once_with(
+            project_dir, "claude", "cli", None, mock.ANY
+        )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -157,12 +171,16 @@ class TestExecuteImplement:
         # Test with claude_code_cli
         mock_parse_llm.return_value = ("claude", "cli")
         args_cli = argparse.Namespace(
-            project_dir="/test/project", llm_method="claude_code_cli", execution_dir=None
+            project_dir="/test/project",
+            llm_method="claude_code_cli",
+            execution_dir=None,
         )
         result = execute_implement(args_cli)
         assert result == 0
         mock_parse_llm.assert_called_with("claude_code_cli")
-        mock_run_workflow.assert_called_with(project_dir, "claude", "cli", None, mock.ANY)
+        mock_run_workflow.assert_called_with(
+            project_dir, "claude", "cli", None, mock.ANY
+        )
 
         # Reset mocks
         mock_resolve_dir.reset_mock()
@@ -172,12 +190,16 @@ class TestExecuteImplement:
         # Test with claude_code_api
         mock_parse_llm.return_value = ("claude", "api")
         args_api = argparse.Namespace(
-            project_dir="/test/project", llm_method="claude_code_api", execution_dir=None
+            project_dir="/test/project",
+            llm_method="claude_code_api",
+            execution_dir=None,
         )
         result = execute_implement(args_api)
         assert result == 0
         mock_parse_llm.assert_called_with("claude_code_api")
-        mock_run_workflow.assert_called_with(project_dir, "claude", "api", None, mock.ANY)
+        mock_run_workflow.assert_called_with(
+            project_dir, "claude", "api", None, mock.ANY
+        )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -197,7 +219,9 @@ class TestExecuteImplement:
         mock_run_workflow.side_effect = Exception("Unexpected error")
 
         args = argparse.Namespace(
-            project_dir="/test/project", llm_method="claude_code_api", execution_dir=None
+            project_dir="/test/project",
+            llm_method="claude_code_api",
+            execution_dir=None,
         )
 
         result = execute_implement(args)
@@ -225,7 +249,9 @@ class TestExecuteImplement:
         mock_run_workflow.side_effect = KeyboardInterrupt()
 
         args = argparse.Namespace(
-            project_dir="/test/project", llm_method="claude_code_api", execution_dir=None
+            project_dir="/test/project",
+            llm_method="claude_code_api",
+            execution_dir=None,
         )
 
         result = execute_implement(args)
