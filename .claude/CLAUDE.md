@@ -6,18 +6,21 @@
 
 ## 🔴 CRITICAL: ALWAYS Use MCP Tools
 
-**MANDATORY**: You MUST use MCP tools for ALL operations when available. DO NOT use standard Claude tools:
+**MANDATORY**: You MUST use MCP tools for ALL operations when available. DO NOT use standard Claude tools.
 
-**✅ ALWAYS USE:**
-- `mcp__code-checker__run_pylint_check` (NOT `Bash` with pylint commands)
-- `mcp__code-checker__run_pytest_check` (NOT `Bash` with pytest commands) 
-- `mcp__code-checker__run_mypy_check` (NOT `Bash` with mypy commands)
-- `mcp__filesystem__*` tools (NOT `Read`, `Write`, `Edit`, `MultiEdit`)
+**BEFORE EVERY TOOL USE, ASK: "Does an MCP version exist?"**
 
-**❌ NEVER USE when MCP alternatives exist:**
-- `Bash` for code quality checks
-- `Read`, `Write`, `Edit`, `MultiEdit` for file operations
-- Direct command execution when MCP wrapper available
+### Tool Mapping Reference:
+
+| Task | ❌ NEVER USE | ✅ USE MCP TOOL |
+|------|--------------|------------------|
+| Read file | `Read()` | `mcp__filesystem__read_file()` |
+| Edit file | `Edit()` | `mcp__filesystem__edit_file()` |
+| Write file | `Write()` | `mcp__filesystem__save_file()` |
+| Run pytest | `Bash("pytest ...")` | `mcp__code-checker__run_pytest_check()` |
+| Run pylint | `Bash("pylint ...")` | `mcp__code-checker__run_pylint_check()` |
+| Run mypy | `Bash("mypy ...")` | `mcp__code-checker__run_mypy_check()` |
+| Git operations | ✅ `Bash("git ...")` | ✅ `Bash("git ...")` (allowed) |
 
 ## 🔴 CRITICAL: Code Quality Requirements
 
@@ -86,6 +89,22 @@ mcp__filesystem__edit_file
 ```
 
 **⚠️ ABSOLUTELY FORBIDDEN:** Using `Read`, `Write`, `Edit`, `MultiEdit` tools when MCP filesystem tools are available.
+
+### Quick Examples:
+
+```python
+# ❌ WRONG - Standard tools
+Read(file_path="src/example.py")
+Edit(file_path="src/example.py", old_string="...", new_string="...")
+Write(file_path="src/new.py", content="...")
+Bash("pytest tests/")
+
+# ✅ CORRECT - MCP tools
+mcp__filesystem__read_file(file_path="src/example.py")
+mcp__filesystem__edit_file(file_path="src/example.py", edits=[...])
+mcp__filesystem__save_file(file_path="src/new.py", content="...")
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])
+```
 
 **WHY MCP TOOLS ARE MANDATORY:**
 - Proper security and access control
