@@ -38,20 +38,20 @@ See [pr_info/steps/step_1.md](steps/step_1.md)
 See [pr_info/steps/step_2.md](steps/step_2.md)
 
 - [x] Add required imports to `issue_manager.py`
-- [ ] Implement `update_workflow_label()` method in IssueManager class
-- [ ] Add complete docstring with Args, Returns, Example
-- [ ] Implement branch name regex extraction logic
-- [ ] Implement branch-issue verification via `get_linked_branches()`
-- [ ] Implement label config loading and lookup
-- [ ] Implement idempotent check (already in target state)
-- [ ] Implement label transition using existing `set_labels()` method
-- [ ] Implement comprehensive error handling (non-blocking)
-- [ ] Implement appropriate logging (INFO/DEBUG/WARNING/ERROR)
-- [ ] Verify all Step 1 tests pass
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check (label update tests) and fix all issues
-- [ ] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Implement `update_workflow_label()` method in IssueManager class
+- [x] Add complete docstring with Args, Returns, Example
+- [x] Implement branch name regex extraction logic
+- [x] Implement branch-issue verification via `get_linked_branches()`
+- [x] Implement label config loading and lookup
+- [x] Implement idempotent check (already in target state)
+- [x] Implement label transition using existing `set_labels()` method
+- [x] Implement comprehensive error handling (non-blocking)
+- [x] Implement appropriate logging (INFO/DEBUG/WARNING/ERROR)
+- [x] Verify all Step 1 tests pass
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check (label update tests) and fix all issues
+- [x] Run mypy check and fix all issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Add CLI Flags for Label Update Feature
 See [pr_info/steps/step_3.md](steps/step_3.md)
