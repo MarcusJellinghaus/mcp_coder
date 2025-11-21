@@ -463,7 +463,11 @@ def log_step(message: str) -> None:
 
 
 def run_create_pr_workflow(
-    project_dir: Path, provider: str, method: str, mcp_config: str | None = None
+    project_dir: Path,
+    provider: str,
+    method: str,
+    mcp_config: str | None = None,
+    update_labels: bool = False,
 ) -> int:
     """Main workflow orchestration function - creates PR and cleans up repository.
 
@@ -472,6 +476,7 @@ def run_create_pr_workflow(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
+        update_labels: If True, update GitHub issue labels on success
 
     Returns:
         int: Exit code (0 for success, 1 for failure)

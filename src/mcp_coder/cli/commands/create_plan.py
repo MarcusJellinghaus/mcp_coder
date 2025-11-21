@@ -38,12 +38,15 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         # Extract mcp_config from args
         mcp_config = getattr(args, "mcp_config", None)
 
+        # Extract update_labels flag from args
+        update_labels = getattr(args, "update_labels", False)
+
         # Import here to avoid circular dependency during module load
         from ...workflows.create_plan import run_create_plan_workflow
 
         # Run the create-plan workflow
         return run_create_plan_workflow(
-            args.issue_number, project_dir, provider, method, mcp_config
+            args.issue_number, project_dir, provider, method, mcp_config, update_labels
         )
 
     except KeyboardInterrupt:

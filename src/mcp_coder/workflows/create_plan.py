@@ -494,6 +494,7 @@ def run_create_plan_workflow(
     provider: str,
     method: str,
     mcp_config: Optional[str] = None,
+    update_labels: bool = False,
 ) -> int:
     """Main workflow orchestration function - creates implementation plan for GitHub issue.
 
@@ -503,6 +504,7 @@ def run_create_plan_workflow(
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
+        update_labels: If True, update GitHub issue labels on success
 
     Returns:
         int: Exit code (0 for success, 1 for error)

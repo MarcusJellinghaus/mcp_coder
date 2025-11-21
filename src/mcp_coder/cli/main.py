@@ -203,6 +203,11 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         default=None,
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
     )
+    implement_parser.add_argument(
+        "--update-labels",
+        action="store_true",
+        help="Automatically update GitHub issue labels on successful completion",
+    )
 
     # Create plan command - Generate implementation plan from GitHub issue
     create_plan_parser = subparsers.add_parser(
@@ -229,6 +234,11 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         default=None,
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
     )
+    create_plan_parser.add_argument(
+        "--update-labels",
+        action="store_true",
+        help="Automatically update GitHub issue labels on successful completion",
+    )
 
     # Create PR command - Step 3
     create_pr_parser = subparsers.add_parser(
@@ -251,6 +261,11 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         type=str,
         default=None,
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
+    create_pr_parser.add_argument(
+        "--update-labels",
+        action="store_true",
+        help="Automatically update GitHub issue labels on successful completion",
     )
 
     # Coordinator commands - Jenkins-based integration testing

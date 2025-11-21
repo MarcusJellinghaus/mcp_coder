@@ -39,8 +39,13 @@ def execute_implement(args: argparse.Namespace) -> int:
         # Extract mcp_config from args
         mcp_config = getattr(args, "mcp_config", None)
 
+        # Extract update_labels flag from args
+        update_labels = getattr(args, "update_labels", False)
+
         # Run the implement workflow
-        return run_implement_workflow(project_dir, provider, method, mcp_config)
+        return run_implement_workflow(
+            project_dir, provider, method, mcp_config, update_labels
+        )
 
     except KeyboardInterrupt:
         print("Operation cancelled by user.")

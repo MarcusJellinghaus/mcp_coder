@@ -39,8 +39,13 @@ def execute_create_pr(args: argparse.Namespace) -> int:
         # Extract mcp_config from args
         mcp_config = getattr(args, "mcp_config", None)
 
+        # Extract update_labels flag from args
+        update_labels = getattr(args, "update_labels", False)
+
         # Run the create-pr workflow
-        return run_create_pr_workflow(project_dir, provider, method, mcp_config)
+        return run_create_pr_workflow(
+            project_dir, provider, method, mcp_config, update_labels
+        )
 
     except KeyboardInterrupt:
         print("Operation cancelled by user.")
