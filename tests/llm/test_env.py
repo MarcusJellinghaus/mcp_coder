@@ -261,7 +261,9 @@ def test_prepare_llm_environment_logging(
     monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
     monkeypatch.delenv("CONDA_PREFIX", raising=False)
 
-    with caplog.at_level(logging.DEBUG):
+    # Get the module logger and set its level to DEBUG
+    module_logger = logging.getLogger("mcp_coder.llm.env")
+    with caplog.at_level(logging.DEBUG, logger=module_logger.name):
         prepare_llm_environment(project_dir)
 
     # Verify debug messages were logged
