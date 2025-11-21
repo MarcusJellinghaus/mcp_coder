@@ -7,6 +7,23 @@ echo MCP-Coder Package Reinstallation
 echo =============================================
 echo.
 
+REM Check if uv is installed
+where uv >nul 2>nul
+if %ERRORLEVEL% NEQ 0 (
+    echo [INFO] uv not found. Installing uv...
+    pip install uv
+    if %ERRORLEVEL% NEQ 0 (
+        echo [ERROR] Failed to install uv!
+        echo Please install uv manually: pip install uv
+        pause
+        exit /b 1
+    )
+    echo [OK] uv installed successfully
+    echo.
+)
+echo [OK] uv is available
+echo.
+
 REM Check if running in a virtual environment
 if "%VIRTUAL_ENV%"=="" (
     echo [ERROR] Not running in a virtual environment!
@@ -27,13 +44,13 @@ echo.
 
 echo [1/7] Uninstalling existing packages...
 echo Uninstalling mcp-coder...
-pip uninstall mcp-coder -y
+uv pip uninstall mcp-coder --yes
 echo Uninstalling mcp-config...
-pip uninstall mcp-config -y
+uv pip uninstall mcp-config --yes
 echo Uninstalling mcp-code-checker...
-pip uninstall mcp-code-checker -y
+uv pip uninstall mcp-code-checker --yes
 echo Uninstalling mcp-server-filesystem...
-pip uninstall mcp-server-filesystem -y
+uv pip uninstall mcp-server-filesystem --yes
 if %ERRORLEVEL% NEQ 0 (
     echo Warning: Some packages may not have been installed
 ) else (
@@ -42,7 +59,7 @@ if %ERRORLEVEL% NEQ 0 (
 echo.
 
 echo [2/7] Installing package in development mode...
-pip install -e .
+uv pip install -e .
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Installation failed!
     echo Please check for errors above and try again.
@@ -53,7 +70,7 @@ echo [OK] Package installed successfully
 echo.
 
 echo [3/7] Installing development dependencies...
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Development dependencies installation failed!
     echo Please check for errors above and try again.
