@@ -52,16 +52,13 @@ def execute_create_pr(args: argparse.Namespace) -> int:
         mcp_config = getattr(args, "mcp_config", None)
         mcp_config = resolve_mcp_config_path(mcp_config)
 
+        # Extract update_labels flag from args
+        update_labels = getattr(args, "update_labels", False)
+
         # Run the create-pr workflow
         return run_create_pr_workflow(
-            project_dir, provider, method, mcp_config, execution_dir
+            project_dir, provider, method, mcp_config, execution_dir, update_labels
         )
-
-    except ValueError as e:
-        # Handle invalid execution_dir
-        logger.error(f"Invalid execution directory: {e}")
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
 
     except KeyboardInterrupt:
         print("Operation cancelled by user.")

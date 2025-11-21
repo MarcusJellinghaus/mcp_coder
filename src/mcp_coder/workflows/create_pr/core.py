@@ -474,6 +474,7 @@ def run_create_pr_workflow(
     method: str,
     mcp_config: str | None = None,
     execution_dir: Optional[Path] = None,
+    update_labels: bool = False,
 ) -> int:
     """Main workflow orchestration function - creates PR and cleans up repository.
 
@@ -483,6 +484,7 @@ def run_create_pr_workflow(
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
+        update_labels: If True, update GitHub issue labels on success
 
     Returns:
         int: Exit code (0 for success, 1 for failure)

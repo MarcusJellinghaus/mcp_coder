@@ -56,20 +56,20 @@ See [pr_info/steps/step_2.md](steps/step_2.md)
 ### Step 3: Add CLI Flags for Label Update Feature
 See [pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Add `--update-labels` argument to `implement_parser` in `main.py`
-- [ ] Add `--update-labels` argument to `create_plan_parser` in `main.py`
-- [ ] Add `--update-labels` argument to `create_pr_parser` in `main.py`
-- [ ] Update `execute_implement()` to pass `args.update_labels` to workflow
-- [ ] Update `execute_create_plan()` to pass `args.update_labels` to workflow
-- [ ] Update `execute_create_pr()` to pass `args.update_labels` to workflow
-- [ ] Update `run_implement_workflow()` signature with `update_labels` parameter
-- [ ] Update `run_create_plan_workflow()` signature with `update_labels` parameter
-- [ ] Update `run_create_pr_workflow()` signature with `update_labels` parameter
-- [ ] Update all workflow function docstrings with new parameter
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest check (fast unit tests) and fix all issues
-- [ ] Run mypy check and fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Add `--update-labels` argument to `implement_parser` in `main.py`
+- [x] Add `--update-labels` argument to `create_plan_parser` in `main.py`
+- [x] Add `--update-labels` argument to `create_pr_parser` in `main.py`
+- [x] Update `execute_implement()` to pass `args.update_labels` to workflow
+- [x] Update `execute_create_plan()` to pass `args.update_labels` to workflow
+- [x] Update `execute_create_pr()` to pass `args.update_labels` to workflow
+- [x] Update `run_implement_workflow()` signature with `update_labels` parameter
+- [x] Update `run_create_plan_workflow()` signature with `update_labels` parameter
+- [x] Update `run_create_pr_workflow()` signature with `update_labels` parameter
+- [x] Update all workflow function docstrings with new parameter
+- [x] Run pylint check and fix all issues
+- [x] Run pytest check (fast unit tests) and fix all issues
+- [x] Run mypy check and fix all issues
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Integrate Label Updates into Workflow Success Paths
 See [pr_info/steps/step_4.md](steps/step_4.md)

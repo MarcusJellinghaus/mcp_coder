@@ -225,6 +225,7 @@ def run_implement_workflow(
     method: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
+    update_labels: bool = False,
 ) -> int:
     """Main workflow orchestration function - processes all implementation tasks in sequence.
 
@@ -234,6 +235,7 @@ def run_implement_workflow(
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
+        update_labels: If True, update GitHub issue labels on success
 
     Returns:
         int: Exit code (0 for success, 1 for error)
