@@ -414,20 +414,28 @@ def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
         repo_name: Name of repository to load (e.g., "mcp_coder")
 
     Returns:
-        Dictionary with repo_url, executor_test_path, github_credentials_id
-        Values may be None if not found in config
+        Dictionary with repo_url, executor_job_path, github_credentials_id, executor_os
+        Values may be None except executor_os which defaults to "linux" (normalized to lowercase)
     """
     section = f"coordinator.repos.{repo_name}"
 
     repo_url = get_config_value(section, "repo_url")
-    executor_test_path = get_config_value(section, "executor_test_path")
+    executor_job_path = get_config_value(section, "executor_job_path")
     github_credentials_id = get_config_value(section, "github_credentials_id")
 
-    # Always return dict with field values (may be None)
+    # Load executor_os with default and normalize to lowercase
+    executor_os = get_config_value(section, "executor_os")
+    if executor_os:
+        executor_os = executor_os.lower()  # Normalize to lowercase
+    else:
+        executor_os = "linux"  # Default
+
+    # Always return dict with field values (may be None except executor_os)
     return {
         "repo_url": repo_url,
-        "executor_test_path": executor_test_path,
+        "executor_job_path": executor_job_path,
         "github_credentials_id": github_credentials_id,
+        "executor_os": executor_os,
     }
 
 
@@ -439,9 +447,9 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
         config: Repository configuration dict with possibly None values
 
     Raises:
-        ValueError: If any required fields are missing with detailed error message
+        ValueError: If any required fields are missing or invalid with detailed error message
     """
-    required_fields = ["repo_url", "executor_test_path", "github_credentials_id"]
+    required_fields = ["repo_url", "executor_job_path", "github_credentials_id"]
     missing_fields = []
 
     for field in required_fields:
@@ -469,6 +477,19 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
                 f"values for fields '{fields_str}' missing"
             )
 
+        raise ValueError(error_msg)
+
+    # Validate executor_os field (already normalized to lowercase by load_repo_config)
+    executor_os = config.get("executor_os", "linux")
+    if executor_os not in ["windows", "linux"]:
+        config_path = get_config_file_path()
+        section_name = f"coordinator.repos.{repo_name}"
+        error_msg = (
+            f"Config file: {config_path} - "
+            f"section [{section_name}] - "
+            f"value for field 'executor_os' invalid: got '{executor_os}'. "
+            f"Must be 'windows' or 'linux' (case-insensitive)"
+        )
         raise ValueError(error_msg)
 
 

@@ -44,15 +44,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run tests using `mcp__code-checker__run_pytest_check` (should fail - TDD)
 
 **Part 2: Implement Functionality**
-- [ ] Update `load_repo_config()` in `src/mcp_coder/cli/commands/coordinator.py` to load `executor_os` with case normalization
-- [ ] Rename field from `executor_test_path` to `executor_job_path` in `load_repo_config()`
-- [ ] Update `validate_repo_config()` to validate `executor_os` is "windows" or "linux"
-- [ ] Update `validate_repo_config()` to use renamed field `executor_job_path`
-- [ ] Run pylint check using `mcp__code-checker__run_pylint_check`
-- [ ] Run pytest check using `mcp__code-checker__run_pytest_check` (should pass)
-- [ ] Run mypy check using `mcp__code-checker__run_mypy_check`
-- [ ] Fix all issues found (if any)
-- [ ] Prepare git commit message for Step 2
+- [x] Update `load_repo_config()` in `src/mcp_coder/cli/commands/coordinator.py` to load `executor_os` with case normalization
+- [x] Rename field from `executor_test_path` to `executor_job_path` in `load_repo_config()`
+- [x] Update `validate_repo_config()` to validate `executor_os` is "windows" or "linux"
+- [x] Update `validate_repo_config()` to use renamed field `executor_job_path`
+- [x] Run pylint check using `mcp__code-checker__run_pylint_check`
+- [x] Run pytest check using `mcp__code-checker__run_pytest_check` (should pass)
+- [x] Run mypy check using `mcp__code-checker__run_mypy_check`
+- [x] Fix all issues found (if any)
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Add Template Selection Logic - TDD ([details](steps/step_3.md))
 
