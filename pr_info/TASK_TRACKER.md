@@ -22,3 +22,42 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### Step 1: Create Logging Helpers Module
+- [ ] Implement `logging_utils.py` with `log_llm_request()`, `log_llm_response()`, `log_llm_error()` functions
+- [ ] Create unit tests in `test_logging_utils.py` with caplog fixtures
+- [ ] Run pylint check and fix all issues
+- [ ] Run pytest and verify all tests pass
+- [ ] Run mypy and fix all type errors
+- [ ] Prepare git commit message
+
+**Reference**: [Step 1 Details](./steps/step_1.md)
+
+### Step 2: Add CLI Logging
+- [ ] Add logging calls to `claude_code_cli.py` `ask_claude_code_cli()` function
+- [ ] Create/update tests in `test_claude_code_cli.py` for request/response/error logging
+- [ ] Run pylint check and fix all issues
+- [ ] Run pytest and verify all tests pass
+- [ ] Run mypy and fix all type errors
+- [ ] Prepare git commit message
+
+**Reference**: [Step 2 Details](./steps/step_2.md)
+
+### Step 3: Add API Logging
+- [ ] Add logging calls to `claude_code_api.py` `ask_claude_code_api()` function
+- [ ] Create/update tests in `test_claude_code_api.py` for request/response/error logging with cost and usage metadata
+- [ ] Run pylint check and fix all issues
+- [ ] Run pytest and verify all tests pass
+- [ ] Run mypy and fix all type errors
+- [ ] Prepare git commit message
+
+**Reference**: [Step 3 Details](./steps/step_3.md)
+
+---
+
+## Pull Request
+
+- [ ] Review all changes for correctness and completeness
+- [ ] Verify PR summary aligns with implementation
+- [ ] Run full test suite one final time
+- [ ] Create/update PR with detailed description and test plan
