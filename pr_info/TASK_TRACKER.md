@@ -49,12 +49,17 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Reference**: [Step 2 Details](./steps/step_2.md)
 
 ### Step 3: Add API Logging
-- [ ] Add logging calls to `claude_code_api.py` `ask_claude_code_api()` function
-- [ ] Create/update tests in `test_claude_code_api.py` for request/response/error logging with cost and usage metadata
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix all type errors
-- [ ] Prepare git commit message
+- [x] Add logging calls to `claude_code_api.py` `ask_claude_code_api()` function
+- [x] Create/update tests in `test_claude_code_api.py` for request/response/error logging with cost and usage metadata
+- [x] Run pylint check and fix all issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix all type errors
+- [x] Prepare git commit message
+  **Message**: "Step 3: Add API logging to ask_claude_code_api() function
+  
+  Add logging calls to ask_claude_code_api() function using logging_utils helpers. Logs request details (method, provider, prompt, session, timeout) before API call. Logs response metadata including duration, cost, usage, and number of turns after successful API call. Logs errors with exception details and duration on failure.
+  
+  Add comprehensive test cases: test_api_logs_request, test_api_logs_response, test_api_logs_error, and test_api_logs_timeout_error to verify logging is called with correct parameters."
 
 **Reference**: [Step 3 Details](./steps/step_3.md)
 

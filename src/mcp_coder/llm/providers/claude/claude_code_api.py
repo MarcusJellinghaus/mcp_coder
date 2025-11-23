@@ -27,6 +27,7 @@ from .claude_executable_finder import (
     setup_claude_path,
     verify_claude_installation,
 )
+from .logging_utils import log_llm_error, log_llm_request, log_llm_response
 
 
 class ClaudeAPIError(Exception):
@@ -451,6 +452,19 @@ def ask_claude_code_api(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
+    # Log request
+    log_llm_request(
+        method="api",
+        provider="claude",
+        session_id=session_id,
+        prompt=question,
+        timeout=int(timeout),
+        env_vars=env_vars or {},
+        cwd=cwd or "",
+        mcp_config=mcp_config,
+    )
+
+    start_time = time.time()
     try:
         # Call detailed function with session_id for native resumption
         detailed = ask_claude_code_api_detailed_sync(
@@ -466,18 +480,35 @@ def ask_claude_code_api(
                 f"Session ID mismatch: requested '{session_id}', got '{actual_session_id}' from Claude"
             )
 
+        # Log response with cost and usage metadata
+        duration_ms = int((time.time() - start_time) * 1000)
+        log_llm_response(
+            method="api",
+            duration_ms=duration_ms,
+            cost_usd=detailed["result_info"].get("cost_usd"),
+            usage=detailed["result_info"].get("usage"),
+            num_turns=detailed["result_info"].get("num_turns"),
+        )
+
         # Build and return response
         return create_api_response_dict(detailed["text"], actual_session_id, detailed)
 
-    except subprocess.TimeoutExpired:
-        # Re-raise timeout errors as-is
+    except subprocess.TimeoutExpired as e:
+        # Log error before re-raising
+        duration_ms = int((time.time() - start_time) * 1000)
+        log_llm_error(method="api", error=e, duration_ms=duration_ms)
         raise
 
-    except ValueError:
-        # Re-raise input validation errors as-is
+    except ValueError as e:
+        # Log error before re-raising
+        duration_ms = int((time.time() - start_time) * 1000)
+        log_llm_error(method="api", error=e, duration_ms=duration_ms)
         raise
 
     except Exception as e:
+        # Log error before converting
+        duration_ms = int((time.time() - start_time) * 1000)
+        log_llm_error(method="api", error=e, duration_ms=duration_ms)
         # Convert to ClaudeAPIError for consistency
         real_error = _extract_real_error_message(e)
         error_msg = f"Claude API Error: {real_error}"
