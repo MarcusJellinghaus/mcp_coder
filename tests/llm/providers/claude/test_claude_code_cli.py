@@ -311,3 +311,165 @@ class TestIOWrappers:
         # Verify stdin was used
         options = call_args[0][1]
         assert options.input_data == "Follow up"
+
+
+class TestCliLogging:
+    """Tests for logging functionality in CLI method."""
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_request")
+    def test_cli_logs_request(
+        self,
+        mock_log_request: MagicMock,
+        mock_execute: MagicMock,
+        mock_find: MagicMock,
+    ) -> None:
+        """Test that request is logged before subprocess execution."""
+        mock_find.return_value = "claude"
+        mock_result = CommandResult(
+            return_code=0,
+            stdout=json.dumps({"result": "Response", "session_id": "test"}),
+            stderr="",
+            timed_out=False,
+        )
+        mock_execute.return_value = mock_result
+
+        ask_claude_code_cli("Test question", session_id="abc-123", timeout=60)
+
+        # Verify log_llm_request was called with correct parameters
+        mock_log_request.assert_called_once()
+        call_kwargs = mock_log_request.call_args[1]
+        assert call_kwargs["method"] == "cli"
+        assert call_kwargs["provider"] == "claude"
+        assert call_kwargs["session_id"] == "abc-123"
+        assert call_kwargs["prompt"] == "Test question"
+        assert call_kwargs["timeout"] == 60
+        assert "command" in call_kwargs
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_response")
+    def test_cli_logs_response(
+        self,
+        mock_log_response: MagicMock,
+        mock_execute: MagicMock,
+        mock_find: MagicMock,
+    ) -> None:
+        """Test that response with duration is logged after success."""
+        mock_find.return_value = "claude"
+        mock_result = CommandResult(
+            return_code=0,
+            stdout=json.dumps({"result": "Response", "session_id": "test"}),
+            stderr="",
+            timed_out=False,
+        )
+        mock_execute.return_value = mock_result
+
+        ask_claude_code_cli("Test question")
+
+        # Verify log_llm_response was called with duration
+        mock_log_response.assert_called_once()
+        call_kwargs = mock_log_response.call_args[1]
+        assert call_kwargs["method"] == "cli"
+        assert "duration_ms" in call_kwargs
+        assert isinstance(call_kwargs["duration_ms"], int)
+        assert call_kwargs["duration_ms"] >= 0
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_error")
+    def test_cli_logs_error_on_timeout(
+        self,
+        mock_log_error: MagicMock,
+        mock_execute: MagicMock,
+        mock_find: MagicMock,
+    ) -> None:
+        """Test that timeout errors are logged with duration."""
+        mock_find.return_value = "claude"
+        mock_result = CommandResult(
+            return_code=1,
+            stdout="",
+            stderr="",
+            timed_out=True,
+            execution_error="Timed out",
+        )
+        mock_execute.return_value = mock_result
+
+        with pytest.raises(subprocess.TimeoutExpired):
+            ask_claude_code_cli("Test question", timeout=30)
+
+        # Verify log_llm_error was called with error and duration
+        mock_log_error.assert_called_once()
+        call_kwargs = mock_log_error.call_args[1]
+        assert call_kwargs["method"] == "cli"
+        assert isinstance(call_kwargs["error"], subprocess.TimeoutExpired)
+        assert "duration_ms" in call_kwargs
+        assert isinstance(call_kwargs["duration_ms"], int)
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_error")
+    def test_cli_logs_error_on_failure(
+        self,
+        mock_log_error: MagicMock,
+        mock_execute: MagicMock,
+        mock_find: MagicMock,
+    ) -> None:
+        """Test that command failures are logged."""
+        mock_find.return_value = "claude"
+        mock_result = CommandResult(
+            return_code=1,
+            stdout="",
+            stderr="Command failed",
+            timed_out=False,
+        )
+        mock_execute.return_value = mock_result
+
+        with pytest.raises(subprocess.CalledProcessError):
+            ask_claude_code_cli("Test question")
+
+        # Verify log_llm_error was called with CalledProcessError
+        mock_log_error.assert_called_once()
+        call_kwargs = mock_log_error.call_args[1]
+        assert call_kwargs["method"] == "cli"
+        assert isinstance(call_kwargs["error"], subprocess.CalledProcessError)
+        assert "duration_ms" in call_kwargs
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_request")
+    def test_cli_logs_request_with_logging_functions(
+        self,
+        mock_log_request: MagicMock,
+        mock_find: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test request logging contains method, prompt, and command info."""
+        mock_find.return_value = "claude"
+
+        # Using caplog to verify actual logging
+        with caplog.at_level("DEBUG"):
+            with patch(
+                "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
+            ):
+                with patch(
+                    "mcp_coder.llm.providers.claude.claude_code_cli.log_llm_response"
+                ):
+                    mock_result = CommandResult(
+                        return_code=0,
+                        stdout=json.dumps({"result": "Response"}),
+                        stderr="",
+                        timed_out=False,
+                    )
+
+                    with patch(
+                        "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
+                    ) as mock_exec:
+                        mock_exec.return_value = mock_result
+                        ask_claude_code_cli("My test question", session_id="sess-1")
+
+        # Verify the log request was called with correct data
+        mock_log_request.assert_called_once()
+        call_kwargs = mock_log_request.call_args[1]
+        assert call_kwargs["method"] == "cli"
+        assert "command" in call_kwargs

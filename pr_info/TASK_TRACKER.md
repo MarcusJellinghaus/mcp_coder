@@ -39,12 +39,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Reference**: [Step 1 Details](./steps/step_1.md)
 
 ### Step 2: Add CLI Logging
-- [ ] Add logging calls to `claude_code_cli.py` `ask_claude_code_cli()` function
-- [ ] Create/update tests in `test_claude_code_cli.py` for request/response/error logging
-- [ ] Run pylint check and fix all issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix all type errors
-- [ ] Prepare git commit message
+- [x] Add logging calls to `claude_code_cli.py` `ask_claude_code_cli()` function
+- [x] Create/update tests in `test_claude_code_cli.py` for request/response/error logging
+- [x] Run pylint check and fix all issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix all type errors
+- [x] Prepare git commit message
 
 **Reference**: [Step 2 Details](./steps/step_2.md)
 
