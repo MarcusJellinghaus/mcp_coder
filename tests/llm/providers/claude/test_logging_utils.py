@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.mcp_coder.llm.providers.claude.logging_utils import (
+from mcp_coder.llm.providers.claude.logging_utils import (
     log_llm_error,
     log_llm_request,
     log_llm_response,

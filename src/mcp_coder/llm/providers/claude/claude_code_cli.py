@@ -297,11 +297,11 @@ def ask_claude_code_cli(
         return create_response_dict(
             parsed["text"], parsed["session_id"], parsed["raw_response"]
         )
-    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, ValueError):
-        # These errors are already logged above
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+        # Already logged above - re-raise without logging again
         raise
     except Exception as e:
-        # Log any other unexpected errors
+        # Log any other unexpected errors (e.g., ValueError from JSON parsing)
         duration_ms = int((time.time() - start_time) * 1000)
         log_llm_error(method="cli", error=e, duration_ms=duration_ms)
         raise
