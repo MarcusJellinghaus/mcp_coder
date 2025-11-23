@@ -57,7 +57,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Add Template Selection Logic - TDD ([details](steps/step_3.md))
 
 **Part 1: Write Tests First**
-- [ ] Add `test_execute_coordinator_test_windows_template` to `tests/cli/commands/test_coordinator.py`
+- [x] Add `test_execute_coordinator_test_windows_template` to `tests/cli/commands/test_coordinator.py`
 - [ ] Add `test_execute_coordinator_test_linux_template` test
 - [ ] Add `test_dispatch_workflow_windows_templates` test (optional but recommended)
 - [ ] Run tests using `mcp__code-checker__run_pytest_check` (should fail - TDD)

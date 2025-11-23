@@ -165,6 +165,12 @@ mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\repo --mc
 """
 
 
+# Template selection mapping for execute_coordinator_test
+TEST_COMMAND_TEMPLATES = {
+    "windows": DEFAULT_TEST_COMMAND_WINDOWS,
+    "linux": DEFAULT_TEST_COMMAND,
+}
+
 # Priority order for processing issues (highest to lowest)
 PRIORITY_ORDER = [
     "status-08:ready-pr",
@@ -596,11 +602,15 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         # Create Jenkins client
         client = JenkinsClient(server_url, username, api_token)
 
+        # Select template based on OS using dictionary mapping
+        executor_os = repo_config["executor_os"]
+        test_command = TEST_COMMAND_TEMPLATES[executor_os]
+
         # Build job parameters
         params = {
             "REPO_URL": validated_config["repo_url"],
             "BRANCH_NAME": args.branch_name,
-            "COMMAND": DEFAULT_TEST_COMMAND,
+            "COMMAND": test_command,  # OS-aware selection
             "GITHUB_CREDENTIALS_ID": validated_config["github_credentials_id"],
         }
 

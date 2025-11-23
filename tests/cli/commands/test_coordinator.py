@@ -9,6 +9,7 @@ import pytest
 
 from mcp_coder.cli.commands.coordinator import (
     DEFAULT_TEST_COMMAND,
+    DEFAULT_TEST_COMMAND_WINDOWS,
     execute_coordinator_test,
     format_job_output,
     get_jenkins_credentials,
@@ -802,6 +803,49 @@ class TestExecuteCoordinatorTest:
         assert "which claude" in command
         assert "claude mcp list" in command
         assert "source .venv/bin/activate" in command
+
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_test_windows_template(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+    ) -> None:
+        """Test Windows template is selected when executor_os = 'windows'."""
+        # Setup
+        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        mock_create_config.return_value = False
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_job_path": "MCP/test-job",
+            "github_credentials_id": "github-pat",
+            "executor_os": "windows",  # Windows OS selected
+        }
+        mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
+
+        mock_client = MagicMock()
+        mock_jenkins_class.return_value = mock_client
+        mock_client.start_job.return_value = 12345
+
+        # Execute
+        execute_coordinator_test(args)
+
+        # Verify - check that start_job was called with Windows template
+        call_args = mock_client.start_job.call_args
+        params = call_args[0][1]  # Second positional argument is params dict
+
+        # Verify COMMAND parameter contains Windows template (uses @echo ON)
+        assert "COMMAND" in params
+        command = params["COMMAND"]
+        assert "@echo ON" in command
+        assert "VENV_BASE_DIR" in command
+        # Verify it's NOT the Linux template
+        assert "source .venv/bin/activate" not in command
+        assert "which mcp-coder" not in command
 
 
 class TestGetEligibleIssues:
