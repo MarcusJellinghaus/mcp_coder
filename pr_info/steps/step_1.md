@@ -1,161 +1,78 @@
-# Step 1: Add Enhanced Logging Helper Function
+# Step 1: Create Logging Helpers Module
 
-## Where
+## WHERE
+**New file**: `src/mcp_coder/llm/providers/claude/logging_utils.py`
 
-**File**: `src/mcp_coder/llm/providers/claude/claude_code_cli.py`
+## WHAT
 
-**Location**: Add new module-level helper function at the end of the file (before `ask_claude_code_cli()` definition, or after other helpers)
-
-## What
-
-Create a reusable logging helper function to format and log debug information consistently for both CLI and API calls.
-
-### Function Signature
+Create 3 helper functions:
 
 ```python
-def _log_llm_request_debug(
-    method: str,
-    provider: str,
+def log_llm_request(
+    method: str,  # 'cli' or 'api'
+    provider: str,  # 'claude'
     session_id: str | None,
-    command: list[str] | None = None,
-    prompt: str | None = None,
-    timeout: int | None = None,
-    env_vars: dict[str, str] | None = None,
-    cwd: str | None = None,
+    prompt: str,
+    timeout: int,
+    env_vars: dict[str, str],
+    cwd: str,
+    command: list[str] | None = None,  # CLI only
     mcp_config: str | None = None,
 ) -> None:
-    """Log comprehensive debug information for LLM requests.
-    
-    Args:
-        method: 'cli' or 'api'
-        provider: 'claude' or other provider name
-        session_id: Session ID (None for new, string for resuming)
-        command: CLI command list (only for CLI method)
-        prompt: Full prompt text (for preview)
-        timeout: Timeout in seconds
-        env_vars: Environment variables dict
-        cwd: Working directory
-        mcp_config: MCP config file path
-    """
+    """Log LLM request details at DEBUG level."""
 ```
-
-## How
-
-### Pseudocode
-
-```
-1. Determine session status: "new" if session_id is None, else "resuming"
-2. Create header: f"Claude {method} execution [{status}]:"
-3. Log provider and method fields
-4. Log session status
-5. If CLI method: format and log command (first arg on same line, rest indented)
-6. Format and log prompt preview (chars + first 250 chars with ellipsis if needed)
-7. Log timeout, cwd, mcp_config, env_vars (full dict)
-8. All fields aligned with proper indentation
-9. Use logger.debug() for all output
-```
-
-## Algorithm
 
 ```python
-# Session indicator
-status = "resuming" if session_id else "new"
-header = f"Claude {method} execution [{status}]:"
-
-# Build field list (tuples of label and value)
-fields = [
-    ("Provider", provider),
-    ("Method", method),
-    ("Session", session_id or "None"),
-    # ... add more fields ...
-]
-
-# Format each field with alignment
-# Log header
-# Log each field on separate line with consistent indentation
+def log_llm_response(
+    method: str,
+    duration_ms: int,
+    cost_usd: float | None = None,  # API only
+    usage: dict | None = None,  # API only
+    num_turns: int | None = None,  # API only
+) -> None:
+    """Log LLM response metadata at DEBUG level."""
 ```
 
-## Data Structures
-
-### Return Value
-- **Type**: `None`
-- **Side Effect**: Calls `logger.debug()` multiple times with formatted strings
-
-### Internal Format
 ```python
-# Example log output (single logger.debug call per line):
-# Line 1: Header with session status
-# Line 2+: Each field indented consistently
+def log_llm_error(
+    method: str,
+    error: Exception,
+    duration_ms: int | None = None,
+) -> None:
+    """Log LLM error at DEBUG level."""
 ```
 
-## Implementation Details
+## IMPLEMENTATION
 
-### Command Formatting (CLI only)
-```python
-if command:
-    cmd_first = command[0]
-    cmd_rest = [f"                 {arg}" for arg in command[1:]]
-    # Format: first arg on same line, rest indented further
-```
+**log_llm_request():**
+- Show session status: `[new]` if session_id is None, else `[resuming]`
+- Show prompt preview: `{len(prompt)} chars - {prompt[:250]}...`
+- Show all parameters in aligned format
+- Use `logger.debug()` for output
 
-### Prompt Preview
-```python
-if prompt:
-    prompt_preview = prompt[:250]
-    ellipsis = "..." if len(prompt) > 250 else ""
-    preview_text = f"{len(prompt)} chars - {prompt_preview}{ellipsis}"
-```
+**log_llm_response():**
+- Show duration, cost (if available), usage tokens
+- Format as indented fields under "Response:" header
 
-### Environment Variables
-```python
-if env_vars:
-    # Log full dict as Python dict representation
-    logger.debug(f"    env_vars:  {env_vars}")
-```
+**log_llm_error():**
+- Show error type and message
+- Show duration if available
+- Format consistently with request/response
 
-## Testing
+## TESTING
 
-**Unit Test File**: `tests/llm/providers/claude/test_claude_code_cli.py` (existing)
+**File**: `tests/llm/providers/claude/test_logging_utils.py` (create new)
 
-**Test Case Name**: `test_log_llm_request_debug_formats_output_correctly`
+**Tests** (verify these fields exist in log output):
+- `test_log_llm_request_cli` - Check: method='cli', session=[new], command present, prompt preview
+- `test_log_llm_request_api` - Check: method='api', session=[resuming], no command
+- `test_log_llm_response` - Check: duration, cost, usage present
+- `test_log_llm_error` - Check: error type, message present
 
-### Test Steps
-1. Mock `logger.debug`
-2. Call `_log_llm_request_debug()` with sample data (CLI method, new session)
-3. Verify:
-   - Header line logged with correct session status
-   - Each field logged on separate line
-   - Command arguments properly formatted and indented
-   - Prompt preview shows count and first 250 chars
-   - Env vars logged as dict
-   - Alignment consistent (check indentation)
-4. Repeat for API method and resuming session
+Use pytest `caplog` fixture to capture DEBUG logs.
 
-### Expected Behavior
-- Function logs nothing to stdout/stderr
-- Function uses `logger.debug()` for all output
-- No exceptions raised
-- Works with None values for optional parameters
-
-## Files to Create/Modify
-
-| File | Type | Details |
-|------|------|---------|
-| `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Modify | Add `_log_llm_request_debug()` function |
-| `tests/llm/providers/claude/test_claude_code_cli.py` | Modify | Add unit test for logging function |
-
-## Integration Points
-
-- **Called by**: `ask_claude_code_cli()` in Step 2
-- **Called by**: `ask_claude_code_api()` in Step 3 (but imported from this module)
-- **Imports**: `logging` (already imported)
-- **Decorators**: None
-- **Dependencies**: None (uses only standard library)
-
-## Success Criteria
-
-- ✅ Helper function defined and callable
-- ✅ Formats all fields correctly
-- ✅ Handles None values gracefully
-- ✅ Unit test passes
-- ✅ No changes to `ask_claude_code_cli()` or API file yet
+## SUCCESS
+- ✅ Module created with 3 functions
+- ✅ All functions use logger.debug()
+- ✅ Tests verify field presence (not formatting)
+- ✅ Code quality checks pass

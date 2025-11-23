@@ -1,88 +1,52 @@
 # Issue #165: Enhanced Debug Logging for LLM Calls
 
-## Summary
-
-Add comprehensive DEBUG-level logging to Claude Code provider functions to show execution context and response details. This enables easier troubleshooting without architectural changes.
-
 ## Problem
 
-Current debug logging is minimal:
-```
-2025-11-02 15:19:32,412 - mcp_coder.llm.providers.claude.claude_code_cli - DEBUG - Executing CLI command with stdin (prompt_len=10525, session_id=None)
-```
-
-Users need to see environment variables, working directory, full command arguments, and response metadata when debugging.
+Current debug logging is minimal and doesn't show execution context (env vars, cwd, command details) or response metadata.
 
 ## Solution
 
-**Simplified Approach (KISS Principle)**: Add enhanced logging directly in the two provider entry points instead of refactoring architecture:
+Add comprehensive DEBUG-level logging for LLM calls:
+- **Request logging**: Show what we're sending (prompt, env, command, etc.)
+- **Response logging**: Show what we got back (duration, tokens, cost)
+- **Error logging**: Show what failed and why
 
-1. **`ask_claude_code_cli()`** - Log request details before CLI execution
-2. **`ask_claude_code_api()`** - Log request details and response metadata after API call
+## Implementation
 
-## Design Changes
+Create `src/mcp_coder/llm/providers/claude/logging_utils.py` with 3 helpers:
+1. `log_llm_request()` - Log before execution
+2. `log_llm_response()` - Log after success
+3. `log_llm_error()` - Log on failure
 
-**Zero architectural refactoring** - adds logging only at provider boundaries:
-- No moving functions
-- No centralizing capture logic  
-- No caller changes
-- Minimal code additions (~50-100 lines total)
+Use these helpers in:
+- `claude_code_cli.py` - CLI execution
+- `claude_code_api.py` - API execution
 
-### Logging Format
+## Changes
 
-All logs at **DEBUG level only**. Multiline format with aligned fields:
+| File | Change |
+|------|--------|
+| `src/mcp_coder/llm/providers/claude/logging_utils.py` | **Create** - 3 logging helpers (~80 lines) |
+| `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Add logging calls (~20 lines) |
+| `src/mcp_coder/llm/providers/claude/claude_code_api.py` | Add logging calls (~20 lines) |
+| `tests/llm/providers/claude/test_logging_utils.py` | **Create** - Unit tests (~60 lines) |
+| `tests/llm/providers/claude/test_claude_code_cli.py` | Add logging tests (~20 lines) |
+| `tests/llm/providers/claude/test_claude_code_api.py` | Add logging tests (~20 lines) |
 
-```
-Claude CLI execution [new]:
-    Provider:  claude
-    Method:    cli
-    Command:   claude.EXE
-                 -p ""
-                 --output-format json
-    Session:   None
-    Prompt:    10525 chars - First 250 characters of prompt...
-    cwd:       C:\project
-    Timeout:   3600s
-    env_vars:  {'MCP_CODER_PROJECT_DIR': '/project', ...}
-```
+**Total**: ~220 lines
 
-For API with response:
-```
-Claude API execution [resuming]:
-    Provider:  claude
-    Method:    api
-    Session:   abc123def456
-    ...
-    Response:
-                 duration_ms: 2801
-                 cost_usd: 0.058779
-                 usage: {'input_tokens': 4, 'output_tokens': 5}
-```
+## Design Decisions
 
-## Files Changed
-
-| File | Change | Reason |
-|------|--------|--------|
-| `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Add request logging in `ask_claude_code_cli()` | Log before execution |
-| `src/mcp_coder/llm/providers/claude/claude_code_api.py` | Add request+response logging in `ask_claude_code_api()` | Log before and after execution |
-
-**No files deleted, no files moved, no refactoring of other modules.**
-
-## Test Strategy
-
-- Unit tests mock logging to verify output format
-- Integration tests capture DEBUG logs to verify completeness
-- Verify both CLI and API methods log correctly
-- Verify new vs resuming sessions show correct indicators
+1. **New module** - Separate `logging_utils.py` keeps logging code organized
+2. **DEBUG level only** - No production impact
+3. **Log at provider boundary** - All callers benefit automatically
+4. **Log full env_vars** - DEBUG logs are private/trusted
+5. **250 char prompt preview** - Balance detail vs log volume
+6. **Test content only** - Verify fields exist, not formatting
 
 ## Benefits
 
-- ✅ Minimal changes (low risk)
-- ✅ All logging at provider boundary (single point of logging effect)
+- ✅ Easy troubleshooting (see full context)
 - ✅ No breaking changes
-- ✅ Easy to understand (logging next to execution)
-- ✅ Achieves all issue requirements
-
-## Implementation Steps
-
-See `step_1.md` through `step_3.md` for detailed implementation.
+- ✅ Clean separation (logging isolated)
+- ✅ Low risk (~220 lines)
