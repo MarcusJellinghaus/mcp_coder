@@ -847,6 +847,49 @@ class TestExecuteCoordinatorTest:
         assert "source .venv/bin/activate" not in command
         assert "which mcp-coder" not in command
 
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_test_linux_template(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+    ) -> None:
+        """Test Linux template is selected when executor_os = 'linux'."""
+        # Setup
+        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        mock_create_config.return_value = False
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_job_path": "MCP/test-job",
+            "github_credentials_id": "github-pat",
+            "executor_os": "linux",  # Linux OS selected
+        }
+        mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
+
+        mock_client = MagicMock()
+        mock_jenkins_class.return_value = mock_client
+        mock_client.start_job.return_value = 12345
+
+        # Execute
+        execute_coordinator_test(args)
+
+        # Verify - check that start_job was called with Linux template
+        call_args = mock_client.start_job.call_args
+        params = call_args[0][1]  # Second positional argument is params dict
+
+        # Verify COMMAND parameter contains Linux template (uses source .venv/bin/activate)
+        assert "COMMAND" in params
+        command = params["COMMAND"]
+        assert "source .venv/bin/activate" in command
+        assert "which mcp-coder" in command
+        # Verify it's NOT the Windows template
+        assert "@echo ON" not in command
+        assert "VENV_BASE_DIR" not in command
+
 
 class TestGetEligibleIssues:
     """Tests for get_eligible_issues function."""
