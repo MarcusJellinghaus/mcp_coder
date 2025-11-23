@@ -3,8 +3,8 @@
 ## Document Metadata
 
 **Framework**: Arc42 Template  
-**Version**: 1.7  
-**Last Updated**: 2025-10-26  
+**Version**: 1.8  
+**Last Updated**: 2025-11-23  
 **Status**: Complete (Sections 1-8)  
 **Maintainer**: Marcus Jellinghaus  
 **Review Frequency**: Quarterly or on major changes  
@@ -173,6 +173,14 @@ mcp-coder implement --project-dir /path/to/project
   - `resolver.py` - LLM method parsing and session resolution (tests: `llm/session/test_resolver.py`)
 - **Providers**: `llm/providers/` - Provider implementations
   - `claude/` - Claude Code CLI/API integration (tests: `llm/providers/claude/test_*.py`)
+    - `claude_code_interface.py` - Claude routing interface
+    - `claude_code_cli.py` - Claude Code CLI integration
+    - `claude_code_api.py` - Claude Code API integration
+    - `logging_utils.py` - Logging utilities for LLM requests/responses/errors (tests: `test_logging_utils.py`)
+      - **Design Decision**: Added structured logging for LLM operations (Nov 2025)
+        - **Rationale**: Centralized logging functions for request, response, and error tracking in Claude provider integrations
+        - **Benefits**: Consistent logging patterns, easier debugging, structured debug output
+        - **Functions**: `log_llm_request()`, `log_llm_response()`, `log_llm_error()`
 
 ### CLI System (`src/mcp_coder/cli/`)
 - **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)
@@ -326,6 +334,12 @@ mcp-coder implement --project-dir /path/to/project
 - **Centralized configuration**: `utils/log_utils.py` - Single point for logging setup
 - **Log level reservation**: INFO level reserved for workflow status and progress
 - **CLI integration**: `--log-level` parameter in `cli/main.py` for user control
+- **LLM operation logging**: `llm/providers/claude/logging_utils.py` - Structured logging for LLM operations
+  - `log_llm_request()` - Log request details with prompt preview, timeout, environment
+  - `log_llm_response()` - Log response metadata (duration, cost, usage, turns)
+  - `log_llm_error()` - Log error details with type, message, and duration
+  - **Level**: DEBUG level for detailed operation tracking
+  - **Use cases**: Provider implementations for both CLI and API integration
 
 ### Configuration Management
 - **User config**: TOML files in `~/.mcp_coder/config.toml`
