@@ -4247,3 +4247,81 @@ class TestCoordinatorRunEdgeCases:
         # Verify - Issue 101: status-02 → status-03
         assert remove_calls[1][0] == (101, "status-02:awaiting-planning")
         assert add_calls[1][0] == (101, "status-03:planning")
+
+
+class TestDispatchWorkflowWindowsTemplates:
+    """Tests for Windows template selection in dispatch_workflow."""
+
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_windows_templates(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test Windows workflow templates are selected for Windows executor.
+
+        When executor_os = "windows", dispatch_workflow should use Windows-specific
+        command templates for all three workflows (create-plan, implement, create-pr).
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-02:awaiting-planning label (create-plan workflow)
+        issue = IssueData(
+            number=555,
+            title="Test Windows templates",
+            body="Test Windows template selection",
+            state="open",
+            labels=["status-02:awaiting-planning", "enhancement"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/555",
+            locked=False,
+        )
+
+        # Setup - Repo configuration with Windows OS
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_test_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-555",
+            "executor_os": "windows",  # Windows OS selected
+        }
+
+        # Setup - Mock Jenkins responses
+        mock_jenkins.start_job.return_value = 55555  # Queue ID
+        mock_jenkins.get_job_status.return_value = MagicMock(status="queued")
+
+        # Execute
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="create-plan",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
+
+        # Verify - Jenkins job started with Windows template
+        mock_jenkins.start_job.assert_called_once()
+        call_args = mock_jenkins.start_job.call_args
+        params = call_args[0][1]  # Second positional argument is params dict
+
+        # Verify COMMAND parameter contains Windows template (uses @echo ON)
+        assert "COMMAND" in params
+        command = params["COMMAND"]
+        assert "@echo ON" in command
+        # Verify Windows-specific patterns
+        assert "VENV_BASE_DIR" in command or "cmd" in command.lower()
+        # Verify it's NOT the Linux template
+        assert "source .venv/bin/activate" not in command
