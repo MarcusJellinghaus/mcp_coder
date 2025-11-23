@@ -589,5 +589,25 @@ def run_create_plan_workflow(
     else:
         logger.info("Successfully pushed changes to remote")
 
+    # Update GitHub issue label if requested
+    if update_labels:
+        logger.info("Updating GitHub issue label...")
+        try:
+            from mcp_coder.utils.github_operations.issue_manager import IssueManager
+
+            issue_manager = IssueManager(project_dir)
+            success = issue_manager.update_workflow_label(
+                from_label_id="planning",
+                to_label_id="plan_review",
+            )
+
+            if success:
+                logger.info("✓ Issue label updated: planning → plan-review")
+            else:
+                logger.warning("✗ Failed to update issue label (non-blocking)")
+
+        except Exception as e:
+            logger.error(f"Error updating issue label (non-blocking): {e}")
+
     logger.info("Create plan workflow completed successfully!")
     return 0

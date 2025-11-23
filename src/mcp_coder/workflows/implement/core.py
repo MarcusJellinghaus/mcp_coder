@@ -348,4 +348,24 @@ def run_implement_workflow(
     else:
         logger.info("No incomplete implementation tasks found - workflow complete")
 
+    # Step 7: Update GitHub issue label if requested
+    if update_labels and completed_tasks > 0 and not error_occurred:
+        logger.info("Updating GitHub issue label...")
+        try:
+            from mcp_coder.utils.github_operations.issue_manager import IssueManager
+
+            issue_manager = IssueManager(project_dir)
+            success = issue_manager.update_workflow_label(
+                from_label_id="implementing",
+                to_label_id="code_review",
+            )
+
+            if success:
+                logger.info("✓ Issue label updated: implementing → code-review")
+            else:
+                logger.warning("✗ Failed to update issue label (non-blocking)")
+
+        except Exception as e:
+            logger.error(f"Error updating issue label (non-blocking): {e}")
+
     return 0

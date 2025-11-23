@@ -59,7 +59,13 @@ def execute_create_plan(args: argparse.Namespace) -> int:
 
         # Run the create-plan workflow
         return run_create_plan_workflow(
-            args.issue_number, project_dir, provider, method, mcp_config, execution_dir, update_labels
+            args.issue_number,
+            project_dir,
+            provider,
+            method,
+            mcp_config,
+            execution_dir,
+            update_labels,
         )
 
     except ValueError as e:
