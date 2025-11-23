@@ -5,6 +5,7 @@ import json
 import logging
 import subprocess
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, TypedDict, cast
@@ -16,6 +17,7 @@ from ....utils.subprocess_runner import (
 )
 from ...types import LLM_RESPONSE_VERSION, LLMResponseDict
 from .claude_executable_finder import find_claude_executable
+from .logging_utils import log_llm_error, log_llm_request, log_llm_response
 
 logger = logging.getLogger(__name__)
 
@@ -230,6 +232,19 @@ def ask_claude_code_cli(
     # Build command with optional --resume and --mcp-config (pure function)
     command = build_cli_command(session_id, claude_cmd, mcp_config)
 
+    # Log request
+    log_llm_request(
+        method="cli",
+        provider="claude",
+        session_id=session_id,
+        prompt=question,
+        timeout=timeout,
+        env_vars=env_vars or {},
+        cwd=cwd or "",
+        command=command,
+        mcp_config=mcp_config,
+    )
+
     # Execute command with stdin input (I/O)
     # cwd parameter controls where Claude subprocess runs
     # This affects .mcp.json discovery and relative path resolution
@@ -237,31 +252,56 @@ def ask_claude_code_cli(
         f"Executing CLI command with stdin (prompt_len={len(question)}, "
         f"session_id={session_id}, cwd={cwd})"
     )
+    start_time = time.time()
     options = CommandOptions(
         timeout_seconds=timeout,
         input_data=question,  # Pass question via stdin
         env=env_vars,
         cwd=cwd,  # Set working directory for Claude subprocess execution
     )
-    result = execute_subprocess(command, options)
 
-    # Error handling
-    if result.timed_out:
-        logger.error(f"CLI timed out after {timeout}s")
-        raise subprocess.TimeoutExpired(command, timeout)
+    try:
+        result = execute_subprocess(command, options)
 
-    if result.return_code != 0:
-        logger.error(f"CLI failed with code {result.return_code}")
-        raise subprocess.CalledProcessError(
-            result.return_code, command, output=result.stdout, stderr=result.stderr
+        # Error handling
+        if result.timed_out:
+            logger.error(f"CLI timed out after {timeout}s")
+            duration_ms = int((time.time() - start_time) * 1000)
+            timeout_error: Exception = subprocess.TimeoutExpired(command, timeout)
+            log_llm_error(method="cli", error=timeout_error, duration_ms=duration_ms)
+            raise timeout_error
+
+        if result.return_code != 0:
+            logger.error(f"CLI failed with code {result.return_code}")
+            duration_ms = int((time.time() - start_time) * 1000)
+            called_process_error: Exception = subprocess.CalledProcessError(
+                result.return_code, command, output=result.stdout, stderr=result.stderr
+            )
+            log_llm_error(
+                method="cli", error=called_process_error, duration_ms=duration_ms
+            )
+            raise called_process_error
+
+        logger.debug(
+            f"CLI success: {len(result.stdout)} bytes, session_id from response"
         )
 
-    logger.debug(f"CLI success: {len(result.stdout)} bytes, session_id from response")
+        # Log response
+        duration_ms = int((time.time() - start_time) * 1000)
+        log_llm_response(method="cli", duration_ms=duration_ms)
 
-    # Parse JSON (pure function)
-    parsed = parse_cli_json_string(result.stdout.strip())
+        # Parse JSON (pure function)
+        parsed = parse_cli_json_string(result.stdout.strip())
 
-    # Create response dict (pure function)
-    return create_response_dict(
-        parsed["text"], parsed["session_id"], parsed["raw_response"]
-    )
+        # Create response dict (pure function)
+        return create_response_dict(
+            parsed["text"], parsed["session_id"], parsed["raw_response"]
+        )
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+        # Already logged above - re-raise without logging again
+        raise
+    except Exception as e:
+        # Log any other unexpected errors (e.g., ValueError from JSON parsing)
+        duration_ms = int((time.time() - start_time) * 1000)
+        log_llm_error(method="cli", error=e, duration_ms=duration_ms)
+        raise

@@ -520,3 +520,131 @@ class TestClaudeCodeApiIntegration:
         # Also verify helper function is available
         assert callable(_create_claude_client)
         print("✓ _create_claude_client helper function is callable")
+
+
+class TestAskClaudeCodeApiLogging:
+    """Test logging in ask_claude_code_api function."""
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.log_llm_request")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.log_llm_response")
+    def test_api_logs_request(
+        self,
+        mock_log_response: MagicMock,
+        mock_log_request: MagicMock,
+        mock_detailed_sync: MagicMock,
+    ) -> None:
+        """Test that request logging is called with proper parameters."""
+        # Setup
+        mock_detailed_sync.return_value = {
+            "text": "Response",
+            "session_info": {"session_id": "test-123"},
+            "result_info": {"cost_usd": 0.05, "usage": {"input_tokens": 10}},
+            "raw_messages": [],
+        }
+
+        # Execute
+        ask_claude_code_api("test question", session_id="existing-session", timeout=60)
+
+        # Verify request logging was called
+        mock_log_request.assert_called_once()
+        call_kwargs = mock_log_request.call_args[1]
+        assert call_kwargs["method"] == "api"
+        assert call_kwargs["provider"] == "claude"
+        assert call_kwargs["prompt"] == "test question"
+        assert call_kwargs["session_id"] == "existing-session"
+        assert call_kwargs["timeout"] == 60
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.log_llm_request")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.log_llm_response")
+    def test_api_logs_response(
+        self,
+        mock_log_response: MagicMock,
+        mock_log_request: MagicMock,
+        mock_detailed_sync: MagicMock,
+    ) -> None:
+        """Test that response logging includes cost and usage metadata."""
+        # Setup
+        mock_detailed_sync.return_value = {
+            "text": "Response",
+            "session_info": {"session_id": "test-123"},
+            "result_info": {
+                "cost_usd": 0.05678,
+                "usage": {"input_tokens": 10, "output_tokens": 5},
+                "num_turns": 2,
+            },
+            "raw_messages": [],
+        }
+
+        # Execute
+        ask_claude_code_api("test question")
+
+        # Verify response logging was called with correct metadata
+        mock_log_response.assert_called_once()
+        call_kwargs = mock_log_response.call_args[1]
+        assert call_kwargs["method"] == "api"
+        assert call_kwargs["cost_usd"] == 0.05678
+        assert call_kwargs["usage"] == {"input_tokens": 10, "output_tokens": 5}
+        assert call_kwargs["num_turns"] == 2
+        assert "duration_ms" in call_kwargs
+        assert isinstance(call_kwargs["duration_ms"], int)
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.log_llm_request")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.log_llm_error")
+    def test_api_logs_error(
+        self,
+        mock_log_error: MagicMock,
+        mock_log_request: MagicMock,
+        mock_detailed_sync: MagicMock,
+    ) -> None:
+        """Test that error logging is called when exception occurs."""
+        # Setup - mock exception
+        test_error = RuntimeError("Test API error")
+        mock_detailed_sync.side_effect = test_error
+
+        # Execute and verify exception is converted and logged
+        with pytest.raises(ClaudeAPIError):
+            ask_claude_code_api("test question")
+
+        # Verify error logging was called
+        mock_log_error.assert_called_once()
+        call_kwargs = mock_log_error.call_args[1]
+        assert call_kwargs["method"] == "api"
+        assert call_kwargs["error"] == test_error
+        assert "duration_ms" in call_kwargs
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.log_llm_request")
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.log_llm_error")
+    def test_api_logs_timeout_error(
+        self,
+        mock_log_error: MagicMock,
+        mock_log_request: MagicMock,
+        mock_detailed_sync: MagicMock,
+    ) -> None:
+        """Test that timeout errors are logged and re-raised."""
+        # Setup
+        timeout_error = subprocess.TimeoutExpired(
+            ["claude-code-sdk", "query"], 30, "Timeout"
+        )
+        mock_detailed_sync.side_effect = timeout_error
+
+        # Execute and verify timeout is logged
+        with pytest.raises(subprocess.TimeoutExpired):
+            ask_claude_code_api("test question")
+
+        # Verify error logging was called
+        mock_log_error.assert_called_once()
+        call_kwargs = mock_log_error.call_args[1]
+        assert call_kwargs["method"] == "api"
+        assert call_kwargs["error"] == timeout_error
