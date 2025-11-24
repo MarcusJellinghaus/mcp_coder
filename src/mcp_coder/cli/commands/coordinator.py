@@ -603,7 +603,8 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         client = JenkinsClient(server_url, username, api_token)
 
         # Select template based on OS using dictionary mapping
-        executor_os = repo_config["executor_os"]
+        # executor_os is guaranteed to be non-None and one of {"windows", "linux"} after validation
+        executor_os: str = repo_config["executor_os"]  # type: ignore[assignment]
         test_command = TEST_COMMAND_TEMPLATES[executor_os]
 
         # Build job parameters

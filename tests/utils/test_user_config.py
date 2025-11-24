@@ -435,13 +435,13 @@ class TestCreateDefaultConfig:
         # Check mcp_coder repo config
         mcp_coder_repo = config["coordinator"]["repos"]["mcp_coder"]
         assert "repo_url" in mcp_coder_repo
-        assert "executor_test_path" in mcp_coder_repo
+        assert "executor_job_path" in mcp_coder_repo
         assert "github_credentials_id" in mcp_coder_repo
 
         # Check mcp_server_filesystem repo config
         filesystem_repo = config["coordinator"]["repos"]["mcp_server_filesystem"]
         assert "repo_url" in filesystem_repo
-        assert "executor_test_path" in filesystem_repo
+        assert "executor_job_path" in filesystem_repo
         assert "github_credentials_id" in filesystem_repo
 
     def test_create_default_config_handles_permission_error(

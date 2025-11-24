@@ -39,9 +39,10 @@ class TestLoadRepoConfig:
                 ): "https://github.com/user/repo.git",
                 (
                     "coordinator.repos.mcp_coder",
-                    "executor_test_path",
+                    "executor_job_path",
                 ): "Folder/job-name",
                 ("coordinator.repos.mcp_coder", "github_credentials_id"): "github-pat",
+                ("coordinator.repos.mcp_coder", "executor_os"): None,
             }
             return config_map.get((section, key))
 
@@ -53,8 +54,9 @@ class TestLoadRepoConfig:
         # Verify
         assert result is not None
         assert result["repo_url"] == "https://github.com/user/repo.git"
-        assert result["executor_test_path"] == "Folder/job-name"
+        assert result["executor_job_path"] == "Folder/job-name"
         assert result["github_credentials_id"] == "github-pat"
+        assert result["executor_os"] == "linux"  # Default
 
     @patch("mcp_coder.cli.commands.coordinator.get_config_value")
     def test_load_repo_config_missing_repo(self, mock_get_config: MagicMock) -> None:
@@ -68,8 +70,9 @@ class TestLoadRepoConfig:
         # Verify - returns dict with None values
         assert result is not None
         assert result["repo_url"] is None
-        assert result["executor_test_path"] is None
+        assert result["executor_job_path"] is None
         assert result["github_credentials_id"] is None
+        assert result["executor_os"] == "linux"  # Default
 
     @patch("mcp_coder.cli.commands.coordinator.get_config_value")
     def test_load_repo_config_handles_missing_config_file(
@@ -85,8 +88,9 @@ class TestLoadRepoConfig:
         # Verify - should return dict with None values, not raise exception
         assert result is not None
         assert result["repo_url"] is None
-        assert result["executor_test_path"] is None
+        assert result["executor_job_path"] is None
         assert result["github_credentials_id"] is None
+        assert result["executor_os"] == "linux"  # Default
 
     @patch("mcp_coder.cli.commands.coordinator.get_config_value")
     def test_load_repo_config_defaults_executor_os(
@@ -169,8 +173,9 @@ class TestValidateRepoConfig:
         # Setup
         config: dict[str, Optional[str]] = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "Folder/job-name",
+            "executor_job_path": "Folder/job-name",
             "github_credentials_id": "github-pat",
+            "executor_os": "linux",
         }
 
         # Execute - should not raise exception
@@ -181,7 +186,7 @@ class TestValidateRepoConfig:
         # Setup
         config = {
             "repo_url": None,
-            "executor_test_path": "Folder/job-name",
+            "executor_job_path": "Folder/job-name",
             "github_credentials_id": "github-pat",
         }
 
@@ -191,19 +196,19 @@ class TestValidateRepoConfig:
         ):
             validate_repo_config("mcp_coder", config)
 
-    def test_validate_repo_config_missing_executor_test_path(self) -> None:
-        """Test validation fails when executor_test_path is missing."""
+    def test_validate_repo_config_missing_executor_job_path(self) -> None:
+        """Test validation fails when executor_job_path is missing."""
         # Setup
         config = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": None,
+            "executor_job_path": None,
             "github_credentials_id": "github-pat",
         }
 
         # Execute & Verify
         with pytest.raises(
             ValueError,
-            match="Config file:.*value for field 'executor_test_path' missing",
+            match="Config file:.*value for field 'executor_job_path' missing",
         ):
             validate_repo_config("mcp_coder", config)
 
@@ -212,7 +217,7 @@ class TestValidateRepoConfig:
         # Setup
         config = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "Folder/job-name",
+            "executor_job_path": "Folder/job-name",
             "github_credentials_id": None,
         }
 
@@ -228,7 +233,7 @@ class TestValidateRepoConfig:
         # Setup
         config = {
             "repo_url": None,
-            "executor_test_path": None,
+            "executor_job_path": None,
             "github_credentials_id": "github-pat",
         }
 
@@ -238,7 +243,7 @@ class TestValidateRepoConfig:
 
         error_msg = str(exc_info.value)
         assert "Config file:" in error_msg
-        assert "values for fields 'repo_url', 'executor_test_path' missing" in error_msg
+        assert "values for fields 'repo_url', 'executor_job_path' missing" in error_msg
 
     def test_validate_repo_config_invalid_executor_os(self) -> None:
         """Test validation fails for invalid executor_os values."""
@@ -452,8 +457,9 @@ class TestExecuteCoordinatorTest:
         # Repo config is valid
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP/test-job",
+            "executor_job_path": "MCP/test-job",
             "github_credentials_id": "github-pat",
+            "executor_os": "linux",
         }
 
         # Jenkins credentials available
@@ -537,7 +543,7 @@ class TestExecuteCoordinatorTest:
         # Repo not found - all values None
         mock_load_repo.return_value = {
             "repo_url": None,
-            "executor_test_path": None,
+            "executor_job_path": None,
             "github_credentials_id": None,
         }
 
@@ -566,7 +572,7 @@ class TestExecuteCoordinatorTest:
         # Missing github_credentials_id
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP/test-job",
+            "executor_job_path": "MCP/test-job",
             "github_credentials_id": None,
         }
 
@@ -596,7 +602,7 @@ class TestExecuteCoordinatorTest:
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP/test-job",
+            "executor_job_path": "MCP/test-job",
             "github_credentials_id": "github-pat",
         }
         mock_get_creds.side_effect = ValueError("Jenkins configuration incomplete")
@@ -627,8 +633,9 @@ class TestExecuteCoordinatorTest:
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP/test-job",
+            "executor_job_path": "MCP/test-job",
             "github_credentials_id": "github-pat",
+            "executor_os": "linux",
         }
         mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
 
@@ -659,8 +666,9 @@ class TestExecuteCoordinatorTest:
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP/test-job",
+            "executor_job_path": "MCP/test-job",
             "github_credentials_id": "github-pat",
+            "executor_os": "linux",
         }
         mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
 
@@ -697,7 +705,7 @@ class TestExecuteCoordinatorTest:
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP/test-job",
+            "executor_job_path": "MCP/test-job",
             "github_credentials_id": "github-pat",
         }
         mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
@@ -738,7 +746,7 @@ class TestExecuteCoordinatorTest:
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP/test-job",
+            "executor_job_path": "MCP/test-job",
             "github_credentials_id": "github-pat",
         }
         mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
@@ -773,8 +781,9 @@ class TestExecuteCoordinatorTest:
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP/test-job",
+            "executor_job_path": "MCP/test-job",
             "github_credentials_id": "github-pat",
+            "executor_os": "linux",
         }
         mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
 
@@ -1342,7 +1351,7 @@ class TestDispatchWorkflow:
         # Setup - Repo configuration
         repo_config = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -1441,7 +1450,7 @@ class TestDispatchWorkflow:
         # Setup - Repo configuration
         repo_config = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-456",
         }
 
@@ -1545,7 +1554,7 @@ class TestDispatchWorkflow:
         # Setup - Repo configuration
         repo_config = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-789",
         }
 
@@ -1645,7 +1654,7 @@ class TestDispatchWorkflow:
         # Setup - Repo configuration
         repo_config = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-555",
         }
 
@@ -1721,7 +1730,7 @@ class TestDispatchWorkflow:
         # Setup - Repo configuration
         repo_config = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-999",
         }
 
@@ -1802,7 +1811,7 @@ class TestDispatchWorkflow:
         # Setup - Repo configuration
         repo_config = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-777",
         }
 
@@ -1940,7 +1949,7 @@ class TestExecuteCoordinatorRun:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -2036,7 +2045,7 @@ class TestExecuteCoordinatorRun:
         assert first_call[1]["workflow_name"] == "create-pr"
         assert first_call[1]["repo_config"] == {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
         assert first_call[1]["jenkins_client"] == mock_jenkins
@@ -2050,7 +2059,7 @@ class TestExecuteCoordinatorRun:
         assert second_call[1]["workflow_name"] == "implement"
         assert second_call[1]["repo_config"] == {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
         assert second_call[1]["jenkins_client"] == mock_jenkins
@@ -2117,7 +2126,7 @@ class TestExecuteCoordinatorRun:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -2206,7 +2215,7 @@ class TestExecuteCoordinatorRun:
         # Setup - Repository not found - all values None
         mock_load_repo.return_value = {
             "repo_url": None,
-            "executor_test_path": None,
+            "executor_job_path": None,
             "github_credentials_id": None,
         }
 
@@ -2292,7 +2301,7 @@ class TestExecuteCoordinatorRun:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
