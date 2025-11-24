@@ -254,9 +254,11 @@ class TestSubprocessCwdParameter:
         assert result == 0
         # Check that execute_subprocess was called with cwd=execution_dir
         assert mock_execute_subprocess.called
-        call_kwargs = mock_execute_subprocess.call_args[1]
-        assert "options" in call_kwargs
-        assert call_kwargs["options"].cwd == str(execution_dir)
+        # execute_subprocess is called with (command, options) as positional args
+        call_args = mock_execute_subprocess.call_args[0]
+        assert len(call_args) == 2  # command, options
+        options = call_args[1]
+        assert options.cwd == str(execution_dir)
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
@@ -303,17 +305,23 @@ class TestSubprocessCwdParameter:
         assert result == 0
         # Check that execute_subprocess was called with cwd=None (uses process CWD)
         assert mock_execute_subprocess.called
-        call_kwargs = mock_execute_subprocess.call_args[1]
-        assert "options" in call_kwargs
+        # execute_subprocess is called with (command, options) as positional args
+        call_args = mock_execute_subprocess.call_args[0]
+        assert len(call_args) == 2  # command, options
+        options = call_args[1]
         # When execution_dir=None, resolve_execution_dir returns Path.cwd()
         # which is then converted to string and passed as cwd
-        assert call_kwargs["options"].cwd == str(Path.cwd())
+        assert options.cwd == str(Path.cwd())
 
     @patch("mcp_coder.workflows.implement.core.process_single_task")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
     def test_implement_workflow_passes_execution_dir_to_task_processing(
         self,
+        mock_check_git_clean: MagicMock,
+        mock_check_main_branch: MagicMock,
         mock_check_prereq: MagicMock,
         mock_prepare_tracker: MagicMock,
         mock_process_task: MagicMock,
@@ -332,6 +340,8 @@ class TestSubprocessCwdParameter:
         # Need to create .git directory for git checks
         (project_dir / ".git").mkdir()
 
+        mock_check_git_clean.return_value = True
+        mock_check_main_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
         mock_process_task.return_value = (False, "no_tasks")  # No more tasks
@@ -424,10 +434,11 @@ class TestSubprocessCwdParameter:
         assert mock_execute_subprocess.called
         # Should be called 3 times (3 planning prompts)
         assert mock_execute_subprocess.call_count >= 1
-        # Check first call has correct cwd
-        first_call_kwargs = mock_execute_subprocess.call_args_list[0][1]
-        assert "options" in first_call_kwargs
-        assert first_call_kwargs["options"].cwd == str(execution_dir)
+        # Check first call has correct cwd - execute_subprocess is called with (command, options) as positional args
+        first_call_args = mock_execute_subprocess.call_args_list[0][0]
+        assert len(first_call_args) == 2  # command, options
+        options = first_call_args[1]
+        assert options.cwd == str(execution_dir)
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
@@ -482,9 +493,11 @@ class TestSubprocessCwdParameter:
         assert result == 0
         # Check that subprocess was called with execution_dir as cwd
         assert mock_execute_subprocess.called
-        call_kwargs = mock_execute_subprocess.call_args[1]
-        assert "options" in call_kwargs
-        assert call_kwargs["options"].cwd == str(execution_dir)
+        # execute_subprocess is called with (command, options) as positional args
+        call_args = mock_execute_subprocess.call_args[0]
+        assert len(call_args) == 2  # command, options
+        options = call_args[1]
+        assert options.cwd == str(execution_dir)
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     def test_llm_interface_passes_execution_dir_to_provider(
@@ -523,9 +536,11 @@ class TestSubprocessCwdParameter:
         assert result == "LLM response"
         # Check that subprocess was called with execution_dir as cwd
         assert mock_execute_subprocess.called
-        call_kwargs = mock_execute_subprocess.call_args[1]
-        assert "options" in call_kwargs
-        assert call_kwargs["options"].cwd == str(execution_dir)
+        # execute_subprocess is called with (command, options) as positional args
+        call_args = mock_execute_subprocess.call_args[0]
+        assert len(call_args) == 2  # command, options
+        options = call_args[1]
+        assert options.cwd == str(execution_dir)
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     def test_execution_dir_separate_from_project_dir_in_subprocess(
@@ -568,13 +583,14 @@ class TestSubprocessCwdParameter:
         assert mock_execute_subprocess.called
 
         # Verify subprocess got execution_dir as cwd (not project_dir)
-        call_kwargs = mock_execute_subprocess.call_args[1]
-        assert call_kwargs["options"].cwd == str(execution_dir)
-        assert call_kwargs["options"].cwd != str(project_dir)
+        # execute_subprocess is called with (command, options) as positional args
+        call_args = mock_execute_subprocess.call_args[0]
+        assert len(call_args) == 2  # command, options
+        options = call_args[1]
+        assert options.cwd == str(execution_dir)
+        assert options.cwd != str(project_dir)
 
         # Verify project_dir is in environment variables (not cwd)
-        assert "env" in call_kwargs["options"].__dict__ or "env" in dir(
-            call_kwargs["options"]
-        )
+        assert "env" in options.__dict__ or "env" in dir(options)
         # The env vars should contain project_dir, not execution_dir
         # (This validates separation of concerns)

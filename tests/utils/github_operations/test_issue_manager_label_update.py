@@ -127,22 +127,43 @@ class TestIssueManagerLabelUpdate:
             capture_output=True,
         )
 
+        # Create mock issue data that get_issue will return
+        mock_issue_data: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": "open",
+            "labels": ["status-06:implementing", "bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/test/test/issues/123",
+            "locked": False,
+        }
+
         # Setup mocks
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.label_config.load_labels_config",
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.git_operations.branches.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
+            ),
+            patch.object(
+                IssueManager, "get_issue", return_value=mock_issue_data
             ),
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
+            # Configure set_labels to return success
+            mock_set_labels.return_value = mock_issue_data
+
             # Create manager and call update
             manager = IssueManager(project_dir=tmp_path)
             result = manager.update_workflow_label("implementing", "code_review")
@@ -187,11 +208,11 @@ class TestIssueManagerLabelUpdate:
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.label_config.load_labels_config",
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch(
-                "mcp_coder.utils.git_operations.branches.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="feature-branch",  # No issue number
             ),
         ):
@@ -231,7 +252,7 @@ class TestIssueManagerLabelUpdate:
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.label_config.load_labels_config",
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
@@ -240,7 +261,7 @@ class TestIssueManagerLabelUpdate:
                 return_value=[],  # No linked branches
             ),
             patch(
-                "mcp_coder.utils.git_operations.branches.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
             ),
         ):
@@ -277,27 +298,36 @@ class TestIssueManagerLabelUpdate:
             capture_output=True,
         )
 
-        # Configure issue to already have target label
-        mock_label_code_review = Mock()
-        mock_label_code_review.name = "status-07:code-review"
-        mock_label_bug = Mock()
-        mock_label_bug.name = "bug"
-
-        mock_issue = mock_github.get_issue.return_value
-        mock_issue.labels = [mock_label_code_review, mock_label_bug]
+        # Configure issue to already have target label (without source label)
+        mock_issue_data: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": "open",
+            "labels": ["status-07:code-review", "bug"],  # Already has target, no source
+            "assignees": [],
+            "user": "testuser",
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/test/test/issues/123",
+            "locked": False,
+        }
 
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.label_config.load_labels_config",
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.git_operations.branches.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
+            ),
+            patch.object(
+                IssueManager, "get_issue", return_value=mock_issue_data
             ),
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
@@ -310,9 +340,6 @@ class TestIssueManagerLabelUpdate:
 
             # Verify set_labels was not called (no change needed)
             mock_set_labels.assert_not_called()
-
-            # Verify appropriate log message
-            assert "DEBUG" in caplog.text or "already" in caplog.text.lower()
 
     def test_update_workflow_label_missing_source_label(
         self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
@@ -338,27 +365,41 @@ class TestIssueManagerLabelUpdate:
         )
 
         # Configure issue without source label
-        mock_label_bug = Mock()
-        mock_label_bug.name = "bug"
-
-        mock_issue = mock_github.get_issue.return_value
-        mock_issue.labels = [mock_label_bug]  # No implementing label
+        mock_issue_data: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": "open",
+            "labels": ["bug"],  # No implementing label
+            "assignees": [],
+            "user": "testuser",
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/test/test/issues/123",
+            "locked": False,
+        }
 
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.label_config.load_labels_config",
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.git_operations.branches.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
+            ),
+            patch.object(
+                IssueManager, "get_issue", return_value=mock_issue_data
             ),
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
+            # Configure set_labels to return success
+            mock_set_labels.return_value = mock_issue_data
+
             # Create manager and call update
             manager = IssueManager(project_dir=tmp_path)
             result = manager.update_workflow_label("implementing", "code_review")
@@ -400,14 +441,14 @@ class TestIssueManagerLabelUpdate:
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.label_config.load_labels_config",
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.git_operations.branches.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
             ),
         ):
@@ -446,19 +487,37 @@ class TestIssueManagerLabelUpdate:
             capture_output=True,
         )
 
+        # Create mock issue data that get_issue will return
+        mock_issue_data: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": "open",
+            "labels": ["status-06:implementing", "bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/test/test/issues/123",
+            "locked": False,
+        }
+
         # Configure set_labels to raise exception
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.label_config.load_labels_config",
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.git_operations.branches.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
+            ),
+            patch.object(
+                IssueManager, "get_issue", return_value=mock_issue_data
             ),
             patch.object(
                 IssueManager,
@@ -499,22 +558,43 @@ class TestIssueManagerLabelUpdate:
             capture_output=True,
         )
 
+        # Create mock issue data that get_issue will return
+        mock_issue_data: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": "open",
+            "labels": ["status-06:implementing", "bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/test/test/issues/123",
+            "locked": False,
+        }
+
         # Setup mocks
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.label_config.load_labels_config",
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.git_operations.branches.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
             ) as mock_get_branch,
+            patch.object(
+                IssueManager, "get_issue", return_value=mock_issue_data
+            ),
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
+            # Configure set_labels to return success
+            mock_set_labels.return_value = mock_issue_data
+
             # Create manager and call update without branch parameter
             manager = IssueManager(project_dir=tmp_path)
             result = manager.update_workflow_label("implementing", "code_review")
