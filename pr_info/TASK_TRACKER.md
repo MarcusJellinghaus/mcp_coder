@@ -73,18 +73,32 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Fix all issues found (if any) - No issues found
 - [x] Prepare git commit message for Step 3
 
-### Step 4: Update Default Config Template ([details](steps/step_4.md))
+### Step 4: Update Default Config Template ([details](steps/step_4.md)) - COMPLETE
 
-- [ ] Update `create_default_config()` template in `src/mcp_coder/utils/user_config.py`
-- [ ] Add `executor_os` field to `[coordinator.repos.mcp_coder]` example with comments
-- [ ] Add `executor_os` field to `[coordinator.repos.mcp_server_filesystem]` example
-- [ ] Rename field from `executor_test_path` to `executor_job_path` in all examples
-- [ ] Add commented Windows executor configuration example
-- [ ] Update final repository template comment to include `executor_os`
-- [ ] Run pylint check using `mcp__code-checker__run_pylint_check`
-- [ ] Run mypy check using `mcp__code-checker__run_mypy_check`
-- [ ] Fix all issues found (if any)
-- [ ] Prepare git commit message for Step 4
+- [x] Update `create_default_config()` template in `src/mcp_coder/utils/user_config.py`
+- [x] Add `executor_os` field to `[coordinator.repos.mcp_coder]` example with comments
+- [x] Add `executor_os` field to `[coordinator.repos.mcp_server_filesystem]` example
+- [x] Rename field from `executor_test_path` to `executor_job_path` in all examples
+- [x] Add commented Windows executor configuration example
+- [x] Update final repository template comment to include `executor_os`
+- [x] Run pylint check using `mcp__code-checker__run_pylint_check` - No issues
+- [x] Run mypy check using `mcp__code-checker__run_mypy_check` - Pre-existing issue not related to our changes
+- [x] Fix all issues found (if any) - No new issues from our changes
+- [x] Prepare git commit message for Step 4
+
+**Commit Message:**
+```
+Step 4: Update default config template with executor_os documentation
+
+Updated create_default_config() template in src/mcp_coder/utils/user_config.py:
+- Added executor_os field to repository examples (default: "linux")
+- Renamed executor_test_path to executor_job_path in all example sections
+- Added helpful comments explaining executor_os valid values
+- Included commented Windows executor configuration example
+- Updated final repository template to include executor_os field
+
+Changes maintain backward compatibility with informative documentation.
+```
 
 ### Step 5: Integration Validation and Final Testing ([details](steps/step_5.md))
 

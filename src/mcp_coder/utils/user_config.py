@@ -185,19 +185,31 @@ test_job_coordination = "Tests/mcp-coder-coordinator-test"  # Job for coordinato
 
 [coordinator.repos.mcp_coder]
 repo_url = "https://github.com/your-org/mcp_coder.git"
-executor_test_path = "Tests/mcp-coder-coordinator-test"
+executor_job_path = "Tests/mcp-coder-coordinator-test"
 github_credentials_id = "github-general-pat"
+# executor_os: "windows" or "linux" (default: "linux", case-insensitive)
+# Use "windows" for Windows Jenkins executors, "linux" for Linux/container executors
+executor_os = "linux"
 
 [coordinator.repos.mcp_server_filesystem]
 repo_url = "https://github.com/your-org/mcp_server_filesystem.git"
-executor_test_path = "Tests/mcp-filesystem-coordinator-test"
+executor_job_path = "Tests/mcp-filesystem-coordinator-test"
 github_credentials_id = "github-general-pat"
+executor_os = "linux"
+
+# Example Windows executor configuration:
+# [coordinator.repos.windows_project]
+# repo_url = "https://github.com/your-org/windows-app.git"
+# executor_job_path = "Windows/Executor/Test"
+# github_credentials_id = "github-general-pat"
+# executor_os = "windows"
 
 # Add more repositories as needed:
 # [coordinator.repos.your_repo_name]
 # repo_url = "https://github.com/your-org/your_repo.git"
-# executor_test_path = "Tests/your-repo-coordinator-test"
+# executor_job_path = "Tests/your-repo-coordinator-test"
 # github_credentials_id = "github-credentials-id"
+# executor_os = "linux"
 """
 
     # Write template to file
