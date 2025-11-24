@@ -303,7 +303,7 @@ def dispatch_workflow(
     }
 
     # Step 5: Trigger Jenkins job
-    queue_id = jenkins_client.start_job(repo_config["executor_test_path"], params)
+    queue_id = jenkins_client.start_job(repo_config["executor_job_path"], params)
 
     # Step 6: Get job status to retrieve build URL
     job_status = jenkins_client.get_job_status(queue_id)
@@ -312,7 +312,7 @@ def dispatch_workflow(
     jenkins_base_url = jenkins_client._client.server.rstrip("/")
     # Convert job path to URL format: "Tests/mcp-coder-test" -> "Tests/job/mcp-coder-test"
     # URL-encode each part to handle spaces and special characters
-    job_path_parts = repo_config["executor_test_path"].split("/")
+    job_path_parts = repo_config["executor_job_path"].split("/")
     encoded_parts = [quote(part, safe="") for part in job_path_parts]
     pipeline_url = f"{jenkins_base_url}/job/" + "/job/".join(encoded_parts)
 
@@ -592,7 +592,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         # After validation, we can safely cast to non-optional dict
         validated_config: dict[str, str] = {
             "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
-            "executor_test_path": repo_config["executor_test_path"],  # type: ignore[dict-item]
+            "executor_job_path": repo_config["executor_job_path"],  # type: ignore[dict-item]
             "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
         }
 
@@ -615,7 +615,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         }
 
         # Start job (API token in Basic Auth bypasses CSRF)
-        queue_id = client.start_job(validated_config["executor_test_path"], params)
+        queue_id = client.start_job(validated_config["executor_job_path"], params)
 
         # Try to get job URL (may not be available immediately)
         try:
@@ -627,7 +627,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
 
         # Format and print output
         output = format_job_output(
-            validated_config["executor_test_path"], queue_id, job_url
+            validated_config["executor_job_path"], queue_id, job_url
         )
         print(output)
 
@@ -716,7 +716,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             # Type narrowing: validate_repo_config raises if any fields are None
             validated_config: dict[str, str] = {
                 "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
-                "executor_test_path": repo_config["executor_test_path"],  # type: ignore[dict-item]
+                "executor_job_path": repo_config["executor_job_path"],  # type: ignore[dict-item]
                 "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
             }
 

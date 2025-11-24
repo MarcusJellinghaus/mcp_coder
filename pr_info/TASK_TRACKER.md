@@ -54,24 +54,24 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Fix all issues found (if any)
 - [x] Prepare git commit message for Step 2
 
-### Step 3: Add Template Selection Logic - TDD ([details](steps/step_3.md))
+### Step 3: Add Template Selection Logic - TDD ([details](steps/step_3.md)) - COMPLETE
 
 **Part 1: Write Tests First**
 - [x] Add `test_execute_coordinator_test_windows_template` to `tests/cli/commands/test_coordinator.py`
 - [x] Add `test_execute_coordinator_test_linux_template` test
 - [x] Add `test_dispatch_workflow_windows_templates` test (optional but recommended)
-- [ ] Run tests using `mcp__code-checker__run_pytest_check` (should fail - TDD)
+- [x] Run tests using `mcp__code-checker__run_pytest_check` (should fail - TDD)
 
 **Part 2: Implement Functionality**
-- [ ] Update `execute_coordinator_test()` to select template based on `executor_os`
-- [ ] Update `execute_coordinator_test()` to use renamed parameter `EXECUTOR_JOB_PATH`
-- [ ] Update `dispatch_workflow()` to select templates based on `executor_os`
-- [ ] Update `dispatch_workflow()` to use renamed field `executor_job_path`
-- [ ] Run pylint check using `mcp__code-checker__run_pylint_check`
-- [ ] Run pytest check using `mcp__code-checker__run_pytest_check` (should pass)
-- [ ] Run mypy check using `mcp__code-checker__run_mypy_check`
-- [ ] Fix all issues found (if any)
-- [ ] Prepare git commit message for Step 3
+- [x] Update `execute_coordinator_test()` to select template based on `executor_os`
+- [x] Update `execute_coordinator_test()` to use renamed parameter `EXECUTOR_JOB_PATH`
+- [x] Update `dispatch_workflow()` to select templates based on `executor_os`
+- [x] Update `dispatch_workflow()` to use renamed field `executor_job_path`
+- [x] Run pylint check using `mcp__code-checker__run_pylint_check` - No issues
+- [x] Run pytest check using `mcp__code-checker__run_pytest_check` (should pass) - Tests pass
+- [x] Run mypy check using `mcp__code-checker__run_mypy_check` - No issues
+- [x] Fix all issues found (if any) - No issues found
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Update Default Config Template ([details](steps/step_4.md))
 
