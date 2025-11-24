@@ -38,6 +38,7 @@ class TestExecuteImplement:
     This follows test-first development - tests are written before implementation.
     """
 
+    @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
     @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
@@ -46,12 +47,15 @@ class TestExecuteImplement:
         mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
+        mock_resolve_exec: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test successful implement execution."""
         # Setup mocks
         project_dir = Path("/test/project")
+        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = str(execution_dir)
         mock_parse_llm.return_value = ("claude", "api")
         mock_run_workflow.return_value = 0
 
@@ -59,17 +63,20 @@ class TestExecuteImplement:
             project_dir="/test/project",
             llm_method="claude_code_api",
             execution_dir=None,
+            mcp_config=None,
         )
 
         result = execute_implement(args)
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
+        mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude_code_api")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "api", None, mock.ANY
+            project_dir, "claude", "api", None, str(execution_dir), False
         )
 
+    @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
     @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
@@ -78,12 +85,15 @@ class TestExecuteImplement:
         mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
+        mock_resolve_exec: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test implement execution with workflow failure."""
         # Setup mocks
         project_dir = Path("/test/project")
+        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = str(execution_dir)
         mock_parse_llm.return_value = ("claude", "api")
         mock_run_workflow.return_value = 1
 
@@ -91,15 +101,17 @@ class TestExecuteImplement:
             project_dir="/test/project",
             llm_method="claude_code_api",
             execution_dir=None,
+            mcp_config=None,
         )
 
         result = execute_implement(args)
 
         assert result == 1
         mock_resolve_dir.assert_called_once_with("/test/project")
+        mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude_code_api")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "api", None, mock.ANY
+            project_dir, "claude", "api", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
@@ -122,6 +134,7 @@ class TestExecuteImplement:
         assert exc_info.value.code == 1
         mock_resolve_dir.assert_called_once_with("/invalid/path")
 
+    @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
     @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
@@ -130,28 +143,33 @@ class TestExecuteImplement:
         mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
+        mock_resolve_exec: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test implement execution with None project directory (uses current dir)."""
         # Setup mocks
         project_dir = Path.cwd()
+        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = str(execution_dir)
         mock_parse_llm.return_value = ("claude", "cli")
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
-            project_dir=None, llm_method="claude_code_cli", execution_dir=None
+            project_dir=None, llm_method="claude_code_cli", execution_dir=None, mcp_config=None
         )
 
         result = execute_implement(args)
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude_code_cli")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "cli", None, mock.ANY
+            project_dir, "claude", "cli", None, str(execution_dir), False
         )
 
+    @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
     @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
@@ -160,12 +178,15 @@ class TestExecuteImplement:
         mock_parse_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
+        mock_resolve_exec: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test implement execution with different LLM methods."""
         # Setup mocks
         project_dir = Path("/test/project")
+        execution_dir = str(Path.cwd())
         mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = execution_dir
         mock_run_workflow.return_value = 0
 
         # Test with claude_code_cli
@@ -174,12 +195,13 @@ class TestExecuteImplement:
             project_dir="/test/project",
             llm_method="claude_code_cli",
             execution_dir=None,
+            mcp_config=None,
         )
         result = execute_implement(args_cli)
         assert result == 0
         mock_parse_llm.assert_called_with("claude_code_cli")
         mock_run_workflow.assert_called_with(
-            project_dir, "claude", "cli", None, mock.ANY
+            project_dir, "claude", "cli", None, execution_dir, False
         )
 
         # Reset mocks
@@ -193,12 +215,13 @@ class TestExecuteImplement:
             project_dir="/test/project",
             llm_method="claude_code_api",
             execution_dir=None,
+            mcp_config=None,
         )
         result = execute_implement(args_api)
         assert result == 0
         mock_parse_llm.assert_called_with("claude_code_api")
         mock_run_workflow.assert_called_with(
-            project_dir, "claude", "api", None, mock.ANY
+            project_dir, "claude", "api", None, execution_dir, False
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
@@ -355,7 +378,7 @@ class TestImplementExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(None)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "api", None, str(execution_dir)
+            project_dir, "claude", "api", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
@@ -385,6 +408,7 @@ class TestImplementExecutionDir:
             execution_dir=str(execution_dir),
             llm_method="claude_code_api",
             mcp_config=None,
+            update_labels=False,
         )
 
         result = execute_implement(args)
@@ -392,7 +416,7 @@ class TestImplementExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(str(execution_dir))
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "api", None, str(execution_dir)
+            project_dir, "claude", "api", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")

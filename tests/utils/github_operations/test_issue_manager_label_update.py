@@ -4,6 +4,7 @@ This module tests the automatic label update functionality that transitions
 workflow labels when operations complete successfully.
 """
 
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List
 from unittest.mock import MagicMock, Mock, patch
@@ -111,6 +112,21 @@ class TestIssueManagerLabelUpdate:
         conditions are met, the label successfully transitions from source
         to target state.
         """
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
         # Setup mocks
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
@@ -153,6 +169,21 @@ class TestIssueManagerLabelUpdate:
         Verifies that branches without a leading issue number are rejected
         gracefully with appropriate warning messages.
         """
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
@@ -182,6 +213,21 @@ class TestIssueManagerLabelUpdate:
         Verifies that unlinked branches (not in get_linked_branches result)
         are rejected for safety.
         """
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
@@ -216,6 +262,21 @@ class TestIssueManagerLabelUpdate:
         Verifies that if the issue already has the target label and doesn't
         have the source label, the operation succeeds without making changes.
         """
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
         # Configure issue to already have target label
         mock_label_code_review = Mock()
         mock_label_code_review.name = "status-07:code-review"
@@ -261,6 +322,21 @@ class TestIssueManagerLabelUpdate:
         Verifies that missing source labels are handled gracefully - the
         target label is still added if not present.
         """
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
         # Configure issue without source label
         mock_label_bug = Mock()
         mock_label_bug.name = "bug"
@@ -306,6 +382,21 @@ class TestIssueManagerLabelUpdate:
         Verifies that invalid internal IDs (not found in config) are
         rejected with appropriate error messages.
         """
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
@@ -339,6 +430,21 @@ class TestIssueManagerLabelUpdate:
         are caught and logged without raising exceptions.
         """
         from github.GithubException import GithubException
+
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
 
         # Configure set_labels to raise exception
         with (
@@ -378,6 +484,21 @@ class TestIssueManagerLabelUpdate:
         Verifies that when no branch name is explicitly provided, the
         method automatically detects the current branch from git.
         """
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
         # Setup mocks
         with (
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
