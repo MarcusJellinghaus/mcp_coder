@@ -707,6 +707,7 @@ class TestExecuteCoordinatorTest:
             "repo_url": "https://github.com/user/repo.git",
             "executor_job_path": "MCP/test-job",
             "github_credentials_id": "github-pat",
+            "executor_os": "linux",
         }
         mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
 
@@ -748,6 +749,7 @@ class TestExecuteCoordinatorTest:
             "repo_url": "https://github.com/user/repo.git",
             "executor_job_path": "MCP/test-job",
             "github_credentials_id": "github-pat",
+            "executor_os": "linux",
         }
         mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
 
