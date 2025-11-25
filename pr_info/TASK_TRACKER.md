@@ -102,7 +102,7 @@ Changes maintain backward compatibility with informative documentation.
 
 ### Step 5: Integration Validation and Final Testing ([details](steps/step_5.md))
 
-- [ ] Run fast unit tests: `mcp__code-checker__run_pytest_check` with parallel execution and exclusions
+- [x] Run fast unit tests: `mcp__code-checker__run_pytest_check` with parallel execution and exclusions
 - [ ] Run pylint check: `mcp__code-checker__run_pylint_check`
 - [ ] Run mypy check: `mcp__code-checker__run_mypy_check`
 - [ ] Fix all issues found (if any)
