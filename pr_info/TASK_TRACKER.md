@@ -104,7 +104,7 @@ Changes maintain backward compatibility with informative documentation.
 
 - [x] Run fast unit tests: `mcp__code-checker__run_pytest_check` with parallel execution and exclusions
 - [x] Run pylint check: `mcp__code-checker__run_pylint_check`
-- [ ] Run mypy check: `mcp__code-checker__run_mypy_check`
+- [x] Run mypy check: `mcp__code-checker__run_mypy_check`
 - [ ] Fix all issues found (if any)
 - [ ] Run all checks combined: `mcp__code-checker__run_all_checks`
 - [ ] Verify Windows templates selected when `executor_os = "windows"`
