@@ -106,7 +106,7 @@ Changes maintain backward compatibility with informative documentation.
 - [x] Run pylint check: `mcp__code-checker__run_pylint_check`
 - [x] Run mypy check: `mcp__code-checker__run_mypy_check`
 - [x] Fix all issues found (if any)
-- [ ] Run all checks combined: `mcp__code-checker__run_all_checks`
+- [x] Run all checks combined: `mcp__code-checker__run_all_checks` - Pylint/Mypy pass, pytest has config conflict with -n auto
 - [ ] Verify Windows templates selected when `executor_os = "windows"`
 - [ ] Verify Linux templates selected when `executor_os = "linux"` or not specified
 - [ ] Verify validation rejects invalid `executor_os` values
