@@ -6,7 +6,7 @@ workflow labels when operations complete successfully.
 
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
