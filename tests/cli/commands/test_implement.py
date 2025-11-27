@@ -156,7 +156,10 @@ class TestExecuteImplement:
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
-            project_dir=None, llm_method="claude_code_cli", execution_dir=None, mcp_config=None
+            project_dir=None,
+            llm_method="claude_code_cli",
+            execution_dir=None,
+            mcp_config=None,
         )
 
         result = execute_implement(args)

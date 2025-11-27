@@ -15,7 +15,9 @@ from mcp_coder.llm.providers.claude.logging_utils import (
 @pytest.fixture
 def caplog_debug(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
     """Configure caplog to capture DEBUG level logs."""
-    caplog.set_level(logging.DEBUG, logger="mcp_coder.llm.providers.claude.logging_utils")
+    caplog.set_level(
+        logging.DEBUG, logger="mcp_coder.llm.providers.claude.logging_utils"
+    )
     return caplog
 
 

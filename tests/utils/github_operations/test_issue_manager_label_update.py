@@ -156,9 +156,7 @@ class TestIssueManagerLabelUpdate:
                 "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
             ),
-            patch.object(
-                IssueManager, "get_issue", return_value=mock_issue_data
-            ),
+            patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure set_labels to return success
@@ -326,9 +324,7 @@ class TestIssueManagerLabelUpdate:
                 "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
             ),
-            patch.object(
-                IssueManager, "get_issue", return_value=mock_issue_data
-            ),
+            patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Create manager and call update
@@ -392,9 +388,7 @@ class TestIssueManagerLabelUpdate:
                 "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
             ),
-            patch.object(
-                IssueManager, "get_issue", return_value=mock_issue_data
-            ),
+            patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure set_labels to return success
@@ -516,9 +510,7 @@ class TestIssueManagerLabelUpdate:
                 "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
             ),
-            patch.object(
-                IssueManager, "get_issue", return_value=mock_issue_data
-            ),
+            patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
             patch.object(
                 IssueManager,
                 "set_labels",
@@ -587,9 +579,7 @@ class TestIssueManagerLabelUpdate:
                 "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
                 return_value="123-feature",
             ) as mock_get_branch,
-            patch.object(
-                IssueManager, "get_issue", return_value=mock_issue_data
-            ),
+            patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure set_labels to return success
