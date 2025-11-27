@@ -60,6 +60,12 @@ def execute_implement(args: argparse.Namespace) -> int:
             project_dir, provider, method, mcp_config, execution_dir, update_labels
         )
 
+    except ValueError as e:
+        # Handle invalid execution_dir
+        logger.error(f"Invalid execution directory: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
     except KeyboardInterrupt:
         print("Operation cancelled by user.")
         return 1
