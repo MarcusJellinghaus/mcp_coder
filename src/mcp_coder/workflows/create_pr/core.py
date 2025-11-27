@@ -474,6 +474,7 @@ def run_create_pr_workflow(
     method: str,
     mcp_config: str | None = None,
     execution_dir: Optional[Path] = None,
+    update_labels: bool = False,
 ) -> int:
     """Main workflow orchestration function - creates PR and cleans up repository.
 
@@ -483,6 +484,7 @@ def run_create_pr_workflow(
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
+        update_labels: If True, update GitHub issue labels on success
 
     Returns:
         int: Exit code (0 for success, 1 for failure)
@@ -556,6 +558,26 @@ def run_create_pr_workflow(
             log_step("Cleanup changes pushed successfully")
     else:
         log_step("No cleanup changes to commit")
+
+    # Update GitHub issue label if requested
+    if update_labels:
+        log_step("Updating GitHub issue label...")
+        try:
+            from mcp_coder.utils.github_operations.issue_manager import IssueManager
+
+            issue_manager = IssueManager(project_dir)
+            success = issue_manager.update_workflow_label(
+                from_label_id="pr_creating",
+                to_label_id="pr_created",
+            )
+
+            if success:
+                log_step("✓ Issue label updated: pr-creating → pr-created")
+            else:
+                logger.warning("✗ Failed to update issue label (non-blocking)")
+
+        except Exception as e:
+            logger.error(f"Error updating issue label (non-blocking): {e}")
 
     log_step("Create PR workflow completed successfully!")
     return 0

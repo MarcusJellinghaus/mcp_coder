@@ -52,9 +52,12 @@ def execute_implement(args: argparse.Namespace) -> int:
         mcp_config = getattr(args, "mcp_config", None)
         mcp_config = resolve_mcp_config_path(mcp_config)
 
+        # Extract update_labels flag from args
+        update_labels = getattr(args, "update_labels", False)
+
         # Run the implement workflow
         return run_implement_workflow(
-            project_dir, provider, method, mcp_config, execution_dir
+            project_dir, provider, method, mcp_config, execution_dir, update_labels
         )
 
     except ValueError as e:

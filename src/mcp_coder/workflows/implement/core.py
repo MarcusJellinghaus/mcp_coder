@@ -225,6 +225,7 @@ def run_implement_workflow(
     method: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
+    update_labels: bool = False,
 ) -> int:
     """Main workflow orchestration function - processes all implementation tasks in sequence.
 
@@ -234,6 +235,7 @@ def run_implement_workflow(
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
+        update_labels: If True, update GitHub issue labels on success
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -345,5 +347,25 @@ def run_implement_workflow(
         log_progress_summary(project_dir)
     else:
         logger.info("No incomplete implementation tasks found - workflow complete")
+
+    # Step 7: Update GitHub issue label if requested
+    if update_labels and completed_tasks > 0 and not error_occurred:
+        logger.info("Updating GitHub issue label...")
+        try:
+            from mcp_coder.utils.github_operations.issue_manager import IssueManager
+
+            issue_manager = IssueManager(project_dir)
+            success = issue_manager.update_workflow_label(
+                from_label_id="implementing",
+                to_label_id="code_review",
+            )
+
+            if success:
+                logger.info("✓ Issue label updated: implementing → code-review")
+            else:
+                logger.warning("✗ Failed to update issue label (non-blocking)")
+
+        except Exception as e:
+            logger.error(f"Error updating issue label (non-blocking): {e}")
 
     return 0

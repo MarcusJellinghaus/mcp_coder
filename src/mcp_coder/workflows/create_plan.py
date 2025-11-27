@@ -24,7 +24,6 @@ from mcp_coder.utils.git_operations.remotes import git_push
 from mcp_coder.utils.git_operations.repository import is_working_directory_clean
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
-from mcp_coder.utils.log_utils import setup_logging
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -505,6 +504,7 @@ def run_create_plan_workflow(
     method: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
+    update_labels: bool = False,
 ) -> int:
     """Main workflow orchestration function - creates implementation plan for GitHub issue.
 
@@ -515,6 +515,7 @@ def run_create_plan_workflow(
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
+        update_labels: If True, update GitHub issue labels on success
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -587,6 +588,24 @@ def run_create_plan_workflow(
         logger.warning(f"Push failed: {push_result.get('error')}")
     else:
         logger.info("Successfully pushed changes to remote")
+
+    # Update GitHub issue label if requested
+    if update_labels:
+        logger.info("Updating GitHub issue label...")
+        try:
+            issue_manager = IssueManager(project_dir)
+            success = issue_manager.update_workflow_label(
+                from_label_id="planning",
+                to_label_id="plan_review",
+            )
+
+            if success:
+                logger.info("✓ Issue label updated: planning → plan-review")
+            else:
+                logger.warning("✗ Failed to update issue label (non-blocking)")
+
+        except Exception as e:
+            logger.error(f"Error updating issue label (non-blocking): {e}")
 
     logger.info("Create plan workflow completed successfully!")
     return 0

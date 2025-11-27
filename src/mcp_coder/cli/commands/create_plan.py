@@ -51,12 +51,21 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         mcp_config = getattr(args, "mcp_config", None)
         mcp_config = resolve_mcp_config_path(mcp_config)
 
+        # Extract update_labels flag from args
+        update_labels = getattr(args, "update_labels", False)
+
         # Import here to avoid circular dependency during module load
         from ...workflows.create_plan import run_create_plan_workflow
 
         # Run the create-plan workflow
         return run_create_plan_workflow(
-            args.issue_number, project_dir, provider, method, mcp_config, execution_dir
+            args.issue_number,
+            project_dir,
+            provider,
+            method,
+            mcp_config,
+            execution_dir,
+            update_labels,
         )
 
     except ValueError as e:
