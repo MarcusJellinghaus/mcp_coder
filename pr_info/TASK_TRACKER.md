@@ -37,6 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Update Config Loading and Validation - TDD ([details](steps/step_2.md))
 
 **Part 1: Write Tests First**
+
 - [x] Add `test_validate_repo_config_invalid_executor_os` to `tests/cli/commands/test_coordinator.py`
 - [x] Add `test_validate_repo_config_valid_executor_os` test
 - [x] Add `test_load_repo_config_defaults_executor_os` test
@@ -44,6 +45,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run tests using `mcp__code-checker__run_pytest_check` (should fail - TDD)
 
 **Part 2: Implement Functionality**
+
 - [x] Update `load_repo_config()` in `src/mcp_coder/cli/commands/coordinator.py` to load `executor_os` with case normalization
 - [x] Rename field from `executor_test_path` to `executor_job_path` in `load_repo_config()`
 - [x] Update `validate_repo_config()` to validate `executor_os` is "windows" or "linux"
@@ -57,12 +59,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Add Template Selection Logic - TDD ([details](steps/step_3.md)) - COMPLETE
 
 **Part 1: Write Tests First**
+
 - [x] Add `test_execute_coordinator_test_windows_template` to `tests/cli/commands/test_coordinator.py`
 - [x] Add `test_execute_coordinator_test_linux_template` test
 - [x] Add `test_dispatch_workflow_windows_templates` test (optional but recommended)
 - [x] Run tests using `mcp__code-checker__run_pytest_check` (should fail - TDD)
 
 **Part 2: Implement Functionality**
+
 - [x] Update `execute_coordinator_test()` to select template based on `executor_os`
 - [x] Update `execute_coordinator_test()` to use renamed parameter `EXECUTOR_JOB_PATH`
 - [x] Update `dispatch_workflow()` to select templates based on `executor_os`
@@ -87,6 +91,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 4
 
 **Commit Message:**
+
 ```
 Step 4: Update default config template with executor_os documentation
 
@@ -111,7 +116,7 @@ Changes maintain backward compatibility with informative documentation.
 - [x] Verify Linux templates selected when `executor_os = "linux"` or not specified
 - [x] Verify validation rejects invalid `executor_os` values
 - [x] Confirm no regressions in existing functionality
-- [ ] Prepare git commit message for Step 5 (if needed)
+- [x] Prepare git commit message for Step 5 (if needed)
 
 ### Pull Request
 
