@@ -593,8 +593,6 @@ def run_create_plan_workflow(
     if update_labels:
         logger.info("Updating GitHub issue label...")
         try:
-            from mcp_coder.utils.github_operations.issue_manager import IssueManager
-
             issue_manager = IssueManager(project_dir)
             success = issue_manager.update_workflow_label(
                 from_label_id="planning",
