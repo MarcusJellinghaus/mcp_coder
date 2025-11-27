@@ -16,10 +16,7 @@
       "mcp__filesystem__delete_this_file",
       "mcp__filesystem__move_file",
       "mcp__filesystem__edit_file",
-      "Bash(git diff:*)",
-      "Bash(git rebase:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git diff:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
