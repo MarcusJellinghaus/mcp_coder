@@ -280,19 +280,37 @@ def dispatch_workflow(
             raise ValueError(f"No linked branch found for issue #{issue['number']}")
         branch_name = branches[0]
 
-    # Step 3: Select appropriate command template and build command
-    if workflow_config["workflow"] == "create-plan":
-        command = CREATE_PLAN_COMMAND_TEMPLATE.format(
-            log_level=log_level, issue_number=issue["number"]
-        )
-    elif workflow_config["workflow"] == "implement":
-        command = IMPLEMENT_COMMAND_TEMPLATE.format(
-            log_level=log_level, branch_name=branch_name
-        )
-    else:  # create-pr
-        command = CREATE_PR_COMMAND_TEMPLATE.format(
-            log_level=log_level, branch_name=branch_name
-        )
+    # Step 3: Select appropriate command template based on executor_os and build command
+    executor_os = repo_config.get("executor_os", "linux")
+
+    if executor_os == "windows":
+        # Windows templates
+        if workflow_config["workflow"] == "create-plan":
+            command = CREATE_PLAN_COMMAND_WINDOWS.format(
+                log_level=log_level, issue_number=issue["number"]
+            )
+        elif workflow_config["workflow"] == "implement":
+            command = IMPLEMENT_COMMAND_WINDOWS.format(
+                log_level=log_level, branch_name=branch_name
+            )
+        else:  # create-pr
+            command = CREATE_PR_COMMAND_WINDOWS.format(
+                log_level=log_level, branch_name=branch_name
+            )
+    else:
+        # Linux templates (default)
+        if workflow_config["workflow"] == "create-plan":
+            command = CREATE_PLAN_COMMAND_TEMPLATE.format(
+                log_level=log_level, issue_number=issue["number"]
+            )
+        elif workflow_config["workflow"] == "implement":
+            command = IMPLEMENT_COMMAND_TEMPLATE.format(
+                log_level=log_level, branch_name=branch_name
+            )
+        else:  # create-pr
+            command = CREATE_PR_COMMAND_TEMPLATE.format(
+                log_level=log_level, branch_name=branch_name
+            )
 
     # Step 4: Build Jenkins job parameters
     params = {

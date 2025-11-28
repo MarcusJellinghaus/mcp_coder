@@ -2611,7 +2611,7 @@ class TestCoordinatorRunIntegration:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -2816,13 +2816,13 @@ class TestCoordinatorRunIntegration:
             if repo_name == "repo_one":
                 return {
                     "repo_url": "https://github.com/user/repo_one.git",
-                    "executor_test_path": "RepoOne/executor-test",
+                    "executor_job_path": "RepoOne/executor-test",
                     "github_credentials_id": "github-pat-123",
                 }
             elif repo_name == "repo_two":
                 return {
                     "repo_url": "https://github.com/user/repo_two.git",
-                    "executor_test_path": "RepoTwo/executor-test",
+                    "executor_job_path": "RepoTwo/executor-test",
                     "github_credentials_id": "github-pat-456",
                 }
             else:
@@ -3091,7 +3091,7 @@ class TestCoordinatorRunIntegration:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -3293,7 +3293,7 @@ class TestCoordinatorRunIntegration:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -3485,7 +3485,7 @@ class TestCoordinatorRunIntegration:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -3673,7 +3673,7 @@ class TestCoordinatorRunIntegration:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -3785,7 +3785,7 @@ class TestCoordinatorRunIntegration:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -3912,7 +3912,7 @@ class TestCoordinatorRunEdgeCases:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -4003,7 +4003,7 @@ class TestCoordinatorRunEdgeCases:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -4135,7 +4135,7 @@ class TestCoordinatorRunEdgeCases:
         # Setup - Valid repository configuration
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
         }
 
@@ -4303,7 +4303,7 @@ class TestDispatchWorkflowWindowsTemplates:
         # Setup - Repo configuration with Windows OS
         repo_config = {
             "repo_url": "https://github.com/user/repo.git",
-            "executor_test_path": "MCP_Coder/executor-test",
+            "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-555",
             "executor_os": "windows",  # Windows OS selected
         }
