@@ -15,7 +15,8 @@
       "mcp__filesystem__append_file",
       "mcp__filesystem__delete_this_file",
       "mcp__filesystem__move_file",
-      "mcp__filesystem__edit_file"
+      "mcp__filesystem__edit_file",
+      "Bash(git diff:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

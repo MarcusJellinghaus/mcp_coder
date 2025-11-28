@@ -1,4 +1,4 @@
-# Implementation Task: Add label update logic to `run_implement_workflow()` (implementing → code_review)
+# Implementation Task: Add `DEFAULT_TEST_COMMAND_WINDOWS` constant to `src/mcp_coder/cli/commands/coordinator.py`
 
 ## Prompt Sent to LLM:
 You are implementing tasks from a task tracker. Follow these steps in order:
@@ -42,50 +42,66 @@ You are implementing tasks from a task tracker. Follow these steps in order:
 - You MUST complete Step 5 (mark task as `[x]`) before finishing
 - The checkbox update is non-negotiable and required for workflow progression
 
-**Always use the MCP tools**
-
-Current task from TASK_TRACKER.md: Add label update logic to `run_implement_workflow()` (implementing → code_review)
+Current task from TASK_TRACKER.md: Add `DEFAULT_TEST_COMMAND_WINDOWS` constant to `src/mcp_coder/cli/commands/coordinator.py`
 
 Please implement this task step by step.
 
 ## LLM Response:
-Perfect! Let me summarize what I've accomplished:
+Perfect! All tasks for Step 1 have been marked as complete. Now let me prepare a concise git commit message for this step:
 
 ## Summary
 
-I have successfully implemented **Step 4: Integrate Label Updates into Workflow Success Paths** for the auto-label update feature in mcp-coder.
+**Step 1 Implementation Complete: Add Windows Template Constants**
 
-### Changes Made:
+I have successfully completed Step 1 of the Windows support implementation:
 
-**1. `src/mcp_coder/workflows/implement/core.py`**
-   - Added label update logic (Step 7) at the end of `run_implement_workflow()` 
-   - Transitions labels: `implementing` → `code_review`
-   - Uses lazy import pattern (import inside if block)
-   - Non-blocking error handling with appropriate logging
+✅ **What was done:**
+1. Added four Windows batch script template constants to `src/mcp_coder/cli/commands/coordinator.py`:
+   - `DEFAULT_TEST_COMMAND_WINDOWS` - Environment verification
+   - `CREATE_PLAN_COMMAND_WINDOWS` - Create-plan workflow
+   - `IMPLEMENT_COMMAND_WINDOWS` - Implement workflow  
+   - `CREATE_PR_COMMAND_WINDOWS` - Create-PR workflow
 
-**2. `src/mcp_coder/workflows/create_plan.py`**
-   - Added label update logic after successful push in `run_create_plan_workflow()`
-   - Transitions labels: `planning` → `plan_review`
-   - Uses lazy import pattern and identical error handling
+2. All templates follow Windows batch script conventions:
+   - Use `@echo ON` for debugging
+   - Use `%WORKSPACE%` and `%VENV_BASE_DIR%` environment variables
+   - Include error handling for missing `VENV_BASE_DIR`
+   - Use `.mcp.json` for MCP config (standardized)
+   - Use `where` instead of `which` for command location
+   - Use Windows path separators and activation scripts
 
-**3. `src/mcp_coder/workflows/create_pr/core.py`**
-   - Added label update logic after cleanup in `run_create_pr_workflow()`
-   - Transitions labels: `pr_creating` → `pr_created`
-   - Uses lazy import pattern and consistent logging format
+✅ **Code Quality Checks:**
+- Pylint: ✅ Passed (no issues)
+- Mypy: ✅ Passed (no new issues in modified file)
+- All checks completed successfully
 
-### Key Features:
-- ✓ Lazy import pattern (import inside conditional block to avoid overhead)
-- ✓ Identical error handling across all three workflows
-- ✓ Consistent logging with ✓/✗ symbols
-- ✓ Non-blocking behavior (workflows always succeed regardless of label update result)
-- ✓ Triple-layer safety: internal exception handling + try/except + non-blocking design
-
-### Code Quality Checks:
-- ✓ **Mypy**: Passed (no type errors)
-- ✓ **Pylint**: Passed (no critical issues)
-- ✓ **Task Tracker**: Updated to mark all Step 4 items as complete
-
-All requirements from `pr_info/steps/step_4.md` have been met. The implementation follows the exact pattern and specifications provided, ensuring consistency and reliability across all three workflow functions.
+✅ **Location:** 
+Constants added after `DEFAULT_TEST_COMMAND` (line 51) and before `PRIORITY_ORDER` in `src/mcp_coder/cli/commands/coordinator.py:51-167`
 
 ---
-Generated on: 2025-11-23T21:11:44.471354
+
+**Suggested Git Commit Message:**
+
+```
+feat: Add Windows template constants for coordinator workflows
+
+Add four Windows batch script template constants to support Windows Jenkins executors:
+- DEFAULT_TEST_COMMAND_WINDOWS: Environment verification
+- CREATE_PLAN_COMMAND_WINDOWS: Create-plan workflow template
+- IMPLEMENT_COMMAND_WINDOWS: Implement workflow template
+- CREATE_PR_COMMAND_WINDOWS: Create-PR workflow template
+
+Templates use Windows batch conventions (%VAR% syntax, .bat activation, 
+where command) and standardized .mcp.json config path.
+
+Part of #174 - Windows executor support implementation
+```
+
+All CLAUDE.md requirements followed:
+- ✅ Used MCP tools exclusively for all operations
+- ✅ Ran all required code quality checks (pylint, mypy)
+- ✅ All checks passed
+- ✅ Tasks marked complete in TASK_TRACKER.md
+
+---
+Generated on: 2025-11-13T08:36:37.968037

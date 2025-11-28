@@ -50,6 +50,126 @@ source .venv/bin/activate
 which mcp-coder && mcp-coder --version
 """
 
+# Windows equivalent of DEFAULT_TEST_COMMAND
+DEFAULT_TEST_COMMAND_WINDOWS = """@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+cd
+dir
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    echo Activating virtual environment...
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+echo %VIRTUAL_ENV%
+where python
+python --version
+pip list
+
+echo Tools in current environment ===================
+claude --version
+where mcp-coder
+mcp-coder --version
+where mcp-code-checker
+mcp-code-checker --version
+where mcp-server-filesystem
+mcp-server-filesystem --version
+where mcp-config
+mcp-config --version
+
+echo llm verification =====================================
+mcp-coder verify
+claude --mcp-config .mcp.json --strict-mcp-config mcp list 
+claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
+
+mcp-coder --log-level debug prompt "What is 1 + 1?"
+mcp-coder --log-level debug prompt "Which MCP server can you use?"
+"""
+
+# Windows workflow command templates
+CREATE_PLAN_COMMAND_WINDOWS = """@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+echo command execution  =====================================
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+"""
+
+IMPLEMENT_COMMAND_WINDOWS = """@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+echo command execution  =====================================
+mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+"""
+
+CREATE_PR_COMMAND_WINDOWS = """@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+echo command execution  =====================================
+mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+"""
+
+
+# Template selection mapping for execute_coordinator_test
+TEST_COMMAND_TEMPLATES = {
+    "windows": DEFAULT_TEST_COMMAND_WINDOWS,
+    "linux": DEFAULT_TEST_COMMAND,
+}
 
 # Priority order for processing issues (highest to lowest)
 PRIORITY_ORDER = [
@@ -160,19 +280,37 @@ def dispatch_workflow(
             raise ValueError(f"No linked branch found for issue #{issue['number']}")
         branch_name = branches[0]
 
-    # Step 3: Select appropriate command template and build command
-    if workflow_config["workflow"] == "create-plan":
-        command = CREATE_PLAN_COMMAND_TEMPLATE.format(
-            log_level=log_level, issue_number=issue["number"]
-        )
-    elif workflow_config["workflow"] == "implement":
-        command = IMPLEMENT_COMMAND_TEMPLATE.format(
-            log_level=log_level, branch_name=branch_name
-        )
-    else:  # create-pr
-        command = CREATE_PR_COMMAND_TEMPLATE.format(
-            log_level=log_level, branch_name=branch_name
-        )
+    # Step 3: Select appropriate command template based on executor_os and build command
+    executor_os = repo_config.get("executor_os", "linux")
+
+    if executor_os == "windows":
+        # Windows templates
+        if workflow_config["workflow"] == "create-plan":
+            command = CREATE_PLAN_COMMAND_WINDOWS.format(
+                log_level=log_level, issue_number=issue["number"]
+            )
+        elif workflow_config["workflow"] == "implement":
+            command = IMPLEMENT_COMMAND_WINDOWS.format(
+                log_level=log_level, branch_name=branch_name
+            )
+        else:  # create-pr
+            command = CREATE_PR_COMMAND_WINDOWS.format(
+                log_level=log_level, branch_name=branch_name
+            )
+    else:
+        # Linux templates (default)
+        if workflow_config["workflow"] == "create-plan":
+            command = CREATE_PLAN_COMMAND_TEMPLATE.format(
+                log_level=log_level, issue_number=issue["number"]
+            )
+        elif workflow_config["workflow"] == "implement":
+            command = IMPLEMENT_COMMAND_TEMPLATE.format(
+                log_level=log_level, branch_name=branch_name
+            )
+        else:  # create-pr
+            command = CREATE_PR_COMMAND_TEMPLATE.format(
+                log_level=log_level, branch_name=branch_name
+            )
 
     # Step 4: Build Jenkins job parameters
     params = {
@@ -183,7 +321,7 @@ def dispatch_workflow(
     }
 
     # Step 5: Trigger Jenkins job
-    queue_id = jenkins_client.start_job(repo_config["executor_test_path"], params)
+    queue_id = jenkins_client.start_job(repo_config["executor_job_path"], params)
 
     # Step 6: Get job status to retrieve build URL
     job_status = jenkins_client.get_job_status(queue_id)
@@ -192,7 +330,7 @@ def dispatch_workflow(
     jenkins_base_url = jenkins_client._client.server.rstrip("/")
     # Convert job path to URL format: "Tests/mcp-coder-test" -> "Tests/job/mcp-coder-test"
     # URL-encode each part to handle spaces and special characters
-    job_path_parts = repo_config["executor_test_path"].split("/")
+    job_path_parts = repo_config["executor_job_path"].split("/")
     encoded_parts = [quote(part, safe="") for part in job_path_parts]
     pipeline_url = f"{jenkins_base_url}/job/" + "/job/".join(encoded_parts)
 
@@ -300,20 +438,28 @@ def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
         repo_name: Name of repository to load (e.g., "mcp_coder")
 
     Returns:
-        Dictionary with repo_url, executor_test_path, github_credentials_id
-        Values may be None if not found in config
+        Dictionary with repo_url, executor_job_path, github_credentials_id, executor_os
+        Values may be None except executor_os which defaults to "linux" (normalized to lowercase)
     """
     section = f"coordinator.repos.{repo_name}"
 
     repo_url = get_config_value(section, "repo_url")
-    executor_test_path = get_config_value(section, "executor_test_path")
+    executor_job_path = get_config_value(section, "executor_job_path")
     github_credentials_id = get_config_value(section, "github_credentials_id")
 
-    # Always return dict with field values (may be None)
+    # Load executor_os with default and normalize to lowercase
+    executor_os = get_config_value(section, "executor_os")
+    if executor_os:
+        executor_os = executor_os.lower()  # Normalize to lowercase
+    else:
+        executor_os = "linux"  # Default
+
+    # Always return dict with field values (may be None except executor_os)
     return {
         "repo_url": repo_url,
-        "executor_test_path": executor_test_path,
+        "executor_job_path": executor_job_path,
         "github_credentials_id": github_credentials_id,
+        "executor_os": executor_os,
     }
 
 
@@ -325,9 +471,9 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
         config: Repository configuration dict with possibly None values
 
     Raises:
-        ValueError: If any required fields are missing with detailed error message
+        ValueError: If any required fields are missing or invalid with detailed error message
     """
-    required_fields = ["repo_url", "executor_test_path", "github_credentials_id"]
+    required_fields = ["repo_url", "executor_job_path", "github_credentials_id"]
     missing_fields = []
 
     for field in required_fields:
@@ -355,6 +501,19 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
                 f"values for fields '{fields_str}' missing"
             )
 
+        raise ValueError(error_msg)
+
+    # Validate executor_os field (already normalized to lowercase by load_repo_config)
+    executor_os = config.get("executor_os", "linux")
+    if executor_os not in ["windows", "linux"]:
+        config_path = get_config_file_path()
+        section_name = f"coordinator.repos.{repo_name}"
+        error_msg = (
+            f"Config file: {config_path} - "
+            f"section [{section_name}] - "
+            f"value for field 'executor_os' invalid: got '{executor_os}'. "
+            f"Must be 'windows' or 'linux' (case-insensitive)"
+        )
         raise ValueError(error_msg)
 
 
@@ -451,7 +610,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         # After validation, we can safely cast to non-optional dict
         validated_config: dict[str, str] = {
             "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
-            "executor_test_path": repo_config["executor_test_path"],  # type: ignore[dict-item]
+            "executor_job_path": repo_config["executor_job_path"],  # type: ignore[dict-item]
             "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
         }
 
@@ -461,16 +620,21 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         # Create Jenkins client
         client = JenkinsClient(server_url, username, api_token)
 
+        # Select template based on OS using dictionary mapping
+        # executor_os is guaranteed to be non-None and one of {"windows", "linux"} after validation
+        executor_os: str = repo_config["executor_os"]  # type: ignore[assignment]
+        test_command = TEST_COMMAND_TEMPLATES[executor_os]
+
         # Build job parameters
         params = {
             "REPO_URL": validated_config["repo_url"],
             "BRANCH_NAME": args.branch_name,
-            "COMMAND": DEFAULT_TEST_COMMAND,
+            "COMMAND": test_command,  # OS-aware selection
             "GITHUB_CREDENTIALS_ID": validated_config["github_credentials_id"],
         }
 
         # Start job (API token in Basic Auth bypasses CSRF)
-        queue_id = client.start_job(validated_config["executor_test_path"], params)
+        queue_id = client.start_job(validated_config["executor_job_path"], params)
 
         # Try to get job URL (may not be available immediately)
         try:
@@ -482,7 +646,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
 
         # Format and print output
         output = format_job_output(
-            validated_config["executor_test_path"], queue_id, job_url
+            validated_config["executor_job_path"], queue_id, job_url
         )
         print(output)
 
@@ -571,7 +735,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             # Type narrowing: validate_repo_config raises if any fields are None
             validated_config: dict[str, str] = {
                 "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
-                "executor_test_path": repo_config["executor_test_path"],  # type: ignore[dict-item]
+                "executor_job_path": repo_config["executor_job_path"],  # type: ignore[dict-item]
                 "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
             }
 
