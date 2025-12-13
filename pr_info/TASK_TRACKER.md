@@ -39,9 +39,21 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Update `CREATE_PLAN_COMMAND_TEMPLATE` template (add DISABLE_AUTOUPDATER, --update-labels flag, change .mcp.linux.json to .mcp.json, archive listing)
 - [x] Update `IMPLEMENT_COMMAND_TEMPLATE` template (add DISABLE_AUTOUPDATER, --update-labels flag, change .mcp.linux.json to .mcp.json, archive listing)
 - [x] Update `CREATE_PR_COMMAND_TEMPLATE` template (add DISABLE_AUTOUPDATER, --update-labels flag, change .mcp.linux.json to .mcp.json, archive listing)
-- [ ] Update tests in `tests/cli/commands/test_coordinator.py` for Linux templates
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Update tests in `tests/cli/commands/test_coordinator.py` for Linux templates
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 2
+
+**Commit message for Step 2:**
+```
+Step 2: Add Linux template test assertions for coordinator
+
+Add test assertions for Linux workflow templates in test_coordinator.py:
+- test_dispatch_workflow_create_plan: verify .mcp.json, --update-labels, DISABLE_AUTOUPDATER, archive listing
+- test_dispatch_workflow_implement: verify .mcp.json, --update-labels, DISABLE_AUTOUPDATER, archive listing
+- test_dispatch_workflow_create_pr: verify .mcp.json, --update-labels, DISABLE_AUTOUPDATER, archive listing
+
+All quality checks pass (pylint, mypy).
+```
 
 ---
 

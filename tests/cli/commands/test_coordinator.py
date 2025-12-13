@@ -1402,6 +1402,11 @@ class TestDispatchWorkflow:
         assert "uv sync --extra dev" in command
         assert "which mcp-coder" in command
         assert "which claude" in command
+        # Verify Step 2 additions for Linux template
+        assert ".mcp.json" in command
+        assert "--update-labels" in command
+        assert "export DISABLE_AUTOUPDATER=1" in command
+        assert "ls -la .mcp-coder" in command  # Archive listing
 
         # Verify - Job status checked
         mock_jenkins.get_job_status.assert_called_once_with(98765)
@@ -1509,6 +1514,11 @@ class TestDispatchWorkflow:
         assert "which claude" in command
         # Implement workflow should NOT include issue number in command
         assert "create-plan" not in command
+        # Verify Step 2 additions for Linux template
+        assert ".mcp.json" in command
+        assert "--update-labels" in command
+        assert "export DISABLE_AUTOUPDATER=1" in command
+        assert "ls -la .mcp-coder" in command  # Archive listing
 
         # Verify - Job status checked
         mock_jenkins.get_job_status.assert_called_once_with(54321)
@@ -1614,6 +1624,11 @@ class TestDispatchWorkflow:
         # Create-pr workflow should NOT include issue number in command
         assert "create-plan" not in command
         assert "implement" not in command
+        # Verify Step 2 additions for Linux template
+        assert ".mcp.json" in command
+        assert "--update-labels" in command
+        assert "export DISABLE_AUTOUPDATER=1" in command
+        assert "ls -la .mcp-coder" in command  # Archive listing
 
         # Verify - Job status checked
         mock_jenkins.get_job_status.assert_called_once_with(11111)
