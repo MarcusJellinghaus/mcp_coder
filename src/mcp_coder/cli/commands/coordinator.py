@@ -151,8 +151,14 @@ if "%VIRTUAL_ENV%"=="" (
     %VENV_BASE_DIR%\.venv\Scripts\activate.bat
 )
 
+set DISABLE_AUTOUPDATER=1
+
 echo command execution  =====================================
-mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+
+echo archive after execution =======================================
+dir .mcp-coder\create_plan_sessions
+dir logs
 """
 
 CREATE_PR_COMMAND_WINDOWS = """@echo ON
