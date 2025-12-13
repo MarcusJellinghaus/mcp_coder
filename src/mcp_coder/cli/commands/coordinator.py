@@ -777,10 +777,12 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             logger.info(f"{'='*80}")
 
             # Type narrowing: validate_repo_config raises if any fields are None
+            # Use .get() for executor_os with default to ensure backward compatibility
             validated_config: dict[str, str] = {
                 "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
                 "executor_job_path": repo_config["executor_job_path"],  # type: ignore[dict-item]
                 "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
+                "executor_os": repo_config.get("executor_os", "linux"),  # type: ignore[dict-item]
             }
 
             # Step 4b: Create managers
