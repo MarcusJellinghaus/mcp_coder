@@ -2043,9 +2043,6 @@ def test_main_exit_code_warnings_only(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Test main() exits with code 2 when validation finds warnings but no errors."""
-    import sys
-    from datetime import datetime, timedelta, timezone
-
     from workflows.validate_labels import main
 
     # Create minimal git repo structure
@@ -2127,9 +2124,6 @@ def test_main_exit_code_errors_take_precedence_over_warnings(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Test main() exits with code 1 when both errors and warnings exist (errors take precedence)."""
-    import sys
-    from datetime import datetime, timedelta, timezone
-
     from workflows.validate_labels import main
 
     # Create minimal git repo structure
@@ -2335,7 +2329,6 @@ def test_full_workflow_integration(
     argument parsing through issue processing to result display.
     """
     import json
-    import sys
 
     from workflows.validate_labels import main
 
@@ -2395,8 +2388,6 @@ def test_full_workflow_integration(
     )
 
     # Create diverse set of test issues covering all scenarios
-    from datetime import datetime, timedelta, timezone
-
     past_stale = datetime.now(timezone.utc) - timedelta(minutes=20)
     past_ok = datetime.now(timezone.utc) - timedelta(minutes=10)
     stale_timestamp = past_stale.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
@@ -2551,8 +2542,6 @@ def test_full_workflow_integration_warnings_only(
     )
 
     # Create stale bot_busy issue (WARNING only)
-    from datetime import datetime, timedelta, timezone
-
     past_stale = datetime.now(timezone.utc) - timedelta(minutes=20)
     stale_timestamp = past_stale.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
 
