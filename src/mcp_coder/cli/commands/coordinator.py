@@ -781,6 +781,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                 "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
                 "executor_job_path": repo_config["executor_job_path"],  # type: ignore[dict-item]
                 "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
+                "executor_os": repo_config["executor_os"],  # type: ignore[dict-item]
             }
 
             # Step 4b: Create managers
