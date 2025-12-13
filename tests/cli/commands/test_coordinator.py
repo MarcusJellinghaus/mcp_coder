@@ -2330,6 +2330,7 @@ class TestExecuteCoordinatorRun:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -2426,6 +2427,7 @@ class TestExecuteCoordinatorRun:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
         assert first_call[1]["jenkins_client"] == mock_jenkins
         assert first_call[1]["issue_manager"] == mock_issue_mgr
@@ -2440,6 +2442,7 @@ class TestExecuteCoordinatorRun:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
         assert second_call[1]["jenkins_client"] == mock_jenkins
         assert second_call[1]["issue_manager"] == mock_issue_mgr
@@ -2507,6 +2510,7 @@ class TestExecuteCoordinatorRun:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -2682,6 +2686,7 @@ class TestExecuteCoordinatorRun:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -2992,6 +2997,7 @@ class TestCoordinatorRunIntegration:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -3197,12 +3203,14 @@ class TestCoordinatorRunIntegration:
                     "repo_url": "https://github.com/user/repo_one.git",
                     "executor_job_path": "RepoOne/executor-test",
                     "github_credentials_id": "github-pat-123",
+                    "executor_os": "linux",
                 }
             elif repo_name == "repo_two":
                 return {
                     "repo_url": "https://github.com/user/repo_two.git",
                     "executor_job_path": "RepoTwo/executor-test",
                     "github_credentials_id": "github-pat-456",
+                    "executor_os": "linux",
                 }
             else:
                 raise ValueError(f"Unknown repo: {repo_name}")
@@ -3472,6 +3480,7 @@ class TestCoordinatorRunIntegration:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -3674,6 +3683,7 @@ class TestCoordinatorRunIntegration:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -3866,6 +3876,7 @@ class TestCoordinatorRunIntegration:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -4054,6 +4065,7 @@ class TestCoordinatorRunIntegration:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -4166,6 +4178,7 @@ class TestCoordinatorRunIntegration:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -4293,6 +4306,7 @@ class TestCoordinatorRunEdgeCases:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -4384,6 +4398,7 @@ class TestCoordinatorRunEdgeCases:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
@@ -4516,6 +4531,7 @@ class TestCoordinatorRunEdgeCases:
             "repo_url": "https://github.com/user/mcp_coder.git",
             "executor_job_path": "MCP_Coder/executor-test",
             "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
         }
 
         # Setup - Jenkins credentials available
