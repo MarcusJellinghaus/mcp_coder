@@ -449,7 +449,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test successful command execution."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
 
         # Config already exists
         mock_create_config.return_value = False
@@ -495,7 +497,7 @@ class TestExecuteCoordinatorTest:
             {
                 "REPO_URL": "https://github.com/user/repo.git",
                 "BRANCH_NAME": "feature-x",
-                "COMMAND": DEFAULT_TEST_COMMAND,
+                "COMMAND": DEFAULT_TEST_COMMAND.format(log_level="DEBUG"),
                 "GITHUB_CREDENTIALS_ID": "github-pat",
             },
         )
@@ -629,7 +631,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test handling of Jenkins API errors."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -662,7 +666,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test that job information is printed to stdout."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -701,7 +707,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test output when job URL immediately available."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -743,7 +751,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test output when job URL not yet available."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -779,7 +789,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test that DEFAULT_TEST_COMMAND is used in job parameters."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="main", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -831,7 +843,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test Windows template is selected when executor_os = 'windows'."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="main", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -878,7 +892,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test Linux template is selected when executor_os = 'linux'."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="main", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -2759,7 +2775,9 @@ class TestCoordinatorIntegration:
             pytest.skip("Jenkins not configured")
 
         # Create minimal args for the test
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="main", log_level="DEBUG"
+        )
 
         # This would trigger an actual Jenkins job if Jenkins is configured
         # For safety, we skip this test by default unless Jenkins is explicitly configured

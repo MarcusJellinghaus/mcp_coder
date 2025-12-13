@@ -286,7 +286,7 @@ class TestCoordinatorCommand:
         assert args.coordinator_subcommand == "test"
         assert args.repo_name == "mcp_coder"
         assert args.branch_name == "feature-x"
-        assert args.log_level == "INFO"  # default
+        assert args.log_level == "DEBUG"  # default for coordinator test subcommand
 
     def test_coordinator_test_requires_branch_name(self) -> None:
         """Test that --branch-name is required."""

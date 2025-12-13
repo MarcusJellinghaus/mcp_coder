@@ -665,7 +665,9 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         # Select template based on OS using dictionary mapping
         # executor_os is guaranteed to be non-None and one of {"windows", "linux"} after validation
         executor_os: str = repo_config["executor_os"]  # type: ignore[assignment]
-        test_command = TEST_COMMAND_TEMPLATES[executor_os]
+        test_command = TEST_COMMAND_TEMPLATES[executor_os].format(
+            log_level=args.log_level
+        )
 
         # Build job parameters
         params = {

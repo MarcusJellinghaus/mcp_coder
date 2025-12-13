@@ -320,6 +320,14 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         required=True,
         help="Git branch to test (e.g., feature-x, main)",
     )
+    test_parser.add_argument(
+        "--log-level",
+        type=str.upper,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="DEBUG",
+        help="Log level for mcp-coder commands in test script (default: DEBUG)",
+        metavar="LEVEL",
+    )
 
     # coordinator run command
     run_parser = coordinator_subparsers.add_parser(
