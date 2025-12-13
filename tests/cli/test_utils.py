@@ -92,8 +92,6 @@ class TestResolveExecutionDir:
 
     def test_none_returns_cwd(self) -> None:
         """None input should return current working directory."""
-        from pathlib import Path
-
         from mcp_coder.cli.utils import resolve_execution_dir
 
         result = resolve_execution_dir(None)

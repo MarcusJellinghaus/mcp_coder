@@ -35,19 +35,24 @@ which mcp-coder && mcp-coder --version
 which mcp-code-checker && mcp-code-checker --help
 which mcp-server-filesystem && mcp-server-filesystem --help
 mcp-coder verify
+export DISABLE_AUTOUPDATER=1
 # Environment setup
 export MCP_CODER_PROJECT_DIR='/workspace/repo'
 export MCP_CODER_VENV_DIR='/workspace/.venv'
 uv sync --extra dev
 # Claude CLI verification
 which claude
-claude mcp list
-claude -p "What is 1 + 1?"
+claude --mcp-config .mcp.json --strict-mcp-config mcp list
+claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
 # MCP Coder functionality test
-mcp-coder --log-level debug prompt "What is 1 + 1?"
+mcp-coder --log-level {log_level} prompt "Which MCP server can you use?"
+mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir /workspace/repo --mcp-config .mcp.json
 # Project environment verification
 source .venv/bin/activate
 which mcp-coder && mcp-coder --version
+echo "archive after execution ======================================="
+ls -la .mcp-coder/create_plan_sessions
+ls -la logs
 """
 
 # Windows equivalent of DEFAULT_TEST_COMMAND
@@ -88,13 +93,20 @@ mcp-server-filesystem --version
 where mcp-config
 mcp-config --version
 
+set DISABLE_AUTOUPDATER=1
+
 echo llm verification =====================================
 mcp-coder verify
 claude --mcp-config .mcp.json --strict-mcp-config mcp list 
 claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
 
 mcp-coder --log-level debug prompt "What is 1 + 1?"
-mcp-coder --log-level debug prompt "Which MCP server can you use?"
+mcp-coder --log-level {log_level} prompt "Which MCP server can you use?"
+mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
+
+echo archive after execution =======================================
+dir .mcp-coder\create_plan_sessions
+dir logs
 """
 
 # Windows workflow command templates
@@ -116,8 +128,14 @@ if "%VIRTUAL_ENV%"=="" (
     %VENV_BASE_DIR%\.venv\Scripts\activate.bat
 )
 
+set DISABLE_AUTOUPDATER=1
+
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+
+echo archive after execution =======================================
+dir .mcp-coder\create_plan_sessions
+dir logs
 """
 
 IMPLEMENT_COMMAND_WINDOWS = """@echo ON
@@ -138,8 +156,14 @@ if "%VIRTUAL_ENV%"=="" (
     %VENV_BASE_DIR%\.venv\Scripts\activate.bat
 )
 
+set DISABLE_AUTOUPDATER=1
+
 echo command execution  =====================================
-mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+
+echo archive after execution =======================================
+dir .mcp-coder\create_plan_sessions
+dir logs
 """
 
 CREATE_PR_COMMAND_WINDOWS = """@echo ON
@@ -160,8 +184,14 @@ if "%VIRTUAL_ENV%"=="" (
     %VENV_BASE_DIR%\.venv\Scripts\activate.bat
 )
 
+set DISABLE_AUTOUPDATER=1
+
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+
+echo archive after execution =======================================
+dir .mcp-coder\create_plan_sessions
+dir logs
 """
 
 
@@ -212,26 +242,38 @@ WORKFLOW_MAPPING = {
 #   5. Execute mcp-coder command
 CREATE_PLAN_COMMAND_TEMPLATE = """git checkout main
 git pull
+export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra dev
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config /workspace/repo/.mcp.linux.json
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
+echo "archive after execution ======================================="
+ls -la .mcp-coder/create_plan_sessions
+ls -la logs
 """
 
 IMPLEMENT_COMMAND_TEMPLATE = """git checkout {branch_name}
 git pull
+export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra dev
-mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config /workspace/repo/.mcp.linux.json
+mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
+echo "archive after execution ======================================="
+ls -la .mcp-coder/create_plan_sessions
+ls -la logs
 """
 
 CREATE_PR_COMMAND_TEMPLATE = """git checkout {branch_name}
 git pull
+export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra dev
-mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config /workspace/repo/.mcp.linux.json
+mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
+echo "archive after execution ======================================="
+ls -la .mcp-coder/create_plan_sessions
+ls -la logs
 """
 
 
@@ -623,7 +665,9 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         # Select template based on OS using dictionary mapping
         # executor_os is guaranteed to be non-None and one of {"windows", "linux"} after validation
         executor_os: str = repo_config["executor_os"]  # type: ignore[assignment]
-        test_command = TEST_COMMAND_TEMPLATES[executor_os]
+        test_command = TEST_COMMAND_TEMPLATES[executor_os].format(
+            log_level=args.log_level
+        )
 
         # Build job parameters
         params = {

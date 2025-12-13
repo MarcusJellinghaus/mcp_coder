@@ -449,7 +449,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test successful command execution."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
 
         # Config already exists
         mock_create_config.return_value = False
@@ -495,7 +497,7 @@ class TestExecuteCoordinatorTest:
             {
                 "REPO_URL": "https://github.com/user/repo.git",
                 "BRANCH_NAME": "feature-x",
-                "COMMAND": DEFAULT_TEST_COMMAND,
+                "COMMAND": DEFAULT_TEST_COMMAND.format(log_level="DEBUG"),
                 "GITHUB_CREDENTIALS_ID": "github-pat",
             },
         )
@@ -629,7 +631,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test handling of Jenkins API errors."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -662,7 +666,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test that job information is printed to stdout."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -701,7 +707,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test output when job URL immediately available."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -743,7 +751,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test output when job URL not yet available."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="feature-x")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -779,7 +789,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test that DEFAULT_TEST_COMMAND is used in job parameters."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="main", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -812,8 +824,11 @@ class TestExecuteCoordinatorTest:
         assert "export MCP_CODER_PROJECT_DIR" in command
         assert "uv sync --extra dev" in command
         assert "which claude" in command
-        assert "claude mcp list" in command
+        assert "claude --mcp-config .mcp.json --strict-mcp-config mcp list" in command
         assert "source .venv/bin/activate" in command
+        # Verify Step 2 additions for Linux template
+        assert "export DISABLE_AUTOUPDATER=1" in command
+        assert "ls -la .mcp-coder" in command  # Archive listing
 
     @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
@@ -828,7 +843,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test Windows template is selected when executor_os = 'windows'."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="main", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -857,6 +874,10 @@ class TestExecuteCoordinatorTest:
         # Verify it's NOT the Linux template
         assert "source .venv/bin/activate" not in command
         assert "which mcp-coder" not in command
+        # Verify new template additions (Step 1 changes)
+        assert "set DISABLE_AUTOUPDATER=1" in command
+        assert "dir .mcp-coder" in command  # Archive listing
+        assert "mcp-coder --log-level" in command  # MCP verification
 
     @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
@@ -871,7 +892,9 @@ class TestExecuteCoordinatorTest:
     ) -> None:
         """Test Linux template is selected when executor_os = 'linux'."""
         # Setup
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="main", log_level="DEBUG"
+        )
         mock_create_config.return_value = False
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/user/repo.git",
@@ -1395,6 +1418,11 @@ class TestDispatchWorkflow:
         assert "uv sync --extra dev" in command
         assert "which mcp-coder" in command
         assert "which claude" in command
+        # Verify Step 2 additions for Linux template
+        assert ".mcp.json" in command
+        assert "--update-labels" in command
+        assert "export DISABLE_AUTOUPDATER=1" in command
+        assert "ls -la .mcp-coder" in command  # Archive listing
 
         # Verify - Job status checked
         mock_jenkins.get_job_status.assert_called_once_with(98765)
@@ -1502,6 +1530,11 @@ class TestDispatchWorkflow:
         assert "which claude" in command
         # Implement workflow should NOT include issue number in command
         assert "create-plan" not in command
+        # Verify Step 2 additions for Linux template
+        assert ".mcp.json" in command
+        assert "--update-labels" in command
+        assert "export DISABLE_AUTOUPDATER=1" in command
+        assert "ls -la .mcp-coder" in command  # Archive listing
 
         # Verify - Job status checked
         mock_jenkins.get_job_status.assert_called_once_with(54321)
@@ -1607,6 +1640,11 @@ class TestDispatchWorkflow:
         # Create-pr workflow should NOT include issue number in command
         assert "create-plan" not in command
         assert "implement" not in command
+        # Verify Step 2 additions for Linux template
+        assert ".mcp.json" in command
+        assert "--update-labels" in command
+        assert "export DISABLE_AUTOUPDATER=1" in command
+        assert "ls -la .mcp-coder" in command  # Archive listing
 
         # Verify - Job status checked
         mock_jenkins.get_job_status.assert_called_once_with(11111)
@@ -1858,6 +1896,240 @@ class TestDispatchWorkflow:
         add_call = mock_issue_mgr.add_labels.call_args
         assert remove_call is not None, "remove_labels should have been called"
         assert add_call is not None, "add_labels should have been called"
+
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_windows_create_plan(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test Windows create-plan template has correct content.
+
+        Verifies Windows template contains:
+        - set DISABLE_AUTOUPDATER=1
+        - --update-labels flag
+        - dir .mcp-coder (archive listing)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-02:awaiting-planning label
+        issue = IssueData(
+            number=123,
+            title="Windows create-plan test",
+            body="Test Windows template",
+            state="open",
+            labels=["status-02:awaiting-planning", "enhancement"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/123",
+            locked=False,
+        )
+
+        # Setup - Repo configuration with Windows OS
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_job_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+            "executor_os": "windows",
+        }
+
+        # Setup - Mock Jenkins responses
+        mock_jenkins.start_job.return_value = 98765
+        mock_jenkins.get_job_status.return_value = MagicMock(status="queued", url=None)
+        mock_jenkins._client = MagicMock()
+        mock_jenkins._client.server = "http://jenkins:8080"
+
+        # Execute
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="create-plan",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
+
+        # Verify - Check command contains Windows-specific elements
+        call_args = mock_jenkins.start_job.call_args
+        params = call_args[0][1]
+        command = params["COMMAND"]
+
+        # Verify Windows template additions (Step 1 changes)
+        assert "set DISABLE_AUTOUPDATER=1" in command
+        assert "--update-labels" in command
+        assert "dir .mcp-coder" in command  # Archive listing
+        # Verify it uses Windows batch syntax
+        assert "@echo ON" in command
+
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_windows_implement(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test Windows implement template has correct content.
+
+        Verifies Windows template contains:
+        - set DISABLE_AUTOUPDATER=1
+        - --update-labels flag
+        - dir .mcp-coder (archive listing)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-05:plan-ready label
+        issue = IssueData(
+            number=456,
+            title="Windows implement test",
+            body="Test Windows template",
+            state="open",
+            labels=["status-05:plan-ready", "enhancement"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/456",
+            locked=False,
+        )
+
+        # Setup - Repo configuration with Windows OS
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_job_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-456",
+            "executor_os": "windows",
+        }
+
+        # Setup - Mock branch manager to return linked branch
+        mock_branch_mgr.get_linked_branches.return_value = ["456-implement-feature"]
+
+        # Setup - Mock Jenkins responses
+        mock_jenkins.start_job.return_value = 54321
+        mock_jenkins.get_job_status.return_value = MagicMock(status="queued", url=None)
+        mock_jenkins._client = MagicMock()
+        mock_jenkins._client.server = "http://jenkins:8080"
+
+        # Execute
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="implement",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="DEBUG",
+        )
+
+        # Verify - Check command contains Windows-specific elements
+        call_args = mock_jenkins.start_job.call_args
+        params = call_args[0][1]
+        command = params["COMMAND"]
+
+        # Verify Windows template additions (Step 1 changes)
+        assert "set DISABLE_AUTOUPDATER=1" in command
+        assert "--update-labels" in command
+        assert "dir .mcp-coder" in command  # Archive listing
+        # Verify it uses Windows batch syntax
+        assert "@echo ON" in command
+
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    def test_dispatch_workflow_windows_create_pr(
+        self,
+        mock_jenkins_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+    ) -> None:
+        """Test Windows create-pr template has correct content.
+
+        Verifies Windows template contains:
+        - set DISABLE_AUTOUPDATER=1
+        - --update-labels flag
+        - dir .mcp-coder (archive listing)
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import dispatch_workflow
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Setup - Mock issue with status-08:ready-pr label
+        issue = IssueData(
+            number=789,
+            title="Windows create-pr test",
+            body="Test Windows template",
+            state="open",
+            labels=["status-08:ready-pr", "enhancement"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/789",
+            locked=False,
+        )
+
+        # Setup - Repo configuration with Windows OS
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_job_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-789",
+            "executor_os": "windows",
+        }
+
+        # Setup - Mock branch manager to return linked branch
+        mock_branch_mgr.get_linked_branches.return_value = ["789-create-pr-feature"]
+
+        # Setup - Mock Jenkins responses
+        mock_jenkins.start_job.return_value = 11111
+        mock_jenkins.get_job_status.return_value = MagicMock(status="queued", url=None)
+        mock_jenkins._client = MagicMock()
+        mock_jenkins._client.server = "http://jenkins:8080"
+
+        # Execute
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="create-pr",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="WARNING",
+        )
+
+        # Verify - Check command contains Windows-specific elements
+        call_args = mock_jenkins.start_job.call_args
+        params = call_args[0][1]
+        command = params["COMMAND"]
+
+        # Verify Windows template additions (Step 1 changes)
+        assert "set DISABLE_AUTOUPDATER=1" in command
+        assert "--update-labels" in command
+        assert "dir .mcp-coder" in command  # Archive listing
+        # Verify it uses Windows batch syntax
+        assert "@echo ON" in command
 
 
 class TestExecuteCoordinatorRun:
@@ -2503,7 +2775,9 @@ class TestCoordinatorIntegration:
             pytest.skip("Jenkins not configured")
 
         # Create minimal args for the test
-        args = argparse.Namespace(repo_name="mcp_coder", branch_name="main")
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="main", log_level="DEBUG"
+        )
 
         # This would trigger an actual Jenkins job if Jenkins is configured
         # For safety, we skip this test by default unless Jenkins is explicitly configured
