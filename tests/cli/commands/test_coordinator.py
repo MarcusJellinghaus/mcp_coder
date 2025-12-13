@@ -2135,6 +2135,111 @@ class TestDispatchWorkflow:
 class TestExecuteCoordinatorRun:
     """Tests for execute_coordinator_run function."""
 
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_run_passes_executor_os_to_dispatch(
+        self,
+        mock_create_config: MagicMock,
+        mock_dispatch_workflow: MagicMock,
+        mock_get_eligible_issues: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+    ) -> None:
+        """Test that executor_os is passed to dispatch_workflow for Windows template selection.
+
+        Regression test for Issue #196:
+        When executor_os="windows" is configured, this value must be included in the
+        repo_config passed to dispatch_workflow(). Otherwise, dispatch_workflow defaults
+        to "linux" and generates incorrect shell commands for Windows agents.
+
+        This test will FAIL before the fix (executor_os missing from validated_config)
+        and PASS after the fix (executor_os included in validated_config).
+        """
+        # Setup - Import the function we're testing
+        from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="test_repo",
+            all=False,
+            log_level="INFO",
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Valid repository configuration with executor_os="windows"
+        # This is the key: we set executor_os to "windows" to verify it passes through
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_job_path": "Windows-Agents/Executor",
+            "github_credentials_id": "github-pat",
+            "executor_os": "windows",  # Non-default value to verify passthrough
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+
+        # Setup - Mock Jenkins client
+        mock_jenkins = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+
+        # Setup - Mock IssueManager and IssueBranchManager
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - Mock one eligible issue
+        mock_get_eligible_issues.return_value = [
+            IssueData(
+                number=42,
+                title="Test issue",
+                body="Test body",
+                state="open",
+                labels=["status-02:awaiting-planning"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/repo/issues/42",
+                locked=False,
+            ),
+        ]
+
+        # Setup - Mock dispatch_workflow succeeds (no exception)
+        mock_dispatch_workflow.return_value = None
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success)
+        assert result == 0
+
+        # Verify - dispatch_workflow was called
+        assert mock_dispatch_workflow.call_count == 1
+
+        # THE KEY ASSERTION: Verify executor_os was passed to dispatch_workflow
+        # This is the regression test - it fails before the fix, passes after
+        call_kwargs = mock_dispatch_workflow.call_args[1]
+        assert "repo_config" in call_kwargs
+        assert call_kwargs["repo_config"]["executor_os"] == "windows"
+
     @patch("mcp_coder.cli.commands.coordinator.create_default_config")
     def test_execute_coordinator_run_creates_config_if_missing(
         self, mock_create_config: MagicMock, capsys: pytest.CaptureFixture[str]
