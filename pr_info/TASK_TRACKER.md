@@ -31,7 +31,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Update `CREATE_PR_COMMAND_WINDOWS` template (add DISABLE_AUTOUPDATER, --update-labels flag, archive listing)
 - [x] Update tests in `tests/cli/commands/test_coordinator.py` for Windows templates
 - [x] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update Linux Templates ([step_2.md](./steps/step_2.md))
 
@@ -59,6 +59,6 @@ All quality checks pass (pylint, mypy).
 
 ## Pull Request
 
-- [ ] Review all changes across both steps
-- [ ] Ensure all quality checks pass (pylint, pytest, mypy)
-- [ ] Create PR summary describing the template updates
+- [x] Review all changes across both steps
+- [x] Ensure all quality checks pass (pylint, pytest, mypy)
+- [x] Create PR summary describing the template updates
