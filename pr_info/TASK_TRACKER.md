@@ -25,7 +25,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 1: Update Windows Templates ([step_1.md](./steps/step_1.md))
 
-- [ ] Update `DEFAULT_TEST_COMMAND_WINDOWS` template (add DISABLE_AUTOUPDATER, MCP verification steps, archive listing)
+- [x] Update `DEFAULT_TEST_COMMAND_WINDOWS` template (add DISABLE_AUTOUPDATER, MCP verification steps, archive listing)
 - [ ] Update `CREATE_PLAN_COMMAND_WINDOWS` template (add DISABLE_AUTOUPDATER, --update-labels flag, archive listing)
 - [ ] Update `IMPLEMENT_COMMAND_WINDOWS` template (add DISABLE_AUTOUPDATER, --update-labels flag, archive listing)
 - [ ] Update `CREATE_PR_COMMAND_WINDOWS` template (add DISABLE_AUTOUPDATER, --update-labels flag, archive listing)

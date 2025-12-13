@@ -88,13 +88,20 @@ mcp-server-filesystem --version
 where mcp-config
 mcp-config --version
 
+set DISABLE_AUTOUPDATER=1
+
 echo llm verification =====================================
 mcp-coder verify
 claude --mcp-config .mcp.json --strict-mcp-config mcp list 
 claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
 
 mcp-coder --log-level debug prompt "What is 1 + 1?"
-mcp-coder --log-level debug prompt "Which MCP server can you use?"
+mcp-coder --log-level {log_level} prompt "Which MCP server can you use?"
+mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
+
+echo archive after execution =======================================
+dir .mcp-coder\create_plan_sessions
+dir logs
 """
 
 # Windows workflow command templates
