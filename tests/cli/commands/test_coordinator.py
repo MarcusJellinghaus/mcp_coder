@@ -812,8 +812,11 @@ class TestExecuteCoordinatorTest:
         assert "export MCP_CODER_PROJECT_DIR" in command
         assert "uv sync --extra dev" in command
         assert "which claude" in command
-        assert "claude mcp list" in command
+        assert "claude --mcp-config .mcp.json --strict-mcp-config mcp list" in command
         assert "source .venv/bin/activate" in command
+        # Verify Step 2 additions for Linux template
+        assert "export DISABLE_AUTOUPDATER=1" in command
+        assert "ls -la .mcp-coder" in command  # Archive listing
 
     @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
     @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
