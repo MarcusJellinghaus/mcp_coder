@@ -29,7 +29,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Update `CREATE_PLAN_COMMAND_WINDOWS` template (add DISABLE_AUTOUPDATER, --update-labels flag, archive listing)
 - [x] Update `IMPLEMENT_COMMAND_WINDOWS` template (add DISABLE_AUTOUPDATER, --update-labels flag, archive listing)
 - [x] Update `CREATE_PR_COMMAND_WINDOWS` template (add DISABLE_AUTOUPDATER, --update-labels flag, archive listing)
-- [ ] Update tests in `tests/cli/commands/test_coordinator.py` for Windows templates
+- [x] Update tests in `tests/cli/commands/test_coordinator.py` for Windows templates
 - [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
 - [ ] Prepare git commit message for Step 1
 
