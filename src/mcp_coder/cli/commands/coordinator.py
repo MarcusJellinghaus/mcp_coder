@@ -242,10 +242,14 @@ WORKFLOW_MAPPING = {
 #   5. Execute mcp-coder command
 CREATE_PLAN_COMMAND_TEMPLATE = """git checkout main
 git pull
+export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra dev
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config /workspace/repo/.mcp.linux.json
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
+echo "archive after execution ======================================="
+ls -la .mcp-coder/create_plan_sessions
+ls -la logs
 """
 
 IMPLEMENT_COMMAND_TEMPLATE = """git checkout {branch_name}

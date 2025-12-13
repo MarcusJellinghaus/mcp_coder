@@ -36,7 +36,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Update Linux Templates ([step_2.md](./steps/step_2.md))
 
 - [x] Update `DEFAULT_TEST_COMMAND` template (add DISABLE_AUTOUPDATER, MCP verification steps, archive listing)
-- [ ] Update `CREATE_PLAN_COMMAND_TEMPLATE` template (add DISABLE_AUTOUPDATER, --update-labels flag, change .mcp.linux.json to .mcp.json, archive listing)
+- [x] Update `CREATE_PLAN_COMMAND_TEMPLATE` template (add DISABLE_AUTOUPDATER, --update-labels flag, change .mcp.linux.json to .mcp.json, archive listing)
 - [ ] Update `IMPLEMENT_COMMAND_TEMPLATE` template (add DISABLE_AUTOUPDATER, --update-labels flag, change .mcp.linux.json to .mcp.json, archive listing)
 - [ ] Update `CREATE_PR_COMMAND_TEMPLATE` template (add DISABLE_AUTOUPDATER, --update-labels flag, change .mcp.linux.json to .mcp.json, archive listing)
 - [ ] Update tests in `tests/cli/commands/test_coordinator.py` for Linux templates
