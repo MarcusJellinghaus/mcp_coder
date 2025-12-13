@@ -22,23 +22,3 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
-
-### Step 1: Add Regression Test for executor_os Passthrough
-
-- [x] Implement regression test in `tests/cli/commands/test_coordinator.py`
-- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [x] Prepare git commit message
-
-### Step 2: Fix executor_os Passthrough in execute_coordinator_run
-
-- [x] Add `executor_os` to `validated_config` in `src/mcp_coder/cli/commands/coordinator.py`
-- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [x] Prepare git commit message
-
----
-
-## Pull Request
-
-- [ ] Review all changes for Issue #196
-- [ ] Create PR summary with description of fix
-- [ ] Submit pull request
