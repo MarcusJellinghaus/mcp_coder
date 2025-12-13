@@ -266,10 +266,14 @@ ls -la logs
 
 CREATE_PR_COMMAND_TEMPLATE = """git checkout {branch_name}
 git pull
+export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra dev
-mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config /workspace/repo/.mcp.linux.json
+mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
+echo "archive after execution ======================================="
+ls -la .mcp-coder/create_plan_sessions
+ls -la logs
 """
 
 
