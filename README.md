@@ -420,6 +420,7 @@ mypy src/
 
 - [Development Process](pr_info/DEVELOPMENT_PROCESS.md) - Detailed methodology
 - [Project Vision](project_idea.md) - Comprehensive project overview
+- [Label Workflow Setup](docs/configuration/LABEL_WORKFLOW_SETUP.md) - GitHub Actions for auto-labeling issues
 
 ## 🔗 Related Projects
 
