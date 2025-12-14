@@ -432,7 +432,7 @@ class IssueManager(BaseGitHubManager):
                 )
 
             # Step 8: Compute new label set
-            new_labels = (current_labels - {from_label_name}) | {to_label_name}
+            new_labels = (current_labels - label_lookups["all_names"]) | {to_label_name}
 
             # Step 9: Apply label transition
             result = self.set_labels(issue_number, *new_labels)
