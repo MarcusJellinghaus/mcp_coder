@@ -47,7 +47,7 @@ Related to: #193
 
 - [x] Add INFO log in `src/mcp_coder/utils/github_operations/issue_manager.py` for missing source label case
 - [x] Fix label removal logic to remove ALL workflow labels (change line ~372)
-- [ ] Run quality checks (pylint)
+- [x] Run quality checks (pylint)
 - [ ] Run quality checks (pytest) - all tests should PASS
 - [ ] Run quality checks (mypy)
 - [ ] Prepare git commit message for Step 2
