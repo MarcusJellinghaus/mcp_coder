@@ -25,11 +25,23 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 1: Add Tests for Workflow Label Removal
 
-- [ ] Implement test `test_update_workflow_label_removes_different_workflow_label` in `tests/utils/github_operations/test_issue_manager_label_update.py`
-- [ ] Run quality checks (pylint)
-- [ ] Run quality checks (pytest) - expect new test to FAIL (TDD approach)
-- [ ] Run quality checks (mypy)
-- [ ] Prepare git commit message for Step 1
+- [x] Implement test `test_update_workflow_label_removes_different_workflow_label` in `tests/utils/github_operations/test_issue_manager_label_update.py`
+- [x] Run quality checks (pylint)
+- [x] Run quality checks (pytest) - expect new test to FAIL (TDD approach)
+- [x] Run quality checks (mypy)
+- [x] Prepare git commit message for Step 1
+
+**Commit Message (Step 1):**
+```
+test(issue-manager): Add test for removing all workflow labels during transition
+
+Add test_update_workflow_label_removes_different_workflow_label to verify
+that update_workflow_label removes ALL workflow labels (not just the source
+label) when transitioning to a new workflow state. This test will fail until
+the fix is implemented in Step 2 (TDD approach).
+
+Related to: #193
+```
 
 ### Step 2: Fix update_workflow_label Logic
 

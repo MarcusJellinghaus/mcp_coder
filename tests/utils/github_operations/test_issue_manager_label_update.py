@@ -623,3 +623,91 @@ class TestIssueManagerLabelUpdate:
 
             # Verify set_labels was called
             mock_set_labels.assert_called_once()
+
+    def test_update_workflow_label_removes_different_workflow_label(
+        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Tests that transitioning removes ALL workflow labels, not just the source.
+
+        Scenario: Issue has 'planning' label, but we're transitioning from
+        'implementing' to 'code_review'. The 'planning' workflow label should
+        also be removed, leaving only the target 'code_review' label.
+
+        This test verifies the bug fix where workflow labels other than the
+        source label were not being removed during transitions.
+        """
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
+        # Configure issue with a DIFFERENT workflow label (planning instead of implementing)
+        # This simulates the bug scenario where a different workflow label exists
+        mock_issue_data: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": "open",
+            "labels": ["status-03:planning", "bug"],  # Has 'planning' workflow label
+            "assignees": [],
+            "user": "testuser",
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/test/test/issues/123",
+            "locked": False,
+        }
+
+        with (
+            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch.object(IssueManager, "_get_repository", return_value=mock_github),
+            patch(
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                return_value=MOCK_LABELS_CONFIG,
+            ),
+            patch.object(
+                IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                return_value="123-feature",
+            ),
+            patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
+            patch.object(IssueManager, "set_labels") as mock_set_labels,
+        ):
+            # Configure mocks
+            mock_config.return_value = "dummy-token"
+            mock_set_labels.return_value = mock_issue_data
+
+            # Create manager and call update
+            # Transitioning from implementing -> code_review
+            # but issue has 'planning' label which should also be removed
+            manager = IssueManager(project_dir=tmp_path)
+            result = manager.update_workflow_label("implementing", "code_review")
+
+            # Assert success
+            assert result is True
+
+            # Verify set_labels was called
+            mock_set_labels.assert_called_once()
+            call_args = mock_set_labels.call_args[0]
+            labels = set(call_args[1:])  # Convert to set for easier assertion
+
+            # The target label should be present
+            assert "status-07:code-review" in labels
+
+            # The 'planning' workflow label should be REMOVED
+            # This is the key assertion - currently fails due to the bug
+            assert "status-03:planning" not in labels
+
+            # Non-workflow labels should be preserved
+            assert "bug" in labels
