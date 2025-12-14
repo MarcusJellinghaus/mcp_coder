@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar, cast
 
 import git
-from github import Github
+from github import Auth, Github
 from github.GithubException import GithubException
 from github.Repository import Repository
 
@@ -144,7 +144,7 @@ class BaseGitHubManager:
 
         # Initialize GitHub client
         self.github_token = github_token
-        self._github_client = Github(github_token)
+        self._github_client = Github(auth=Auth.Token(github_token))
         self._repository: Optional[Repository] = None
 
     def _init_with_project_dir(self, project_dir: Path) -> None:

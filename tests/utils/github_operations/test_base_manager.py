@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import git
 import pytest
+from github import Auth
 from github.GithubException import GithubException
 
 from mcp_coder.utils.github_operations.base_manager import (
@@ -248,8 +249,11 @@ class TestBaseGitHubManagerWithProjectDir:
             # Verify git.Repo was called with project_dir
             mock_repo_class.assert_called_once_with(mock_path)
 
-            # Verify GitHub client was initialized
-            mock_github_class.assert_called_once_with("fake_token")
+            # Verify GitHub client was initialized with Auth.Token
+            mock_github_class.assert_called_once()
+            call_kwargs = mock_github_class.call_args.kwargs
+            assert "auth" in call_kwargs
+            assert isinstance(call_kwargs["auth"], Auth.Token)
 
     def test_initialization_fails_directory_not_exists(self) -> None:
         """Test initialization fails when directory does not exist."""
@@ -408,8 +412,11 @@ class TestBaseGitHubManagerWithRepoUrl:
             assert manager.github_token == "fake_token"
             assert manager._repository is None  # Not fetched yet
 
-            # Verify GitHub client was initialized
-            mock_github_class.assert_called_once_with("fake_token")
+            # Verify GitHub client was initialized with Auth.Token
+            mock_github_class.assert_called_once()
+            call_kwargs = mock_github_class.call_args.kwargs
+            assert "auth" in call_kwargs
+            assert isinstance(call_kwargs["auth"], Auth.Token)
 
     def test_successful_initialization_with_https_repo_url_no_git_extension(
         self,
@@ -437,8 +444,11 @@ class TestBaseGitHubManagerWithRepoUrl:
             assert manager.github_token == "fake_token"
             assert manager._repository is None  # Not fetched yet
 
-            # Verify GitHub client was initialized
-            mock_github_class.assert_called_once_with("fake_token")
+            # Verify GitHub client was initialized with Auth.Token
+            mock_github_class.assert_called_once()
+            call_kwargs = mock_github_class.call_args.kwargs
+            assert "auth" in call_kwargs
+            assert isinstance(call_kwargs["auth"], Auth.Token)
 
     def test_successful_initialization_with_ssh_repo_url(self) -> None:
         """Test successful initialization with valid SSH repo_url."""
@@ -464,8 +474,11 @@ class TestBaseGitHubManagerWithRepoUrl:
             assert manager.github_token == "fake_token"
             assert manager._repository is None  # Not fetched yet
 
-            # Verify GitHub client was initialized
-            mock_github_class.assert_called_once_with("fake_token")
+            # Verify GitHub client was initialized with Auth.Token
+            mock_github_class.assert_called_once()
+            call_kwargs = mock_github_class.call_args.kwargs
+            assert "auth" in call_kwargs
+            assert isinstance(call_kwargs["auth"], Auth.Token)
 
     def test_initialization_fails_invalid_repo_url(self) -> None:
         """Test initialization fails with invalid GitHub repo_url."""
