@@ -13,6 +13,48 @@ from typing import Optional
 from .log_utils import log_function_call
 
 
+def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
+    """Format TOML parse error in Python SyntaxError style.
+
+    Args:
+        file_path: Path to the config file that failed to parse
+        error: The TOMLDecodeError from tomllib
+
+    Returns:
+        Formatted error string with file path, line content, and pointer
+    """
+    # TOMLDecodeError has lineno/colno attributes (added in Python 3.11)
+    # but type stubs may not include them
+    line_num: int | None = getattr(error, "lineno", None)
+    col_num: int | None = getattr(error, "colno", None)
+
+    # Build the file/line header
+    lines = [f'  File "{file_path}", line {line_num}']
+
+    # Try to read the error line from the file
+    try:
+        file_content = file_path.read_text(encoding="utf-8")
+        file_lines = file_content.splitlines()
+
+        # Check if line number is valid (1-based)
+        if line_num is not None and 1 <= line_num <= len(file_lines):
+            error_line = file_lines[line_num - 1].rstrip()
+            lines.append(f"    {error_line}")
+
+            # Add pointer at column position (1-based to 0-based)
+            if col_num is not None and col_num >= 1:
+                pointer_pos = col_num - 1
+                lines.append("    " + " " * pointer_pos + "^")
+    except OSError:
+        # File can't be read - skip line content
+        pass
+
+    # Add the error message
+    lines.append(f"TOML parse error: {error}")
+
+    return "\n".join(lines)
+
+
 @log_function_call
 def get_config_file_path() -> Path:
     r"""Get the path to the user configuration file.

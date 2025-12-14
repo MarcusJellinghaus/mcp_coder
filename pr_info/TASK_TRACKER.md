@@ -26,10 +26,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Add `_format_toml_error()` Helper Function
 [Details](./steps/step_1.md)
 
-- [ ] Implement `_format_toml_error()` helper function in `src/mcp_coder/utils/user_config.py`
-- [ ] Write tests for `_format_toml_error()` in `tests/utils/test_user_config.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement `_format_toml_error()` helper function in `src/mcp_coder/utils/user_config.py`
+- [x] Write tests for `_format_toml_error()` in `tests/utils/test_user_config.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Add `load_config()` Function
 [Details](./steps/step_2.md)
