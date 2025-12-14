@@ -58,7 +58,7 @@ import tomllib
 from ...utils.user_config import load_config
 ```
 
-**Option**: Move import to module-level with existing imports:
+Add `load_config` to existing module-level imports:
 ```python
 from ...utils.user_config import (
     create_default_config,

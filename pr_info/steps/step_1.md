@@ -50,14 +50,12 @@ TOML parse error: Illegal character '\n'
 
 ### Imports to Add
 
-```python
-import re  # For parsing line/column from error message
-```
+No additional imports needed - `tomllib` is already imported.
 
 ## ALGORITHM
 
 ```
-1. Extract line number and column from error message using regex
+1. Get line number and column directly from error.lineno and error.colno
 2. Read file content and get the error line (handle file read errors gracefully)
 3. Build pointer string with spaces + caret at column position
 4. Format output: File line, content line, pointer line, error message line
@@ -75,13 +73,12 @@ import re  # For parsing line/column from error message
 
 - `str`: Multi-line formatted error message
 
-### Error Message Patterns
+### TOMLDecodeError Attributes
 
-The `tomllib.TOMLDecodeError` message format:
-- `"Illegal character '\n' (at line 25, column 49)"`
-- `"Expected '=' after a key (at line 10, column 1)"`
-
-Regex pattern: `r"\(at line (\d+), column (\d+)\)"`
+`tomllib.TOMLDecodeError` provides direct access to position information:
+- `error.lineno` - Line number (1-based)
+- `error.colno` - Column number (1-based)
+- `str(error)` - Error message text
 
 ## TESTS TO WRITE
 
