@@ -8,10 +8,253 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 from mcp_coder.utils.user_config import (
+    _format_toml_error,
     create_default_config,
     get_config_file_path,
     get_config_value,
+    load_config,
 )
+
+
+class TestFormatTomlError:
+    """Tests for _format_toml_error helper function."""
+
+    def test_format_includes_file_path(self, tmp_path: Path) -> None:
+        """Error message includes the file path."""
+        # Setup - create a file with invalid TOML to generate real error
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('key = "unclosed string\n', encoding="utf-8")
+
+        # Parse to get real TOMLDecodeError
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Execute
+            result = _format_toml_error(config_file, error)
+
+            # Verify
+            assert str(config_file) in result
+            assert 'File "' in result
+
+    def test_format_includes_line_number(self, tmp_path: Path) -> None:
+        """Error message includes line number from error."""
+        # Setup - create file with error on line 3
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            'line1 = "ok"\nline2 = "ok"\nline3 = "unclosed\n', encoding="utf-8"
+        )
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Execute
+            result = _format_toml_error(config_file, error)
+
+            # Verify - line number should be in the output
+            assert "line 3" in result
+
+    def test_format_includes_error_line_content(self, tmp_path: Path) -> None:
+        """Error message includes the actual line content."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('my_special_key = "unclosed\n', encoding="utf-8")
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Execute
+            result = _format_toml_error(config_file, error)
+
+            # Verify - the line content should be included
+            assert "my_special_key" in result
+
+    def test_format_includes_pointer_at_column(self, tmp_path: Path) -> None:
+        """Error message includes ^ pointer at error column."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('key = "unclosed\n', encoding="utf-8")
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Execute
+            result = _format_toml_error(config_file, error)
+
+            # Verify - should have a caret pointer
+            assert "^" in result
+
+    def test_format_handles_file_read_error(self, tmp_path: Path) -> None:
+        """Gracefully handles if file cannot be read for context."""
+        # Setup - create error but then delete file
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('key = "unclosed\n', encoding="utf-8")
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Delete file so it can't be read for context
+            config_file.unlink()
+
+            # Execute - should not raise
+            result = _format_toml_error(config_file, error)
+
+            # Verify - should still have file path and error message
+            assert str(config_file) in result
+            assert "TOML parse error" in result
+
+    def test_format_handles_line_out_of_range(self, tmp_path: Path) -> None:
+        """Handles when error line number exceeds file lines."""
+        # Setup - create error, then modify file to have fewer lines
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            'line1 = "ok"\nline2 = "ok"\nline3 = "unclosed\n', encoding="utf-8"
+        )
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Reduce file to 1 line so error line (3) is out of range
+            config_file.write_text('only_one_line = "ok"\n', encoding="utf-8")
+
+            # Execute - should not raise
+            result = _format_toml_error(config_file, error)
+
+            # Verify - should have file path and error message
+            assert str(config_file) in result
+            assert "TOML parse error" in result
+
+
+class TestLoadConfig:
+    """Tests for load_config function."""
+
+    def test_load_config_returns_dict(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Successfully loads valid TOML config."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[github]\ntoken = "ghp_test123"\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = load_config()
+
+        # Verify
+        assert isinstance(result, dict)
+        assert result == {"github": {"token": "ghp_test123"}}
+
+    def test_load_config_returns_empty_dict_if_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns empty dict when config file doesn't exist."""
+        # Setup - point to non-existent file
+        config_file = tmp_path / "nonexistent.toml"
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = load_config()
+
+        # Verify
+        assert result == {}
+
+    def test_load_config_raises_on_invalid_toml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Raises ValueError on TOML parse error."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('key = "unclosed\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute & Verify
+        with pytest.raises(ValueError) as exc_info:
+            load_config()
+
+        # Should have formatted error message
+        assert "TOML parse error" in str(exc_info.value)
+
+    def test_load_config_error_includes_file_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """ValueError message includes the config file path."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('key = "unclosed\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute & Verify
+        with pytest.raises(ValueError) as exc_info:
+            load_config()
+
+        # Should include file path
+        assert str(config_file) in str(exc_info.value)
+
+    def test_load_config_error_includes_line_content(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """ValueError message includes the error line content."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('my_unique_key = "unclosed\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute & Verify
+        with pytest.raises(ValueError) as exc_info:
+            load_config()
+
+        # Should include line content
+        assert "my_unique_key" in str(exc_info.value)
+
+    def test_load_config_preserves_nested_structure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Correctly loads nested TOML sections."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_content = """[github]
+token = "ghp_test"
+
+[coordinator.repos.mcp_coder]
+repo_url = "https://github.com/test/mcp_coder.git"
+executor_os = "linux"
+"""
+        config_file.write_text(config_content, encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = load_config()
+
+        # Verify nested structure is preserved
+        assert result["github"]["token"] == "ghp_test"
+        assert (
+            result["coordinator"]["repos"]["mcp_coder"]["repo_url"]
+            == "https://github.com/test/mcp_coder.git"
+        )
+        assert result["coordinator"]["repos"]["mcp_coder"]["executor_os"] == "linux"
 
 
 class TestGetConfigFilePath:
@@ -174,8 +417,10 @@ github_credentials_id = "github-pat"
             assert result is None
 
     @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_invalid_toml(self, mock_get_path: MagicMock) -> None:
-        """Test that None is returned when TOML file is invalid."""
+    def test_get_config_value_invalid_toml_raises(
+        self, mock_get_path: MagicMock
+    ) -> None:
+        """Test that ValueError is raised when TOML file is invalid."""
         # Setup
         mock_path = MagicMock(spec=Path)
         mock_path.exists.return_value = True
@@ -184,26 +429,28 @@ github_credentials_id = "github-pat"
         invalid_toml = b"[invalid toml content without closing bracket"
 
         with patch("builtins.open", mock_open(read_data=invalid_toml)):
-            # Execute
-            result = get_config_value("tokens", "github")
+            # Execute & Verify
+            with pytest.raises(ValueError) as exc_info:
+                get_config_value("tokens", "github")
 
-            # Verify
-            assert result is None
+            # Verify error message includes file path
+            assert str(mock_path) in str(exc_info.value)
 
     @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_io_error(self, mock_get_path: MagicMock) -> None:
-        """Test that None is returned when file cannot be read (IO error)."""
+    def test_get_config_value_io_error_raises(self, mock_get_path: MagicMock) -> None:
+        """Test that ValueError is raised when file cannot be read (IO error)."""
         # Setup
         mock_path = MagicMock(spec=Path)
         mock_path.exists.return_value = True
         mock_get_path.return_value = mock_path
 
         with patch("builtins.open", side_effect=IOError("Permission denied")):
-            # Execute
-            result = get_config_value("tokens", "github")
+            # Execute & Verify
+            with pytest.raises(ValueError) as exc_info:
+                get_config_value("tokens", "github")
 
-            # Verify
-            assert result is None
+            # Verify error message includes file path
+            assert str(mock_path) in str(exc_info.value)
 
     @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_null_value(self, mock_get_path: MagicMock) -> None:

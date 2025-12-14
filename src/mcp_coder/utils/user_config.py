@@ -8,9 +8,64 @@ import os
 import platform
 import tomllib
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from .log_utils import log_function_call
+
+
+def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
+    """Format TOML parse error in Python SyntaxError style.
+
+    Args:
+        file_path: Path to the config file that failed to parse
+        error: The TOMLDecodeError from tomllib
+
+    Returns:
+        Formatted error string with file path, line content, and pointer
+    """
+    import re
+
+    # TOMLDecodeError has lineno/colno attributes (added in Python 3.11)
+    # but type stubs may not include them
+    line_num: int | None = getattr(error, "lineno", None)
+    col_num: int | None = getattr(error, "colno", None)
+
+    # If attributes aren't available, try to extract from error message
+    # Error message format: "... (at line X, column Y)"
+    if line_num is None:
+        match = re.search(r"at line (\d+)", str(error))
+        if match:
+            line_num = int(match.group(1))
+    if col_num is None:
+        match = re.search(r"column (\d+)", str(error))
+        if match:
+            col_num = int(match.group(1))
+
+    # Build the file/line header
+    lines = [f'  File "{file_path}", line {line_num}']
+
+    # Try to read the error line from the file
+    try:
+        file_content = file_path.read_text(encoding="utf-8")
+        file_lines = file_content.splitlines()
+
+        # Check if line number is valid (1-based)
+        if line_num is not None and 1 <= line_num <= len(file_lines):
+            error_line = file_lines[line_num - 1].rstrip()
+            lines.append(f"    {error_line}")
+
+            # Add pointer at column position (1-based to 0-based)
+            if col_num is not None and col_num >= 1:
+                pointer_pos = col_num - 1
+                lines.append("    " + " " * pointer_pos + "^")
+    except OSError:
+        # File can't be read - skip line content
+        pass
+
+    # Add the error message
+    lines.append(f"TOML parse error: {error}")
+
+    return "\n".join(lines)
 
 
 @log_function_call
@@ -27,6 +82,32 @@ def get_config_file_path() -> Path:
     else:
         # Linux/macOS/Containers - use XDG Base Directory Specification
         return Path.home() / ".config" / "mcp_coder" / "config.toml"
+
+
+@log_function_call
+def load_config() -> dict[str, Any]:
+    """Load user configuration from TOML file.
+
+    Returns:
+        Configuration dictionary. Empty dict if file doesn't exist.
+
+    Raises:
+        ValueError: If config file exists but has invalid TOML syntax.
+                   Error message includes file path, line content, and pointer.
+    """
+    config_path = get_config_file_path()
+
+    # Return empty dict if config file doesn't exist
+    if not config_path.exists():
+        return {}
+
+    try:
+        with open(config_path, "rb") as f:
+            return tomllib.load(f)
+    except tomllib.TOMLDecodeError as e:
+        raise ValueError(_format_toml_error(config_path, e)) from e
+    except OSError as e:
+        raise ValueError(f"Error reading config file: {config_path}\n{e}") from e
 
 
 @log_function_call
@@ -51,6 +132,9 @@ def get_config_value(
 
     Returns:
         The configuration value as a string, or None if not found
+
+    Raises:
+        ValueError: If config file exists but has invalid TOML syntax.
 
     Note:
         Returns None gracefully for any missing file, section, or key.
@@ -77,37 +161,30 @@ def get_config_value(
             return env_value
 
     # Step 2: Fall back to config file
-    config_path = get_config_file_path()
+    # load_config() raises ValueError on parse errors
+    config_data = load_config()
 
-    # Return None if config file doesn't exist
-    if not config_path.exists():
+    # Return None if config is empty (file doesn't exist)
+    if not config_data:
         return None
 
-    try:
-        with open(config_path, "rb") as f:
-            config_data = tomllib.load(f)
+    # Navigate nested sections using dot notation
+    section_data: Any = config_data
+    section_parts = section.split(".")
 
-        # Navigate nested sections using dot notation
-        section_data = config_data
-        section_parts = section.split(".")
-
-        for part in section_parts:
-            if not isinstance(section_data, dict) or part not in section_data:
-                return None
-            section_data = section_data[part]
-
-        # Return None if key doesn't exist in section
-        if not isinstance(section_data, dict) or key not in section_data:
+    for part in section_parts:
+        if not isinstance(section_data, dict) or part not in section_data:
             return None
+        section_data = section_data[part]
 
-        value = section_data[key]
-
-        # Convert to string if not already a string
-        return str(value) if value is not None else None
-
-    except (tomllib.TOMLDecodeError, OSError, IOError):
-        # Return None for any file reading or parsing errors
+    # Return None if key doesn't exist in section
+    if not isinstance(section_data, dict) or key not in section_data:
         return None
+
+    value = section_data[key]
+
+    # Convert to string if not already a string
+    return str(value) if value is not None else None
 
 
 def _get_standard_env_var(section: str, key: str) -> Optional[str]:
