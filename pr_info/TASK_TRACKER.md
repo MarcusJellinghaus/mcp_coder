@@ -22,3 +22,27 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### Step 1: Add Tests for Workflow Label Removal
+
+- [ ] Implement test `test_update_workflow_label_removes_different_workflow_label` in `tests/utils/github_operations/test_issue_manager_label_update.py`
+- [ ] Run quality checks (pylint)
+- [ ] Run quality checks (pytest) - expect new test to FAIL (TDD approach)
+- [ ] Run quality checks (mypy)
+- [ ] Prepare git commit message for Step 1
+
+### Step 2: Fix update_workflow_label Logic
+
+- [ ] Add INFO log in `src/mcp_coder/utils/github_operations/issue_manager.py` for missing source label case
+- [ ] Fix label removal logic to remove ALL workflow labels (change line ~372)
+- [ ] Run quality checks (pylint)
+- [ ] Run quality checks (pytest) - all tests should PASS
+- [ ] Run quality checks (mypy)
+- [ ] Prepare git commit message for Step 2
+
+---
+
+## Pull Request
+
+- [ ] Review all changes for Issue #193
+- [ ] Prepare PR summary describing the fix for update_workflow_label
