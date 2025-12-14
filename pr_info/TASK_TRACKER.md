@@ -45,7 +45,7 @@ Related to: #193
 
 ### Step 2: Fix update_workflow_label Logic
 
-- [ ] Add INFO log in `src/mcp_coder/utils/github_operations/issue_manager.py` for missing source label case
+- [x] Add INFO log in `src/mcp_coder/utils/github_operations/issue_manager.py` for missing source label case
 - [ ] Fix label removal logic to remove ALL workflow labels (change line ~372)
 - [ ] Run quality checks (pylint)
 - [ ] Run quality checks (pytest) - all tests should PASS
