@@ -12,7 +12,7 @@ When `IssueManager.update_workflow_label()` transitions from one label to anothe
 
 ## Root Cause
 
-In `src/mcp_coder/utils/github_operations/issue_manager.py:372`:
+In `src/mcp_coder/utils/github_operations/issue_manager.py`, line ~372:
 
 ```python
 new_labels = (current_labels - {from_label_name}) | {to_label_name}
@@ -28,27 +28,23 @@ Remove **all workflow labels** using `label_lookups["all_names"]` before adding 
 new_labels = (current_labels - label_lookups["all_names"]) | {to_label_name}
 ```
 
-## Architectural / Design Changes
-
-**None.** This is a single-line bug fix with no architectural changes. The solution uses existing data structures (`label_lookups["all_names"]`) that are already loaded and available in the method.
-
 ## Files to Modify
 
-| File | Change Type | Description |
-|------|-------------|-------------|
-| `src/mcp_coder/utils/github_operations/issue_manager.py` | Modify | Fix line 372, add INFO log |
-| `tests/utils/github_operations/test_issue_manager_label_update.py` | Modify | Update existing test, add new test |
+| File | Change |
+|------|--------|
+| `src/.../issue_manager.py` | Fix line ~372, add INFO log |
+| `tests/.../test_issue_manager_label_update.py` | Update test + add new test |
 
-## Implementation Steps Overview
+## Implementation Steps
 
-| Step | Description | TDD Approach |
-|------|-------------|--------------|
-| 1 | Add test for "wrong workflow label" scenario + update existing test | Test first |
-| 2 | Fix `update_workflow_label()` logic + add INFO log | Implementation |
+| Step | Description |
+|------|-------------|
+| 1 | Add tests for "wrong workflow label" scenario (TDD) |
+| 2 | Fix `update_workflow_label()` logic + add INFO log |
 
 ## Success Criteria
 
 1. Transitioning labels removes ALL workflow labels, not just the expected source
 2. Non-workflow labels (e.g., `bug`, `enhancement`) are preserved
-3. INFO log appears when source label is not present
-4. All existing tests continue to pass
+3. INFO log when source label is not present
+4. All existing tests pass
