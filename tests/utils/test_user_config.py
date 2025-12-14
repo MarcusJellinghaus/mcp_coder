@@ -417,8 +417,10 @@ github_credentials_id = "github-pat"
             assert result is None
 
     @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_invalid_toml(self, mock_get_path: MagicMock) -> None:
-        """Test that None is returned when TOML file is invalid."""
+    def test_get_config_value_invalid_toml_raises(
+        self, mock_get_path: MagicMock
+    ) -> None:
+        """Test that ValueError is raised when TOML file is invalid."""
         # Setup
         mock_path = MagicMock(spec=Path)
         mock_path.exists.return_value = True
@@ -427,26 +429,28 @@ github_credentials_id = "github-pat"
         invalid_toml = b"[invalid toml content without closing bracket"
 
         with patch("builtins.open", mock_open(read_data=invalid_toml)):
-            # Execute
-            result = get_config_value("tokens", "github")
+            # Execute & Verify
+            with pytest.raises(ValueError) as exc_info:
+                get_config_value("tokens", "github")
 
-            # Verify
-            assert result is None
+            # Verify error message includes file path
+            assert str(mock_path) in str(exc_info.value)
 
     @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_io_error(self, mock_get_path: MagicMock) -> None:
-        """Test that None is returned when file cannot be read (IO error)."""
+    def test_get_config_value_io_error_raises(self, mock_get_path: MagicMock) -> None:
+        """Test that ValueError is raised when file cannot be read (IO error)."""
         # Setup
         mock_path = MagicMock(spec=Path)
         mock_path.exists.return_value = True
         mock_get_path.return_value = mock_path
 
         with patch("builtins.open", side_effect=IOError("Permission denied")):
-            # Execute
-            result = get_config_value("tokens", "github")
+            # Execute & Verify
+            with pytest.raises(ValueError) as exc_info:
+                get_config_value("tokens", "github")
 
-            # Verify
-            assert result is None
+            # Verify error message includes file path
+            assert str(mock_path) in str(exc_info.value)
 
     @patch("mcp_coder.utils.user_config.get_config_file_path")
     def test_get_config_value_null_value(self, mock_get_path: MagicMock) -> None:

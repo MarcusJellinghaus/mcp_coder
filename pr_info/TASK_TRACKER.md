@@ -42,10 +42,26 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Refactor `get_config_value()` to Use `load_config()`
 [Details](./steps/step_3.md)
 
-- [ ] Refactor `get_config_value()` to use `load_config()` in `src/mcp_coder/utils/user_config.py`
-- [ ] Update existing tests to expect `ValueError` on invalid TOML in `tests/utils/test_user_config.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Refactor `get_config_value()` to use `load_config()` in `src/mcp_coder/utils/user_config.py`
+- [x] Update existing tests to expect `ValueError` on invalid TOML in `tests/utils/test_user_config.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 3
+
+**Commit message:**
+```
+Step 3: Refactor get_config_value() to use load_config()
+
+Refactored get_config_value() to use load_config() internally instead of
+directly using tomllib. This is a behavior change: parse errors now raise
+ValueError instead of returning None, making configuration errors explicit.
+
+Changes:
+- Replace direct tomllib.load() with load_config() call
+- Remove try/except block that silently caught parse errors
+- Let ValueError from load_config() propagate to caller
+- Update docstring to document the new Raises: ValueError behavior
+- Update tests to expect ValueError on invalid TOML and IO errors
+```
 
 ### Step 4: Update `coordinator.py` to Use `load_config()`
 [Details](./steps/step_4.md)

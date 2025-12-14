@@ -120,6 +120,9 @@ def get_config_value(
     Returns:
         The configuration value as a string, or None if not found
 
+    Raises:
+        ValueError: If config file exists but has invalid TOML syntax.
+
     Note:
         Returns None gracefully for any missing file, section, or key.
         No exceptions are raised for missing resources.
@@ -145,37 +148,30 @@ def get_config_value(
             return env_value
 
     # Step 2: Fall back to config file
-    config_path = get_config_file_path()
+    # load_config() raises ValueError on parse errors
+    config_data = load_config()
 
-    # Return None if config file doesn't exist
-    if not config_path.exists():
+    # Return None if config is empty (file doesn't exist)
+    if not config_data:
         return None
 
-    try:
-        with open(config_path, "rb") as f:
-            config_data = tomllib.load(f)
+    # Navigate nested sections using dot notation
+    section_data: Any = config_data
+    section_parts = section.split(".")
 
-        # Navigate nested sections using dot notation
-        section_data = config_data
-        section_parts = section.split(".")
-
-        for part in section_parts:
-            if not isinstance(section_data, dict) or part not in section_data:
-                return None
-            section_data = section_data[part]
-
-        # Return None if key doesn't exist in section
-        if not isinstance(section_data, dict) or key not in section_data:
+    for part in section_parts:
+        if not isinstance(section_data, dict) or part not in section_data:
             return None
+        section_data = section_data[part]
 
-        value = section_data[key]
-
-        # Convert to string if not already a string
-        return str(value) if value is not None else None
-
-    except (tomllib.TOMLDecodeError, OSError, IOError):
-        # Return None for any file reading or parsing errors
+    # Return None if key doesn't exist in section
+    if not isinstance(section_data, dict) or key not in section_data:
         return None
+
+    value = section_data[key]
+
+    # Convert to string if not already a string
+    return str(value) if value is not None else None
 
 
 def _get_standard_env_var(section: str, key: str) -> Optional[str]:
