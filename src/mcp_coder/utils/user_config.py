@@ -8,7 +8,7 @@ import os
 import platform
 import tomllib
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from .log_utils import log_function_call
 
@@ -69,6 +69,32 @@ def get_config_file_path() -> Path:
     else:
         # Linux/macOS/Containers - use XDG Base Directory Specification
         return Path.home() / ".config" / "mcp_coder" / "config.toml"
+
+
+@log_function_call
+def load_config() -> dict[str, Any]:
+    """Load user configuration from TOML file.
+
+    Returns:
+        Configuration dictionary. Empty dict if file doesn't exist.
+
+    Raises:
+        ValueError: If config file exists but has invalid TOML syntax.
+                   Error message includes file path, line content, and pointer.
+    """
+    config_path = get_config_file_path()
+
+    # Return empty dict if config file doesn't exist
+    if not config_path.exists():
+        return {}
+
+    try:
+        with open(config_path, "rb") as f:
+            return tomllib.load(f)
+    except tomllib.TOMLDecodeError as e:
+        raise ValueError(_format_toml_error(config_path, e)) from e
+    except OSError as e:
+        raise ValueError(f"Error reading config file: {config_path}\n{e}") from e
 
 
 @log_function_call

@@ -34,10 +34,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Add `load_config()` Function
 [Details](./steps/step_2.md)
 
-- [ ] Implement `load_config()` function in `src/mcp_coder/utils/user_config.py`
-- [ ] Write tests for `load_config()` in `tests/utils/test_user_config.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Implement `load_config()` function in `src/mcp_coder/utils/user_config.py`
+- [x] Write tests for `load_config()` in `tests/utils/test_user_config.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Refactor `get_config_value()` to Use `load_config()`
 [Details](./steps/step_3.md)

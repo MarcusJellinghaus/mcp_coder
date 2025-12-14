@@ -12,6 +12,7 @@ from mcp_coder.utils.user_config import (
     create_default_config,
     get_config_file_path,
     get_config_value,
+    load_config,
 )
 
 
@@ -133,6 +134,127 @@ class TestFormatTomlError:
             # Verify - should have file path and error message
             assert str(config_file) in result
             assert "TOML parse error" in result
+
+
+class TestLoadConfig:
+    """Tests for load_config function."""
+
+    def test_load_config_returns_dict(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Successfully loads valid TOML config."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[github]\ntoken = "ghp_test123"\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = load_config()
+
+        # Verify
+        assert isinstance(result, dict)
+        assert result == {"github": {"token": "ghp_test123"}}
+
+    def test_load_config_returns_empty_dict_if_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns empty dict when config file doesn't exist."""
+        # Setup - point to non-existent file
+        config_file = tmp_path / "nonexistent.toml"
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = load_config()
+
+        # Verify
+        assert result == {}
+
+    def test_load_config_raises_on_invalid_toml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Raises ValueError on TOML parse error."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('key = "unclosed\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute & Verify
+        with pytest.raises(ValueError) as exc_info:
+            load_config()
+
+        # Should have formatted error message
+        assert "TOML parse error" in str(exc_info.value)
+
+    def test_load_config_error_includes_file_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """ValueError message includes the config file path."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('key = "unclosed\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute & Verify
+        with pytest.raises(ValueError) as exc_info:
+            load_config()
+
+        # Should include file path
+        assert str(config_file) in str(exc_info.value)
+
+    def test_load_config_error_includes_line_content(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """ValueError message includes the error line content."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('my_unique_key = "unclosed\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute & Verify
+        with pytest.raises(ValueError) as exc_info:
+            load_config()
+
+        # Should include line content
+        assert "my_unique_key" in str(exc_info.value)
+
+    def test_load_config_preserves_nested_structure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Correctly loads nested TOML sections."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_content = """[github]
+token = "ghp_test"
+
+[coordinator.repos.mcp_coder]
+repo_url = "https://github.com/test/mcp_coder.git"
+executor_os = "linux"
+"""
+        config_file.write_text(config_content, encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = load_config()
+
+        # Verify nested structure is preserved
+        assert result["github"]["token"] == "ghp_test"
+        assert (
+            result["coordinator"]["repos"]["mcp_coder"]["repo_url"]
+            == "https://github.com/test/mcp_coder.git"
+        )
+        assert result["coordinator"]["repos"]["mcp_coder"]["executor_os"] == "linux"
 
 
 class TestGetConfigFilePath:
