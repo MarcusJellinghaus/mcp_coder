@@ -105,7 +105,10 @@ port = 5432
             )
 
     def test_malformed_config_file_handling(self, tmp_path: Path) -> None:
-        """Test behavior with malformed TOML files."""
+        """Test behavior with malformed TOML files.
+
+        Invalid TOML files should raise ValueError with helpful error message.
+        """
         config_file = tmp_path / ".mcp_coder" / "config.toml"
         config_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -124,9 +127,12 @@ port = 5432
             for malformed_content in malformed_configs:
                 config_file.write_text(malformed_content, encoding="utf-8")
 
-                # Should return None gracefully for malformed files
-                result = get_config_value("section", "key")
-                assert result is None
+                # Should raise ValueError for malformed TOML files
+                with pytest.raises(ValueError) as exc_info:
+                    get_config_value("section", "key")
+
+                # Error message should contain file path and TOML error info
+                assert "TOML parse error" in str(exc_info.value)
 
     def test_empty_and_nonexistent_file_scenarios(self, tmp_path: Path) -> None:
         """Test behavior with empty and non-existent files."""
@@ -155,7 +161,10 @@ port = 5432
             assert result is None
 
     def test_file_permission_scenarios(self, tmp_path: Path) -> None:
-        """Test behavior when file permissions prevent reading."""
+        """Test behavior when file permissions prevent reading.
+
+        Permission errors should raise ValueError with helpful error message.
+        """
         config_file = tmp_path / ".mcp_coder" / "config.toml"
         config_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -170,8 +179,12 @@ key = "value"
         ):
             # Simulate file permission error by patching open
             with patch("builtins.open", side_effect=PermissionError("Access denied")):
-                result = get_config_value("section", "key")
-                assert result is None
+                with pytest.raises(ValueError) as exc_info:
+                    get_config_value("section", "key")
+
+                # Error message should contain file path and permission error info
+                assert str(config_file) in str(exc_info.value)
+                assert "Access denied" in str(exc_info.value)
 
     def test_unicode_content_handling(self, tmp_path: Path) -> None:
         """Test handling of Unicode content in config files."""

@@ -3337,25 +3337,18 @@ class TestCoordinatorRunIntegration:
         )
 
         # Setup - Mock the config file reading for --all mode
-        # Mock get_config_file_path to return a fake path
+        # Mock load_config to return config with two repos
+        mock_config_data: dict[str, Any] = {
+            "coordinator": {"repos": {"repo_one": {}, "repo_two": {}}}
+        }
+
         with patch(
-            "mcp_coder.cli.commands.coordinator.get_config_file_path"
-        ) as mock_get_config_path:
-            mock_get_config_path.return_value = Path("/fake/config.toml")
+            "mcp_coder.cli.commands.coordinator.load_config"
+        ) as mock_load_config:
+            mock_load_config.return_value = mock_config_data
 
-            # Mock tomllib.load to return config with two repos
-            mock_config_data: dict[str, Any] = {
-                "coordinator": {"repos": {"repo_one": {}, "repo_two": {}}}
-            }
-
-            with (
-                patch("builtins.open", create=True) as mock_open,
-                patch("tomllib.load") as mock_tomllib_load,
-            ):
-                mock_tomllib_load.return_value = mock_config_data
-
-                # Execute
-                result = execute_coordinator_run(args)
+            # Execute
+            result = execute_coordinator_run(args)
 
         # Verify - Exit code 0 (success)
         assert result == 0

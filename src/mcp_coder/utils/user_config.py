@@ -23,10 +23,23 @@ def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
     Returns:
         Formatted error string with file path, line content, and pointer
     """
+    import re
+
     # TOMLDecodeError has lineno/colno attributes (added in Python 3.11)
     # but type stubs may not include them
     line_num: int | None = getattr(error, "lineno", None)
     col_num: int | None = getattr(error, "colno", None)
+
+    # If attributes aren't available, try to extract from error message
+    # Error message format: "... (at line X, column Y)"
+    if line_num is None:
+        match = re.search(r"at line (\d+)", str(error))
+        if match:
+            line_num = int(match.group(1))
+    if col_num is None:
+        match = re.search(r"column (\d+)", str(error))
+        if match:
+            col_num = int(match.group(1))
 
     # Build the file/line header
     lines = [f'  File "{file_path}", line {line_num}']
