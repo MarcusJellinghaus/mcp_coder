@@ -126,6 +126,8 @@ flowchart TD
 - **LLM Assistant** - Generates code, plans, documentation via structured prompts
 - **Automated Tools** - Quality checks (pylint, mypy, pytest), formatting, git operations
 
+**📋 Prerequisites:** Set up GitHub Actions for auto-labeling and `/approve` command. See [Label Workflow Setup](../docs/configuration/LABEL_WORKFLOW_SETUP.md).
+
 ---
 
 ## Detailed Workflows
