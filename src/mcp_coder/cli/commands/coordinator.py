@@ -23,6 +23,7 @@ from ...utils.user_config import (
     create_default_config,
     get_config_file_path,
     get_config_value,
+    load_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -742,11 +743,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             repo_names = [args.repo]
         elif args.all:
             # All repositories mode - extract from config
-            import tomllib
-
-            config_path = get_config_file_path()
-            with open(config_path, "rb") as f:
-                config_data = tomllib.load(f)
+            config_data = load_config()
 
             repos_section = config_data.get("coordinator", {}).get("repos", {})
             repo_names = list(repos_section.keys())

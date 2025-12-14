@@ -66,10 +66,25 @@ Changes:
 ### Step 4: Update `coordinator.py` to Use `load_config()`
 [Details](./steps/step_4.md)
 
-- [ ] Update `execute_coordinator_run()` to use `load_config()` in `src/mcp_coder/cli/commands/coordinator.py`
-- [ ] Verify existing tests in `tests/cli/commands/test_coordinator.py` still pass
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 4
+- [x] Update `execute_coordinator_run()` to use `load_config()` in `src/mcp_coder/cli/commands/coordinator.py`
+- [x] Verify existing tests in `tests/cli/commands/test_coordinator.py` still pass
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 4
+
+**Commit message:**
+```
+Step 4: Update coordinator.py to use load_config()
+
+Updated execute_coordinator_run() to use load_config() from user_config
+instead of direct tomllib.load() call. This ensures consistent error
+handling across the codebase with formatted error messages.
+
+Changes:
+- Add load_config to module-level imports from user_config
+- Replace inline tomllib import with load_config() call
+- Remove manual file opening (load_config handles it internally)
+- Existing ValueError handler now catches formatted parse errors
+```
 
 ---
 
