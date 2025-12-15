@@ -48,9 +48,21 @@ Related to: #193
 - [x] Add INFO log in `src/mcp_coder/utils/github_operations/issue_manager.py` for missing source label case
 - [x] Fix label removal logic to remove ALL workflow labels (change line ~372)
 - [x] Run quality checks (pylint)
-- [ ] Run quality checks (pytest) - all tests should PASS
-- [ ] Run quality checks (mypy)
-- [ ] Prepare git commit message for Step 2
+- [x] Run quality checks (pytest) - all tests should PASS
+- [x] Run quality checks (mypy)
+- [x] Prepare git commit message for Step 2
+
+**Commit Message (Step 2):**
+```
+fix(issue-manager): remove ALL workflow labels during transition
+
+- Add INFO log when source label is missing during workflow transition
+- Fix update_workflow_label to remove ALL workflow labels before adding
+  the target label, not just the source label. This ensures clean workflow
+  state transitions even when labels were manually modified.
+
+Fixes: #193
+```
 
 ---
 
