@@ -636,6 +636,10 @@ class TestIssueManagerLabelUpdate:
         This test verifies the bug fix where workflow labels other than the
         source label were not being removed during transitions.
         """
+        import logging
+
+        caplog.set_level(logging.INFO)
+
         # Initialize tmp_path as a git repository
         subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
         subprocess.run(
@@ -711,3 +715,6 @@ class TestIssueManagerLabelUpdate:
 
             # Non-workflow labels should be preserved
             assert "bug" in labels
+
+            # Verify INFO log was emitted for missing source label
+            assert "Source label 'status-06:implementing' not present" in caplog.text

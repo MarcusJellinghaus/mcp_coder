@@ -68,5 +68,37 @@ Fixes: #193
 
 ## Pull Request
 
-- [ ] Review all changes for Issue #193
-- [ ] Prepare PR summary describing the fix for update_workflow_label
+- [x] Review all changes for Issue #193
+- [x] Prepare PR summary describing the fix for update_workflow_label
+
+**PR Summary:**
+```
+## Summary
+
+Fix bug in `update_workflow_label` where transitioning workflow states didn't
+remove ALL existing workflow labels - only the specified source label.
+
+### Problem
+When an issue had workflow label "planning" but the transition was from
+"implementing" to "code_review", the "planning" label was NOT removed.
+This left issues in an inconsistent state with multiple workflow labels.
+
+### Solution
+Changed the label removal logic (line ~372 in issue_manager.py) to remove
+ALL workflow labels before adding the target label:
+
+```python
+# Before (bug):
+new_labels = (current_labels - {from_label_name}) | {to_label_name}
+
+# After (fix):
+new_labels = (current_labels - label_lookups["all_names"]) | {to_label_name}
+```
+
+### Changes
+- Add test `test_update_workflow_label_removes_different_workflow_label`
+- Add INFO log when source label is missing during transition
+- Fix label removal to remove ALL workflow labels
+
+Fixes: #193
+```
