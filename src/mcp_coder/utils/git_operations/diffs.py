@@ -8,7 +8,12 @@ from typing import Optional
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
-from .branches import branch_exists, get_current_branch_name, get_parent_branch_name
+from .branches import (
+    branch_exists,
+    get_current_branch_name,
+    get_parent_branch_name,
+    remote_branch_exists,
+)
 from .core import GIT_SHORT_HASH_LENGTH, PLACEHOLDER_HASH, _safe_repo_context, logger
 from .repository import is_git_repository
 
@@ -107,6 +112,8 @@ def get_branch_diff(
     Note:
         - Uses three-dot notation (base...HEAD) to show changes on current branch
         - Auto-detects base branch using get_parent_branch_name() if not provided
+        - If base_branch doesn't exist locally but exists on origin,
+          falls back to using origin/{base_branch} for comparison.
         - Returns empty string for any error conditions (invalid repo, missing branch, etc.)
         - Uses unified diff format with 5 lines of context
     """
@@ -143,10 +150,22 @@ def get_branch_diff(
                 logger.debug("Current branch is the base branch, no diff to show")
                 return ""
 
-            # Verify base branch exists
+            # Verify base branch exists (local or remote)
             if not branch_exists(project_dir, base_branch):
-                logger.error("Base branch '%s' does not exist", base_branch)
-                return ""
+                # Try remote ref as fallback
+                if remote_branch_exists(project_dir, base_branch):
+                    logger.debug(
+                        "Local branch '%s' not found, using remote ref 'origin/%s'",
+                        base_branch,
+                        base_branch,
+                    )
+                    base_branch = f"origin/{base_branch}"
+                else:
+                    logger.error(
+                        "Base branch '%s' does not exist locally or on remote",
+                        base_branch,
+                    )
+                    return ""
 
             # Build git diff command
             if exclude_paths:
