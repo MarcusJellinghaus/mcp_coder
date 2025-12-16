@@ -424,8 +424,15 @@ class IssueManager(BaseGitHubManager):
                     return True
                 # else: Has both labels, proceed with removal of old label
 
+            # Log if source label is not present (but target label is also not present)
+            if from_label_name not in current_labels:
+                logger.info(
+                    f"Source label '{from_label_name}' not present on issue #{issue_number}. "
+                    "Proceeding with transition."
+                )
+
             # Step 8: Compute new label set
-            new_labels = (current_labels - {from_label_name}) | {to_label_name}
+            new_labels = (current_labels - label_lookups["all_names"]) | {to_label_name}
 
             # Step 9: Apply label transition
             result = self.set_labels(issue_number, *new_labels)
