@@ -53,7 +53,7 @@ from .branches import branch_exists, get_current_branch_name, get_parent_branch_
 
 ### 2. Modification Location
 
-In `get_branch_diff()`, around line 100 (after the `branch_exists` check):
+In `get_branch_diff()`, after the `branch_exists` check:
 
 **Current code:**
 ```python

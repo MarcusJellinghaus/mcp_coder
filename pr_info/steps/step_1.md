@@ -118,7 +118,6 @@ def test_remote_branch_exists_returns_false_no_origin(self, git_repo_with_commit
 def test_remote_branch_exists_invalid_inputs(self, tmp_path):
     """Test remote_branch_exists returns False for invalid inputs."""
     assert remote_branch_exists(tmp_path, "main") is False  # Not a repo
-    # Empty branch name tested implicitly
 ```
 
 ## Implementation Order
