@@ -403,6 +403,56 @@ def branch_exists(project_dir: Path, branch_name: str) -> bool:
         return False
 
 
+def remote_branch_exists(project_dir: Path, branch_name: str) -> bool:
+    """Check if a git branch exists on the remote origin.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+        branch_name: Name of the branch to check (without 'origin/' prefix)
+
+    Returns:
+        True if branch exists on origin remote, False otherwise
+    """
+    logger.debug(
+        "Checking if remote branch '%s' exists in %s", branch_name, project_dir
+    )
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    # Validate branch name
+    if not branch_name or not branch_name.strip():
+        logger.debug("Branch name is empty")
+        return False
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            # Check if origin remote exists
+            if "origin" not in [remote.name for remote in repo.remotes]:
+                logger.debug("No origin remote found in %s", project_dir)
+                return False
+
+            # Get remote refs
+            remote_refs = [ref.name for ref in repo.remotes.origin.refs]
+            remote_branch_name = f"origin/{branch_name}"
+            exists = remote_branch_name in remote_refs
+
+            if exists:
+                logger.debug("Remote branch '%s' exists", remote_branch_name)
+            else:
+                logger.debug("Remote branch '%s' does not exist", remote_branch_name)
+
+            return exists
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.debug("Git error checking remote branch existence: %s", e)
+        return False
+    except Exception as e:
+        logger.warning("Unexpected error checking remote branch existence: %s", e)
+        return False
+
+
 def delete_branch(
     branch_name: str,
     project_dir: Path,

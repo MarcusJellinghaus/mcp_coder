@@ -13,6 +13,7 @@ from mcp_coder.utils.git_operations import (
     get_current_branch_name,
     get_default_branch_name,
     get_parent_branch_name,
+    remote_branch_exists,
 )
 
 
@@ -133,3 +134,44 @@ class TestExtractIssueNumberFromBranch:
         assert (
             extract_issue_number_from_branch("-feature") is None
         )  # No number before hyphen
+
+
+@pytest.mark.git_integration
+class TestRemoteBranchExists:
+    """Tests for remote_branch_exists function."""
+
+    def test_remote_branch_exists_returns_true(
+        self, git_repo_with_remote: tuple[Repo, Path, Path]
+    ) -> None:
+        """Test remote_branch_exists returns True for existing remote branch."""
+        repo, project_dir, _ = git_repo_with_remote
+        # Get actual branch name (could be master or main depending on git config)
+        current_branch = repo.active_branch.name
+        # Push current branch to remote
+        repo.git.push("-u", "origin", current_branch)
+        assert remote_branch_exists(project_dir, current_branch) is True
+
+    def test_remote_branch_exists_returns_false_for_nonexistent(
+        self, git_repo_with_remote: tuple[Repo, Path, Path]
+    ) -> None:
+        """Test remote_branch_exists returns False for non-existing remote branch."""
+        _, project_dir, _ = git_repo_with_remote
+        assert remote_branch_exists(project_dir, "nonexistent-branch") is False
+
+    def test_remote_branch_exists_returns_false_no_origin(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Test remote_branch_exists returns False when no origin remote."""
+        _, project_dir = git_repo_with_commit
+        assert remote_branch_exists(project_dir, "master") is False
+
+    def test_remote_branch_exists_invalid_inputs(self, tmp_path: Path) -> None:
+        """Test remote_branch_exists returns False for invalid inputs."""
+        assert remote_branch_exists(tmp_path, "master") is False  # Not a repo
+
+    def test_remote_branch_exists_empty_branch_name(
+        self, git_repo_with_remote: tuple[Repo, Path, Path]
+    ) -> None:
+        """Test remote_branch_exists returns False for empty branch name."""
+        _, project_dir, _ = git_repo_with_remote
+        assert remote_branch_exists(project_dir, "") is False
