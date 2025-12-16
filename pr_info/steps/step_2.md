@@ -143,14 +143,4 @@ def test_get_branch_diff_falls_back_to_remote(
 3. Modify `get_branch_diff()` with fallback logic
 4. Run tests to verify
 
-## Verification
 
-After implementation, the following should work in CI:
-
-```bash
-# In Jenkins where only feature branch is checked out
-mcp-coder create-pr --project-dir /path/to/repo
-
-# Should see DEBUG log instead of ERROR:
-# "Local branch 'main' not found, using remote ref 'origin/main'"
-```
