@@ -718,3 +718,211 @@ class TestIssueManagerLabelUpdate:
 
             # Verify INFO log was emitted for missing source label
             assert "Source label 'status-06:implementing' not present" in caplog.text
+
+    def test_update_workflow_label_with_validated_issue_number(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Tests that validated_issue_number skips branch linkage validation."""
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
+        # Create mock issue data that get_issue will return
+        mock_issue_data: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": "open",
+            "labels": ["status-06:implementing", "bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/test/test/issues/123",
+            "locked": False,
+        }
+
+        # Setup mocks - importantly, get_linked_branches returns empty list (post-PR state)
+        with (
+            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch.object(IssueManager, "_get_repository", return_value=mock_github),
+            patch(
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                return_value=MOCK_LABELS_CONFIG,
+            ),
+            patch.object(
+                IssueBranchManager, "get_linked_branches", return_value=[]
+            ) as mock_get_linked,
+            patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
+            patch.object(IssueManager, "set_labels") as mock_set_labels,
+        ):
+            # Configure mocks
+            mock_config.return_value = "dummy-token"
+            mock_set_labels.return_value = mock_issue_data
+
+            # Create manager and call update with validated_issue_number
+            manager = IssueManager(project_dir=tmp_path)
+            result = manager.update_workflow_label(
+                "implementing", "code_review", validated_issue_number=123
+            )
+
+            # Assert success
+            assert result is True
+
+            # Assert get_linked_branches was NOT called (skipped branch validation)
+            mock_get_linked.assert_not_called()
+
+            # Verify set_labels was called with correct label set
+            mock_set_labels.assert_called_once()
+            call_args = mock_set_labels.call_args[0]
+            issue_number = call_args[0]
+            labels = call_args[1:]
+
+            assert issue_number == 123
+            assert "status-07:code-review" in labels
+            assert "status-06:implementing" not in labels
+            assert "bug" in labels  # Other labels preserved
+
+    def test_update_workflow_label_validated_issue_number_invalid(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Tests that invalid validated_issue_number (non-existent issue) fails gracefully."""
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
+        # Create empty issue data to simulate issue not found
+        empty_issue_data: IssueData = {
+            "number": 0,
+            "title": "",
+            "body": "",
+            "state": "",
+            "labels": [],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "locked": False,
+        }
+
+        with (
+            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch.object(IssueManager, "_get_repository", return_value=mock_github),
+            patch(
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                return_value=MOCK_LABELS_CONFIG,
+            ),
+            patch.object(IssueManager, "get_issue", return_value=empty_issue_data),
+        ):
+            # Configure mock token
+            mock_config.return_value = "dummy-token"
+
+            # Create manager and call update with invalid validated_issue_number
+            manager = IssueManager(project_dir=tmp_path)
+            result = manager.update_workflow_label(
+                "implementing", "code_review", validated_issue_number=99999
+            )
+
+            # Assert failure
+            assert result is False
+
+    def test_update_workflow_label_race_condition_scenario(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Tests the race condition: linkedBranches empty after PR creation.
+
+        Simulates:
+        1. Branch was linked to issue before PR creation
+        2. PR was created (GitHub removes linkedBranches)
+        3. Caller provides validated_issue_number from earlier validation
+        4. Label update succeeds despite empty linkedBranches
+        """
+        # Initialize tmp_path as a git repository
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+        )
+
+        # Create mock issue data that get_issue will return
+        mock_issue_data: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Test body",
+            "state": "open",
+            "labels": ["status-06:implementing", "bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/test/test/issues/123",
+            "locked": False,
+        }
+
+        with (
+            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch.object(IssueManager, "_get_repository", return_value=mock_github),
+            patch(
+                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                return_value=MOCK_LABELS_CONFIG,
+            ),
+            # Simulate post-PR state: linkedBranches is empty
+            patch.object(IssueBranchManager, "get_linked_branches", return_value=[]),
+            patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
+            patch.object(IssueManager, "set_labels") as mock_set_labels,
+        ):
+            # Configure mocks
+            mock_config.return_value = "dummy-token"
+            mock_set_labels.return_value = mock_issue_data
+
+            # Create manager and call update with validated_issue_number
+            # This simulates the case where validation occurred before PR creation
+            manager = IssueManager(project_dir=tmp_path)
+            result = manager.update_workflow_label(
+                "implementing", "code_review", validated_issue_number=123
+            )
+
+            # Assert success - the race condition is handled
+            assert result is True
+
+            # Verify label was updated correctly
+            mock_set_labels.assert_called_once()
+            call_args = mock_set_labels.call_args[0]
+            issue_number = call_args[0]
+            labels = call_args[1:]
+
+            assert issue_number == 123
+            assert "status-07:code-review" in labels
+            assert "status-06:implementing" not in labels
+            assert "bug" in labels  # Other labels preserved

@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 1: Add `validated_issue_number` Parameter to `update_workflow_label()`
 
-- [ ] Implement Step 1: Add `validated_issue_number` parameter ([step_1.md](./steps/step_1.md))
-- [ ] Run quality checks for Step 1 (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement Step 1: Add `validated_issue_number` parameter ([step_1.md](./steps/step_1.md))
+- [x] Run quality checks for Step 1 (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Add Early Validation to Create-PR Workflow
 
