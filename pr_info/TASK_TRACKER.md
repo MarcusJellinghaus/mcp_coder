@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 2: Add Early Validation to Create-PR Workflow
 
-- [ ] Implement Step 2: Add early validation to create-pr workflow ([step_2.md](./steps/step_2.md))
-- [ ] Run quality checks for Step 2 (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Implement Step 2: Add early validation to create-pr workflow ([step_2.md](./steps/step_2.md))
+- [x] Run quality checks for Step 2 (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 2
 
 ## Pull Request
 

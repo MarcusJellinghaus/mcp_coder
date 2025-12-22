@@ -5,7 +5,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
+from mcp_coder.workflows.create_pr.core import (
+    run_create_pr_workflow,
+    validate_branch_issue_linkage,
+)
 
 
 class TestRunCreatePrWorkflow:
@@ -139,3 +142,174 @@ class TestRunCreatePrWorkflow:
         assert result == 0
         # Verify execution_dir was passed to generate_pr_summary
         mock_generate.assert_called_once_with(tmp_path, "claude", "cli", None, exec_dir)
+
+    @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
+    @patch("mcp_coder.workflows.create_pr.core.IssueManager")
+    def test_workflow_caches_issue_number_before_pr_creation(
+        self,
+        mock_issue_manager_class: MagicMock,
+        mock_commit: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_validate: MagicMock,
+    ) -> None:
+        """Tests that workflow caches issue number before PR creation."""
+        # Setup: Mock validate_branch_issue_linkage to return 123
+        mock_validate.return_value = 123
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Test Title", "Test Body")
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = True
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True  # Clean directory, no commit needed
+
+        # Setup IssueManager mock
+        mock_issue_manager = MagicMock()
+        mock_issue_manager_class.return_value = mock_issue_manager
+        mock_issue_manager.update_workflow_label.return_value = True
+
+        # Call: run_create_pr_workflow(..., update_labels=True)
+        result = run_create_pr_workflow(
+            Path("/test"), "claude", "cli", update_labels=True
+        )
+
+        # Assert: update_workflow_label called with validated_issue_number=123
+        assert result == 0
+        mock_validate.assert_called_once_with(Path("/test"))
+        mock_issue_manager.update_workflow_label.assert_called_once_with(
+            from_label_id="pr_creating",
+            to_label_id="pr_created",
+            validated_issue_number=123,
+        )
+
+    @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
+    @patch("mcp_coder.workflows.create_pr.core.IssueManager")
+    def test_workflow_skips_label_update_when_not_linked(
+        self,
+        mock_issue_manager_class: MagicMock,
+        mock_commit: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_validate: MagicMock,
+    ) -> None:
+        """Tests that workflow skips label update when branch not linked."""
+        # Setup: Mock validate_branch_issue_linkage to return None
+        mock_validate.return_value = None
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Test Title", "Test Body")
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = True
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True  # Clean directory, no commit needed
+
+        # Setup IssueManager mock
+        mock_issue_manager = MagicMock()
+        mock_issue_manager_class.return_value = mock_issue_manager
+
+        # Call: run_create_pr_workflow(..., update_labels=True)
+        result = run_create_pr_workflow(
+            Path("/test"), "claude", "cli", update_labels=True
+        )
+
+        # Assert: update_workflow_label NOT called
+        assert result == 0
+        mock_validate.assert_called_once_with(Path("/test"))
+        mock_issue_manager.update_workflow_label.assert_not_called()
+
+
+class TestValidateBranchIssueLinkage:
+    """Test suite for validate_branch_issue_linkage helper function."""
+
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.IssueBranchManager")
+    def test_validate_branch_issue_linkage_success(
+        self, mock_manager_class: MagicMock, mock_get_branch: MagicMock, tmp_path: Path
+    ) -> None:
+        """Tests successful validation when branch is linked to issue."""
+        # Setup: Mock branch name "123-feature", linked branches ["123-feature"]
+        mock_get_branch.return_value = "123-feature"
+        mock_manager = MagicMock()
+        mock_manager_class.return_value = mock_manager
+        mock_manager.get_linked_branches.return_value = ["123-feature"]
+
+        # Call: validate_branch_issue_linkage(tmp_path)
+        result = validate_branch_issue_linkage(tmp_path)
+
+        # Assert: Returns 123
+        assert result == 123
+        mock_get_branch.assert_called_once_with(tmp_path)
+        mock_manager_class.assert_called_once_with(project_dir=tmp_path)
+        mock_manager.get_linked_branches.assert_called_once_with(123)
+
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.IssueBranchManager")
+    def test_validate_branch_issue_linkage_not_linked(
+        self, mock_manager_class: MagicMock, mock_get_branch: MagicMock, tmp_path: Path
+    ) -> None:
+        """Tests validation fails when branch is not linked."""
+        # Setup: Mock branch name "123-feature", linked branches []
+        mock_get_branch.return_value = "123-feature"
+        mock_manager = MagicMock()
+        mock_manager_class.return_value = mock_manager
+        mock_manager.get_linked_branches.return_value = []
+
+        # Call: validate_branch_issue_linkage(tmp_path)
+        result = validate_branch_issue_linkage(tmp_path)
+
+        # Assert: Returns None
+        assert result is None
+        mock_get_branch.assert_called_once_with(tmp_path)
+        mock_manager_class.assert_called_once_with(project_dir=tmp_path)
+        mock_manager.get_linked_branches.assert_called_once_with(123)
+
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    def test_validate_branch_issue_linkage_no_issue_number(
+        self, mock_get_branch: MagicMock, tmp_path: Path
+    ) -> None:
+        """Tests validation fails when branch name has no issue number."""
+        # Setup: Mock branch name "feature-branch" (no issue number prefix)
+        mock_get_branch.return_value = "feature-branch"
+
+        # Call: validate_branch_issue_linkage(tmp_path)
+        result = validate_branch_issue_linkage(tmp_path)
+
+        # Assert: Returns None
+        assert result is None
+        mock_get_branch.assert_called_once_with(tmp_path)
+
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    def test_validate_branch_issue_linkage_no_branch_name(
+        self, mock_get_branch: MagicMock, tmp_path: Path
+    ) -> None:
+        """Tests validation fails when branch name cannot be determined."""
+        # Setup: Mock branch name return None
+        mock_get_branch.return_value = None
+
+        # Call: validate_branch_issue_linkage(tmp_path)
+        result = validate_branch_issue_linkage(tmp_path)
+
+        # Assert: Returns None
+        assert result is None
+        mock_get_branch.assert_called_once_with(tmp_path)
