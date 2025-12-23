@@ -35,6 +35,18 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run quality checks for Step 2 (pylint, pytest, mypy) and fix all issues
 - [x] Prepare git commit message for Step 2
 
+### Step 3: Extract `extract_issue_number_from_branch()` Utility Function
+
+- [ ] Implement Step 3: Extract shared utility function ([step_3.md](./steps/step_3.md))
+- [ ] Run quality checks for Step 3 (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 3
+
+### Step 4: Add Inline Comment Explaining GitHub Behavior
+
+- [ ] Implement Step 4: Add documentation comment ([step_4.md](./steps/step_4.md))
+- [ ] Run quality checks for Step 4 (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 4
+
 ## Pull Request
 
 - [ ] Review and test complete implementation

@@ -63,8 +63,10 @@ AFTER:
 |------|-------------|-------------|
 | `src/mcp_coder/utils/github_operations/issue_manager.py` | MODIFY | Add `validated_issue_number` parameter to `update_workflow_label()` |
 | `src/mcp_coder/workflows/create_pr/core.py` | MODIFY | Add `validate_branch_issue_linkage()` helper; use it in workflow |
+| `src/mcp_coder/utils/git_operations/branches.py` | MODIFY | Add `extract_issue_number_from_branch()` utility function |
 | `tests/utils/github_operations/test_issue_manager_label_update.py` | MODIFY | Add tests for `validated_issue_number` parameter |
 | `tests/workflows/create_pr/test_workflow.py` | MODIFY | Add tests for early validation in workflow |
+| `tests/utils/git_operations/test_branches.py` | MODIFY | Add tests for new utility function |
 
 ## Acceptance Criteria
 
@@ -75,8 +77,16 @@ AFTER:
 | Label update still fails when branch has no association | Early validation returns `None`, label update skipped with warning |
 | Existing tests pass | `validated_issue_number` is optional, backward compatible |
 | Add test case for race condition scenario | New test simulates empty `linkedBranches` after PR creation |
+| No code duplication | Shared `extract_issue_number_from_branch()` function |
+| Clear documentation | Inline comment explains GitHub behavior |
 
 ## Implementation Steps
 
 - **Step 1**: Add `validated_issue_number` parameter to `update_workflow_label()` with tests
 - **Step 2**: Add `validate_branch_issue_linkage()` helper to workflow with tests; integrate into `run_create_pr_workflow()`
+- **Step 3**: Extract `extract_issue_number_from_branch()` utility function to reduce code duplication (from code review)
+- **Step 4**: Add inline comment explaining GitHub behavior (from code review)
+
+## Code Review Decisions
+
+See [decisions.md](./decisions.md) for detailed discussion and rationale for additional implementation steps.
