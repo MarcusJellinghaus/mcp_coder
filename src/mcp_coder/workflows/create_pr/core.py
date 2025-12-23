@@ -537,7 +537,11 @@ def run_create_pr_workflow(
     log_step("Starting create PR workflow...")
     log_step(f"Using project directory: {project_dir}")
 
-    # NEW: Cache branch-issue linkage before PR creation
+    # Cache branch-issue linkage BEFORE PR creation.
+    # GitHub automatically removes linkedBranches when a PR is created from a branch
+    # (the link transfers to the PR). If we query linkedBranches after PR creation,
+    # it returns empty, causing label updates to fail. By validating early and caching
+    # the issue number, we can still update labels after PR creation succeeds.
     cached_issue_number: Optional[int] = None
     if update_labels:
         cached_issue_number = validate_branch_issue_linkage(project_dir)
