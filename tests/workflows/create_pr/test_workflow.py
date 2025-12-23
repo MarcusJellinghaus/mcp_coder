@@ -151,7 +151,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
-    @patch("mcp_coder.workflows.create_pr.core.IssueManager")
+    @patch("mcp_coder.utils.github_operations.issue_manager.IssueManager")
     def test_workflow_caches_issue_number_before_pr_creation(
         self,
         mock_issue_manager_class: MagicMock,
@@ -201,7 +201,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
-    @patch("mcp_coder.workflows.create_pr.core.IssueManager")
+    @patch("mcp_coder.utils.github_operations.issue_manager.IssueManager")
     def test_workflow_skips_label_update_when_not_linked(
         self,
         mock_issue_manager_class: MagicMock,
