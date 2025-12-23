@@ -5,14 +5,16 @@ GitHub issues through the PyGithub library.
 """
 
 import logging
-import re
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional, TypedDict
 
 from github.GithubException import GithubException
 
-from mcp_coder.utils.git_operations.branches import get_current_branch_name
+from mcp_coder.utils.git_operations.branches import (
+    extract_issue_number_from_branch,
+    get_current_branch_name,
+)
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.label_config import (
     build_label_lookups,
@@ -298,6 +300,7 @@ class IssueManager(BaseGitHubManager):
         from_label_id: str,
         to_label_id: str,
         branch_name: Optional[str] = None,
+        validated_issue_number: Optional[int] = None,
     ) -> bool:
         """Update workflow label after successful workflow completion.
 
@@ -314,6 +317,10 @@ class IssueManager(BaseGitHubManager):
             from_label_id: Internal ID of source label (e.g., "implementing")
             to_label_id: Internal ID of target label (e.g., "code_review")
             branch_name: Optional branch name. If None, detects current branch.
+            validated_issue_number: Optional pre-validated issue number. If provided,
+                skips branch detection and linkage validation. Use this when the
+                branch-issue linkage has been verified earlier in the workflow
+                (e.g., before PR creation when GitHub removes the linkage).
 
         Returns:
             True if label updated successfully, False otherwise
@@ -325,54 +332,60 @@ class IssueManager(BaseGitHubManager):
             ...     print("Label updated")
         """
         try:
-            # Step 1: Get branch name (provided or auto-detect)
-            actual_branch_name: str
-            if branch_name is None:
-                # project_dir can be None if initialized with repo_url
-                if self.project_dir is None:
-                    logger.error(
-                        "Cannot auto-detect branch name without project_dir. "
-                        "Please provide branch_name parameter."
-                    )
-                    return False
-                detected_branch = get_current_branch_name(self.project_dir)
-                if detected_branch is None:
-                    logger.error(
-                        "Failed to detect current branch name. "
-                        "Please provide branch_name parameter."
-                    )
-                    return False
-                actual_branch_name = detected_branch
+            # Check for pre-validated issue number
+            if validated_issue_number is not None:
+                issue_number = validated_issue_number
+                # Skip to step 4 (label config loading)
             else:
-                actual_branch_name = branch_name
+                # Step 1: Get branch name (provided or auto-detect)
+                actual_branch_name: str
+                if branch_name is None:
+                    # project_dir can be None if initialized with repo_url
+                    if self.project_dir is None:
+                        logger.error(
+                            "Cannot auto-detect branch name without project_dir. "
+                            "Please provide branch_name parameter."
+                        )
+                        return False
+                    detected_branch = get_current_branch_name(self.project_dir)
+                    if detected_branch is None:
+                        logger.error(
+                            "Failed to detect current branch name. "
+                            "Please provide branch_name parameter."
+                        )
+                        return False
+                    actual_branch_name = detected_branch
+                else:
+                    actual_branch_name = branch_name
 
-            # Step 2: Extract issue number from branch name using regex
-            match = re.match(r"^(\d+)-", actual_branch_name)
-            if not match:
-                logger.warning(
-                    f"Branch '{actual_branch_name}' does not follow {{issue_number}}-title pattern"
+                # Step 2: Extract issue number from branch name
+                extracted_issue_number = extract_issue_number_from_branch(
+                    actual_branch_name
                 )
-                return False
+                if extracted_issue_number is None:
+                    logger.warning(
+                        f"Branch '{actual_branch_name}' does not follow {{issue_number}}-title pattern"
+                    )
+                    return False
+                issue_number = extracted_issue_number
 
-            issue_number = int(match.group(1))
+                # Step 3: Verify branch is linked to the issue
+                # Construct repo_url from _repo_full_name if available, otherwise use project_dir
+                repo_url = None
+                if self._repo_full_name is not None:
+                    repo_url = f"https://github.com/{self._repo_full_name}.git"
 
-            # Step 3: Verify branch is linked to the issue
-            # Construct repo_url from _repo_full_name if available, otherwise use project_dir
-            repo_url = None
-            if self._repo_full_name is not None:
-                repo_url = f"https://github.com/{self._repo_full_name}.git"
-
-            branch_manager = IssueBranchManager(
-                project_dir=self.project_dir, repo_url=repo_url
-            )
-            linked_branches = branch_manager.get_linked_branches(issue_number)
-
-            if actual_branch_name not in linked_branches:
-                logger.warning(
-                    f"Branch '{actual_branch_name}' is not linked to issue #{issue_number}. "
-                    f"Linked branches: {linked_branches}"
+                branch_manager = IssueBranchManager(
+                    project_dir=self.project_dir, repo_url=repo_url
                 )
-                return False
+                linked_branches = branch_manager.get_linked_branches(issue_number)
+
+                if actual_branch_name not in linked_branches:
+                    logger.warning(
+                        f"Branch '{actual_branch_name}' is not linked to issue #{issue_number}. "
+                        f"Linked branches: {linked_branches}"
+                    )
+                    return False
 
             # Step 4: Load label config and build lookups
             # project_dir is required for label config

@@ -1,6 +1,7 @@
 """Branch operations for git repositories."""
 
 import logging
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -495,3 +496,26 @@ def delete_branch(
     except Exception as e:
         logger.error("Unexpected error deleting branch: %s", e)
         return False
+
+
+def extract_issue_number_from_branch(branch_name: str) -> Optional[int]:
+    """Extract issue number from branch name pattern '{issue_number}-title'.
+
+    Args:
+        branch_name: Branch name to extract issue number from
+
+    Returns:
+        Issue number as integer if found, None otherwise
+
+    Example:
+        >>> extract_issue_number_from_branch("123-feature-name")
+        123
+        >>> extract_issue_number_from_branch("feature-branch")
+        None
+    """
+    if not branch_name:
+        return None
+    match = re.match(r"^(\d+)-", branch_name)
+    if match:
+        return int(match.group(1))
+    return None

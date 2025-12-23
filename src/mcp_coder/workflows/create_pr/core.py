@@ -22,6 +22,8 @@ from mcp_coder.utils import (
     git_push,
     is_working_directory_clean,
 )
+from mcp_coder.utils.git_operations.branches import extract_issue_number_from_branch
+from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
@@ -463,6 +465,49 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
         return False
 
 
+def validate_branch_issue_linkage(project_dir: Path) -> Optional[int]:
+    """Validate current branch is linked to an issue.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        Issue number if branch is linked, None otherwise
+    """
+    try:
+        # 1. Get current branch name
+        branch_name = get_current_branch_name(project_dir)
+        if not branch_name:
+            logger.warning("Could not determine current branch name")
+            return None
+
+        # 2. Extract issue number from branch name
+        issue_number = extract_issue_number_from_branch(branch_name)
+        if issue_number is None:
+            logger.warning(
+                f"Branch name '{branch_name}' does not start with issue number"
+            )
+            return None
+
+        # 3. Query linked branches via GitHub API
+        branch_manager = IssueBranchManager(project_dir=project_dir)
+        linked_branches = branch_manager.get_linked_branches(issue_number)
+
+        # 4. Check if current branch is in linked branches
+        if branch_name in linked_branches:
+            logger.info(f"Branch '{branch_name}' is linked to issue #{issue_number}")
+            return issue_number
+        else:
+            logger.warning(
+                f"Branch '{branch_name}' is not linked to issue #{issue_number}"
+            )
+            return None
+
+    except Exception as e:
+        logger.error(f"Error validating branch-issue linkage: {e}")
+        return None
+
+
 def log_step(message: str) -> None:
     """Log step with structured logging instead of print."""
     logger.info(message)
@@ -491,6 +536,21 @@ def run_create_pr_workflow(
     """
     log_step("Starting create PR workflow...")
     log_step(f"Using project directory: {project_dir}")
+
+    # Cache branch-issue linkage BEFORE PR creation.
+    # GitHub automatically removes linkedBranches when a PR is created from a branch
+    # (the link transfers to the PR). If we query linkedBranches after PR creation,
+    # it returns empty, causing label updates to fail. By validating early and caching
+    # the issue number, we can still update labels after PR creation succeeds.
+    cached_issue_number: Optional[int] = None
+    if update_labels:
+        cached_issue_number = validate_branch_issue_linkage(project_dir)
+        if cached_issue_number:
+            log_step(f"Branch linked to issue #{cached_issue_number}")
+        else:
+            logger.warning(
+                "Branch not linked to any issue, label update will be skipped"
+            )
 
     # Step 1: Check prerequisites
     log_step("Step 1/4: Checking prerequisites...")
@@ -561,23 +621,27 @@ def run_create_pr_workflow(
 
     # Update GitHub issue label if requested
     if update_labels:
-        log_step("Updating GitHub issue label...")
-        try:
-            from mcp_coder.utils.github_operations.issue_manager import IssueManager
+        if cached_issue_number is None:
+            logger.warning("Skipping label update: branch was not linked to an issue")
+        else:
+            log_step("Updating GitHub issue label...")
+            try:
+                from mcp_coder.utils.github_operations.issue_manager import IssueManager
 
-            issue_manager = IssueManager(project_dir)
-            success = issue_manager.update_workflow_label(
-                from_label_id="pr_creating",
-                to_label_id="pr_created",
-            )
+                issue_manager = IssueManager(project_dir)
+                success = issue_manager.update_workflow_label(
+                    from_label_id="pr_creating",
+                    to_label_id="pr_created",
+                    validated_issue_number=cached_issue_number,  # Use cached value
+                )
 
-            if success:
-                log_step("✓ Issue label updated: pr-creating → pr-created")
-            else:
-                logger.warning("✗ Failed to update issue label (non-blocking)")
+                if success:
+                    log_step("✓ Issue label updated: pr-creating → pr-created")
+                else:
+                    logger.warning("✗ Failed to update issue label (non-blocking)")
 
-        except Exception as e:
-            logger.error(f"Error updating issue label (non-blocking): {e}")
+            except Exception as e:
+                logger.error(f"Error updating issue label (non-blocking): {e}")
 
     log_step("Create PR workflow completed successfully!")
     return 0
