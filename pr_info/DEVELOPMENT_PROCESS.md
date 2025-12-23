@@ -755,6 +755,8 @@ flowchart TD
   
   Please also update the task tracker ('pr_info/TASK_TRACKER.md').
   ```
+  
+  - Adjust the status to `status:plan-ready`
   </details>
 - **Fundamental Problems:** Return to `status:plan-review` or `status:created` for complete redesign
 
