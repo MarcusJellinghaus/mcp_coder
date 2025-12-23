@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 3: Extract `extract_issue_number_from_branch()` Utility Function
 
-- [ ] Implement Step 3: Extract shared utility function ([step_3.md](./steps/step_3.md))
-- [ ] Run quality checks for Step 3 (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Implement Step 3: Extract shared utility function ([step_3.md](./steps/step_3.md))
+- [x] Run quality checks for Step 3 (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Add Inline Comment Explaining GitHub Behavior
 

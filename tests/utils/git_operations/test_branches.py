@@ -9,6 +9,7 @@ from mcp_coder.utils.git_operations import (
     branch_exists,
     checkout_branch,
     create_branch,
+    extract_issue_number_from_branch,
     get_current_branch_name,
     get_default_branch_name,
     get_parent_branch_name,
@@ -106,3 +107,29 @@ class TestBranchOperations:
         # Verify we're on the branch and it exists locally
         assert get_current_branch_name(project_dir) == "remote-test-branch"
         assert branch_exists(project_dir, "remote-test-branch") is True
+
+
+class TestExtractIssueNumberFromBranch:
+    """Tests for extract_issue_number_from_branch utility function."""
+
+    def test_extract_issue_number_from_branch_valid(self) -> None:
+        """Tests extraction from valid branch names."""
+        assert extract_issue_number_from_branch("123-feature-name") == 123
+        assert extract_issue_number_from_branch("1-fix") == 1
+        assert extract_issue_number_from_branch("999-long-branch-name-here") == 999
+
+    def test_extract_issue_number_from_branch_invalid(self) -> None:
+        """Tests extraction from invalid branch names returns None."""
+        assert extract_issue_number_from_branch("feature-branch") is None
+        assert extract_issue_number_from_branch("main") is None
+        assert (
+            extract_issue_number_from_branch("feature-123-name") is None
+        )  # Number not at start
+
+    def test_extract_issue_number_from_branch_edge_cases(self) -> None:
+        """Tests edge cases for issue number extraction."""
+        assert extract_issue_number_from_branch("") is None
+        assert extract_issue_number_from_branch("123") is None  # No hyphen after number
+        assert (
+            extract_issue_number_from_branch("-feature") is None
+        )  # No number before hyphen

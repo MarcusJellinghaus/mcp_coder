@@ -5,14 +5,16 @@ GitHub issues through the PyGithub library.
 """
 
 import logging
-import re
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional, TypedDict
 
 from github.GithubException import GithubException
 
-from mcp_coder.utils.git_operations.branches import get_current_branch_name
+from mcp_coder.utils.git_operations.branches import (
+    extract_issue_number_from_branch,
+    get_current_branch_name,
+)
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.label_config import (
     build_label_lookups,
@@ -356,15 +358,16 @@ class IssueManager(BaseGitHubManager):
                 else:
                     actual_branch_name = branch_name
 
-                # Step 2: Extract issue number from branch name using regex
-                match = re.match(r"^(\d+)-", actual_branch_name)
-                if not match:
+                # Step 2: Extract issue number from branch name
+                extracted_issue_number = extract_issue_number_from_branch(
+                    actual_branch_name
+                )
+                if extracted_issue_number is None:
                     logger.warning(
                         f"Branch '{actual_branch_name}' does not follow {{issue_number}}-title pattern"
                     )
                     return False
-
-                issue_number = int(match.group(1))
+                issue_number = extracted_issue_number
 
                 # Step 3: Verify branch is linked to the issue
                 # Construct repo_url from _repo_full_name if available, otherwise use project_dir

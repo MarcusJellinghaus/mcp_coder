@@ -7,7 +7,6 @@ PR creation workflow.
 """
 
 import logging
-import re
 import shutil
 from pathlib import Path
 from typing import Optional, Tuple
@@ -23,6 +22,7 @@ from mcp_coder.utils import (
     git_push,
     is_working_directory_clean,
 )
+from mcp_coder.utils.git_operations.branches import extract_issue_number_from_branch
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
@@ -481,14 +481,13 @@ def validate_branch_issue_linkage(project_dir: Path) -> Optional[int]:
             logger.warning("Could not determine current branch name")
             return None
 
-        # 2. Extract issue number from branch name using regex
-        match = re.match(r"^(\d+)-", branch_name)
-        if not match:
+        # 2. Extract issue number from branch name
+        issue_number = extract_issue_number_from_branch(branch_name)
+        if issue_number is None:
             logger.warning(
                 f"Branch name '{branch_name}' does not start with issue number"
             )
             return None
-        issue_number = int(match.group(1))
 
         # 3. Query linked branches via GitHub API
         branch_manager = IssueBranchManager(project_dir=project_dir)
