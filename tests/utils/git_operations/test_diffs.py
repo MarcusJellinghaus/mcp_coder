@@ -6,6 +6,7 @@ import pytest
 from git import Repo
 
 from mcp_coder.utils.git_operations import (
+    branch_exists,
     checkout_branch,
     commit_all_changes,
     create_branch,
@@ -80,3 +81,35 @@ class TestDiffOperations:
 
         assert diff != ""
         assert "feature.py" in diff
+
+    def test_get_branch_diff_falls_back_to_remote(
+        self, git_repo_with_remote: tuple[Repo, Path, Path]
+    ) -> None:
+        """Test get_branch_diff falls back to remote ref when local branch missing."""
+        repo, project_dir, _ = git_repo_with_remote
+
+        # Get initial branch name (main)
+        initial_branch = get_current_branch_name(project_dir)
+        assert initial_branch is not None
+
+        # Push main to remote
+        repo.git.push("-u", "origin", initial_branch)
+
+        # Create feature branch with changes
+        create_branch("feature-branch", project_dir)
+        feature_file = project_dir / "feature.py"
+        feature_file.write_text("# Feature file")
+        commit_all_changes("Add feature file", project_dir)
+
+        # Delete local main branch (simulating CI environment)
+        repo.git.branch("-D", initial_branch)
+
+        # Verify local main doesn't exist
+        assert branch_exists(project_dir, initial_branch) is False
+
+        # get_branch_diff should still work using origin/main
+        diff = get_branch_diff(project_dir, initial_branch)
+
+        assert diff != ""
+        assert "feature.py" in diff
+        assert "# Feature file" in diff
