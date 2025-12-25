@@ -70,7 +70,7 @@ class TestCriticalPathIntegration:
         # Skip API test if SDK is not working in this environment
         # if not claude_sdk_working():
         #     pytest.skip("Claude Code SDK not working in this environment")
-        # 
+        #
         # api_result = ask_llm(
         #     "Yes or no: Is 2+2=4?",
         #     provider="claude",
@@ -116,10 +116,10 @@ class TestCriticalPathIntegration:
     #     # Skip API test if SDK is not working in this environment
     #     if not claude_sdk_working():
     #         pytest.skip("Claude Code SDK not working in this environment")
-    #         
+    #
     #     # Prepare environment variables for MCP servers
     #     env_vars = prepare_llm_environment(Path.cwd())
-    # 
+    #
     #     # Use prompt_llm to test full response structure with API method
     #     result1 = prompt_llm(
     #         "Remember this: giraffe", method="api", timeout=60, env_vars=env_vars
@@ -128,7 +128,7 @@ class TestCriticalPathIntegration:
     #     assert result1["session_id"] is not None
     #     assert "text" in result1
     #     session_id = result1["session_id"]
-    # 
+    #
     #     # Test session continuity with API method
     #     result2 = prompt_llm(
     #         "What animal did I tell you to remember?",
@@ -185,7 +185,7 @@ class TestEnvironmentVariablePropagation:
         # Skip API test if SDK is not working in this environment
         # if not claude_sdk_working():
         #     pytest.skip("Claude Code SDK not working in this environment")
-        #     
+        #
         # result_api = ask_llm(
         #     "Say hello",
         #     provider="claude",
