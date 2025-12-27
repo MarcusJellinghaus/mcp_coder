@@ -289,6 +289,10 @@ mcp-coder implement --project-dir /path/to/project
 
 ## 8. Cross-cutting Concepts
 
+### CI Pipeline
+- **Matrix-based execution**: Each check (black, isort, pylint, tests, mypy) runs as independent job with individual pass/fail status
+- **Parallel execution**: All checks run simultaneously with `fail-fast: false`
+
 ### Testing Strategy & Markers
 **Legend**: 🏷️ = pytest integration marker, ❌ = missing test coverage
 
