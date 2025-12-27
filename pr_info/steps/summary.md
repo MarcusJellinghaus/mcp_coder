@@ -30,7 +30,7 @@ strategy:
     check: [black, isort, pylint, unit-tests, integration-tests, mypy]
 ```
 
-Each check becomes a matrix job with distinct name in GitHub UI.
+Each check becomes a matrix job with distinct name in GitHub UI (e.g., "test (black)", "test (isort)").
 
 ## Architectural Changes
 
@@ -38,16 +38,16 @@ Each check becomes a matrix job with distinct name in GitHub UI.
 - Manual "Summarize results" step and aggregation logic
 - `continue-on-error: true` from all check steps
 - Individual step IDs and outcome checking
+- `needs: [check-forbidden-folders]` dependency (checks run in parallel)
 
 ### Modified Components
 - `.github/workflows/ci.yml`: Convert from steps to matrix jobs
 - Job naming: Matrix entries appear as separate jobs in GitHub UI
 
 ### Preserved Components
-- `check-forbidden-folders` job (unchanged, PR-only)
+- `check-forbidden-folders` job (unchanged, PR-only, runs independently)
 - Python 3.11 setup and dependency installation
 - All existing check commands and parameters
-- JUnit XML artifact generation for tests
 
 ## Requirements Compliance
 
@@ -60,6 +60,7 @@ Each check becomes a matrix job with distinct name in GitHub UI.
 
 ### Core Changes
 - `.github/workflows/ci.yml`: Complete restructure to matrix approach
+- `docs/architecture/ARCHITECTURE.md`: Minimal update (~2-3 lines) in Cross-cutting Concepts
 
 ### No New Files Required
 - No new modules, classes, or test files needed
@@ -70,7 +71,10 @@ Each check becomes a matrix job with distinct name in GitHub UI.
 - Job names change from single "test" to matrix names: "black", "isort", etc.
 - External tools can query: `GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs`
 
-## Implementation Complexity
-**Minimal**: Single file modification with matrix configuration
-**Risk**: Low - preserves all existing functionality, only changes execution structure
-**Testing**: Verify matrix jobs run independently and show correct status
+## Implementation
+
+**Single step**: Implement matrix configuration and update documentation.
+**Verification**: Done during PR review (observe GitHub Actions UI).
+**Risk**: Low - preserves all existing functionality, only changes execution structure.
+
+See `decisions.md` for detailed decisions made during plan review.

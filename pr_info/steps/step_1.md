@@ -1,94 +1,87 @@
-# Step 1: Test Current CI Behavior and Create Test for New Matrix Structure
+# Step 1: Implement Matrix-Based CI Workflow
 
 ## LLM Prompt
 ```
 Reference: pr_info/steps/summary.md - CI Pipeline Restructure
 
-Implement Step 1: Test current CI behavior and create validation tests for the new matrix structure approach. The goal is to understand the current CI flow and establish tests that verify the matrix approach will work correctly.
+Implement Step 1: Convert the existing single-job CI workflow to a matrix-based approach and update documentation.
 
 Follow the requirements in this step document precisely.
 ```
 
 ## Objective
-Create test infrastructure to validate current CI behavior and establish verification for the matrix-based approach.
+Replace the current CI structure with a matrix-based approach that shows individual job status per check.
 
-## WHERE
-- `tests/ci/test_github_actions_matrix.py` (new test file)
-- `.github/workflows/` (analysis target)
+## Files to Modify
 
-## WHAT
+### 1. `.github/workflows/ci.yml`
 
-### Main Functions
-```python
-def test_current_ci_structure_analysis():
-    """Analyze current CI workflow structure and document behavior"""
+#### Remove
+- All `continue-on-error: true` declarations
+- All step `id:` attributes for checks (black, isort, pylint, etc.)
+- The entire "Summarize results" step
+- `needs: [check-forbidden-folders]` from test job
+- `if: always()` from test job
 
-def test_matrix_job_simulation():
-    """Simulate matrix job behavior locally to validate approach"""
-    
-def test_matrix_job_naming():
-    """Verify matrix job names will be correct in GitHub UI"""
-
-def validate_continue_on_error_removal():
-    """Confirm removing continue-on-error achieves proper failure status"""
+#### Convert test job to matrix structure
+```yaml
+test:
+  runs-on: ubuntu-latest
+  strategy:
+    fail-fast: false
+    matrix:
+      check:
+        - {name: "black", cmd: "black --check src tests"}
+        - {name: "isort", cmd: "isort --check --profile=black --float-to-top src tests"}
+        - {name: "pylint", cmd: "pylint -E ./src ./tests"}
+        - {name: "unit-tests", cmd: "pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration' --junitxml=unit-tests.xml"}
+        - {name: "integration-tests", cmd: "pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
+        - {name: "mypy", cmd: "mypy --strict src tests"}
+  name: ${{ matrix.check.name }}
+  steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .
+        python -m pip install .[dev]
+    - name: Run ${{ matrix.check.name }}
+      run: ${{ matrix.check.cmd }}
 ```
 
-## HOW
-
-### Integration Points
-- **pytest markers**: Use `@pytest.mark.ci_integration` for CI-specific tests
-- **YAML parsing**: Import `yaml` for workflow file analysis
-- **subprocess**: Simulate command execution for matrix validation
-
-### Imports
-```python
-import yaml
-import subprocess
-import pytest
-from pathlib import Path
+#### Add inline comment
+```yaml
+# Matrix approach: Each check runs as independent job with individual pass/fail status
+# fail-fast: false ensures all checks complete even if one fails
 ```
 
-## ALGORITHM
+#### Preserve unchanged
+- `check-forbidden-folders` job (no changes)
+- Trigger configuration (on push/pull_request/workflow_dispatch)
 
-### Core Logic (test_matrix_job_simulation)
+### 2. `docs/architecture/ARCHITECTURE.md`
+
+Add brief note (~2-3 lines) in Cross-cutting Concepts section:
+
+```markdown
+### CI Pipeline
+- **Matrix-based execution**: Each check (black, isort, pylint, tests, mypy) runs as independent job with individual pass/fail status
+- **Parallel execution**: All checks run simultaneously with `fail-fast: false`
 ```
-1. Load current CI workflow YAML structure
-2. Extract check commands from existing steps
-3. Simulate matrix job execution locally
-4. Verify each command can run independently
-5. Confirm failure propagation works correctly
-6. Assert matrix approach maintains functionality
-```
-
-## DATA
-
-### Return Values
-```python
-# Current CI analysis result
-CurrentCIStructure = {
-    'job_count': int,
-    'check_steps': List[str],
-    'has_continue_on_error': bool,
-    'has_summarize_step': bool
-}
-
-# Matrix simulation result  
-MatrixSimulation = {
-    'matrix_jobs': List[str],
-    'execution_success': bool,
-    'failure_propagation': bool,
-    'job_independence': bool
-}
-```
-
-## Implementation Notes
-- **TDD Approach**: Write tests first to validate current behavior
-- **Minimal Risk**: Test infrastructure doesn't modify actual CI
-- **Validation**: Ensure matrix approach maintains all existing functionality
-- **Documentation**: Capture current CI behavior for comparison
 
 ## Success Criteria
-- Tests pass and document current CI structure
-- Matrix simulation validates independent job execution
-- Failure propagation behavior confirmed
-- Foundation established for Step 2 implementation
+- Matrix jobs appear as "test (black)", "test (isort)", etc. in GitHub Actions UI
+- Individual job failures show red status (not green)
+- All checks continue running despite individual failures
+- "Summarize results" step removed
+- `check-forbidden-folders` runs independently (no dependency)
+
+## Verification
+Done during PR review:
+1. Push to feature branch
+2. Observe GitHub Actions UI shows 6 separate jobs
+3. Confirm each job has independent pass/fail status
