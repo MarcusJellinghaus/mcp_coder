@@ -18,6 +18,7 @@ Follow existing patterns from other GitHub operations managers.
 ```
 tests/utils/github_operations/test_ci_results_manager.py    # Add test cases
 src/mcp_coder/utils/github_operations/ci_results_manager.py # Add implementation
+pyproject.toml                                              # Add requests dependency
 ```
 
 ## WHAT: Main Function
@@ -43,6 +44,15 @@ def get_failed_job_logs(self, run_id: int) -> Dict[str, str]:
 
 ## HOW: Integration Points
 
+### Dependencies
+Add to `pyproject.toml`:
+```toml
+dependencies = [
+    # ... existing deps
+    "requests>=2.28.0",
+]
+```
+
 ### PyGithub API Calls
 ```python
 # Get specific workflow run
@@ -53,19 +63,29 @@ workflow_run = repo.get_workflow_run(run_id)
 jobs = workflow_run.jobs()
 failed_jobs = [job for job in jobs if job.conclusion in ['failure', 'error']]
 
-# Get logs for each failed job
-for job in failed_jobs:
-    log_url = job.logs_url()
-    # Download log content via HTTP request
+# Get logs URL (returns ZIP file)
+logs_url = workflow_run.logs_url
 ```
 
-### HTTP Requests for Log Download
+### HTTP Requests for Log Download (ZIP)
 ```python
 import requests
+import zipfile
+import io
 
-# Download logs using the logs_url
-response = requests.get(log_url, headers={'Authorization': f'token {self.github_token}'})
-log_content = response.text
+# Download logs using Bearer token authentication
+headers = {
+    "Authorization": f"Bearer {self.github_token}",
+    "Accept": "application/vnd.github.v3+json"
+}
+response = requests.get(logs_url, headers=headers, allow_redirects=True)
+
+# Response is a ZIP file - extract contents
+zip_buffer = io.BytesIO(response.content)
+with zipfile.ZipFile(zip_buffer, 'r') as zip_file:
+    # Extract log files from ZIP
+    for file_name in zip_file.namelist():
+        log_content = zip_file.read(file_name).decode('utf-8')
 ```
 
 ## ALGORITHM: Core Logic
@@ -83,11 +103,11 @@ def get_failed_job_logs(self, run_id: int) -> Dict[str, str]:
 
 ### Log Download Logic
 ```python
-def _download_job_logs(self, job) -> str:
-    # 1. Get logs_url from job object
-    # 2. Make authenticated HTTP request 
-    # 3. Return log content as string
-    # 4. Handle HTTP errors gracefully (return empty string)
+def _download_logs(self, logs_url: str) -> Dict[str, str]:
+    # 1. Make authenticated HTTP request with Bearer token
+    # 2. Handle ZIP response - extract all log files
+    # 3. Return {filename: content} dictionary
+    # 4. Handle HTTP/ZIP errors gracefully (return empty dict)
 ```
 
 ## DATA: Test Cases and Expected Returns
@@ -174,4 +194,4 @@ ignored_conclusions = ['success', 'cancelled', 'skipped', 'neutral']
 - [ ] Handles HTTP errors gracefully during log download  
 - [ ] Returns proper dictionary mapping job names to log contents
 - [ ] Edge cases handled (no failed jobs, invalid run ID)
-- [ ] All tests pass
+- [ ] All tests pass (use @pytest.fixture pattern)

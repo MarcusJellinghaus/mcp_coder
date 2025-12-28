@@ -30,15 +30,13 @@ src/mcp_coder/utils/github_operations/ci_results_manager.py          # Final cod
 from .ci_results_manager import (
     CIResultsManager,
     CIStatusData,
-    CIFailureData,
 )
 
 # Add to __all__ list
 __all__ = [
     # ... existing exports
     "CIResultsManager",
-    "CIStatusData", 
-    "CIFailureData",
+    "CIStatusData",
 ]
 ```
 
@@ -76,7 +74,6 @@ def ci_manager(
 from mcp_coder.utils.github_operations import (
     CIResultsManager,
     CIStatusData,
-    CIFailureData,
 )
 ```
 
@@ -126,9 +123,9 @@ class TestCIResultsManagerSmoke:
             logs = ci_manager.get_failed_job_logs(run_id)
             assert isinstance(logs, dict)
             
-            # Test artifact parsing (may be empty if no artifacts)
-            failures = ci_manager.get_junit_failures(run_id)
-            assert isinstance(failures, list)
+            # Test artifact retrieval (may be empty if no artifacts)
+            artifacts = ci_manager.get_artifacts(run_id)
+            assert isinstance(artifacts, dict)
             
         print(f"[OK] CI analysis workflow tested successfully")
 ```
@@ -140,13 +137,11 @@ def test_module_exports():
     from mcp_coder.utils.github_operations import (
         CIResultsManager,
         CIStatusData,
-        CIFailureData,
     )
     
-    # Verify classes exist and can be instantiated
+    # Verify classes exist
     assert CIResultsManager is not None
     assert CIStatusData is not None
-    assert CIFailureData is not None
 ```
 
 ### Requirements Validation Checklist
@@ -158,8 +153,9 @@ def test_module_exports():
 #     -> jobs array in CIStatusData response
 # ✅ 3. Retrieve console logs for failed jobs
 #     -> get_failed_job_logs(run_id) method
-# ✅ 4. Download and parse artifacts (JUnit XML) for detailed failure information
-#     -> get_junit_failures(run_id) method
+# ✅ 4. Download artifacts for detailed failure information
+#     -> get_artifacts(run_id, name_filter) method
+#     Note: Parsing (e.g., JUnit XML) is left to consumer
 
 # Integration Requirements Check:
 # ✅ Extends BaseGitHubManager
@@ -189,5 +185,5 @@ pytest tests/utils/github_operations/test_ci_results_manager.py -v
 pytest tests/utils/github_operations/test_github_integration_smoke.py::TestCIResultsManagerSmoke -v -m github_integration
 
 # Verify imports work
-python -c "from mcp_coder.utils.github_operations import CIResultsManager, CIStatusData, CIFailureData; print('✅ Imports successful')"
+python -c "from mcp_coder.utils.github_operations import CIResultsManager, CIStatusData; print('✅ Imports successful')"
 ```

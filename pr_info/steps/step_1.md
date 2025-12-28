@@ -25,13 +25,11 @@ src/mcp_coder/utils/github_operations/ci_results_manager.py # Create (implementa
 ### Data Structures
 ```python
 class CIStatusData(TypedDict):
-    run: Dict[str, Any]        # {id, status, conclusion, branch, commit_sha, created_at, url}
+    run: Dict[str, Any]        # {id, status, conclusion, workflow_name, event, workflow_path, branch, commit_sha, created_at, url}
     jobs: List[Dict[str, Any]] # [{id, name, status, conclusion, started_at, completed_at}]
-
-class CIFailureData(TypedDict):
-    job_logs: Dict[str, str]           # {job_name: log_content}  
-    test_failures: List[Dict[str, Any]] # [{test_name, failure_message, file, line}]
 ```
+
+> **Note**: Field names are illustrative - verify against actual PyGithub objects during implementation.
 
 ### Manager Class Foundation
 ```python
@@ -47,6 +45,7 @@ class CIResultsManager(BaseGitHubManager):
 ```python
 from .base_manager import BaseGitHubManager, _handle_github_errors
 from mcp_coder.utils.log_utils import log_function_call
+from mcp_coder.utils.git_operations.branches import validate_branch_name
 from typing import Dict, List, Optional, TypedDict, Any
 ```
 
@@ -59,10 +58,9 @@ from typing import Dict, List, Optional, TypedDict, Any
 ### Validation Methods
 ```python
 def _validate_branch_name(self, branch: str) -> bool:
-    # 1. Check if branch is non-empty string
-    # 2. Check if branch contains valid characters
-    # 3. Log error if invalid
-    # 4. Return boolean result
+    # 1. Use validate_branch_name() from git_operations.branches
+    # 2. Log error if invalid
+    # 3. Return boolean result
 ```
 
 ### Manager Initialization
@@ -87,11 +85,11 @@ class TestCIResultsManagerFoundation:
 
 ### Validation Test Cases
 ```python
-# Branch validation
+# Branch validation (delegates to validate_branch_name from git_operations)
 assert manager._validate_branch_name("feature/xyz") == True
 assert manager._validate_branch_name("main") == True  
 assert manager._validate_branch_name("") == False
-assert manager._validate_branch_name(None) == False
+assert manager._validate_branch_name("branch~1") == False  # Invalid char
 
 # Run ID validation
 assert manager._validate_run_id(12345) == True
@@ -100,9 +98,9 @@ assert manager._validate_run_id(-1) == False
 ```
 
 ## Success Criteria
-- [ ] TypedDict classes defined and importable
+- [ ] CIStatusData TypedDict defined and importable
 - [ ] CIResultsManager extends BaseGitHubManager correctly
-- [ ] Validation methods work as expected
-- [ ] All tests pass
+- [ ] Validation methods work as expected (using validate_branch_name from Step 0)
+- [ ] All tests pass (use @pytest.fixture pattern)
 - [ ] Code follows existing manager patterns
 - [ ] Proper error handling and logging setup

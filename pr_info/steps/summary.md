@@ -16,7 +16,9 @@ Instead of granular CRUD operations, provide **3 focused methods** that match re
 
 1. **Status Check**: "What's the latest CI status for this branch?"
 2. **Failure Analysis**: "What failed and what are the logs?"
-3. **Test Analysis**: "What specific tests failed and why?"
+3. **Artifact Retrieval**: "What artifacts are available from this run?"
+
+> **Note**: This module retrieves raw data only. Parsing of logs or artifacts (e.g., JUnit XML) is left to the consumer.
 
 ### New Components
 
@@ -29,20 +31,17 @@ Instead of granular CRUD operations, provide **3 focused methods** that match re
 ```python
 # Combined status information
 class CIStatusData(TypedDict):
-    run: dict          # Basic run info (id, status, conclusion, etc.)
+    run: dict          # Run info (id, status, conclusion, workflow_name, event, etc.)
     jobs: List[dict]   # All jobs with status/conclusion
-
-# Failure analysis results  
-class CIFailureData(TypedDict):
-    job_logs: Dict[str, str]           # {job_name: log_content}
-    test_failures: List[dict]          # Parsed JUnit failures
 ```
+
+> **Note**: Field names are illustrative - verify against actual PyGithub objects during implementation.
 
 #### 3. Public API Methods
 ```python
 def get_latest_ci_status(self, branch: str) -> CIStatusData
 def get_failed_job_logs(self, run_id: int) -> Dict[str, str] 
-def get_junit_failures(self, run_id: int) -> List[dict]
+def get_artifacts(self, run_id: int, name_filter: Optional[str] = None) -> Dict[str, str]
 ```
 
 ### Integration Points
@@ -50,8 +49,11 @@ def get_junit_failures(self, run_id: int) -> List[dict]
 #### PyGithub API Usage
 - `repo.get_workflow_runs(branch="...")` - Get runs for specific branch
 - `workflow_run.jobs()` - Get jobs for a run
-- `job.logs_url()` - Get log download URL
-- `workflow_run.get_artifacts()` - Get artifacts for parsing
+- `workflow_run.logs_url` - Get log download URL (returns ZIP, requires `requests` + `zipfile`)
+- `workflow_run.get_artifacts()` - Get artifacts for download
+
+#### Additional Dependencies
+- `requests` - Required for downloading logs/artifacts (PyGithub doesn't provide direct download)
 
 #### Error Handling & Logging
 - Use `@_handle_github_errors` decorator (consistent with existing managers)
@@ -60,7 +62,7 @@ def get_junit_failures(self, run_id: int) -> List[dict]
 
 #### Module Exports
 - Update `src/mcp_coder/utils/github_operations/__init__.py`
-- Export: `CIResultsManager`, `CIStatusData`, `CIFailureData`
+- Export: `CIResultsManager`, `CIStatusData`
 
 ## Files to Create/Modify
 
@@ -68,6 +70,7 @@ def get_junit_failures(self, run_id: int) -> List[dict]
 ```
 src/mcp_coder/utils/github_operations/ci_results_manager.py
 tests/utils/github_operations/test_ci_results_manager.py  
+pr_info/steps/step_0.md
 pr_info/steps/step_1.md
 pr_info/steps/step_2.md  
 pr_info/steps/step_3.md
@@ -77,8 +80,10 @@ pr_info/steps/step_5.md
 
 ### Modified Files
 ```
-src/mcp_coder/utils/github_operations/__init__.py         # Add exports
+src/mcp_coder/utils/git_operations/branches.py           # Extract validate_branch_name()
+src/mcp_coder/utils/github_operations/__init__.py        # Add exports
 tests/utils/github_operations/test_github_integration_smoke.py  # Add smoke tests
+pyproject.toml                                            # Add requests dependency
 ```
 
 ## Benefits of This Design
@@ -98,10 +103,11 @@ Each step follows TDD pattern:
 3. **Refactor**: Clean up while keeping tests green
 
 ### Step Breakdown
+0. **Step 0**: Refactor branch validation into reusable function
 1. **Step 1**: Core data structures and basic manager setup
 2. **Step 2**: CI status retrieval (`get_latest_ci_status`)
 3. **Step 3**: Job log retrieval (`get_failed_job_logs`) 
-4. **Step 4**: JUnit artifact parsing (`get_junit_failures`)
+4. **Step 4**: Artifact retrieval (`get_artifacts`)
 5. **Step 5**: Integration and smoke tests
 
 ### Validation & Error Handling

@@ -72,18 +72,21 @@ def get_latest_ci_status(self, branch: str) -> CIStatusData:
 
 ### Data Transformation
 ```python
-# Transform run data
+# Transform run data (field names illustrative - verify against PyGithub objects)
 run_data = {
     "id": run.id,
     "status": run.status,
     "conclusion": run.conclusion,
+    "workflow_name": run.name,         # Workflow name (e.g., "CI")
+    "event": run.event,                 # Trigger (e.g., "push", "pull_request")
+    "workflow_path": run.path,          # e.g., ".github/workflows/ci.yml"
     "branch": branch,
     "commit_sha": run.head_sha,
     "created_at": run.created_at.isoformat() if run.created_at else None,
     "url": run.html_url
 }
 
-# Transform job data  
+# Transform job data (field names illustrative - verify against PyGithub objects)
 jobs_data = [{
     "id": job.id,
     "name": job.name,
@@ -108,12 +111,15 @@ class TestGetLatestCIStatus:
 
 ### Expected Return Structure
 ```python
-# Successful case
+# Successful case (field names illustrative)
 {
     "run": {
         "id": 123456789,
         "status": "completed", 
         "conclusion": "failure",
+        "workflow_name": "CI",
+        "event": "push",
+        "workflow_path": ".github/workflows/ci.yml",
         "branch": "feature/xyz",
         "commit_sha": "abc123...",
         "created_at": "2024-01-15T10:30:00Z",
@@ -168,4 +174,4 @@ mock_repo.get_workflow_runs.return_value = [mock_run]
 - [ ] Handles edge cases (no runs, no jobs)
 - [ ] Proper error handling with decorators
 - [ ] Returns structured CIStatusData format
-- [ ] All tests pass
+- [ ] All tests pass (use @pytest.fixture pattern)
