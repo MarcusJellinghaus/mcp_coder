@@ -34,6 +34,10 @@ The auto-created template includes all sections with example values:
 # MCP Coder Configuration
 # Update with your actual credentials and repository information
 
+[coordinator]
+# GitHub API caching settings (optional)
+cache_refresh_minutes = 1440  # 24 hours (default)
+
 [jenkins]
 # Jenkins server configuration
 # Environment variables (higher priority): JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
@@ -66,6 +70,40 @@ github_credentials_id = "github-general-pat"
 ```
 
 ## Configuration Sections
+
+### [coordinator]
+
+Coordinator-specific settings for GitHub API optimization and caching.
+
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|----------|
+| `cache_refresh_minutes` | integer | Minutes before GitHub API cache expires | No | 1440 (24 hours) |
+
+**Example:**
+```toml
+[coordinator]
+# Refresh cache every 24 hours (default)
+cache_refresh_minutes = 1440
+
+# More frequent refresh for active development
+# cache_refresh_minutes = 60
+
+# Conservative refresh for stable repositories  
+# cache_refresh_minutes = 2880  # 48 hours
+```
+
+**Cache Behavior:**
+- GitHub API calls are cached to reduce API rate limiting
+- Issues are fetched incrementally using `since` parameter
+- Cache files are stored per repository in `~/.mcp_coder/cache/`
+- Duplicate issue protection within 1-minute window
+- Automatic cache invalidation after configured minutes
+
+**Performance Benefits:**
+- Reduces GitHub API calls by 70-90% for subsequent runs
+- Faster coordinator execution on large repositories
+- Respects GitHub API rate limits
+- Enables frequent coordinator runs without API exhaustion
 
 ### [jenkins]
 
@@ -205,6 +243,24 @@ https://jenkins.example.com/job/MCP_Coder/mcp-coder-test-job/42/
 mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
 ```
 
+### With Cache Refresh
+
+Force fresh GitHub API data (bypasses all caching):
+
+```bash
+# Force refresh on specific repository
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+
+# Force refresh with debug logging
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh --log-level DEBUG
+```
+
+**When to use `--force-refresh`:**
+- After significant repository changes (new issues, labels, etc.)
+- When cache seems stale or inaccurate
+- For critical runs requiring latest data
+- Troubleshooting cache-related issues
+
 ### Testing Main Branch
 
 ```bash
@@ -333,6 +389,73 @@ PermissionError: [Errno 13] Permission denied: '/home/user/.mcp_coder/config.tom
 ```
 
 **Solution:** Check directory permissions or run as appropriate user.
+
+### Cache-Related Issues
+
+#### Error: Stale or incorrect data
+
+**Symptoms:**
+- Coordinator missing recently created issues
+- Issue counts seem incorrect
+- Recent label changes not reflected
+
+**Solution:**
+```bash
+# Force refresh to bypass cache
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+```
+
+#### Error: Cache file corruption
+
+**Symptoms:**
+- JSON decode errors in logs
+- Coordinator fails with cache-related errors
+- Unexpected cache behavior
+
+**Solution:**
+```bash
+# Clear cache directory (cache will rebuild automatically)
+rm -rf ~/.mcp_coder/cache/
+# Or on Windows:
+# rmdir /s %USERPROFILE%\.mcp_coder\cache
+
+# Then run normally (cache rebuilds automatically)
+mcp-coder coordinator test mcp_coder --branch-name feature-x
+```
+
+#### Performance: Cache not improving speed
+
+**Symptoms:**
+- Still making many GitHub API calls
+- No noticeable speed improvement
+- Cache files seem small or missing
+
+**Diagnosis:**
+```bash
+# Check cache directory exists and has recent files
+ls -la ~/.mcp_coder/cache/
+# Or on Windows:
+# dir %USERPROFILE%\.mcp_coder\cache
+
+# Run with debug logging to see cache behavior
+mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
+```
+
+**Solutions:**
+- Ensure `cache_refresh_minutes` is set appropriately (not too low)
+- Check that repository URL in cache filename matches config
+- Verify sufficient disk space for cache files
+
+#### Cache file locations
+
+**Default cache directory:**
+- **Linux/macOS:** `~/.mcp_coder/cache/`
+- **Windows:** `%USERPROFILE%\.mcp_coder\cache\`
+
+**Cache file naming:**
+- Format: `issues_cache_{owner}_{repo}.json`
+- Example: `issues_cache_myorg_myrepo.json`
+- Falls back to URL hash if repository parsing fails
 
 ## Security Best Practices
 

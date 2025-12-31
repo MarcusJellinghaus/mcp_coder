@@ -221,6 +221,10 @@ mcp-coder coordinator test <repo_name> --branch-name <branch>
 - `<repo_name>` - Repository identifier from config (e.g., `mcp_coder`)
 - `--branch-name` - Git branch to test (required)
 - `--log-level` - Logging verbosity (optional, default: INFO)
+- `--force-refresh` - Bypass GitHub API cache and fetch fresh data (optional)
+
+**Caching:**
+The coordinator includes GitHub API caching to reduce API calls and improve performance. Cache is automatically managed but can be bypassed using `--force-refresh` when fresh data is needed.
 
 **Example:**
 ```bash
