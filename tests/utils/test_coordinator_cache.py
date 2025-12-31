@@ -637,6 +637,7 @@ class TestGetCachedEligibleIssues:
         # Cache checked 30 minutes ago (within 24-hour window)
         cache_time = datetime.now().astimezone() - timedelta(minutes=30)
         mock_issue_manager.list_issues.return_value = [sample_issue]
+        mock_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
@@ -672,6 +673,7 @@ class TestGetCachedEligibleIssues:
         # Cache checked 25 hours ago (beyond 24-hour window)
         old_cache_time = datetime.now().astimezone() - timedelta(hours=25)
         mock_issue_manager.list_issues.return_value = [sample_issue]
+        mock_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
@@ -711,6 +713,7 @@ class TestGetCachedEligibleIssues:
         """Test duplicate protection skips recent checks."""
         # Cache checked 30 seconds ago (within 1-minute window)
         recent_time = datetime.now().astimezone() - timedelta(seconds=30)
+        mock_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(

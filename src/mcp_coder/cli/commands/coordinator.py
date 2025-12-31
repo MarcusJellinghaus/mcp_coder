@@ -640,14 +640,14 @@ def get_cached_eligible_issues(
             logger.info(f"Skipping {repo_name} - checked {age_seconds}s ago")
             return []
 
-        # Step 2: Determine refresh strategy
+        # Step 3: Determine refresh strategy
         is_full_refresh = (
             force_refresh
             or not last_checked
             or (now - last_checked) > timedelta(minutes=cache_refresh_minutes)
         )
 
-        # Step 3: Fetch issues using appropriate method
+        # Step 4: Fetch issues using appropriate method
         if is_full_refresh:
             refresh_type = "force" if force_refresh else "full"
             logger.debug(f"Full refresh for {repo_name} (type={refresh_type})")
@@ -674,7 +674,7 @@ def get_cached_eligible_issues(
             logger.debug(
                 f"Incremental refresh for {repo_name} since {last_checked} (age={cache_age_minutes}m)"
             )
-            # Use the extended list_issues method with since parameter from Step 1
+            # Use the extended list_issues method with since parameter
             fresh_issues = issue_manager.list_issues(
                 state="open", include_pull_requests=False, since=last_checked
             )
@@ -685,7 +685,7 @@ def get_cached_eligible_issues(
                 issue_count=len(fresh_issues),
             )
 
-        # Step 4: Merge fresh issues with cached issues
+        # Step 5: Merge fresh issues with cached issues
         # Convert to dict for easier merging
         fresh_issues_dict = {str(issue["number"]): issue for issue in fresh_issues}
 
@@ -693,14 +693,14 @@ def get_cached_eligible_issues(
         cache_data["issues"].update(fresh_issues_dict)
         cache_data["last_checked"] = now.isoformat()
 
-        # Step 5: Save updated cache
+        # Step 6: Save updated cache
         save_success = _save_cache_file(cache_file_path, cache_data)
         if save_success:
             _log_cache_metrics(
                 "save", repo_name, total_issues=len(cache_data["issues"])
             )
 
-        # Step 6: Filter cached issues for eligibility
+        # Step 7: Filter cached issues for eligibility
         all_cached_issues = list(cache_data["issues"].values())
         eligible_issues = _filter_eligible_issues(all_cached_issues)
 
