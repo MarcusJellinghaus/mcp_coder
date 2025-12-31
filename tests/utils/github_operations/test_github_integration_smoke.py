@@ -23,7 +23,11 @@ from typing import TYPE_CHECKING, Generator
 
 import pytest
 
-from mcp_coder.utils.github_operations import LabelsManager, PullRequestManager
+from mcp_coder.utils.github_operations import (
+    CIResultsManager,
+    LabelsManager,
+    PullRequestManager,
+)
 
 if TYPE_CHECKING:
     from tests.conftest import GitHubTestSetup
@@ -55,6 +59,20 @@ def pr_manager(
         yield manager
     except Exception as e:
         pytest.skip(f"Failed to create PullRequestManager: {e}")
+
+
+@pytest.fixture
+def ci_manager(
+    github_test_setup: "GitHubTestSetup",
+) -> Generator[CIResultsManager, None, None]:
+    """Create CIResultsManager instance for testing."""
+    from tests.conftest import create_github_manager
+
+    try:
+        manager = create_github_manager(CIResultsManager, github_test_setup)
+        yield manager
+    except Exception as e:
+        pytest.skip(f"Failed to create CIResultsManager: {e}")
 
 
 @pytest.mark.github_integration
@@ -226,3 +244,55 @@ class TestLabelsManagerSmoke:
                     labels_manager.delete_label(created_label["name"])
                 except Exception:
                     pass  # Ignore cleanup failures
+
+
+@pytest.mark.github_integration
+class TestCIResultsManagerSmoke:
+    """Smoke test for CIResultsManager GitHub API integration."""
+
+    def test_basic_api_connectivity(
+        self, ci_manager: CIResultsManager, project_dir: Path
+    ) -> None:
+        """Verify basic GitHub Actions API connectivity."""
+        # Get default branch dynamically (Decision 21)
+        from mcp_coder.utils.git_operations.branches import get_default_branch_name
+
+        default_branch = get_default_branch_name(project_dir) or "main"
+
+        # Test CI status retrieval works
+        status = ci_manager.get_latest_ci_status(default_branch)
+        assert isinstance(status, dict)
+        assert "run" in status
+        assert "jobs" in status
+
+        print(f"[OK] CI status retrieved for branch '{default_branch}'")
+
+    def test_ci_analysis_workflow(
+        self, ci_manager: CIResultsManager, project_dir: Path
+    ) -> None:
+        """Verify complete CI analysis workflow."""
+        # Get default branch dynamically (Decision 21)
+        from mcp_coder.utils.git_operations.branches import get_default_branch_name
+
+        default_branch = get_default_branch_name(project_dir) or "main"
+
+        # Get CI status
+        status = ci_manager.get_latest_ci_status(default_branch)
+
+        if status["run"]:  # If there are CI runs
+            run_id = status["run"]["id"]
+
+            # Test log retrieval (returns all logs - Decision 15)
+            logs = ci_manager.get_run_logs(run_id)
+            assert isinstance(logs, dict)
+            # Logs are {filename: content} - consumer filters by job name
+
+            # Test artifact retrieval (may be empty if no artifacts)
+            artifacts = ci_manager.get_artifacts(run_id)
+            assert isinstance(artifacts, dict)
+
+            print(f"[OK] CI analysis workflow tested for run {run_id}")
+        else:
+            print("[INFO] No CI runs found for testing workflow")
+
+        print(f"[OK] CI analysis workflow tested successfully")
