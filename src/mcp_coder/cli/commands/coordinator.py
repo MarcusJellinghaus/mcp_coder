@@ -412,6 +412,13 @@ def _parse_repo_identifier(repo_url: str, repo_name: str) -> tuple[str, str | No
     """
     import re
 
+    # Ensure repo_url is a string (handle Mock objects in tests)
+    if not isinstance(repo_url, str):
+        logger.warning(
+            f"Using fallback cache naming for {repo_name}: repo_url is not a string (got {type(repo_url)})"
+        )
+        return (repo_name, None)
+
     # Pattern for HTTPS URLs: https://github.com/owner/repo(.git)?
     https_pattern = r"https://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$"
     https_match = re.match(https_pattern, repo_url)
@@ -596,6 +603,9 @@ def get_cached_eligible_issues(
     try:
         # Step 1: Parse repository URL for robust cache naming
         repo_url = getattr(issue_manager, "repo_url", repo_full_name)
+        # Handle Mock objects in tests - if repo_url is not a string, use repo_full_name
+        if not isinstance(repo_url, str):
+            repo_url = repo_full_name
         repo_name, owner = _parse_repo_identifier(repo_url, repo_full_name)
 
         # Step 2: Check duplicate protection (1-minute window) with enhanced cache path
@@ -638,7 +648,9 @@ def get_cached_eligible_issues(
                 reason=f"duplicate_protection_{age_seconds}s",
             )
             logger.info(f"Skipping {repo_name} - checked {age_seconds}s ago")
-            return []
+            # Return cached eligible issues instead of empty list
+            all_cached_issues = list(cache_data["issues"].values())
+            return _filter_eligible_issues(all_cached_issues)
 
         # Step 3: Determine refresh strategy
         is_full_refresh = (
@@ -693,12 +705,16 @@ def get_cached_eligible_issues(
         cache_data["issues"].update(fresh_issues_dict)
         cache_data["last_checked"] = now.isoformat()
 
-        # Step 6: Save updated cache
-        save_success = _save_cache_file(cache_file_path, cache_data)
-        if save_success:
-            _log_cache_metrics(
-                "save", repo_name, total_issues=len(cache_data["issues"])
-            )
+        # Only save cache if we actually fetched new data
+        should_save_cache = len(fresh_issues) > 0 or is_full_refresh
+
+        # Step 6: Save updated cache (only if we have new data or force refresh)
+        if should_save_cache:
+            save_success = _save_cache_file(cache_file_path, cache_data)
+            if save_success:
+                _log_cache_metrics(
+                    "save", repo_name, total_issues=len(cache_data["issues"])
+                )
 
         # Step 7: Filter cached issues for eligibility
         all_cached_issues = list(cache_data["issues"].values())
@@ -723,6 +739,8 @@ def get_cached_eligible_issues(
         # Use repo_name from parsing if available, otherwise fall back to repo_full_name
         try:
             repo_url = getattr(issue_manager, "repo_url", repo_full_name)
+            if not isinstance(repo_url, str):
+                repo_url = repo_full_name
             repo_name, _ = _parse_repo_identifier(repo_url, repo_full_name)
         except Exception:
             repo_name = repo_full_name
