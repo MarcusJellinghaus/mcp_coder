@@ -92,3 +92,89 @@ class CIResultsManager(BaseGitHubManager):
             logger.error(f"Invalid run ID: {run_id}. Must be a positive integer.")
             return False
         return True
+
+    @log_function_call
+    @_handle_github_errors(default_return=CIStatusData(run={}, jobs=[]))
+    def get_latest_ci_status(self, branch: str) -> CIStatusData:
+        """Get latest CI run status and job results for a branch.
+
+        Args:
+            branch: Branch name (required, e.g., 'feature/xyz', 'main')
+
+        Returns:
+            CIStatusData with run info and all job statuses
+
+        Raises:
+            ValueError: For invalid branch names
+            GithubException: For authentication or permission errors
+        """
+        # Validate branch parameter
+        if not branch or not branch.strip():
+            raise ValueError("Invalid branch name: branch name cannot be empty")
+
+        if not self._validate_branch_name(branch.strip()):
+            raise ValueError(f"Invalid branch name: '{branch}'")
+
+        branch = branch.strip()
+
+        # Get repository
+        repo = self._get_repository()
+        if not repo:
+            logger.error("Could not access GitHub repository")
+            return CIStatusData(run={}, jobs=[])
+
+        # Get workflow runs for the branch
+        try:
+            # Get all workflow runs and filter by branch
+            all_runs = repo.get_workflow_runs()
+            runs_list = [run for run in all_runs if run.head_branch == branch]
+
+            if not runs_list:
+                logger.info(f"No workflow runs found for branch: {branch}")
+                return CIStatusData(run={}, jobs=[])
+
+            # Get the latest run (first in the list)
+            latest_run = runs_list[0]
+
+            # Get all jobs for the latest run
+            jobs = list(latest_run.jobs())
+
+            # Transform run data
+            run_data = {
+                "id": latest_run.id,
+                "status": latest_run.status,
+                "conclusion": latest_run.conclusion,
+                "workflow_name": latest_run.name,
+                "event": latest_run.event,
+                "workflow_path": latest_run.path,
+                "branch": branch,
+                "commit_sha": latest_run.head_sha,
+                "created_at": (
+                    latest_run.created_at.isoformat() if latest_run.created_at else None
+                ),
+                "url": latest_run.html_url,
+            }
+
+            # Transform job data
+            jobs_data = []
+            for job in jobs:
+                job_data = {
+                    "id": job.id,
+                    "name": job.name,
+                    "status": job.status,
+                    "conclusion": job.conclusion,
+                    "started_at": (
+                        job.started_at.isoformat() if job.started_at else None
+                    ),
+                    "completed_at": (
+                        job.completed_at.isoformat() if job.completed_at else None
+                    ),
+                }
+                jobs_data.append(job_data)
+
+            return CIStatusData(run=run_data, jobs=jobs_data)
+
+        except Exception as e:
+            logger.error(f"Error retrieving CI status for branch {branch}: {e}")
+            # Re-raise to let the decorator handle it
+            raise
