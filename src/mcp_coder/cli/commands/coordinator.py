@@ -832,6 +832,32 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
         raise ValueError(error_msg)
 
 
+def get_cache_refresh_minutes() -> int:
+    """Get cache refresh threshold from config with default fallback.
+
+    Returns:
+        Cache refresh threshold in minutes (default: 1440 = 24 hours)
+    """
+    value = get_config_value("coordinator", "cache_refresh_minutes")
+
+    if value is None:
+        return 1440  # Default: 24 hours
+
+    try:
+        result = int(value)
+        if result <= 0:
+            logger.warning(
+                f"Invalid cache_refresh_minutes value '{value}' (must be positive), using default 1440"
+            )
+            return 1440
+        return result
+    except (ValueError, TypeError):
+        logger.warning(
+            f"Invalid cache_refresh_minutes value '{value}' (must be integer), using default 1440"
+        )
+        return 1440
+
+
 def get_jenkins_credentials() -> tuple[str, str, str]:
     """Get Jenkins credentials from environment or config file.
 
@@ -1058,16 +1084,38 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             issue_manager = IssueManager(repo_url=validated_config["repo_url"])
             branch_manager = IssueBranchManager(repo_url=validated_config["repo_url"])
 
-            # Step 4c: Get eligible issues
-            eligible_issues = get_eligible_issues(issue_manager)
+            # Step 4c: Get eligible issues using cache
+            # Extract repo_full_name from repo_url (e.g., https://github.com/owner/repo -> owner/repo)
+            repo_url = validated_config["repo_url"]
+            if repo_url.startswith("https://github.com/"):
+                repo_full_name = repo_url[len("https://github.com/") :]
+                if repo_full_name.endswith(".git"):
+                    repo_full_name = repo_full_name[:-4]
+            else:
+                # Fallback: use repo_name if URL format is unexpected
+                repo_full_name = repo_name
+
+            try:
+                eligible_issues = get_cached_eligible_issues(
+                    repo_full_name=repo_full_name,
+                    issue_manager=issue_manager,
+                    force_refresh=args.force_refresh,
+                    cache_refresh_minutes=get_cache_refresh_minutes(),
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Cache failed for {repo_full_name}: {e}, using direct fetch"
+                )
+                eligible_issues = get_eligible_issues(issue_manager)
+
             logger.info(f"Found {len(eligible_issues)} eligible issues")
 
-            # Step 4d: If no issues, continue to next repo
+            # Skip if no eligible issues or duplicate protection triggered
             if not eligible_issues:
                 logger.info(f"No eligible issues for {repo_name}")
                 continue
 
-            # Step 4e: Dispatch workflows for each eligible issue (fail-fast)
+            # Step 4d: Dispatch workflows for each eligible issue (fail-fast)
             for issue in eligible_issues:
                 # Find current bot_pickup label to determine workflow
                 current_label = None

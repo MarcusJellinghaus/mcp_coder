@@ -4724,3 +4724,315 @@ class TestDispatchWorkflowWindowsTemplates:
         assert "VENV_BASE_DIR" in command or "cmd" in command.lower()
         # Verify it's NOT the Linux template
         assert "source .venv/bin/activate" not in command
+
+
+class TestCoordinatorRunForceRefreshIntegration:
+    """Integration tests for --force-refresh flag in coordinator run command."""
+
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.get_cache_refresh_minutes")
+    def test_coordinator_run_force_refresh_flag(
+        self,
+        mock_get_cache_refresh_minutes: Mock,
+        mock_get_cached_eligible_issues: Mock,
+        mock_branch_manager_class: Mock,
+        mock_issue_manager_class: Mock,
+        mock_jenkins_client_class: Mock,
+        mock_get_jenkins_credentials: Mock,
+        mock_create_default_config: Mock,
+        mock_load_repo_config: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that --force-refresh flag is passed correctly to get_cached_eligible_issues."""
+        # Setup mocks
+        mock_create_default_config.return_value = False
+        mock_get_jenkins_credentials.return_value = ("http://jenkins", "user", "token")
+        mock_get_cache_refresh_minutes.return_value = 1440
+        mock_get_cached_eligible_issues.return_value = []
+        mock_load_repo_config.return_value = {
+            "repo_url": "https://github.com/test/repo",
+            "executor_job_path": "test/job",
+            "github_credentials_id": "creds",
+            "executor_os": "linux",
+        }
+
+        args = argparse.Namespace(
+            repo="test_repo", all=False, force_refresh=True, log_level="INFO"
+        )
+
+        with patch(
+            "mcp_coder.cli.commands.coordinator.load_repo_config", mock_load_repo_config
+        ):
+            with patch("mcp_coder.cli.commands.coordinator.validate_repo_config"):
+                result = execute_coordinator_run(args)
+
+        assert result == 0
+
+        # Verify get_cached_eligible_issues was called with force_refresh=True
+        mock_get_cached_eligible_issues.assert_called_once_with(
+            repo_full_name="test/repo",
+            issue_manager=mock_issue_manager_class.return_value,
+            force_refresh=True,  # This should be True due to args.force_refresh=True
+            cache_refresh_minutes=1440,
+        )
+
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.get_cache_refresh_minutes")
+    def test_coordinator_run_cache_config_default(
+        self,
+        mock_get_cache_refresh_minutes: Mock,
+        mock_get_cached_eligible_issues: Mock,
+        mock_branch_manager_class: Mock,
+        mock_issue_manager_class: Mock,
+        mock_jenkins_client_class: Mock,
+        mock_get_jenkins_credentials: Mock,
+        mock_create_default_config: Mock,
+        mock_load_repo_config: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test coordinator run uses default cache refresh minutes when not configured."""
+        # Setup mocks
+        mock_create_default_config.return_value = False
+        mock_get_jenkins_credentials.return_value = ("http://jenkins", "user", "token")
+        mock_get_cache_refresh_minutes.return_value = 1440  # Default value
+        mock_get_cached_eligible_issues.return_value = []
+        mock_load_repo_config.return_value = {
+            "repo_url": "https://github.com/test/repo",
+            "executor_job_path": "test/job",
+            "github_credentials_id": "creds",
+            "executor_os": "linux",
+        }
+
+        args = argparse.Namespace(
+            repo="test_repo", all=False, force_refresh=False, log_level="INFO"
+        )
+
+        with patch(
+            "mcp_coder.cli.commands.coordinator.load_repo_config", mock_load_repo_config
+        ):
+            with patch("mcp_coder.cli.commands.coordinator.validate_repo_config"):
+                result = execute_coordinator_run(args)
+
+        assert result == 0
+
+        # Verify get_cache_refresh_minutes was called and default was used
+        mock_get_cache_refresh_minutes.assert_called_once()
+        mock_get_cached_eligible_issues.assert_called_once_with(
+            repo_full_name="test/repo",
+            issue_manager=mock_issue_manager_class.return_value,
+            force_refresh=False,
+            cache_refresh_minutes=1440,  # Default value
+        )
+
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.get_cache_refresh_minutes")
+    def test_coordinator_run_cache_config_custom(
+        self,
+        mock_get_cache_refresh_minutes: Mock,
+        mock_get_cached_eligible_issues: Mock,
+        mock_branch_manager_class: Mock,
+        mock_issue_manager_class: Mock,
+        mock_jenkins_client_class: Mock,
+        mock_get_jenkins_credentials: Mock,
+        mock_create_default_config: Mock,
+        mock_load_repo_config: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test coordinator run uses custom cache refresh minutes from config."""
+        # Setup mocks
+        mock_create_default_config.return_value = False
+        mock_get_jenkins_credentials.return_value = ("http://jenkins", "user", "token")
+        mock_get_cache_refresh_minutes.return_value = 720  # Custom value (12 hours)
+        mock_get_cached_eligible_issues.return_value = []
+        mock_load_repo_config.return_value = {
+            "repo_url": "https://github.com/test/repo",
+            "executor_job_path": "test/job",
+            "github_credentials_id": "creds",
+            "executor_os": "linux",
+        }
+
+        args = argparse.Namespace(
+            repo="test_repo", all=False, force_refresh=False, log_level="INFO"
+        )
+
+        with patch(
+            "mcp_coder.cli.commands.coordinator.load_repo_config", mock_load_repo_config
+        ):
+            with patch("mcp_coder.cli.commands.coordinator.validate_repo_config"):
+                result = execute_coordinator_run(args)
+
+        assert result == 0
+
+        # Verify custom cache refresh minutes were used
+        mock_get_cache_refresh_minutes.assert_called_once()
+        mock_get_cached_eligible_issues.assert_called_once_with(
+            repo_full_name="test/repo",
+            issue_manager=mock_issue_manager_class.return_value,
+            force_refresh=False,
+            cache_refresh_minutes=720,  # Custom value
+        )
+
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.get_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.get_cache_refresh_minutes")
+    def test_coordinator_run_cache_fallback(
+        self,
+        mock_get_cache_refresh_minutes: Mock,
+        mock_get_eligible_issues: Mock,
+        mock_get_cached_eligible_issues: Mock,
+        mock_branch_manager_class: Mock,
+        mock_issue_manager_class: Mock,
+        mock_jenkins_client_class: Mock,
+        mock_get_jenkins_credentials: Mock,
+        mock_create_default_config: Mock,
+        mock_load_repo_config: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test coordinator run falls back to direct fetch when cache fails."""
+        # Setup mocks
+        mock_create_default_config.return_value = False
+        mock_get_jenkins_credentials.return_value = ("http://jenkins", "user", "token")
+        mock_get_cache_refresh_minutes.return_value = 1440
+
+        # Make cache function raise an exception
+        mock_get_cached_eligible_issues.side_effect = Exception("Cache error")
+        mock_get_eligible_issues.return_value = []  # Fallback returns empty list
+
+        mock_load_repo_config.return_value = {
+            "repo_url": "https://github.com/test/repo",
+            "executor_job_path": "test/job",
+            "github_credentials_id": "creds",
+            "executor_os": "linux",
+        }
+
+        args = argparse.Namespace(
+            repo="test_repo", all=False, force_refresh=False, log_level="INFO"
+        )
+
+        with patch(
+            "mcp_coder.cli.commands.coordinator.load_repo_config", mock_load_repo_config
+        ):
+            with patch("mcp_coder.cli.commands.coordinator.validate_repo_config"):
+                result = execute_coordinator_run(args)
+
+        assert result == 0
+
+        # Verify cache function was attempted
+        mock_get_cached_eligible_issues.assert_called_once()
+
+        # Verify fallback to direct fetch was used
+        mock_get_eligible_issues.assert_called_once_with(
+            mock_issue_manager_class.return_value
+        )
+
+        # Check that warning was logged
+        captured = capsys.readouterr()
+        # Note: logging output might not appear in capsys, so we just verify the functions were called
+
+
+class TestGetCacheRefreshMinutesConfig:
+    """Tests for get_cache_refresh_minutes configuration function."""
+
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_default(
+        self, mock_get_config_value: Mock
+    ) -> None:
+        """Test default cache refresh minutes when config is None."""
+        mock_get_config_value.return_value = None
+
+        result = get_cache_refresh_minutes()
+
+        assert result == 1440  # Default 24 hours
+        mock_get_config_value.assert_called_once_with(
+            "coordinator", "cache_refresh_minutes"
+        )
+
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_valid_config(
+        self, mock_get_config_value: Mock
+    ) -> None:
+        """Test valid cache refresh minutes from config."""
+        mock_get_config_value.return_value = "720"
+
+        result = get_cache_refresh_minutes()
+
+        assert result == 720  # 12 hours
+        mock_get_config_value.assert_called_once_with(
+            "coordinator", "cache_refresh_minutes"
+        )
+
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_invalid_negative(
+        self, mock_get_config_value: Mock
+    ) -> None:
+        """Test invalid negative value falls back to default."""
+        mock_get_config_value.return_value = "-60"
+
+        result = get_cache_refresh_minutes()
+
+        assert result == 1440  # Falls back to default
+        mock_get_config_value.assert_called_once_with(
+            "coordinator", "cache_refresh_minutes"
+        )
+
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_invalid_zero(
+        self, mock_get_config_value: Mock
+    ) -> None:
+        """Test invalid zero value falls back to default."""
+        mock_get_config_value.return_value = "0"
+
+        result = get_cache_refresh_minutes()
+
+        assert result == 1440  # Falls back to default
+        mock_get_config_value.assert_called_once_with(
+            "coordinator", "cache_refresh_minutes"
+        )
+
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_invalid_string(
+        self, mock_get_config_value: Mock
+    ) -> None:
+        """Test invalid non-integer string falls back to default."""
+        mock_get_config_value.return_value = "not_a_number"
+
+        result = get_cache_refresh_minutes()
+
+        assert result == 1440  # Falls back to default
+        mock_get_config_value.assert_called_once_with(
+            "coordinator", "cache_refresh_minutes"
+        )
+
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_integer_input(
+        self, mock_get_config_value: Mock
+    ) -> None:
+        """Test integer value from config (not string)."""
+        mock_get_config_value.return_value = 480  # Already an integer
+
+        result = get_cache_refresh_minutes()
+
+        assert result == 480  # 8 hours
+        mock_get_config_value.assert_called_once_with(
+            "coordinator", "cache_refresh_minutes"
+        )

@@ -346,6 +346,12 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="Process single repository (e.g., mcp_coder)",
     )
 
+    run_parser.add_argument(
+        "--force-refresh",
+        action="store_true",
+        help="Force full cache refresh, bypass all caching",
+    )
+
     return parser
 
 
