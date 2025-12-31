@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict
 
-import requests
+import requests  # type: ignore
 
 from mcp_coder.utils.git_operations.branches import validate_branch_name
 from mcp_coder.utils.log_utils import log_function_call
@@ -190,7 +190,8 @@ class CIResultsManager(BaseGitHubManager):
             url: URL to download ZIP from
 
         Returns:
-            Dictionary mapping filenames to their contents as strings
+            Dictionary mapping filenames to their contents as strings.
+            Binary files are skipped with a log warning (Decision 19).
         """
         try:
             # Make authenticated HTTP request
@@ -209,8 +210,15 @@ class CIResultsManager(BaseGitHubManager):
             with zipfile.ZipFile(zip_buffer, "r") as zip_file:
                 for file_name in zip_file.namelist():
                     try:
-                        log_content = zip_file.read(file_name).decode("utf-8")
-                        extracted_files[file_name] = log_content
+                        # Try to decode as UTF-8 text
+                        file_content = zip_file.read(file_name).decode("utf-8")
+                        extracted_files[file_name] = file_content
+                    except UnicodeDecodeError:
+                        # Skip binary files with log warning (Decision 19)
+                        logger.warning(
+                            f"Skipping binary file '{file_name}' - only text files are supported"
+                        )
+                        continue
                     except Exception as e:
                         logger.warning(f"Failed to extract file {file_name}: {e}")
                         continue
@@ -259,5 +267,88 @@ class CIResultsManager(BaseGitHubManager):
 
         except Exception as e:
             logger.error(f"Error retrieving logs for run ID {run_id}: {e}")
+            # Re-raise to let the decorator handle it
+            raise
+
+    @log_function_call
+    @_handle_github_errors(default_return={})
+    def get_artifacts(
+        self, run_id: int, name_filter: Optional[str] = None
+    ) -> Dict[str, str]:
+        """Download and return artifact contents from a workflow run.
+
+        Args:
+            run_id: Workflow run ID to get artifacts from
+            name_filter: Optional filter - only return artifacts containing this string
+                         in their name (case-insensitive). If None, returns all artifacts.
+
+        Returns:
+            Dictionary mapping artifact file names to their contents as strings.
+            Binary files are skipped with a log warning (Decision 19).
+            Artifacts are ZIP files - contents are extracted and returned.
+            Example: {"test-results.xml": "<xml content...>", "coverage.json": "{...}"}
+
+            Note: No size limit - consumer should use name_filter for large runs (Decision 18).
+
+        Raises:
+            ValueError: For invalid run IDs
+            GithubException: For authentication or permission errors
+        """
+        # Validate run_id parameter
+        if not self._validate_run_id(run_id):
+            raise ValueError(
+                f"Invalid workflow run ID: {run_id}. Must be a positive integer."
+            )
+
+        try:
+            # Get repository and workflow run
+            repo = self._get_repository()
+            if not repo:
+                logger.error("Could not access GitHub repository")
+                return {}
+
+            workflow_run = repo.get_workflow_run(run_id)
+
+            # Get artifacts from the workflow run
+            artifacts = list(workflow_run.get_artifacts())
+
+            # Apply name filter if provided (case-insensitive)
+            if name_filter:
+                filtered_artifacts = [
+                    artifact
+                    for artifact in artifacts
+                    if name_filter.lower() in artifact.name.lower()
+                ]
+                artifacts = filtered_artifacts
+
+            if not artifacts:
+                logger.info(
+                    f"No artifacts found for run ID {run_id}"
+                    + (f" with filter '{name_filter}'" if name_filter else "")
+                )
+                return {}
+
+            # Download and extract each artifact
+            all_artifact_contents = {}
+
+            for artifact in artifacts:
+                try:
+                    # Download and extract artifact ZIP
+                    artifact_contents = self._download_and_extract_zip(
+                        artifact.archive_download_url
+                    )
+
+                    # Merge contents from this artifact
+                    all_artifact_contents.update(artifact_contents)
+
+                except Exception as e:
+                    logger.error(f"Failed to download artifact '{artifact.name}': {e}")
+                    # Continue with other artifacts
+                    continue
+
+            return all_artifact_contents
+
+        except Exception as e:
+            logger.error(f"Error retrieving artifacts for run ID {run_id}: {e}")
             # Re-raise to let the decorator handle it
             raise

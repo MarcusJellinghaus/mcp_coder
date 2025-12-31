@@ -27,5 +27,5 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] [Step 1: Core Data Structures and Manager Foundation](steps/step_1.md)
 - [x] [Step 2: CI Status Retrieval](steps/step_2.md)
 - [x] [Step 3: Failed Job Logs Retrieval](steps/step_3.md)
-- [ ] [Step 4: Artifact Retrieval](steps/step_4.md)
+- [x] [Step 4: Artifact Retrieval](steps/step_4.md)
 - [ ] [Step 5: Module Integration and Smoke Tests](steps/step_5.md)
