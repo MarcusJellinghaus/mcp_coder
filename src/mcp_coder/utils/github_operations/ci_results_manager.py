@@ -4,9 +4,13 @@ This module provides data structures and the CIResultsManager class for managing
 GitHub CI pipeline results through the PyGithub library.
 """
 
+import io
 import logging
+import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict
+
+import requests
 
 from mcp_coder.utils.git_operations.branches import validate_branch_name
 from mcp_coder.utils.log_utils import log_function_call
@@ -176,5 +180,84 @@ class CIResultsManager(BaseGitHubManager):
 
         except Exception as e:
             logger.error(f"Error retrieving CI status for branch {branch}: {e}")
+            # Re-raise to let the decorator handle it
+            raise
+
+    def _download_and_extract_zip(self, url: str) -> Dict[str, str]:
+        """Download ZIP from URL and extract contents.
+
+        Args:
+            url: URL to download ZIP from
+
+        Returns:
+            Dictionary mapping filenames to their contents as strings
+        """
+        try:
+            # Make authenticated HTTP request
+            headers = {
+                "Authorization": f"Bearer {self.github_token}",
+                "Accept": "application/vnd.github.v3+json",
+            }
+
+            response = requests.get(url, headers=headers, allow_redirects=True)
+            response.raise_for_status()
+
+            # Extract ZIP contents
+            zip_buffer = io.BytesIO(response.content)
+            extracted_files = {}
+
+            with zipfile.ZipFile(zip_buffer, "r") as zip_file:
+                for file_name in zip_file.namelist():
+                    try:
+                        log_content = zip_file.read(file_name).decode("utf-8")
+                        extracted_files[file_name] = log_content
+                    except Exception as e:
+                        logger.warning(f"Failed to extract file {file_name}: {e}")
+                        continue
+
+            return extracted_files
+
+        except Exception as e:
+            logger.error(f"Failed to download and extract ZIP from {url}: {e}")
+            return {}
+
+    @log_function_call
+    @_handle_github_errors(default_return={})
+    def get_run_logs(self, run_id: int) -> Dict[str, str]:
+        """Get all console logs from a workflow run.
+
+        Args:
+            run_id: Workflow run ID to get logs from
+
+        Returns:
+            Dictionary mapping log filenames to their contents.
+            Log filenames typically include job name (e.g., "test/1_Setup.txt").
+            Consumer can filter by job name using info from get_latest_ci_status().
+
+        Raises:
+            ValueError: For invalid run IDs
+            GithubException: For authentication or permission errors
+        """
+        # Validate run_id parameter
+        if not self._validate_run_id(run_id):
+            raise ValueError(
+                f"Invalid workflow run ID: {run_id}. Must be a positive integer."
+            )
+
+        try:
+            # Get repository and workflow run
+            repo = self._get_repository()
+            if not repo:
+                logger.error("Could not access GitHub repository")
+                return {}
+
+            workflow_run = repo.get_workflow_run(run_id)
+
+            # Get logs URL and download
+            logs_url = workflow_run.logs_url
+            return self._download_and_extract_zip(logs_url)
+
+        except Exception as e:
+            logger.error(f"Error retrieving logs for run ID {run_id}: {e}")
             # Re-raise to let the decorator handle it
             raise
