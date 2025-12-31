@@ -294,5 +294,4 @@ class TestCIResultsManagerSmoke:
             print(f"[OK] CI analysis workflow tested for run {run_id}")
         else:
             print("[INFO] No CI runs found for testing workflow")
-
-        print(f"[OK] CI analysis workflow tested successfully")
+        # Removed duplicate print statement
