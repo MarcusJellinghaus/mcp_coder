@@ -31,5 +31,5 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] [Step 5: Module Integration and Smoke Tests](steps/step_5.md)
 - [x] [Step 6: Add Type Stubs and Request Timeout](steps/step_6.md)
 - [x] [Step 7: Move Shared Test Fixtures to conftest.py](steps/step_7.md)
-- [ ] [Step 8: Split Test File by Feature](steps/step_8.md)
+- [x] [Step 8: Split Test File by Feature](steps/step_8.md)
 - [ ] [Step 9: Fix Duplicate Print Statement in Smoke Test](steps/step_9.md)
