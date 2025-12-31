@@ -24,7 +24,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 - [x] [Step 0: Refactor Branch Validation](steps/step_0.md)
-- [ ] [Step 1: Core Data Structures and Manager Foundation](steps/step_1.md)
+- [x] [Step 1: Core Data Structures and Manager Foundation](steps/step_1.md)
 - [ ] [Step 2: CI Status Retrieval](steps/step_2.md)
 - [ ] [Step 3: Failed Job Logs Retrieval](steps/step_3.md)
 - [ ] [Step 4: Artifact Retrieval](steps/step_4.md)

@@ -1,0 +1,179 @@
+"""Tests for CIResultsManager class."""
+
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
+
+from mcp_coder.utils.github_operations import (
+    CIResultsManager,
+    CIStatusData,
+)
+
+
+class TestCIResultsManagerFoundation:
+    """Test the foundational components of CIResultsManager."""
+
+    def test_initialization_with_project_dir(self, tmp_path: Path) -> None:
+        """Test initialization with project_dir parameter."""
+        # Create a git repository
+        repo_dir = tmp_path / "test_repo"
+        repo_dir.mkdir()
+
+        # Mock the git repository check
+        with patch("git.Repo") as mock_repo_class:
+            mock_repo = Mock()
+            mock_repo_class.return_value = mock_repo
+
+            # Mock user config to return a token
+            with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+                mock_config.return_value = "test_token"
+
+                # Mock Github client
+                with patch("github.Github"):
+                    manager = CIResultsManager(project_dir=repo_dir)
+
+                    assert manager.project_dir == repo_dir
+                    assert manager._repo is not None
+
+    def test_initialization_with_repo_url(self) -> None:
+        """Test initialization with repo_url parameter."""
+        repo_url = "https://github.com/test/repo.git"
+
+        # Mock user config to return a token
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "test_token"
+
+            # Mock Github client
+            with patch("github.Github"):
+                manager = CIResultsManager(repo_url=repo_url)
+
+                assert manager.project_dir is None
+                assert manager._repo_owner == "test"
+                assert manager._repo_name == "repo"
+                assert manager._repo_full_name == "test/repo"
+
+    def test_initialization_validation(self) -> None:
+        """Test initialization parameter validation."""
+        # Test with neither parameter
+        with pytest.raises(
+            ValueError, match="Exactly one of project_dir or repo_url must be provided"
+        ):
+            CIResultsManager()
+
+        # Test with both parameters
+        with pytest.raises(
+            ValueError, match="Exactly one of project_dir or repo_url must be provided"
+        ):
+            CIResultsManager(
+                project_dir=Path("/tmp"), repo_url="https://github.com/test/repo.git"
+            )
+
+    def test_validate_branch_name(self) -> None:
+        """Test branch name validation."""
+        repo_url = "https://github.com/test/repo.git"
+
+        # Mock user config and Github client
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "test_token"
+
+            with patch("github.Github"):
+                manager = CIResultsManager(repo_url=repo_url)
+
+                # Valid branch names
+                assert manager._validate_branch_name("feature/xyz") == True
+                assert manager._validate_branch_name("main") == True
+                assert manager._validate_branch_name("develop") == True
+
+                # Invalid branch names
+                assert manager._validate_branch_name("") == False
+                assert manager._validate_branch_name("   ") == False
+                assert (
+                    manager._validate_branch_name("branch~1") == False
+                )  # Invalid char
+                assert (
+                    manager._validate_branch_name("branch^2") == False
+                )  # Invalid char
+                assert (
+                    manager._validate_branch_name("branch:fix") == False
+                )  # Invalid char
+                assert (
+                    manager._validate_branch_name("branch?test") == False
+                )  # Invalid char
+                assert (
+                    manager._validate_branch_name("branch*glob") == False
+                )  # Invalid char
+                assert (
+                    manager._validate_branch_name("branch[1]") == False
+                )  # Invalid char
+
+    def test_validate_run_id(self) -> None:
+        """Test workflow run ID validation."""
+        repo_url = "https://github.com/test/repo.git"
+
+        # Mock user config and Github client
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "test_token"
+
+            with patch("github.Github"):
+                manager = CIResultsManager(repo_url=repo_url)
+
+                # Valid run IDs
+                assert manager._validate_run_id(12345) == True
+                assert manager._validate_run_id(1) == True
+                assert manager._validate_run_id(999999999) == True
+
+                # Invalid run IDs
+                assert manager._validate_run_id(0) == False
+                assert manager._validate_run_id(-1) == False
+                assert manager._validate_run_id(-100) == False
+
+    def test_cistatus_data_structure(self) -> None:
+        """Test that CIStatusData TypedDict is properly defined and importable."""
+        # Create a test instance to verify structure
+        test_data: CIStatusData = {
+            "run": {
+                "id": 123,
+                "status": "completed",
+                "conclusion": "failure",
+                "workflow_name": "CI",
+                "event": "push",
+                "workflow_path": ".github/workflows/ci.yml",
+                "branch": "main",
+                "commit_sha": "abc123",
+                "created_at": "2023-01-01T00:00:00Z",
+                "url": "https://github.com/test/repo/actions/runs/123",
+            },
+            "jobs": [
+                {
+                    "id": 456,
+                    "name": "test",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "started_at": "2023-01-01T00:01:00Z",
+                    "completed_at": "2023-01-01T00:05:00Z",
+                }
+            ],
+        }
+
+        # Verify the structure is accessible
+        assert test_data["run"]["id"] == 123
+        assert test_data["jobs"][0]["name"] == "test"
+        assert len(test_data["jobs"]) == 1
+
+    def test_manager_inheritance(self) -> None:
+        """Test that CIResultsManager properly extends BaseGitHubManager."""
+        repo_url = "https://github.com/test/repo.git"
+
+        # Mock user config and Github client
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "test_token"
+
+            with patch("github.Github"):
+                manager = CIResultsManager(repo_url=repo_url)
+
+                # Verify inheritance - should have BaseGitHubManager attributes
+                assert hasattr(manager, "_github_client")
+                assert hasattr(manager, "_repository")
+                assert hasattr(manager, "_get_repository")
+                assert manager._repo_full_name == "test/repo"
