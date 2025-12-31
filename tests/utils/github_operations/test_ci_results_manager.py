@@ -187,25 +187,6 @@ class TestCIResultsManagerFoundation:
 class TestGetLatestCIStatus:
     """Test the get_latest_ci_status method."""
 
-    @pytest.fixture
-    def mock_repo(self) -> Mock:
-        """Mock repository for testing."""
-        return Mock()
-
-    @pytest.fixture
-    def ci_manager(self, mock_repo: Mock) -> CIResultsManager:
-        """CIResultsManager instance for testing."""
-        repo_url = "https://github.com/test/repo.git"
-
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test_token"
-
-            with patch("github.Github") as mock_github:
-                mock_github.return_value.get_repo.return_value = mock_repo
-                manager = CIResultsManager(repo_url=repo_url)
-                manager._repository = mock_repo
-                return manager
-
     def test_successful_status_retrieval(
         self, mock_repo: Mock, ci_manager: CIResultsManager
     ) -> None:
@@ -295,44 +276,6 @@ class TestGetLatestCIStatus:
 
 class TestGetArtifacts:
     """Test the get_artifacts method."""
-
-    @pytest.fixture
-    def mock_repo(self) -> Mock:
-        """Mock repository for testing."""
-        return Mock()
-
-    @pytest.fixture
-    def ci_manager(self, mock_repo: Mock) -> CIResultsManager:
-        """CIResultsManager instance for testing."""
-        repo_url = "https://github.com/test/repo.git"
-
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test_token"
-
-            with patch("github.Github") as mock_github:
-                mock_github.return_value.get_repo.return_value = mock_repo
-                manager = CIResultsManager(repo_url=repo_url)
-                manager._repository = mock_repo
-                return manager
-
-    @pytest.fixture
-    def mock_artifact(self) -> Mock:
-        """Mock artifact for testing."""
-        artifact = Mock()
-        artifact.name = "test-results"
-        artifact.archive_download_url = (
-            "https://api.github.com/repos/test/repo/artifacts/123/zip"
-        )
-        return artifact
-
-    @pytest.fixture
-    def mock_zip_content(self) -> bytes:
-        """Create mock ZIP content with test files."""
-        buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, "w") as zf:
-            zf.writestr("results.xml", "<?xml version='1.0'?><testsuites></testsuites>")
-            zf.writestr("coverage.json", '{"total": 85.5}')
-        return buffer.getvalue()
 
     def test_single_artifact(
         self, mock_repo: Mock, ci_manager: CIResultsManager
@@ -708,25 +651,6 @@ class TestDownloadAndExtractZip:
 class TestGetRunLogs:
     """Test the get_run_logs method."""
 
-    @pytest.fixture
-    def mock_repo(self) -> Mock:
-        """Mock repository for testing."""
-        return Mock()
-
-    @pytest.fixture
-    def ci_manager(self, mock_repo: Mock) -> CIResultsManager:
-        """CIResultsManager instance for testing."""
-        repo_url = "https://github.com/test/repo.git"
-
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test_token"
-
-            with patch("github.Github") as mock_github:
-                mock_github.return_value.get_repo.return_value = mock_repo
-                manager = CIResultsManager(repo_url=repo_url)
-                manager._repository = mock_repo
-                return manager
-
     @patch("mcp_coder.utils.github_operations.ci_results_manager.requests.get")
     def test_successful_logs_retrieval(
         self, mock_requests: Mock, mock_repo: Mock, ci_manager: CIResultsManager
@@ -784,25 +708,6 @@ class TestGetRunLogs:
 
 class TestGetLatestCIStatusContinued:
     """Additional tests for get_latest_ci_status method."""
-
-    @pytest.fixture
-    def mock_repo(self) -> Mock:
-        """Mock repository for testing."""
-        return Mock()
-
-    @pytest.fixture
-    def ci_manager(self, mock_repo: Mock) -> CIResultsManager:
-        """CIResultsManager instance for testing."""
-        repo_url = "https://github.com/test/repo.git"
-
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test_token"
-
-            with patch("github.Github") as mock_github:
-                mock_github.return_value.get_repo.return_value = mock_repo
-                manager = CIResultsManager(repo_url=repo_url)
-                manager._repository = mock_repo
-                return manager
 
     def test_no_workflow_runs_for_branch(
         self, mock_repo: Mock, ci_manager: CIResultsManager
