@@ -6,6 +6,11 @@ Provides two main commands:
 
 The coordinator run command automates the issue → plan → implement → PR pipeline
 by filtering eligible issues and triggering appropriate Jenkins workflows.
+
+GitHub API Caching:
+Implements efficient caching with incremental fetching using GitHub's 'since' parameter,
+duplicate protection (1-minute windows), atomic file storage in ~/.mcp_coder/coordinator_cache/,
+and graceful fallback to direct API calls on errors. Cache files: {owner}_{repo}.issues.json
 """
 
 import argparse
@@ -591,6 +596,10 @@ def get_cached_eligible_issues(
 ) -> List[IssueData]:
     """Get eligible issues using cache for performance and duplicate protection.
 
+    Uses GitHub API caching with incremental fetching via the 'since' parameter
+    for efficient API usage. The 'since' parameter allows fetching only issues
+    modified after a specific timestamp, reducing API calls and improving performance.
+
     Args:
         repo_full_name: Repository in "owner/repo" format (e.g., "anthropics/claude-code")
         issue_manager: IssueManager for GitHub API calls
@@ -686,7 +695,8 @@ def get_cached_eligible_issues(
             logger.debug(
                 f"Incremental refresh for {repo_name} since {last_checked} (age={cache_age_minutes}m)"
             )
-            # Use the extended list_issues method with since parameter
+            # GitHub API 'since' parameter expects ISO 8601 timestamp
+            # Only returns issues modified after this timestamp
             fresh_issues = issue_manager.list_issues(
                 state="open", include_pull_requests=False, since=last_checked
             )
