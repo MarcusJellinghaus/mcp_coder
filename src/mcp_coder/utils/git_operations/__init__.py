@@ -11,6 +11,7 @@ from .branches import (
     get_default_branch_name,
     get_parent_branch_name,
     remote_branch_exists,
+    validate_branch_name,
 )
 
 # Commit operations
@@ -59,6 +60,7 @@ __all__ = [
     "get_default_branch_name",
     "get_parent_branch_name",
     "remote_branch_exists",
+    "validate_branch_name",
     # Commit operations
     "commit_all_changes",
     "commit_staged_files",

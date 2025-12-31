@@ -12,6 +12,31 @@ from .core import _safe_repo_context, logger
 from .repository import is_git_repository
 
 
+def validate_branch_name(branch_name: str) -> bool:
+    """Validate branch name against git naming rules.
+
+    Args:
+        branch_name: Branch name to validate
+
+    Returns:
+        True if valid, False otherwise
+
+    Validation rules:
+        - Must be non-empty string
+        - Cannot contain: ~ ^ : ? * [
+    """
+    # Check for empty or whitespace-only branch name
+    if not branch_name or not branch_name.strip():
+        return False
+
+    # Basic branch name validation (GitHub-compatible)
+    invalid_chars = ["~", "^", ":", "?", "*", "["]
+    if any(char in branch_name for char in invalid_chars):
+        return False
+
+    return True
+
+
 def get_current_branch_name(project_dir: Path) -> Optional[str]:
     """
     Get the name of the current active branch.
@@ -212,15 +237,10 @@ def create_branch(
         return False
 
     # Validate branch name
-    if not branch_name or not branch_name.strip():
-        logger.error("Branch name cannot be empty")
-        return False
-
-    # Basic branch name validation (GitHub-compatible)
-    invalid_chars = ["~", "^", ":", "?", "*", "["]
-    if any(char in branch_name for char in invalid_chars):
+    if not validate_branch_name(branch_name):
         logger.error(
-            "Invalid branch name: '%s'. Contains invalid characters", branch_name
+            "Invalid branch name: '%s'. Must be non-empty and cannot contain: ~ ^ : ? * [",
+            branch_name,
         )
         return False
 

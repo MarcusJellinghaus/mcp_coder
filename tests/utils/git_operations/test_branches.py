@@ -14,6 +14,7 @@ from mcp_coder.utils.git_operations import (
     get_default_branch_name,
     get_parent_branch_name,
     remote_branch_exists,
+    validate_branch_name,
 )
 
 
@@ -108,6 +109,31 @@ class TestBranchOperations:
         # Verify we're on the branch and it exists locally
         assert get_current_branch_name(project_dir) == "remote-test-branch"
         assert branch_exists(project_dir, "remote-test-branch") is True
+
+
+class TestValidateBranchName:
+    """Tests for validate_branch_name function."""
+
+    def test_valid_names(self) -> None:
+        """Test valid branch names return True."""
+        assert validate_branch_name("main") is True
+        assert validate_branch_name("feature/xyz") is True
+        assert validate_branch_name("123-fix-bug") is True
+
+    def test_invalid_empty(self) -> None:
+        """Test empty branch names return False."""
+        assert validate_branch_name("") is False
+        assert validate_branch_name("   ") is False  # whitespace-only
+
+    def test_invalid_characters(self) -> None:
+        """Test branch names with invalid characters return False."""
+        # Test one representative invalid character
+        assert validate_branch_name("branch~1") is False
+        assert validate_branch_name("feature^branch") is False
+        assert validate_branch_name("fix:bug") is False
+        assert validate_branch_name("branch?name") is False
+        assert validate_branch_name("feature*branch") is False
+        assert validate_branch_name("branch[name]") is False
 
 
 class TestExtractIssueNumberFromBranch:

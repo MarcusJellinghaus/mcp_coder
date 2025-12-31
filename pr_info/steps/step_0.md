@@ -84,8 +84,8 @@ class TestValidateBranchName:
 ```
 
 ## Success Criteria
-- [ ] `validate_branch_name()` function extracted and working
-- [ ] Unit tests cover valid and invalid cases
-- [ ] `create_branch()` updated to use new function
-- [ ] Function exported from module
-- [ ] All existing tests still pass
+- [x] `validate_branch_name()` function extracted and working
+- [x] Unit tests cover valid and invalid cases
+- [x] `create_branch()` updated to use new function
+- [x] Function exported from module
+- [x] All existing tests still pass
