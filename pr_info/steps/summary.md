@@ -42,7 +42,7 @@ Add GitHub API caching to the coordinator to reduce unnecessary API calls when r
 
 #### New Components
 - **Cache function**: `get_cached_eligible_issues()` in `coordinator.py`
-- **Helper function**: `list_issues_since()` method in `IssueManager`
+- **Extended method**: `list_issues()` with optional `since` parameter in `IssueManager`
 - **Cache directory**: Auto-created `~/.mcp_coder/coordinator_cache/`
 
 #### Modified Components
@@ -62,7 +62,7 @@ Add GitHub API caching to the coordinator to reduce unnecessary API calls when r
 
 ### Modified Files  
 - `src/mcp_coder/cli/commands/coordinator.py` - Add cache function and integration
-- `src/mcp_coder/utils/github_operations/issue_manager.py` - Add `list_issues_since()` method
+- `src/mcp_coder/utils/github_operations/issue_manager.py` - Extend `list_issues()` with `since` parameter
 - `tests/cli/commands/test_coordinator.py` - Add cache integration tests
 
 ## Benefits
@@ -73,7 +73,12 @@ Add GitHub API caching to the coordinator to reduce unnecessary API calls when r
 - **Simple maintenance**: Single cache function contains all complexity
 
 ## Implementation Approach
-1. **Test-driven development** - Write tests first for each component
+1. **Test-driven development** - Write tests first for each component (integrated into each step)
 2. **Incremental integration** - Add cache as opt-in layer initially
 3. **Graceful degradation** - Any error reverts to current behavior
 4. **Minimal surface area** - Keep changes localized and focused
+
+## Step Structure
+- **Step 1**: Extend `list_issues()` with optional `since` parameter
+- **Step 2**: Implement core cache logic function with staleness detection
+- **Step 3**: Configuration + CLI flag + Integration into coordinator

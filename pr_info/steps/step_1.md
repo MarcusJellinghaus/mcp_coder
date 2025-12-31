@@ -1,15 +1,16 @@
-# Step 1: Add Incremental GitHub API Fetching
+# Step 1: Extend `list_issues()` with `since` Parameter
 
 ## Objective
-Add `list_issues_since()` method to `IssueManager` to support incremental fetching using GitHub's `since` parameter.
+Extend the existing `list_issues()` method in `IssueManager` to support incremental fetching using GitHub's `since` parameter.
 
 ## LLM Prompt
 ```
-Based on the GitHub API caching implementation summary, implement Step 1: Add incremental GitHub API fetching to IssueManager.
+Based on the GitHub API caching implementation summary, implement Step 1: Extend list_issues() with since parameter.
 
 Requirements:
-- Add `list_issues_since()` method to support incremental fetching
-- Use GitHub API's `since` parameter with `state="all"` 
+- Extend existing `list_issues()` method with optional `since: Optional[datetime] = None` parameter
+- When `since` is provided, use GitHub API's `since` parameter to fetch only issues updated after that time
+- Maintain backward compatibility - existing calls without `since` work unchanged
 - Follow existing code patterns in issue_manager.py
 - Include proper error handling and logging
 - Write comprehensive tests first (TDD approach)
@@ -22,36 +23,44 @@ Refer to the summary document for overall context and architecture decisions.
 - **Test File**: `tests/utils/github_operations/test_issue_manager.py`
 
 ## WHAT
-### New Method
+### Extended Method Signature
 ```python
-def list_issues_since(self, since: datetime, state: str = "all", include_pull_requests: bool = False) -> List[IssueData]:
+def list_issues(
+    self, 
+    state: str = "open", 
+    include_pull_requests: bool = False,
+    since: Optional[datetime] = None
+) -> List[IssueData]:
 ```
 
 ### Test Functions
 ```python
-def test_list_issues_since_valid_datetime()
+def test_list_issues_with_since_parameter()
 def test_list_issues_since_filters_pull_requests() 
-def test_list_issues_since_error_handling()
+def test_list_issues_without_since_unchanged()
 def test_list_issues_since_pagination()
 ```
 
 ## HOW
 ### Integration Points
-- **Decorator**: `@log_function_call` and `@_handle_github_errors(default_return=[])`
-- **Import**: `from datetime import datetime` (if not already present)
-- **Position**: After existing `list_issues()` method in IssueManager class
+- **Decorator**: Existing `@log_function_call` and `@_handle_github_errors(default_return=[])` unchanged
+- **Import**: `from datetime import datetime` (add to existing imports)
+- **Position**: Modify existing `list_issues()` method in IssueManager class
 
 ### GitHub API Call
 ```python
-# Uses PyGithub's get_issues() with since parameter
-for issue in repo.get_issues(state=state, since=since):
+# Pass since parameter to PyGithub's get_issues() when provided
+if since is not None:
+    issues_iterator = repo.get_issues(state=state, since=since)
+else:
+    issues_iterator = repo.get_issues(state=state)
 ```
 
 ## ALGORITHM
 ```
-1. Validate since parameter is datetime object
-2. Get repository using existing _get_repository() method  
-3. Call repo.get_issues(state=state, since=since) for incremental fetch
+1. Get repository using existing _get_repository() method  
+2. Build get_issues() call - include since parameter if provided
+3. Iterate over issues from GitHub API
 4. Filter out pull requests if include_pull_requests=False
 5. Convert GitHub issue objects to IssueData dictionaries
 6. Return list of IssueData objects
@@ -59,20 +68,19 @@ for issue in repo.get_issues(state=state, since=since):
 
 ## DATA
 ### Input Parameters
-- `since: datetime` - Only fetch issues updated after this time
-- `state: str = "all"` - Issue state filter ('open', 'closed', 'all')  
-- `include_pull_requests: bool = False` - Whether to include PRs
+- `state: str = "open"` - Issue state filter ('open', 'closed', 'all') - unchanged
+- `include_pull_requests: bool = False` - Whether to include PRs - unchanged
+- `since: Optional[datetime] = None` - Only fetch issues updated after this time (new)
 
 ### Return Value
-- `List[IssueData]` - List of issue dictionaries with same structure as `list_issues()`
+- `List[IssueData]` - List of issue dictionaries, unchanged structure
 
 ### Error Handling
-- Returns empty list `[]` on any GitHub API errors (via decorator)
-- Logs validation errors for invalid datetime parameter
-- Uses existing error handling patterns from current `list_issues()` method
+- Returns empty list `[]` on any GitHub API errors (via existing decorator)
+- Uses existing error handling patterns - no changes needed
 
 ## Implementation Notes
-- **Minimal changes**: Follows existing patterns exactly, just adds `since` parameter
-- **Backwards compatible**: Doesn't modify existing `list_issues()` method
-- **State parameter**: Uses `"all"` by default to detect closed/deleted issues for cache cleanup
-- **Consistent interface**: Same return type and error handling as existing method
+- **Minimal changes**: Extends existing method, follows existing patterns
+- **Backward compatible**: Existing calls without `since` work unchanged
+- **Optional parameter**: `since` defaults to `None`, only used when provided
+- **Consistent interface**: Same return type and error handling as before

@@ -36,9 +36,9 @@ This document lists all files and modules that will be created or modified durin
 
 - `src/mcp_coder/utils/github_operations/issue_manager.py`
   - **Changes**:
-    - Add `list_issues_since()` method for incremental fetching
+    - Extend `list_issues()` with optional `since: Optional[datetime] = None` parameter
     - Add datetime import if not present
-  - **Lines Added**: ~50 (single method + documentation)
+  - **Lines Added**: ~10 (parameter addition + conditional logic)
 
 ### Test Files
 - `tests/cli/commands/test_coordinator.py` (existing)
@@ -50,9 +50,9 @@ This document lists all files and modules that will be created or modified durin
 
 - `tests/utils/github_operations/test_issue_manager.py` (existing)
   - **Changes**:
-    - Add test functions for `list_issues_since()` method
+    - Add test functions for `list_issues()` with `since` parameter
     - Add test fixtures for datetime scenarios
-  - **Lines Added**: ~100 (unit tests for new method)
+  - **Lines Added**: ~60 (unit tests for extended method)
 
 ## Module Dependencies
 
@@ -78,10 +78,10 @@ cache_refresh_minutes = 1440  # Optional, defaults to 1440 (24 hours)
 
 ### New Code
 - **Cache Logic**: ~200 lines (coordinator.py)
-- **GitHub API Method**: ~50 lines (issue_manager.py) 
-- **Unit Tests**: ~250 lines (across test files)
-- **Integration Tests**: ~150 lines (end-to-end scenarios)
-- **Total New**: ~650 lines of code
+- **GitHub API Extension**: ~10 lines (issue_manager.py) 
+- **Unit Tests**: ~200 lines (across test files)
+- **Integration Tests**: ~100 lines (in test_coordinator.py)
+- **Total New**: ~510 lines of code
 
 ### Modified Code  
 - **CLI Integration**: ~10 lines modified in existing functions
@@ -94,9 +94,10 @@ cache_refresh_minutes = 1440  # Optional, defaults to 1440 (24 hours)
 ```
 CLI (coordinator.py)
   └── get_cached_eligible_issues()
-      ├── Cache File I/O (JSON)
+      ├── Cache File I/O (JSON, atomic writes)
       ├── Configuration Reading
-      └── IssueManager.list_issues_since()
+      ├── Staleness Detection & Logging
+      └── IssueManager.list_issues(since=...)
           └── GitHub API (PyGithub)
 ```
 

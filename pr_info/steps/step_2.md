@@ -15,7 +15,7 @@ Requirements:
 - Include comprehensive error handling with graceful fallback
 - Write tests first following TDD approach
 
-Use the `list_issues_since()` method from Step 1. Refer to the summary for architecture context.
+Use the extended `list_issues()` method with `since` parameter from Step 1. Refer to the summary for architecture context.
 ```
 
 ## WHERE
@@ -36,8 +36,9 @@ def get_cached_eligible_issues(
 ### Helper Functions
 ```python
 def _load_cache_file(cache_file_path: Path) -> dict
-def _save_cache_file(cache_file_path: Path, cache_data: dict) -> bool
+def _save_cache_file(cache_file_path: Path, cache_data: dict) -> bool  # Uses atomic write
 def _get_cache_file_path(repo_name: str) -> Path
+def _log_stale_cache_entries(cached_issues: dict, fresh_issues: dict) -> None  # Detailed staleness logging
 ```
 
 ### Test Functions
@@ -48,6 +49,8 @@ def test_get_cached_eligible_issues_full_refresh()
 def test_get_cached_eligible_issues_duplicate_protection()
 def test_get_cached_eligible_issues_force_refresh()
 def test_get_cached_eligible_issues_corrupted_cache()
+def test_staleness_logging_detects_label_changes()
+def test_staleness_logging_detects_missing_issues()
 ```
 
 ## HOW
@@ -72,8 +75,9 @@ def test_get_cached_eligible_issues_corrupted_cache()
 2. Load existing cache file or create empty cache structure
 3. Determine refresh strategy: incremental vs full based on cache age
 4. Fetch issues using appropriate method (since vs full)
-5. Merge fetched issues with cached issues, update cache
-6. Filter cached issues for state="open" and apply eligibility rules
+5. On full refresh: compare cached vs fresh issues, log any staleness detected
+6. Merge fetched issues with cached issues, update cache (atomic write)
+7. Filter cached issues for state="open" and apply eligibility rules
 ```
 
 ## DATA
@@ -100,8 +104,17 @@ CacheData = {
 - **JSON errors**: Log warning, recreate cache file
 - **All errors**: Fall back to existing `get_eligible_issues()` behavior
 
+### Staleness Logging (on full refresh)
+Log each stale cache entry with details of what changed:
+```
+Issue #42: cached labels ['status-02:awaiting-planning'] != actual ['status-03:planning']
+Issue #17: cached state 'open' != actual 'closed'
+Issue #55: no longer exists in repository
+```
+
 ## Implementation Notes
 - **Pure function**: No side effects except cache file I/O
 - **Graceful degradation**: Any error returns same result as current implementation
-- **Thread-safe**: Use atomic file writes for cache updates
-- **Minimal logging**: INFO for skips, DEBUG for cache hits, WARNING for errors
+- **Atomic file writes**: Write to temp file, then rename (pattern: write to `{cache_file}.tmp`, then `os.replace()` to target)
+- **Detailed staleness logging**: On full refresh, compare cached vs fresh and log each discrepancy
+- **Minimal logging**: INFO for skips and staleness, DEBUG for cache hits, WARNING for errors
