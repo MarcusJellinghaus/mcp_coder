@@ -26,7 +26,7 @@ Use the extended `list_issues()` method with `since` parameter from Step 1. Refe
 ### Core Function
 ```python
 def get_cached_eligible_issues(
-    repo_name: str, 
+    repo_full_name: str,  # Format: "owner/repo"
     issue_manager: IssueManager, 
     force_refresh: bool = False,
     cache_refresh_minutes: int = 1440
@@ -37,7 +37,7 @@ def get_cached_eligible_issues(
 ```python
 def _load_cache_file(cache_file_path: Path) -> dict
 def _save_cache_file(cache_file_path: Path, cache_data: dict) -> bool  # Uses atomic write
-def _get_cache_file_path(repo_name: str) -> Path
+def _get_cache_file_path(repo_full_name: str) -> Path  # repo_full_name is "owner/repo" format
 def _log_stale_cache_entries(cached_issues: dict, fresh_issues: dict) -> None  # Detailed staleness logging
 ```
 
@@ -58,6 +58,7 @@ def test_staleness_logging_detects_missing_issues()
 - **Imports**: `from datetime import datetime, timedelta`, `from pathlib import Path`, `import json`
 - **Position**: Add before `execute_coordinator_run()` function
 - **Cache directory**: `Path.home() / ".mcp_coder" / "coordinator_cache"`
+- **Cache file naming**: Use full repo identifier `owner_repo.issues.json` (derived from `owner/repo` by replacing `/` with `_`)
 
 ### Cache File Format
 ```json
@@ -71,7 +72,7 @@ def test_staleness_logging_detects_missing_issues()
 
 ## ALGORITHM
 ```
-1. Check duplicate protection: return empty if last_checked < 1 minute ago
+1. Check duplicate protection: if last_checked < 1 minute ago, return empty list [] (skip processing this repo)
 2. Load existing cache file or create empty cache structure
 3. Determine refresh strategy: incremental vs full based on cache age
 4. Fetch issues using appropriate method (since vs full)
@@ -82,7 +83,7 @@ def test_staleness_logging_detects_missing_issues()
 
 ## DATA
 ### Input Parameters
-- `repo_name: str` - Repository name for cache file naming
+- `repo_full_name: str` - Full repository identifier in "owner/repo" format (e.g., "anthropics/claude-code")
 - `issue_manager: IssueManager` - For GitHub API calls  
 - `force_refresh: bool = False` - Bypass cache entirely
 - `cache_refresh_minutes: int = 1440` - Full refresh threshold
@@ -115,6 +116,12 @@ Issue #55: no longer exists in repository
 ## Implementation Notes
 - **Pure function**: No side effects except cache file I/O
 - **Graceful degradation**: Any error returns same result as current implementation
-- **Atomic file writes**: Write to temp file, then rename (pattern: write to `{cache_file}.tmp`, then `os.replace()` to target)
-- **Detailed staleness logging**: On full refresh, compare cached vs fresh and log each discrepancy
+- **Atomic file writes**: Write to temp file, then rename to prevent corruption on crash/interruption:
+  ```python
+  # Atomic write pattern - prevents partial writes on crash
+  temp_path = cache_path.with_suffix('.tmp')
+  temp_path.write_text(json.dumps(cache_data, indent=2))
+  temp_path.replace(cache_path)  # Atomic rename
+  ```
+- **Detailed staleness logging**: On full refresh, compare cached vs fresh and log each discrepancy at INFO level
 - **Minimal logging**: INFO for skips and staleness, DEBUG for cache hits, WARNING for errors

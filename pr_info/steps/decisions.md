@@ -38,3 +38,16 @@ This document records decisions made during the project plan review discussion.
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Test file organization | Keep separate files for unit vs integration tests | As originally planned |
+| Cache logic test location | Dedicated `tests/utils/test_coordinator_cache.py` | Cleaner separation, cache logic is conceptually distinct from CLI handling |
+
+## Caching Implementation Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Staleness logging level | Detailed at INFO level | Helps validate caching strategy is working correctly |
+| Duplicate protection mechanism | JSON field `last_checked` | Self-contained, explicit, portable |
+| Duplicate protection return value | Return empty list `[]` | Clean "too soon, do nothing" behavior |
+| Cache file naming | Full repo identifier (`owner_repo.issues.json`) | Ensures uniqueness across different owners with same repo name |
+| Error handling granularity | Specific handlers per error type | More informative for troubleshooting |
+| Step 2 algorithm detail | Prescriptive helper function structure | Clear expectations for consistent implementation |
+| Atomic writes documentation | Document in step file with example | Ensures implementer doesn't miss this important pattern |

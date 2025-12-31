@@ -19,7 +19,8 @@ This document lists all files and modules that will be created or modified durin
 ### Cache Directory (Auto-created)
 - `~/.mcp_coder/coordinator_cache/`
   - **Purpose**: Storage location for cache files
-  - **Files**: `{repo_name}.issues.json` (created dynamically per repository)
+  - **Files**: `{owner}_{repo}.issues.json` (e.g., `anthropics_claude-code.issues.json`)
+  - **Naming**: Derived from full repo identifier `owner/repo` by replacing `/` with `_`
   - **Structure**: JSON files with last_checked timestamps and issue data
 
 ## Modified Files

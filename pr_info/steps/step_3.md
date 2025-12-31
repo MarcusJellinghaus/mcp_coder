@@ -50,7 +50,7 @@ def get_cache_refresh_minutes() -> int:
 
 # With:
 eligible_issues = get_cached_eligible_issues(
-    repo_name=repo_name,
+    repo_full_name=repo_full_name,  # e.g., "owner/repo" from issue_manager
     issue_manager=issue_manager, 
     force_refresh=args.force_refresh,
     cache_refresh_minutes=get_cache_refresh_minutes()
@@ -91,10 +91,10 @@ run_parser.add_argument("--force-refresh", action="store_true",
 ```python
 try:
     eligible_issues = get_cached_eligible_issues(
-        repo_name, issue_manager, args.force_refresh, get_cache_refresh_minutes()
+        repo_full_name, issue_manager, args.force_refresh, get_cache_refresh_minutes()
     )
 except Exception as e:
-    logger.warning(f"Cache failed for {repo_name}: {e}, using direct fetch")
+    logger.warning(f"Cache failed for {repo_full_name}: {e}, using direct fetch")
     eligible_issues = get_eligible_issues(issue_manager)
 ```
 
@@ -130,7 +130,7 @@ cache_refresh_minutes = 720  # 12 hours
 ### Input Changes to execute_coordinator_run()
 - **Added**: `args.force_refresh` from CLI arguments
 - **Added**: `cache_refresh_minutes` from configuration
-- **Added**: `repo_name` (already available in loop context)
+- **Added**: `repo_full_name` - extract from `issue_manager._repo_full_name` (already available after IssueManager creation)
 
 ### Return Value
 - **Same**: `List[IssueData]` - No change to downstream processing
