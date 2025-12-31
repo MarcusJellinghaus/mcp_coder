@@ -129,11 +129,10 @@ class TestCIResultsManagerSmoke:
         if status["run"]:  # If there are CI runs
             run_id = status["run"]["id"]
             
-            # Test log retrieval (returns all logs with job info - Decision 15)
+            # Test log retrieval (returns all logs - Decision 15)
             logs = ci_manager.get_run_logs(run_id)
             assert isinstance(logs, dict)
-            assert "logs" in logs
-            assert "jobs" in logs
+            # Logs are {filename: content} - consumer filters by job name
             
             # Test artifact retrieval (may be empty if no artifacts)
             artifacts = ci_manager.get_artifacts(run_id)

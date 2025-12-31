@@ -8,11 +8,10 @@ In this step, implement the get_run_logs method:
 1. Write tests for get_run_logs method first (TDD approach)
 2. Implement shared helper _download_and_extract_zip() for ZIP download/extraction
 3. Implement the method to retrieve all console logs from a run
-4. Include job status info so consumer knows which jobs failed
-5. Handle edge cases (no logs, download errors)
+4. Handle edge cases (no logs, download errors)
 
 This covers requirement 3 from the issue: "Retrieve console logs for failed jobs".
-Note: Returns ALL logs with job status info - consumer filters if needed (Decision 15).
+Note: Returns ALL logs - consumer filters by job name using info from get_latest_ci_status() (Decision 15).
 Follow existing patterns from other GitHub operations managers.
 ```
 
@@ -41,18 +40,17 @@ def _download_and_extract_zip(self, url: str) -> Dict[str, str]:
 ### Method Signature
 ```python
 @log_function_call
-@_handle_github_errors(default_return={"logs": {}, "jobs": []})
-def get_run_logs(self, run_id: int) -> Dict[str, Any]:
-    """Get all console logs from a workflow run with job status info.
+@_handle_github_errors(default_return={})
+def get_run_logs(self, run_id: int) -> Dict[str, str]:
+    """Get all console logs from a workflow run.
     
     Args:
         run_id: Workflow run ID to get logs from
     
     Returns:
-        Dictionary with:
-        - "logs": Dict[str, str] mapping log filenames to contents
-        - "jobs": List[Dict] with job status info (id, name, status, conclusion)
-        Consumer can use job info to identify which logs belong to failed jobs.
+        Dictionary mapping log filenames to their contents.
+        Log filenames typically include job name (e.g., "test/1_Setup.txt").
+        Consumer can filter by job name using info from get_latest_ci_status().
     
     Raises:
         GithubException: For authentication or permission errors
@@ -118,12 +116,11 @@ def _download_and_extract_zip(self, url: str) -> Dict[str, str]:
 
 ### get_run_logs Implementation
 ```python
-def get_run_logs(self, run_id: int) -> Dict[str, Any]:
+def get_run_logs(self, run_id: int) -> Dict[str, str]:
     # 1. Validate run_id parameter
     # 2. Get workflow run from GitHub API
-    # 3. Get all jobs for the run (for status info)
-    # 4. Download logs using _download_and_extract_zip()
-    # 5. Return {"logs": {...}, "jobs": [...]} structure
+    # 3. Download logs using _download_and_extract_zip()
+    # 4. Return {filename: content} dictionary
 ```
 
 ## DATA: Test Cases and Expected Returns
@@ -136,30 +133,24 @@ class TestDownloadAndExtractZip:
     def test_invalid_zip(self, ci_manager, mock_requests)
 
 class TestGetRunLogs:
-    def test_successful_logs_with_job_info(self, mock_repo, ci_manager)
+    def test_successful_logs_retrieval(self, mock_repo, ci_manager)
     def test_invalid_run_id(self, ci_manager) 
     def test_log_download_failure(self, mock_repo, ci_manager, mock_requests)
 ```
 
 ### Expected Return Examples
 ```python
-# Successful case - all logs with job status info (Decision 15)
+# Successful case - all logs (Decision 15)
 {
-    "logs": {
-        "test/1_Setup.txt": "Setting up...",
-        "test/2_Run tests.txt": "Test failed: assertion error",
-        "build/1_Setup.txt": "Setting up...",
-        "build/2_Compile.txt": "Build successful"
-    },
-    "jobs": [
-        {"id": 123, "name": "test", "status": "completed", "conclusion": "failure"},
-        {"id": 124, "name": "build", "status": "completed", "conclusion": "success"}
-    ]
+    "test/1_Setup.txt": "Setting up...",
+    "test/2_Run tests.txt": "Test failed: assertion error",
+    "build/1_Setup.txt": "Setting up...",
+    "build/2_Compile.txt": "Build successful"
 }
-# Consumer can filter logs by checking which jobs have conclusion='failure'
+# Consumer filters by job name (e.g., "test/") using job info from get_latest_ci_status()
 
 # No logs available
-{"logs": {}, "jobs": []}
+{}
 ```
 
 ### Mock Setup for Tests
@@ -202,8 +193,8 @@ mock_requests.get.return_value = mock_response
 ## Success Criteria
 - [ ] Tests written first and define expected behavior
 - [ ] Shared helper `_download_and_extract_zip()` implemented and tested
-- [ ] Method returns all logs with job status info
+- [ ] Method returns all logs as Dict[str, str]
 - [ ] Handles HTTP errors gracefully during log download  
-- [ ] Returns proper structure with logs and jobs
+- [ ] Returns proper {filename: content} structure
 - [ ] Edge cases handled (no logs, invalid run ID)
 - [ ] All tests pass (use @pytest.fixture pattern)

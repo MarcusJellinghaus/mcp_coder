@@ -9,7 +9,7 @@ In this step, implement the get_artifacts method:
 2. Reuse `_download_and_extract_zip()` helper from Step 3 (Decision 16)
 3. Implement the method to download and return artifact contents
 4. Support optional name filtering
-5. Handle binary files by returning bytes (Decision 19)
+5. Skip binary files with log warning (Decision 19)
 6. Handle edge cases (no artifacts, download errors)
 
 This provides raw artifact data - parsing (e.g., JUnit XML) is left to the consumer.
@@ -33,7 +33,7 @@ def get_artifacts(
     self, 
     run_id: int, 
     name_filter: Optional[str] = None
-) -> Dict[str, Union[str, bytes]]:
+) -> Dict[str, str]:
     """Download and return artifact contents from a workflow run.
     
     Args:
@@ -42,10 +42,10 @@ def get_artifacts(
                      in their name (case-insensitive). If None, returns all artifacts.
     
     Returns:
-        Dictionary mapping artifact file names to their contents.
-        Text files returned as str, binary files as bytes (Decision 19).
+        Dictionary mapping artifact file names to their contents as strings.
+        Binary files are skipped with a log warning (Decision 19).
         Artifacts are ZIP files - contents are extracted and returned.
-        Example: {"test-results.xml": "<xml content...>", "image.png": b"..."}
+        Example: {"test-results.xml": "<xml content...>", "coverage.json": "{...}"}
         
         Note: No size limit - consumer should use name_filter for large runs (Decision 18).
     
@@ -100,7 +100,7 @@ def get_artifacts(self, run_id: int, name_filter: Optional[str] = None) -> Dict[
     # 2. Get workflow run and artifacts list
     # 3. Apply name_filter if provided
     # 4. Download and extract each artifact ZIP
-    # 5. Collect all file contents into result dictionary
+    # 5. Collect text file contents, skip binary files with warning
     # 6. Return {filename: content} dictionary
 ```
 
@@ -123,7 +123,7 @@ class TestGetArtifacts:
     def test_name_filter_no_match(self, mock_repo, ci_manager)
     def test_artifact_download_failure(self, mock_repo, ci_manager)
     def test_invalid_run_id(self, ci_manager)
-    def test_binary_file_handling(self, mock_repo, ci_manager)
+    def test_binary_file_skipped_with_warning(self, mock_repo, ci_manager)
 ```
 
 ### Expected Return Examples
@@ -133,12 +133,12 @@ class TestGetArtifacts:
     "test-results.xml": "<?xml version=\"1.0\"?>..."
 }
 
-# Multiple artifacts with mixed content (Decision 19)
+# Multiple artifacts - text files only (Decision 19)
 {
-    "junit.xml": "<?xml version=\"1.0\"?>...",      # str - text file
-    "coverage.json": "{\"total\": 85.5, ...}",      # str - text file
-    "screenshot.png": b"\x89PNG\r\n..."             # bytes - binary file
+    "junit.xml": "<?xml version=\"1.0\"?>...",
+    "coverage.json": "{\"total\": 85.5, ...}"
 }
+# Note: Binary files like screenshot.png are skipped with a log warning
 
 # No artifacts
 {}
@@ -178,9 +178,9 @@ def mock_zip_content():
 # - ZIP extraction errors: skip artifact, log error, continue
 
 # Binary file handling (Decision 19)
-# - Try UTF-8 decode first
-# - If decode fails, return as bytes
-# - No files are skipped
+# - Try UTF-8 decode
+# - If decode fails, skip file and log warning
+# - Binary support can be added in future iteration if needed
 
 # Empty scenarios
 # - No artifacts in run: return {}
@@ -192,6 +192,6 @@ def mock_zip_content():
 - [ ] Tests written first (use @pytest.fixture pattern)
 - [ ] Method downloads and extracts artifacts correctly
 - [ ] Optional name_filter works (case-insensitive)
-- [ ] Returns raw file contents as strings
+- [ ] Returns text file contents as strings, skips binary files with warning
 - [ ] Graceful error handling for download/extraction failures
 - [ ] All tests pass

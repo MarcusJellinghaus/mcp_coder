@@ -40,8 +40,8 @@ class CIStatusData(TypedDict):
 #### 3. Public API Methods
 ```python
 def get_latest_ci_status(self, branch: str) -> CIStatusData
-def get_run_logs(self, run_id: int) -> Dict[str, Any]  # Returns {"logs": {...}, "jobs": [...]}
-def get_artifacts(self, run_id: int, name_filter: Optional[str] = None) -> Dict[str, Union[str, bytes]]
+def get_run_logs(self, run_id: int) -> Dict[str, str]  # Returns {filename: content}
+def get_artifacts(self, run_id: int, name_filter: Optional[str] = None) -> Dict[str, str]  # Text only, skips binary
 ```
 
 ### Integration Points

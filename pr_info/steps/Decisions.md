@@ -47,7 +47,7 @@ Decisions made during plan review discussion.
 
 ## Plan Review Decisions (Round 2)
 
-15. **Log retrieval approach**: Return all logs from the run, but include job status info so consumer knows which jobs failed. Method renamed to `get_run_logs(run_id)`. Consumer can filter by job name if needed.
+15. **Log retrieval approach**: Return all logs from the run as `Dict[str, str]`. Job status info is NOT included (consumer already has it from `get_latest_ci_status()`). Consumer can filter logs by job name using the job info they already have.
 
 16. **Shared ZIP download helper**: Create `_download_and_extract_zip(url: str)` helper in Step 3, reuse in Step 4.
 
@@ -55,7 +55,7 @@ Decisions made during plan review discussion.
 
 18. **Large artifact handling**: No limit on artifact size. Document memory implications. Consumer's responsibility to use `name_filter` wisely.
 
-19. **Binary file handling in artifacts**: Return `Dict[str, Union[str, bytes]]`. Text files as `str`, binary files as `bytes`.
+19. **Binary file handling in artifacts**: Return `Dict[str, str]` only. Skip binary files with a log warning. Add binary support in a future iteration if needed.
 
 20. **Step 0 simplification**: Keep Step 0 but simplify test cases - just cover valid/invalid basics, fewer edge cases.
 
