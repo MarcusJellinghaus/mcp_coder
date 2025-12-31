@@ -32,13 +32,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 1 implementation
 
 ### Step 2: Implement Core Cache Logic
-- [ ] Implement `get_cached_eligible_issues()` function in `src/mcp_coder/cli/commands/coordinator.py`
-- [ ] Implement helper functions: `_load_cache_file`, `_save_cache_file`, `_get_cache_file_path`, `_log_stale_cache_entries`
-- [ ] Create comprehensive tests in `tests/utils/test_coordinator_cache.py` (new file)
-- [ ] Run pylint check and fix all issues found
-- [ ] Run pytest and fix all failing tests
-- [ ] Run mypy and fix all type issues
-- [ ] Prepare git commit message for Step 2 implementation
+- [x] Implement `get_cached_eligible_issues()` function in `src/mcp_coder/cli/commands/coordinator.py`
+- [x] Implement helper functions: `_load_cache_file`, `_save_cache_file`, `_get_cache_file_path`, `_log_stale_cache_entries`
+- [x] Create comprehensive tests in `tests/utils/test_coordinator_cache.py` (new file)
+- [x] Run pylint check and fix all issues found
+- [x] Run pytest and fix all failing tests
+- [x] Run mypy and fix all type issues
+- [x] Prepare git commit message for Step 2 implementation
 
 ### Step 3: Configuration, CLI Flag, and Integration
 - [ ] Add `--force-refresh` CLI flag to coordinator run command

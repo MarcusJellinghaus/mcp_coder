@@ -9,9 +9,12 @@ by filtering eligible issues and triggering appropriate Jenkins workflows.
 """
 
 import argparse
+import json
 import logging
 import sys
-from typing import Optional
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
@@ -395,6 +398,275 @@ def dispatch_workflow(
         f"removed '{current_label}', added '{workflow_config['next_label']}' | "
         f"Issue: {issue_url} | {jenkins_link}"
     )
+
+
+def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
+    """Load cache file or return empty cache structure.
+
+    Args:
+        cache_file_path: Path to cache file
+
+    Returns:
+        Dictionary with last_checked and issues, or empty structure on errors
+    """
+    try:
+        if not cache_file_path.exists():
+            return {"last_checked": None, "issues": {}}
+
+        with cache_file_path.open("r") as f:
+            data = json.load(f)
+
+        # Validate structure
+        if not isinstance(data, dict) or "issues" not in data:
+            logger.warning(f"Invalid cache structure in {cache_file_path}, recreating")
+            return {"last_checked": None, "issues": {}}
+
+        return data
+
+    except (json.JSONDecodeError, OSError, PermissionError) as e:
+        logger.warning(f"Cache load error for {cache_file_path}: {e}, starting fresh")
+        return {"last_checked": None, "issues": {}}
+
+
+def _save_cache_file(cache_file_path: Path, cache_data: Dict[str, Any]) -> bool:
+    """Save cache data to file using atomic write.
+
+    Args:
+        cache_file_path: Path to cache file
+        cache_data: Cache data to save
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Ensure directory exists
+        cache_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Atomic write: write to temp file, then rename
+        temp_path = cache_file_path.with_suffix(".tmp")
+        with temp_path.open("w") as f:
+            json.dump(cache_data, f, indent=2)
+        temp_path.replace(cache_file_path)  # Atomic rename
+
+        return True
+
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Cache save error for {cache_file_path}: {e}")
+        return False
+
+
+def _get_cache_file_path(repo_full_name: str) -> Path:
+    """Get cache file path for repository.
+
+    Args:
+        repo_full_name: Repository in "owner/repo" format
+
+    Returns:
+        Path to cache file
+    """
+    # Convert "owner/repo" to "owner_repo.issues.json"
+    safe_name = repo_full_name.replace("/", "_")
+    cache_dir = Path.home() / ".mcp_coder" / "coordinator_cache"
+    return cache_dir / f"{safe_name}.issues.json"
+
+
+def _log_stale_cache_entries(
+    cached_issues: Dict[str, IssueData], fresh_issues: Dict[str, IssueData]
+) -> None:
+    """Log detailed staleness information when cached data differs from fresh data.
+
+    Args:
+        cached_issues: Issues from cache (issue_number -> IssueData)
+        fresh_issues: Fresh issues from API (issue_number -> IssueData)
+    """
+    # Check for state/label changes in existing issues
+    for issue_num, cached_issue in cached_issues.items():
+        if issue_num in fresh_issues:
+            fresh_issue = fresh_issues[issue_num]
+
+            # Check state changes
+            if cached_issue.get("state") != fresh_issue.get("state"):
+                logger.info(
+                    f"Issue #{issue_num}: cached state '{cached_issue.get('state')}' != "
+                    f"actual '{fresh_issue.get('state')}'"
+                )
+
+            # Check label changes
+            cached_labels = set(cached_issue.get("labels", []))
+            fresh_labels = set(fresh_issue.get("labels", []))
+            if cached_labels != fresh_labels:
+                logger.info(
+                    f"Issue #{issue_num}: cached labels {sorted(cached_labels)} != "
+                    f"actual {sorted(fresh_labels)}"
+                )
+        else:
+            # Issue no longer exists
+            logger.info(f"Issue #{issue_num}: no longer exists in repository")
+
+
+def get_cached_eligible_issues(
+    repo_full_name: str,
+    issue_manager: IssueManager,
+    force_refresh: bool = False,
+    cache_refresh_minutes: int = 1440,
+) -> List[IssueData]:
+    """Get eligible issues using cache for performance and duplicate protection.
+
+    Args:
+        repo_full_name: Repository in "owner/repo" format (e.g., "anthropics/claude-code")
+        issue_manager: IssueManager for GitHub API calls
+        force_refresh: Bypass cache entirely
+        cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
+
+    Returns:
+        List of eligible issues (open state, meeting bot pickup criteria)
+    """
+    try:
+        # Step 1: Check duplicate protection (1-minute window)
+        cache_file_path = _get_cache_file_path(repo_full_name)
+        cache_data = _load_cache_file(cache_file_path)
+
+        # Parse last_checked timestamp
+        last_checked = None
+        if cache_data["last_checked"]:
+            try:
+                last_checked = datetime.fromisoformat(
+                    cache_data["last_checked"].replace("Z", "+00:00")
+                )
+            except (ValueError, AttributeError):
+                logger.debug(
+                    f"Invalid timestamp in cache: {cache_data['last_checked']}"
+                )
+
+        # Duplicate protection: skip if checked within last minute
+        now = datetime.now().astimezone()
+        if (
+            not force_refresh
+            and last_checked
+            and (now - last_checked) < timedelta(minutes=1)
+        ):
+            logger.info(
+                f"Skipping {repo_full_name} - checked {int((now - last_checked).total_seconds())}s ago"
+            )
+            return []
+
+        # Step 2: Determine refresh strategy
+        is_full_refresh = (
+            force_refresh
+            or not last_checked
+            or (now - last_checked) > timedelta(minutes=cache_refresh_minutes)
+        )
+
+        # Step 3: Fetch issues using appropriate method
+        if is_full_refresh:
+            logger.debug(f"Full refresh for {repo_full_name}")
+            fresh_issues = issue_manager.list_issues(
+                state="open", include_pull_requests=False
+            )
+
+            # Log staleness if we had cached data
+            if cache_data["issues"]:
+                fresh_issues_dict = {
+                    str(issue["number"]): issue for issue in fresh_issues
+                }
+                _log_stale_cache_entries(cache_data["issues"], fresh_issues_dict)
+        else:
+            logger.debug(
+                f"Incremental refresh for {repo_full_name} since {last_checked}"
+            )
+            # Use the extended list_issues method with since parameter from Step 1
+            fresh_issues = issue_manager.list_issues(
+                state="open", include_pull_requests=False, since=last_checked
+            )
+
+        # Step 4: Merge fresh issues with cached issues
+        # Convert to dict for easier merging
+        fresh_issues_dict = {str(issue["number"]): issue for issue in fresh_issues}
+
+        # Update cache with fresh data
+        cache_data["issues"].update(fresh_issues_dict)
+        cache_data["last_checked"] = now.isoformat()
+
+        # Step 5: Save updated cache
+        _save_cache_file(cache_file_path, cache_data)
+
+        # Step 6: Filter cached issues for eligibility
+        all_cached_issues = list(cache_data["issues"].values())
+        eligible_issues = _filter_eligible_issues(all_cached_issues)
+
+        logger.debug(
+            f"Cache returned {len(eligible_issues)} eligible issues for {repo_full_name}"
+        )
+        return eligible_issues
+
+    except Exception as e:
+        # Graceful fallback: any error returns same result as current implementation
+        logger.warning(
+            f"Cache error for {repo_full_name}: {e}, falling back to direct fetch"
+        )
+        return get_eligible_issues(issue_manager)
+
+
+def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
+    """Filter issues for eligibility (same logic as get_eligible_issues).
+
+    Args:
+        issues: List of issues to filter
+
+    Returns:
+        List of eligible issues sorted by priority
+    """
+    # Load label configuration
+    from importlib import resources
+    from pathlib import Path
+
+    config_resource = resources.files("mcp_coder.config") / "labels.json"
+    config_path = Path(str(config_resource))
+    labels_config = load_labels_config(config_path)
+
+    # Extract bot_pickup labels and ignore_labels
+    bot_pickup_labels = set()
+    for label in labels_config["workflow_labels"]:
+        if label["category"] == "bot_pickup":
+            bot_pickup_labels.add(label["name"])
+
+    ignore_labels_set = set(labels_config.get("ignore_labels", []))
+
+    # Filter issues (only open state)
+    eligible_issues = []
+    for issue in issues:
+        # Skip if not open
+        if issue.get("state") != "open":
+            continue
+
+        issue_labels = set(issue["labels"])
+
+        # Count bot_pickup labels on this issue
+        bot_pickup_count = len(issue_labels & bot_pickup_labels)
+
+        # Skip if not exactly one bot_pickup label
+        if bot_pickup_count != 1:
+            continue
+
+        # Skip if has any ignore_labels
+        if issue_labels & ignore_labels_set:
+            continue
+
+        # Issue is eligible
+        eligible_issues.append(issue)
+
+    # Sort by priority
+    priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
+
+    def get_priority(issue: IssueData) -> int:
+        """Get priority index for an issue (lower = higher priority)."""
+        for label in issue["labels"]:
+            if label in priority_map:
+                return priority_map[label]
+        return len(PRIORITY_ORDER)  # Lowest priority
+
+    eligible_issues.sort(key=get_priority)
+    return eligible_issues
 
 
 def get_eligible_issues(
