@@ -8,7 +8,7 @@ import json
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
 import pytest
@@ -35,11 +35,15 @@ def sample_issue() -> IssueData:
         "url": "https://github.com/test/repo/issues/123",
         "title": "Test issue",
         "body": "Test issue body",
+        "assignees": [],
+        "user": "testuser",
+        "created_at": "2025-12-31T08:00:00Z",
+        "locked": False,
     }
 
 
 @pytest.fixture
-def sample_cache_data() -> dict:
+def sample_cache_data() -> Dict[str, object]:
     """Sample cache data structure."""
     return {
         "last_checked": "2025-12-31T10:30:00Z",
@@ -52,13 +56,17 @@ def sample_cache_data() -> dict:
                 "url": "https://github.com/test/repo/issues/123",
                 "title": "Test issue",
                 "body": "Test issue body",
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
             }
         },
     }
 
 
 @pytest.fixture
-def mock_issue_manager():
+def mock_issue_manager() -> Mock:
     """Mock IssueManager for testing."""
     manager = Mock()
     manager.list_issues.return_value = []
@@ -68,7 +76,7 @@ def mock_issue_manager():
 class TestCacheFilePath:
     """Tests for _get_cache_file_path function."""
 
-    def test_get_cache_file_path_basic(self):
+    def test_get_cache_file_path_basic(self) -> None:
         """Test basic cache file path generation."""
         repo_name = "owner/repo"
         path = _get_cache_file_path(repo_name)
@@ -78,7 +86,7 @@ class TestCacheFilePath:
 
         assert path == expected_file
 
-    def test_get_cache_file_path_complex_names(self):
+    def test_get_cache_file_path_complex_names(self) -> None:
         """Test cache file path with complex repository names."""
         test_cases = [
             ("anthropics/claude-code", "anthropics_claude-code.issues.json"),
@@ -94,7 +102,7 @@ class TestCacheFilePath:
 class TestCacheFileOperations:
     """Tests for cache file load/save operations."""
 
-    def test_load_cache_file_nonexistent(self):
+    def test_load_cache_file_nonexistent(self) -> None:
         """Test loading non-existent cache file returns empty structure."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "nonexistent.json"
@@ -102,7 +110,7 @@ class TestCacheFileOperations:
 
             assert result == {"last_checked": None, "issues": {}}
 
-    def test_load_cache_file_valid(self, sample_cache_data):
+    def test_load_cache_file_valid(self, sample_cache_data: Dict[str, object]) -> None:
         """Test loading valid cache file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "cache.json"
@@ -111,7 +119,7 @@ class TestCacheFileOperations:
             result = _load_cache_file(cache_path)
             assert result == sample_cache_data
 
-    def test_load_cache_file_invalid_json(self):
+    def test_load_cache_file_invalid_json(self) -> None:
         """Test loading corrupted JSON file returns empty structure."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "invalid.json"
@@ -120,7 +128,7 @@ class TestCacheFileOperations:
             result = _load_cache_file(cache_path)
             assert result == {"last_checked": None, "issues": {}}
 
-    def test_load_cache_file_invalid_structure(self):
+    def test_load_cache_file_invalid_structure(self) -> None:
         """Test loading file with invalid structure returns empty structure."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "invalid_structure.json"
@@ -129,7 +137,9 @@ class TestCacheFileOperations:
             result = _load_cache_file(cache_path)
             assert result == {"last_checked": None, "issues": {}}
 
-    def test_save_cache_file_success(self, sample_cache_data):
+    def test_save_cache_file_success(
+        self, sample_cache_data: Dict[str, object]
+    ) -> None:
         """Test successful cache file save with atomic write."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "subdir" / "cache.json"
@@ -142,7 +152,9 @@ class TestCacheFileOperations:
             saved_data = json.loads(cache_path.read_text())
             assert saved_data == sample_cache_data
 
-    def test_save_cache_file_creates_directory(self, sample_cache_data):
+    def test_save_cache_file_creates_directory(
+        self, sample_cache_data: Dict[str, object]
+    ) -> None:
         """Test cache file save creates parent directories."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "deep" / "nested" / "dirs" / "cache.json"
@@ -152,7 +164,9 @@ class TestCacheFileOperations:
             assert cache_path.exists()
 
     @patch("builtins.open", side_effect=PermissionError("Access denied"))
-    def test_save_cache_file_permission_error(self, mock_open, sample_cache_data):
+    def test_save_cache_file_permission_error(
+        self, mock_open: Mock, sample_cache_data: Dict[str, object]
+    ) -> None:
         """Test cache file save handles permission errors gracefully."""
         cache_path = Path("/fake/path/cache.json")
 
@@ -163,26 +177,78 @@ class TestCacheFileOperations:
 class TestStalenessLogging:
     """Tests for _log_stale_cache_entries function."""
 
-    def test_log_stale_cache_entries_state_change(self, caplog):
+    def test_log_stale_cache_entries_state_change(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test logging when issue state changes."""
-        cached_issues = {"123": {"number": 123, "state": "open", "labels": ["bug"]}}
-        fresh_issues = {"123": {"number": 123, "state": "closed", "labels": ["bug"]}}
+        cached_issues: Dict[str, IssueData] = {
+            "123": {
+                "number": 123,
+                "state": "open",
+                "labels": ["bug"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test",
+                "body": "Test",
+                "url": "http://test.com",
+                "updated_at": "2025-12-31T08:00:00Z",
+            }
+        }
+        fresh_issues: Dict[str, IssueData] = {
+            "123": {
+                "number": 123,
+                "state": "closed",
+                "labels": ["bug"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test",
+                "body": "Test",
+                "url": "http://test.com",
+                "updated_at": "2025-12-31T08:00:00Z",
+            }
+        }
 
         _log_stale_cache_entries(cached_issues, fresh_issues)
 
         assert "Issue #123: cached state 'open' != actual 'closed'" in caplog.text
 
-    def test_log_stale_cache_entries_label_change(self, caplog):
+    def test_log_stale_cache_entries_label_change(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test logging when issue labels change."""
-        cached_issues = {
+        cached_issues: Dict[str, IssueData] = {
             "123": {
                 "number": 123,
                 "state": "open",
                 "labels": ["status-02:awaiting-planning"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test",
+                "body": "Test",
+                "url": "http://test.com",
+                "updated_at": "2025-12-31T08:00:00Z",
             }
         }
-        fresh_issues = {
-            "123": {"number": 123, "state": "open", "labels": ["status-03:planning"]}
+        fresh_issues: Dict[str, IssueData] = {
+            "123": {
+                "number": 123,
+                "state": "open",
+                "labels": ["status-03:planning"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test",
+                "body": "Test",
+                "url": "http://test.com",
+                "updated_at": "2025-12-31T08:00:00Z",
+            }
         }
 
         _log_stale_cache_entries(cached_issues, fresh_issues)
@@ -191,19 +257,65 @@ class TestStalenessLogging:
         assert "status-02:awaiting-planning" in caplog.text
         assert "status-03:planning" in caplog.text
 
-    def test_log_stale_cache_entries_missing_issue(self, caplog):
+    def test_log_stale_cache_entries_missing_issue(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test logging when cached issue no longer exists."""
-        cached_issues = {"123": {"number": 123, "state": "open", "labels": ["bug"]}}
-        fresh_issues = {}
+        cached_issues: Dict[str, IssueData] = {
+            "123": {
+                "number": 123,
+                "state": "open",
+                "labels": ["bug"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test",
+                "body": "Test",
+                "url": "http://test.com",
+                "updated_at": "2025-12-31T08:00:00Z",
+            }
+        }
+        fresh_issues: Dict[str, IssueData] = {}
 
         _log_stale_cache_entries(cached_issues, fresh_issues)
 
         assert "Issue #123: no longer exists in repository" in caplog.text
 
-    def test_log_stale_cache_entries_no_changes(self, caplog):
+    def test_log_stale_cache_entries_no_changes(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test no logging when no changes detected."""
-        cached_issues = {"123": {"number": 123, "state": "open", "labels": ["bug"]}}
-        fresh_issues = {"123": {"number": 123, "state": "open", "labels": ["bug"]}}
+        cached_issues: Dict[str, IssueData] = {
+            "123": {
+                "number": 123,
+                "state": "open",
+                "labels": ["bug"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test",
+                "body": "Test",
+                "url": "http://test.com",
+                "updated_at": "2025-12-31T08:00:00Z",
+            }
+        }
+        fresh_issues: Dict[str, IssueData] = {
+            "123": {
+                "number": 123,
+                "state": "open",
+                "labels": ["bug"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test",
+                "body": "Test",
+                "url": "http://test.com",
+                "updated_at": "2025-12-31T08:00:00Z",
+            }
+        }
 
         _log_stale_cache_entries(cached_issues, fresh_issues)
 
@@ -215,7 +327,7 @@ class TestEligibleIssuesFiltering:
     """Tests for _filter_eligible_issues function."""
 
     @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
-    def test_filter_eligible_issues_basic(self, mock_load_config):
+    def test_filter_eligible_issues_basic(self, mock_load_config: Mock) -> None:
         """Test basic filtering of eligible issues."""
         # Mock labels config
         mock_load_config.return_value = {
@@ -227,19 +339,71 @@ class TestEligibleIssuesFiltering:
             "ignore_labels": ["wontfix"],
         }
 
-        issues = [
-            {"number": 1, "state": "open", "labels": ["status-02:awaiting-planning"]},
-            {"number": 2, "state": "open", "labels": ["status-05:plan-ready"]},
+        issues: List[IssueData] = [
+            {
+                "number": 1,
+                "state": "open",
+                "labels": ["status-02:awaiting-planning"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test 1",
+                "body": "Test 1",
+                "url": "http://test.com/1",
+                "updated_at": "2025-12-31T08:00:00Z",
+            },
+            {
+                "number": 2,
+                "state": "open",
+                "labels": ["status-05:plan-ready"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test 2",
+                "body": "Test 2",
+                "url": "http://test.com/2",
+                "updated_at": "2025-12-31T08:00:00Z",
+            },
             {
                 "number": 3,
                 "state": "closed",
                 "labels": ["status-02:awaiting-planning"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test 3",
+                "body": "Test 3",
+                "url": "http://test.com/3",
+                "updated_at": "2025-12-31T08:00:00Z",
             },  # closed
-            {"number": 4, "state": "open", "labels": ["bug"]},  # no bot_pickup label
+            {
+                "number": 4,
+                "state": "open",
+                "labels": ["bug"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test 4",
+                "body": "Test 4",
+                "url": "http://test.com/4",
+                "updated_at": "2025-12-31T08:00:00Z",
+            },  # no bot_pickup label
             {
                 "number": 5,
                 "state": "open",
                 "labels": ["status-02:awaiting-planning", "wontfix"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test 5",
+                "body": "Test 5",
+                "url": "http://test.com/5",
+                "updated_at": "2025-12-31T08:00:00Z",
             },  # ignore label
         ]
 
@@ -253,7 +417,9 @@ class TestEligibleIssuesFiltering:
         )  # status-02:awaiting-planning has lower priority
 
     @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
-    def test_filter_eligible_issues_multiple_bot_pickup_labels(self, mock_load_config):
+    def test_filter_eligible_issues_multiple_bot_pickup_labels(
+        self, mock_load_config: Mock
+    ) -> None:
         """Test filtering excludes issues with multiple bot_pickup labels."""
         mock_load_config.return_value = {
             "workflow_labels": [
@@ -263,11 +429,19 @@ class TestEligibleIssuesFiltering:
             "ignore_labels": [],
         }
 
-        issues = [
+        issues: List[IssueData] = [
             {
                 "number": 1,
                 "state": "open",
                 "labels": ["status-02:awaiting-planning", "status-05:plan-ready"],
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+                "title": "Test",
+                "body": "Test",
+                "url": "http://test.com",
+                "updated_at": "2025-12-31T08:00:00Z",
             }
         ]
 
@@ -279,8 +453,8 @@ class TestGetCachedEligibleIssues:
     """Tests for get_cached_eligible_issues main function."""
 
     def test_get_cached_eligible_issues_first_run(
-        self, mock_issue_manager, sample_issue
-    ):
+        self, mock_issue_manager: Mock, sample_issue: IssueData
+    ) -> None:
         """Test first run with no existing cache."""
         mock_issue_manager.list_issues.return_value = [sample_issue]
 
@@ -309,8 +483,8 @@ class TestGetCachedEligibleIssues:
             mock_save.assert_called_once()
 
     def test_get_cached_eligible_issues_incremental_update(
-        self, mock_issue_manager, sample_issue
-    ):
+        self, mock_issue_manager: Mock, sample_issue: IssueData
+    ) -> None:
         """Test incremental update with recent cache."""
         # Cache checked 30 minutes ago (within 24-hour window)
         cache_time = datetime.now().astimezone() - timedelta(minutes=30)
@@ -344,8 +518,8 @@ class TestGetCachedEligibleIssues:
             )
 
     def test_get_cached_eligible_issues_full_refresh(
-        self, mock_issue_manager, sample_issue
-    ):
+        self, mock_issue_manager: Mock, sample_issue: IssueData
+    ) -> None:
         """Test full refresh when cache is old."""
         # Cache checked 25 hours ago (beyond 24-hour window)
         old_cache_time = datetime.now().astimezone() - timedelta(hours=25)
@@ -383,7 +557,9 @@ class TestGetCachedEligibleIssues:
             # Should log staleness since we had cached data
             mock_log_stale.assert_called_once()
 
-    def test_get_cached_eligible_issues_duplicate_protection(self, mock_issue_manager):
+    def test_get_cached_eligible_issues_duplicate_protection(
+        self, mock_issue_manager: Mock
+    ) -> None:
         """Test duplicate protection skips recent checks."""
         # Cache checked 30 seconds ago (within 1-minute window)
         recent_time = datetime.now().astimezone() - timedelta(seconds=30)
@@ -408,8 +584,8 @@ class TestGetCachedEligibleIssues:
             mock_issue_manager.list_issues.assert_not_called()
 
     def test_get_cached_eligible_issues_force_refresh(
-        self, mock_issue_manager, sample_issue
-    ):
+        self, mock_issue_manager: Mock, sample_issue: IssueData
+    ) -> None:
         """Test force refresh bypasses cache and duplicate protection."""
         # Cache checked 30 seconds ago, but force_refresh should bypass it
         recent_time = datetime.now().astimezone() - timedelta(seconds=30)
@@ -442,7 +618,9 @@ class TestGetCachedEligibleIssues:
             # Should call issue_manager despite recent check
             mock_issue_manager.list_issues.assert_called_once()
 
-    def test_get_cached_eligible_issues_corrupted_cache(self, mock_issue_manager):
+    def test_get_cached_eligible_issues_corrupted_cache(
+        self, mock_issue_manager: Mock
+    ) -> None:
         """Test graceful fallback when cache operations fail."""
         with (
             patch(
@@ -467,8 +645,8 @@ class TestGetCachedEligibleIssues:
             mock_fallback.assert_called_once_with(mock_issue_manager)
 
     def test_get_cached_eligible_issues_custom_cache_refresh_minutes(
-        self, mock_issue_manager, sample_issue
-    ):
+        self, mock_issue_manager: Mock, sample_issue: IssueData
+    ) -> None:
         """Test custom cache refresh threshold."""
         # Cache checked 10 minutes ago, with custom 5-minute threshold
         cache_time = datetime.now().astimezone() - timedelta(minutes=10)
