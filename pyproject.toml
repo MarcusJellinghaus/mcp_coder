@@ -120,6 +120,7 @@ ignore_missing_imports = true
 module = ["tests.*"]
 # Disable unreachable warnings for test files due to mypy false positives with assertions
 disable_error_code = ["unreachable"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["mcp.server.fastmcp"]
@@ -131,6 +132,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["pyperclip"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["requests", "requests.*"]
 ignore_missing_imports = true
 
 [tool.setuptools_scm]
