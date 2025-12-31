@@ -82,3 +82,19 @@ Add GitHub API caching to the coordinator to reduce unnecessary API calls when r
 - **Step 1**: Extend `list_issues()` with optional `since` parameter
 - **Step 2**: Implement core cache logic function with staleness detection
 - **Step 3**: Configuration + CLI flag + Integration into coordinator
+- **Step 4**: Cache robustness improvements and performance metrics
+- **Step 5**: Documentation updates for caching functionality
+
+## Post-Implementation Improvements
+
+### Robustness Enhancements (Step 4)
+- **Enhanced URL parsing**: Handle various Git URL formats with fallback logic
+- **Cache naming fallback**: Use "repo.issues.json" when owner cannot be determined
+- **Performance metrics**: DEBUG-level logging for cache hit/miss/age/count
+- **Edge case handling**: Robust fallback for non-standard repository URLs
+
+### Documentation (Step 5)
+- **User guidance**: Practical documentation for caching configuration
+- **Troubleshooting**: Common cache issues and solutions
+- **Performance expectations**: Expected API call reduction benefits
+- **Configuration examples**: Sample TOML configurations for different use cases

@@ -51,3 +51,16 @@ This document records decisions made during the project plan review discussion.
 | Error handling granularity | Specific handlers per error type | More informative for troubleshooting |
 | Step 2 algorithm detail | Prescriptive helper function structure | Clear expectations for consistent implementation |
 | Atomic writes documentation | Document in step file with example | Ensures implementer doesn't miss this important pattern |
+
+## Post-Implementation Review Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Repo URL parsing fallback | Handle owner=None inside `get_cached_eligible_issues()` | Centralize fallback logic in cache function |
+| Cache naming for unknown owner | Use "repo.issues.json" when owner=None, log warning | Avoid collisions, inform user of fallback |
+| Cache metrics logging | DEBUG level with detailed info (repo, hit/miss, age, count) | Help validate caching effectiveness without noise |
+| Input validation for repo_full_name | Trust caller, no validation | Keep function simple and performant |
+| Cache schema versioning | Skip versioning, cache files are temporary | Avoid complexity for temporary data |
+| Error handling approach | Keep broad exception handler with fallback | Simple and safe, any cache error triggers fallback |
+| Configuration validation | Keep current approach with warnings | User-friendly, doesn't break on invalid config |
+| Documentation updates | Update existing docs with caching section | Integrate with existing documentation structure |

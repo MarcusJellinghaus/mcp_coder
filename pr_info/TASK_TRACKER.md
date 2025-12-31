@@ -50,8 +50,29 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run mypy and fix all type issues
 - [x] Prepare git commit message for Step 3 implementation
 
+### Step 4: Cache Robustness and Metrics Improvements
+- [ ] Implement enhanced `_parse_repo_identifier()` function with fallback logic
+- [ ] Add warning logging for cache naming fallback scenarios
+- [ ] Implement detailed cache metrics logging at DEBUG level
+- [ ] Enhance `_get_cache_file_path()` for owner=None scenarios
+- [ ] Update `get_cached_eligible_issues()` with robust URL parsing
+- [ ] Add comprehensive tests for URL parsing and edge cases
+- [ ] Run pylint check and fix all issues found
+- [ ] Run pytest and fix all failing tests
+- [ ] Run mypy and fix all type issues
+- [ ] Prepare git commit message for Step 4 implementation
+
+### Step 5: Documentation Updates
+- [ ] Locate existing coordinator documentation files
+- [ ] Add caching functionality section to relevant documentation
+- [ ] Document configuration options with examples
+- [ ] Add CLI flag usage examples
+- [ ] Create troubleshooting section for cache-related issues
+- [ ] Review documentation for clarity and completeness
+- [ ] Prepare git commit message for documentation updates
+
 ### Pull Request
-- [ ] Review all implementation steps are complete
+- [ ] Review all implementation steps are complete (Steps 1-5)
 - [ ] Run full test suite and ensure all tests pass
 - [ ] Run final code quality checks (pylint, mypy, pytest)
 - [ ] Prepare comprehensive PR summary and description
