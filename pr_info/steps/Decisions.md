@@ -62,3 +62,21 @@ Decisions made during plan review discussion.
 21. **Smoke test default branch**: Use `get_default_branch_name()` from `git_operations.branches` to detect the correct branch dynamically.
 
 22. **Fixture location**: Shared fixtures (like `mock_repo`, `ci_manager`) should go in `tests/utils/github_operations/conftest.py`.
+
+## Code Review Decisions (Post-Implementation)
+
+23. **Logger f-strings**: Leave f-strings in logger calls as-is. F-strings are more readable, and the performance difference is negligible for error-level logs.
+
+24. **Type stubs for requests**: Add `types-requests` to dev dependencies in `pyproject.toml` and remove the `# type: ignore` comment from the requests import.
+
+25. **HTTP request timeout**: Add a configurable timeout as a class-level constant (`DEFAULT_REQUEST_TIMEOUT = 60`) to prevent indefinite hangs when GitHub API is slow or unresponsive.
+
+26. **Test file organization**: Split the large test file (`test_ci_results_manager.py`, 964 lines) into multiple files by feature:
+    - `test_ci_results_manager_foundation.py` - initialization, validation
+    - `test_ci_results_manager_status.py` - `get_latest_ci_status` tests
+    - `test_ci_results_manager_logs.py` - `get_run_logs` tests
+    - `test_ci_results_manager_artifacts.py` - `get_artifacts` tests
+
+27. **Shared fixtures in conftest**: Move shared fixtures (`mock_repo`, `ci_manager`, `mock_artifact`, `mock_zip_content`) to `tests/utils/github_operations/conftest.py` to reduce duplication.
+
+28. **Duplicate print statement fix**: Remove the unconditional print statement at the end of `test_ci_analysis_workflow` in the smoke tests.

@@ -109,6 +109,10 @@ Each step follows TDD pattern:
 3. **Step 3**: Run log retrieval (`get_run_logs`) with shared ZIP helper
 4. **Step 4**: Artifact retrieval (`get_artifacts`) reusing ZIP helper
 5. **Step 5**: Integration and smoke tests
+6. **Step 6**: Add type stubs for requests and configurable HTTP timeout
+7. **Step 7**: Move shared test fixtures to conftest.py
+8. **Step 8**: Split test file by feature (foundation, status, logs, artifacts)
+9. **Step 9**: Fix duplicate print statement in smoke test
 
 ### Validation & Error Handling
 - Consistent with existing managers (BaseGitHubManager patterns)
