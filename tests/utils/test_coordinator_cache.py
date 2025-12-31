@@ -5,6 +5,7 @@ for proper cache storage, duplicate protection, and incremental fetching.
 """
 
 import json
+import logging
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -163,15 +164,14 @@ class TestCacheFileOperations:
             assert result is True
             assert cache_path.exists()
 
-    @patch("builtins.open", side_effect=PermissionError("Access denied"))
     def test_save_cache_file_permission_error(
-        self, mock_open: Mock, sample_cache_data: Dict[str, object]
+        self, sample_cache_data: Dict[str, object]
     ) -> None:
         """Test cache file save handles permission errors gracefully."""
-        cache_path = Path("/fake/path/cache.json")
-
-        result = _save_cache_file(cache_path, sample_cache_data)
-        assert result is False
+        with patch.object(Path, "open", side_effect=PermissionError("Access denied")):
+            cache_path = Path("/fake/path/cache.json")
+            result = _save_cache_file(cache_path, sample_cache_data)
+            assert result is False
 
 
 class TestStalenessLogging:
@@ -181,6 +181,8 @@ class TestStalenessLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test logging when issue state changes."""
+        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator")
+
         cached_issues: Dict[str, IssueData] = {
             "123": {
                 "number": 123,
@@ -220,6 +222,8 @@ class TestStalenessLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test logging when issue labels change."""
+        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator")
+
         cached_issues: Dict[str, IssueData] = {
             "123": {
                 "number": 123,
@@ -261,6 +265,8 @@ class TestStalenessLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test logging when cached issue no longer exists."""
+        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator")
+
         cached_issues: Dict[str, IssueData] = {
             "123": {
                 "number": 123,
