@@ -6,12 +6,20 @@ Provides two main commands:
 
 The coordinator run command automates the issue → plan → implement → PR pipeline
 by filtering eligible issues and triggering appropriate Jenkins workflows.
+
+GitHub API Caching:
+Implements efficient caching with incremental fetching using GitHub's 'since' parameter,
+duplicate protection (1-minute windows), atomic file storage in ~/.mcp_coder/coordinator_cache/,
+and graceful fallback to direct API calls on errors. Cache files: {owner}_{repo}.issues.json
 """
 
 import argparse
+import json
 import logging
 import sys
-from typing import Optional
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
@@ -397,6 +405,425 @@ def dispatch_workflow(
     )
 
 
+def _parse_repo_identifier(repo_url: str, repo_name: str) -> tuple[str, str | None]:
+    """Parse repository URL to extract owner and repo name with fallback.
+
+    Args:
+        repo_url: Repository URL in various formats
+        repo_name: Repository name for fallback
+
+    Returns:
+        Tuple of (repo_name, owner) where owner may be None if extraction fails
+    """
+    import re
+
+    # Ensure repo_url is a string (handle Mock objects in tests)
+    if not isinstance(repo_url, str):
+        logger.warning(
+            f"Using fallback cache naming for {repo_name}: repo_url is not a string (got {type(repo_url)})"
+        )
+        return (repo_name, None)
+
+    # Pattern for HTTPS URLs: https://github.com/owner/repo(.git)?
+    https_pattern = r"https://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$"
+    https_match = re.match(https_pattern, repo_url)
+    if https_match:
+        owner, extracted_repo = https_match.groups()
+        return (extracted_repo, owner)
+
+    # Pattern for SSH URLs: git@github.com:owner/repo(.git)?
+    ssh_pattern = r"git@github\.com:([^/]+)/([^/]+?)(?:\.git)?/?$"
+    ssh_match = re.match(ssh_pattern, repo_url)
+    if ssh_match:
+        owner, extracted_repo = ssh_match.groups()
+        return (extracted_repo, owner)
+
+    # Fallback: unable to parse URL format, return repo_name with owner=None
+    logger.warning(
+        f"Using fallback cache naming for {repo_name}: owner could not be determined from URL {repo_url}"
+    )
+    return (repo_name, None)
+
+
+def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
+    """Load cache file or return empty cache structure.
+
+    Args:
+        cache_file_path: Path to cache file
+
+    Returns:
+        Dictionary with last_checked and issues, or empty structure on errors
+    """
+    try:
+        if not cache_file_path.exists():
+            return {"last_checked": None, "issues": {}}
+
+        with cache_file_path.open("r") as f:
+            data = json.load(f)
+
+        # Validate structure
+        if not isinstance(data, dict) or "issues" not in data:
+            logger.warning(f"Invalid cache structure in {cache_file_path}, recreating")
+            return {"last_checked": None, "issues": {}}
+
+        return data
+
+    except (json.JSONDecodeError, OSError, PermissionError) as e:
+        logger.warning(f"Cache load error for {cache_file_path}: {e}, starting fresh")
+        return {"last_checked": None, "issues": {}}
+
+
+def _log_cache_metrics(action: str, repo_name: str, **kwargs: Any) -> None:
+    """Log detailed cache performance metrics at DEBUG level.
+
+    Args:
+        action: Cache action ('hit', 'miss', 'refresh', 'save')
+        repo_name: Repository name for logging context
+        **kwargs: Additional metrics (age_minutes, issue_count, reason, etc.)
+    """
+    if action == "hit":
+        age_minutes = kwargs.get("age_minutes", 0)
+        issue_count = kwargs.get("issue_count", 0)
+        logger.debug(
+            f"Cache hit for {repo_name}: age={age_minutes}m, issues={issue_count}"
+        )
+    elif action == "miss":
+        reason = kwargs.get("reason", "unknown")
+        logger.debug(f"Cache miss for {repo_name}: reason='{reason}'")
+    elif action == "refresh":
+        refresh_type = kwargs.get("refresh_type", "unknown")
+        issue_count = kwargs.get("issue_count", 0)
+        logger.debug(
+            f"Cache refresh for {repo_name}: type={refresh_type}, new_issues={issue_count}"
+        )
+    elif action == "save":
+        total_issues = kwargs.get("total_issues", 0)
+        logger.debug(f"Cache save for {repo_name}: total_issues={total_issues}")
+
+
+def _save_cache_file(cache_file_path: Path, cache_data: Dict[str, Any]) -> bool:
+    """Save cache data to file using atomic write.
+
+    Args:
+        cache_file_path: Path to cache file
+        cache_data: Cache data to save
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Ensure directory exists
+        cache_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Atomic write: write to temp file, then rename
+        temp_path = cache_file_path.with_suffix(".tmp")
+        with temp_path.open("w") as f:
+            json.dump(cache_data, f, indent=2)
+        temp_path.replace(cache_file_path)  # Atomic rename
+
+        return True
+
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Cache save error for {cache_file_path}: {e}")
+        return False
+
+
+def _get_cache_file_path(repo_full_name: str, owner: str | None = None) -> Path:
+    """Get cache file path with enhanced naming for missing owner.
+
+    Args:
+        repo_full_name: Repository in "owner/repo" format (or just "repo" if owner unknown)
+        owner: Optional owner for enhanced naming when repo_full_name lacks owner
+
+    Returns:
+        Path to cache file
+    """
+    cache_dir = Path.home() / ".mcp_coder" / "coordinator_cache"
+
+    # If repo_full_name contains "/", use it as-is
+    if "/" in repo_full_name:
+        safe_name = repo_full_name.replace("/", "_")
+        return cache_dir / f"{safe_name}.issues.json"
+
+    # If owner is provided, construct "owner_repo.issues.json"
+    if owner:
+        safe_name = f"{owner}_{repo_full_name}"
+        return cache_dir / f"{safe_name}.issues.json"
+
+    # Fallback: just use repo name
+    return cache_dir / f"{repo_full_name}.issues.json"
+
+
+def _log_stale_cache_entries(
+    cached_issues: Dict[str, IssueData], fresh_issues: Dict[str, IssueData]
+) -> None:
+    """Log detailed staleness information when cached data differs from fresh data.
+
+    Args:
+        cached_issues: Issues from cache (issue_number -> IssueData)
+        fresh_issues: Fresh issues from API (issue_number -> IssueData)
+    """
+    # Check for state/label changes in existing issues
+    for issue_num, cached_issue in cached_issues.items():
+        if issue_num in fresh_issues:
+            fresh_issue = fresh_issues[issue_num]
+
+            # Check state changes
+            if cached_issue.get("state") != fresh_issue.get("state"):
+                logger.info(
+                    f"Issue #{issue_num}: cached state '{cached_issue.get('state')}' != "
+                    f"actual '{fresh_issue.get('state')}'"
+                )
+
+            # Check label changes
+            cached_labels = set(cached_issue.get("labels", []))
+            fresh_labels = set(fresh_issue.get("labels", []))
+            if cached_labels != fresh_labels:
+                logger.info(
+                    f"Issue #{issue_num}: cached labels {sorted(cached_labels)} != "
+                    f"actual {sorted(fresh_labels)}"
+                )
+        else:
+            # Issue no longer exists
+            logger.info(f"Issue #{issue_num}: no longer exists in repository")
+
+
+def get_cached_eligible_issues(
+    repo_full_name: str,
+    issue_manager: IssueManager,
+    force_refresh: bool = False,
+    cache_refresh_minutes: int = 1440,
+) -> List[IssueData]:
+    """Get eligible issues using cache for performance and duplicate protection.
+
+    Uses GitHub API caching with incremental fetching via the 'since' parameter
+    for efficient API usage. The 'since' parameter allows fetching only issues
+    modified after a specific timestamp, reducing API calls and improving performance.
+
+    Args:
+        repo_full_name: Repository in "owner/repo" format (e.g., "anthropics/claude-code")
+        issue_manager: IssueManager for GitHub API calls
+        force_refresh: Bypass cache entirely
+        cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
+
+    Returns:
+        List of eligible issues (open state, meeting bot pickup criteria)
+    """
+    try:
+        # Step 1: Parse repository URL for robust cache naming
+        repo_url = getattr(issue_manager, "repo_url", repo_full_name)
+        # Handle Mock objects in tests - if repo_url is not a string, use repo_full_name
+        if not isinstance(repo_url, str):
+            repo_url = repo_full_name
+        repo_name, owner = _parse_repo_identifier(repo_url, repo_full_name)
+
+        # Step 2: Check duplicate protection (1-minute window) with enhanced cache path
+        cache_file_path = _get_cache_file_path(
+            repo_name if owner is None else f"{owner}/{repo_name}", owner
+        )
+        cache_data = _load_cache_file(cache_file_path)
+
+        # Log cache metrics
+        _log_cache_metrics(
+            "miss" if not cache_data["last_checked"] else "hit",
+            repo_name,
+            reason="no_cache" if not cache_data["last_checked"] else "cache_found",
+        )
+
+        # Parse last_checked timestamp
+        last_checked = None
+        if cache_data["last_checked"]:
+            try:
+                last_checked = datetime.fromisoformat(
+                    cache_data["last_checked"].replace("Z", "+00:00")
+                )
+            except (ValueError, AttributeError):
+                logger.debug(
+                    f"Invalid timestamp in cache: {cache_data['last_checked']}"
+                )
+
+        # Duplicate protection: skip if checked within last minute
+        now = datetime.now().astimezone()
+        if (
+            not force_refresh
+            and last_checked
+            and (now - last_checked) < timedelta(minutes=1)
+        ):
+            age_seconds = int((now - last_checked).total_seconds())
+            _log_cache_metrics(
+                "hit",
+                repo_name,
+                age_minutes=0,
+                reason=f"duplicate_protection_{age_seconds}s",
+            )
+            logger.info(f"Skipping {repo_name} - checked {age_seconds}s ago")
+            # Return cached eligible issues instead of empty list
+            all_cached_issues = list(cache_data["issues"].values())
+            return _filter_eligible_issues(all_cached_issues)
+
+        # Step 3: Determine refresh strategy
+        is_full_refresh = (
+            force_refresh
+            or not last_checked
+            or (now - last_checked) > timedelta(minutes=cache_refresh_minutes)
+        )
+
+        # Step 4: Fetch issues using appropriate method
+        if is_full_refresh:
+            refresh_type = "force" if force_refresh else "full"
+            logger.debug(f"Full refresh for {repo_name} (type={refresh_type})")
+            fresh_issues = issue_manager.list_issues(
+                state="open", include_pull_requests=False
+            )
+            _log_cache_metrics(
+                "refresh",
+                repo_name,
+                refresh_type=refresh_type,
+                issue_count=len(fresh_issues),
+            )
+
+            # Log staleness if we had cached data
+            if cache_data["issues"]:
+                fresh_issues_dict = {
+                    str(issue["number"]): issue for issue in fresh_issues
+                }
+                _log_stale_cache_entries(cache_data["issues"], fresh_issues_dict)
+        else:
+            # last_checked is guaranteed to be non-None here due to is_full_refresh logic
+            assert last_checked is not None
+            cache_age_minutes = int((now - last_checked).total_seconds() / 60)
+            logger.debug(
+                f"Incremental refresh for {repo_name} since {last_checked} (age={cache_age_minutes}m)"
+            )
+            # GitHub API 'since' parameter expects ISO 8601 timestamp
+            # Only returns issues modified after this timestamp
+            fresh_issues = issue_manager.list_issues(
+                state="open", include_pull_requests=False, since=last_checked
+            )
+            _log_cache_metrics(
+                "refresh",
+                repo_name,
+                refresh_type="incremental",
+                issue_count=len(fresh_issues),
+            )
+
+        # Step 5: Merge fresh issues with cached issues
+        # Convert to dict for easier merging
+        fresh_issues_dict = {str(issue["number"]): issue for issue in fresh_issues}
+
+        # Update cache with fresh data
+        cache_data["issues"].update(fresh_issues_dict)
+        cache_data["last_checked"] = now.isoformat()
+
+        # Only save cache if we actually fetched new data
+        should_save_cache = len(fresh_issues) > 0 or is_full_refresh
+
+        # Step 6: Save updated cache (only if we have new data or force refresh)
+        if should_save_cache:
+            save_success = _save_cache_file(cache_file_path, cache_data)
+            if save_success:
+                _log_cache_metrics(
+                    "save", repo_name, total_issues=len(cache_data["issues"])
+                )
+
+        # Step 7: Filter cached issues for eligibility
+        all_cached_issues = list(cache_data["issues"].values())
+        eligible_issues = _filter_eligible_issues(all_cached_issues)
+
+        _log_cache_metrics(
+            "hit",
+            repo_name,
+            age_minutes=(
+                int((now - last_checked).total_seconds() / 60) if last_checked else 0
+            ),
+            issue_count=len(eligible_issues),
+        )
+
+        logger.debug(
+            f"Cache returned {len(eligible_issues)} eligible issues for {repo_name}"
+        )
+        return eligible_issues
+
+    except Exception as e:
+        # Graceful fallback: any error returns same result as current implementation
+        # Use repo_name from parsing if available, otherwise fall back to repo_full_name
+        try:
+            repo_url = getattr(issue_manager, "repo_url", repo_full_name)
+            if not isinstance(repo_url, str):
+                repo_url = repo_full_name
+            repo_name, _ = _parse_repo_identifier(repo_url, repo_full_name)
+        except Exception:
+            repo_name = repo_full_name
+
+        _log_cache_metrics("miss", repo_name, reason=f"error_{type(e).__name__}")
+        logger.warning(
+            f"Cache error for {repo_name}: {e}, falling back to direct fetch"
+        )
+        return get_eligible_issues(issue_manager)
+
+
+def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
+    """Filter issues for eligibility (same logic as get_eligible_issues).
+
+    Args:
+        issues: List of issues to filter
+
+    Returns:
+        List of eligible issues sorted by priority
+    """
+    # Load label configuration
+    from importlib import resources
+    from pathlib import Path
+
+    config_resource = resources.files("mcp_coder.config") / "labels.json"
+    config_path = Path(str(config_resource))
+    labels_config = load_labels_config(config_path)
+
+    # Extract bot_pickup labels and ignore_labels
+    bot_pickup_labels = set()
+    for label in labels_config["workflow_labels"]:
+        if label["category"] == "bot_pickup":
+            bot_pickup_labels.add(label["name"])
+
+    ignore_labels_set = set(labels_config.get("ignore_labels", []))
+
+    # Filter issues (only open state)
+    eligible_issues = []
+    for issue in issues:
+        # Skip if not open
+        if issue.get("state") != "open":
+            continue
+
+        issue_labels = set(issue["labels"])
+
+        # Count bot_pickup labels on this issue
+        bot_pickup_count = len(issue_labels & bot_pickup_labels)
+
+        # Skip if not exactly one bot_pickup label
+        if bot_pickup_count != 1:
+            continue
+
+        # Skip if has any ignore_labels
+        if issue_labels & ignore_labels_set:
+            continue
+
+        # Issue is eligible
+        eligible_issues.append(issue)
+
+    # Sort by priority
+    priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
+
+    def get_priority(issue: IssueData) -> int:
+        """Get priority index for an issue (lower = higher priority)."""
+        for label in issue["labels"]:
+            if label in priority_map:
+                return priority_map[label]
+        return len(PRIORITY_ORDER)  # Lowest priority
+
+    eligible_issues.sort(key=get_priority)
+    return eligible_issues
+
+
 def get_eligible_issues(
     issue_manager: IssueManager, log_level: str = "INFO"
 ) -> list[IssueData]:
@@ -558,6 +985,32 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
             f"Must be 'windows' or 'linux' (case-insensitive)"
         )
         raise ValueError(error_msg)
+
+
+def get_cache_refresh_minutes() -> int:
+    """Get cache refresh threshold from config with default fallback.
+
+    Returns:
+        Cache refresh threshold in minutes (default: 1440 = 24 hours)
+    """
+    value = get_config_value("coordinator", "cache_refresh_minutes")
+
+    if value is None:
+        return 1440  # Default: 24 hours
+
+    try:
+        result = int(value)
+        if result <= 0:
+            logger.warning(
+                f"Invalid cache_refresh_minutes value '{value}' (must be positive), using default 1440"
+            )
+            return 1440
+        return result
+    except (ValueError, TypeError):
+        logger.warning(
+            f"Invalid cache_refresh_minutes value '{value}' (must be integer), using default 1440"
+        )
+        return 1440
 
 
 def get_jenkins_credentials() -> tuple[str, str, str]:
@@ -786,16 +1239,38 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             issue_manager = IssueManager(repo_url=validated_config["repo_url"])
             branch_manager = IssueBranchManager(repo_url=validated_config["repo_url"])
 
-            # Step 4c: Get eligible issues
-            eligible_issues = get_eligible_issues(issue_manager)
+            # Step 4c: Get eligible issues using cache
+            # Extract repo_full_name from repo_url (e.g., https://github.com/owner/repo -> owner/repo)
+            repo_url = validated_config["repo_url"]
+            if repo_url.startswith("https://github.com/"):
+                repo_full_name = repo_url[len("https://github.com/") :]
+                if repo_full_name.endswith(".git"):
+                    repo_full_name = repo_full_name[:-4]
+            else:
+                # Fallback: use repo_name if URL format is unexpected
+                repo_full_name = repo_name
+
+            try:
+                eligible_issues = get_cached_eligible_issues(
+                    repo_full_name=repo_full_name,
+                    issue_manager=issue_manager,
+                    force_refresh=args.force_refresh,
+                    cache_refresh_minutes=get_cache_refresh_minutes(),
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Cache failed for {repo_full_name}: {e}, using direct fetch"
+                )
+                eligible_issues = get_eligible_issues(issue_manager)
+
             logger.info(f"Found {len(eligible_issues)} eligible issues")
 
-            # Step 4d: If no issues, continue to next repo
+            # Skip if no eligible issues or duplicate protection triggered
             if not eligible_issues:
                 logger.info(f"No eligible issues for {repo_name}")
                 continue
 
-            # Step 4e: Dispatch workflows for each eligible issue (fail-fast)
+            # Step 4d: Dispatch workflows for each eligible issue (fail-fast)
             for issue in eligible_issues:
                 # Find current bot_pickup label to determine workflow
                 current_label = None

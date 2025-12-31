@@ -1,5 +1,6 @@
 """Unit tests for IssueManager with mocked dependencies."""
 
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
@@ -1988,3 +1989,210 @@ class TestIssueManagerUnit:
 
             assert result == []
             mock_issue.get_events.assert_called_once()
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_with_since_parameter(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test list_issues with since parameter filters by update time."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock issue objects
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Recent Issue"
+        mock_issue.body = "Recent description"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+        mock_issue.pull_request = None
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.return_value = [mock_issue]
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            # Test with since parameter
+            since_time = datetime(2023, 1, 1)
+            result = manager.list_issues(since=since_time)
+
+            assert len(result) == 1
+            assert result[0]["number"] == 123
+            assert result[0]["title"] == "Recent Issue"
+
+            # Verify get_issues was called with since parameter
+            mock_repo.get_issues.assert_called_once_with(state="open", since=since_time)
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_since_filters_pull_requests(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test list_issues with since parameter still filters out PRs by default."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock issue (not a PR)
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Recent Issue"
+        mock_issue.body = "Issue description"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+        mock_issue.pull_request = None
+
+        # Mock PR (should be filtered out)
+        mock_pr = MagicMock()
+        mock_pr.number = 124
+        mock_pr.title = "Recent PR"
+        mock_pr.body = "PR description"
+        mock_pr.state = "open"
+        mock_pr.labels = []
+        mock_pr.assignees = []
+        mock_pr.html_url = "https://github.com/test/repo/pull/124"
+        mock_pr.created_at.isoformat.return_value = "2023-01-02T01:00:00Z"
+        mock_pr.updated_at.isoformat.return_value = "2023-01-02T01:00:00Z"
+        mock_pr.user.login = "testuser"
+        mock_pr.locked = False
+        mock_pr.pull_request = MagicMock()  # This is a PR
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.return_value = [mock_issue, mock_pr]
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            # Test with since parameter
+            since_time = datetime(2023, 1, 1)
+            result = manager.list_issues(since=since_time, include_pull_requests=False)
+
+            # Should only return the issue, not the PR
+            assert len(result) == 1
+            assert result[0]["number"] == 123
+            assert result[0]["title"] == "Recent Issue"
+
+            # Verify get_issues was called with since parameter
+            mock_repo.get_issues.assert_called_once_with(state="open", since=since_time)
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_without_since_unchanged(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test list_issues without since parameter works as before (backward compatibility)."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Mock issue
+        mock_issue = MagicMock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "Test description"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+        mock_issue.user.login = "testuser"
+        mock_issue.locked = False
+        mock_issue.pull_request = None
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.return_value = [mock_issue]
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            # Test without since parameter (existing behavior)
+            result = manager.list_issues(state="open", include_pull_requests=False)
+
+            assert len(result) == 1
+            assert result[0]["number"] == 123
+            assert result[0]["title"] == "Test Issue"
+
+            # Verify get_issues was called without since parameter
+            mock_repo.get_issues.assert_called_once_with(state="open")
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    def test_list_issues_since_pagination(
+        self, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """Test list_issues with since parameter handles pagination correctly."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        # Create multiple mock issues to simulate pagination
+        mock_issues = []
+        for i in range(10):
+            mock_issue = MagicMock()
+            mock_issue.number = i + 1
+            mock_issue.title = f"Recent Issue {i + 1}"
+            mock_issue.body = f"Description {i + 1}"
+            mock_issue.state = "open"
+            mock_issue.labels = []
+            mock_issue.assignees = []
+            mock_issue.html_url = f"https://github.com/test/repo/issues/{i + 1}"
+            mock_issue.created_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+            mock_issue.updated_at.isoformat.return_value = "2023-01-02T00:00:00Z"
+            mock_issue.user.login = "testuser"
+            mock_issue.locked = False
+            mock_issue.pull_request = None
+            mock_issues.append(mock_issue)
+
+        mock_repo = MagicMock()
+        mock_repo.get_issues.return_value = mock_issues
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
+            mock_config.return_value = "dummy-token"
+            manager = IssueManager(git_dir)
+
+            # Test with since parameter
+            since_time = datetime(2023, 1, 1)
+            result = manager.list_issues(since=since_time)
+
+            # Should return all 10 issues
+            assert len(result) == 10
+            assert result[0]["number"] == 1
+            assert result[9]["number"] == 10
+
+            # Verify get_issues was called with since parameter
+            mock_repo.get_issues.assert_called_once_with(state="open", since=since_time)

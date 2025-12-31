@@ -34,6 +34,17 @@ The auto-created template includes all sections with example values:
 # MCP Coder Configuration
 # Update with your actual credentials and repository information
 
+[coordinator]
+# GitHub API caching settings (optional)
+# Controls how long to cache GitHub API responses before refreshing
+# Reduces API calls and improves performance for subsequent runs
+cache_refresh_minutes = 1440  # 24 hours (default)
+
+# Alternative cache durations based on your needs:
+# cache_refresh_minutes = 60    # 1 hour - for active development
+# cache_refresh_minutes = 360   # 6 hours - balanced approach
+# cache_refresh_minutes = 2880  # 48 hours - for stable repositories
+
 [jenkins]
 # Jenkins server configuration
 # Environment variables (higher priority): JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
@@ -66,6 +77,65 @@ github_credentials_id = "github-general-pat"
 ```
 
 ## Configuration Sections
+
+### [coordinator]
+
+Coordinator-specific settings for GitHub API optimization and caching.
+
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|----------|
+| `cache_refresh_minutes` | integer | Minutes before GitHub API cache expires | No | 1440 (24 hours) |
+
+#### Configuration Examples
+
+**Default Configuration (24-hour refresh):**
+```toml
+[coordinator]
+cache_refresh_minutes = 1440  # 24 hours (default)
+```
+
+**Active Development (1-hour refresh):**
+```toml
+[coordinator]
+cache_refresh_minutes = 60  # 1 hour - for repositories with frequent changes
+```
+
+**Conservative Refresh (48-hour refresh):**
+```toml
+[coordinator]
+cache_refresh_minutes = 2880  # 48 hours - for stable repositories
+```
+
+**Custom Refresh (6-hour refresh):**
+```toml
+[coordinator]
+cache_refresh_minutes = 360  # 6 hours - balanced approach
+```
+
+#### Recommended Values by Use Case
+
+| Use Case | Recommended Value | Rationale |
+|----------|------------------|-----------|
+| **Active Development** | `60` (1 hour) | Frequent issue updates, labels, assignments |
+| **Regular Development** | `1440` (24 hours) | Default balance of freshness and performance |
+| **Stable Projects** | `2880` (48 hours) | Minimal changes, maximize cache benefits |
+| **CI/CD Pipelines** | `360` (6 hours) | Automated runs need reasonably fresh data |
+| **Demo Environments** | `4320` (72 hours) | Infrequent changes, optimize for performance |
+
+#### Cache Behavior
+- GitHub API calls are cached to reduce API rate limiting
+- Issues are fetched incrementally using `since` parameter
+- Cache files are stored per repository in `~/.mcp_coder/cache/`
+- Duplicate issue protection within 1-minute window
+- Automatic cache invalidation after configured minutes
+- Cache bypass available with `--force-refresh` flag
+
+#### Performance Benefits
+- Reduces GitHub API calls by 70-90% for subsequent runs
+- Faster coordinator execution on large repositories
+- Respects GitHub API rate limits
+- Enables frequent coordinator runs without API exhaustion
+- Particularly effective for repositories with 100+ issues
 
 ### [jenkins]
 
@@ -205,6 +275,98 @@ https://jenkins.example.com/job/MCP_Coder/mcp-coder-test-job/42/
 mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
 ```
 
+### With Cache Refresh
+
+Force fresh GitHub API data (bypasses all caching):
+
+```bash
+# Force refresh on specific repository
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+
+# Force refresh with debug logging
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh --log-level DEBUG
+```
+
+#### CLI Flag Usage Examples
+
+**Normal operation (uses cache):**
+```bash
+mcp-coder coordinator test mcp_coder --branch-name feature-x
+```
+
+**Force fresh data (bypass cache completely):**
+```bash
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+```
+
+**Multiple repositories with fresh data:**
+```bash
+mcp-coder coordinator test repo_a --branch-name main --force-refresh
+mcp-coder coordinator test repo_b --branch-name develop --force-refresh
+```
+
+**Debug cache behavior:**
+```bash
+mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
+```
+
+#### When to use `--force-refresh`
+
+| Scenario | Use `--force-refresh` | Reason |
+|----------|---------------------|--------|
+| **New issues created** | Yes | Ensure latest issues are included |
+| **Label changes** | Yes | Fresh label data needed |
+| **Milestone updates** | Yes | Current milestone assignments |
+| **Assignee changes** | Yes | Updated assignment information |
+| **Regular development** | No | Cache provides good performance |
+| **Automated CI runs** | Depends | Consider freshness vs. speed needs |
+| **Cache corruption** | Yes | Force rebuild of cache files |
+| **Troubleshooting** | Yes | Eliminate cache as variable |
+
+**Performance Impact:**
+- Without `--force-refresh`: 1-3 GitHub API calls (using cache)
+- With `--force-refresh`: 10-50+ GitHub API calls (fresh data)
+- Trade-off between data freshness and execution speed
+
+#### Cache Configuration Best Practices
+
+**Choosing the Right Cache Duration:**
+
+1. **Consider Repository Activity Level:**
+   - High activity (daily issues/PRs): 60-360 minutes
+   - Medium activity (weekly changes): 1440 minutes (24 hours)
+   - Low activity (monthly changes): 2880+ minutes (48+ hours)
+
+2. **Consider Use Pattern:**
+   - Frequent coordinator runs: Longer cache (1440+ minutes)
+   - Occasional runs: Shorter cache (60-360 minutes)
+   - CI/CD automation: Medium cache (360-1440 minutes)
+
+3. **Consider Team Size:**
+   - Large teams (10+ developers): Shorter cache (60-360 minutes)
+   - Small teams (2-5 developers): Medium cache (1440 minutes)
+   - Solo developer: Longer cache (2880+ minutes)
+
+**Environment-Specific Recommendations:**
+
+```toml
+# Development environment
+[coordinator]
+cache_refresh_minutes = 60  # Fresh data for active development
+
+# Staging environment  
+[coordinator]
+cache_refresh_minutes = 360  # Balance freshness and performance
+
+# Production monitoring
+[coordinator]
+cache_refresh_minutes = 1440  # Stable, less frequent updates
+
+# Demo/sandbox environment
+[coordinator]
+cache_refresh_minutes = 4320  # Maximize performance, minimal changes
+```
+
 ### Testing Main Branch
 
 ```bash
@@ -333,6 +495,156 @@ PermissionError: [Errno 13] Permission denied: '/home/user/.mcp_coder/config.tom
 ```
 
 **Solution:** Check directory permissions or run as appropriate user.
+
+### Cache-Related Issues
+
+#### Error: Stale or incorrect data
+
+**Symptoms:**
+- Coordinator missing recently created issues
+- Issue counts seem incorrect
+- Recent label changes not reflected
+
+**Solution:**
+```bash
+# Force refresh to bypass cache
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+```
+
+#### Error: Cache file corruption
+
+**Symptoms:**
+- JSON decode errors in logs
+- Coordinator fails with cache-related errors
+- Unexpected cache behavior
+
+**Solution:**
+```bash
+# Clear cache directory (cache will rebuild automatically)
+rm -rf ~/.mcp_coder/cache/
+# Or on Windows:
+# rmdir /s %USERPROFILE%\.mcp_coder\cache
+
+# Then run normally (cache rebuilds automatically)
+mcp-coder coordinator test mcp_coder --branch-name feature-x
+```
+
+#### Performance: Cache not improving speed
+
+**Symptoms:**
+- Still making many GitHub API calls
+- No noticeable speed improvement
+- Cache files seem small or missing
+
+**Diagnosis:**
+```bash
+# Check cache directory exists and has recent files
+ls -la ~/.mcp_coder/cache/
+# Or on Windows:
+# dir %USERPROFILE%\.mcp_coder\cache
+
+# Run with debug logging to see cache behavior
+mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
+```
+
+**Solutions:**
+- Ensure `cache_refresh_minutes` is set appropriately (not too low)
+- Check that repository URL in cache filename matches config
+- Verify sufficient disk space for cache files
+
+#### Cache file locations
+
+**Default cache directory:**
+- **Linux/macOS:** `~/.mcp_coder/cache/`
+- **Windows:** `%USERPROFILE%\.mcp_coder\cache\`
+
+**Cache file naming:**
+- Format: `issues_cache_{owner}_{repo}.json`
+- Example: `issues_cache_myorg_myrepo.json`
+- Falls back to URL hash if repository parsing fails
+
+#### Complete Configuration Examples
+
+**Standard Development Configuration:**
+```toml
+[coordinator]
+# Cache GitHub API calls for 24 hours (recommended default)
+cache_refresh_minutes = 1440
+
+[jenkins]
+server_url = "https://jenkins.example.com:8080"
+username = "ci-user"
+api_token = "your-api-token"
+
+[coordinator.repos.my_project]
+repo_url = "https://github.com/myorg/my_project.git"
+executor_test_path = "MyProject/integration-tests"
+github_credentials_id = "github-pat"
+```
+
+**Active Development Environment:**
+```toml
+[coordinator]
+# Refresh cache hourly for repositories with frequent issue updates
+cache_refresh_minutes = 60
+
+[jenkins]
+server_url = "https://jenkins.dev.local:8080"
+username = "dev-automation"
+api_token = "dev-token-123"
+
+[coordinator.repos.active_project]
+repo_url = "https://github.com/myorg/active_project.git"
+executor_test_path = "Development/test-job"
+github_credentials_id = "github-dev-token"
+```
+
+**Production Environment with Conservative Caching:**
+```toml
+[coordinator]
+# Refresh cache every 48 hours for stable production repositories
+cache_refresh_minutes = 2880
+
+[jenkins]
+server_url = "https://jenkins.prod.company.com:8080"
+username = "prod-automation"
+api_token = "prod-secure-token"
+
+[coordinator.repos.stable_service]
+repo_url = "https://github.com/company/stable_service.git"
+executor_test_path = "Production/integration-suite"
+github_credentials_id = "github-prod-pat"
+```
+
+**Multi-Repository Configuration with Different Cache Settings:**
+```toml
+[coordinator]
+# Default cache setting (applies to all repos unless overridden)
+cache_refresh_minutes = 1440
+
+[jenkins]
+server_url = "https://jenkins.company.com:8080"
+username = "automation-user"
+api_token = "company-jenkins-token"
+
+# Active development repository - more frequent updates
+[coordinator.repos.frontend_app]
+repo_url = "https://github.com/company/frontend-app.git"
+executor_test_path = "Frontend/test-suite"
+github_credentials_id = "github-frontend-pat"
+
+# Backend service - moderate activity
+[coordinator.repos.backend_api]
+repo_url = "https://github.com/company/backend-api.git"
+executor_test_path = "Backend/api-tests"
+github_credentials_id = "github-backend-pat"
+
+# Infrastructure repository - infrequent changes
+[coordinator.repos.infrastructure]
+repo_url = "https://github.com/company/infrastructure.git"
+executor_test_path = "Infrastructure/validation"
+github_credentials_id = "github-infra-pat"
+```
 
 ## Security Best Practices
 

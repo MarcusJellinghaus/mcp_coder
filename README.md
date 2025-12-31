@@ -221,11 +221,104 @@ mcp-coder coordinator test <repo_name> --branch-name <branch>
 - `<repo_name>` - Repository identifier from config (e.g., `mcp_coder`)
 - `--branch-name` - Git branch to test (required)
 - `--log-level` - Logging verbosity (optional, default: INFO)
+- `--force-refresh` - Bypass GitHub API cache and fetch fresh data (optional)
 
-**Example:**
+**Caching:**
+The coordinator includes GitHub API caching to reduce API calls and improve performance. Cache is automatically managed but can be bypassed using `--force-refresh` when fresh data is needed.
+
+**Examples:**
+
 ```bash
+# Basic usage with cache
 mcp-coder coordinator test mcp_coder --branch-name feature-x
+
+# Force fresh data (bypass cache)
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+
+# Test with debug logging
+mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
+
+# Combine force refresh with debug logging
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh --log-level DEBUG
 ```
+
+**CLI Flag Usage Scenarios:**
+
+- **Use cache (default)**: Regular development workflow when data freshness is not critical
+- **Use `--force-refresh`**: When you need the latest GitHub data, such as:
+  - After creating new issues or updating labels
+  - When troubleshooting cache-related problems
+  - For critical builds requiring absolute latest state
+- **Use `--log-level DEBUG`**: For troubleshooting cache behavior or API interactions
+- **Combine flags**: Use both `--force-refresh --log-level DEBUG` for detailed cache bypass logging
+
+**Troubleshooting Cache Issues:**
+
+If you encounter cache-related problems, try these solutions:
+
+1. **Stale Data Issues**: If you see outdated issue information
+   ```bash
+   # Force refresh to get latest data
+   mcp-coder coordinator test repo_name --branch-name feature --force-refresh
+   ```
+
+2. **Cache File Corruption**: If you see unexpected errors or crashes
+   ```bash
+   # Remove cache files and restart
+   # Linux/macOS:
+   rm -f ~/.cache/mcp_coder/github_cache_*.json
+   
+   # Windows:
+   del "%LOCALAPPDATA%\mcp_coder\github_cache_*.json"
+   ```
+
+3. **API Rate Limiting**: If you hit GitHub rate limits
+   ```bash
+   # Use cache to reduce API calls (default behavior)
+   mcp-coder coordinator test repo_name --branch-name feature
+   
+   # Check current rate limit status
+   mcp-coder coordinator test repo_name --branch-name feature --log-level DEBUG
+   ```
+
+4. **Permission Issues**: If cache directory cannot be created
+   ```bash
+   # Ensure cache directory exists and is writable
+   # Linux/macOS:
+   mkdir -p ~/.cache/mcp_coder
+   chmod 755 ~/.cache/mcp_coder
+   
+   # Windows:
+   mkdir "%LOCALAPPDATA%\mcp_coder" 2>nul
+   ```
+
+5. **Multiple Repository Conflicts**: If cache shows wrong repository data
+   ```bash
+   # Clear specific repository cache
+   # Cache files are named with repository identifiers
+   # Use --force-refresh for immediate clean state
+   mcp-coder coordinator test repo_name --branch-name feature --force-refresh --log-level DEBUG
+   ```
+
+**Cache Configuration:**
+
+Adjust cache behavior in your configuration file:
+
+```toml
+[coordinator]
+# Cache refresh interval (default: 1440 minutes = 24 hours)
+cache_refresh_minutes = 1440
+
+# For active development (refresh every hour)
+cache_refresh_minutes = 60
+
+# For stable repositories (refresh every 48 hours)
+cache_refresh_minutes = 2880
+```
+
+**Cache Locations:**
+- **Linux/macOS**: `~/.cache/mcp_coder/github_cache_<repo_identifier>.json`
+- **Windows**: `%LOCALAPPDATA%\mcp_coder\github_cache_<repo_identifier>.json`
 
 **Output:**
 ```

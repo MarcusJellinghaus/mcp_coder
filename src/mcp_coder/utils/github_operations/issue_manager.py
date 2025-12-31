@@ -5,6 +5,7 @@ GitHub issues through the PyGithub library.
 """
 
 import logging
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional, TypedDict
@@ -641,13 +642,17 @@ class IssueManager(BaseGitHubManager):
     @log_function_call
     @_handle_github_errors(default_return=[])
     def list_issues(
-        self, state: str = "open", include_pull_requests: bool = False
+        self,
+        state: str = "open",
+        include_pull_requests: bool = False,
+        since: Optional[datetime] = None,
     ) -> List[IssueData]:
         """List all issues in the repository with pagination support.
 
         Args:
             state: Issue state filter - 'open', 'closed', or 'all' (default: 'open')
             include_pull_requests: Whether to include PRs in results (default: False)
+            since: Only fetch issues updated after this time (optional)
 
         Returns:
             List of IssueData dictionaries with issue information, or empty list on error
@@ -660,6 +665,10 @@ class IssueManager(BaseGitHubManager):
             >>> print(f"Found {len(issues)} open issues")
             >>> for issue in issues:
             ...     print(f"#{issue['number']}: {issue['title']}")
+            >>> # Get issues updated since a specific time
+            >>> from datetime import datetime
+            >>> cutoff_time = datetime(2023, 1, 1)
+            >>> recent_issues = manager.list_issues(since=cutoff_time)
         """
         # Get repository
         repo = self._get_repository()
@@ -668,8 +677,14 @@ class IssueManager(BaseGitHubManager):
             return []
 
         # Get issues with pagination support (PyGithub handles this automatically)
+        # Pass since parameter to PyGithub's get_issues() when provided
         issues_list: List[IssueData] = []
-        for issue in repo.get_issues(state=state):
+        if since is not None:
+            issues_iterator = repo.get_issues(state=state, since=since)
+        else:
+            issues_iterator = repo.get_issues(state=state)
+
+        for issue in issues_iterator:
             # Filter out pull requests if not requested
             if not include_pull_requests and issue.pull_request is not None:
                 continue
