@@ -251,12 +251,13 @@ class TestCIResultsManagerSmoke:
     """Smoke test for CIResultsManager GitHub API integration."""
 
     def test_basic_api_connectivity(
-        self, ci_manager: CIResultsManager, project_dir: Path
+        self, ci_manager: CIResultsManager, github_test_setup: "GitHubTestSetup"
     ) -> None:
         """Verify basic GitHub Actions API connectivity."""
         # Get default branch dynamically (Decision 21)
         from mcp_coder.utils.git_operations.branches import get_default_branch_name
 
+        project_dir = github_test_setup["project_dir"]
         default_branch = get_default_branch_name(project_dir) or "main"
 
         # Test CI status retrieval works
@@ -268,12 +269,13 @@ class TestCIResultsManagerSmoke:
         print(f"[OK] CI status retrieved for branch '{default_branch}'")
 
     def test_ci_analysis_workflow(
-        self, ci_manager: CIResultsManager, project_dir: Path
+        self, ci_manager: CIResultsManager, github_test_setup: "GitHubTestSetup"
     ) -> None:
         """Verify complete CI analysis workflow."""
         # Get default branch dynamically (Decision 21)
         from mcp_coder.utils.git_operations.branches import get_default_branch_name
 
+        project_dir = github_test_setup["project_dir"]
         default_branch = get_default_branch_name(project_dir) or "main"
 
         # Get CI status
@@ -294,4 +296,3 @@ class TestCIResultsManagerSmoke:
             print(f"[OK] CI analysis workflow tested for run {run_id}")
         else:
             print("[INFO] No CI runs found for testing workflow")
-        # Removed duplicate print statement

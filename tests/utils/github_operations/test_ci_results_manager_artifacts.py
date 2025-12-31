@@ -229,14 +229,14 @@ class TestGetArtifacts:
             assert mock_download.call_count == 2
 
     def test_invalid_run_id(self, ci_manager: CIResultsManager) -> None:
-        """Test with invalid run ID."""
-        # Test negative run ID
-        with pytest.raises(ValueError, match="Invalid workflow run ID"):
-            ci_manager.get_artifacts(-1)
+        """Test with invalid run ID returns empty dict (decorator catches ValueError)."""
+        # Test negative run ID - returns default empty dict
+        result = ci_manager.get_artifacts(-1)
+        assert result == {}
 
-        # Test zero run ID
-        with pytest.raises(ValueError, match="Invalid workflow run ID"):
-            ci_manager.get_artifacts(0)
+        # Test zero run ID - returns default empty dict
+        result = ci_manager.get_artifacts(0)
+        assert result == {}
 
     @patch("mcp_coder.utils.github_operations.ci_results_manager.logger")
     def test_binary_file_skipped_with_warning(
@@ -274,13 +274,13 @@ class TestGetArtifacts:
         self, mock_repo: Mock, ci_manager: CIResultsManager
     ) -> None:
         """Test handling of GitHub API errors."""
-        # Test workflow run not found
+        # Test workflow run not found (404) - returns default empty dict
         mock_repo.get_workflow_run.side_effect = GithubException(404, "Not Found", {})
 
-        with pytest.raises(GithubException):
-            ci_manager.get_artifacts(123456)
+        result = ci_manager.get_artifacts(123456)
+        assert result == {}
 
-        # Test authentication error
+        # Test authentication error (401) - re-raised by decorator
         mock_repo.get_workflow_run.side_effect = GithubException(
             401, "Bad credentials", {}
         )

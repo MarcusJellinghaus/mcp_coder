@@ -134,10 +134,6 @@ ignore_missing_imports = true
 module = ["pyperclip"]
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = ["requests", "requests.*"]
-ignore_missing_imports = true
-
 [tool.setuptools_scm]
 # Version is automatically determined from git tags
 # Tag format: v0.1.0 -> version 0.1.0
