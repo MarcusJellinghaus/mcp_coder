@@ -22,3 +22,36 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### Step 1: Extend `list_issues()` with `since` Parameter
+- [ ] Implement extended `list_issues()` method with optional `since` parameter in `src/mcp_coder/utils/github_operations/issue_manager.py`
+- [ ] Add comprehensive tests in `tests/utils/github_operations/test_issue_manager.py`
+- [ ] Run pylint check and fix all issues found
+- [ ] Run pytest and fix all failing tests
+- [ ] Run mypy and fix all type issues
+- [ ] Prepare git commit message for Step 1 implementation
+
+### Step 2: Implement Core Cache Logic
+- [ ] Implement `get_cached_eligible_issues()` function in `src/mcp_coder/cli/commands/coordinator.py`
+- [ ] Implement helper functions: `_load_cache_file`, `_save_cache_file`, `_get_cache_file_path`, `_log_stale_cache_entries`
+- [ ] Create comprehensive tests in `tests/utils/test_coordinator_cache.py` (new file)
+- [ ] Run pylint check and fix all issues found
+- [ ] Run pytest and fix all failing tests
+- [ ] Run mypy and fix all type issues
+- [ ] Prepare git commit message for Step 2 implementation
+
+### Step 3: Configuration, CLI Flag, and Integration
+- [ ] Add `--force-refresh` CLI flag to coordinator run command
+- [ ] Implement `get_cache_refresh_minutes()` configuration reading function
+- [ ] Integrate `get_cached_eligible_issues()` into `execute_coordinator_run()` workflow
+- [ ] Add integration tests to existing `tests/cli/commands/test_coordinator.py`
+- [ ] Run pylint check and fix all issues found
+- [ ] Run pytest and fix all failing tests
+- [ ] Run mypy and fix all type issues
+- [ ] Prepare git commit message for Step 3 implementation
+
+### Pull Request
+- [ ] Review all implementation steps are complete
+- [ ] Run full test suite and ensure all tests pass
+- [ ] Run final code quality checks (pylint, mypy, pytest)
+- [ ] Prepare comprehensive PR summary and description
