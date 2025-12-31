@@ -36,6 +36,7 @@ dev = [
     "pytest-asyncio",
     "pytest-xdist",   # for parallelisation "-n" on CI bots
     "types-pyperclip",
+    "types-requests>=2.28.0",
     "mcp-server-filesystem @ git+https://github.com/MarcusJellinghaus/mcp_server_filesystem.git",
 ]
 

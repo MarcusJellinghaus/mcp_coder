@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict
 
-import requests  # type: ignore
+import requests
 
 from mcp_coder.utils.git_operations.branches import validate_branch_name
 from mcp_coder.utils.log_utils import log_function_call
@@ -53,6 +53,8 @@ class CIResultsManager(BaseGitHubManager):
 
         Token needs 'repo' scope for private repositories, 'public_repo' for public.
     """
+
+    DEFAULT_REQUEST_TIMEOUT: int = 60  # seconds
 
     def __init__(
         self, project_dir: Optional[Path] = None, repo_url: Optional[str] = None
@@ -200,7 +202,12 @@ class CIResultsManager(BaseGitHubManager):
                 "Accept": "application/vnd.github.v3+json",
             }
 
-            response = requests.get(url, headers=headers, allow_redirects=True)
+            response = requests.get(
+                url,
+                headers=headers,
+                allow_redirects=True,
+                timeout=self.DEFAULT_REQUEST_TIMEOUT,
+            )
             response.raise_for_status()
 
             # Extract ZIP contents

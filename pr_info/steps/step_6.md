@@ -86,9 +86,9 @@ response = requests.get(
 This step only modifies configuration and adds a safety timeout.
 
 ## Success Criteria
-- [ ] `types-requests` added to dev dependencies
-- [ ] `# type: ignore` removed from requests import
-- [ ] `DEFAULT_REQUEST_TIMEOUT` class constant added
-- [ ] `_download_and_extract_zip` uses timeout parameter
-- [ ] All existing tests still pass
-- [ ] mypy passes without requests-related warnings
+- [x] `types-requests` added to dev dependencies
+- [x] `# type: ignore` removed from requests import
+- [x] `DEFAULT_REQUEST_TIMEOUT` class constant added
+- [x] `_download_and_extract_zip` uses timeout parameter
+- [x] All existing tests still pass
+- [x] mypy passes without requests-related warnings
