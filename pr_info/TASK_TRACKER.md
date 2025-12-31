@@ -66,7 +66,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Locate existing coordinator documentation files
 - [x] Add caching functionality section to relevant documentation
 - [x] Document configuration options with examples
-- [ ] Add CLI flag usage examples
+- [x] Add CLI flag usage examples
 - [ ] Create troubleshooting section for cache-related issues
 - [ ] Review documentation for clarity and completeness
 - [ ] Prepare git commit message for documentation updates

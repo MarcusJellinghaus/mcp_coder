@@ -226,10 +226,31 @@ mcp-coder coordinator test <repo_name> --branch-name <branch>
 **Caching:**
 The coordinator includes GitHub API caching to reduce API calls and improve performance. Cache is automatically managed but can be bypassed using `--force-refresh` when fresh data is needed.
 
-**Example:**
+**Examples:**
+
 ```bash
+# Basic usage with cache
 mcp-coder coordinator test mcp_coder --branch-name feature-x
+
+# Force fresh data (bypass cache)
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+
+# Test with debug logging
+mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
+
+# Combine force refresh with debug logging
+mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh --log-level DEBUG
 ```
+
+**CLI Flag Usage Scenarios:**
+
+- **Use cache (default)**: Regular development workflow when data freshness is not critical
+- **Use `--force-refresh`**: When you need the latest GitHub data, such as:
+  - After creating new issues or updating labels
+  - When troubleshooting cache-related problems
+  - For critical builds requiring absolute latest state
+- **Use `--log-level DEBUG`**: For troubleshooting cache behavior or API interactions
+- **Combine flags**: Use both `--force-refresh --log-level DEBUG` for detailed cache bypass logging
 
 **Output:**
 ```
