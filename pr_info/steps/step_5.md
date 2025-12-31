@@ -46,9 +46,11 @@ __all__ = [
 class TestCIResultsManagerSmoke:
     """Smoke test for CIResultsManager GitHub API integration."""
     
-    def test_basic_api_connectivity(self, ci_manager: CIResultsManager) -> None
-    def test_ci_analysis_workflow(self, ci_manager: CIResultsManager) -> None
+    def test_basic_api_connectivity(self, ci_manager: CIResultsManager, project_dir: Path) -> None
+    def test_ci_analysis_workflow(self, ci_manager: CIResultsManager, project_dir: Path) -> None
 ```
+
+> **Note**: Use `get_default_branch_name(project_dir)` to detect branch dynamically (Decision 21).
 
 ## HOW: Integration Points
 
@@ -103,25 +105,35 @@ def test_ci_analysis_workflow(self, ci_manager):
 ### Smoke Test Structure
 ```python
 class TestCIResultsManagerSmoke:
-    def test_basic_api_connectivity(self, ci_manager: CIResultsManager) -> None:
+    def test_basic_api_connectivity(self, ci_manager: CIResultsManager, project_dir: Path) -> None:
         """Verify basic GitHub Actions API connectivity."""
+        # Get default branch dynamically (Decision 21)
+        from mcp_coder.utils.git_operations.branches import get_default_branch_name
+        default_branch = get_default_branch_name(project_dir) or "main"
+        
         # Test CI status retrieval works
-        status = ci_manager.get_latest_ci_status("main")
+        status = ci_manager.get_latest_ci_status(default_branch)
         assert isinstance(status, dict)
         assert "run" in status
         assert "jobs" in status
         
-    def test_ci_analysis_workflow(self, ci_manager: CIResultsManager) -> None:
+    def test_ci_analysis_workflow(self, ci_manager: CIResultsManager, project_dir: Path) -> None:
         """Verify complete CI analysis workflow."""
+        # Get default branch dynamically (Decision 21)
+        from mcp_coder.utils.git_operations.branches import get_default_branch_name
+        default_branch = get_default_branch_name(project_dir) or "main"
+        
         # Get CI status
-        status = ci_manager.get_latest_ci_status("main")
+        status = ci_manager.get_latest_ci_status(default_branch)
         
         if status["run"]:  # If there are CI runs
             run_id = status["run"]["id"]
             
-            # Test log retrieval (may be empty if no failures)
-            logs = ci_manager.get_failed_job_logs(run_id)
+            # Test log retrieval (returns all logs with job info - Decision 15)
+            logs = ci_manager.get_run_logs(run_id)
             assert isinstance(logs, dict)
+            assert "logs" in logs
+            assert "jobs" in logs
             
             # Test artifact retrieval (may be empty if no artifacts)
             artifacts = ci_manager.get_artifacts(run_id)

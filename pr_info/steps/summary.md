@@ -40,8 +40,8 @@ class CIStatusData(TypedDict):
 #### 3. Public API Methods
 ```python
 def get_latest_ci_status(self, branch: str) -> CIStatusData
-def get_failed_job_logs(self, run_id: int) -> Dict[str, str] 
-def get_artifacts(self, run_id: int, name_filter: Optional[str] = None) -> Dict[str, str]
+def get_run_logs(self, run_id: int) -> Dict[str, Any]  # Returns {"logs": {...}, "jobs": [...]}
+def get_artifacts(self, run_id: int, name_filter: Optional[str] = None) -> Dict[str, Union[str, bytes]]
 ```
 
 ### Integration Points
@@ -106,8 +106,8 @@ Each step follows TDD pattern:
 0. **Step 0**: Refactor branch validation into reusable function
 1. **Step 1**: Core data structures and basic manager setup
 2. **Step 2**: CI status retrieval (`get_latest_ci_status`)
-3. **Step 3**: Job log retrieval (`get_failed_job_logs`) 
-4. **Step 4**: Artifact retrieval (`get_artifacts`)
+3. **Step 3**: Run log retrieval (`get_run_logs`) with shared ZIP helper
+4. **Step 4**: Artifact retrieval (`get_artifacts`) reusing ZIP helper
 5. **Step 5**: Integration and smoke tests
 
 ### Validation & Error Handling

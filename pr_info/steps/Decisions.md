@@ -44,3 +44,21 @@ Decisions made during plan review discussion.
 13. **Algorithm detail level**: Keep detailed structure in step files but add note that field names are illustrative and should be verified against actual PyGithub objects.
 
 14. **Test fixtures**: Use `@pytest.fixture` pattern - standard pytest approach.
+
+## Plan Review Decisions (Round 2)
+
+15. **Log retrieval approach**: Return all logs from the run, but include job status info so consumer knows which jobs failed. Method renamed to `get_run_logs(run_id)`. Consumer can filter by job name if needed.
+
+16. **Shared ZIP download helper**: Create `_download_and_extract_zip(url: str)` helper in Step 3, reuse in Step 4.
+
+17. **Distinguishing empty responses**: Return empty only for "no runs found". Let exceptions propagate for API errors or invalid branch (handled by `@_handle_github_errors` decorator).
+
+18. **Large artifact handling**: No limit on artifact size. Document memory implications. Consumer's responsibility to use `name_filter` wisely.
+
+19. **Binary file handling in artifacts**: Return `Dict[str, Union[str, bytes]]`. Text files as `str`, binary files as `bytes`.
+
+20. **Step 0 simplification**: Keep Step 0 but simplify test cases - just cover valid/invalid basics, fewer edge cases.
+
+21. **Smoke test default branch**: Use `get_default_branch_name()` from `git_operations.branches` to detect the correct branch dynamically.
+
+22. **Fixture location**: Shared fixtures (like `mock_repo`, `ci_manager`) should go in `tests/utils/github_operations/conftest.py`.

@@ -66,37 +66,21 @@ Update `src/mcp_coder/utils/git_operations/__init__.py` to export `validate_bran
 ## DATA: Test Cases
 
 ### Test Cases Structure
+> **Note**: Simplified test cases - cover valid/invalid basics only (Decision 20).
+
 ```python
 class TestValidateBranchName:
-    def test_valid_simple_name(self):
+    def test_valid_names(self):
         assert validate_branch_name("main") == True
-        
-    def test_valid_with_slash(self):
         assert validate_branch_name("feature/xyz") == True
-        
-    def test_valid_with_numbers(self):
         assert validate_branch_name("123-fix-bug") == True
         
     def test_invalid_empty(self):
         assert validate_branch_name("") == False
         
-    def test_invalid_with_tilde(self):
+    def test_invalid_characters(self):
+        # Test one representative invalid character
         assert validate_branch_name("branch~1") == False
-        
-    def test_invalid_with_caret(self):
-        assert validate_branch_name("branch^2") == False
-        
-    def test_invalid_with_colon(self):
-        assert validate_branch_name("branch:name") == False
-        
-    def test_invalid_with_question(self):
-        assert validate_branch_name("branch?") == False
-        
-    def test_invalid_with_asterisk(self):
-        assert validate_branch_name("branch*") == False
-        
-    def test_invalid_with_bracket(self):
-        assert validate_branch_name("branch[1]") == False
 ```
 
 ## Success Criteria

@@ -55,7 +55,8 @@ jobs = latest_run.jobs()
 
 ### Error Handling
 - Use `@_handle_github_errors` decorator
-- Return empty CIStatusData on errors
+- Return empty CIStatusData only for "no runs found" case
+- Let exceptions propagate for API errors or invalid branch (Decision 17)
 - Validate branch parameter before API calls
 
 ## ALGORITHM: Core Logic
@@ -98,6 +99,8 @@ jobs_data = [{
 ```
 
 ## DATA: Test Cases and Expected Returns
+
+> **Note**: Shared fixtures (like `mock_repo`, `ci_manager`) should go in `tests/utils/github_operations/conftest.py` (Decision 22).
 
 ### Test Cases Structure
 ```python

@@ -6,11 +6,14 @@ I'm implementing issue #213 - CI Pipeline Result Analysis Tool. Please refer to 
 
 In this step, implement the get_artifacts method:
 1. Write tests for get_artifacts method first (TDD approach)
-2. Implement the method to download and return artifact contents
-3. Support optional name filtering
-4. Handle edge cases (no artifacts, download errors)
+2. Reuse `_download_and_extract_zip()` helper from Step 3 (Decision 16)
+3. Implement the method to download and return artifact contents
+4. Support optional name filtering
+5. Handle binary files by returning bytes (Decision 19)
+6. Handle edge cases (no artifacts, download errors)
 
 This provides raw artifact data - parsing (e.g., JUnit XML) is left to the consumer.
+No limit on artifact size - document memory implications (Decision 18).
 Follow existing patterns from other GitHub operations managers.
 ```
 
@@ -30,7 +33,7 @@ def get_artifacts(
     self, 
     run_id: int, 
     name_filter: Optional[str] = None
-) -> Dict[str, str]:
+) -> Dict[str, Union[str, bytes]]:
     """Download and return artifact contents from a workflow run.
     
     Args:
@@ -39,9 +42,12 @@ def get_artifacts(
                      in their name (case-insensitive). If None, returns all artifacts.
     
     Returns:
-        Dictionary mapping artifact file names to their contents as strings.
+        Dictionary mapping artifact file names to their contents.
+        Text files returned as str, binary files as bytes (Decision 19).
         Artifacts are ZIP files - contents are extracted and returned.
-        Example: {"test-results.xml": "<xml content...>", "coverage.json": "{...}"}
+        Example: {"test-results.xml": "<xml content...>", "image.png": b"..."}
+        
+        Note: No size limit - consumer should use name_filter for large runs (Decision 18).
     
     Raises:
         GithubException: For authentication or permission errors
@@ -98,13 +104,11 @@ def get_artifacts(self, run_id: int, name_filter: Optional[str] = None) -> Dict[
     # 6. Return {filename: content} dictionary
 ```
 
-### Artifact Download Helper
+### Artifact Download (Reuses Step 3 Helper)
 ```python
-def _download_artifact(self, artifact) -> Dict[str, str]:
-    # 1. Make authenticated HTTP request with Bearer token
-    # 2. Handle ZIP response - extract all files
-    # 3. Return {filename: content} for files in this artifact
-    # 4. Handle HTTP/ZIP errors gracefully (return empty dict)
+# Uses _download_and_extract_zip() from Step 3 (Decision 16)
+# For each artifact:
+#   contents = self._download_and_extract_zip(artifact.archive_download_url)
 ```
 
 ## DATA: Test Cases and Expected Returns
@@ -129,11 +133,11 @@ class TestGetArtifacts:
     "test-results.xml": "<?xml version=\"1.0\"?>..."
 }
 
-# Multiple artifacts with multiple files
+# Multiple artifacts with mixed content (Decision 19)
 {
-    "junit.xml": "<?xml version=\"1.0\"?>...",
-    "coverage.json": "{\"total\": 85.5, ...}",
-    "summary.txt": "Tests passed: 42\nTests failed: 3"
+    "junit.xml": "<?xml version=\"1.0\"?>...",      # str - text file
+    "coverage.json": "{\"total\": 85.5, ...}",      # str - text file
+    "screenshot.png": b"\x89PNG\r\n..."             # bytes - binary file
 }
 
 # No artifacts
@@ -172,7 +176,11 @@ def mock_zip_content():
 # Download/extraction errors
 # - Network failures: skip artifact, log error, continue with others
 # - ZIP extraction errors: skip artifact, log error, continue
-# - Binary files that can't decode as UTF-8: skip file, log warning
+
+# Binary file handling (Decision 19)
+# - Try UTF-8 decode first
+# - If decode fails, return as bytes
+# - No files are skipped
 
 # Empty scenarios
 # - No artifacts in run: return {}
