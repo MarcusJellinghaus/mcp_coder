@@ -400,6 +400,39 @@ def dispatch_workflow(
     )
 
 
+def _parse_repo_identifier(repo_url: str, repo_name: str) -> tuple[str, str | None]:
+    """Parse repository URL to extract owner and repo name with fallback.
+
+    Args:
+        repo_url: Repository URL in various formats
+        repo_name: Repository name for fallback
+
+    Returns:
+        Tuple of (repo_name, owner) where owner may be None if extraction fails
+    """
+    import re
+
+    # Pattern for HTTPS URLs: https://github.com/owner/repo(.git)?
+    https_pattern = r"https://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$"
+    https_match = re.match(https_pattern, repo_url)
+    if https_match:
+        owner, extracted_repo = https_match.groups()
+        return (extracted_repo, owner)
+
+    # Pattern for SSH URLs: git@github.com:owner/repo(.git)?
+    ssh_pattern = r"git@github\.com:([^/]+)/([^/]+?)(?:\.git)?/?$"
+    ssh_match = re.match(ssh_pattern, repo_url)
+    if ssh_match:
+        owner, extracted_repo = ssh_match.groups()
+        return (extracted_repo, owner)
+
+    # Fallback: unable to parse URL format, return repo_name with owner=None
+    logger.warning(
+        f"Using fallback cache naming for {repo_name}: owner could not be determined from URL {repo_url}"
+    )
+    return (repo_name, None)
+
+
 def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
     """Load cache file or return empty cache structure.
 
@@ -426,6 +459,34 @@ def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
     except (json.JSONDecodeError, OSError, PermissionError) as e:
         logger.warning(f"Cache load error for {cache_file_path}: {e}, starting fresh")
         return {"last_checked": None, "issues": {}}
+
+
+def _log_cache_metrics(action: str, repo_name: str, **kwargs: Any) -> None:
+    """Log detailed cache performance metrics at DEBUG level.
+
+    Args:
+        action: Cache action ('hit', 'miss', 'refresh', 'save')
+        repo_name: Repository name for logging context
+        **kwargs: Additional metrics (age_minutes, issue_count, reason, etc.)
+    """
+    if action == "hit":
+        age_minutes = kwargs.get("age_minutes", 0)
+        issue_count = kwargs.get("issue_count", 0)
+        logger.debug(
+            f"Cache hit for {repo_name}: age={age_minutes}m, issues={issue_count}"
+        )
+    elif action == "miss":
+        reason = kwargs.get("reason", "unknown")
+        logger.debug(f"Cache miss for {repo_name}: reason='{reason}'")
+    elif action == "refresh":
+        refresh_type = kwargs.get("refresh_type", "unknown")
+        issue_count = kwargs.get("issue_count", 0)
+        logger.debug(
+            f"Cache refresh for {repo_name}: type={refresh_type}, new_issues={issue_count}"
+        )
+    elif action == "save":
+        total_issues = kwargs.get("total_issues", 0)
+        logger.debug(f"Cache save for {repo_name}: total_issues={total_issues}")
 
 
 def _save_cache_file(cache_file_path: Path, cache_data: Dict[str, Any]) -> bool:
@@ -455,19 +516,30 @@ def _save_cache_file(cache_file_path: Path, cache_data: Dict[str, Any]) -> bool:
         return False
 
 
-def _get_cache_file_path(repo_full_name: str) -> Path:
-    """Get cache file path for repository.
+def _get_cache_file_path(repo_full_name: str, owner: str | None = None) -> Path:
+    """Get cache file path with enhanced naming for missing owner.
 
     Args:
-        repo_full_name: Repository in "owner/repo" format
+        repo_full_name: Repository in "owner/repo" format (or just "repo" if owner unknown)
+        owner: Optional owner for enhanced naming when repo_full_name lacks owner
 
     Returns:
         Path to cache file
     """
-    # Convert "owner/repo" to "owner_repo.issues.json"
-    safe_name = repo_full_name.replace("/", "_")
     cache_dir = Path.home() / ".mcp_coder" / "coordinator_cache"
-    return cache_dir / f"{safe_name}.issues.json"
+
+    # If repo_full_name contains "/", use it as-is
+    if "/" in repo_full_name:
+        safe_name = repo_full_name.replace("/", "_")
+        return cache_dir / f"{safe_name}.issues.json"
+
+    # If owner is provided, construct "owner_repo.issues.json"
+    if owner:
+        safe_name = f"{owner}_{repo_full_name}"
+        return cache_dir / f"{safe_name}.issues.json"
+
+    # Fallback: just use repo name
+    return cache_dir / f"{repo_full_name}.issues.json"
 
 
 def _log_stale_cache_entries(
@@ -522,9 +594,22 @@ def get_cached_eligible_issues(
         List of eligible issues (open state, meeting bot pickup criteria)
     """
     try:
-        # Step 1: Check duplicate protection (1-minute window)
-        cache_file_path = _get_cache_file_path(repo_full_name)
+        # Step 1: Parse repository URL for robust cache naming
+        repo_url = getattr(issue_manager, "repo_url", repo_full_name)
+        repo_name, owner = _parse_repo_identifier(repo_url, repo_full_name)
+
+        # Step 2: Check duplicate protection (1-minute window) with enhanced cache path
+        cache_file_path = _get_cache_file_path(
+            repo_name if owner is None else f"{owner}/{repo_name}", owner
+        )
         cache_data = _load_cache_file(cache_file_path)
+
+        # Log cache metrics
+        _log_cache_metrics(
+            "miss" if not cache_data["last_checked"] else "hit",
+            repo_name,
+            reason="no_cache" if not cache_data["last_checked"] else "cache_found",
+        )
 
         # Parse last_checked timestamp
         last_checked = None
@@ -545,9 +630,14 @@ def get_cached_eligible_issues(
             and last_checked
             and (now - last_checked) < timedelta(minutes=1)
         ):
-            logger.info(
-                f"Skipping {repo_full_name} - checked {int((now - last_checked).total_seconds())}s ago"
+            age_seconds = int((now - last_checked).total_seconds())
+            _log_cache_metrics(
+                "hit",
+                repo_name,
+                age_minutes=0,
+                reason=f"duplicate_protection_{age_seconds}s",
             )
+            logger.info(f"Skipping {repo_name} - checked {age_seconds}s ago")
             return []
 
         # Step 2: Determine refresh strategy
@@ -559,9 +649,16 @@ def get_cached_eligible_issues(
 
         # Step 3: Fetch issues using appropriate method
         if is_full_refresh:
-            logger.debug(f"Full refresh for {repo_full_name}")
+            refresh_type = "force" if force_refresh else "full"
+            logger.debug(f"Full refresh for {repo_name} (type={refresh_type})")
             fresh_issues = issue_manager.list_issues(
                 state="open", include_pull_requests=False
+            )
+            _log_cache_metrics(
+                "refresh",
+                repo_name,
+                refresh_type=refresh_type,
+                issue_count=len(fresh_issues),
             )
 
             # Log staleness if we had cached data
@@ -571,12 +668,21 @@ def get_cached_eligible_issues(
                 }
                 _log_stale_cache_entries(cache_data["issues"], fresh_issues_dict)
         else:
+            # last_checked is guaranteed to be non-None here due to is_full_refresh logic
+            assert last_checked is not None
+            cache_age_minutes = int((now - last_checked).total_seconds() / 60)
             logger.debug(
-                f"Incremental refresh for {repo_full_name} since {last_checked}"
+                f"Incremental refresh for {repo_name} since {last_checked} (age={cache_age_minutes}m)"
             )
             # Use the extended list_issues method with since parameter from Step 1
             fresh_issues = issue_manager.list_issues(
                 state="open", include_pull_requests=False, since=last_checked
+            )
+            _log_cache_metrics(
+                "refresh",
+                repo_name,
+                refresh_type="incremental",
+                issue_count=len(fresh_issues),
             )
 
         # Step 4: Merge fresh issues with cached issues
@@ -588,21 +694,42 @@ def get_cached_eligible_issues(
         cache_data["last_checked"] = now.isoformat()
 
         # Step 5: Save updated cache
-        _save_cache_file(cache_file_path, cache_data)
+        save_success = _save_cache_file(cache_file_path, cache_data)
+        if save_success:
+            _log_cache_metrics(
+                "save", repo_name, total_issues=len(cache_data["issues"])
+            )
 
         # Step 6: Filter cached issues for eligibility
         all_cached_issues = list(cache_data["issues"].values())
         eligible_issues = _filter_eligible_issues(all_cached_issues)
 
+        _log_cache_metrics(
+            "hit",
+            repo_name,
+            age_minutes=(
+                int((now - last_checked).total_seconds() / 60) if last_checked else 0
+            ),
+            issue_count=len(eligible_issues),
+        )
+
         logger.debug(
-            f"Cache returned {len(eligible_issues)} eligible issues for {repo_full_name}"
+            f"Cache returned {len(eligible_issues)} eligible issues for {repo_name}"
         )
         return eligible_issues
 
     except Exception as e:
         # Graceful fallback: any error returns same result as current implementation
+        # Use repo_name from parsing if available, otherwise fall back to repo_full_name
+        try:
+            repo_url = getattr(issue_manager, "repo_url", repo_full_name)
+            repo_name, _ = _parse_repo_identifier(repo_url, repo_full_name)
+        except Exception:
+            repo_name = repo_full_name
+
+        _log_cache_metrics("miss", repo_name, reason=f"error_{type(e).__name__}")
         logger.warning(
-            f"Cache error for {repo_full_name}: {e}, falling back to direct fetch"
+            f"Cache error for {repo_name}: {e}, falling back to direct fetch"
         )
         return get_eligible_issues(issue_manager)
 

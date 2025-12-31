@@ -18,7 +18,9 @@ from mcp_coder.cli.commands.coordinator import (
     _filter_eligible_issues,
     _get_cache_file_path,
     _load_cache_file,
+    _log_cache_metrics,
     _log_stale_cache_entries,
+    _parse_repo_identifier,
     _save_cache_file,
     get_cached_eligible_issues,
 )
@@ -74,6 +76,111 @@ def mock_issue_manager() -> Mock:
     return manager
 
 
+class TestParseRepoIdentifier:
+    """Tests for _parse_repo_identifier function."""
+
+    def test_parse_repo_identifier_https_url(self) -> None:
+        """Test parsing HTTPS GitHub URLs."""
+        test_cases = [
+            ("https://github.com/owner/repo", "repo_name", ("repo", "owner")),
+            ("https://github.com/owner/repo.git", "repo_name", ("repo", "owner")),
+            ("https://github.com/owner/repo/", "repo_name", ("repo", "owner")),
+            ("https://github.com/owner/repo.git/", "repo_name", ("repo", "owner")),
+            (
+                "https://github.com/anthropics/claude-code",
+                "fallback",
+                ("claude-code", "anthropics"),
+            ),
+            (
+                "https://github.com/user123/repo-with-dashes.git",
+                "fallback",
+                ("repo-with-dashes", "user123"),
+            ),
+        ]
+
+        for repo_url, repo_name, expected in test_cases:
+            result = _parse_repo_identifier(repo_url, repo_name)
+            assert result == expected, f"Failed for {repo_url}"
+
+    def test_parse_repo_identifier_ssh_url(self) -> None:
+        """Test parsing SSH GitHub URLs."""
+        test_cases = [
+            ("git@github.com:owner/repo", "repo_name", ("repo", "owner")),
+            ("git@github.com:owner/repo.git", "repo_name", ("repo", "owner")),
+            (
+                "git@github.com:anthropics/claude-code.git",
+                "fallback",
+                ("claude-code", "anthropics"),
+            ),
+            (
+                "git@github.com:user123/my-project",
+                "fallback",
+                ("my-project", "user123"),
+            ),
+        ]
+
+        for repo_url, repo_name, expected in test_cases:
+            result = _parse_repo_identifier(repo_url, repo_name)
+            assert result == expected, f"Failed for {repo_url}"
+
+    def test_parse_repo_identifier_fallback_scenarios(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test fallback behavior for unparseable URLs."""
+        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+
+        test_cases = [
+            ("invalid-url", "my-repo", ("my-repo", None)),
+            ("https://gitlab.com/owner/repo", "my-repo", ("my-repo", None)),
+            ("file:///local/path/repo", "local-repo", ("local-repo", None)),
+            ("", "empty-fallback", ("empty-fallback", None)),
+        ]
+
+        for repo_url, repo_name, expected in test_cases:
+            caplog.clear()
+            result = _parse_repo_identifier(repo_url, repo_name)
+            assert result == expected, f"Failed for {repo_url}"
+            # Verify warning was logged
+            assert f"Using fallback cache naming for {repo_name}" in caplog.text
+            assert repo_url in caplog.text
+
+
+class TestCacheMetricsLogging:
+    """Tests for _log_cache_metrics function."""
+
+    def test_log_cache_metrics_hit(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Test cache hit metrics logging."""
+        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+
+        _log_cache_metrics("hit", "test-repo", age_minutes=15, issue_count=5)
+
+        assert "Cache hit for test-repo: age=15m, issues=5" in caplog.text
+
+    def test_log_cache_metrics_miss(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Test cache miss metrics logging."""
+        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+
+        _log_cache_metrics("miss", "test-repo", reason="no_cache")
+
+        assert "Cache miss for test-repo: reason='no_cache'" in caplog.text
+
+    def test_log_cache_metrics_refresh(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Test cache refresh metrics logging."""
+        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+
+        _log_cache_metrics("refresh", "test-repo", refresh_type="full", issue_count=10)
+
+        assert "Cache refresh for test-repo: type=full, new_issues=10" in caplog.text
+
+    def test_log_cache_metrics_save(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Test cache save metrics logging."""
+        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+
+        _log_cache_metrics("save", "test-repo", total_issues=25)
+
+        assert "Cache save for test-repo: total_issues=25" in caplog.text
+
+
 class TestCacheFilePath:
     """Tests for _get_cache_file_path function."""
 
@@ -98,6 +205,40 @@ class TestCacheFilePath:
         for repo_name, expected_filename in test_cases:
             path = _get_cache_file_path(repo_name)
             assert path.name == expected_filename
+
+    def test_get_cache_file_path_with_owner_none(self) -> None:
+        """Test cache file path generation when owner is None."""
+        test_cases = [
+            ("just-repo", None, "just-repo.issues.json"),
+            ("my-project", None, "my-project.issues.json"),
+            ("complex-repo-name", None, "complex-repo-name.issues.json"),
+        ]
+
+        for repo_name, owner, expected_filename in test_cases:
+            path = _get_cache_file_path(repo_name, owner)
+            assert path.name == expected_filename
+
+    def test_get_cache_file_path_with_owner_provided(self) -> None:
+        """Test cache file path generation when owner is provided."""
+        test_cases = [
+            ("repo", "owner", "owner_repo.issues.json"),
+            ("my-project", "user123", "user123_my-project.issues.json"),
+            ("complex-repo", "org-name", "org-name_complex-repo.issues.json"),
+        ]
+
+        for repo_name, owner, expected_filename in test_cases:
+            path = _get_cache_file_path(repo_name, owner)
+            assert path.name == expected_filename
+
+    def test_get_cache_file_path_repo_with_slash_ignores_owner(self) -> None:
+        """Test that repo_full_name with slash ignores owner parameter."""
+        repo_full_name = "owner/repo"
+        path_without_owner = _get_cache_file_path(repo_full_name)
+        path_with_owner = _get_cache_file_path(repo_full_name, "different-owner")
+
+        # Both should be identical and ignore the owner parameter
+        assert path_without_owner == path_with_owner
+        assert path_without_owner.name == "owner_repo.issues.json"
 
 
 class TestCacheFileOperations:
@@ -463,6 +604,7 @@ class TestGetCachedEligibleIssues:
     ) -> None:
         """Test first run with no existing cache."""
         mock_issue_manager.list_issues.return_value = [sample_issue]
+        mock_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
@@ -657,6 +799,7 @@ class TestGetCachedEligibleIssues:
         # Cache checked 10 minutes ago, with custom 5-minute threshold
         cache_time = datetime.now().astimezone() - timedelta(minutes=10)
         mock_issue_manager.list_issues.return_value = [sample_issue]
+        mock_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
@@ -686,3 +829,71 @@ class TestGetCachedEligibleIssues:
             mock_issue_manager.list_issues.assert_called_once_with(
                 state="open", include_pull_requests=False
             )
+
+    def test_get_cached_eligible_issues_url_parsing_fallback(
+        self,
+        mock_issue_manager: Mock,
+        sample_issue: IssueData,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test URL parsing fallback when repo URL is not a GitHub URL."""
+        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+        mock_issue_manager.list_issues.return_value = [sample_issue]
+        mock_issue_manager.repo_url = "https://gitlab.com/owner/repo"  # Non-GitHub URL
+
+        with (
+            patch(
+                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+            ) as mock_path,
+            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
+            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
+            ) as mock_filter,
+        ):
+            mock_path.return_value = Path("/fake/cache.json")
+            mock_load.return_value = {"last_checked": None, "issues": {}}
+            mock_save.return_value = True
+            mock_filter.return_value = [sample_issue]
+
+            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+
+            assert result == [sample_issue]
+            # Should log warning about fallback cache naming
+            assert "Using fallback cache naming for owner/repo" in caplog.text
+            assert "https://gitlab.com/owner/repo" in caplog.text
+
+    def test_get_cached_eligible_issues_metrics_logging(
+        self,
+        mock_issue_manager: Mock,
+        sample_issue: IssueData,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test that cache metrics are logged properly."""
+        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+        mock_issue_manager.list_issues.return_value = [sample_issue]
+        mock_issue_manager.repo_url = "https://github.com/owner/repo"
+
+        with (
+            patch(
+                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+            ) as mock_path,
+            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
+            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
+            ) as mock_filter,
+        ):
+            mock_path.return_value = Path("/fake/cache.json")
+            mock_load.return_value = {"last_checked": None, "issues": {}}
+            mock_save.return_value = True
+            mock_filter.return_value = [sample_issue]
+
+            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+
+            assert result == [sample_issue]
+            # Should log cache metrics
+            assert "Cache miss for repo: reason='no_cache'" in caplog.text
+            assert "Cache refresh for repo: type=full, new_issues=1" in caplog.text
+            assert "Cache save for repo: total_issues=1" in caplog.text
+            assert "Cache hit for repo:" in caplog.text

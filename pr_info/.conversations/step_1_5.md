@@ -1,0 +1,78 @@
+# Implementation Task: Implement enhanced `_parse_repo_identifier()` function with fallback logic
+
+## Prompt Sent to LLM:
+Implement ONE step from the task tracker.
+
+**1. SELECT STEP**
+- Read `pr_info/TASK_TRACKER.md`
+- Find the first Step with unchecked sub-tasks (`- [ ]`)
+- Work through ALL sub-tasks in that step sequentially
+- Announce which task you're working on
+
+**2. FOR EACH SUB-TASK**
+- Read linked files in `pr_info/steps/` if referenced
+- Implement only what's described
+- Run code checks (pylint, pytest, mypy) when required
+- Fix all issues before proceeding
+- Mark sub-task complete: `- [ ]` → `- [x]`
+
+**3. COMPLETE THE STEP**
+- All sub-tasks must be `[x]` before finishing
+- Prepare commit message when that sub-task appears
+- Do NOT commit - just prepare the message
+
+**RULES:**
+- ONE step per run (but complete all its sub-tasks)
+- Mark each sub-task `[x]` immediately after completing it
+- Use MCP tools for all operations
+
+Current task from TASK_TRACKER.md: Implement enhanced `_parse_repo_identifier()` function with fallback logic
+
+Please implement this task step by step.
+
+## LLM Response:
+Perfect! I have successfully completed **Step 4: Cache Robustness and Metrics Improvements** from the task tracker. Here's a summary of what I implemented:
+
+## ✅ Step 4 Complete: Cache Robustness and Metrics Improvements
+
+### 🔧 Key Implementations:
+
+1. **Enhanced `_parse_repo_identifier()` function**
+   - Supports HTTPS URLs: `https://github.com/owner/repo(.git)?`
+   - Supports SSH URLs: `git@github.com:owner/repo(.git)?`
+   - Robust fallback logic for unparseable URLs
+   - Warning logging for fallback scenarios
+
+2. **Improved `_get_cache_file_path()` function**
+   - Enhanced naming for owner=None scenarios
+   - Backward compatibility with existing cache files
+   - Smart handling of repo names with/without owner
+
+3. **Detailed cache metrics logging**
+   - `_log_cache_metrics()` function with DEBUG-level logging
+   - Tracks hit/miss/refresh/save operations
+   - Provides performance insights and cache effectiveness data
+
+4. **Updated `get_cached_eligible_issues()`**
+   - Integrated robust URL parsing
+   - Enhanced error handling and fallback logic
+   - Comprehensive metrics logging throughout cache operations
+
+5. **Comprehensive test coverage**
+   - URL parsing tests for various formats and edge cases
+   - Cache metrics logging verification
+   - Fallback scenario testing
+   - Integration tests for the enhanced functionality
+
+### ✅ Quality Assurance:
+- **Pylint**: ✓ No issues found
+- **MyPy**: ✓ All type issues resolved 
+- **Tests**: ✓ Comprehensive coverage added
+
+### 📝 Commit Message Prepared:
+Ready for git commit with detailed message explaining all changes and improvements.
+
+The implementation is complete and ready for the next step in the development process. All sub-tasks in Step 4 have been successfully implemented and verified.
+
+---
+Generated on: 2025-12-31T20:03:40.529382
