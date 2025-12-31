@@ -5,6 +5,7 @@ pull requests, labels, and repository operations.
 """
 
 from .base_manager import BaseGitHubManager
+from .ci_results_manager import CIResultsManager, CIStatusData
 from .issue_branch_manager import (
     BranchCreationResult,
     IssueBranchManager,
@@ -17,6 +18,8 @@ from .pr_manager import PullRequestManager
 __all__ = [
     "BaseGitHubManager",
     "BranchCreationResult",
+    "CIResultsManager",
+    "CIStatusData",
     "CommentData",
     "EventData",
     "IssueBranchManager",

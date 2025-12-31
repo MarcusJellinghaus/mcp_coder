@@ -755,7 +755,11 @@ flowchart TD
   
   Please also update the task tracker ('pr_info/TASK_TRACKER.md').
   ```
-  
+
+  - Commit the changes with the extended implementation plan with
+    ```
+      Implementation plan extended based on code review findings
+    ```
   - Adjust the status to `status:plan-ready`
   </details>
 - **Fundamental Problems:** Return to `status:plan-review` or `status:created` for complete redesign
