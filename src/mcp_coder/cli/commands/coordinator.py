@@ -489,30 +489,17 @@ def _save_cache_file(cache_file_path: Path, cache_data: Dict[str, Any]) -> bool:
         return False
 
 
-def _get_cache_file_path(repo_full_name: str, owner: str | None = None) -> Path:
-    """Get cache file path with enhanced naming for missing owner.
+def _get_cache_file_path(repo_identifier: RepoIdentifier) -> Path:
+    """Get cache file path using RepoIdentifier.
 
     Args:
-        repo_full_name: Repository in "owner/repo" format (or just "repo" if owner unknown)
-        owner: Optional owner for enhanced naming when repo_full_name lacks owner
+        repo_identifier: Repository identifier with owner and repo name
 
     Returns:
         Path to cache file
     """
     cache_dir = Path.home() / ".mcp_coder" / "coordinator_cache"
-
-    # If repo_full_name contains "/", use it as-is
-    if "/" in repo_full_name:
-        safe_name = repo_full_name.replace("/", "_")
-        return cache_dir / f"{safe_name}.issues.json"
-
-    # If owner is provided, construct "owner_repo.issues.json"
-    if owner:
-        safe_name = f"{owner}_{repo_full_name}"
-        return cache_dir / f"{safe_name}.issues.json"
-
-    # Fallback: just use repo name
-    return cache_dir / f"{repo_full_name}.issues.json"
+    return cache_dir / f"{repo_identifier.cache_safe_name}.issues.json"
 
 
 def _log_stale_cache_entries(
@@ -571,23 +558,17 @@ def get_cached_eligible_issues(
         List of eligible issues (open state, meeting bot pickup criteria)
     """
     try:
-        # Step 1: Parse repository URL for robust cache naming
-        repo_url = getattr(issue_manager, "repo_url", repo_full_name)
-        # Handle Mock objects in tests - if repo_url is not a string, use repo_full_name
-        if not isinstance(repo_url, str):
-            repo_url = repo_full_name
-        repo_name, owner = _parse_repo_identifier(repo_url, repo_full_name)
+        # Step 1: Create RepoIdentifier from repo_full_name
+        repo_identifier = RepoIdentifier.from_full_name(repo_full_name)
 
-        # Step 2: Check duplicate protection (1-minute window) with enhanced cache path
-        cache_file_path = _get_cache_file_path(
-            repo_name if owner is None else f"{owner}/{repo_name}", owner
-        )
+        # Step 2: Check duplicate protection (1-minute window) with RepoIdentifier
+        cache_file_path = _get_cache_file_path(repo_identifier)
         cache_data = _load_cache_file(cache_file_path)
 
         # Log cache metrics
         _log_cache_metrics(
             "miss" if not cache_data["last_checked"] else "hit",
-            repo_name,
+            repo_identifier.repo_name,
             reason="no_cache" if not cache_data["last_checked"] else "cache_found",
         )
 
@@ -613,11 +594,13 @@ def get_cached_eligible_issues(
             age_seconds = int((now - last_checked).total_seconds())
             _log_cache_metrics(
                 "hit",
-                repo_name,
+                repo_identifier.repo_name,
                 age_minutes=0,
                 reason=f"duplicate_protection_{age_seconds}s",
             )
-            logger.info(f"Skipping {repo_name} - checked {age_seconds}s ago")
+            logger.info(
+                f"Skipping {repo_identifier.repo_name} - checked {age_seconds}s ago"
+            )
             # Return cached eligible issues instead of empty list
             all_cached_issues = list(cache_data["issues"].values())
             return _filter_eligible_issues(all_cached_issues)
@@ -632,13 +615,15 @@ def get_cached_eligible_issues(
         # Step 4: Fetch issues using appropriate method
         if is_full_refresh:
             refresh_type = "force" if force_refresh else "full"
-            logger.debug(f"Full refresh for {repo_name} (type={refresh_type})")
+            logger.debug(
+                f"Full refresh for {repo_identifier.repo_name} (type={refresh_type})"
+            )
             fresh_issues = issue_manager.list_issues(
                 state="open", include_pull_requests=False
             )
             _log_cache_metrics(
                 "refresh",
-                repo_name,
+                repo_identifier.repo_name,
                 refresh_type=refresh_type,
                 issue_count=len(fresh_issues),
             )
@@ -654,7 +639,7 @@ def get_cached_eligible_issues(
             assert last_checked is not None
             cache_age_minutes = int((now - last_checked).total_seconds() / 60)
             logger.debug(
-                f"Incremental refresh for {repo_name} since {last_checked} (age={cache_age_minutes}m)"
+                f"Incremental refresh for {repo_identifier.repo_name} since {last_checked} (age={cache_age_minutes}m)"
             )
             # GitHub API 'since' parameter expects ISO 8601 timestamp
             # Only returns issues modified after this timestamp
@@ -663,7 +648,7 @@ def get_cached_eligible_issues(
             )
             _log_cache_metrics(
                 "refresh",
-                repo_name,
+                repo_identifier.repo_name,
                 refresh_type="incremental",
                 issue_count=len(fresh_issues),
             )
@@ -684,7 +669,9 @@ def get_cached_eligible_issues(
             save_success = _save_cache_file(cache_file_path, cache_data)
             if save_success:
                 _log_cache_metrics(
-                    "save", repo_name, total_issues=len(cache_data["issues"])
+                    "save",
+                    repo_identifier.repo_name,
+                    total_issues=len(cache_data["issues"]),
                 )
 
         # Step 7: Filter cached issues for eligibility
@@ -693,7 +680,7 @@ def get_cached_eligible_issues(
 
         _log_cache_metrics(
             "hit",
-            repo_name,
+            repo_identifier.repo_name,
             age_minutes=(
                 int((now - last_checked).total_seconds() / 60) if last_checked else 0
             ),
@@ -701,24 +688,24 @@ def get_cached_eligible_issues(
         )
 
         logger.debug(
-            f"Cache returned {len(eligible_issues)} eligible issues for {repo_name}"
+            f"Cache returned {len(eligible_issues)} eligible issues for {repo_identifier.repo_name}"
         )
         return eligible_issues
 
     except Exception as e:
         # Graceful fallback: any error returns same result as current implementation
-        # Use repo_name from parsing if available, otherwise fall back to repo_full_name
+        # Try to extract repo name for logging, otherwise use repo_full_name
         try:
-            repo_url = getattr(issue_manager, "repo_url", repo_full_name)
-            if not isinstance(repo_url, str):
-                repo_url = repo_full_name
-            repo_name, _ = _parse_repo_identifier(repo_url, repo_full_name)
+            fallback_repo_identifier = RepoIdentifier.from_full_name(repo_full_name)
+            fallback_repo_name = fallback_repo_identifier.repo_name
         except Exception:
-            repo_name = repo_full_name
+            fallback_repo_name = repo_full_name
 
-        _log_cache_metrics("miss", repo_name, reason=f"error_{type(e).__name__}")
+        _log_cache_metrics(
+            "miss", fallback_repo_name, reason=f"error_{type(e).__name__}"
+        )
         logger.warning(
-            f"Cache error for {repo_name}: {e}, falling back to direct fetch"
+            f"Cache error for {fallback_repo_name}: {e}, falling back to direct fetch"
         )
         return get_eligible_issues(issue_manager)
 
