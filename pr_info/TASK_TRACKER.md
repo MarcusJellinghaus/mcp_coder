@@ -54,8 +54,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Update execute_coordinator_run() to create RepoIdentifier from repo_url
 - [x] Simplify exception handler to use RepoIdentifier directly
 - [x] Run pylint on coordinator.py and fix all issues
-- [ ] Run pytest on all coordinator tests and fix all issues
-- [ ] Run mypy on coordinator.py and fix all issues
+- [x] Run pytest on all coordinator tests and fix all issues
+- [x] Run mypy on coordinator.py and fix all issues
 - [ ] Prepare git commit message for Step 3
 
 ### Step 4: Update Tests and Documentation
