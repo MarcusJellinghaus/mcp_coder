@@ -1,96 +1,129 @@
-# Step 1: Write Tests for Simplified Repository Identifier Handling
+# Step 1: Write Tests for `RepoIdentifier` Class
 
 ## Overview
-Following TDD principles, create comprehensive tests for the new simplified repository identifier handling before implementing changes.
+Following TDD principles, create comprehensive tests for the new `RepoIdentifier` class before implementing it.
 
 ## LLM Prompt
 ```
-Implement test cases for the new _split_repo_identifier() function as specified in pr_info/steps/summary.md. 
+Implement test cases for the new RepoIdentifier class as specified in pr_info/steps/summary.md. 
 
 Requirements:
-1. Create TestSplitRepoIdentifier class with 2-3 simple test methods
-2. Test basic "owner/repo" splitting
-3. Test edge case: no slash in input
-4. Add one test verifying no spurious warnings are logged when using "owner/repo" format
-5. Delete obsolete TestParseRepoIdentifier class and test_get_cached_eligible_issues_url_parsing_fallback
+1. Create tests in a new file: tests/utils/github_operations/test_repo_identifier.py
+2. Test from_full_name(): valid input, no slash, multiple slashes, empty owner, empty repo
+3. Test from_repo_url(): HTTPS URLs, SSH URLs, invalid URLs
+4. Test properties: full_name, cache_safe_name
+5. All invalid inputs should raise ValueError
 
 Follow the test patterns in the existing codebase and use pytest fixtures for setup.
 ```
 
 ## WHERE: File Paths
-- **Primary**: `tests/utils/test_coordinator_cache.py`
-- **Helper**: Add test utilities if needed in existing test structure
+- **New file**: `tests/utils/github_operations/test_repo_identifier.py`
 
-## WHAT: Main Functions
+## WHAT: Test Classes
 
-### Test Class to Add
+### TestRepoIdentifierFromFullName (3 unit tests)
 ```python
-class TestSplitRepoIdentifier:
-    def test_split_basic_owner_repo()
-    def test_split_raises_on_no_slash()
-    def test_split_raises_on_multiple_slashes()
+class TestRepoIdentifierFromFullName:
+    def test_valid_owner_repo(self):
+        """Test parsing valid 'owner/repo' format."""
+        
+    def test_raises_on_no_slash(self):
+        """Test ValueError for input without slash."""
+        
+    def test_raises_on_multiple_slashes(self):
+        """Test ValueError for input with multiple slashes."""
+        
+    def test_raises_on_empty_owner(self):
+        """Test ValueError for '/repo' input."""
+        
+    def test_raises_on_empty_repo(self):
+        """Test ValueError for 'owner/' input."""
 ```
 
-### Test Function to Add
+### TestRepoIdentifierFromRepoUrl
 ```python
-def test_no_spurious_warnings_with_owner_repo_format()
+class TestRepoIdentifierFromRepoUrl:
+    def test_https_url(self):
+        """Test parsing HTTPS GitHub URLs."""
+        
+    def test_https_url_with_git_suffix(self):
+        """Test parsing HTTPS URLs with .git suffix."""
+        
+    def test_ssh_url(self):
+        """Test parsing SSH GitHub URLs."""
+        
+    def test_ssh_url_with_git_suffix(self):
+        """Test parsing SSH URLs with .git suffix."""
+        
+    def test_raises_on_invalid_url(self):
+        """Test ValueError for non-GitHub URLs."""
+        
+    def test_raises_on_non_string(self):
+        """Test ValueError for non-string input."""
 ```
 
-### Tests to Delete
-- Entire `TestParseRepoIdentifier` class
-- `test_get_cached_eligible_issues_url_parsing_fallback` method
-
-### Tests to Update
-- `TestCacheFilePath` class: Remove tests that use the `owner` parameter (now removed from function signature)
+### TestRepoIdentifierProperties
+```python
+class TestRepoIdentifierProperties:
+    def test_full_name_property(self):
+        """Test full_name returns 'owner/repo' format."""
+        
+    def test_cache_safe_name_property(self):
+        """Test cache_safe_name returns 'owner_repo' format."""
+```
 
 ## HOW: Integration Points
-- **Import**: `from mcp_coder.cli.commands.coordinator import _split_repo_identifier, get_cached_eligible_issues`
-- **Mocking**: Mock `IssueManager` to avoid GitHub API calls
-- **Logging**: Capture log output with `caplog` to verify no warnings
-- **Fixtures**: Use existing coordinator test fixtures
+- **Import**: `from mcp_coder.utils.github_operations.github_utils import RepoIdentifier`
+- **Fixtures**: None required — class is self-contained
 
 ## ALGORITHM: Core Test Logic
 ```python
-# For TestSplitRepoIdentifier:
-1. Call _split_repo_identifier() with valid input
-2. Assert returned tuple matches expected (owner, repo_name)
-3. For invalid input (no slash, multiple slashes), assert ValueError is raised
+# For from_full_name():
+1. Call RepoIdentifier.from_full_name("owner/repo")
+2. Assert result.owner == "owner" and result.repo_name == "repo"
+3. For invalid input, assert ValueError is raised with descriptive message
 
-# For warning verification test:
-1. Create mock IssueManager with repo_url matching repo_full_name
-2. Call get_cached_eligible_issues("owner/repo", ...)
-3. Capture log output with caplog
-4. Assert no "Using fallback cache naming" warnings in log
+# For from_repo_url():
+1. Call RepoIdentifier.from_repo_url("https://github.com/owner/repo")
+2. Assert result.owner == "owner" and result.repo_name == "repo"
+3. For invalid URLs, assert ValueError is raised
+
+# For properties:
+1. Create RepoIdentifier(owner="owner", repo_name="repo")
+2. Assert full_name == "owner/repo"
+3. Assert cache_safe_name == "owner_repo"
 ```
 
 ## DATA: Expected Test Outcomes
 
-### Return Values for _split_repo_identifier()
+### from_full_name() Return Values
 ```python
-_split_repo_identifier("owner/repo") -> ("owner", "repo")
-_split_repo_identifier("just-repo") -> raises ValueError
-_split_repo_identifier("owner/repo/extra") -> raises ValueError
+RepoIdentifier.from_full_name("owner/repo") -> RepoIdentifier(owner="owner", repo_name="repo")
+RepoIdentifier.from_full_name("just-repo") -> raises ValueError
+RepoIdentifier.from_full_name("a/b/c") -> raises ValueError
+RepoIdentifier.from_full_name("/repo") -> raises ValueError
+RepoIdentifier.from_full_name("owner/") -> raises ValueError
 ```
 
-### Test Assertions
+### from_repo_url() Return Values
 ```python
-# Basic split
-assert _split_repo_identifier("owner/repo") == ("owner", "repo")
+RepoIdentifier.from_repo_url("https://github.com/owner/repo") -> RepoIdentifier(owner="owner", repo_name="repo")
+RepoIdentifier.from_repo_url("https://github.com/owner/repo.git") -> RepoIdentifier(owner="owner", repo_name="repo")
+RepoIdentifier.from_repo_url("git@github.com:owner/repo") -> RepoIdentifier(owner="owner", repo_name="repo")
+RepoIdentifier.from_repo_url("git@github.com:owner/repo.git") -> RepoIdentifier(owner="owner", repo_name="repo")
+RepoIdentifier.from_repo_url("https://gitlab.com/owner/repo") -> raises ValueError
+RepoIdentifier.from_repo_url("invalid") -> raises ValueError
+```
 
-# No slash - raises exception
-with pytest.raises(ValueError):
-    _split_repo_identifier("just-repo")
-
-# Multiple slashes - raises exception
-with pytest.raises(ValueError):
-    _split_repo_identifier("owner/repo/extra")
-
-# No spurious warnings
-assert "Using fallback cache naming" not in caplog.text
+### Property Values
+```python
+repo = RepoIdentifier(owner="MarcusJellinghaus", repo_name="mcp_coder")
+repo.full_name -> "MarcusJellinghaus/mcp_coder"
+repo.cache_safe_name -> "MarcusJellinghaus_mcp_coder"
 ```
 
 ## Implementation Notes
-- **Mock Strategy**: Mock GitHub API calls to focus on identifier parsing logic
-- **Log Capture**: Use `caplog` fixture to verify warning elimination
-- **Simplicity**: Keep tests focused and minimal — avoid over-testing simple string operations
-- **Cleanup**: Remove obsolete tests that reference deleted `_parse_repo_identifier()` function
+- **Test Count**: 3 unit tests for `from_full_name` + tests for `from_repo_url` + property tests
+- **Error Messages**: Verify ValueError messages are descriptive
+- **Edge Cases**: Test with dashes, underscores, numbers in owner/repo names

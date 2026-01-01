@@ -15,58 +15,97 @@ WARNING - Using fallback cache naming for MarcusJellinghaus/mcp_coder: owner cou
 ## Architectural Changes
 
 ### Design Principles
-- **KISS Principle**: Replace complex URL parsing with simple string operations
-- **Single Responsibility**: Parse once at entry point, use consistently downstream
-- **Testability**: Extract logic to small testable function
+- **Single Source of Truth**: Introduce `RepoIdentifier` class to handle all repository identifier parsing
+- **Clear Contracts**: Factory methods with explicit validation and error handling
+- **Testability**: Small, focused class with well-defined behavior
+
+### New Class: `RepoIdentifier`
+```python
+@dataclass
+class RepoIdentifier:
+    owner: str      # e.g., "MarcusJellinghaus"
+    repo_name: str  # e.g., "mcp_coder"
+    
+    @property
+    def full_name(self) -> str:
+        """Returns 'owner/repo' format."""
+    
+    @property
+    def cache_safe_name(self) -> str:
+        """Returns 'owner_repo' format for filenames."""
+    
+    @classmethod
+    def from_full_name(cls, full_name: str) -> "RepoIdentifier":
+        """Parse 'owner/repo' format. Raises ValueError if invalid."""
+    
+    @classmethod
+    def from_repo_url(cls, url: str) -> "RepoIdentifier":
+        """Parse GitHub URL (HTTPS or SSH). Raises ValueError if invalid."""
+```
 
 ### Changes Overview
-1. **Add Simple Function**: New `_split_repo_identifier()` function with validation (exactly one slash required)
-2. **Remove Redundant Code**: Delete `_parse_repo_identifier()` function entirely
-3. **Simplify `_get_cache_file_path()`**: Remove unused `owner` parameter and fallback branches
-4. **Simplify Error Handling**: Exception handler uses `repo_full_name` directly
-5. **Clarify Contracts**: Update docstrings to specify expected data formats (module docstring + function docstrings)
+1. **Add `RepoIdentifier` class**: New dataclass in `github_utils.py` with factory methods
+2. **Remove `_parse_repo_identifier()`**: Delete function from `coordinator.py`
+3. **Simplify `_get_cache_file_path()`**: Remove `owner` parameter, use `RepoIdentifier.cache_safe_name`
+4. **Update callers**: Full adoption of `RepoIdentifier` throughout `coordinator.py`
+5. **Simplify error handling**: Exception handler uses `RepoIdentifier` directly
 
 ### Data Flow (After Changes)
 ```
-execute_coordinator_run() → repo_full_name: "owner/repo"
+execute_coordinator_run() → repo_url: "https://github.com/owner/repo"
                          ↓
-get_cached_eligible_issues() → _split_repo_identifier(repo_full_name)
-                             ↓ returns (owner, repo_name)
-_get_cache_file_path(repo_full_name) → "owner_repo.issues.json"
+                         RepoIdentifier.from_repo_url(repo_url)
+                         ↓
+get_cached_eligible_issues(repo_identifier: RepoIdentifier, ...)
+                         ↓
+_get_cache_file_path(repo_identifier) → uses repo_identifier.cache_safe_name
+                         ↓
+                         "owner_repo.issues.json"
 ```
 
 ## Files Modified
 
+### New Implementation
+- **Modified**: `src/mcp_coder/utils/github_operations/github_utils.py`
+  - Add: `RepoIdentifier` dataclass with `from_full_name()` and `from_repo_url()` factory methods
+
 ### Core Implementation
 - **Modified**: `src/mcp_coder/cli/commands/coordinator.py`
-  - Add: `_split_repo_identifier()` function with validation
   - Remove: `_parse_repo_identifier()` function
-  - Simplify: `_get_cache_file_path()` — remove `owner` parameter and fallback branches
-  - Modify: `get_cached_eligible_issues()` to use new function
-  - Simplify: Exception handler to use `repo_full_name` directly
-  - Update: Module and function docstrings (terminology table in both places)
+  - Simplify: `_get_cache_file_path()` — remove `owner` parameter, use `RepoIdentifier`
+  - Modify: `get_cached_eligible_issues()` to accept `RepoIdentifier`
+  - Update: `execute_coordinator_run()` to create `RepoIdentifier` from URL
+  - Simplify: Exception handler to use `RepoIdentifier` directly
 
 ### Test Coverage
+- **New**: `tests/utils/github_operations/test_repo_identifier.py`
+  - Add: `TestRepoIdentifierFromFullName` class (3 unit tests)
+  - Add: `TestRepoIdentifierFromRepoUrl` class (tests for HTTPS, SSH, invalid URLs)
+  - Add: `TestRepoIdentifierProperties` class (tests for `full_name`, `cache_safe_name`)
 - **Modified**: `tests/utils/test_coordinator_cache.py`
-  - Add: `TestSplitRepoIdentifier` class with tests for valid input and exception cases
-  - Add: Test verifying no spurious warnings
+  - Add: Test verifying no spurious warnings (1 integration test)
   - Delete: `TestParseRepoIdentifier` class (tests removed function)
   - Delete: `test_get_cached_eligible_issues_url_parsing_fallback`
-  - Update: `TestCacheFilePath` tests to remove `owner` parameter usage
+  - Update: `TestCacheFilePath` tests to use `RepoIdentifier`
+
+### Documentation
+- **Minimal approach**: Only `RepoIdentifier` class docstring + method docstrings
+- No module docstring updates in `coordinator.py`
 
 ## Benefits
 
 ### Immediate
 - ✅ Eliminates spurious warnings during normal operation
 - ✅ Maintains correct cache file naming: `{owner}_{repo}.issues.json`
-- ✅ Reduces code complexity and maintenance burden
+- ✅ Single source of truth for repository identifier parsing
 
 ### Long-term
-- ✅ Clear separation of concerns (URL parsing vs string splitting)
-- ✅ Better error messages and debugging experience
+- ✅ Clear, self-documenting API via `RepoIdentifier` class
+- ✅ Reusable across other modules that need repository parsing
+- ✅ Better error messages with explicit validation
 - ✅ Foundation for future repository handling improvements
 
 ## Risk Assessment
-- **Low Risk**: Changes are minimal and localized
-- **Backward Compatible**: No API changes, existing cache files continue to work
-- **Test Coverage**: Existing tests verify cache functionality still works
+- **Low-Medium Risk**: Larger change than original plan, but well-contained
+- **Backward Compatible**: No external API changes, existing cache files continue to work
+- **Test Coverage**: Comprehensive tests for new class and updated callers

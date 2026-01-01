@@ -90,3 +90,59 @@ Decisions made during plan review discussion.
 **Topic:** Whether to remove the `owner` parameter from `_get_cache_file_path()`  
 **Decision:** Yes — remove the `owner` parameter and fallback branches  
 **Rationale:** Since `repo_full_name` always contains a slash now, the parameter and fallback logic are redundant
+
+---
+
+## Decision 14: Introduce `RepoIdentifier` Class
+**Topic:** Whether to introduce a class instead of loose variables for repository identifiers  
+**Decision:** Yes — create a `RepoIdentifier` dataclass with clear properties and factory methods  
+**Rationale:** Prevents confusion between `repo_full_name`, `repo_name`, `owner`, `repo_url` by having a single source of truth
+
+---
+
+## Decision 15: Include `from_repo_url` Method
+**Topic:** Whether `RepoIdentifier` should have a `from_repo_url` factory method  
+**Decision:** Yes — include both `from_full_name` and `from_repo_url` methods  
+**Rationale:** Single source of truth for all repository identifier parsing
+
+---
+
+## Decision 16: Location of `RepoIdentifier` Class
+**Topic:** Where to place the `RepoIdentifier` class  
+**Decision:** Add to `src/mcp_coder/utils/github_operations/github_utils.py`  
+**Rationale:** Fits with GitHub-related utilities and can be reused across modules
+
+---
+
+## Decision 17: Adoption Scope for `RepoIdentifier`
+**Topic:** How extensively to adopt the new class in this PR  
+**Decision:** Full adoption — update all callers in `coordinator.py` to use `RepoIdentifier`  
+**Rationale:** Consistent design throughout the module
+
+---
+
+## Decision 18: Error Handling for Invalid Input
+**Topic:** Should `from_repo_url` raise an exception or return `None` on invalid URLs  
+**Decision:** Raise `ValueError` (consistent with `from_full_name`, fail fast)  
+**Rationale:** Consistent behavior across both factory methods
+
+---
+
+## Decision 19: Empty String Validation
+**Topic:** Should we validate that both `owner` and `repo_name` are non-empty  
+**Decision:** Yes — raise `ValueError` if either part is empty  
+**Rationale:** Prevents invalid identifiers like `/repo` or `owner/`
+
+---
+
+## Decision 20: Step 1 Test Count Clarification
+**Topic:** How to describe the number of tests in Step 1  
+**Decision:** Change to "3 unit tests + 1 integration test"  
+**Rationale:** Accurate count of the 4 test functions
+
+---
+
+## Decision 21: Minimal Documentation
+**Topic:** How much documentation to add and where  
+**Decision:** Minimal — only document `RepoIdentifier` class itself (class docstring + method docstrings), skip module docstring updates in `coordinator.py`  
+**Rationale:** Reduces maintenance burden; the class is self-documenting

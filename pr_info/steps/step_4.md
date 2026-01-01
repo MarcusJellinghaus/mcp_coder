@@ -1,115 +1,149 @@
-# Step 4: Update Documentation and Docstrings
+# Step 4: Update Tests and Documentation
 
 ## Overview
-Update module and function docstrings to clarify the expected repository identifier formats and document the simplified approach.
+Update existing tests to use `RepoIdentifier`, delete obsolete tests, and add integration test for warning verification.
 
 ## LLM Prompt
 ```
-Update documentation in coordinator.py as specified in pr_info/steps/summary.md.
+Update tests and documentation as specified in pr_info/steps/summary.md.
 
 Requirements:
-1. Add terminology definitions to module docstring
-2. Add terminology table as comment near _split_repo_identifier() function (already done in Step 2)
-3. Update get_cached_eligible_issues() docstring to clarify repo_full_name format
-4. Ensure documentation reflects the simplified approach
-5. Maintain consistency with existing documentation style
+1. Update tests/utils/test_coordinator_cache.py:
+   - Delete TestParseRepoIdentifier class
+   - Delete test_get_cached_eligible_issues_url_parsing_fallback
+   - Update TestCacheFilePath to use RepoIdentifier
+   - Add test_no_spurious_warnings_with_owner_repo_format integration test
+2. Update module docstring in coordinator.py with RepoIdentifier documentation
+3. Run all tests to verify no regressions
 
-Focus on clarity and helping future developers understand the expected data formats.
+Focus on removing obsolete tests and ensuring new behavior is covered.
 ```
 
 ## WHERE: File Paths
-- **Primary**: `src/mcp_coder/cli/commands/coordinator.py`
-- **Sections**: Module docstring (at top of file), `_split_repo_identifier()` function docstring (already added in Step 2), `get_cached_eligible_issues()` function docstring
+- **Primary**: `tests/utils/test_coordinator_cache.py`
+- **Secondary**: `src/mcp_coder/cli/commands/coordinator.py` (module docstring)
 
-## WHAT: Main Documentation Updates
+## WHAT: Test Changes
 
-### Module Docstring Addition
-Add terminology section to existing module docstring:
+### Tests to Delete
 ```python
-"""Coordinator CLI commands for automated workflow orchestration.
+# Delete entire class
+class TestParseRepoIdentifier:
+    ...
 
-[Existing content...]
-
-Repository Identifier Terminology:
-| Term | Format | Example |
-|------|--------|---------|
-| `repo_url` | Full GitHub URL | `https://github.com/owner/repo.git` |
-| `repo_full_name` | owner/repo | `MarcusJellinghaus/mcp_coder` |
-| `repo_name` | Just the repo | `mcp_coder` |
-| `owner` | Just the owner | `MarcusJellinghaus` |
-
-GitHub API Caching:
-[Existing caching documentation...]
-"""
+# Delete this test method from TestGetCachedEligibleIssues
+def test_get_cached_eligible_issues_url_parsing_fallback(self, ...):
+    ...
 ```
 
-### Function Docstring Updates
+### Tests to Update: `TestCacheFilePath`
+
+**BEFORE:**
 ```python
-def get_cached_eligible_issues(
-    repo_full_name: str,
-    issue_manager: IssueManager,
-    force_refresh: bool = False,
-    cache_refresh_minutes: int = 1440,
-) -> List[IssueData]:
-    """Get eligible issues using cache for performance and duplicate protection.
+class TestCacheFilePath:
+    def test_get_cache_file_path_basic(self) -> None:
+        repo_name = "owner/repo"
+        path = _get_cache_file_path(repo_name)
+        ...
 
-    Args:
-        repo_full_name: Repository in "owner/repo" format (e.g., "MarcusJellinghaus/mcp_coder")
-        issue_manager: IssueManager for GitHub API calls
-        force_refresh: Bypass cache entirely
-        cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
+    def test_get_cache_file_path_with_owner_none(self) -> None:
+        ...
 
-    Returns:
-        List of eligible issues (open state, meeting bot pickup criteria)
-    """
+    def test_get_cache_file_path_with_owner_provided(self) -> None:
+        ...
+```
+
+**AFTER:**
+```python
+class TestCacheFilePath:
+    def test_get_cache_file_path_basic(self) -> None:
+        repo_identifier = RepoIdentifier(owner="owner", repo_name="repo")
+        path = _get_cache_file_path(repo_identifier)
+        
+        expected_dir = Path.home() / ".mcp_coder" / "coordinator_cache"
+        expected_file = expected_dir / "owner_repo.issues.json"
+        
+        assert path == expected_file
+
+    def test_get_cache_file_path_complex_names(self) -> None:
+        test_cases = [
+            (RepoIdentifier("anthropics", "claude-code"), "anthropics_claude-code.issues.json"),
+            (RepoIdentifier("user", "repo-with-dashes"), "user_repo-with-dashes.issues.json"),
+            (RepoIdentifier("org", "very.long.repo.name"), "org_very.long.repo.name.issues.json"),
+        ]
+
+        for repo_identifier, expected_filename in test_cases:
+            path = _get_cache_file_path(repo_identifier)
+            assert path.name == expected_filename
+```
+
+### Test to Add: Integration Test for No Spurious Warnings
+
+```python
+class TestNoSpuriousWarnings:
+    def test_no_spurious_warnings_with_repo_identifier(
+        self,
+        mock_issue_manager: Mock,
+        sample_issue: IssueData,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test that no spurious warnings occur when using RepoIdentifier."""
+        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+        mock_issue_manager.list_issues.return_value = [sample_issue]
+
+        with (
+            patch("mcp_coder.cli.commands.coordinator._get_cache_file_path") as mock_path,
+            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
+            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch("mcp_coder.cli.commands.coordinator._filter_eligible_issues") as mock_filter,
+        ):
+            mock_path.return_value = Path("/fake/cache.json")
+            mock_load.return_value = {"last_checked": None, "issues": {}}
+            mock_save.return_value = True
+            mock_filter.return_value = [sample_issue]
+
+            repo_identifier = RepoIdentifier(owner="owner", repo_name="repo")
+            result = get_cached_eligible_issues(repo_identifier, mock_issue_manager)
+
+            assert result == [sample_issue]
+            # Verify NO spurious warnings about fallback cache naming
+            assert "Using fallback cache naming" not in caplog.text
+            assert "owner could not be determined" not in caplog.text
+```
+
+### Update Imports in Test File
+
+```python
+from mcp_coder.cli.commands.coordinator import (
+    _filter_eligible_issues,
+    _get_cache_file_path,
+    _load_cache_file,
+    _log_cache_metrics,
+    _log_stale_cache_entries,
+    _save_cache_file,
+    get_cached_eligible_issues,
+)
+from mcp_coder.utils.github_operations.github_utils import RepoIdentifier
 ```
 
 ## HOW: Integration Points
-- **Style Consistency**: Match existing docstring format and tone
-- **Links**: Maintain references to existing GitHub API caching documentation
-- **Examples**: Use real repository names from the codebase
+- **Import**: Add `RepoIdentifier` import to test file
+- **Remove**: Delete import of `_parse_repo_identifier` (no longer exists)
+- **Update**: All test methods that use `_get_cache_file_path`
 
-## ALGORITHM: Documentation Process
-```python
-# Documentation updates:
-1. Locate module docstring at top of coordinator.py
-2. Insert terminology table after existing intro
-3. Find get_cached_eligible_issues() function docstring
-4. Update Args section to clarify repo_full_name format
-5. Verify formatting consistency with project standards
+## ALGORITHM: Test Migration Steps
 ```
-
-## DATA: Documentation Content
-
-### Terminology Table
-| Field | Description | Purpose |
-|-------|-------------|---------|
-| `repo_url` | Full GitHub URLs with protocol | Used at entry points for parsing |
-| `repo_full_name` | Standardized "owner/repo" format | Used internally for cache and API calls |
-| `repo_name` | Repository name only | Used for cache file naming |
-| `owner` | Repository owner/organization | Used for cache file naming |
-
-### Updated Parameter Documentation
-```python
-Args:
-    repo_full_name: Repository in "owner/repo" format (e.g., "MarcusJellinghaus/mcp_coder")
-        This parameter expects the standardized internal format, not a full URL.
-        The format is validated and parsed using simple string operations.
+1. Add RepoIdentifier import to test file
+2. Remove _parse_repo_identifier from imports
+3. Delete TestParseRepoIdentifier class entirely
+4. Delete test_get_cached_eligible_issues_url_parsing_fallback method
+5. Update TestCacheFilePath tests to use RepoIdentifier
+6. Add TestNoSpuriousWarnings class with integration test
+7. Update any other tests that reference old function signatures
+8. Run pytest to verify all tests pass
 ```
 
 ## Implementation Notes
-
-### Style Guidelines
-- **Format**: Use existing table markdown style for terminology
-- **Examples**: Reference actual repositories from the codebase
-- **Tone**: Maintain technical but accessible language
-
-### Validation
-- **Consistency**: Check docstring format matches other functions
-- **Accuracy**: Ensure examples match actual usage patterns
-- **Completeness**: Cover all important parameter constraints
-
-### Cross-References
-- **Related Functions**: Reference `_get_cache_file_path()` behavior
-- **Caching Logic**: Link to existing caching documentation
-- **Error Handling**: Document fallback behavior
+- **Test Count**: Net reduction in test count (deleting obsolete tests, adding focused new tests)
+- **Coverage**: Ensure the new integration test verifies the original bug is fixed
+- **Cleanup**: Remove any fixtures or helper methods only used by deleted tests
