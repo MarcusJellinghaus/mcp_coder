@@ -18,12 +18,12 @@ Focus on clarity and helping future developers understand the expected data form
 
 ## WHERE: File Paths
 - **Primary**: `src/mcp_coder/cli/commands/coordinator.py`
-- **Sections**: Module docstring (top), `get_cached_eligible_issues()` function docstring
+- **Sections**: Module docstring (at top of file), `get_cached_eligible_issues()` function docstring
 
 ## WHAT: Main Documentation Updates
 
 ### Module Docstring Addition
-Add terminology section to existing module docstring (after line ~13):
+Add terminology section to existing module docstring:
 ```python
 """Coordinator CLI commands for automated workflow orchestration.
 
@@ -71,9 +71,9 @@ def get_cached_eligible_issues(
 ## ALGORITHM: Documentation Process
 ```python
 # Documentation updates:
-1. Locate module docstring (~line 13)
+1. Locate module docstring at top of coordinator.py
 2. Insert terminology table after existing intro
-3. Find get_cached_eligible_issues() docstring (~line 604)
+3. Find get_cached_eligible_issues() function docstring
 4. Update Args section to clarify repo_full_name format
 5. Verify formatting consistency with project standards
 ```

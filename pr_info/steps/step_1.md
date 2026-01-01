@@ -5,13 +5,14 @@ Following TDD principles, create comprehensive tests for the new simplified repo
 
 ## LLM Prompt
 ```
-Implement test cases for coordinator repository identifier handling as specified in pr_info/steps/summary.md. 
+Implement test cases for the new _split_repo_identifier() function as specified in pr_info/steps/summary.md. 
 
 Requirements:
-1. Test cache file naming with "owner/repo" format inputs
-2. Test edge cases (no slash, multiple slashes, empty strings)
-3. Verify no spurious warnings are logged
-4. Ensure existing cache functionality continues to work
+1. Create TestSplitRepoIdentifier class with 2-3 simple test methods
+2. Test basic "owner/repo" splitting
+3. Test edge case: no slash in input
+4. Add one test verifying no spurious warnings are logged when using "owner/repo" format
+5. Delete obsolete TestParseRepoIdentifier class and test_get_cached_eligible_issues_url_parsing_fallback
 
 Follow the test patterns in the existing codebase and use pytest fixtures for setup.
 ```
@@ -22,66 +23,65 @@ Follow the test patterns in the existing codebase and use pytest fixtures for se
 
 ## WHAT: Main Functions
 
-### Test Functions to Add/Modify
+### Test Class to Add
 ```python
-def test_repo_identifier_parsing_valid_format()
-def test_repo_identifier_parsing_edge_cases()
-def test_cache_file_naming_no_warnings()
-def test_existing_cache_functionality_preserved()
+class TestSplitRepoIdentifier:
+    def test_split_basic_owner_repo()
+    def test_split_no_slash()
+    def test_split_multiple_slashes()
 ```
 
-### Test Data Structures
+### Test Function to Add
 ```python
-@pytest.fixture
-def repo_test_cases():
-    return [
-        ("owner/repo", "owner", "repo"),
-        ("org-name/repo-name", "org-name", "repo-name"), 
-        ("owner/repo/subdir", "owner", "repo/subdir"),  # Edge case
-        ("just-repo", None, "just-repo"),  # No slash
-        ("", None, ""),  # Empty
-    ]
+def test_no_spurious_warnings_with_owner_repo_format()
 ```
+
+### Tests to Delete
+- Entire `TestParseRepoIdentifier` class
+- `test_get_cached_eligible_issues_url_parsing_fallback` method
 
 ## HOW: Integration Points
-- **Import**: `from src.mcp_coder.cli.commands.coordinator import get_cached_eligible_issues`
+- **Import**: `from mcp_coder.cli.commands.coordinator import _split_repo_identifier, get_cached_eligible_issues`
 - **Mocking**: Mock `IssueManager` to avoid GitHub API calls
-- **Logging**: Capture log output to verify no warnings
+- **Logging**: Capture log output with `caplog` to verify no warnings
 - **Fixtures**: Use existing coordinator test fixtures
 
 ## ALGORITHM: Core Test Logic
 ```python
-# For each test case:
-1. Create mock IssueManager with test repo_full_name
-2. Call get_cached_eligible_issues() 
-3. Capture log output during execution
-4. Assert no "Using fallback cache naming" warnings
-5. Verify cache file path follows owner_repo.issues.json pattern
-6. Confirm function returns expected results
+# For TestSplitRepoIdentifier:
+1. Call _split_repo_identifier() with test input
+2. Assert returned tuple matches expected (owner, repo_name)
+
+# For warning verification test:
+1. Create mock IssueManager with repo_url matching repo_full_name
+2. Call get_cached_eligible_issues("owner/repo", ...)
+3. Capture log output with caplog
+4. Assert no "Using fallback cache naming" warnings in log
 ```
 
 ## DATA: Expected Test Outcomes
 
-### Return Values
-- **Function Output**: `List[IssueData]` (same as before)
-- **Cache File Path**: `Path` object with correct naming pattern
-- **Log Messages**: No warnings containing "Using fallback cache naming"
+### Return Values for _split_repo_identifier()
+```python
+_split_repo_identifier("owner/repo") -> ("owner", "repo")
+_split_repo_identifier("just-repo") -> (None, "just-repo")
+_split_repo_identifier("owner/repo/extra") -> ("owner", "repo/extra")
+```
 
 ### Test Assertions
 ```python
-# Cache file naming
-assert cache_path.name == "owner_repo.issues.json"
+# Basic split
+assert _split_repo_identifier("owner/repo") == ("owner", "repo")
+
+# No slash
+assert _split_repo_identifier("just-repo") == (None, "just-repo")
 
 # No spurious warnings
 assert "Using fallback cache naming" not in caplog.text
-
-# Function still works
-assert isinstance(result, list)
-assert all(isinstance(issue, dict) for issue in result)
 ```
 
 ## Implementation Notes
 - **Mock Strategy**: Mock GitHub API calls to focus on identifier parsing logic
-- **Log Capture**: Use `pytest.caplog` to verify warning elimination
-- **Parametrize**: Use `@pytest.mark.parametrize` for testing multiple repo format cases
-- **Isolation**: Ensure tests don't affect real cache files or GitHub API calls
+- **Log Capture**: Use `caplog` fixture to verify warning elimination
+- **Simplicity**: Keep tests focused and minimal — avoid over-testing simple string operations
+- **Cleanup**: Remove obsolete tests that reference deleted `_parse_repo_identifier()` function

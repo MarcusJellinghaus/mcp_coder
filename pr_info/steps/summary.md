@@ -17,18 +17,19 @@ WARNING - Using fallback cache naming for MarcusJellinghaus/mcp_coder: owner cou
 ### Design Principles
 - **KISS Principle**: Replace complex URL parsing with simple string operations
 - **Single Responsibility**: Parse once at entry point, use consistently downstream
-- **Existing Utilities**: Leverage working code, remove redundant functions
+- **Testability**: Extract logic to small testable function
 
 ### Changes Overview
-1. **Simplify Parsing Logic**: Replace URL parsing attempt with direct string split
+1. **Add Simple Function**: New `_split_repo_identifier()` function for clean string splitting
 2. **Remove Redundant Code**: Delete `_parse_repo_identifier()` function entirely
-3. **Clarify Contracts**: Update docstrings to specify expected data formats
+3. **Simplify Error Handling**: Exception handler uses `repo_full_name` directly
+4. **Clarify Contracts**: Update docstrings to specify expected data formats
 
 ### Data Flow (After Changes)
 ```
 execute_coordinator_run() → repo_full_name: "owner/repo"
                          ↓
-get_cached_eligible_issues() → owner, repo = repo_full_name.split("/", 1)
+get_cached_eligible_issues() → _split_repo_identifier(repo_full_name)
                              ↓
 _get_cache_file_path() → "owner_repo.issues.json"
 ```
@@ -37,13 +38,18 @@ _get_cache_file_path() → "owner_repo.issues.json"
 
 ### Core Implementation
 - **Modified**: `src/mcp_coder/cli/commands/coordinator.py`
-  - Remove: `_parse_repo_identifier()` function (lines ~408-445)
-  - Modify: `get_cached_eligible_issues()` parsing logic (lines ~614-618)
-  - Update: Function docstrings
+  - Add: `_split_repo_identifier()` function
+  - Remove: `_parse_repo_identifier()` function
+  - Modify: `get_cached_eligible_issues()` to use new function
+  - Simplify: Exception handler to use `repo_full_name` directly
+  - Update: Module and function docstrings
 
 ### Test Coverage
-- **Modified**: `tests/utils/test_coordinator_cache.py` (if exists)
-- **Enhanced**: Test cases for cache file naming with various repo formats
+- **Modified**: `tests/utils/test_coordinator_cache.py`
+  - Add: `TestSplitRepoIdentifier` class with 2-3 simple tests
+  - Add: Test verifying no spurious warnings
+  - Delete: `TestParseRepoIdentifier` class (tests removed function)
+  - Delete: `test_get_cached_eligible_issues_url_parsing_fallback`
 
 ## Benefits
 
