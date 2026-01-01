@@ -292,6 +292,7 @@ def dispatch_workflow(
     workflow_name: str,
     repo_config: dict[str, str],
     jenkins_client: JenkinsClient,
+    *,
     issue_manager: IssueManager,
     branch_manager: IssueBranchManager,
     log_level: str,
@@ -692,7 +693,7 @@ def get_cached_eligible_issues(
         )
         return eligible_issues
 
-    except Exception as e:
+    except (ValueError, KeyError, TypeError) as e:
         _log_cache_metrics(
             "miss", repo_identifier.repo_name, reason=f"error_{type(e).__name__}"
         )
@@ -1078,7 +1079,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         try:
             status = client.get_job_status(queue_id)
             job_url = status.url
-        except Exception as e:
+        except (ConnectionError, TimeoutError, ValueError) as e:
             logger.debug(f"Could not get job status: {e}")
             job_url = None
 
@@ -1096,7 +1097,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         logger.error(f"Configuration error: {e}")
         return 1
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, RuntimeError) as e:
         # Let all other exceptions bubble up with full traceback
         # (per issue spec: "Let exceptions bubble up naturally for debugging")
         logger.error(f"Unexpected error: {e}", exc_info=True)
@@ -1196,7 +1197,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     force_refresh=args.force_refresh,
                     cache_refresh_minutes=get_cache_refresh_minutes(),
                 )
-            except Exception as e:
+            except (ValueError, KeyError, ConnectionError, TimeoutError) as e:
                 logger.warning(
                     f"Cache failed for {repo_full_name}: {e}, using direct fetch"
                 )
@@ -1237,7 +1238,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         branch_manager=branch_manager,
                         log_level=args.log_level,
                     )
-                except Exception as e:
+                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                     # Fail-fast: log error and exit immediately
                     logger.error(
                         f"Failed processing issue #{issue['number']}: {e}",
@@ -1260,7 +1261,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         logger.error(f"Configuration error: {e}")
         return 1
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError, RuntimeError) as e:
         # Let all other exceptions bubble up with full traceback
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise
