@@ -109,7 +109,7 @@ class RepoIdentifier:
             owner, repo_name = ssh_match.groups()
             return cls.from_full_name(f"{owner}/{repo_name}")
 
-        raise ValueError(f"Invalid GitHub URL")
+        raise ValueError(f"Invalid GitHub URL '{url}': expected GitHub URL format")
 
 
 def parse_github_url(url: str) -> Optional[Tuple[str, str]]:

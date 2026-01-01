@@ -16,22 +16,22 @@ class TestRepoIdentifierFromFullName:
 
     def test_raises_on_no_slash(self) -> None:
         """Test ValueError for input without slash."""
-        with pytest.raises(ValueError, match="Invalid format"):
+        with pytest.raises(ValueError, match="Invalid repo identifier"):
             RepoIdentifier.from_full_name("just-repo")
 
     def test_raises_on_multiple_slashes(self) -> None:
         """Test ValueError for input with multiple slashes."""
-        with pytest.raises(ValueError, match="Invalid format"):
+        with pytest.raises(ValueError, match="Invalid repo identifier"):
             RepoIdentifier.from_full_name("a/b/c")
 
     def test_raises_on_empty_owner(self) -> None:
         """Test ValueError for '/repo' input."""
-        with pytest.raises(ValueError, match="Owner cannot be empty"):
+        with pytest.raises(ValueError, match="owner cannot be empty"):
             RepoIdentifier.from_full_name("/repo")
 
     def test_raises_on_empty_repo(self) -> None:
         """Test ValueError for 'owner/' input."""
-        with pytest.raises(ValueError, match="Repository name cannot be empty"):
+        with pytest.raises(ValueError, match="repo_name cannot be empty"):
             RepoIdentifier.from_full_name("owner/")
 
 
