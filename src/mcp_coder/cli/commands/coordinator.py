@@ -693,19 +693,11 @@ def get_cached_eligible_issues(
         return eligible_issues
 
     except Exception as e:
-        # Graceful fallback: any error returns same result as current implementation
-        # Try to extract repo name for logging, otherwise use repo_full_name
-        try:
-            fallback_repo_identifier = RepoIdentifier.from_full_name(repo_full_name)
-            fallback_repo_name = fallback_repo_identifier.repo_name
-        except Exception:
-            fallback_repo_name = repo_full_name
-
         _log_cache_metrics(
-            "miss", fallback_repo_name, reason=f"error_{type(e).__name__}"
+            "miss", repo_identifier.repo_name, reason=f"error_{type(e).__name__}"
         )
         logger.warning(
-            f"Cache error for {fallback_repo_name}: {e}, falling back to direct fetch"
+            f"Cache error for {repo_identifier.full_name}: {e}, falling back to direct fetch"
         )
         return get_eligible_issues(issue_manager)
 
