@@ -24,13 +24,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Write Tests for `RepoIdentifier` Class
-- [ ] Create tests in tests/utils/github_operations/test_repo_identifier.py
-- [ ] Implement TestRepoIdentifierFromFullName class (5 unit tests)
-- [ ] Implement TestRepoIdentifierFromRepoUrl class (6 unit tests)
-- [ ] Implement TestRepoIdentifierProperties class (3 unit tests)
-- [ ] Run pylint on test file and fix all issues
-- [ ] Run pytest on test file and fix all issues
-- [ ] Run mypy on test file and fix all issues
+- [x] Create tests in tests/utils/github_operations/test_repo_identifier.py
+- [x] Implement TestRepoIdentifierFromFullName class (5 unit tests)
+- [x] Implement TestRepoIdentifierFromRepoUrl class (6 unit tests)
+- [x] Implement TestRepoIdentifierProperties class (3 unit tests)
+- [x] Run pylint on test file and fix all issues
+- [x] Run pytest on test file and fix all issues
+- [x] Run mypy on test file and fix all issues
 - [ ] Prepare git commit message for Step 1
 
 ### Step 2: Implement `RepoIdentifier` Class
