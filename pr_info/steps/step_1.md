@@ -71,6 +71,9 @@ class TestRepoIdentifierProperties:
         
     def test_cache_safe_name_property(self):
         """Test cache_safe_name returns 'owner_repo' format."""
+        
+    def test_str_returns_full_name(self):
+        """Test __str__ returns full_name format."""
 ```
 
 ## HOW: Integration Points
@@ -121,6 +124,7 @@ RepoIdentifier.from_repo_url("invalid") -> raises ValueError
 repo = RepoIdentifier(owner="MarcusJellinghaus", repo_name="mcp_coder")
 repo.full_name -> "MarcusJellinghaus/mcp_coder"
 repo.cache_safe_name -> "MarcusJellinghaus_mcp_coder"
+str(repo) -> "MarcusJellinghaus/mcp_coder"
 ```
 
 ## Implementation Notes

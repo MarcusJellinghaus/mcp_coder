@@ -146,3 +146,38 @@ Decisions made during plan review discussion.
 **Topic:** How much documentation to add and where  
 **Decision:** Minimal — only document `RepoIdentifier` class itself (class docstring + method docstrings), skip module docstring updates in `coordinator.py`  
 **Rationale:** Reduces maintenance burden; the class is self-documenting
+
+---
+
+## Decision 22: Test Count Accuracy
+**Topic:** Mismatch between summary.md ("3 unit tests") and step_1.md (5 test methods)  
+**Decision:** Update summary.md to say "5 unit tests" for `TestRepoIdentifierFromFullName`  
+**Rationale:** Accurate documentation
+
+---
+
+## Decision 23: Export RepoIdentifier from `__init__.py`
+**Topic:** Whether to export `RepoIdentifier` from the package `__init__.py`  
+**Decision:** Yes — export from `src/mcp_coder/utils/github_operations/__init__.py`  
+**Rationale:** Cleaner imports, signals it's a public API
+
+---
+
+## Decision 24: Trailing Slash Test Coverage
+**Topic:** Whether to add explicit test cases for URLs with trailing slashes  
+**Decision:** Skip — current tests are sufficient  
+**Rationale:** The regex is simple enough; trailing slash handling doesn't need explicit tests
+
+---
+
+## Decision 25: Dataclass Frozen Parameter
+**Topic:** Whether to add `frozen=True` to the `RepoIdentifier` dataclass  
+**Decision:** No — keep as regular dataclass  
+**Rationale:** Simpler, more flexible
+
+---
+
+## Decision 26: Add `__str__` Method
+**Topic:** Whether to add a `__str__` method to `RepoIdentifier`  
+**Decision:** Yes — add `__str__` returning `self.full_name`  
+**Rationale:** Cleaner logging syntax

@@ -56,6 +56,10 @@ class RepoIdentifier:
         """Return repository in 'owner_repo' format (safe for filenames)."""
         return f"{self.owner}_{self.repo_name}"
     
+    def __str__(self) -> str:
+        """Return string representation (full_name format)."""
+        return self.full_name
+    
     @classmethod
     def from_full_name(cls, full_name: str) -> "RepoIdentifier":
         """Parse 'owner/repo' format into RepoIdentifier.
@@ -135,7 +139,7 @@ class RepoIdentifier:
 ## HOW: Integration Points
 - **Imports**: Add `from dataclasses import dataclass` and `import re` if not present
 - **Location**: Add class near top of file after imports
-- **Export**: Add to `__all__` if the module uses it
+- **Export**: Add `RepoIdentifier` to `src/mcp_coder/utils/github_operations/__init__.py`
 
 ## ALGORITHM: Parsing Logic
 

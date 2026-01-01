@@ -79,7 +79,7 @@ _get_cache_file_path(repo_identifier) → uses repo_identifier.cache_safe_name
 
 ### Test Coverage
 - **New**: `tests/utils/github_operations/test_repo_identifier.py`
-  - Add: `TestRepoIdentifierFromFullName` class (3 unit tests)
+  - Add: `TestRepoIdentifierFromFullName` class (5 unit tests)
   - Add: `TestRepoIdentifierFromRepoUrl` class (tests for HTTPS, SSH, invalid URLs)
   - Add: `TestRepoIdentifierProperties` class (tests for `full_name`, `cache_safe_name`)
 - **Modified**: `tests/utils/test_coordinator_cache.py`
