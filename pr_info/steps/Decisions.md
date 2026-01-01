@@ -55,3 +55,38 @@ Decisions made during plan review discussion.
 **Topic:** What to do with tests for removed functionality  
 **Decision:** Delete `TestParseRepoIdentifier` class and `test_get_cached_eligible_issues_url_parsing_fallback`  
 **Rationale:** These test functionality that no longer exists
+
+---
+
+## Decision 9: Input Validation for `_split_repo_identifier()`
+**Topic:** How to handle edge cases like multiple slashes or no slash in input  
+**Decision:** Raise an exception for invalid input (no slash or multiple slashes)  
+**Rationale:** In practice, `repo_full_name` always comes from `execute_coordinator_run()` in "owner/repo" format — invalid input indicates a bug
+
+---
+
+## Decision 10: Return Type of `_split_repo_identifier()`
+**Topic:** Should owner be allowed to be None in the return type  
+**Decision:** Return `tuple[str, str]` — both owner and repo always present  
+**Rationale:** With validation raising exceptions for invalid input, owner is never None
+
+---
+
+## Decision 11: Mock Object Handling Test
+**Topic:** Whether to add a test for Mock object handling of `repo_url`  
+**Decision:** Not needed  
+**Rationale:** We use `repo_full_name` directly now (always a string parameter), so Mock handling is irrelevant
+
+---
+
+## Decision 12: Documentation Placement
+**Topic:** Where to place the terminology table  
+**Decision:** Both module docstring AND comment near `_split_repo_identifier()`  
+**Rationale:** Module docstring for overall context, function comment for discoverability
+
+---
+
+## Decision 13: Simplify `_get_cache_file_path()` Signature
+**Topic:** Whether to remove the `owner` parameter from `_get_cache_file_path()`  
+**Decision:** Yes — remove the `owner` parameter and fallback branches  
+**Rationale:** Since `repo_full_name` always contains a slash now, the parameter and fallback logic are redundant

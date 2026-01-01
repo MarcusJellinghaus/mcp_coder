@@ -1,7 +1,7 @@
 # Step 2: Implement Simplified Repository Identifier Handling
 
 ## Overview
-Replace the complex URL parsing logic with a simple `_split_repo_identifier()` function, remove the old `_parse_repo_identifier()` function, and simplify the exception handler.
+Replace the complex URL parsing logic with a simple `_split_repo_identifier()` function, remove the old `_parse_repo_identifier()` function, simplify `_get_cache_file_path()` by removing the unused `owner` parameter, and simplify the exception handler.
 
 ## LLM Prompt
 ```
@@ -27,25 +27,61 @@ The goal is to eliminate spurious warnings while preserving all existing functio
 
 ### New Function to Add
 ```python
-def _split_repo_identifier(repo_full_name: str) -> tuple[str | None, str]:
+def _split_repo_identifier(repo_full_name: str) -> tuple[str, str]:
     """Split 'owner/repo' format into (owner, repo_name).
     
+    Repository Identifier Terminology:
+    | Term | Format | Example |
+    |------|--------|--------|
+    | `repo_url` | Full GitHub URL | `https://github.com/owner/repo.git` |
+    | `repo_full_name` | owner/repo | `MarcusJellinghaus/mcp_coder` |
+    | `repo_name` | Just the repo | `mcp_coder` |
+    | `owner` | Just the owner | `MarcusJellinghaus` |
+    
     Args:
-        repo_full_name: Repository in "owner/repo" format or just "repo"
+        repo_full_name: Repository in "owner/repo" format (exactly one slash required)
         
     Returns:
-        Tuple of (owner, repo_name) where owner is None if no slash present
+        Tuple of (owner, repo_name)
+        
+    Raises:
+        ValueError: If input doesn't contain exactly one slash
     """
-    if "/" in repo_full_name:
-        owner, repo_name = repo_full_name.split("/", 1)
-        return owner, repo_name
-    return None, repo_full_name
+    slash_count = repo_full_name.count("/")
+    if slash_count != 1:
+        raise ValueError(
+            f"Invalid repo_full_name '{repo_full_name}': expected 'owner/repo' format "
+            f"(exactly one slash), got {slash_count} slashes"
+        )
+    owner, repo_name = repo_full_name.split("/")
+    return owner, repo_name
 ```
 
 ### Function to Delete
 ```python
 # Delete entire _parse_repo_identifier() function (~37 lines)
 # This function attempted to parse URLs but caused spurious warnings
+```
+
+### Function to Simplify: `_get_cache_file_path()`
+```python
+# BEFORE:
+def _get_cache_file_path(repo_full_name: str, owner: str | None = None) -> Path:
+    # ... complex branching logic for owner=None fallback
+
+# AFTER:
+def _get_cache_file_path(repo_full_name: str) -> Path:
+    """Get cache file path for repository.
+    
+    Args:
+        repo_full_name: Repository in "owner/repo" format
+        
+    Returns:
+        Path to cache file (e.g., ~/.mcp_coder/coordinator_cache/owner_repo.issues.json)
+    """
+    cache_dir = Path.home() / ".mcp_coder" / "coordinator_cache"
+    safe_name = repo_full_name.replace("/", "_")
+    return cache_dir / f"{safe_name}.issues.json"
 ```
 
 ### Logic Replacement in get_cached_eligible_issues()
@@ -83,8 +119,8 @@ except Exception as e:
 ### _split_repo_identifier() Return Values
 ```python
 _split_repo_identifier("owner/repo") -> ("owner", "repo")
-_split_repo_identifier("just-repo") -> (None, "just-repo")
-_split_repo_identifier("owner/repo/extra") -> ("owner", "repo/extra")
+_split_repo_identifier("just-repo") -> raises ValueError (0 slashes)
+_split_repo_identifier("owner/repo/extra") -> raises ValueError (2 slashes)
 ```
 
 ### get_cached_eligible_issues() (Unchanged)
@@ -95,9 +131,9 @@ _split_repo_identifier("owner/repo/extra") -> ("owner", "repo/extra")
 ## Implementation Notes
 
 ### Edge Case Handling
-- **Multiple slashes**: `split("/", 1)` handles "owner/repo/extra" → ("owner", "repo/extra")
-- **No slash**: Returns (None, repo_full_name)
-- **Empty string**: Handled by existing validation in cache logic
+- **No slash**: Raises ValueError (invalid input)
+- **Multiple slashes**: Raises ValueError (invalid input)
+- **Empty string**: Raises ValueError (0 slashes)
 
 ### Backward Compatibility
 - **Function signature**: Unchanged

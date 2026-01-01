@@ -9,16 +9,17 @@ Update documentation in coordinator.py as specified in pr_info/steps/summary.md.
 
 Requirements:
 1. Add terminology definitions to module docstring
-2. Update get_cached_eligible_issues() docstring to clarify repo_full_name format
-3. Ensure documentation reflects the simplified approach
-4. Maintain consistency with existing documentation style
+2. Add terminology table as comment near _split_repo_identifier() function (already done in Step 2)
+3. Update get_cached_eligible_issues() docstring to clarify repo_full_name format
+4. Ensure documentation reflects the simplified approach
+5. Maintain consistency with existing documentation style
 
 Focus on clarity and helping future developers understand the expected data formats.
 ```
 
 ## WHERE: File Paths
 - **Primary**: `src/mcp_coder/cli/commands/coordinator.py`
-- **Sections**: Module docstring (at top of file), `get_cached_eligible_issues()` function docstring
+- **Sections**: Module docstring (at top of file), `_split_repo_identifier()` function docstring (already added in Step 2), `get_cached_eligible_issues()` function docstring
 
 ## WHAT: Main Documentation Updates
 
