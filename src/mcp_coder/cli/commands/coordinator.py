@@ -557,6 +557,7 @@ def get_cached_eligible_issues(
     Returns:
         List of eligible issues (open state, meeting bot pickup criteria)
     """
+    repo_identifier = None
     try:
         # Step 1: Create RepoIdentifier from repo_full_name
         repo_identifier = RepoIdentifier.from_full_name(repo_full_name)
@@ -568,7 +569,9 @@ def get_cached_eligible_issues(
         except Exception as cache_error:
             # If cache loading fails with unexpected error, fall back to direct fetch
             _log_cache_metrics(
-                "miss", repo_identifier.repo_name, reason=f"cache_load_error_{type(cache_error).__name__}"
+                "miss",
+                repo_identifier.repo_name,
+                reason=f"cache_load_error_{type(cache_error).__name__}",
             )
             logger.warning(
                 f"Cache load error for {repo_identifier.full_name}: {cache_error}, falling back to direct fetch"
