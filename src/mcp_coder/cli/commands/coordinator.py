@@ -564,7 +564,17 @@ def get_cached_eligible_issues(
 
         # Step 2: Check duplicate protection (1-minute window) with RepoIdentifier
         cache_file_path = _get_cache_file_path(repo_identifier)
-        cache_data = _load_cache_file(cache_file_path)
+        try:
+            cache_data = _load_cache_file(cache_file_path)
+        except Exception as cache_error:
+            # If cache loading fails with unexpected error, fall back to direct fetch
+            _log_cache_metrics(
+                "miss", repo_identifier.repo_name, reason=f"cache_load_error_{type(cache_error).__name__}"
+            )
+            logger.warning(
+                f"Cache load error for {repo_identifier.full_name}: {cache_error}, falling back to direct fetch"
+            )
+            return get_eligible_issues(issue_manager)
 
         # Log cache metrics
         _log_cache_metrics(
@@ -1197,7 +1207,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     force_refresh=args.force_refresh,
                     cache_refresh_minutes=get_cache_refresh_minutes(),
                 )
-            except (ValueError, KeyError, ConnectionError, TimeoutError) as e:
+            except Exception as e:
                 logger.warning(
                     f"Cache failed for {repo_full_name}: {e}, using direct fetch"
                 )
