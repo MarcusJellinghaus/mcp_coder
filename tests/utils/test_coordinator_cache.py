@@ -765,3 +765,45 @@ class TestGetCachedEligibleIssues:
             assert "Cache refresh for repo: type=full, new_issues=1" in caplog.text
             assert "Cache save for repo: total_issues=1" in caplog.text
             assert "Cache hit for repo:" in caplog.text
+
+    def test_no_spurious_warnings_with_repo_identifier(
+        self,
+        mock_issue_manager: Mock,
+        sample_issue: IssueData,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test that using RepoIdentifier does not generate spurious warnings."""
+        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+        mock_issue_manager.list_issues.return_value = [sample_issue]
+        mock_issue_manager.repo_url = "https://github.com/owner/repo"
+
+        with (
+            patch(
+                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+            ) as mock_path,
+            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
+            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
+            ) as mock_filter,
+        ):
+            mock_path.return_value = Path("/fake/cache.json")
+            mock_load.return_value = {"last_checked": None, "issues": {}}
+            mock_save.return_value = True
+            mock_filter.return_value = [sample_issue]
+
+            # This should complete without any warnings
+            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+
+            assert result == [sample_issue]
+            # Should not contain any warnings related to repo identifier parsing
+            warning_messages = [
+                record.message
+                for record in caplog.records
+                if record.levelname == "WARNING"
+            ]
+            assert not any("repo identifier" in msg.lower() for msg in warning_messages)
+            assert not any(
+                "parse" in msg.lower() and "repo" in msg.lower()
+                for msg in warning_messages
+            )
