@@ -1188,13 +1188,12 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             branch_manager = IssueBranchManager(repo_url=validated_config["repo_url"])
 
             # Step 4c: Get eligible issues using cache
-            # Extract repo_full_name from repo_url (e.g., https://github.com/owner/repo -> owner/repo)
+            # Create RepoIdentifier from repo_url
             repo_url = validated_config["repo_url"]
-            if repo_url.startswith("https://github.com/"):
-                repo_full_name = repo_url[len("https://github.com/") :]
-                if repo_full_name.endswith(".git"):
-                    repo_full_name = repo_full_name[:-4]
-            else:
+            try:
+                repo_identifier = RepoIdentifier.from_repo_url(repo_url)
+                repo_full_name = repo_identifier.full_name
+            except ValueError:
                 # Fallback: use repo_name if URL format is unexpected
                 repo_full_name = repo_name
 

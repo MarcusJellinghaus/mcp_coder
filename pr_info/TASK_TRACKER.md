@@ -51,7 +51,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Delete the entire _parse_repo_identifier() function
 - [x] Simplify _get_cache_file_path() to accept RepoIdentifier and remove owner parameter
 - [x] Update get_cached_eligible_issues() to use RepoIdentifier
-- [ ] Update execute_coordinator_run() to create RepoIdentifier from repo_url
+- [x] Update execute_coordinator_run() to create RepoIdentifier from repo_url
 - [ ] Simplify exception handler to use RepoIdentifier directly
 - [ ] Run pylint on coordinator.py and fix all issues
 - [ ] Run pytest on all coordinator tests and fix all issues
