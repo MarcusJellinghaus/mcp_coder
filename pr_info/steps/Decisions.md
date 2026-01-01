@@ -181,3 +181,37 @@ Decisions made during plan review discussion.
 **Topic:** Whether to add a `__str__` method to `RepoIdentifier`  
 **Decision:** Yes — add `__str__` returning `self.full_name`  
 **Rationale:** Cleaner logging syntax
+
+
+## Decision 27: NameError Fix Strategy
+**Topic:** How to fix potential NameError in exception handler when `repo_identifier` is not defined  
+**Decision:** Initialize `repo_identifier` to `None` before the try block, then check for `None` in the exception handler  
+**Rationale:** Clean approach that doesn't require nested try blocks or `dir()` checks
+
+---
+
+## Decision 28: Exception Handling Scope
+**Topic:** Whether to keep narrowed exception types or revert to broad exception handling  
+**Decision:** Revert to `except Exception` in all four locations  
+**Rationale:** Safety - library exceptions from `requests`, `PyGithub`, and Jenkins client may not be caught otherwise, causing unhandled crashes
+
+---
+
+## Decision 29: Keep Default `__repr__`
+**Topic:** Whether to add custom `__repr__` method to `RepoIdentifier`  
+**Decision:** Keep the default dataclass `__repr__`  
+**Rationale:** The default `RepoIdentifier(owner='...', repo_name='...')` format is already good for debugging
+
+---
+
+## Decision 30: Error Message Consistency
+**Topic:** How to make error messages in `from_full_name()` consistent  
+**Decision:** Include the invalid input in all error messages  
+**Rationale:** Consistent format helps debugging; shows what was passed vs what was expected
+
+---
+
+## Decision 31: Remove Accidental Keyword-Only Marker
+**Topic:** Whether to keep the `*,` added to `dispatch_workflow` signature  
+**Decision:** Remove - it was an accidental/incidental change unrelated to this PR  
+**Rationale:** Out of scope; no clear reason for the change

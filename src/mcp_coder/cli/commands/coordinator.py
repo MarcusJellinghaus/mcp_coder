@@ -292,7 +292,6 @@ def dispatch_workflow(
     workflow_name: str,
     repo_config: dict[str, str],
     jenkins_client: JenkinsClient,
-    *,
     issue_manager: IssueManager,
     branch_manager: IssueBranchManager,
     log_level: str,

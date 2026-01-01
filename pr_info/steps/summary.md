@@ -63,6 +63,16 @@ _get_cache_file_path(repo_identifier) → uses repo_identifier.cache_safe_name
                          "owner_repo.issues.json"
 ```
 
+## Implementation Steps
+
+| Step | Description | Status |
+|------|-------------|--------|
+| Step 1 | Write tests for `RepoIdentifier` class | ✅ Complete |
+| Step 2 | Implement `RepoIdentifier` class | ✅ Complete |
+| Step 3 | Update `coordinator.py` to use `RepoIdentifier` | ✅ Complete |
+| Step 4 | Update tests and documentation | ✅ Complete |
+| Step 5 | Fix exception handling and error messages | ⬚ Pending |
+
 ## Files Modified
 
 ### New Implementation

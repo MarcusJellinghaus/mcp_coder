@@ -83,6 +83,18 @@ logging behavior.
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
+### Step 5: Fix Exception Handling and Error Messages (Code Review Fixes)
+- [ ] Initialize repo_identifier to None before try block in get_cached_eligible_issues()
+- [ ] Update exception handler to check for None and use fallback
+- [ ] Revert exception handling to `except Exception` in execute_coordinator_test() (2 locations)
+- [ ] Revert exception handling to `except Exception` in execute_coordinator_run() (2 locations)
+- [ ] Update error messages in from_full_name() to include invalid input
+- [ ] Update test assertions if needed for new error message format
+- [ ] Run pylint on modified files and fix all issues
+- [ ] Run pytest on all tests and fix all issues
+- [ ] Run mypy on modified files and fix all issues
+- [ ] Prepare git commit message for Step 5
+
 ### Pull Request
 - [ ] Review all code changes for consistency and quality
 - [ ] Run full test suite to ensure no regressions
