@@ -57,14 +57,21 @@ class RepoIdentifier:
         """
         slash_count = full_name.count("/")
         if slash_count != 1:
-            raise ValueError(f"Invalid format")
+            raise ValueError(
+                f"Invalid repo identifier '{full_name}': expected 'owner/repo' format "
+                f"(exactly one slash), got {slash_count} slashes"
+            )
 
         owner, repo_name = full_name.split("/")
 
         if not owner:
-            raise ValueError(f"Owner cannot be empty")
+            raise ValueError(
+                f"Invalid repo identifier '{full_name}': owner cannot be empty"
+            )
         if not repo_name:
-            raise ValueError(f"Repository name cannot be empty")
+            raise ValueError(
+                f"Invalid repo identifier '{full_name}': repo_name cannot be empty"
+            )
 
         return cls(owner=owner, repo_name=repo_name)
 

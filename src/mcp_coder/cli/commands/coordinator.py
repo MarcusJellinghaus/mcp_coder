@@ -706,11 +706,11 @@ def get_cached_eligible_issues(
         return eligible_issues
 
     except (ValueError, KeyError, TypeError) as e:
-        _log_cache_metrics(
-            "miss", repo_identifier.repo_name, reason=f"error_{type(e).__name__}"
-        )
+        repo_name = repo_identifier.repo_name if repo_identifier else "unknown_repo"
+        full_name = repo_identifier.full_name if repo_identifier else "unknown/unknown"
+        _log_cache_metrics("miss", repo_name, reason=f"error_{type(e).__name__}")
         logger.warning(
-            f"Cache error for {repo_identifier.full_name}: {e}, falling back to direct fetch"
+            f"Cache error for {full_name}: {e}, falling back to direct fetch"
         )
         return get_eligible_issues(issue_manager)
 
@@ -1091,7 +1091,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         try:
             status = client.get_job_status(queue_id)
             job_url = status.url
-        except (ConnectionError, TimeoutError, ValueError) as e:
+        except Exception as e:
             logger.debug(f"Could not get job status: {e}")
             job_url = None
 
@@ -1109,7 +1109,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         logger.error(f"Configuration error: {e}")
         return 1
 
-    except (ConnectionError, TimeoutError, RuntimeError) as e:
+    except Exception as e:
         # Let all other exceptions bubble up with full traceback
         # (per issue spec: "Let exceptions bubble up naturally for debugging")
         logger.error(f"Unexpected error: {e}", exc_info=True)
@@ -1250,7 +1250,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         branch_manager=branch_manager,
                         log_level=args.log_level,
                     )
-                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+                except Exception as e:
                     # Fail-fast: log error and exit immediately
                     logger.error(
                         f"Failed processing issue #{issue['number']}: {e}",
@@ -1273,7 +1273,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         logger.error(f"Configuration error: {e}")
         return 1
 
-    except (ConnectionError, TimeoutError, RuntimeError) as e:
+    except Exception as e:
         # Let all other exceptions bubble up with full traceback
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise
