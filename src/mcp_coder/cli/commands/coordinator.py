@@ -406,46 +406,6 @@ def dispatch_workflow(
     )
 
 
-def _parse_repo_identifier(repo_url: str, repo_name: str) -> tuple[str, str | None]:
-    """Parse repository URL to extract owner and repo name with fallback.
-
-    Args:
-        repo_url: Repository URL in various formats
-        repo_name: Repository name for fallback
-
-    Returns:
-        Tuple of (repo_name, owner) where owner may be None if extraction fails
-    """
-    import re
-
-    # Ensure repo_url is a string (handle Mock objects in tests)
-    if not isinstance(repo_url, str):
-        logger.warning(
-            f"Using fallback cache naming for {repo_name}: repo_url is not a string (got {type(repo_url)})"
-        )
-        return (repo_name, None)
-
-    # Pattern for HTTPS URLs: https://github.com/owner/repo(.git)?
-    https_pattern = r"https://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$"
-    https_match = re.match(https_pattern, repo_url)
-    if https_match:
-        owner, extracted_repo = https_match.groups()
-        return (extracted_repo, owner)
-
-    # Pattern for SSH URLs: git@github.com:owner/repo(.git)?
-    ssh_pattern = r"git@github\.com:([^/]+)/([^/]+?)(?:\.git)?/?$"
-    ssh_match = re.match(ssh_pattern, repo_url)
-    if ssh_match:
-        owner, extracted_repo = ssh_match.groups()
-        return (extracted_repo, owner)
-
-    # Fallback: unable to parse URL format, return repo_name with owner=None
-    logger.warning(
-        f"Using fallback cache naming for {repo_name}: owner could not be determined from URL {repo_url}"
-    )
-    return (repo_name, None)
-
-
 def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
     """Load cache file or return empty cache structure.
 
