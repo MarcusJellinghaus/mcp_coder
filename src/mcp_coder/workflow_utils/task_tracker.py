@@ -97,7 +97,7 @@ def _find_implementation_section(content: str) -> str:
 
     for i, line in enumerate(lines):
         # Check for section headers (## or ###)
-        if line.strip().startswith(("#")):
+        if line.strip().startswith("##"):
             header_text = line.strip().lstrip("#").strip().lower()
 
             # Look for start marker: "implementation steps" or "tasks"

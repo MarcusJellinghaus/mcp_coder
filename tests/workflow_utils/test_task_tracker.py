@@ -1498,7 +1498,7 @@ class TestMultiPhaseTaskTracker:
 - [x] Complete task
 - [ ] Incomplete task
 
-### Pull Request
+## Pull Request
 - [ ] Create PR
 """
         incomplete = _get_incomplete_tasks(content)
