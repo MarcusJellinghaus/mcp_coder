@@ -14,7 +14,6 @@ Run all quality checks (pylint, pytest, mypy) to ensure the implementation is co
 |------|------------|
 | `src/mcp_coder/workflow_utils/task_tracker.py` | pylint, mypy |
 | `tests/workflow_utils/test_task_tracker.py` | pylint, mypy, pytest |
-| `tests/workflow_utils/test_data/multi_phase_tracker.md` | N/A (test data) |
 
 ---
 
@@ -95,7 +94,7 @@ run_mypy_check(target_directories=["src/mcp_coder/workflow_utils"])
 | `TestTaskInfo` | 2 | PASS |
 | `TestExceptions` | 2 | PASS |
 | `TestReadTaskTracker` | 3 | PASS |
-| `TestFindImplementationSection` | 5 | PASS |
+| `TestFindImplementationSection` | 6 | PASS |
 | `TestParseTaskLines` | 11 | PASS |
 | `TestGetIncompleteTasksInternal` | 5 | PASS |
 | `TestGetIncompleteTasks` | 8 | PASS |
@@ -165,7 +164,6 @@ assert incomplete == ["Add class to github_utils.py"]
 |-------|---------|-----|
 | Import error in tests | `NameError: _find_implementation_section` | Add import to test file |
 | Type hint issue | mypy error on fixture | Use `-> str` return type |
-| Test data not found | `FileNotFoundError` | Verify path to test_data directory |
 | Missing logger import | `NameError: logger` | Add `import logging` and `logger = logging.getLogger(__name__)` |
 
 ---

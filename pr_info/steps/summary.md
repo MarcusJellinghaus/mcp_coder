@@ -39,8 +39,7 @@ This approach is simpler and more robust than tracking header levels or keywords
 | File | Change Type | Description |
 |------|-------------|-------------|
 | `src/mcp_coder/workflow_utils/task_tracker.py` | **Modified** | Update `_find_implementation_section()` to handle phase headers |
-| `tests/workflow_utils/test_task_tracker.py` | **Modified** | Add test cases for multi-phase parsing |
-| `tests/workflow_utils/test_data/multi_phase_tracker.md` | **New** | Test data file with multi-phase structure |
+| `tests/workflow_utils/test_task_tracker.py` | **Modified** | Add test cases for multi-phase parsing (inline test data) |
 
 ### No New Modules Required
 
@@ -79,7 +78,6 @@ Simpler: No header level tracking, no keyword detection—just find boundaries a
 - `tests/workflow_utils/test_task_tracker.py` - Test cases
 
 ### Files to Create
-- `tests/workflow_utils/test_data/multi_phase_tracker.md` - Test data
 - `pr_info/steps/step_1.md` - Implementation step 1
 - `pr_info/steps/step_2.md` - Implementation step 2
 - `pr_info/steps/step_3.md` - Implementation step 3
@@ -89,18 +87,17 @@ Simpler: No header level tracking, no keyword detection—just find boundaries a
 
 | Step | Description | Effort |
 |------|-------------|--------|
-| 1 | Create test data and add unit tests for multi-phase parsing (TDD) | ~30 min |
+| 1 | Add unit tests for multi-phase parsing (TDD) with inline test data | ~30 min |
 | 2 | Add logging and update `_find_implementation_section()` | ~20 min |
 | 3 | Run quality checks and verify backward compatibility | ~15 min |
-| 4 | Evaluate and remove redundant tests | ~10 min |
 
-**Total Estimated Time**: ~1 hour 15 min
+**Total Estimated Time**: ~1 hour 5 min
 
 ## Key Decisions (see Decisions.md for details)
 
 - **Decision 3**: Use boundary-based extraction (find content between `## Tasks` and `## Pull Request`)
-- **Decision 9**: Keep all 5 tests initially, clean up redundant ones in Step 4
-- **Decision 10**: Keep both test data structures (complex file + simple inline)
+- **Decision 12**: Remove Step 4 — keep all 5 tests, no cleanup step needed
+- **Decision 14**: Use inline test data (no separate test data file)
 
 ## Success Criteria
 

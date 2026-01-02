@@ -1,10 +1,10 @@
-# Step 1: Create Test Data and Add Unit Tests for Multi-Phase Parsing (TDD)
+# Step 1: Add Unit Tests for Multi-Phase Parsing (TDD)
 
 ## Summary Reference
 See [summary.md](summary.md) for overall context and design decisions.
 
 ## Objective
-Create test data file and add comprehensive unit tests for multi-phase task tracker parsing before implementing the fix.
+Add comprehensive unit tests for multi-phase task tracker parsing before implementing the fix. Test data is defined inline (Decision 14).
 
 ---
 
@@ -12,7 +12,6 @@ Create test data file and add comprehensive unit tests for multi-phase task trac
 
 | Action | File Path |
 |--------|-----------|
-| Create | `tests/workflow_utils/test_data/multi_phase_tracker.md` |
 | Modify | `tests/workflow_utils/test_task_tracker.py` |
 
 ---
@@ -45,9 +44,10 @@ class TestMultiPhaseTaskTracker:
 
 ## HOW: Integration Points
 
-1. **Test Data Loading**: Use `Path(__file__).parent / "test_data" / "multi_phase_tracker.md"`
-2. **Imports**: Use existing imports from `task_tracker` module
+1. **Test Data**: Define inline as string constants (no external files)
+2. **Imports**: Use existing imports from `task_tracker` module, add `from tempfile import TemporaryDirectory`
 3. **Test Class**: Add new `TestMultiPhaseTaskTracker` class to existing test file
+4. **Empty Tasks Test**: Add to existing `TestFindImplementationSection` class (Decision 13)
 
 ---
 
@@ -77,18 +77,29 @@ class TestMultiPhaseTaskTracker:
 
 | Test Function | Input | Expected Output |
 |---------------|-------|-----------------|
-| `test_get_incomplete_tasks_across_phases` | multi_phase_tracker.md | `["Task B", "Task C"]` (excludes PR task) |
-| `test_get_step_progress_includes_all_phases` | multi_phase_tracker.md | Dict with Step 1 AND Step 2 |
-| `test_find_implementation_section_includes_all_phases` | multi_phase_tracker.md | Content contains "Phase 2" |
+| `test_get_incomplete_tasks_across_phases` | MULTI_PHASE_CONTENT | Incomplete tasks from Phase 2 (excludes PR tasks) |
+| `test_get_step_progress_includes_all_phases` | MULTI_PHASE_CONTENT | Dict with Step 1 AND Step 3/4 |
+| `test_find_implementation_section_includes_all_phases` | MULTI_PHASE_CONTENT | Content contains "Phase 2" |
+| `test_empty_tasks_section` | Empty Tasks content | Empty string |
 
 ---
 
 ## Implementation Details
 
-### 1. Create Test Data File: `tests/workflow_utils/test_data/multi_phase_tracker.md`
+### 1. Add Import to `tests/workflow_utils/test_task_tracker.py`
 
-```markdown
-# Task Status Tracker
+Add to the imports section:
+```python
+from tempfile import TemporaryDirectory
+```
+
+### 2. Define Inline Test Data Constants
+
+Add after imports, before test classes:
+
+```python
+# Multi-phase test data (realistic example)
+MULTI_PHASE_CONTENT = """# Task Status Tracker
 
 ## Instructions for LLM
 
@@ -128,9 +139,27 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [ ] Review all changes
 - [ ] Create pull request
+"""
 ```
 
-### 2. Add Test Class to `tests/workflow_utils/test_task_tracker.py`
+### 3. Add Empty Tasks Test to `TestFindImplementationSection`
+
+Add to the existing `TestFindImplementationSection` class:
+
+```python
+    def test_empty_tasks_section(self) -> None:
+        """Test that empty Tasks section returns empty string."""
+        content = """# Task Tracker
+
+## Tasks
+## Pull Request
+- [ ] Create PR
+"""
+        section = _find_implementation_section(content)
+        assert section.strip() == ""
+```
+
+### 4. Add Test Class to `tests/workflow_utils/test_task_tracker.py`
 
 Add after existing test classes:
 
@@ -138,17 +167,9 @@ Add after existing test classes:
 class TestMultiPhaseTaskTracker:
     """Tests for multi-phase task tracker parsing."""
 
-    @pytest.fixture
-    def multi_phase_content(self) -> str:
-        """Load multi-phase test tracker content."""
-        test_data_path = Path(__file__).parent / "test_data" / "multi_phase_tracker.md"
-        return test_data_path.read_text(encoding="utf-8")
-
-    def test_find_implementation_section_includes_all_phases(
-        self, multi_phase_content: str
-    ) -> None:
+    def test_find_implementation_section_includes_all_phases(self) -> None:
         """Test that _find_implementation_section includes content from all phases."""
-        section = _find_implementation_section(multi_phase_content)
+        section = _find_implementation_section(MULTI_PHASE_CONTENT)
         
         # Should include content from both phases
         assert "Phase 1" in section or "Step 1" in section
@@ -157,12 +178,10 @@ class TestMultiPhaseTaskTracker:
         # Should NOT include Pull Request section
         assert "Review all changes" not in section
 
-    def test_get_incomplete_tasks_across_phases(
-        self, multi_phase_content: str
-    ) -> None:
+    def test_get_incomplete_tasks_across_phases(self) -> None:
         """Test getting incomplete tasks from multiple phases."""
         # Use internal function with content string
-        incomplete = _get_incomplete_tasks(multi_phase_content)
+        incomplete = _get_incomplete_tasks(MULTI_PHASE_CONTENT)
         
         # Should find incomplete tasks from Phase 2
         assert "Update README with examples" in incomplete
@@ -181,10 +200,9 @@ class TestMultiPhaseTaskTracker:
     def test_get_step_progress_includes_all_phases(self) -> None:
         """Test that get_step_progress returns steps from all phases."""
         with TemporaryDirectory() as temp_dir:
-            # Copy test data to temp directory
-            test_data_path = Path(__file__).parent / "test_data" / "multi_phase_tracker.md"
+            # Write inline test data to temp directory
             tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
-            tracker_path.write_text(test_data_path.read_text(encoding="utf-8"))
+            tracker_path.write_text(MULTI_PHASE_CONTENT)
             
             progress = get_step_progress(temp_dir)
             
@@ -258,17 +276,18 @@ CONTEXT:
 - See pr_info/steps/step_1.md for this step's details
 
 TASK:
-1. Create test data file: tests/workflow_utils/test_data/multi_phase_tracker.md
-2. Add TestMultiPhaseTaskTracker class to tests/workflow_utils/test_task_tracker.py
-3. Run the new tests to verify they FAIL (TDD approach)
+1. Add `from tempfile import TemporaryDirectory` import
+2. Add MULTI_PHASE_CONTENT constant (inline test data)
+3. Add test_empty_tasks_section to TestFindImplementationSection class
+4. Add TestMultiPhaseTaskTracker class with 5 tests
+5. Run the new tests to verify they FAIL (TDD approach)
 
 REQUIREMENTS:
 - Follow existing code style and patterns in the test file
 - Import required functions from task_tracker module
-- Use pytest fixtures for test data loading
+- Use inline test data (no external files)
 - Tests should fail initially (implementation comes in Step 2)
 
 FILES TO MODIFY:
-- tests/workflow_utils/test_data/multi_phase_tracker.md (CREATE)
-- tests/workflow_utils/test_task_tracker.py (ADD test class)
+- tests/workflow_utils/test_task_tracker.py (ADD import, constant, and test classes)
 ```
