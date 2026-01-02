@@ -90,10 +90,17 @@ Simpler: No header level tracking, no keyword detection—just find boundaries a
 | Step | Description | Effort |
 |------|-------------|--------|
 | 1 | Create test data and add unit tests for multi-phase parsing (TDD) | ~30 min |
-| 2 | Update `_find_implementation_section()` to handle phase headers | ~20 min |
+| 2 | Add logging and update `_find_implementation_section()` | ~20 min |
 | 3 | Run quality checks and verify backward compatibility | ~15 min |
+| 4 | Evaluate and remove redundant tests | ~10 min |
 
-**Total Estimated Time**: ~1 hour
+**Total Estimated Time**: ~1 hour 15 min
+
+## Key Decisions (see Decisions.md for details)
+
+- **Decision 3**: Use boundary-based extraction (find content between `## Tasks` and `## Pull Request`)
+- **Decision 9**: Keep all 5 tests initially, clean up redundant ones in Step 4
+- **Decision 10**: Keep both test data structures (complex file + simple inline)
 
 ## Success Criteria
 

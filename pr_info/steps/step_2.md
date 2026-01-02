@@ -80,16 +80,23 @@ def _find_implementation_section(content: str) -> str:
 
 ## Implementation Details
 
-### Full Updated Function
+### New Requirement: Add Module-Level Logging
 
-Replace the `_find_implementation_section` function in `src/mcp_coder/workflow_utils/task_tracker.py`:
+The `task_tracker.py` module currently has no logging. Add the standard logging pattern used throughout this codebase:
 
 ```python
 import logging
 
 logger = logging.getLogger(__name__)
+```
 
+Add these lines near the top of the file, after the existing imports (after `from pathlib import Path`). This follows the project's established pattern (see `claude_code_api.py`, `core.py` for examples) and enables debug-level troubleshooting for section extraction.
 
+### Full Updated Function
+
+Replace the `_find_implementation_section` function in `src/mcp_coder/workflow_utils/task_tracker.py`:
+
+```python
 def _find_implementation_section(content: str) -> str:
     """Find and extract Implementation Steps or Tasks section, raise exception if missing.
 

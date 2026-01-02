@@ -86,3 +86,31 @@ DEBUG - Found Tasks section between '## Tasks' and '## Pull Request', lines 15 t
 **Context:** Should we also stop at "PR Tasks", "Merge Request", etc.?
 
 **Decision:** Only "pull request" is used in this project; keep it simple with just this one end marker.
+
+---
+
+## Decision 9: Test Cleanup Strategy
+
+**Context:** Some tests may have overlapping coverage (e.g., test 4 duplicates test 1's purpose, test 5 may be covered by existing tests).
+
+**Decision:** Keep all 5 tests initially, then add a Step 4 to evaluate and remove redundant tests after all tests pass successfully.
+
+**Reasoning:** Start with full coverage, then clean up once everything works.
+
+---
+
+## Decision 10: Test Data Structures
+
+**Context:** Should we use one test data file or multiple structures?
+
+**Decision:** Keep both test data structures — the complex `multi_phase_tracker.md` file AND the simple inline test in test 4.
+
+**Reasoning:** Ensures coverage of both realistic multi-phase trackers and minimal edge cases.
+
+---
+
+## Decision 11: Edge Case for Missing Phase 1
+
+**Context:** Should we add a test for when `## Tasks` is immediately followed by `## Phase 2:` with no Phase 1?
+
+**Decision:** No additional test needed — the existing tests cover this implicitly since the boundary-based extraction doesn't care about phase numbering.
