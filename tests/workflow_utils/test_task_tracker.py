@@ -22,6 +22,7 @@ from mcp_coder.workflow_utils.task_tracker import (
 )
 
 # Multi-phase test data (realistic example)
+# Note: Using ASCII-safe markers instead of emoji for Windows compatibility
 MULTI_PHASE_CONTENT = """# Task Status Tracker
 
 ## Instructions for LLM
@@ -32,7 +33,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ## Tasks
 
-## Phase 1: Initial Implementation (Steps 1-2) ✅ COMPLETE
+## Phase 1: Initial Implementation (Steps 1-2) [COMPLETE]
 
 ### Step 1: Setup Infrastructure
 - [x] Create directory structure
@@ -45,7 +46,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ---
 
-## Phase 2: Code Review Fixes (Steps 3-4) 📋 NEW
+## Phase 2: Code Review Fixes (Steps 3-4) [NEW]
 
 ### Step 3: Fix Documentation
 - [ ] Update README with examples
@@ -1456,7 +1457,7 @@ class TestMultiPhaseTaskTracker:
         with TemporaryDirectory() as temp_dir:
             # Write inline test data to temp directory
             tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
-            tracker_path.write_text(MULTI_PHASE_CONTENT)
+            tracker_path.write_text(MULTI_PHASE_CONTENT, encoding="utf-8")
 
             progress = get_step_progress(temp_dir)
 
@@ -1471,7 +1472,7 @@ class TestMultiPhaseTaskTracker:
 
 ## Tasks
 
-## Phase 1: Done ✅
+## Phase 1: Done [COMPLETE]
 - [x] Task from phase 1
 
 ## Phase 2: In Progress
