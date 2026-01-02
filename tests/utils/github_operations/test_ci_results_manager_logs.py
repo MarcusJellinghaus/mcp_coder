@@ -7,7 +7,7 @@ from typing import Dict
 from unittest.mock import Mock, patch
 
 import pytest
-import requests  # type: ignore[import-untyped]
+import requests
 from github import GithubException
 
 from mcp_coder.utils.github_operations import (
