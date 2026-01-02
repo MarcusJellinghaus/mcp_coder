@@ -52,13 +52,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 
 ### Step 4: Revert Incorrect Type Ignore Comments
-- [x] Remove `# type: ignore[import-untyped]` from `ci_results_manager.py` (see [step_4.md](steps/step_4.md))
-- [x] Remove `# type: ignore[import-untyped]` from `test_ci_results_manager_artifacts.py` (see [step_4.md](steps/step_4.md))
-- [x] Remove `# type: ignore[import-untyped]` from `test_ci_results_manager_foundation.py` (see [step_4.md](steps/step_4.md))
-- [x] Remove `# type: ignore[import-untyped]` from `test_ci_results_manager_logs.py` (see [step_4.md](steps/step_4.md))
-- [x] Remove `# type: ignore[import-untyped]` from `test_ci_results_manager_status.py` (see [step_4.md](steps/step_4.md))
-- [x] Run mypy to verify no type errors (see [step_4.md](steps/step_4.md))
-- [x] Prepare git commit message for Step 4 (see [step_4.md](steps/step_4.md))
+- [ ] Remove `# type: ignore[import-untyped]` from `ci_results_manager.py` (see [step_4.md](steps/step_4.md))
+- [ ] Remove `# type: ignore[import-untyped]` from `test_ci_results_manager_artifacts.py` (see [step_4.md](steps/step_4.md))
+- [ ] Remove `# type: ignore[import-untyped]` from `test_ci_results_manager_foundation.py` (see [step_4.md](steps/step_4.md))
+- [ ] Remove `# type: ignore[import-untyped]` from `test_ci_results_manager_logs.py` (see [step_4.md](steps/step_4.md))
+- [ ] Remove `# type: ignore[import-untyped]` from `test_ci_results_manager_status.py` (see [step_4.md](steps/step_4.md))
+- [ ] Run mypy to verify no type errors (see [step_4.md](steps/step_4.md))
+- [ ] Prepare git commit message for Step 4 (see [step_4.md](steps/step_4.md))
 
 ---
 
