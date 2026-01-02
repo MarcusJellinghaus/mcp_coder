@@ -152,3 +152,24 @@ DEBUG - Found Tasks section between '## Tasks' and '## Pull Request', lines 15 t
 **Context:** Step 1's test code uses `TemporaryDirectory` but doesn't show the import.
 
 **Decision:** Add the missing `from tempfile import TemporaryDirectory` import to Step 1 for complete, copy-paste-ready code.
+
+---
+
+## Decision 16: Revert Incorrect Type Ignore Comments
+
+**Context:** During code review, it was discovered that `# type: ignore[import-untyped]` comments were added to `requests` imports in 5 files. However, `types-requests>=2.28.0` is already listed as a dev dependency in `pyproject.toml`.
+
+**Decision:** Revert all `# type: ignore[import-untyped]` comments on `requests` imports.
+
+**Reasoning:**
+- The type stubs for `requests` are already available via `types-requests` in dev dependencies
+- Adding inline type ignore comments is a workaround that masks potential environment issues
+- With proper dev dependencies installed, mypy should work without these comments
+- If mypy still complains after reverting, the issue is with environment setup, not the code
+
+**Files affected:**
+- `src/mcp_coder/utils/github_operations/ci_results_manager.py`
+- `tests/utils/github_operations/test_ci_results_manager_artifacts.py`
+- `tests/utils/github_operations/test_ci_results_manager_foundation.py`
+- `tests/utils/github_operations/test_ci_results_manager_logs.py`
+- `tests/utils/github_operations/test_ci_results_manager_status.py`

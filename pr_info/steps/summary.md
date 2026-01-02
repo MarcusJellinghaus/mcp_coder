@@ -90,14 +90,16 @@ Simpler: No header level tracking, no keyword detection—just find boundaries a
 | 1 | Add unit tests for multi-phase parsing (TDD) with inline test data | ~30 min |
 | 2 | Add logging and update `_find_implementation_section()` | ~20 min |
 | 3 | Run quality checks and verify backward compatibility | ~15 min |
+| 4 | Revert incorrect type ignore comments on requests imports | ~10 min |
 
-**Total Estimated Time**: ~1 hour 5 min
+**Total Estimated Time**: ~1 hour 15 min
 
 ## Key Decisions (see Decisions.md for details)
 
 - **Decision 3**: Use boundary-based extraction (find content between `## Tasks` and `## Pull Request`)
 - **Decision 12**: Remove Step 4 — keep all 5 tests, no cleanup step needed
 - **Decision 14**: Use inline test data (no separate test data file)
+- **Decision 16**: Revert incorrect type ignore comments (types-requests already in dev deps)
 
 ## Success Criteria
 
