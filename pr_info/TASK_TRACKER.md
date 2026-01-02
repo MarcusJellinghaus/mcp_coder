@@ -24,15 +24,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Create Test Data and Add Unit Tests (TDD)
-- [ ] Create test data file `tests/workflow_utils/test_data/multi_phase_tracker.md` (see [step_1.md](steps/step_1.md))
-- [ ] Add `TestMultiPhaseTaskTracker` class to `tests/workflow_utils/test_task_tracker.py` (see [step_1.md](steps/step_1.md))
-- [ ] Add test `test_find_implementation_section_includes_all_phases` (see [step_1.md](steps/step_1.md))
-- [ ] Add test `test_get_incomplete_tasks_across_phases` (see [step_1.md](steps/step_1.md))
-- [ ] Add test `test_get_step_progress_includes_all_phases` (see [step_1.md](steps/step_1.md))
-- [ ] Add test `test_phase_headers_recognized_as_continuations` (see [step_1.md](steps/step_1.md))
-- [ ] Add test `test_backward_compatibility_single_phase` (see [step_1.md](steps/step_1.md))
-- [ ] Run new tests to verify they FAIL (TDD approach) (see [step_1.md](steps/step_1.md))
-- [ ] Prepare git commit message for Step 1 (see [step_1.md](steps/step_1.md))
+- [x] Create test data file `tests/workflow_utils/test_data/multi_phase_tracker.md` (see [step_1.md](steps/step_1.md))
+- [x] Add `TestMultiPhaseTaskTracker` class to `tests/workflow_utils/test_task_tracker.py` (see [step_1.md](steps/step_1.md))
+- [x] Add test `test_find_implementation_section_includes_all_phases` (see [step_1.md](steps/step_1.md))
+- [x] Add test `test_get_incomplete_tasks_across_phases` (see [step_1.md](steps/step_1.md))
+- [x] Add test `test_get_step_progress_includes_all_phases` (see [step_1.md](steps/step_1.md))
+- [x] Add test `test_phase_headers_recognized_as_continuations` (see [step_1.md](steps/step_1.md))
+- [x] Add test `test_backward_compatibility_single_phase` (see [step_1.md](steps/step_1.md))
+- [x] Run new tests to verify they FAIL (TDD approach) (see [step_1.md](steps/step_1.md))
+- [x] Prepare git commit message for Step 1 (see [step_1.md](steps/step_1.md))
 
 ### Step 2: Update `_find_implementation_section()` to Handle Phase Headers
 - [ ] Open `src/mcp_coder/workflow_utils/task_tracker.py` (see [step_2.md](steps/step_2.md))
