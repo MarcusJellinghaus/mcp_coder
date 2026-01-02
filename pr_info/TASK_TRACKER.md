@@ -35,11 +35,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 1 (see [step_1.md](steps/step_1.md))
 
 ### Step 2: Update `_find_implementation_section()` to Handle Phase Headers
-- [ ] Open `src/mcp_coder/workflow_utils/task_tracker.py` (see [step_2.md](steps/step_2.md))
-- [ ] Locate the `_find_implementation_section()` function (see [step_2.md](steps/step_2.md))
-- [ ] Update header parsing logic to recognize "phase" headers as continuations (see [step_2.md](steps/step_2.md))
-- [ ] Run all tests to verify they PASS (see [step_2.md](steps/step_2.md))
-- [ ] Prepare git commit message for Step 2 (see [step_2.md](steps/step_2.md))
+- [x] Open `src/mcp_coder/workflow_utils/task_tracker.py` (see [step_2.md](steps/step_2.md))
+- [x] Locate the `_find_implementation_section()` function (see [step_2.md](steps/step_2.md))
+- [x] Update header parsing logic to recognize "phase" headers as continuations (see [step_2.md](steps/step_2.md))
+- [x] Run all tests to verify they PASS (see [step_2.md](steps/step_2.md))
+- [x] Prepare git commit message for Step 2 (see [step_2.md](steps/step_2.md))
 
 ### Step 3: Run Quality Checks and Verify Backward Compatibility
 - [ ] Run pytest on `tests/workflow_utils/test_task_tracker.py` (see [step_3.md](steps/step_3.md))

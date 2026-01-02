@@ -4,10 +4,13 @@ This module provides utilities to parse markdown task tracker files with GitHub-
 checkboxes and extract incomplete implementation tasks for automated workflow management.
 """
 
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple
+
+logger = logging.getLogger(__name__)
 
 # Compiled regex patterns for better performance
 # Updated to handle both "- [ ]" and "[ ]" formats
@@ -74,6 +77,9 @@ def _read_task_tracker(folder_path: str) -> str:
 def _find_implementation_section(content: str) -> str:
     """Find and extract Implementation Steps or Tasks section, raise exception if missing.
 
+    Uses boundary-based extraction: finds content between the Tasks/Implementation Steps
+    header and the Pull Request header (or end of file if no Pull Request section).
+
     Args:
         content: Full TASK_TRACKER.md content
 
@@ -84,41 +90,50 @@ def _find_implementation_section(content: str) -> str:
         TaskTrackerSectionNotFoundError: If Implementation Steps or Tasks section not found
     """
     lines = content.split("\n")
-    in_impl_section = False
-    impl_section_level = 0  # Track the header level of the implementation section
-    impl_lines = []
+    start_line: int | None = None
+    start_header: str | None = None
+    end_line: int | None = None
+    end_header: str = "end of file"
 
-    for line in lines:
+    for i, line in enumerate(lines):
         # Check for section headers (## or ###)
-        if line.strip().startswith(("##", "###")):
-            # Count the number of # characters to determine header level
-            header_level = len(line.strip()) - len(line.strip().lstrip("#"))
+        if line.strip().startswith(("#")):
             header_text = line.strip().lstrip("#").strip().lower()
 
-            # Look for either "implementation steps" or "tasks" sections
-            if "implementation steps" in header_text or header_text == "tasks":
-                in_impl_section = True
-                impl_section_level = header_level
-                continue
-            elif in_impl_section:
-                # Stop parsing when we hit Pull Request section
+            # Look for start marker: "implementation steps" or "tasks"
+            if start_line is None:
+                if "implementation steps" in header_text or header_text == "tasks":
+                    start_line = i + 1  # Start after the header line
+                    start_header = line.strip()
+            else:
+                # Look for end marker: "pull request"
                 if "pull request" in header_text:
+                    end_line = i
+                    end_header = line.strip()
                     break
-                # Stop parsing if we hit a same-level or higher-level section
-                # (lower numbers mean higher level: ## is level 2, ### is level 3)
-                elif header_level <= impl_section_level:
-                    break
-                # Otherwise, this is a subsection within our implementation section
-                # Continue collecting it
 
-        # Collect lines if we're in the implementation section
-        if in_impl_section:
-            impl_lines.append(line)
-
-    if not in_impl_section:
+    # Check if we found the start marker
+    if start_line is None or start_header is None:
         raise TaskTrackerSectionNotFoundError(
             "Implementation Steps or Tasks section not found in TASK_TRACKER.md"
         )
+
+    # If no end marker found, use end of file
+    if end_line is None:
+        end_line = len(lines)
+
+    # Extract lines between boundaries
+    impl_lines = lines[start_line:end_line]
+    line_count = len(impl_lines)
+
+    logger.debug(
+        "Found Tasks section between '%s' and '%s', lines %d to %d (%d lines)",
+        start_header,
+        end_header,
+        start_line + 1,  # 1-based for human readability
+        end_line,
+        line_count,
+    )
 
     return "\n".join(impl_lines)
 
