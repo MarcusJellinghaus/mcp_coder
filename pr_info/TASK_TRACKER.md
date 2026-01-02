@@ -42,13 +42,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Prepare git commit message for Step 2 (see [step_2.md](steps/step_2.md))
 
 ### Step 3: Run Quality Checks and Verify Backward Compatibility
-- [ ] Run pytest on `tests/workflow_utils/test_task_tracker.py` (see [step_3.md](steps/step_3.md))
-- [ ] Run pytest on `tests/test_integration_task_tracker.py` (see [step_3.md](steps/step_3.md))
-- [ ] Run pylint on modified files (see [step_3.md](steps/step_3.md))
-- [ ] Run mypy on modified files (see [step_3.md](steps/step_3.md))
-- [ ] Fix any issues found by quality checks (see [step_3.md](steps/step_3.md))
-- [ ] Verify real-world examples from issue #156 work correctly (see [step_3.md](steps/step_3.md))
-- [ ] Prepare git commit message for Step 3 (see [step_3.md](steps/step_3.md))
+- [x] Run pytest on `tests/workflow_utils/test_task_tracker.py` (see [step_3.md](steps/step_3.md))
+- [x] Run pytest on `tests/test_integration_task_tracker.py` (see [step_3.md](steps/step_3.md))
+- [x] Run pylint on modified files (see [step_3.md](steps/step_3.md))
+- [x] Run mypy on modified files (see [step_3.md](steps/step_3.md))
+- [x] Fix any issues found by quality checks (see [step_3.md](steps/step_3.md))
+- [x] Verify real-world examples from issue #156 work correctly (see [step_3.md](steps/step_3.md))
+- [x] Prepare git commit message for Step 3 (see [step_3.md](steps/step_3.md))
 
 ---
 
