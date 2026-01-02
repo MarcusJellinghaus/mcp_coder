@@ -1,10 +1,13 @@
-# Step 2: Update `_find_implementation_section()` to Handle Phase Headers
+# Step 2: Simplify `_find_implementation_section()` with Boundary-Based Extraction
 
 ## Summary Reference
 See [summary.md](summary.md) for overall context and design decisions.
+See [Decisions.md](Decisions.md) for decisions made during plan review.
 
 ## Objective
-Modify the `_find_implementation_section()` function to recognize phase headers as continuations within the Tasks section, rather than treating them as section boundaries.
+Replace the complex header-level tracking logic with a simpler boundary-based extraction approach. This finds everything between `## Tasks` and `## Pull Request` markers.
+
+**Why this change?** The original approach tracked header levels and used keyword detection. The new approach is simpler, more robust, and handles any structure within the Tasks section (phases, sprints, parts, etc.) without needing keyword lists.
 
 ---
 
@@ -36,52 +39,33 @@ def _find_implementation_section(content: str) -> str:
 
 ---
 
-## HOW: Code Changes
+## HOW: Approach Change
 
-### Current Logic (Lines ~70-95 in task_tracker.py)
+### Current Approach (complex)
+- Track header levels
+- Compare levels to determine section boundaries  
+- Stop at same-level or higher-level headers
+- Problem: `## Phase 2:` is same level as `## Tasks`, stops too early
 
-```python
-elif in_impl_section:
-    # Stop parsing when we hit Pull Request section
-    if "pull request" in header_text:
-        break
-    # Stop parsing if we hit a same-level or higher-level section
-    elif header_level <= impl_section_level:
-        break
-    # Otherwise, this is a subsection within our implementation section
-    # Continue collecting it
-```
-
-### New Logic (Replace the above)
-
-```python
-elif in_impl_section:
-    # Stop parsing when we hit Pull Request section
-    if "pull request" in header_text:
-        break
-    # Check if this is a phase header (continuation of tasks section)
-    elif header_level <= impl_section_level:
-        # Phase headers are continuations, not section boundaries
-        if "phase" in header_text:
-            # Continue collecting phase content
-            pass
-        else:
-            # Other same-level headers end the section
-            break
-    # Otherwise, this is a subsection within our implementation section
-    # Continue collecting it
-```
+### New Approach (boundary-based)
+- Find start marker: `## Tasks` or `### Implementation Steps`
+- Find end marker: `## Pull Request` (case-insensitive)
+- Extract everything between them
+- If no end marker, extract to end of file
+- Add debug logging for troubleshooting
 
 ---
 
-## ALGORITHM: Pseudocode (5 lines)
+## ALGORITHM: Pseudocode
 
 ```
-1. IF "pull request" in header → STOP (explicit end marker)
-2. IF header_level <= section_level:
-3.     IF "phase" in header → CONTINUE (phase is continuation)
-4.     ELSE → STOP (unrelated section)
-5. ELSE → CONTINUE (subsection like ### Step N)
+1. Scan lines for start marker ("## tasks" or "### implementation steps")
+2. Record start line number and header text
+3. Continue scanning for end marker ("## pull request")
+4. Record end line number (or use last line if no end marker)
+5. Extract lines between start and end
+6. Log debug info: start header, end header, line numbers, count
+7. Return extracted content
 ```
 
 ---
@@ -101,8 +85,16 @@ elif in_impl_section:
 Replace the `_find_implementation_section` function in `src/mcp_coder/workflow_utils/task_tracker.py`:
 
 ```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def _find_implementation_section(content: str) -> str:
     """Find and extract Implementation Steps or Tasks section, raise exception if missing.
+
+    Uses boundary-based extraction: finds content between the Tasks/Implementation Steps
+    header and the Pull Request header (or end of file if no Pull Request section).
 
     Args:
         content: Full TASK_TRACKER.md content
@@ -114,60 +106,68 @@ def _find_implementation_section(content: str) -> str:
         TaskTrackerSectionNotFoundError: If Implementation Steps or Tasks section not found
     """
     lines = content.split("\n")
-    in_impl_section = False
-    impl_section_level = 0  # Track the header level of the implementation section
-    impl_lines = []
+    start_line: int | None = None
+    start_header: str | None = None
+    end_line: int | None = None
+    end_header: str = "end of file"
 
-    for line in lines:
+    for i, line in enumerate(lines):
         # Check for section headers (## or ###)
-        if line.strip().startswith(("##", "###")):
-            # Count the number of # characters to determine header level
-            header_level = len(line.strip()) - len(line.strip().lstrip("#"))
+        if line.strip().startswith(("#")):
             header_text = line.strip().lstrip("#").strip().lower()
 
-            # Look for either "implementation steps" or "tasks" sections
-            if "implementation steps" in header_text or header_text == "tasks":
-                in_impl_section = True
-                impl_section_level = header_level
-                continue
-            elif in_impl_section:
-                # Stop parsing when we hit Pull Request section
+            # Look for start marker: "implementation steps" or "tasks"
+            if start_line is None:
+                if "implementation steps" in header_text or header_text == "tasks":
+                    start_line = i + 1  # Start after the header line
+                    start_header = line.strip()
+            else:
+                # Look for end marker: "pull request"
                 if "pull request" in header_text:
+                    end_line = i
+                    end_header = line.strip()
                     break
-                # Check if this is a phase header (continuation of tasks section)
-                elif header_level <= impl_section_level:
-                    # Phase headers are continuations, not section boundaries
-                    if "phase" in header_text:
-                        # Continue collecting phase content
-                        pass
-                    else:
-                        # Other same-level headers end the section
-                        break
-                # Otherwise, this is a subsection within our implementation section
-                # Continue collecting it
 
-        # Collect lines if we're in the implementation section
-        if in_impl_section:
-            impl_lines.append(line)
-
-    if not in_impl_section:
+    # Check if we found the start marker
+    if start_line is None or start_header is None:
         raise TaskTrackerSectionNotFoundError(
             "Implementation Steps or Tasks section not found in TASK_TRACKER.md"
         )
 
+    # If no end marker found, use end of file
+    if end_line is None:
+        end_line = len(lines)
+
+    # Extract lines between boundaries
+    impl_lines = lines[start_line:end_line]
+    line_count = len(impl_lines)
+
+    logger.debug(
+        "Found Tasks section between '%s' and '%s', lines %d to %d (%d lines)",
+        start_header,
+        end_header,
+        start_line + 1,  # 1-based for human readability
+        end_line,
+        line_count,
+    )
+
     return "\n".join(impl_lines)
 ```
+
+**Note:** Add the `import logging` and `logger = logging.getLogger(__name__)` at the top of the file if not already present.
 
 ---
 
 ## Edge Cases Handled
 
-| Scenario | Header | Behavior |
-|----------|--------|----------|
-| Phase continuation | `## Phase 2: Fixes` | Continue parsing |
-| Pull Request section | `## Pull Request` | Stop parsing |
-| Progress Summary | `## Progress Summary` | Stop parsing (not "phase") |
-| Subsection | `### Step 3: Details` | Continue parsing (lower level) |
+| Scenario | Behavior |
+|----------|----------|
+| `## Phase 2: Fixes` within Tasks | Included (between boundaries) |
+| `## Sprint 3: Cleanup` within Tasks | Included (between boundaries) |
+| `## Pull Request` | Marks end boundary, content excluded |
+| `## PULL REQUEST` (uppercase) | Marks end boundary (case-insensitive) |
+| No Pull Request section | Extract to end of file |
+| `### Step 3: Details` | Included (between boundaries) |
 
 ---
 
@@ -189,31 +189,21 @@ You are implementing Step 2 of issue #156: Support for Multi-Phase Task Tracker.
 
 CONTEXT:
 - See pr_info/steps/summary.md for overall design
+- See pr_info/steps/Decisions.md for design decisions
 - See pr_info/steps/step_2.md for this step's details
 - Step 1 added failing tests - now we implement the fix
 
 TASK:
 1. Open src/mcp_coder/workflow_utils/task_tracker.py
-2. Find the _find_implementation_section() function
-3. Update the header parsing logic to recognize "phase" headers as continuations
-4. The key change is: when header_level <= impl_section_level, check if "phase" in header_text
+2. Add logging import and logger at module level if not present
+3. Replace the entire _find_implementation_section() function with the new boundary-based version
+4. The new approach: find content between "## Tasks" and "## Pull Request" markers
 
 REQUIREMENTS:
-- Minimal code change - only modify the elif block inside the header parsing loop
+- Replace the entire function (cleaner than patching)
+- Add debug logging for troubleshooting
 - Maintain backward compatibility - existing tests must still pass
 - Follow existing code style
-
-KEY CODE CHANGE:
-Replace:
-    elif header_level <= impl_section_level:
-        break
-
-With:
-    elif header_level <= impl_section_level:
-        if "phase" in header_text:
-            pass  # Phase headers are continuations
-        else:
-            break  # Other same-level headers end section
 
 FILES TO MODIFY:
 - src/mcp_coder/workflow_utils/task_tracker.py

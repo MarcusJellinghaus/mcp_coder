@@ -24,10 +24,13 @@ The parser stops at `## Phase 2:` because it's at the same level (`##`) as `## T
 
 ## Solution
 
-Modify the parsing logic to:
-1. Recognize "phase" headers as **continuations** within the Tasks section
-2. Only stop parsing at explicit end markers ("Pull Request") or truly unrelated sections
-3. Maintain backward compatibility with single-phase trackers
+Simplify the parsing logic to use **boundary-based extraction**:
+1. Find the `## Tasks` header as the start boundary
+2. Find the `## Pull Request` header as the end boundary (if present)
+3. Extract everything between these boundaries
+4. If no end boundary, extract everything after `## Tasks`
+
+This approach is simpler and more robust than tracking header levels or keywords.
 
 ## Architectural / Design Changes
 
@@ -53,20 +56,21 @@ This is a targeted fix within the existing `task_tracker.py` module. No new clas
 
 **Current Logic** (problematic):
 ```
-if header_level <= impl_section_level:
-    break  # Stops at Phase 2!
+1. Find "## Tasks" or "### Implementation Steps" → start collecting
+2. Track header levels
+3. Stop at same-level or higher-level headers
+4. Stop at "Pull Request"
 ```
+Problem: `## Phase 2:` is same level as `## Tasks`, so parsing stops too early.
 
-**New Logic** (fixed):
+**New Logic** (boundary-based):
 ```
-if header_level <= impl_section_level:
-    if "phase" in header_text:
-        continue  # Phase headers are continuations
-    elif "pull request" in header_text:
-        break  # Explicit end marker
-    else:
-        break  # Other same-level headers end section
+1. Find "## Tasks" or "### Implementation Steps" → mark start line
+2. Find "## Pull Request" → mark end line (or use end of file)
+3. Extract everything between start and end
+4. Log debug info: headers, line numbers, line count
 ```
+Simpler: No header level tracking, no keyword detection—just find boundaries and extract.
 
 ## Files to Create/Modify
 
@@ -79,6 +83,7 @@ if header_level <= impl_section_level:
 - `pr_info/steps/step_1.md` - Implementation step 1
 - `pr_info/steps/step_2.md` - Implementation step 2
 - `pr_info/steps/step_3.md` - Implementation step 3
+- `pr_info/steps/Decisions.md` - Decisions log from plan review
 
 ## Implementation Steps Overview
 

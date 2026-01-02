@@ -242,7 +242,9 @@ After implementing tests, run:
 pytest tests/workflow_utils/test_task_tracker.py::TestMultiPhaseTaskTracker -v
 ```
 
-**Expected Result**: Tests should **FAIL** initially (TDD - tests first, then implementation).
+**Expected Result**: 
+- The **multi-phase tests** (tests 1-4) should **FAIL** initially (TDD - tests first, then implementation)
+- The **backward compatibility test** (`test_backward_compatibility_single_phase`) should **PASS** since it uses existing functionality
 
 ---
 

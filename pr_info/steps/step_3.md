@@ -166,6 +166,7 @@ assert incomplete == ["Add class to github_utils.py"]
 | Import error in tests | `NameError: _find_implementation_section` | Add import to test file |
 | Type hint issue | mypy error on fixture | Use `-> str` return type |
 | Test data not found | `FileNotFoundError` | Verify path to test_data directory |
+| Missing logger import | `NameError: logger` | Add `import logging` and `logger = logging.getLogger(__name__)` |
 
 ---
 
@@ -176,6 +177,7 @@ You are implementing Step 3 of issue #156: Support for Multi-Phase Task Tracker.
 
 CONTEXT:
 - See pr_info/steps/summary.md for overall design
+- See pr_info/steps/Decisions.md for design decisions
 - See pr_info/steps/step_3.md for this step's details
 - Steps 1 and 2 added tests and implementation
 
