@@ -25,8 +25,6 @@ from urllib.parse import quote
 from ...utils.github_operations.github_utils import RepoIdentifier
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
-
-
 from ...utils.github_operations.label_config import load_labels_config
 from ...utils.jenkins_operations.client import JenkinsClient
 from ...utils.jenkins_operations.models import JobStatus
