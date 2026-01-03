@@ -810,7 +810,7 @@ class TestCacheFileOperations:
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "subdir" / "cache.json"
 
-            result = _save_cache_file(cache_path, sample_cache_data)  # type: ignore[arg-type]
+            result = _save_cache_file(cache_path, sample_cache_data)
             assert result is True
 
             # Verify file was created and data is correct
