@@ -14,6 +14,7 @@ import pytest
 from mcp_coder.cli.commands.coordinator import (
     DEFAULT_TEST_COMMAND,
     DEFAULT_TEST_COMMAND_WINDOWS,
+    CacheData,
     _filter_eligible_issues,
     _get_cache_file_path,
     _load_cache_file,
@@ -787,9 +788,23 @@ class TestCacheFileOperations:
 
     def test_save_cache_file_success(self) -> None:
         """Test successful cache file save with atomic write."""
-        sample_cache_data = {
+        sample_cache_data: CacheData = {
             "last_checked": "2025-12-31T10:30:00Z",
-            "issues": {"123": {"number": 123, "state": "open"}},
+            "issues": {
+                "123": {
+                    "number": 123,
+                    "state": "open",
+                    "labels": ["bug"],
+                    "title": "Test issue",
+                    "body": "Test issue body",
+                    "assignees": [],
+                    "user": "testuser",
+                    "created_at": "2025-12-31T08:00:00Z",
+                    "updated_at": "2025-12-31T09:00:00Z",
+                    "url": "https://github.com/test/repo/issues/123",
+                    "locked": False,
+                }
+            },
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
