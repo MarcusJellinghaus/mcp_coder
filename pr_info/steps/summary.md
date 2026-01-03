@@ -42,11 +42,17 @@ Implement **in-place cache label updates** immediately after successful workflow
   - Add tests for `_update_issue_labels_in_cache()`
   - Add integration tests for cache update in dispatch flow
 
+### Configuration
+- **`pyproject.toml`**
+  - Add `types-requests>=2.28.0` dependency for type stubs
+
 ### Documentation
 - **`pr_info/steps/summary.md`** (this file)
+- **`pr_info/steps/Decisions.md`** - Code review decisions log
 - **`pr_info/steps/step_1.md`** - Test implementation
 - **`pr_info/steps/step_2.md`** - Function implementation
 - **`pr_info/steps/step_3.md`** - Integration and validation
+- **`pr_info/steps/step_4.md`** - Code review fixes
 
 ## Implementation Strategy
 
@@ -54,6 +60,7 @@ Implement **in-place cache label updates** immediately after successful workflow
 1. **Step 1**: Write comprehensive tests for cache update functionality
 2. **Step 2**: Implement `_update_issue_labels_in_cache()` function
 3. **Step 3**: Integrate cache update into dispatch workflow and validate
+4. **Step 4**: Apply code review fixes (log message alignment, pyproject.toml cleanup)
 
 ### Key Benefits
 - **Prevents Duplicate Dispatches**: Cache reflects actual GitHub state
@@ -101,3 +108,12 @@ Implement **in-place cache label updates** immediately after successful workflow
 - Changes are additive only - can be easily reverted
 - No database schema or external API changes
 - Self-contained function can be disabled if needed
+
+## Code Review Decisions
+
+Key decisions made during code review are documented in `pr_info/steps/Decisions.md`. Summary:
+
+1. **Log messages**: Updated to be more informative and consistent with test expectations
+2. **Error handling**: Keep existing approach, rely on generic exception handlers
+3. **Documentation encoding**: Leave as-is (non-functional files)
+4. **Type stubs**: Use `types-requests` dependency, remove redundant mypy override
