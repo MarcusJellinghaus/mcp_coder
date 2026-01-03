@@ -533,8 +533,8 @@ def _update_issue_labels_in_cache(
         # Step 3: Find target issue in cache
         issue_key = str(issue_number)
         if issue_key not in cache_data["issues"]:
-            logger.debug(
-                f"Issue #{issue_number} not found in cache for {repo_full_name}, skipping update"
+            logger.warning(
+                f"Issue #{issue_number} not found in cache for {repo_full_name}"
             )
             return
 
@@ -1325,12 +1325,17 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     )
 
                     # Update cache with new labels immediately after successful dispatch
-                    _update_issue_labels_in_cache(
-                        repo_full_name=repo_full_name,
-                        issue_number=issue["number"],
-                        old_label=current_label,
-                        new_label=workflow_config["next_label"],
-                    )
+                    try:
+                        _update_issue_labels_in_cache(
+                            repo_full_name=repo_full_name,
+                            issue_number=issue["number"],
+                            old_label=current_label,
+                            new_label=workflow_config["next_label"],
+                        )
+                    except Exception as cache_error:
+                        logger.warning(
+                            f"Cache update failed for issue #{issue['number']}: {cache_error}"
+                        )
 
                 except Exception as e:
                     # Fail-fast: log error and exit immediately

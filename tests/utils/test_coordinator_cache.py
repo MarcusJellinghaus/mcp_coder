@@ -1124,11 +1124,16 @@ class TestCacheUpdateIntegration:
     """Integration tests for cache update in dispatch workflow."""
 
     def test_dispatch_workflow_updates_cache(self) -> None:
-        """Test that dispatch_workflow triggers cache update."""
+        """Test that cache update integration exists and works correctly.
+
+        This test verifies the cache update functionality without mocking,
+        since the integration between dispatch_workflow and cache update
+        already exists in the coordinator.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "test_cache.json"
 
-            # Create initial cache
+            # Create initial cache with issue that has a workflow label
             initial_cache = {
                 "last_checked": "2025-01-03T10:30:00Z",
                 "issues": {
@@ -1149,35 +1154,13 @@ class TestCacheUpdateIntegration:
             }
             cache_path.write_text(json.dumps(initial_cache))
 
-            # Mock the cache update function to verify it's called
-            with (
-                patch(
-                    "mcp_coder.cli.commands.coordinator._get_cache_file_path"
-                ) as mock_path,
-                patch(
-                    "mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache"
-                ) as mock_update,
-            ):
+            # Mock only the cache file path to point to our test cache
+            with patch(
+                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+            ) as mock_path:
                 mock_path.return_value = cache_path
 
-                # Simulate a successful dispatch that should trigger cache update
-                # This test verifies the integration point exists
-                sample_issue: IssueData = {
-                    "number": 123,
-                    "state": "open",
-                    "labels": ["status-02:awaiting-planning"],
-                    "updated_at": "2025-01-03T09:00:00Z",
-                    "url": "https://github.com/test/repo/issues/123",
-                    "title": "Test issue",
-                    "body": "Test body",
-                    "assignees": [],
-                    "user": "testuser",
-                    "created_at": "2025-01-03T08:00:00Z",
-                    "locked": False,
-                }
-
-                # Test the cache update function would be called after dispatch
-                # (This simulates the integration that will be added in Step 2)
+                # Call the actual cache update function (this is what dispatch_workflow calls)
                 _update_issue_labels_in_cache(
                     "test/repo",
                     123,
@@ -1185,13 +1168,13 @@ class TestCacheUpdateIntegration:
                     "status-03:planning",
                 )
 
-                # Verify cache update was called with correct parameters
-                mock_update.assert_called_once_with(
-                    "test/repo",
-                    123,
-                    "status-02:awaiting-planning",
-                    "status-03:planning",
-                )
+            # Verify the cache was actually updated
+            updated_cache = json.loads(cache_path.read_text())
+            issue_labels = updated_cache["issues"]["123"]["labels"]
+
+            # Check that the old label was removed and new label was added
+            assert "status-02:awaiting-planning" not in issue_labels
+            assert "status-03:planning" in issue_labels
 
     def test_multiple_dispatches_update_cache_correctly(self) -> None:
         """Test multiple dispatch operations update cache sequentially."""
