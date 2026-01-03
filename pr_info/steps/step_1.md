@@ -22,7 +22,7 @@ def test_strip_robot_emoji_footer_only()
 def test_strip_coauthored_footer_only()
 def test_strip_no_footers_present()
 def test_strip_trailing_blank_lines()
-def test_strip_empty_or_none_message()
+def test_strip_empty_message()
 def test_preserve_legitimate_content()
 ```
 
@@ -120,9 +120,9 @@ feat: feature with trailing blanks
 feat: feature with trailing blanks
 ```
 
-### Test Case 6: Empty/None Messages
-**Input:** `""` or `None`
-**Expected Output:** `""` or `None` (unchanged)
+### Test Case 6: Empty Message
+**Input:** `""`
+**Expected Output:** `""` (unchanged)
 
 ### Test Case 7: Legitimate Content Preservation
 **Input:**

@@ -44,7 +44,7 @@ def strip_claude_footers(message: str) -> str:
 ## ALGORITHM: Core Logic (Simple Backward Iteration)
 
 ```
-1. IF message is empty/None, RETURN unchanged
+1. IF message is empty, RETURN unchanged
 2. SPLIT message into lines array
 3. WHILE last line is footer or empty:
    - CHECK if line starts with '🤖'
@@ -76,13 +76,13 @@ def strip_claude_footers(message: str) -> str:
 "feat: clean commit"
 ```
 
-**Input:** Empty/None
+**Input:** Empty string
 ```
-"" or None
+""
 ```
 **Output:** Unchanged
 ```
-"" or original None
+""
 ```
 
 ### Footer Patterns to Match
@@ -94,7 +94,7 @@ def strip_claude_footers(message: str) -> str:
 - **Work Backwards**: Remove from end only using `lines.pop()` 
 - **Independent Patterns**: Handle both footer types in same loop
 - **Preserve Content**: Only remove from end, never from middle
-- **Handle Edge Cases**: Empty strings, None values, whitespace-only lines
+- **Handle Edge Cases**: Empty strings, whitespace-only lines
 
 ## Success Criteria
 - [ ] Function implemented with simple, readable logic
