@@ -787,7 +787,7 @@ class TestCacheFileOperations:
 
     def test_save_cache_file_success(self) -> None:
         """Test successful cache file save with atomic write."""
-        sample_cache_data = {
+        sample_cache_data: Dict[str, Any] = {
             "last_checked": "2025-12-31T10:30:00Z",
             "issues": {"123": {"number": 123, "state": "open"}},
         }
@@ -795,7 +795,7 @@ class TestCacheFileOperations:
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "subdir" / "cache.json"
 
-            result = _save_cache_file(cache_path, sample_cache_data)
+            result = _save_cache_file(cache_path, sample_cache_data)  # type: ignore[arg-type]
             assert result is True
 
             # Verify file was created and data is correct

@@ -19,12 +19,14 @@ import logging
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 from urllib.parse import quote
 
 from ...utils.github_operations.github_utils import RepoIdentifier
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
+
+
 from ...utils.github_operations.label_config import load_labels_config
 from ...utils.jenkins_operations.client import JenkinsClient
 from ...utils.jenkins_operations.models import JobStatus
@@ -36,6 +38,18 @@ from ...utils.user_config import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class CacheData(TypedDict):
+    """Type definition for coordinator issue cache structure.
+
+    Attributes:
+        last_checked: ISO 8601 timestamp of last cache refresh, or None if never checked
+        issues: Dictionary mapping issue number (as string) to IssueData
+    """
+
+    last_checked: Optional[str]
+    issues: Dict[str, IssueData]
 
 
 # Default test command for coordinator integration tests
@@ -84,7 +98,7 @@ if "%VENV_BASE_DIR%"=="" (
 
 if "%VIRTUAL_ENV%"=="" (
     echo Activating virtual environment...
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
 )
 
 echo %VIRTUAL_ENV%
@@ -112,10 +126,10 @@ claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
 
 mcp-coder --log-level debug prompt "What is 1 + 1?"
 mcp-coder --log-level {log_level} prompt "Which MCP server can you use?"
-mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
+mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
 
 echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
+dir .mcp-coder\\create_plan_sessions
 dir logs
 """
 
@@ -135,16 +149,16 @@ if "%VENV_BASE_DIR%"=="" (
 )
 
 if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
 )
 
 set DISABLE_AUTOUPDATER=1
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\\\\repo --mcp-config .mcp.json --update-labels
 
 echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
+dir .mcp-coder\\create_plan_sessions
 dir logs
 """
 
@@ -163,16 +177,16 @@ if "%VENV_BASE_DIR%"=="" (
 )
 
 if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
 )
 
 set DISABLE_AUTOUPDATER=1
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\\\repo --mcp-config .mcp.json --update-labels
 
 echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
+dir .mcp-coder\\create_plan_sessions
 dir logs
 """
 
@@ -191,16 +205,16 @@ if "%VENV_BASE_DIR%"=="" (
 )
 
 if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
 )
 
 set DISABLE_AUTOUPDATER=1
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\\\repo --mcp-config .mcp.json --update-labels
 
 echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
+dir .mcp-coder\\create_plan_sessions
 dir logs
 """
 
@@ -406,14 +420,14 @@ def dispatch_workflow(
     )
 
 
-def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
+def _load_cache_file(cache_file_path: Path) -> CacheData:
     """Load cache file or return empty cache structure.
 
     Args:
         cache_file_path: Path to cache file
 
     Returns:
-        Dictionary with last_checked and issues, or empty structure on errors
+        CacheData with last_checked and issues, or empty structure on errors
     """
     try:
         if not cache_file_path.exists():
@@ -427,7 +441,8 @@ def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
             logger.warning(f"Invalid cache structure in {cache_file_path}, recreating")
             return {"last_checked": None, "issues": {}}
 
-        return data
+        # Return as CacheData since we validated the structure
+        return {"last_checked": data.get("last_checked"), "issues": data["issues"]}
 
     except (json.JSONDecodeError, OSError, PermissionError) as e:
         logger.warning(f"Cache load error for {cache_file_path}: {e}, starting fresh")
@@ -462,12 +477,12 @@ def _log_cache_metrics(action: str, repo_name: str, **kwargs: Any) -> None:
         logger.debug(f"Cache save for {repo_name}: total_issues={total_issues}")
 
 
-def _save_cache_file(cache_file_path: Path, cache_data: Dict[str, Any]) -> bool:
+def _save_cache_file(cache_file_path: Path, cache_data: CacheData) -> bool:
     """Save cache data to file using atomic write.
 
     Args:
         cache_file_path: Path to cache file
-        cache_data: Cache data to save
+        cache_data: CacheData to save
 
     Returns:
         True if successful, False otherwise
@@ -558,7 +573,7 @@ def _update_issue_labels_in_cache(
         save_success = _save_cache_file(cache_file_path, cache_data)
         if save_success:
             logger.debug(
-                f"Updated issue #{issue_number} labels in cache: '{old_label}' → '{new_label}'"
+                f"Updated issue #{issue_number} labels in cache: '{old_label}' -> '{new_label}'"
             )
         else:
             logger.warning(
@@ -799,7 +814,6 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
     """
     # Load label configuration
     from importlib import resources
-    from pathlib import Path
 
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))
@@ -871,7 +885,6 @@ def get_eligible_issues(
     # Load label configuration
     # Uses bundled package config (coordinator operates without local project context)
     from importlib import resources
-    from pathlib import Path
 
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))

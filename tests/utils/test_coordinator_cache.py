@@ -15,6 +15,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
+    CacheData,
     _filter_eligible_issues,
     _get_cache_file_path,
     _load_cache_file,
@@ -47,7 +48,7 @@ def sample_issue() -> IssueData:
 
 
 @pytest.fixture
-def sample_cache_data() -> Dict[str, object]:
+def sample_cache_data() -> CacheData:
     """Sample cache data structure."""
     return {
         "last_checked": "2025-12-31T10:30:00Z",
@@ -151,7 +152,7 @@ class TestCacheFileOperations:
 
             assert result == {"last_checked": None, "issues": {}}
 
-    def test_load_cache_file_valid(self, sample_cache_data: Dict[str, object]) -> None:
+    def test_load_cache_file_valid(self, sample_cache_data: CacheData) -> None:
         """Test loading valid cache file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "cache.json"
@@ -179,7 +180,7 @@ class TestCacheFileOperations:
             assert result == {"last_checked": None, "issues": {}}
 
     def test_save_cache_file_success(
-        self, sample_cache_data: Dict[str, object]
+        self, sample_cache_data: CacheData
     ) -> None:
         """Test successful cache file save with atomic write."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -194,7 +195,7 @@ class TestCacheFileOperations:
             assert saved_data == sample_cache_data
 
     def test_save_cache_file_creates_directory(
-        self, sample_cache_data: Dict[str, object]
+        self, sample_cache_data: CacheData
     ) -> None:
         """Test cache file save creates parent directories."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -205,7 +206,7 @@ class TestCacheFileOperations:
             assert cache_path.exists()
 
     def test_save_cache_file_permission_error(
-        self, sample_cache_data: Dict[str, object]
+        self, sample_cache_data: CacheData
     ) -> None:
         """Test cache file save handles permission errors gracefully."""
         with patch.object(Path, "open", side_effect=PermissionError("Access denied")):
@@ -1118,6 +1119,8 @@ class TestCacheIssueUpdate:
             )
             assert any("status-02:awaiting-planning" in msg for msg in log_messages)
             assert any("status-03:planning" in msg for msg in log_messages)
+            # Verify ASCII arrow is used
+            assert any("->" in msg for msg in log_messages)
 
 
 class TestCacheUpdateIntegration:
