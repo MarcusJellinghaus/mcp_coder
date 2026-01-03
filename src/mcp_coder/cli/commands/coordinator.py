@@ -502,6 +502,75 @@ def _get_cache_file_path(repo_identifier: RepoIdentifier) -> Path:
     return cache_dir / f"{repo_identifier.cache_safe_name}.issues.json"
 
 
+def _update_issue_labels_in_cache(
+    repo_full_name: str, issue_number: int, old_label: str, new_label: str
+) -> None:
+    """Update issue labels in cache after successful dispatch.
+
+    Updates the cached issue labels to reflect GitHub label changes made
+    during workflow dispatch. This prevents stale cache data from causing
+    duplicate dispatches within the 1-minute duplicate protection window.
+
+    Args:
+        repo_full_name: Repository in "owner/repo" format (e.g., "anthropics/claude-code")
+        issue_number: GitHub issue number to update
+        old_label: Label to remove from cached issue
+        new_label: Label to add to cached issue
+
+    Note:
+        Cache update failures are logged as warnings but do not interrupt
+        the main workflow. The next cache refresh will fetch correct data
+        from GitHub API.
+    """
+    try:
+        # Step 1: Parse repository identifier
+        repo_identifier = RepoIdentifier.from_full_name(repo_full_name)
+
+        # Step 2: Load existing cache
+        cache_file_path = _get_cache_file_path(repo_identifier)
+        cache_data = _load_cache_file(cache_file_path)
+
+        # Step 3: Find target issue in cache
+        issue_key = str(issue_number)
+        if issue_key not in cache_data["issues"]:
+            logger.debug(f"Issue #{issue_number} not found in cache, skipping update")
+            return
+
+        # Step 4: Update issue labels
+        issue = cache_data["issues"][issue_key]
+        current_labels = list(issue.get("labels", []))
+
+        # Remove old label if present
+        if old_label in current_labels:
+            current_labels.remove(old_label)
+
+        # Add new label if not already present
+        if new_label and new_label not in current_labels:
+            current_labels.append(new_label)
+
+        # Update cached issue
+        issue["labels"] = current_labels
+        cache_data["issues"][issue_key] = issue
+
+        # Step 5: Save updated cache
+        save_success = _save_cache_file(cache_file_path, cache_data)
+        if save_success:
+            logger.debug(
+                f"Updated cache for issue #{issue_number}: '{old_label}' → '{new_label}'"
+            )
+        else:
+            logger.warning(f"Failed to save cache update for issue #{issue_number}")
+
+    except ValueError as e:
+        # Repository parsing or cache structure errors
+        logger.warning(f"Cache update failed for issue #{issue_number}: {e}")
+    except Exception as e:
+        # Any unexpected errors - don't break main workflow
+        logger.warning(
+            f"Unexpected error updating cache for issue #{issue_number}: {e}"
+        )
+
+
 def _log_stale_cache_entries(
     cached_issues: Dict[str, IssueData], fresh_issues: Dict[str, IssueData]
 ) -> None:
