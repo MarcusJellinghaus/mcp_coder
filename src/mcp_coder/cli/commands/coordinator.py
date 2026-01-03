@@ -533,7 +533,9 @@ def _update_issue_labels_in_cache(
         # Step 3: Find target issue in cache
         issue_key = str(issue_number)
         if issue_key not in cache_data["issues"]:
-            logger.debug(f"Issue #{issue_number} not found in cache, skipping update")
+            logger.debug(
+                f"Issue #{issue_number} not found in cache for {repo_full_name}, skipping update"
+            )
             return
 
         # Step 4: Update issue labels
@@ -556,10 +558,12 @@ def _update_issue_labels_in_cache(
         save_success = _save_cache_file(cache_file_path, cache_data)
         if save_success:
             logger.debug(
-                f"Updated cache for issue #{issue_number}: '{old_label}' → '{new_label}'"
+                f"Updated issue #{issue_number} labels in cache: '{old_label}' → '{new_label}'"
             )
         else:
-            logger.warning(f"Failed to save cache update for issue #{issue_number}")
+            logger.warning(
+                f"Cache update failed for issue #{issue_number}: save operation failed"
+            )
 
     except ValueError as e:
         # Repository parsing or cache structure errors
