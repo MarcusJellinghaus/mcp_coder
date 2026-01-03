@@ -112,6 +112,7 @@ disable = ["W1203", "W0621"]
 
 [tool.mypy]
 python_version = "3.11"
+disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = ["pytest.*"]
@@ -133,6 +134,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["pyperclip"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["requests"]
 ignore_missing_imports = true
 
 [tool.setuptools_scm]
