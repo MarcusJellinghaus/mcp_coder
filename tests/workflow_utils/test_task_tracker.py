@@ -21,6 +21,50 @@ from mcp_coder.workflow_utils.task_tracker import (
     is_task_done,
 )
 
+# Multi-phase test data (realistic example)
+# Note: Using ASCII-safe markers instead of emoji for Windows compatibility
+MULTI_PHASE_CONTENT = """# Task Status Tracker
+
+## Instructions for LLM
+
+This tracks **Feature Implementation** consisting of multiple **Implementation Steps** (tasks).
+
+---
+
+## Tasks
+
+## Phase 1: Initial Implementation (Steps 1-2) [COMPLETE]
+
+### Step 1: Setup Infrastructure
+- [x] Create directory structure
+- [x] Add configuration files
+- [x] Run quality checks
+
+### Step 2: Core Implementation  
+- [x] Implement main logic
+- [x] Add error handling
+
+---
+
+## Phase 2: Code Review Fixes (Steps 3-4) [NEW]
+
+### Step 3: Fix Documentation
+- [ ] Update README with examples
+- [ ] Add inline code comments
+- [x] Fix typos in docstrings
+
+### Step 4: Clean Up Code
+- [ ] Remove unused imports
+- [ ] Simplify complex functions
+
+---
+
+## Pull Request
+
+- [ ] Review all changes
+- [ ] Create pull request
+"""
+
 
 def create_test_tracker_content(
     tasks: list[tuple[str, bool]], use_dashes: bool = True
@@ -243,6 +287,17 @@ Some instructions here.
         assert "- [ ] PR task should be excluded" not in result
         assert "- [ ] Another PR task" not in result
         assert "- [ ] This should also be excluded" not in result
+
+    def test_empty_tasks_section(self) -> None:
+        """Test that empty Tasks section returns empty string."""
+        content = """# Task Tracker
+
+## Tasks
+## Pull Request
+- [ ] Create PR
+"""
+        section = _find_implementation_section(content)
+        assert section.strip() == ""
 
 
 class TestParseTaskLines:
@@ -1362,3 +1417,90 @@ class TestNormalizeTaskName:
                 "Update llm/__init__.py with public API exports",
             ]
             assert result_without_meta == expected
+
+
+class TestMultiPhaseTaskTracker:
+    """Tests for multi-phase task tracker parsing."""
+
+    def test_find_implementation_section_includes_all_phases(self) -> None:
+        """Test that _find_implementation_section includes content from all phases."""
+        section = _find_implementation_section(MULTI_PHASE_CONTENT)
+
+        # Should include content from both phases
+        assert "Phase 1" in section or "Step 1" in section
+        assert "Phase 2" in section or "Step 3" in section
+        assert "Update README with examples" in section
+        # Should NOT include Pull Request section
+        assert "Review all changes" not in section
+
+    def test_get_incomplete_tasks_across_phases(self) -> None:
+        """Test getting incomplete tasks from multiple phases."""
+        # Use internal function with content string
+        incomplete = _get_incomplete_tasks(MULTI_PHASE_CONTENT)
+
+        # Should find incomplete tasks from Phase 2
+        assert "Update README with examples" in incomplete
+        assert "Add inline code comments" in incomplete
+        assert "Remove unused imports" in incomplete
+        assert "Simplify complex functions" in incomplete
+
+        # Should NOT include completed tasks
+        assert "Create directory structure" not in incomplete
+        assert "Fix typos in docstrings" not in incomplete
+
+        # Should NOT include Pull Request tasks
+        assert "Review all changes" not in incomplete
+        assert "Create pull request" not in incomplete
+
+    def test_get_step_progress_includes_all_phases(self) -> None:
+        """Test that get_step_progress returns steps from all phases."""
+        with TemporaryDirectory() as temp_dir:
+            # Write inline test data to temp directory
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            tracker_path.write_text(MULTI_PHASE_CONTENT, encoding="utf-8")
+
+            progress = get_step_progress(temp_dir)
+
+            # Should have steps from both phases
+            step_names = list(progress.keys())
+            assert any("Step 1" in name for name in step_names)
+            assert any("Step 3" in name or "Step 4" in name for name in step_names)
+
+    def test_phase_headers_recognized_as_continuations(self) -> None:
+        """Test that phase headers don't terminate section parsing."""
+        content = """# Task Tracker
+
+## Tasks
+
+## Phase 1: Done [COMPLETE]
+- [x] Task from phase 1
+
+## Phase 2: In Progress
+- [ ] Task from phase 2
+
+## Pull Request
+- [ ] PR task
+"""
+        section = _find_implementation_section(content)
+
+        # Phase 2 content should be included
+        assert "Task from phase 2" in section
+        # PR section should be excluded
+        assert "PR task" not in section
+
+    def test_backward_compatibility_single_phase(self) -> None:
+        """Test that single-phase trackers still work correctly."""
+        content = """# Task Tracker
+
+## Tasks
+
+### Step 1: Setup
+- [x] Complete task
+- [ ] Incomplete task
+
+## Pull Request
+- [ ] Create PR
+"""
+        incomplete = _get_incomplete_tasks(content)
+
+        assert incomplete == ["Incomplete task"]
