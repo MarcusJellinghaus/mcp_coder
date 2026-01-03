@@ -34,9 +34,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Update "issue not found" log message to include repo_full_name
 - [x] Update successful update log message format
 - [x] Update save failure log message format
-- [x] Remove redundant mypy override from pyproject.toml
-- [x] Run quality checks: pylint, pytest, mypy for Step 4
-- [x] Prepare git commit message for Step 4
+- [ ] Remove redundant mypy override from pyproject.toml
+- [ ] Run quality checks: pylint, pytest, mypy for Step 4
+- [ ] Prepare git commit message for Step 4
 
 ### Pull Request
 - [ ] Review all implementation steps for completeness
