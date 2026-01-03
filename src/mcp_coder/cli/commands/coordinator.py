@@ -1319,6 +1319,15 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         branch_manager=branch_manager,
                         log_level=args.log_level,
                     )
+
+                    # Update cache with new labels immediately after successful dispatch
+                    _update_issue_labels_in_cache(
+                        repo_full_name=repo_full_name,
+                        issue_number=issue["number"],
+                        old_label=current_label,
+                        new_label=workflow_config["next_label"],
+                    )
+
                 except Exception as e:
                     # Fail-fast: log error and exit immediately
                     logger.error(
