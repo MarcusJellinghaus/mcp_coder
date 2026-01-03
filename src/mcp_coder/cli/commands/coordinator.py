@@ -19,7 +19,7 @@ import logging
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 from urllib.parse import quote
 
 from ...utils.github_operations.github_utils import RepoIdentifier
@@ -36,6 +36,18 @@ from ...utils.user_config import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class CacheData(TypedDict):
+    """Type definition for coordinator issue cache structure.
+
+    Attributes:
+        last_checked: ISO 8601 timestamp of last cache refresh, or None if never checked
+        issues: Dictionary mapping issue number (as string) to IssueData
+    """
+
+    last_checked: Optional[str]
+    issues: Dict[str, IssueData]
 
 
 # Default test command for coordinator integration tests
@@ -84,7 +96,7 @@ if "%VENV_BASE_DIR%"=="" (
 
 if "%VIRTUAL_ENV%"=="" (
     echo Activating virtual environment...
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
 )
 
 echo %VIRTUAL_ENV%
@@ -112,10 +124,10 @@ claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
 
 mcp-coder --log-level debug prompt "What is 1 + 1?"
 mcp-coder --log-level {log_level} prompt "Which MCP server can you use?"
-mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
+mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
 
 echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
+dir .mcp-coder\\create_plan_sessions
 dir logs
 """
 
@@ -135,16 +147,16 @@ if "%VENV_BASE_DIR%"=="" (
 )
 
 if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
 )
 
 set DISABLE_AUTOUPDATER=1
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\\\\repo --mcp-config .mcp.json --update-labels
 
 echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
+dir .mcp-coder\\create_plan_sessions
 dir logs
 """
 
@@ -163,16 +175,16 @@ if "%VENV_BASE_DIR%"=="" (
 )
 
 if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
 )
 
 set DISABLE_AUTOUPDATER=1
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\\\repo --mcp-config .mcp.json --update-labels
 
 echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
+dir .mcp-coder\\create_plan_sessions
 dir logs
 """
 
@@ -191,16 +203,16 @@ if "%VENV_BASE_DIR%"=="" (
 )
 
 if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
 )
 
 set DISABLE_AUTOUPDATER=1
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\\\repo --mcp-config .mcp.json --update-labels
 
 echo archive after execution =======================================
-dir .mcp-coder\create_plan_sessions
+dir .mcp-coder\\create_plan_sessions
 dir logs
 """
 
@@ -406,14 +418,14 @@ def dispatch_workflow(
     )
 
 
-def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
+def _load_cache_file(cache_file_path: Path) -> CacheData:
     """Load cache file or return empty cache structure.
 
     Args:
         cache_file_path: Path to cache file
 
     Returns:
-        Dictionary with last_checked and issues, or empty structure on errors
+        CacheData with last_checked and issues, or empty structure on errors
     """
     try:
         if not cache_file_path.exists():
@@ -427,7 +439,8 @@ def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
             logger.warning(f"Invalid cache structure in {cache_file_path}, recreating")
             return {"last_checked": None, "issues": {}}
 
-        return data
+        # Return as CacheData since we validated the structure
+        return {"last_checked": data.get("last_checked"), "issues": data["issues"]}
 
     except (json.JSONDecodeError, OSError, PermissionError) as e:
         logger.warning(f"Cache load error for {cache_file_path}: {e}, starting fresh")
@@ -462,12 +475,12 @@ def _log_cache_metrics(action: str, repo_name: str, **kwargs: Any) -> None:
         logger.debug(f"Cache save for {repo_name}: total_issues={total_issues}")
 
 
-def _save_cache_file(cache_file_path: Path, cache_data: Dict[str, Any]) -> bool:
+def _save_cache_file(cache_file_path: Path, cache_data: CacheData) -> bool:
     """Save cache data to file using atomic write.
 
     Args:
         cache_file_path: Path to cache file
-        cache_data: Cache data to save
+        cache_data: CacheData to save
 
     Returns:
         True if successful, False otherwise
@@ -500,6 +513,79 @@ def _get_cache_file_path(repo_identifier: RepoIdentifier) -> Path:
     """
     cache_dir = Path.home() / ".mcp_coder" / "coordinator_cache"
     return cache_dir / f"{repo_identifier.cache_safe_name}.issues.json"
+
+
+def _update_issue_labels_in_cache(
+    repo_full_name: str, issue_number: int, old_label: str, new_label: str
+) -> None:
+    """Update issue labels in cache after successful dispatch.
+
+    Updates the cached issue labels to reflect GitHub label changes made
+    during workflow dispatch. This prevents stale cache data from causing
+    duplicate dispatches within the 1-minute duplicate protection window.
+
+    Args:
+        repo_full_name: Repository in "owner/repo" format (e.g., "anthropics/claude-code")
+        issue_number: GitHub issue number to update
+        old_label: Label to remove from cached issue
+        new_label: Label to add to cached issue
+
+    Note:
+        Cache update failures are logged as warnings but do not interrupt
+        the main workflow. The next cache refresh will fetch correct data
+        from GitHub API.
+    """
+    try:
+        # Step 1: Parse repository identifier
+        repo_identifier = RepoIdentifier.from_full_name(repo_full_name)
+
+        # Step 2: Load existing cache
+        cache_file_path = _get_cache_file_path(repo_identifier)
+        cache_data = _load_cache_file(cache_file_path)
+
+        # Step 3: Find target issue in cache
+        issue_key = str(issue_number)
+        if issue_key not in cache_data["issues"]:
+            logger.warning(
+                f"Issue #{issue_number} not found in cache for {repo_full_name}"
+            )
+            return
+
+        # Step 4: Update issue labels
+        issue = cache_data["issues"][issue_key]
+        current_labels = list(issue.get("labels", []))
+
+        # Remove old label if present
+        if old_label in current_labels:
+            current_labels.remove(old_label)
+
+        # Add new label if not already present
+        if new_label and new_label not in current_labels:
+            current_labels.append(new_label)
+
+        # Update cached issue
+        issue["labels"] = current_labels
+        cache_data["issues"][issue_key] = issue
+
+        # Step 5: Save updated cache
+        save_success = _save_cache_file(cache_file_path, cache_data)
+        if save_success:
+            logger.debug(
+                f"Updated issue #{issue_number} labels in cache: '{old_label}' -> '{new_label}'"
+            )
+        else:
+            logger.warning(
+                f"Cache update failed for issue #{issue_number}: save operation failed"
+            )
+
+    except ValueError as e:
+        # Repository parsing or cache structure errors
+        logger.warning(f"Cache update failed for issue #{issue_number}: {e}")
+    except Exception as e:
+        # Any unexpected errors - don't break main workflow
+        logger.warning(
+            f"Unexpected error updating cache for issue #{issue_number}: {e}"
+        )
 
 
 def _log_stale_cache_entries(
@@ -726,7 +812,6 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
     """
     # Load label configuration
     from importlib import resources
-    from pathlib import Path
 
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))
@@ -798,7 +883,6 @@ def get_eligible_issues(
     # Load label configuration
     # Uses bundled package config (coordinator operates without local project context)
     from importlib import resources
-    from pathlib import Path
 
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))
@@ -1250,6 +1334,20 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         branch_manager=branch_manager,
                         log_level=args.log_level,
                     )
+
+                    # Update cache with new labels immediately after successful dispatch
+                    try:
+                        _update_issue_labels_in_cache(
+                            repo_full_name=repo_full_name,
+                            issue_number=issue["number"],
+                            old_label=current_label,
+                            new_label=workflow_config["next_label"],
+                        )
+                    except Exception as cache_error:
+                        logger.warning(
+                            f"Cache update failed for issue #{issue['number']}: {cache_error}"
+                        )
+
                 except Exception as e:
                     # Fail-fast: log error and exit immediately
                     logger.error(

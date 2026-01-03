@@ -14,11 +14,13 @@ import pytest
 from mcp_coder.cli.commands.coordinator import (
     DEFAULT_TEST_COMMAND,
     DEFAULT_TEST_COMMAND_WINDOWS,
+    CacheData,
     _filter_eligible_issues,
     _get_cache_file_path,
     _load_cache_file,
     _log_stale_cache_entries,
     _save_cache_file,
+    _update_issue_labels_in_cache,
     dispatch_workflow,
     execute_coordinator_run,
     execute_coordinator_test,
@@ -786,9 +788,23 @@ class TestCacheFileOperations:
 
     def test_save_cache_file_success(self) -> None:
         """Test successful cache file save with atomic write."""
-        sample_cache_data = {
+        sample_cache_data: CacheData = {
             "last_checked": "2025-12-31T10:30:00Z",
-            "issues": {"123": {"number": 123, "state": "open"}},
+            "issues": {
+                "123": {
+                    "number": 123,
+                    "state": "open",
+                    "labels": ["bug"],
+                    "title": "Test issue",
+                    "body": "Test issue body",
+                    "assignees": [],
+                    "user": "testuser",
+                    "created_at": "2025-12-31T08:00:00Z",
+                    "updated_at": "2025-12-31T09:00:00Z",
+                    "url": "https://github.com/test/repo/issues/123",
+                    "locked": False,
+                }
+            },
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1273,3 +1289,330 @@ class TestCoordinatorRunCacheIntegration:
 
         # Verify - Warning was logged
         assert "Cache failed" in caplog.text or "using direct fetch" in caplog.text
+
+
+class TestCacheUpdateIntegration:
+    """End-to-end tests for cache update integration in execute_coordinator_run."""
+
+    @patch("mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_run_updates_cache_after_successful_dispatch(
+        self,
+        mock_create_config: MagicMock,
+        mock_dispatch_workflow: MagicMock,
+        mock_get_cached_issues: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_update_cache: MagicMock,
+    ) -> None:
+        """Test that successful dispatch updates cache labels."""
+        # Setup - Mock args
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="test_repo",
+            all=False,
+            log_level="INFO",
+            force_refresh=False,
+        )
+
+        # Setup - Config exists
+        mock_create_config.return_value = False
+
+        # Setup - Valid repo config
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/test_repo.git",
+            "executor_job_path": "Test/executor",
+            "github_credentials_id": "github-pat",
+            "executor_os": "linux",
+        }
+
+        # Setup - Jenkins credentials
+        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
+
+        # Setup - Mock clients
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - Mock issue with status-02:awaiting-planning
+        test_issue = {
+            "number": 123,
+            "state": "open",
+            "labels": ["status-02:awaiting-planning", "enhancement"],
+            "title": "Test issue",
+            "body": "Test",
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T08:00:00Z",
+            "updated_at": "2025-12-31T09:00:00Z",
+            "url": "https://github.com/user/test_repo/issues/123",
+            "locked": False,
+        }
+        mock_get_cached_issues.return_value = [test_issue]
+
+        # Setup - dispatch_workflow succeeds (no exception)
+        mock_dispatch_workflow.return_value = None
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success)
+        assert result == 0
+
+        # Verify - dispatch_workflow was called
+        mock_dispatch_workflow.assert_called_once()
+
+        # Verify - cache update was called with correct parameters
+        mock_update_cache.assert_called_once_with(
+            repo_full_name="user/test_repo",
+            issue_number=123,
+            old_label="status-02:awaiting-planning",
+            new_label="status-03:planning",
+        )
+
+    @patch("mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_cache_update_failure_does_not_break_dispatch(
+        self,
+        mock_create_config: MagicMock,
+        mock_dispatch_workflow: MagicMock,
+        mock_get_cached_issues: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_update_cache: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test that cache update errors don't affect dispatch success."""
+        # Setup - Mock args
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="test_repo",
+            all=False,
+            log_level="INFO",
+            force_refresh=False,
+        )
+
+        # Setup - Config exists
+        mock_create_config.return_value = False
+
+        # Setup - Valid repo config
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/test_repo.git",
+            "executor_job_path": "Test/executor",
+            "github_credentials_id": "github-pat",
+            "executor_os": "linux",
+        }
+
+        # Setup - Jenkins credentials
+        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
+
+        # Setup - Mock clients
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - Mock issue
+        test_issue = {
+            "number": 456,
+            "state": "open",
+            "labels": ["status-05:plan-ready"],
+            "title": "Test issue",
+            "body": "Test",
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T08:00:00Z",
+            "updated_at": "2025-12-31T09:00:00Z",
+            "url": "https://github.com/user/test_repo/issues/456",
+            "locked": False,
+        }
+        mock_get_cached_issues.return_value = [test_issue]
+
+        # Setup - dispatch_workflow succeeds, but cache update fails
+        mock_dispatch_workflow.return_value = None
+        mock_update_cache.side_effect = Exception("Cache update error")
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success despite cache update failure)
+        assert result == 0
+
+        # Verify - dispatch_workflow was still called
+        mock_dispatch_workflow.assert_called_once()
+
+        # Verify - cache update was attempted
+        mock_update_cache.assert_called_once_with(
+            repo_full_name="user/test_repo",
+            issue_number=456,
+            old_label="status-05:plan-ready",
+            new_label="status-06:implementing",
+        )
+
+        # Note: Cache update error is handled within _update_issue_labels_in_cache
+        # itself and logged as warning, so no exception propagates to coordinator
+
+    @patch("mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache")
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_multiple_dispatches_keep_cache_synchronized(
+        self,
+        mock_create_config: MagicMock,
+        mock_dispatch_workflow: MagicMock,
+        mock_get_cached_issues: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        mock_update_cache: MagicMock,
+    ) -> None:
+        """Test processing multiple issues keeps cache in sync."""
+        # Setup - Mock args
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="test_repo",
+            all=False,
+            log_level="INFO",
+            force_refresh=False,
+        )
+
+        # Setup - Config exists
+        mock_create_config.return_value = False
+
+        # Setup - Valid repo config
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/test_repo.git",
+            "executor_job_path": "Test/executor",
+            "github_credentials_id": "github-pat",
+            "executor_os": "linux",
+        }
+
+        # Setup - Jenkins credentials
+        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
+
+        # Setup - Mock clients
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - Multiple issues with different priority labels (sorted by priority)
+        test_issues = [
+            {
+                "number": 101,
+                "state": "open",
+                "labels": ["status-08:ready-pr"],  # Highest priority
+                "title": "PR ready issue",
+                "body": "Test",
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "updated_at": "2025-12-31T09:00:00Z",
+                "url": "https://github.com/user/test_repo/issues/101",
+                "locked": False,
+            },
+            {
+                "number": 102,
+                "state": "open",
+                "labels": ["status-05:plan-ready"],  # Medium priority
+                "title": "Plan ready issue",
+                "body": "Test",
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "updated_at": "2025-12-31T09:00:00Z",
+                "url": "https://github.com/user/test_repo/issues/102",
+                "locked": False,
+            },
+            {
+                "number": 103,
+                "state": "open",
+                "labels": ["status-02:awaiting-planning"],  # Lower priority
+                "title": "Planning needed issue",
+                "body": "Test",
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "updated_at": "2025-12-31T09:00:00Z",
+                "url": "https://github.com/user/test_repo/issues/103",
+                "locked": False,
+            },
+        ]
+        mock_get_cached_issues.return_value = test_issues
+
+        # Setup - All dispatches succeed
+        mock_dispatch_workflow.return_value = None
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 0 (success)
+        assert result == 0
+
+        # Verify - dispatch_workflow was called for each issue (3 times)
+        assert mock_dispatch_workflow.call_count == 3
+
+        # Verify - cache update was called for each issue with correct mappings
+        expected_cache_calls = [
+            # Issue 101: status-08:ready-pr -> status-09:pr-creating
+            ("user/test_repo", 101, "status-08:ready-pr", "status-09:pr-creating"),
+            # Issue 102: status-05:plan-ready -> status-06:implementing
+            ("user/test_repo", 102, "status-05:plan-ready", "status-06:implementing"),
+            # Issue 103: status-02:awaiting-planning -> status-03:planning
+            (
+                "user/test_repo",
+                103,
+                "status-02:awaiting-planning",
+                "status-03:planning",
+            ),
+        ]
+
+        assert mock_update_cache.call_count == 3
+        actual_calls = [
+            (
+                call[1]["repo_full_name"],
+                call[1]["issue_number"],
+                call[1]["old_label"],
+                call[1]["new_label"],
+            )
+            for call in mock_update_cache.call_args_list
+        ]
+
+        assert actual_calls == expected_cache_calls
