@@ -179,9 +179,7 @@ class TestCacheFileOperations:
             result = _load_cache_file(cache_path)
             assert result == {"last_checked": None, "issues": {}}
 
-    def test_save_cache_file_success(
-        self, sample_cache_data: CacheData
-    ) -> None:
+    def test_save_cache_file_success(self, sample_cache_data: CacheData) -> None:
         """Test successful cache file save with atomic write."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "subdir" / "cache.json"
