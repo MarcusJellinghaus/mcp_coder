@@ -19,7 +19,7 @@ import logging
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict, cast
 from urllib.parse import quote
 
 from ...utils.github_operations.github_utils import RepoIdentifier
@@ -36,6 +36,18 @@ from ...utils.user_config import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class CacheData(TypedDict):
+    """Type definition for coordinator issue cache structure.
+
+    Attributes:
+        last_checked: ISO 8601 timestamp of last cache refresh, or None if never checked
+        issues: Dictionary mapping issue number (as string) to IssueData
+    """
+
+    last_checked: Optional[str]
+    issues: Dict[str, IssueData]
 
 
 # Default test command for coordinator integration tests
@@ -406,7 +418,7 @@ def dispatch_workflow(
     )
 
 
-def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
+def _load_cache_file(cache_file_path: Path) -> CacheData:
     """Load cache file or return empty cache structure.
 
     Args:
@@ -427,7 +439,7 @@ def _load_cache_file(cache_file_path: Path) -> Dict[str, Any]:
             logger.warning(f"Invalid cache structure in {cache_file_path}, recreating")
             return {"last_checked": None, "issues": {}}
 
-        return data
+        return cast(CacheData, data)
 
     except (json.JSONDecodeError, OSError, PermissionError) as e:
         logger.warning(f"Cache load error for {cache_file_path}: {e}, starting fresh")
@@ -462,7 +474,7 @@ def _log_cache_metrics(action: str, repo_name: str, **kwargs: Any) -> None:
         logger.debug(f"Cache save for {repo_name}: total_issues={total_issues}")
 
 
-def _save_cache_file(cache_file_path: Path, cache_data: Dict[str, Any]) -> bool:
+def _save_cache_file(cache_file_path: Path, cache_data: CacheData) -> bool:
     """Save cache data to file using atomic write.
 
     Args:
