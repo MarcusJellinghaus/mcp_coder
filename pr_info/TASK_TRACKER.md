@@ -38,6 +38,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run quality checks: pylint, pytest, mypy for Step 4
 - [ ] Prepare git commit message for Step 4
 
+### Step 5: Add TypedDict for Cache Data Structure
+- [ ] Define CacheData TypedDict in coordinator.py
+- [ ] Update _load_cache_file() return type to CacheData
+- [ ] Update _save_cache_file() parameter type to CacheData
+- [ ] Run quality checks: pylint, pytest, mypy for Step 5
+- [ ] Prepare git commit message for Step 5
+
 ### Pull Request
 - [ ] Review all implementation steps for completeness
 - [ ] Run final comprehensive test suite

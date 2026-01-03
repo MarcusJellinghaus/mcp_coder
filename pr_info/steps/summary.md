@@ -23,17 +23,20 @@ Implement **in-place cache label updates** immediately after successful workflow
 1. **New Function**: `_update_issue_labels_in_cache()` - Updates cached issue labels after successful dispatch
 2. **Integration Point**: `execute_coordinator_run()` - Calls cache update immediately after `dispatch_workflow()`
 3. **Error Handling**: Cache update failures do not break main workflow
+4. **Type Safety**: `CacheData` TypedDict for improved type checking across cache functions
 
 ### Design Principles Applied
 - **KISS Principle**: Single-purpose function, minimal complexity
 - **Fail-Safe**: Cache errors don't affect workflow dispatch
 - **Data Integrity**: Only updates what actually changed
 - **Backward Compatibility**: No changes to existing cache structure or API
+- **Type Safety**: TypedDict provides clear contracts between cache functions
 
 ## Files Modified
 
 ### Core Implementation
 - **`src/mcp_coder/cli/commands/coordinator.py`**
+  - Add `CacheData` TypedDict for type safety
   - Add `_update_issue_labels_in_cache()` function
   - Integrate cache update in `execute_coordinator_run()`
 
@@ -41,6 +44,9 @@ Implement **in-place cache label updates** immediately after successful workflow
 - **`tests/utils/test_coordinator_cache.py`**
   - Add tests for `_update_issue_labels_in_cache()`
   - Add integration tests for cache update in dispatch flow
+
+- **`tests/cli/commands/test_coordinator.py`**
+  - Add end-to-end integration tests for cache update in coordinator run
 
 ### Configuration
 - **`pyproject.toml`**
@@ -53,6 +59,7 @@ Implement **in-place cache label updates** immediately after successful workflow
 - **`pr_info/steps/step_2.md`** - Function implementation
 - **`pr_info/steps/step_3.md`** - Integration and validation
 - **`pr_info/steps/step_4.md`** - Code review fixes
+- **`pr_info/steps/step_5.md`** - TypedDict for cache data structure
 
 ## Implementation Strategy
 
@@ -61,6 +68,7 @@ Implement **in-place cache label updates** immediately after successful workflow
 2. **Step 2**: Implement `_update_issue_labels_in_cache()` function
 3. **Step 3**: Integrate cache update into dispatch workflow and validate
 4. **Step 4**: Apply code review fixes (log message alignment, pyproject.toml cleanup)
+5. **Step 5**: Add TypedDict for cache data structure (type safety improvement)
 
 ### Key Benefits
 - **Prevents Duplicate Dispatches**: Cache reflects actual GitHub state
@@ -68,6 +76,7 @@ Implement **in-place cache label updates** immediately after successful workflow
 - **Maintains Compatibility**: Existing cache structure unchanged
 - **Simple Integration**: Single function call after dispatch
 - **Robust Error Handling**: Cache failures don't break workflows
+- **Type Safety**: Clear contracts between cache functions via TypedDict
 
 ## Expected Behavior After Implementation
 
@@ -117,3 +126,6 @@ Key decisions made during code review are documented in `pr_info/steps/Decisions
 2. **Error handling**: Keep existing approach, rely on generic exception handlers
 3. **Documentation encoding**: Leave as-is (non-functional files)
 4. **Type stubs**: Use `types-requests` dependency, remove redundant mypy override
+5. **Log level for missing issue**: Keep as `logger.warning()` - warrants operator attention
+6. **Redundant try-catch**: Keep outer try-catch for defense in depth
+7. **TypedDict for cache**: Add `CacheData` TypedDict for improved type safety

@@ -57,3 +57,42 @@ This document records decisions made during code review and implementation discu
   - C: Keep both
 - **Decision**: **A** - Remove mypy override, keep only `types-requests` dependency
 - **Rationale**: Type stubs provide better type checking; override is redundant
+
+
+## Date: 2025-01-03 (Code Review Discussion)
+
+### Decision 7: Log level for "Issue not found in cache" case
+- **Context**: Implementation uses `logger.warning()` but original design doc suggested `logger.debug()`
+- **Options Considered**:
+  - A: Change to `logger.debug()` - Treat as normal/expected behavior
+  - B: Keep as `logger.warning()` - This situation warrants attention from operators
+  - C: Use `logger.info()` - Middle ground
+- **Decision**: **B** - Keep as `logger.warning()`
+- **Rationale**: Issue not found in cache during dispatch is unexpected in normal operation and worth investigating
+
+### Decision 8: Encoding issue in documentation files (arrow characters)
+- **Context**: Arrow characters appear corrupted as `ΓåÆ` instead of `→` in docs and code
+- **Options Considered**:
+  - A: Fix encoding - Re-save files with proper UTF-8
+  - B: Use ASCII alternative - Replace with `->`
+  - C: Leave as-is
+- **Decision**: **C** - Leave as-is
+- **Rationale**: Documentation files in pr_info/ don't affect functionality, log message still conveys meaning
+
+### Decision 9: Redundant try-catch in integration point
+- **Context**: `_update_issue_labels_in_cache()` has internal error handling, outer try-catch in `execute_coordinator_run()` may be redundant
+- **Options Considered**:
+  - A: Remove outer try-catch - Function handles errors internally
+  - B: Keep outer try-catch - Defense in depth
+  - C: Remove inner try-catch, keep outer - Handle at call site
+- **Decision**: **B** - Keep outer try-catch
+- **Rationale**: Defense in depth protects against future changes to the function that might raise exceptions
+
+### Decision 10: TypedDict for cache data structure
+- **Context**: Cache data structure used in multiple places but typed as `Dict[str, Any]`
+- **Options Considered**:
+  - A: Add TypedDict - Improve type safety and IDE support
+  - B: Leave as-is - Nice-to-have, do in separate PR
+  - C: Create follow-up issue
+- **Decision**: **A** - Add TypedDict for cache data structure
+- **Rationale**: Improves type safety, better IDE autocompletion, clearer contracts between functions
