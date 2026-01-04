@@ -28,6 +28,12 @@ from ...utils.github_operations.issue_manager import IssueData, IssueManager
 from ...utils.github_operations.label_config import load_labels_config
 from ...utils.jenkins_operations.client import JenkinsClient
 from ...utils.jenkins_operations.models import JobStatus
+from ...utils.timezone_utils import (
+    format_for_cache,
+    is_within_duration,
+    now_utc,
+    parse_iso_timestamp,
+)
 from ...utils.user_config import (
     create_default_config,
     get_config_file_path,
@@ -671,24 +677,23 @@ def get_cached_eligible_issues(
             reason="no_cache" if not cache_data["last_checked"] else "cache_found",
         )
 
-        # Parse last_checked timestamp
+        # Parse last_checked timestamp using timezone utilities
         last_checked = None
         if cache_data["last_checked"]:
             try:
-                last_checked = datetime.fromisoformat(
-                    cache_data["last_checked"].replace("Z", "+00:00")
-                )
-            except (ValueError, AttributeError):
+                # Parse timezone-aware datetime and convert to UTC
+                last_checked = parse_iso_timestamp(cache_data["last_checked"])
+            except ValueError as e:
                 logger.debug(
-                    f"Invalid timestamp in cache: {cache_data['last_checked']}"
+                    f"Invalid timestamp in cache: {cache_data['last_checked']}, error: {e}"
                 )
 
         # Duplicate protection: skip if checked within last minute
-        now = datetime.now().astimezone()
+        now = now_utc()
         if (
             not force_refresh
             and last_checked
-            and (now - last_checked) < timedelta(minutes=1)
+            and is_within_duration(last_checked, 60.0, now)
         ):
             age_seconds = int((now - last_checked).total_seconds())
             _log_cache_metrics(
@@ -758,20 +763,17 @@ def get_cached_eligible_issues(
 
         # Update cache with fresh data
         cache_data["issues"].update(fresh_issues_dict)
-        cache_data["last_checked"] = now.isoformat()
+        cache_data["last_checked"] = format_for_cache(now)
 
-        # Only save cache if we actually fetched new data
-        should_save_cache = len(fresh_issues) > 0 or is_full_refresh
-
-        # Step 6: Save updated cache (only if we have new data or force refresh)
-        if should_save_cache:
-            save_success = _save_cache_file(cache_file_path, cache_data)
-            if save_success:
-                _log_cache_metrics(
-                    "save",
-                    repo_identifier.repo_name,
-                    total_issues=len(cache_data["issues"]),
-                )
+        # Always save cache to update last_checked timestamp
+        # This ensures incremental fetches work properly on subsequent runs
+        save_success = _save_cache_file(cache_file_path, cache_data)
+        if save_success:
+            _log_cache_metrics(
+                "save",
+                repo_identifier.repo_name,
+                total_issues=len(cache_data["issues"]),
+            )
 
         # Step 7: Filter cached issues for eligibility
         all_cached_issues = list(cache_data["issues"].values())
