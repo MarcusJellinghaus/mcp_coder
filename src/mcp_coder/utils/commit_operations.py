@@ -175,6 +175,9 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
     try:
         commit_message, _ = parse_llm_commit_response(response)
 
+        # Strip Claude Code footers from commit message
+        commit_message = strip_claude_footers(commit_message)
+
         if not commit_message or not commit_message.strip():
             error_msg = "LLM generated an empty commit message. The AI may not have understood the changes. Try modifying your changes or running the command again."
             logger.error(error_msg)

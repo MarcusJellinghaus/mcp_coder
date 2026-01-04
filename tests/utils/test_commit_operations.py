@@ -42,7 +42,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_stage.return_value = True
         mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
         mock_get_prompt.return_value = "Generate commit message"
-        mock_ask_llm.return_value = "feat: add new feature"
+        mock_ask_llm.return_value = "feat: add new feature\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
 
         project_dir = Path("/test/repo")
 
@@ -82,7 +82,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_stage.return_value = True
         mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
         mock_get_prompt.return_value = "Generate commit message"
-        mock_ask_llm.return_value = "feat: add new feature"
+        mock_ask_llm.return_value = "feat: add new feature\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
 
         project_dir = Path("/test/repo")
 
