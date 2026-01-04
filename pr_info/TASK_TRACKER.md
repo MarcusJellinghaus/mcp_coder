@@ -59,9 +59,9 @@ See details: [pr_info/steps/step_4.md](steps/step_4.md)
 See details: [pr_info/steps/step_5.md](steps/step_5.md)
 - [x] Run comprehensive test suite for coordinator module
 - [x] Verify all import patterns (backward compatible + new specific)
-- [ ] Test CLI command registration and execution
-- [ ] Validate no circular dependencies exist
-- [ ] Remove original coordinator.py file
+- [x] Test CLI command registration and execution
+- [x] Validate no circular dependencies exist
+- [x] Remove original coordinator.py file
 - [ ] Final test run to ensure cleanup didn't break anything
 - [ ] Run quality checks: pylint, pytest, mypy on final structure
 - [ ] Prepare git commit message for Step 5
