@@ -15,11 +15,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ## Tasks
 
 ### Step 1: Implement Tests for Claude Footer Stripping
-[ ] Implement comprehensive tests for `strip_claude_footers()` function in `tests/utils/test_commit_operations.py`
-[ ] Quality checks: Run pylint on test code and fix all issues found
-[ ] Quality checks: Run pytest on new tests and ensure they fail properly (TDD)
-[ ] Quality checks: Run mypy on test code and fix all issues found
-[ ] Prepare git commit message for Step 1 implementation
+[x] Implement comprehensive tests for `strip_claude_footers()` function in `tests/utils/test_commit_operations.py`
+[x] Quality checks: Run pylint on test code and fix all issues found
+[x] Quality checks: Run pytest on new tests and ensure they fail properly (TDD)
+[x] Quality checks: Run mypy on test code and fix all issues found
+[x] Prepare git commit message for Step 1 implementation
 
 ### Step 2: Implement strip_claude_footers() Function
 [ ] Implement `strip_claude_footers()` function in `src/mcp_coder/utils/commit_operations.py`
