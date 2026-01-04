@@ -1,0 +1,16 @@
+fix(coordinator): handle missing branch gracefully instead of crashing
+
+Replace ValueError with warning log and early return in dispatch_workflow()
+when no linked branch is found for implement/create-pr workflows.
+
+- Modified dispatch_workflow() in src/mcp_coder/cli/commands/coordinator.py
+- Changed from raising ValueError to logging warning and returning early
+- Updated test to verify graceful handling behavior
+- Preserves all existing functionality for valid branch cases
+- Coordinator now continues processing other issues instead of crashing
+
+Resolves issue #232 where coordinator would crash on missing branches.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>

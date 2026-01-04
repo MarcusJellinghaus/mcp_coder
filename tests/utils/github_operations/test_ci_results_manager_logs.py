@@ -10,10 +10,7 @@ import pytest
 import requests
 from github import GithubException
 
-from mcp_coder.utils.github_operations import (
-    CIResultsManager,
-    CIStatusData,
-)
+from mcp_coder.utils.github_operations import CIResultsManager, CIStatusData
 
 
 class TestDownloadAndExtractZip:

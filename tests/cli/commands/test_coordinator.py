@@ -32,9 +32,7 @@ from mcp_coder.cli.commands.coordinator import (
     load_repo_config,
     validate_repo_config,
 )
-from mcp_coder.utils.github_operations.issue_branch_manager import (
-    IssueBranchManager,
-)
+from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 
@@ -569,6 +567,137 @@ class TestDispatchWorkflow:
         assert "git checkout main" in command
         assert "git pull" in command
         assert "mcp-coder --log-level INFO create-plan 123" in command
+
+    def test_dispatch_workflow_handles_missing_branch_gracefully(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test that dispatch_workflow logs warning and returns early when no branch found."""
+        # Setup - Mock issue with status-08:ready-pr label (requires branch)
+        issue: IssueData = {
+            "number": 156,
+            "title": "Create PR for feature",
+            "body": "Feature ready for PR",
+            "state": "open",
+            "labels": ["status-08:ready-pr"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T08:00:00Z",
+            "updated_at": "2025-12-31T09:00:00Z",
+            "url": "https://github.com/test/repo/issues/156",
+            "locked": False,
+        }
+
+        # Setup - Repo configuration
+        repo_config = {
+            "repo_url": "https://github.com/test/repo.git",
+            "executor_job_path": "Tests/executor",
+            "github_credentials_id": "github-pat",
+            "executor_os": "linux",
+        }
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Mock get_linked_branches to return empty list (missing branch scenario)
+        mock_branch_mgr.get_linked_branches.return_value = []
+
+        # Set up logging capture
+        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+
+        # Execute - should complete gracefully without raising exception
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="create-pr",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
+
+        # Verify branch manager was called with correct issue number
+        mock_branch_mgr.get_linked_branches.assert_called_once_with(156)
+
+        # Verify warning was logged with correct message
+        assert (
+            "No linked branch found for issue #156, skipping workflow dispatch"
+            in caplog.text
+        )
+
+        # Verify no Jenkins job was triggered (should return early)
+        mock_jenkins.start_job.assert_not_called()
+
+        # Verify no label updates occurred (should return early)
+        mock_issue_mgr.remove_labels.assert_not_called()
+        mock_issue_mgr.add_labels.assert_not_called()
+
+    def test_dispatch_workflow_preserves_existing_behavior_with_valid_branch(
+        self,
+    ) -> None:
+        """Test that existing functionality works unchanged when branch exists."""
+        # Setup - Mock issue with status-05:plan-ready label (requires branch)
+        issue: IssueData = {
+            "number": 123,
+            "title": "Implement feature",
+            "body": "Plan is ready for implementation",
+            "state": "open",
+            "labels": ["status-05:plan-ready"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T08:00:00Z",
+            "updated_at": "2025-12-31T09:00:00Z",
+            "url": "https://github.com/test/repo/issues/123",
+            "locked": False,
+        }
+
+        # Setup - Repo configuration
+        repo_config = {
+            "repo_url": "https://github.com/test/repo.git",
+            "executor_job_path": "Tests/executor",
+            "github_credentials_id": "github-pat",
+            "executor_os": "linux",
+        }
+
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Mock get_linked_branches to return valid branch
+        mock_branch_mgr.get_linked_branches.return_value = ["feature/issue-123"]
+
+        # Mock Jenkins responses
+        mock_jenkins.start_job.return_value = 98765
+        mock_jenkins.get_job_status.return_value = MagicMock(status="queued", url=None)
+        mock_jenkins._client.server = "https://jenkins.test.com"
+
+        # Execute - should complete successfully
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="implement",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
+
+        # Verify branch manager was called
+        mock_branch_mgr.get_linked_branches.assert_called_once_with(123)
+
+        # Verify Jenkins job was triggered with correct branch
+        mock_jenkins.start_job.assert_called_once()
+        call_args = mock_jenkins.start_job.call_args
+        params = call_args[0][1]
+        assert params["BRANCH_NAME"] == "feature/issue-123"
+
+        # Verify label updates occurred
+        mock_issue_mgr.remove_labels.assert_called_once_with(
+            123, "status-05:plan-ready"
+        )
+        mock_issue_mgr.add_labels.assert_called_once_with(123, "status-06:implementing")
 
 
 class TestExecuteCoordinatorRun:
@@ -1289,6 +1418,107 @@ class TestCoordinatorRunCacheIntegration:
 
         # Verify - Warning was logged
         assert "Cache failed" in caplog.text or "using direct fetch" in caplog.text
+
+    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    def test_execute_coordinator_run_continues_processing_after_dispatch_failure(
+        self,
+        mock_create_config: MagicMock,
+        mock_dispatch_workflow: MagicMock,
+        mock_get_cached_issues: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test that coordinator fails fast when dispatch_workflow raises an exception."""
+        # Setup - Mock args for single repository mode
+        args = argparse.Namespace(
+            command="coordinator",
+            coordinator_subcommand="run",
+            repo="test_repo",
+            all=False,
+            log_level="INFO",
+            force_refresh=False,
+        )
+
+        # Setup - Config already exists
+        mock_create_config.return_value = False
+
+        # Setup - Valid repository configuration
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/test_repo.git",
+            "executor_job_path": "Test/executor",
+            "github_credentials_id": "github-pat",
+            "executor_os": "linux",
+        }
+
+        # Setup - Jenkins credentials available
+        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
+
+        # Setup - Mock clients
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+        mock_jenkins_class.return_value = mock_jenkins
+        mock_issue_mgr_class.return_value = mock_issue_mgr
+        mock_branch_mgr_class.return_value = mock_branch_mgr
+
+        # Setup - Multiple eligible issues
+        mock_get_cached_issues.return_value = [
+            {
+                "number": 156,
+                "state": "open",
+                "labels": ["status-08:ready-pr"],
+                "title": "First issue - will fail",
+                "body": "This will cause dispatch to fail",
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "updated_at": "2025-12-31T09:00:00Z",
+                "url": "https://github.com/user/test_repo/issues/156",
+                "locked": False,
+            },
+            {
+                "number": 157,
+                "state": "open",
+                "labels": ["status-05:plan-ready"],
+                "title": "Second issue - would succeed",
+                "body": "This should not be processed due to fail-fast",
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "updated_at": "2025-12-31T09:00:00Z",
+                "url": "https://github.com/user/test_repo/issues/157",
+                "locked": False,
+            },
+        ]
+
+        # Setup - First dispatch fails with ValueError (missing branch)
+        mock_dispatch_workflow.side_effect = ValueError(
+            "No linked branch found for issue #156"
+        )
+
+        # Execute
+        result = execute_coordinator_run(args)
+
+        # Verify - Exit code 1 (failure due to fail-fast)
+        assert result == 1
+
+        # Verify - dispatch_workflow was called only once (fail-fast behavior)
+        assert mock_dispatch_workflow.call_count == 1
+
+        # Verify - Error was logged
+        assert "Failed processing issue #156" in caplog.text
+        assert "No linked branch found for issue #156" in caplog.text
 
 
 class TestCacheUpdateIntegration:

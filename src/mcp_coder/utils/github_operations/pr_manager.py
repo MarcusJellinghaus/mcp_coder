@@ -12,10 +12,7 @@ from github.GithubException import GithubException
 from github.PullRequest import PullRequest
 from github.Repository import Repository
 
-from mcp_coder.utils import (
-    get_default_branch_name,
-    get_github_repository_url,
-)
+from mcp_coder.utils import get_default_branch_name, get_github_repository_url
 from mcp_coder.utils.log_utils import log_function_call
 
 from .base_manager import BaseGitHubManager, _handle_github_errors

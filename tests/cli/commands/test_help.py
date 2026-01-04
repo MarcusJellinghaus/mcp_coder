@@ -6,11 +6,7 @@ from io import StringIO
 
 import pytest
 
-from mcp_coder.cli.commands.help import (
-    execute_help,
-    get_help_text,
-    get_usage_examples,
-)
+from mcp_coder.cli.commands.help import execute_help, get_help_text, get_usage_examples
 
 
 def test_execute_help_returns_success(capsys: pytest.CaptureFixture[str]) -> None:

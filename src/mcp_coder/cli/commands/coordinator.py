@@ -347,7 +347,10 @@ def dispatch_workflow(
     else:  # from_issue
         branches = branch_manager.get_linked_branches(issue["number"])
         if not branches:
-            raise ValueError(f"No linked branch found for issue #{issue['number']}")
+            logger.warning(
+                f"No linked branch found for issue #{issue['number']}, skipping workflow dispatch"
+            )
+            return
         branch_name = branches[0]
 
     # Step 3: Select appropriate command template based on executor_os and build command

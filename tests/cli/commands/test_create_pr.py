@@ -14,9 +14,7 @@ import pytest
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
-    from mcp_coder.cli.commands.create_pr import (
-        execute_create_pr,
-    )
+    from mcp_coder.cli.commands.create_pr import execute_create_pr
 
     CREATE_PR_MODULE_AVAILABLE = True
 except Exception as e:
