@@ -111,6 +111,8 @@ disable = ["W1203", "W0621"]
 
 [tool.mypy]
 python_version = "3.11"
+# Disable import-untyped warnings for external libraries without type stubs
+disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = ["pytest.*"]
