@@ -102,9 +102,6 @@ def format_for_cache(dt: datetime) -> str:
     return dt.isoformat()
 
 
-
-
-
 def is_within_duration(
     timestamp: datetime,
     duration_seconds: float,
@@ -113,12 +110,16 @@ def is_within_duration(
     """Check if a timestamp is within a duration from a reference time.
 
     Args:
-        timestamp: The timestamp to check (timezone-aware)
+        timestamp: The timestamp to check (timezone-aware recommended)
         duration_seconds: Duration in seconds
         reference_time: Reference time (timezone-aware). If None, uses current UTC time.
 
     Returns:
         True if timestamp is within duration from reference_time
+
+    Note:
+        If timestamp is timezone-naive, it will be compared directly with the
+        reference_time. For consistent behavior, ensure all inputs are timezone-aware.
 
     Example:
         >>> ts = parse_iso_timestamp("2026-01-03T23:36:14Z")
