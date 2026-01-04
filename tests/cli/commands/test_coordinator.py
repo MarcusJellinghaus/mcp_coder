@@ -635,11 +635,7 @@ class TestDispatchWorkflow:
         mock_issue_mgr.remove_labels.assert_not_called()
         mock_issue_mgr.add_labels.assert_not_called()
 
-    def test_dispatch_workflow_continues_processing_after_skip(self) -> None:
-        """Test that coordinator processes remaining issues after skipping one with missing branch."""
-        # This test is implemented at the coordinator level in TestExecuteCoordinatorRun
-        # since dispatch_workflow handles individual issues, not processing flow
-        pass
+
 
     def test_dispatch_workflow_preserves_existing_behavior_with_valid_branch(
         self,
