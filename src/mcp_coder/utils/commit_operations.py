@@ -20,6 +20,43 @@ LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes for commit message generation
 logger = logging.getLogger(__name__)
 
 
+def strip_claude_footers(message: str) -> str:
+    """Remove Claude Code footer lines from commit message.
+
+    Removes lines starting with 🤖 (robot emoji) and exact matches for
+    'Co-Authored-By: Claude <noreply@anthropic.com>' from the end of the message.
+    Also cleans up trailing blank lines.
+
+    Args:
+        message: The commit message to clean
+
+    Returns:
+        Cleaned commit message with Claude footers removed
+    """
+    if not message:
+        return ""
+
+    # Split message into lines
+    lines = message.split("\n")
+
+    # Work backwards from the end, removing footers and empty lines
+    while lines:
+        last_line = lines[-1].strip()
+
+        # Check if line is a footer pattern or empty
+        if (
+            last_line.startswith("🤖")
+            or last_line == "Co-Authored-By: Claude <noreply@anthropic.com>"
+            or last_line == ""
+        ):
+            lines.pop()
+        else:
+            break
+
+    # Join lines back together
+    return "\n".join(lines)
+
+
 def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
     project_dir: Path,
     provider: str = "claude",
@@ -137,6 +174,9 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
     logger.debug("Parsing LLM response into commit message")
     try:
         commit_message, _ = parse_llm_commit_response(response)
+
+        # Strip Claude Code footers from commit message
+        commit_message = strip_claude_footers(commit_message)
 
         if not commit_message or not commit_message.strip():
             error_msg = "LLM generated an empty commit message. The AI may not have understood the changes. Try modifying your changes or running the command again."
