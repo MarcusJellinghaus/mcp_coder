@@ -37,13 +37,13 @@ See details: [pr_info/steps/step_2.md](steps/step_2.md)
 
 ### Step 3: Move CLI Handlers and Templates to commands.py
 See details: [pr_info/steps/step_3.md](steps/step_3.md)
-- [ ] Move CLI entry point functions to commands.py
-- [ ] Move all command templates and constants to commands.py
-- [ ] Set up imports from core.py in commands.py
-- [ ] Verify CLI functions can execute business logic through core imports
-- [ ] Ensure no circular dependencies between commands.py and core.py
-- [ ] Run quality checks: pylint, pytest, mypy on commands.py
-- [ ] Prepare git commit message for Step 3
+- [x] Move CLI entry point functions to commands.py
+- [x] Move all command templates and constants to commands.py
+- [x] Set up imports from core.py in commands.py
+- [x] Verify CLI functions can execute business logic through core imports
+- [x] Ensure no circular dependencies between commands.py and core.py
+- [x] Run quality checks: pylint, pytest, mypy on commands.py
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Update Package Imports and External References
 See details: [pr_info/steps/step_4.md](steps/step_4.md)
