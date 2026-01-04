@@ -20,7 +20,7 @@ LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes for commit message generation
 logger = logging.getLogger(__name__)
 
 
-def strip_claude_footers(message: Optional[str]) -> str:
+def strip_claude_footers(message: str) -> str:
     """Remove Claude Code footer lines from commit message.
 
     Removes lines starting with 🤖 (robot emoji) and exact matches for
@@ -33,7 +33,7 @@ def strip_claude_footers(message: Optional[str]) -> str:
     Returns:
         Cleaned commit message with Claude footers removed
     """
-    if message is None or not message:
+    if not message:
         return ""
 
     # Split message into lines

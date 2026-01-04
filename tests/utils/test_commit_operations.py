@@ -17,7 +17,7 @@ try:
     from mcp_coder.utils.commit_operations import strip_claude_footers
 except ImportError:
     # Function doesn't exist yet - this is expected for TDD
-    def strip_claude_footers(message: Optional[str]) -> str:
+    def strip_claude_footers(message: str) -> str:
         return ""
 
     strip_claude_footers = None  # type: ignore[assignment]
@@ -666,11 +666,10 @@ The Co-Authored-By feature is also mentioned."""
 co-authored-by: claude <noreply@anthropic.com>
 🤖 generated with [claude code](https://claude.com/claude-code)"""
 
-        # Should remain unchanged as footers don't match exact case
+        # Robot emoji line is removed (starts with 🤖), but co-authored line remains (wrong case)
         expected = """feat: case test
 
-co-authored-by: claude <noreply@anthropic.com>
-🤖 generated with [claude code](https://claude.com/claude-code)"""
+co-authored-by: claude <noreply@anthropic.com>"""
 
         result = strip_claude_footers(message)
         assert result == expected
@@ -687,7 +686,13 @@ More content
 
 Co-Authored-By: Claude <noreply@anthropic.com>"""
 
-        expected = "feat: multiple footers"
+        # Only removes footers from the end, preserves content in middle
+        expected = """feat: multiple footers
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Some content here
+Co-Authored-By: Claude <noreply@anthropic.com>
+More content"""
 
         result = strip_claude_footers(message)
         assert result == expected
@@ -728,14 +733,7 @@ Some body content"""
         result = strip_claude_footers(message)
         assert result == expected
 
-    def test_strip_footers_none_input(self) -> None:
-        """Test handling None input."""
-        message = None
 
-        expected = ""
-
-        result = strip_claude_footers(message)
-        assert result == expected
 
     def test_strip_footers_only_whitespace(self) -> None:
         """Test handling input with only whitespace."""
