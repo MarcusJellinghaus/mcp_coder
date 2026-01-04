@@ -15,8 +15,6 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Check for forbidden folders in PR
-      id: forbidden-folders
-      continue-on-error: true
       run: |
         echo "Checking for forbidden folders in pull request..."
         
@@ -86,16 +84,6 @@ jobs:
         else
           echo ""
           echo "✅ All checks passed! No forbidden folders found."
-        fi
-    
-    - name: Summarize forbidden folders check
-      if: always()
-      run: |
-        if [[ "${{ steps.forbidden-folders.outcome }}" == "failure" ]]; then
-          echo "⚠️  Warning: Forbidden folders check failed (not blocking)"
-          exit 0
-        else
-          echo "✅ Forbidden folders check passed"
         fi
 
   # Matrix approach: Each check runs as independent job with individual pass/fail status
