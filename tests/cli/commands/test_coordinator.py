@@ -570,8 +570,10 @@ class TestDispatchWorkflow:
         assert "git pull" in command
         assert "mcp-coder --log-level INFO create-plan 123" in command
 
-    def test_dispatch_workflow_handles_missing_branch_gracefully(self) -> None:
-        """Test that dispatch_workflow logs warning and continues when no branch found."""
+    def test_dispatch_workflow_handles_missing_branch_gracefully(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test that dispatch_workflow logs warning and returns early when no branch found."""
         # Setup - Mock issue with status-08:ready-pr label (requires branch)
         issue: IssueData = {
             "number": 156,
@@ -603,25 +605,33 @@ class TestDispatchWorkflow:
         # Mock get_linked_branches to return empty list (missing branch scenario)
         mock_branch_mgr.get_linked_branches.return_value = []
 
-        # Execute and verify ValueError is raised
-        with pytest.raises(ValueError, match="No linked branch found for issue #156"):
-            dispatch_workflow(
-                issue=issue,
-                workflow_name="create-pr",
-                repo_config=repo_config,
-                jenkins_client=mock_jenkins,
-                issue_manager=mock_issue_mgr,
-                branch_manager=mock_branch_mgr,
-                log_level="INFO",
-            )
+        # Set up logging capture
+        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+
+        # Execute - should complete gracefully without raising exception
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="create-pr",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
 
         # Verify branch manager was called with correct issue number
         mock_branch_mgr.get_linked_branches.assert_called_once_with(156)
 
-        # Verify no Jenkins job was triggered (should fail before that)
+        # Verify warning was logged with correct message
+        assert (
+            "No linked branch found for issue #156, skipping workflow dispatch"
+            in caplog.text
+        )
+
+        # Verify no Jenkins job was triggered (should return early)
         mock_jenkins.start_job.assert_not_called()
 
-        # Verify no label updates occurred (should fail before that)
+        # Verify no label updates occurred (should return early)
         mock_issue_mgr.remove_labels.assert_not_called()
         mock_issue_mgr.add_labels.assert_not_called()
 
