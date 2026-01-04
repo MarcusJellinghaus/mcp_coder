@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Optional
 from unittest.mock import Mock, patch
 
 import pytest
@@ -17,7 +17,10 @@ try:
     from mcp_coder.utils.commit_operations import strip_claude_footers
 except ImportError:
     # Function doesn't exist yet - this is expected for TDD
-    strip_claude_footers = None
+    def strip_claude_footers(message: Optional[str]) -> str:
+        return ""
+
+    strip_claude_footers = None  # type: ignore[assignment]
 
 
 class TestGenerateCommitMessageWithLLM:
