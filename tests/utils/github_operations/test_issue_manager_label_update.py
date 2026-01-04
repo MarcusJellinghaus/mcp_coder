@@ -11,13 +11,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_branch_manager import (
-    IssueBranchManager,
-)
-from mcp_coder.utils.github_operations.issue_manager import (
-    IssueData,
-    IssueManager,
-)
+from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
+from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
 
 # Mock label configuration
 MOCK_LABELS_CONFIG = {

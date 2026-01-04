@@ -15,9 +15,7 @@ import pytest
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
-    from mcp_coder.cli.commands.implement import (
-        execute_implement,
-    )
+    from mcp_coder.cli.commands.implement import execute_implement
 
     IMPLEMENT_MODULE_AVAILABLE = True
 except ImportError:

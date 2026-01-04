@@ -8,10 +8,7 @@ from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
-from mcp_coder.llm.storage.session_storage import (
-    extract_session_id,
-    store_session,
-)
+from mcp_coder.llm.storage.session_storage import extract_session_id, store_session
 
 
 class TestStoreSession:

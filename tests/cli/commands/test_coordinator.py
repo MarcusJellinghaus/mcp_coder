@@ -32,9 +32,7 @@ from mcp_coder.cli.commands.coordinator import (
     load_repo_config,
     validate_repo_config,
 )
-from mcp_coder.utils.github_operations.issue_branch_manager import (
-    IssueBranchManager,
-)
+from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 
@@ -634,8 +632,6 @@ class TestDispatchWorkflow:
         # Verify no label updates occurred (should return early)
         mock_issue_mgr.remove_labels.assert_not_called()
         mock_issue_mgr.add_labels.assert_not_called()
-
-
 
     def test_dispatch_workflow_preserves_existing_behavior_with_valid_branch(
         self,

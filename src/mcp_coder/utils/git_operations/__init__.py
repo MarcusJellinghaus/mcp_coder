@@ -27,12 +27,7 @@ from .diffs import get_branch_diff, get_git_diff_for_commit
 from .file_tracking import git_move, is_file_tracked
 
 # Remote operations
-from .remotes import (
-    fetch_remote,
-    get_github_repository_url,
-    git_push,
-    push_branch,
-)
+from .remotes import fetch_remote, get_github_repository_url, git_push, push_branch
 
 # Repository operations
 from .repository import (

@@ -5,10 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.formatters.utils import (
-    get_default_target_dirs,
-    read_tool_config,
-)
+from mcp_coder.formatters.utils import get_default_target_dirs, read_tool_config
 
 
 @pytest.mark.formatter_integration

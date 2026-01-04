@@ -10,10 +10,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.commit import (
-    execute_commit_auto,
-    validate_git_repository,
-)
+from mcp_coder.cli.commands.commit import execute_commit_auto, validate_git_repository
 from mcp_coder.utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
