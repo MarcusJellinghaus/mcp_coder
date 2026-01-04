@@ -22,18 +22,18 @@ See details: [pr_info/steps/step_1.md](steps/step_1.md)
 - [x] Create __init__.py with complete public API re-exports
 - [x] Verify package can be imported without errors
 - [x] Run quality checks: pylint, pytest, mypy on new structure
-- [ ] Prepare git commit message for Step 1
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Move Core Business Logic to core.py
 See details: [pr_info/steps/step_2.md](steps/step_2.md)
-- [ ] Move configuration management functions to core.py
-- [ ] Move caching system functions and CacheData class to core.py
-- [ ] Move issue filtering functions to core.py
-- [ ] Move workflow dispatch function to core.py
-- [ ] Update all imports in core.py
-- [ ] Verify all internal function calls work within core.py
-- [ ] Run quality checks: pylint, pytest, mypy on core.py
-- [ ] Prepare git commit message for Step 2
+- [x] Move configuration management functions to core.py
+- [x] Move caching system functions and CacheData class to core.py
+- [x] Move issue filtering functions to core.py
+- [x] Move workflow dispatch function to core.py
+- [x] Update all imports in core.py
+- [x] Verify all internal function calls work within core.py
+- [x] Run quality checks: pylint, pytest, mypy on core.py
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Move CLI Handlers and Templates to commands.py
 See details: [pr_info/steps/step_3.md](steps/step_3.md)

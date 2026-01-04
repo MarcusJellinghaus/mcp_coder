@@ -1,0 +1,11 @@
+refactor(coordinator): create module structure and public API exports
+
+Create coordinator package structure as foundation for refactoring:
+
+- Add src/mcp_coder/cli/commands/coordinator/ package directory
+- Add __init__.py with complete public API exports and placeholder functions
+- Add commands.py and core.py placeholder modules for future code movement
+- Maintain backward compatibility through __init__.py re-exports
+- Preserve all public functions, classes, and constants from original coordinator.py
+
+Package now ready for incremental code movement in subsequent steps.
