@@ -556,21 +556,12 @@ class TestParseLLMCommitResponse:
 class TestStripClaudeFooters:
     """Tests for strip_claude_footers function."""
 
+    # Basic functionality tests
+    def test_strip_no_footers_present(self) -> None:
+        """Test message with no footers remains unchanged."""
+        message = "feat: clean commit message"
 
-
-    def test_strip_both_footers_present(self) -> None:
-        """Test stripping message with both footers present."""
-        message = """feat: add new feature
-
-Some commit body text
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"""
-
-        expected = """feat: add new feature
-
-Some commit body text"""
+        expected = "feat: clean commit message"
 
         result = strip_claude_footers(message)
         assert result == expected
@@ -597,11 +588,52 @@ Co-Authored-By: Claude <noreply@anthropic.com>"""
         result = strip_claude_footers(message)
         assert result == expected
 
-    def test_strip_no_footers_present(self) -> None:
-        """Test message with no footers remains unchanged."""
-        message = "feat: clean commit message"
+    def test_strip_both_footers_present(self) -> None:
+        """Test stripping message with both footers present."""
+        message = """feat: add new feature
 
-        expected = "feat: clean commit message"
+Some commit body text
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"""
+
+        expected = """feat: add new feature
+
+Some commit body text"""
+
+        result = strip_claude_footers(message)
+        assert result == expected
+
+    # Edge cases
+    def test_strip_empty_message(self) -> None:
+        """Test empty message remains unchanged."""
+        message = ""
+
+        expected = ""
+
+        result = strip_claude_footers(message)
+        assert result == expected
+
+    def test_strip_footers_only_whitespace(self) -> None:
+        """Test handling input with only whitespace."""
+        message = "   \n\t  \n  "
+
+        expected = ""
+
+        result = strip_claude_footers(message)
+        assert result == expected
+
+    def test_strip_footers_whitespace_variations(self) -> None:
+        """Test handling footers with various whitespace."""
+        message = """feat: whitespace test
+
+   🤖 Generated with [Claude Code](https://claude.com/claude-code)   
+
+   Co-Authored-By: Claude <noreply@anthropic.com>   
+   """
+
+        expected = "feat: whitespace test"
 
         result = strip_claude_footers(message)
         assert result == expected
@@ -622,43 +654,24 @@ Co-Authored-By: Claude <noreply@anthropic.com>"""
         result = strip_claude_footers(message)
         assert result == expected
 
-    def test_strip_empty_message(self) -> None:
-        """Test empty message remains unchanged."""
-        message = ""
+    def test_strip_footers_mixed_with_blank_lines(self) -> None:
+        """Test footers mixed with various blank lines."""
+        message = """feat: mixed blank lines
 
-        expected = ""
+Some body content
 
-        result = strip_claude_footers(message)
-        assert result == expected
 
-    def test_preserve_legitimate_content(self) -> None:
-        """Test preservation of legitimate content that mentions footers."""
-        message = """feat: add 🤖 emoji support
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-This commit adds robot emoji support.
-The Co-Authored-By feature is also mentioned.
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)"""
+Co-Authored-By: Claude <noreply@anthropic.com>
 
-        expected = """feat: add 🤖 emoji support
 
-This commit adds robot emoji support.
-The Co-Authored-By feature is also mentioned."""
+"""
 
-        result = strip_claude_footers(message)
-        assert result == expected
+        expected = """feat: mixed blank lines
 
-    def test_strip_footers_case_sensitive(self) -> None:
-        """Test that footer matching is case sensitive."""
-        message = """feat: case test
-
-co-authored-by: claude <noreply@anthropic.com>
-🤖 generated with [claude code](https://claude.com/claude-code)"""
-
-        # Robot emoji line is removed (starts with 🤖), but co-authored line remains (wrong case)
-        expected = """feat: case test
-
-co-authored-by: claude <noreply@anthropic.com>"""
+Some body content"""
 
         result = strip_claude_footers(message)
         assert result == expected
@@ -686,47 +699,35 @@ More content"""
         result = strip_claude_footers(message)
         assert result == expected
 
-    def test_strip_footers_whitespace_variations(self) -> None:
-        """Test handling footers with various whitespace."""
-        message = """feat: whitespace test
+    def test_strip_footers_case_sensitive(self) -> None:
+        """Test that footer matching is case sensitive."""
+        message = """feat: case test
 
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)   
+co-authored-by: claude <noreply@anthropic.com>
+🤖 generated with [claude code](https://claude.com/claude-code)"""
 
-   Co-Authored-By: Claude <noreply@anthropic.com>   
-   """
+        # Robot emoji line is removed (starts with 🤖), but co-authored line remains (wrong case)
+        expected = """feat: case test
 
-        expected = "feat: whitespace test"
-
-        result = strip_claude_footers(message)
-        assert result == expected
-
-    def test_strip_footers_mixed_with_blank_lines(self) -> None:
-        """Test footers mixed with various blank lines."""
-        message = """feat: mixed blank lines
-
-Some body content
-
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-
-
-"""
-
-        expected = """feat: mixed blank lines
-
-Some body content"""
+co-authored-by: claude <noreply@anthropic.com>"""
 
         result = strip_claude_footers(message)
         assert result == expected
 
-    def test_strip_footers_only_whitespace(self) -> None:
-        """Test handling input with only whitespace."""
-        message = "   \n\t  \n  "
+    # Content preservation tests
+    def test_preserve_legitimate_content(self) -> None:
+        """Test preservation of legitimate content that mentions footers."""
+        message = """feat: add 🤖 emoji support
 
-        expected = ""
+This commit adds robot emoji support.
+The Co-Authored-By feature is also mentioned.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)"""
+
+        expected = """feat: add 🤖 emoji support
+
+This commit adds robot emoji support.
+The Co-Authored-By feature is also mentioned."""
 
         result = strip_claude_footers(message)
         assert result == expected
