@@ -1,0 +1,12 @@
+feat: implement strip_claude_footers() function for commit message cleaning
+
+Add strip_claude_footers() function to src/mcp_coder/utils/commit_operations.py that removes Claude Code footer lines from commit messages. The function:
+
+- Removes lines starting with 🤖 (robot emoji) from the end of messages
+- Removes exact matches for 'Co-Authored-By: Claude <noreply@anthropic.com>' 
+- Cleans up trailing blank lines
+- Handles None input gracefully by returning empty string
+- Uses simple string operations without regex patterns (KISS principle)
+- Works backwards from the end to preserve legitimate content in message body
+
+All tests from Step 1 pass with the implementation. The function will be integrated into commit message generation workflow in Step 3.
