@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,16 +11,8 @@ from mcp_coder.llm.providers.claude.claude_code_api import ClaudeAPIError
 from mcp_coder.utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
+    strip_claude_footers,
 )
-
-try:
-    from mcp_coder.utils.commit_operations import strip_claude_footers
-except ImportError:
-    # Function doesn't exist yet - this is expected for TDD
-    def strip_claude_footers(message: str) -> str:
-        return ""
-
-    strip_claude_footers = None  # type: ignore[assignment]
 
 
 class TestGenerateCommitMessageWithLLM:
@@ -564,10 +556,7 @@ class TestParseLLMCommitResponse:
 class TestStripClaudeFooters:
     """Tests for strip_claude_footers function."""
 
-    def setup_method(self) -> None:
-        """Skip all tests if function not implemented yet."""
-        if strip_claude_footers is None:
-            pytest.skip("strip_claude_footers function not implemented yet")
+
 
     def test_strip_both_footers_present(self) -> None:
         """Test stripping message with both footers present."""
@@ -732,8 +721,6 @@ Some body content"""
 
         result = strip_claude_footers(message)
         assert result == expected
-
-
 
     def test_strip_footers_only_whitespace(self) -> None:
         """Test handling input with only whitespace."""
