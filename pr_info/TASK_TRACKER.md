@@ -47,13 +47,13 @@ See details: [pr_info/steps/step_3.md](steps/step_3.md)
 
 ### Step 4: Update Package Imports and External References
 See details: [pr_info/steps/step_4.md](steps/step_4.md)
-- [ ] Complete coordinator/__init__.py with all public exports
-- [ ] Update src/mcp_coder/cli/commands/__init__.py for package import
-- [ ] Update tests/cli/commands/test_coordinator.py imports
-- [ ] Verify backward compatibility for all existing import patterns
-- [ ] Test that old import styles still work
-- [ ] Run quality checks: pylint, pytest, mypy on updated files
-- [ ] Prepare git commit message for Step 4
+- [x] Complete coordinator/__init__.py with all public exports
+- [x] Update src/mcp_coder/cli/commands/__init__.py for package import
+- [x] Update tests/cli/commands/test_coordinator.py imports
+- [x] Verify backward compatibility for all existing import patterns
+- [x] Test that old import styles still work
+- [x] Run quality checks: pylint, pytest, mypy on updated files
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Final Verification and Cleanup
 See details: [pr_info/steps/step_5.md](steps/step_5.md)

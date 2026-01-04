@@ -11,9 +11,14 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.coordinator import (
+from mcp_coder.cli.commands.coordinator.commands import (
     DEFAULT_TEST_COMMAND,
     DEFAULT_TEST_COMMAND_WINDOWS,
+    execute_coordinator_run,
+    execute_coordinator_test,
+    format_job_output,
+)
+from mcp_coder.cli.commands.coordinator.core import (
     CacheData,
     _filter_eligible_issues,
     _get_cache_file_path,
@@ -22,9 +27,6 @@ from mcp_coder.cli.commands.coordinator import (
     _save_cache_file,
     _update_issue_labels_in_cache,
     dispatch_workflow,
-    execute_coordinator_run,
-    execute_coordinator_test,
-    format_job_output,
     get_cache_refresh_minutes,
     get_cached_eligible_issues,
     get_eligible_issues,
