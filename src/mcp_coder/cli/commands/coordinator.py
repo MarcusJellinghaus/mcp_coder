@@ -695,9 +695,7 @@ def get_cached_eligible_issues(
             and last_checked
             and is_within_duration(last_checked, 60.0, now)
         ):
-            from ...utils.timezone_utils import calculate_elapsed_seconds
-
-            age_seconds = int(calculate_elapsed_seconds(last_checked, now))
+            age_seconds = int((now - last_checked).total_seconds())
             _log_cache_metrics(
                 "hit",
                 repo_identifier.repo_name,

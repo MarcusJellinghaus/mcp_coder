@@ -79,33 +79,6 @@ def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def format_for_github_api(dt: datetime) -> str:
-    """Format datetime for GitHub API 'since' parameter.
-
-    GitHub API expects ISO 8601 format ending with 'Z' (UTC).
-
-    Args:
-        dt: Timezone-aware datetime (will be converted to UTC if needed)
-
-    Returns:
-        ISO 8601 string ending with 'Z' for GitHub API
-
-    Raises:
-        ValueError: If datetime is timezone-naive
-
-    Example:
-        >>> dt = parse_iso_timestamp("2026-01-03T23:36:14.620992+01:00")
-        >>> github_format = format_for_github_api(dt)
-        >>> print(github_format)  # "2026-01-03T22:36:14.620992Z"
-    """
-    if dt.tzinfo is None:
-        raise ValueError("Datetime must be timezone-aware")
-
-    # Convert to UTC and format with Z suffix
-    utc_dt = dt.astimezone(timezone.utc)
-    return utc_dt.isoformat().replace("+00:00", "Z")
-
-
 def format_for_cache(dt: datetime) -> str:
     """Format datetime for cache storage with timezone info.
 
@@ -129,60 +102,7 @@ def format_for_cache(dt: datetime) -> str:
     return dt.isoformat()
 
 
-def ensure_timezone_aware(dt: datetime, assume_utc: bool = True) -> datetime:
-    """Ensure a datetime is timezone-aware.
 
-    Args:
-        dt: Datetime that may or may not have timezone info
-        assume_utc: If True, treat naive datetimes as UTC. If False, use local timezone.
-
-    Returns:
-        Timezone-aware datetime
-
-    Example:
-        >>> naive_dt = datetime(2026, 1, 3, 23, 36, 14)
-        >>> aware_dt = ensure_timezone_aware(naive_dt)
-        >>> print(aware_dt.tzinfo)  # timezone.utc
-    """
-    if dt.tzinfo is None:
-        if assume_utc:
-            return dt.replace(tzinfo=timezone.utc)
-        else:
-            # Use system local timezone
-            return dt.astimezone()
-    return dt
-
-
-def calculate_elapsed_seconds(
-    start_time: datetime, end_time: Optional[datetime] = None
-) -> float:
-    """Calculate elapsed seconds between two timezone-aware datetimes.
-
-    Args:
-        start_time: Start time (timezone-aware)
-        end_time: End time (timezone-aware). If None, uses current UTC time.
-
-    Returns:
-        Elapsed seconds as float
-
-    Raises:
-        ValueError: If either datetime is timezone-naive
-
-    Example:
-        >>> start = parse_iso_timestamp("2026-01-03T23:36:14+01:00")
-        >>> end = parse_iso_timestamp("2026-01-03T23:37:14+01:00")
-        >>> elapsed = calculate_elapsed_seconds(start, end)
-        >>> print(elapsed)  # 60.0
-    """
-    if start_time.tzinfo is None:
-        raise ValueError("start_time must be timezone-aware")
-
-    if end_time is None:
-        end_time = now_utc()
-    elif end_time.tzinfo is None:
-        raise ValueError("end_time must be timezone-aware")
-
-    return (end_time - start_time).total_seconds()
 
 
 def is_within_duration(
@@ -208,5 +128,5 @@ def is_within_duration(
     if reference_time is None:
         reference_time = now_utc()
 
-    elapsed = calculate_elapsed_seconds(timestamp, reference_time)
+    elapsed = (reference_time - timestamp).total_seconds()
     return abs(elapsed) <= duration_seconds

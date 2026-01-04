@@ -5,10 +5,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from mcp_coder.utils.timezone_utils import (
-    calculate_elapsed_seconds,
-    ensure_timezone_aware,
     format_for_cache,
-    format_for_github_api,
     is_within_duration,
     now_utc,
     parse_iso_timestamp,
@@ -97,35 +94,6 @@ class TestNowUtc:
         assert before <= result <= after
 
 
-class TestFormatForGithubApi:
-    """Test GitHub API formatting."""
-
-    def test_format_utc_datetime(self) -> None:
-        """Test formatting UTC datetime."""
-        dt = datetime(2026, 1, 3, 23, 36, 14, 620992, timezone.utc)
-        result = format_for_github_api(dt)
-
-        expected = "2026-01-03T23:36:14.620992Z"
-        assert result == expected
-
-    def test_format_datetime_with_offset(self) -> None:
-        """Test formatting datetime with timezone offset."""
-        # CET timezone (+01:00)
-        cet_tz = timezone(timedelta(hours=1))
-        dt = datetime(2026, 1, 3, 23, 36, 14, 620992, cet_tz)
-        result = format_for_github_api(dt)
-
-        # Should be converted to UTC
-        expected = "2026-01-03T22:36:14.620992Z"
-        assert result == expected
-
-    def test_format_naive_datetime_raises(self) -> None:
-        """Test formatting naive datetime raises ValueError."""
-        dt = datetime(2026, 1, 3, 23, 36, 14)
-        with pytest.raises(ValueError, match="Datetime must be timezone-aware"):
-            format_for_github_api(dt)
-
-
 class TestFormatForCache:
     """Test cache formatting."""
 
@@ -151,81 +119,6 @@ class TestFormatForCache:
         dt = datetime(2026, 1, 3, 23, 36, 14)
         with pytest.raises(ValueError, match="Datetime must be timezone-aware"):
             format_for_cache(dt)
-
-
-class TestEnsureTimezoneAware:
-    """Test timezone awareness enforcement."""
-
-    def test_naive_datetime_assume_utc(self) -> None:
-        """Test naive datetime assumed as UTC."""
-        dt = datetime(2026, 1, 3, 23, 36, 14)
-        result = ensure_timezone_aware(dt, assume_utc=True)
-
-        expected = datetime(2026, 1, 3, 23, 36, 14, 0, timezone.utc)
-        assert result == expected
-
-    def test_naive_datetime_assume_local(self) -> None:
-        """Test naive datetime with local timezone."""
-        dt = datetime(2026, 1, 3, 23, 36, 14)
-        result = ensure_timezone_aware(dt, assume_utc=False)
-
-        # Should have some timezone (depends on system)
-        assert result.tzinfo is not None
-        assert result.hour == 23  # Time unchanged, only timezone added
-
-    def test_aware_datetime_unchanged(self) -> None:
-        """Test timezone-aware datetime is unchanged."""
-        dt = datetime(2026, 1, 3, 23, 36, 14, 0, timezone.utc)
-        result = ensure_timezone_aware(dt)
-
-        assert result == dt
-        assert result.tzinfo == timezone.utc
-
-
-class TestCalculateElapsedSeconds:
-    """Test elapsed time calculations."""
-
-    def test_calculate_elapsed_same_timezone(self) -> None:
-        """Test elapsed calculation with same timezone."""
-        start = datetime(2026, 1, 3, 23, 36, 14, 0, timezone.utc)
-        end = datetime(2026, 1, 3, 23, 37, 14, 0, timezone.utc)
-        result = calculate_elapsed_seconds(start, end)
-
-        assert result == 60.0
-
-    def test_calculate_elapsed_different_timezones(self) -> None:
-        """Test elapsed calculation with different timezones."""
-        start = datetime(2026, 1, 3, 23, 36, 14, 0, timezone.utc)
-        # 1 minute later in CET (which is same UTC time + 1 hour)
-        cet_tz = timezone(timedelta(hours=1))
-        end = datetime(2026, 1, 4, 0, 37, 14, 0, cet_tz)  # Same as 23:37 UTC
-        result = calculate_elapsed_seconds(start, end)
-
-        assert result == 60.0
-
-    def test_calculate_elapsed_to_now(self) -> None:
-        """Test elapsed calculation to current time."""
-        start = datetime.now(timezone.utc) - timedelta(seconds=5)
-        result = calculate_elapsed_seconds(start)
-
-        # Should be approximately 5 seconds (allowing for execution time)
-        assert 4.0 <= result <= 6.0
-
-    def test_naive_start_time_raises(self) -> None:
-        """Test naive start time raises ValueError."""
-        start = datetime(2026, 1, 3, 23, 36, 14)
-        end = datetime(2026, 1, 3, 23, 37, 14, 0, timezone.utc)
-
-        with pytest.raises(ValueError, match="start_time must be timezone-aware"):
-            calculate_elapsed_seconds(start, end)
-
-    def test_naive_end_time_raises(self) -> None:
-        """Test naive end time raises ValueError."""
-        start = datetime(2026, 1, 3, 23, 36, 14, 0, timezone.utc)
-        end = datetime(2026, 1, 3, 23, 37, 14)
-
-        with pytest.raises(ValueError, match="end_time must be timezone-aware"):
-            calculate_elapsed_seconds(start, end)
 
 
 class TestIsWithinDuration:
@@ -281,13 +174,16 @@ class TestEndToEndWorkflow:
         # Parse to UTC datetime
         parsed = parse_iso_timestamp(original)
 
-        # Format for GitHub API
-        github_format = format_for_github_api(parsed)
-        assert github_format == "2026-01-03T22:36:14.620992Z"
+        # Verify UTC conversion happened
+        assert parsed == datetime(2026, 1, 3, 22, 36, 14, 620992, timezone.utc)
 
         # Format for cache
         cache_format = format_for_cache(parsed)
         assert cache_format == "2026-01-03T22:36:14.620992+00:00"
+
+        # Parse back from cache format
+        reparsed = parse_iso_timestamp(cache_format)
+        assert reparsed == parsed
 
     def test_cache_timestamp_comparison(self) -> None:
         """Test realistic cache timestamp comparison scenario."""
@@ -302,15 +198,12 @@ class TestEndToEndWorkflow:
         # Verify comparison (user change should be after cache time in UTC)
         assert user_change > cache_time
 
-        # Verify GitHub API would get correct timestamp
-        github_since = format_for_github_api(cache_time)
-        assert github_since == "2026-01-03T22:36:14.620992Z"
+        # Verify the UTC times are correct
+        # cache_time: 23:36 CET = 22:36 UTC
+        # user_change: 00:00 CET = 23:00 UTC
+        assert cache_time == datetime(2026, 1, 3, 22, 36, 14, 620992, timezone.utc)
+        assert user_change == datetime(2026, 1, 3, 23, 0, 0, 0, timezone.utc)
 
-        # Verify user change in UTC is after GitHub since parameter
-        user_change_utc_str = format_for_github_api(user_change)
-        assert user_change_utc_str == "2026-01-03T23:00:00Z"
-
-        # Parse GitHub format and verify comparison
-        github_since_dt = parse_iso_timestamp(github_since)
-        user_change_utc_dt = parse_iso_timestamp(user_change_utc_str)
-        assert user_change_utc_dt > github_since_dt
+        # Verify cache formatting works correctly
+        cache_format = format_for_cache(cache_time)
+        assert cache_format == "2026-01-03T22:36:14.620992+00:00"
