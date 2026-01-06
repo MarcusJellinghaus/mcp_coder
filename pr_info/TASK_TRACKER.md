@@ -85,7 +85,7 @@ See details: [pr_info/steps/step_6.md](steps/step_6.md)
 
 - [x] Create `coordinator/command_templates.py` with all template strings
 - [x] Create `coordinator/workflow_constants.py` with WORKFLOW_MAPPING
-- [ ] Update `commands.py` to import from `command_templates.py`
+- [x] Update `commands.py` to import from `command_templates.py`
 - [ ] Update `core.py` to import from both new modules
 - [ ] Remove duplicate templates from `commands.py` and `core.py`
 - [ ] Update `__init__.py` exports to use new modules
