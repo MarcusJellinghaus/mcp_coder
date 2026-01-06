@@ -83,7 +83,9 @@ class TestCacheMetricsLogging:
 
     def test_log_cache_metrics_hit(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache hit metrics logging."""
-        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+        )
 
         _log_cache_metrics("hit", "test-repo", age_minutes=15, issue_count=5)
 
@@ -91,7 +93,9 @@ class TestCacheMetricsLogging:
 
     def test_log_cache_metrics_miss(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache miss metrics logging."""
-        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+        )
 
         _log_cache_metrics("miss", "test-repo", reason="no_cache")
 
@@ -99,7 +103,9 @@ class TestCacheMetricsLogging:
 
     def test_log_cache_metrics_refresh(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache refresh metrics logging."""
-        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+        )
 
         _log_cache_metrics("refresh", "test-repo", refresh_type="full", issue_count=10)
 
@@ -107,7 +113,9 @@ class TestCacheMetricsLogging:
 
     def test_log_cache_metrics_save(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache save metrics logging."""
-        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+        )
 
         _log_cache_metrics("save", "test-repo", total_issues=25)
 
@@ -220,7 +228,7 @@ class TestStalenessLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test logging when issue state changes."""
-        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator.core")
 
         cached_issues: Dict[str, IssueData] = {
             "123": {
@@ -261,7 +269,7 @@ class TestStalenessLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test logging when issue labels change."""
-        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator.core")
 
         cached_issues: Dict[str, IssueData] = {
             "123": {
@@ -304,7 +312,7 @@ class TestStalenessLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test logging when cached issue no longer exists."""
-        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator.core")
 
         cached_issues: Dict[str, IssueData] = {
             "123": {
@@ -738,7 +746,9 @@ class TestGetCachedEligibleIssues:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that cache metrics are logged properly."""
-        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+        )
         mock_issue_manager.list_issues.return_value = [sample_issue]
         mock_issue_manager.repo_url = "https://github.com/owner/repo"
 
@@ -773,7 +783,9 @@ class TestGetCachedEligibleIssues:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that using RepoIdentifier does not generate spurious warnings."""
-        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+        )
         mock_issue_manager.list_issues.return_value = [sample_issue]
         mock_issue_manager.repo_url = "https://github.com/owner/repo"
 
@@ -950,7 +962,9 @@ class TestCacheIssueUpdate:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test graceful handling when issue not found in cache."""
-        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "test_cache.json"
@@ -998,7 +1012,9 @@ class TestCacheIssueUpdate:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test handling of corrupted cache file structure."""
-        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "test_cache.json"
@@ -1027,7 +1043,9 @@ class TestCacheIssueUpdate:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test handling of file permission errors."""
-        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+        )
 
         with (
             patch(
@@ -1069,7 +1087,9 @@ class TestCacheIssueUpdate:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test proper logging behavior during successful updates."""
-        caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "test_cache.json"
@@ -1247,7 +1267,9 @@ class TestCacheUpdateIntegration:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that cache update failures don't interrupt dispatch workflow."""
-        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(
+            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+        )
 
         with (
             patch(
