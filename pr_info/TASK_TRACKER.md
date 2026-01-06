@@ -58,8 +58,8 @@ See details: [pr_info/steps/step_3.md](steps/step_3.md)
 
 See details: [pr_info/steps/step_4.md](steps/step_4.md)
 
-- [x] Complete coordinator/**init**.py with all public exports
-- [x] Update src/mcp_coder/cli/commands/**init**.py for package import
+- [x] Complete coordinator/__init__.py with all public exports
+- [x] Update src/mcp_coder/cli/commands/__init__.py for package import
 - [x] Update tests/cli/commands/test_coordinator.py imports
 - [x] Verify backward compatibility for all existing import patterns
 - [x] Test that old import styles still work
@@ -79,9 +79,45 @@ See details: [pr_info/steps/step_5.md](steps/step_5.md)
 - [x] Run quality checks: pylint, pytest, mypy on final structure
 - [x] Prepare git commit message for Step 5
 
+### Step 6: Extract Constants to Dedicated Modules
+
+See details: [pr_info/steps/step_6.md](steps/step_6.md)
+
+- [ ] Create `coordinator/command_templates.py` with all template strings
+- [ ] Create `coordinator/workflow_constants.py` with WORKFLOW_MAPPING
+- [ ] Update `commands.py` to import from `command_templates.py`
+- [ ] Update `core.py` to import from both new modules
+- [ ] Remove duplicate templates from `commands.py` and `core.py`
+- [ ] Update `__init__.py` exports to use new modules
+- [ ] Revert `pyproject.toml` mypy change (remove disable_error_code)
+- [ ] Run quality checks: pylint, pytest, mypy
+- [ ] Prepare git commit message for Step 6
+
+### Step 7: Restructure Test Files
+
+See details: [pr_info/steps/step_7.md](steps/step_7.md)
+
+- [ ] Create `tests/cli/commands/coordinator/` package with `__init__.py`
+- [ ] Create `test_core.py` with core.py test classes
+- [ ] Create `test_commands.py` with commands.py test classes
+- [ ] Create `test_integration.py` with integration test classes
+- [ ] Verify all tests pass in new locations
+- [ ] Verify test count matches original (no tests lost)
+- [ ] Delete original `tests/cli/commands/test_coordinator.py`
+- [ ] Run quality checks: pylint, pytest, mypy
+- [ ] Prepare git commit message for Step 7
+
+## Code Review
+
+See details: [pr_info/steps/Decisions.md](steps/Decisions.md)
+
+- [x] Review all implemented changes (Steps 1-5)
+- [x] Document code review decisions
+- [x] Create additional implementation steps (6-7)
+
 ## Pull Request
 
-- [ ] Review all implemented changes
+- [ ] Complete Steps 6-7
 - [ ] Run final quality checks on complete implementation
 - [ ] Create comprehensive PR summary
 - [ ] Verify all acceptance criteria met
