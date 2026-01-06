@@ -98,7 +98,7 @@ See details: [pr_info/steps/step_6.md](steps/step_6.md)
 See details: [pr_info/steps/step_7.md](steps/step_7.md)
 
 - [x] Create `tests/cli/commands/coordinator/` package with `__init__.py`
-- [ ] Create `test_core.py` with core.py test classes
+- [x] Create `test_core.py` with core.py test classes
 - [ ] Create `test_commands.py` with commands.py test classes
 - [ ] Create `test_integration.py` with integration test classes
 - [ ] Verify all tests pass in new locations
