@@ -27,7 +27,6 @@ from .commands import (
 
 # Import from core module
 from .core import (  # All private functions for test access
-    WORKFLOW_MAPPING,
     CacheData,
     _filter_eligible_issues,
     _get_cache_file_path,
@@ -44,6 +43,9 @@ from .core import (  # All private functions for test access
     load_repo_config,
     validate_repo_config,
 )
+
+# Import from workflow_constants module
+from .workflow_constants import WORKFLOW_MAPPING
 
 __all__ = [
     # Public CLI interface

@@ -31,7 +31,8 @@ from .command_templates import (
     PRIORITY_ORDER,
     TEST_COMMAND_TEMPLATES,
 )
-from .core import WORKFLOW_MAPPING, validate_repo_config
+from .core import validate_repo_config
+from .workflow_constants import WORKFLOW_MAPPING
 
 # Re-export constants for backward compatibility with __init__.py
 # These will be imported directly from command_templates.py in a later refactoring step

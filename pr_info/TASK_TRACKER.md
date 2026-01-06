@@ -87,7 +87,7 @@ See details: [pr_info/steps/step_6.md](steps/step_6.md)
 - [x] Create `coordinator/workflow_constants.py` with WORKFLOW_MAPPING
 - [x] Update `commands.py` to import from `command_templates.py`
 - [x] Update `core.py` to import from both new modules
-- [ ] Remove duplicate templates from `commands.py` and `core.py`
+- [x] Remove duplicate templates from `commands.py` and `core.py`
 - [ ] Update `__init__.py` exports to use new modules
 - [ ] Revert `pyproject.toml` mypy change (remove disable_error_code)
 - [ ] Run quality checks: pylint, pytest, mypy
