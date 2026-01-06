@@ -8,8 +8,8 @@ from ....utils.github_operations.label_config import load_labels_config
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.user_config import create_default_config, get_config_value
 
-# Import from commands module
-from .commands import (
+# Import from command_templates module (constants)
+from .command_templates import (
     CREATE_PLAN_COMMAND_TEMPLATE,
     CREATE_PLAN_COMMAND_WINDOWS,
     CREATE_PR_COMMAND_TEMPLATE,
@@ -20,6 +20,10 @@ from .commands import (
     IMPLEMENT_COMMAND_WINDOWS,
     PRIORITY_ORDER,
     TEST_COMMAND_TEMPLATES,
+)
+
+# Import from commands module (CLI entry points)
+from .commands import (
     execute_coordinator_run,
     execute_coordinator_test,
     format_job_output,

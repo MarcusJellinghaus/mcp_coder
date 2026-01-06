@@ -88,10 +88,10 @@ See details: [pr_info/steps/step_6.md](steps/step_6.md)
 - [x] Update `commands.py` to import from `command_templates.py`
 - [x] Update `core.py` to import from both new modules
 - [x] Remove duplicate templates from `commands.py` and `core.py`
-- [ ] Update `__init__.py` exports to use new modules
-- [ ] Revert `pyproject.toml` mypy change (remove disable_error_code)
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Prepare git commit message for Step 6
+- [x] Update `__init__.py` exports to use new modules
+- [x] Revert `pyproject.toml` mypy change (remove disable_error_code)
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Prepare git commit message for Step 6
 
 ### Step 7: Restructure Test Files
 
