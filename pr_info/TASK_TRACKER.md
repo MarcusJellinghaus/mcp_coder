@@ -83,7 +83,7 @@ See details: [pr_info/steps/step_5.md](steps/step_5.md)
 
 See details: [pr_info/steps/step_6.md](steps/step_6.md)
 
-- [ ] Create `coordinator/command_templates.py` with all template strings
+- [x] Create `coordinator/command_templates.py` with all template strings
 - [ ] Create `coordinator/workflow_constants.py` with WORKFLOW_MAPPING
 - [ ] Update `commands.py` to import from `command_templates.py`
 - [ ] Update `core.py` to import from both new modules
