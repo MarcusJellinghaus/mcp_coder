@@ -11,29 +11,26 @@ by filtering eligible issues and triggering appropriate Jenkins workflows.
 import argparse
 import logging
 import sys
-from typing import Optional
+
+# Lazy imports from coordinator package to enable test patching
+# Tests can patch at 'mcp_coder.cli.commands.coordinator.<name>'
+from typing import TYPE_CHECKING, Optional
 
 from ....utils.github_operations.github_utils import RepoIdentifier
-from ....utils.github_operations.issue_branch_manager import IssueBranchManager
-from ....utils.github_operations.issue_manager import IssueManager
-from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.jenkins_operations.models import JobStatus
-from ....utils.user_config import (
-    create_default_config,
-    get_config_file_path,
-    load_config,
-)
-from .core import (
-    WORKFLOW_MAPPING,
-    _update_issue_labels_in_cache,
-    dispatch_workflow,
-    get_cache_refresh_minutes,
-    get_cached_eligible_issues,
-    get_eligible_issues,
-    get_jenkins_credentials,
-    load_repo_config,
-    validate_repo_config,
-)
+from ....utils.user_config import get_config_file_path, load_config
+from .core import WORKFLOW_MAPPING, validate_repo_config
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+
+def _get_coordinator() -> "ModuleType":
+    """Get coordinator package for late binding of patchable functions."""
+    from mcp_coder.cli.commands import coordinator
+
+    return coordinator
+
 
 logger = logging.getLogger(__name__)
 
@@ -299,8 +296,11 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         int: Exit code (0 for success, 1 for error)
     """
     try:
+        # Get coordinator for patchable function access
+        coordinator = _get_coordinator()
+
         # Auto-create config on first run
-        created = create_default_config()
+        created = coordinator.create_default_config()
         if created:
             config_path = get_config_file_path()
             logger.info(
@@ -311,26 +311,26 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
             return 1  # Exit to let user configure
 
         # Load and validate repository config
-        repo_config = load_repo_config(args.repo_name)
+        repo_config = coordinator.load_repo_config(args.repo_name)
         validate_repo_config(args.repo_name, repo_config)
 
         # Type narrowing: validate_repo_config raises if any fields are None
         # After validation, we can safely cast to non-optional dict
         validated_config: dict[str, str] = {
-            "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
-            "executor_job_path": repo_config["executor_job_path"],  # type: ignore[dict-item]
-            "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
+            "repo_url": repo_config["repo_url"],
+            "executor_job_path": repo_config["executor_job_path"],
+            "github_credentials_id": repo_config["github_credentials_id"],
         }
 
         # Get Jenkins credentials
-        server_url, username, api_token = get_jenkins_credentials()
+        server_url, username, api_token = coordinator.get_jenkins_credentials()
 
         # Create Jenkins client
-        client = JenkinsClient(server_url, username, api_token)
+        client = coordinator.JenkinsClient(server_url, username, api_token)
 
         # Select template based on OS using dictionary mapping
         # executor_os is guaranteed to be non-None and one of {"windows", "linux"} after validation
-        executor_os: str = repo_config["executor_os"]  # type: ignore[assignment]
+        executor_os: str = repo_config["executor_os"]
         test_command = TEST_COMMAND_TEMPLATES[executor_os].format(
             log_level=args.log_level
         )
@@ -391,8 +391,11 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         Exception: Any unexpected errors (not caught, let bubble up)
     """
     try:
+        # Get coordinator for patchable function access
+        coordinator = _get_coordinator()
+
         # Step 1: Auto-create config on first run
-        created = create_default_config()
+        created = coordinator.create_default_config()
         if created:
             config_path = get_config_file_path()
             logger.info(
@@ -423,13 +426,13 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             return 1
 
         # Step 3: Get Jenkins credentials (shared across all repos)
-        server_url, username, api_token = get_jenkins_credentials()
-        jenkins_client = JenkinsClient(server_url, username, api_token)
+        server_url, username, api_token = coordinator.get_jenkins_credentials()
+        jenkins_client = coordinator.JenkinsClient(server_url, username, api_token)
 
         # Step 4: Process each repository
         for repo_name in repo_names:
             # Step 4a: Load and validate repo config
-            repo_config = load_repo_config(repo_name)
+            repo_config = coordinator.load_repo_config(repo_name)
             validate_repo_config(repo_name, repo_config)
 
             # Log repository header with URL
@@ -441,15 +444,19 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             # Type narrowing: validate_repo_config raises if any fields are None
             # Use .get() for executor_os with default to ensure backward compatibility
             validated_config: dict[str, str] = {
-                "repo_url": repo_config["repo_url"],  # type: ignore[dict-item]
-                "executor_job_path": repo_config["executor_job_path"],  # type: ignore[dict-item]
-                "github_credentials_id": repo_config["github_credentials_id"],  # type: ignore[dict-item]
-                "executor_os": repo_config.get("executor_os", "linux"),  # type: ignore[dict-item]
+                "repo_url": repo_config["repo_url"],
+                "executor_job_path": repo_config["executor_job_path"],
+                "github_credentials_id": repo_config["github_credentials_id"],
+                "executor_os": repo_config.get("executor_os", "linux"),
             }
 
             # Step 4b: Create managers
-            issue_manager = IssueManager(repo_url=validated_config["repo_url"])
-            branch_manager = IssueBranchManager(repo_url=validated_config["repo_url"])
+            issue_manager = coordinator.IssueManager(
+                repo_url=validated_config["repo_url"]
+            )
+            branch_manager = coordinator.IssueBranchManager(
+                repo_url=validated_config["repo_url"]
+            )
 
             # Step 4c: Get eligible issues using cache
             # Create RepoIdentifier from repo_url
@@ -462,17 +469,17 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                 repo_full_name = repo_name
 
             try:
-                eligible_issues = get_cached_eligible_issues(
+                eligible_issues = coordinator.get_cached_eligible_issues(
                     repo_full_name=repo_full_name,
                     issue_manager=issue_manager,
                     force_refresh=args.force_refresh,
-                    cache_refresh_minutes=get_cache_refresh_minutes(),
+                    cache_refresh_minutes=coordinator.get_cache_refresh_minutes(),
                 )
             except Exception as e:
                 logger.warning(
                     f"Cache failed for {repo_full_name}: {e}, using direct fetch"
                 )
-                eligible_issues = get_eligible_issues(issue_manager)
+                eligible_issues = coordinator.get_eligible_issues(issue_manager)
 
             logger.info(f"Found {len(eligible_issues)} eligible issues")
 
@@ -500,7 +507,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                 workflow_name = workflow_config["workflow"]
 
                 try:
-                    dispatch_workflow(
+                    coordinator.dispatch_workflow(
                         issue=issue,
                         workflow_name=workflow_name,
                         repo_config=validated_config,
@@ -512,7 +519,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
 
                     # Update cache with new labels immediately after successful dispatch
                     try:
-                        _update_issue_labels_in_cache(
+                        coordinator._update_issue_labels_in_cache(
                             repo_full_name=repo_full_name,
                             issue_number=issue["number"],
                             old_label=current_label,

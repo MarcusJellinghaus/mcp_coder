@@ -7,19 +7,19 @@ This module contains:
 - Workflow dispatch function
 """
 
-import argparse
 import json
 import logging
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict
+
+# Lazy imports from coordinator package to enable test patching
+# Tests can patch at 'mcp_coder.cli.commands.coordinator.<name>'
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
 from urllib.parse import quote
 
 from ....utils.github_operations.github_utils import RepoIdentifier
 from ....utils.github_operations.issue_branch_manager import IssueBranchManager
 from ....utils.github_operations.issue_manager import IssueData, IssueManager
-from ....utils.github_operations.label_config import load_labels_config
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.jenkins_operations.models import JobStatus
 from ....utils.timezone_utils import (
@@ -28,12 +28,18 @@ from ....utils.timezone_utils import (
     now_utc,
     parse_iso_timestamp,
 )
-from ....utils.user_config import (
-    create_default_config,
-    get_config_file_path,
-    get_config_value,
-    load_config,
-)
+from ....utils.user_config import get_config_file_path
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+
+def _get_coordinator() -> "ModuleType":
+    """Get coordinator package for late binding of patchable functions."""
+    from mcp_coder.cli.commands import coordinator
+
+    return coordinator
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +54,19 @@ def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
         Dictionary with repo_url, executor_job_path, github_credentials_id, executor_os
         Values may be None except executor_os which defaults to "linux" (normalized to lowercase)
     """
+    # Use late binding for patchable function access
+    coordinator = _get_coordinator()
+
     section = f"coordinator.repos.{repo_name}"
 
-    repo_url = get_config_value(section, "repo_url")
-    executor_job_path = get_config_value(section, "executor_job_path")
-    github_credentials_id = get_config_value(section, "github_credentials_id")
+    repo_url = coordinator.get_config_value(section, "repo_url")
+    executor_job_path = coordinator.get_config_value(section, "executor_job_path")
+    github_credentials_id = coordinator.get_config_value(
+        section, "github_credentials_id"
+    )
 
     # Load executor_os with default and normalize to lowercase
-    executor_os = get_config_value(section, "executor_os")
+    executor_os = coordinator.get_config_value(section, "executor_os")
     if executor_os:
         executor_os = executor_os.lower()  # Normalize to lowercase
     else:
@@ -130,7 +141,10 @@ def get_cache_refresh_minutes() -> int:
     Returns:
         Cache refresh threshold in minutes (default: 1440 = 24 hours)
     """
-    value = get_config_value("coordinator", "cache_refresh_minutes")
+    # Use late binding for patchable function access
+    coordinator = _get_coordinator()
+
+    value = coordinator.get_config_value("coordinator", "cache_refresh_minutes")
 
     if value is None:
         return 1440  # Default: 24 hours
@@ -161,10 +175,13 @@ def get_jenkins_credentials() -> tuple[str, str, str]:
     Raises:
         ValueError: If any required credential is missing
     """
+    # Use late binding for patchable function access
+    coordinator = _get_coordinator()
+
     # get_config_value automatically checks environment variables first
-    server_url = get_config_value("jenkins", "server_url")
-    username = get_config_value("jenkins", "username")
-    api_token = get_config_value("jenkins", "api_token")
+    server_url = coordinator.get_config_value("jenkins", "server_url")
+    username = coordinator.get_config_value("jenkins", "username")
+    api_token = coordinator.get_config_value("jenkins", "api_token")
 
     # Check for missing credentials
     missing = []
@@ -319,13 +336,16 @@ def _update_issue_labels_in_cache(
         the main workflow. The next cache refresh will fetch correct data
         from GitHub API.
     """
+    # Use late binding for patchable function access
+    coordinator = _get_coordinator()
+
     try:
         # Step 1: Parse repository identifier
         repo_identifier = RepoIdentifier.from_full_name(repo_full_name)
 
         # Step 2: Load existing cache
-        cache_file_path = _get_cache_file_path(repo_identifier)
-        cache_data = _load_cache_file(cache_file_path)
+        cache_file_path = coordinator._get_cache_file_path(repo_identifier)
+        cache_data = coordinator._load_cache_file(cache_file_path)
 
         # Step 3: Find target issue in cache
         issue_key = str(issue_number)
@@ -352,7 +372,7 @@ def _update_issue_labels_in_cache(
         cache_data["issues"][issue_key] = issue
 
         # Step 5: Save updated cache
-        save_success = _save_cache_file(cache_file_path, cache_data)
+        save_success = coordinator._save_cache_file(cache_file_path, cache_data)
         if save_success:
             logger.debug(
                 f"Updated issue #{issue_number} labels in cache: '{old_label}' -> '{new_label}'"
@@ -415,12 +435,15 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
     Returns:
         List of eligible issues sorted by priority
     """
+    # Use late binding for patchable function access
+    coordinator = _get_coordinator()
+
     # Load label configuration
     from importlib import resources
 
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))
-    labels_config = load_labels_config(config_path)
+    labels_config = coordinator.load_labels_config(config_path)
 
     # Extract bot_pickup labels and ignore_labels
     bot_pickup_labels = set()
@@ -492,13 +515,16 @@ def get_eligible_issues(
     Raises:
         GithubException: If GitHub API errors occur
     """
+    # Use late binding for patchable function access
+    coordinator = _get_coordinator()
+
     # Load label configuration
     # Uses bundled package config (coordinator operates without local project context)
     from importlib import resources
 
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))
-    labels_config = load_labels_config(config_path)
+    labels_config = coordinator.load_labels_config(config_path)
 
     # Extract bot_pickup labels (labels with category="bot_pickup")
     bot_pickup_labels = set()
@@ -578,18 +604,21 @@ def get_cached_eligible_issues(
     Returns:
         List of eligible issues (open state, meeting bot pickup criteria)
     """
+    # Use late binding for patchable function access
+    coordinator = _get_coordinator()
+
     repo_identifier = None
     try:
         # Step 1: Create RepoIdentifier from repo_full_name
         repo_identifier = RepoIdentifier.from_full_name(repo_full_name)
 
         # Step 2: Check duplicate protection (1-minute window) with RepoIdentifier
-        cache_file_path = _get_cache_file_path(repo_identifier)
+        cache_file_path = coordinator._get_cache_file_path(repo_identifier)
         try:
-            cache_data = _load_cache_file(cache_file_path)
+            cache_data = coordinator._load_cache_file(cache_file_path)
         except Exception as cache_error:
             # If cache loading fails with unexpected error, fall back to direct fetch
-            _log_cache_metrics(
+            coordinator._log_cache_metrics(
                 "miss",
                 repo_identifier.repo_name,
                 reason=f"cache_load_error_{type(cache_error).__name__}",
@@ -597,10 +626,10 @@ def get_cached_eligible_issues(
             logger.warning(
                 f"Cache load error for {repo_identifier.full_name}: {cache_error}, falling back to direct fetch"
             )
-            return get_eligible_issues(issue_manager)
+            return coordinator.get_eligible_issues(issue_manager)  # type: ignore[no-any-return]
 
         # Log cache metrics
-        _log_cache_metrics(
+        coordinator._log_cache_metrics(
             "miss" if not cache_data["last_checked"] else "hit",
             repo_identifier.repo_name,
             reason="no_cache" if not cache_data["last_checked"] else "cache_found",
@@ -625,7 +654,7 @@ def get_cached_eligible_issues(
             and is_within_duration(last_checked, 60.0, now)
         ):
             age_seconds = int((now - last_checked).total_seconds())
-            _log_cache_metrics(
+            coordinator._log_cache_metrics(
                 "hit",
                 repo_identifier.repo_name,
                 age_minutes=0,
@@ -636,7 +665,7 @@ def get_cached_eligible_issues(
             )
             # Return cached eligible issues instead of empty list
             all_cached_issues = list(cache_data["issues"].values())
-            return _filter_eligible_issues(all_cached_issues)
+            return coordinator._filter_eligible_issues(all_cached_issues)  # type: ignore[no-any-return]
 
         # Step 3: Determine refresh strategy
         is_full_refresh = (
@@ -654,7 +683,7 @@ def get_cached_eligible_issues(
             fresh_issues = issue_manager.list_issues(
                 state="open", include_pull_requests=False
             )
-            _log_cache_metrics(
+            coordinator._log_cache_metrics(
                 "refresh",
                 repo_identifier.repo_name,
                 refresh_type=refresh_type,
@@ -666,7 +695,9 @@ def get_cached_eligible_issues(
                 fresh_issues_dict = {
                     str(issue["number"]): issue for issue in fresh_issues
                 }
-                _log_stale_cache_entries(cache_data["issues"], fresh_issues_dict)
+                coordinator._log_stale_cache_entries(
+                    cache_data["issues"], fresh_issues_dict
+                )
         else:
             # last_checked is guaranteed to be non-None here due to is_full_refresh logic
             assert last_checked is not None
@@ -679,7 +710,7 @@ def get_cached_eligible_issues(
             fresh_issues = issue_manager.list_issues(
                 state="open", include_pull_requests=False, since=last_checked
             )
-            _log_cache_metrics(
+            coordinator._log_cache_metrics(
                 "refresh",
                 repo_identifier.repo_name,
                 refresh_type="incremental",
@@ -696,9 +727,9 @@ def get_cached_eligible_issues(
 
         # Always save cache to update last_checked timestamp
         # This ensures incremental fetches work properly on subsequent runs
-        save_success = _save_cache_file(cache_file_path, cache_data)
+        save_success = coordinator._save_cache_file(cache_file_path, cache_data)
         if save_success:
-            _log_cache_metrics(
+            coordinator._log_cache_metrics(
                 "save",
                 repo_identifier.repo_name,
                 total_issues=len(cache_data["issues"]),
@@ -706,9 +737,9 @@ def get_cached_eligible_issues(
 
         # Step 7: Filter cached issues for eligibility
         all_cached_issues = list(cache_data["issues"].values())
-        eligible_issues = _filter_eligible_issues(all_cached_issues)
+        eligible_issues = coordinator._filter_eligible_issues(all_cached_issues)
 
-        _log_cache_metrics(
+        coordinator._log_cache_metrics(
             "hit",
             repo_identifier.repo_name,
             age_minutes=(
@@ -720,16 +751,18 @@ def get_cached_eligible_issues(
         logger.debug(
             f"Cache returned {len(eligible_issues)} eligible issues for {repo_identifier.repo_name}"
         )
-        return eligible_issues
+        return eligible_issues  # type: ignore[no-any-return]
 
     except (ValueError, KeyError, TypeError) as e:
         repo_name = repo_identifier.repo_name if repo_identifier else "unknown_repo"
         full_name = repo_identifier.full_name if repo_identifier else "unknown/unknown"
-        _log_cache_metrics("miss", repo_name, reason=f"error_{type(e).__name__}")
+        coordinator._log_cache_metrics(
+            "miss", repo_name, reason=f"error_{type(e).__name__}"
+        )
         logger.warning(
             f"Cache error for {full_name}: {e}, falling back to direct fetch"
         )
-        return get_eligible_issues(issue_manager)
+        return coordinator.get_eligible_issues(issue_manager)  # type: ignore[no-any-return]
 
 
 # Workflow configuration mapping

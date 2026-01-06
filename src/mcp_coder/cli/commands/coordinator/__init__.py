@@ -1,5 +1,13 @@
 """Coordinator CLI commands for automated workflow orchestration."""
 
+# Import external dependencies for test patching support
+# Tests patch these at 'mcp_coder.cli.commands.coordinator.<name>'
+from ....utils.github_operations.issue_branch_manager import IssueBranchManager
+from ....utils.github_operations.issue_manager import IssueManager
+from ....utils.github_operations.label_config import load_labels_config
+from ....utils.jenkins_operations.client import JenkinsClient
+from ....utils.user_config import create_default_config, get_config_value
+
 # Import from commands module
 from .commands import (
     CREATE_PLAN_COMMAND_TEMPLATE,
@@ -71,4 +79,11 @@ __all__ = [
     "_update_issue_labels_in_cache",
     "_log_cache_metrics",
     "_log_stale_cache_entries",
+    # External dependencies (for test patching)
+    "create_default_config",
+    "get_config_value",
+    "load_labels_config",
+    "JenkinsClient",
+    "IssueManager",
+    "IssueBranchManager",
 ]
