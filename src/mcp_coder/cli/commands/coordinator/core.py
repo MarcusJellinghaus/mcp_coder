@@ -14,7 +14,8 @@ from pathlib import Path
 
 # Lazy imports from coordinator package to enable test patching
 # Tests can patch at 'mcp_coder.cli.commands.coordinator.<name>'
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
+from types import ModuleType
+from typing import Any, Dict, List, Optional, TypedDict
 from urllib.parse import quote
 
 from ....utils.github_operations.github_utils import RepoIdentifier
@@ -40,11 +41,8 @@ from .command_templates import (
 )
 from .workflow_constants import WORKFLOW_MAPPING
 
-if TYPE_CHECKING:
-    from types import ModuleType
 
-
-def _get_coordinator() -> "ModuleType":
+def _get_coordinator() -> ModuleType:
     """Get coordinator package for late binding of patchable functions."""
     from mcp_coder.cli.commands import coordinator
 
