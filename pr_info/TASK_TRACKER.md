@@ -36,9 +36,9 @@ Reference: [pr_info/steps/step_2.md](steps/step_2.md)
 ### Step 3: Add Documentation to CONFIG.md
 Reference: [pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Implement Step 3: Add "Dependency Architecture for Automated Workflows" section to CONFIG.md
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Implement Step 3: Add "Dependency Architecture for Automated Workflows" section to CONFIG.md
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 3
 
 ---
 
