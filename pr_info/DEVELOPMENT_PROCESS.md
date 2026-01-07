@@ -110,9 +110,10 @@ flowchart TD
 
 **Note:** *Workflow supports iteration - plans can be revised during review, code can be reworked during review, and PRs may require returning to implementation for major changes.*
 
-**Detailed Workflows:** See sections below for step-by-step details: 
-- [1. Issue Discussion](#1-issue-discussion-workflow) 
-- [2. Plan Creation](#2-plan-creation-workflow) 
+**Detailed Workflows:** See sections below for step-by-step details:
+
+- [1. Issue Discussion](#1-issue-discussion-workflow)
+- [2. Plan Creation](#2-plan-creation-workflow)
 - [3. Plan Review](#3-plan-review-workflow)
 - [4. Implementation](#4-implementation-workflow)
 - [5. Code Review](#5-code-review-workflow)
@@ -122,6 +123,7 @@ flowchart TD
 ### Key Characteristics
 
 **🎭 Roles:**
+
 - **Human Orchestrator** - Guides process, makes decisions, reviews outputs
 - **LLM Assistant** - Generates code, plans, documentation via structured prompts
 - **Automated Tools** - Quality checks (pylint, mypy, pytest), formatting, git operations
@@ -164,6 +166,7 @@ flowchart LR
 
 **Tools:** Claude Desktop/Chat  
 **Key Steps:**
+
 - Discuss requirements and feasibility
 - Refine issue description
 - Add implementation hints (without detailed plan)
@@ -180,21 +183,23 @@ Please also look at the code base to understand the context (using the different
 Do not provide code yet!
 At the end of our discussion, I want to have an even better issue description.
 ```
+
 </details>
 
- <details>
- <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
- 
- ```
- Can we go through all open suggested changes and questions step by step?
- You explain, ask and I answer until we discussed all topics?
- Please offer, whenever possible, simple options like 
- - A
- - B
- - C
- Always just ask ONE question
- ```
- </details>
+<details>
+<summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
+
+```
+Can we go through all open suggested changes and questions step by step?
+You explain, ask and I answer until we discussed all topics?
+Please offer, whenever possible, simple options like 
+- A
+- B
+- C
+Always just ask ONE question
+```
+
+</details>
 
 <details>
 <summary>📋 Draft Issue Text (click to expand and copy)</summary>
@@ -204,6 +209,7 @@ Let's draft the issue text, with some very limited, concise implementation ideas
 The implementation plan should be developed later. Focus on the issue and include the discussed details.
 Please provide the issue text (with issue header!) as markdown artifact, so that I can easily update the issue on GitHub.
 ```
+
 </details>
 
 ---
@@ -216,8 +222,8 @@ Let's draft the initial analysis text, with some very limited, concise implement
 The implementation plan should be developed later. Focus on the issue and include the discussed details.
 Please provide the issue text as markdown artifact, so that I can easily update the issue on GitHub by adding the analysis text.
 ```
-</details>
 
+</details>
 
 ### 2. Plan Creation Workflow
 
@@ -250,6 +256,7 @@ flowchart LR
 **Output:** Implementation plan files with summary and steps (summary.md, step_*.md)
 
 **Process:**
+
 - Creates feature branch
 - Analyzes requirements
 - Generates plan using three prompts (🔗 [prompts.md](../src/mcp_coder/prompts/prompts.md#plan-generation-workflow)):
@@ -291,10 +298,11 @@ flowchart LR
 ```
 
 **Interactive Review Process:**
+
 1. **Review the project plan**
    <details>
    <summary>📋 Review the implementation plan</summary>
-   
+
    ```
    Please review the project plan for a new feature in folder PR_Info\steps.
    Please revise the project plan with a balanced level of detail.
@@ -304,12 +312,13 @@ flowchart LR
    Please consider the already discussed and decided decisions (if any) under decisions.
    We do not need to challenge them again unless absolutely necessary.
    ```
+
    </details>
 
 2. **Step-by-step discussion**
    <details>
    <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
-   
+
    ```
    Can we go through all open suggested changes and questions step by step?
    You explain, ask and I answer until we discussed all topics?
@@ -319,12 +328,13 @@ flowchart LR
    - C
    Always just ask ONE question
    ```
+
    </details>
 
 3. **Update plan files**
    <details>
    <summary>📋 Update Plan Files</summary>
-   
+
    ```
    Can you update the plan by updating the different files in folder `pr_info\steps`
    Please do targeted changes.
@@ -333,15 +343,17 @@ flowchart LR
    Only put those decisions that we discussed, no invented decisions 
    ( For each decision that you log, consider whether you discussed it with me and when I said so )
    ```
+
    </details>
 
 4. **Commit updated implementation plan**
    <details>
    <summary>📋 Commit updated implementation plan with</summary>
-   
+
    ```
    Updated implementation plan
    ```
+
    </details>
 
 5. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
@@ -349,7 +361,6 @@ flowchart LR
 6. **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
 
 **Additional Prompts (for special cases):**
-
 
 <details>
 <summary>📋 Requirements Update Note</summary>
@@ -360,9 +371,9 @@ put something in the project plan to stop and tell me,
 so that I can install the requirements. 
 This is important so that unit tests can work.
 ```
+
 Alternatively, update the pyproject.toml already at this stage, and install the dependencies (if required).
 </details>
-
 
 <details>
 <summary>📋 Consistency Review</summary>
@@ -378,6 +389,7 @@ Please review the project plan for a new feature in the folder PR_Info\steps.
 Please review for consistency.
 Please tell me all inconsistencies you find and how you want to fix them.
 ```
+
 </details>
 
 <details>
@@ -387,11 +399,12 @@ Please tell me all inconsistencies you find and how you want to fix them.
 Please summarise the changes you want to do to the project plan for confirmation as 
 (one-liner bullet points)
 ```
+
 Use in case of uncertainty.
 </details>
 
-
 **🔄 Alternative Paths:**
+
 - **Minor Revisions:** Loop back within the review process - refine and re-discuss plan details, e.g., until no more changes required.
 - **Major Restart:** Return to `status:awaiting-planning` if fundamental approach needs reconsideration. In this case, delete the files for the implementation plan.
 
@@ -426,11 +439,13 @@ flowchart LR
 #### Tool: `mcp-coder implement` (fully automated)
 
 **✨ Quality Gates:**
+
 - All code changes validated through: **pylint** → **pytest** → **mypy**, by llm and by routine when implementation is done
 - Automated formatting with **black** and **isort**
 - Git commits only after all checks pass
 
 **🔄 Iteration Support:**
+
 - Project plan contains several steps, implementation loops over the steps
 - Each step starts with a fresh context
 - Step-by-step approach prevents overwhelming changes
@@ -438,6 +453,7 @@ flowchart LR
 **Output:** Implemented code with all quality checks passed
 
 **Process:**
+
 - Updates TASK_TRACKER.md with implementation steps
 - Implements each step from the tracker
 - Runs quality checks (pylint → pytest → mypy) after each step
@@ -449,6 +465,7 @@ flowchart LR
   - 🔗 [Mypy Fix](../src/mcp_coder/prompts/prompts.md#mypy-fix-prompt)
 
 **🔄 Alternative Paths:**
+
 - (WIP)
 - **Plan Issues Discovered:** Return to `status:plan-review` if implementation reveals plan needs adjustment
 - **Critical Blocker:** Return to `status:awaiting-planning` if fundamental redesign required
@@ -459,11 +476,12 @@ flowchart LR
 
 **Preparing for implementation:**
 
-##### 4.1 Task Tracker Update Prompt:
+##### 4.1 Task Tracker Update Prompt
 
 See: [Task Tracker Update Prompt](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt) in `src/mcp_coder/prompts/prompts.md`
 
-- commit afterwards with 
+- commit afterwards with
+
   ```
   TASK_TRACKER.md with implementation steps and PR tasks updated
   ```
@@ -475,12 +493,14 @@ Each step consists of two main phases:
 ##### 4.2 Code Implementation and Quality Validation
 
 **Process:**
+
 - Implement the required functionality
 - Follow TDD practices where applicable
 - Run comprehensive quality checks
 - Fix all issues until checks pass
 
 **Quality Validation Steps:**
+
 - **Run pytest:**
   - Execute all tests
   - Check for side effects (test files, temporary data)
@@ -494,11 +514,13 @@ Each step consists of two main phases:
   - Fix type-related issues
 
 **Context Length Considerations:**
+
 - **Preferred:** Complete all implementation and validation in one conversation
 - **If context limit reached:** Acceptable to run mypy checks and fixes separately
 - **Less preferred but possible:** Run pytest and pylint separately if needed
 
 **Tools:**
+
 - `tools/checks2clipboard.bat` - **Primary tool**: Run all checks (pylint, pytest, mypy) and copy results to clipboard for LLM analysis
   - Handles test side effects checking
   - Provides structured output for LLM review
@@ -510,6 +532,7 @@ Each step consists of two main phases:
 See: [Implementation Prompt Template using task tracker](../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker) in `src/mcp_coder/prompts/prompts.md`
 
 Possible follow up question:
+
 ```
 Did you implement everything of the current step?
 Do you have a commit message?
@@ -518,21 +541,26 @@ Did you tick of the tasks in the task tracker?
 
 **Common Implementation Failures & Responses:**
 
-- ** Checks do not work **
+- **Checks do not work**
   - Sometimes, mypy tests were forgotten and do not work:
-    - Prompt 
+    - Prompt
+
       ```
       Please run mypy checks and work on possible issues and fix it.
       ```
+
     - run pylint and pytest after that
     - run formatter after that
     - commit with auto and/or with mypy fixing info, or ask session for a commit message
+
       ```
       Please provide a concise commit message  in markdown code format (```)
-      ``` 
+      ```
+
       - triple ticks might or might not be provided
       - Claude might add a useless footer:
-        ``` 
+
+        ```
          🤖 Generated with [Claude Code](https://claude.ai/code)
 
           Co-Authored-By: Claude <noreply@anthropic.com>
@@ -545,6 +573,7 @@ Did you tick of the tasks in the task tracker?
 
 - **Implementation gets stuck in a certain step**
   - Working prompt:
+
     ```
     Please take a look at 
     pr_info/TASK_TRACKER.md
@@ -568,13 +597,12 @@ Did you tick of the tasks in the task tracker?
   - Task was unnecessary or already implemented
   - *Response:* Mark as complete, update plan for remaining tasks
   
-- ** Check for slower and slower unit tests **
+- **Check for slower and slower unit tests**
 
-- ** Check for file / folder / module names **
+- **Check for file / folder / module names**
   - Files or folders might have wrong location or names. Eg test files should follow the same folder structure like the code.
 
-
-** Possible prompt for too complex task**
+**Possible prompt for too complex task**
 
 ```
 Please look at pr_info/TASK_TRACKER.md and pick the next task that should be done.
@@ -591,10 +619,9 @@ Please tell me whether this is feasible, how complicated it is, whether it could
 
 ( still to be done)
 
-
 ##### 4.4 Working with Todos
 
-Put some todos in your code and work on them using 
+Put some todos in your code and work on them using
 
 ```commandline
 Please take a look
@@ -604,11 +631,10 @@ There are many todos in there - please take the first one, can we work on just t
 Tell me what needs to be done, do not yet modify any code!
 ```
 
-
-
 ##### 4.5 Commit Preparation
 
 **Process:**
+
 - format
 - get commit message
   - Parse commit message from chat conversation
@@ -616,18 +642,21 @@ Tell me what needs to be done, do not yet modify any code!
 - commit changes
 
 **Commit Message Prompt when working on a step:**
+
 ```
 Please provide a short concise commit message stating the step name in the title.
 ```
 
-
 **Commit message prompt after a small change:**
+
 ```
 Can you provide a short commit message with short info on relevant changes?
 ```
+
 This could benefit from `format_and_commit` tool.
 
 **Tools:**
+
 - `tools/format_all.bat` - Run all formatting tools (ruff, black, isort)
 - `mcp-coder commit clipboard` - to commit all changes with a commit message from the clipboard
 - `mcp-coder commit auto` - to commit all changes with a commit message generated via LLM from the git diff
@@ -698,26 +727,57 @@ flowchart TD
 ```
 
 **Tools:** `pr_review.bat`, checks2clipboard.bat  
+or alternatively the following prompt:
+<details>
+<summary>📋 Code Review Prompt (click to expand and copy)</summary>
+
+````
+## Code Review Request
+
+Run this command to get the changes to review:
+```
+git diff --unified=5 --no-prefix %BASE_BRANCH%...HEAD -- . ":(exclude)pr_info/.conversations/**"
+```
+
+No need to run all checks; do not use pylint warnings. Feel free to further analyse any mentioned files and/or the file structure.
+
+### Focus Areas:
+- Logic errors or bugs
+- Tests for `__main__` functions should be removed (not needed)
+- Unnecessary debug code or print statements
+- Code that could break existing functionality
+- Compliance with existing architecture principles, see `docs/architecture/ARCHITECTURE.md`
+
+### Output Format:
+1. **Summary** - What changed (1-2 sentences)
+2. **Critical Issues** - Must fix before merging
+3. **Suggestions** - Nice to have improvements
+4. **Good** - What works well
+
+Do not perform any action. Just present the code review.
+````
+
+</details>
 
 **Review the result of the pull request review**
-- use the ABC prompt
-  <details>
-  <summary>📋 ABC Discussion Prompt (click to expand and copy)</summary>
-  
-  ```
-  Can we go through all open suggested changes and questions step by step?
-  You explain, ask and I answer until we discussed all topics?
-  Please offer, whenever possible, simple options like 
-  - A
-  - B
-  - C
-  
-  We will use the discussion later to add more tasks to the implementation plan files under pr_info\steps
-  ```
-  </details>
+<details>
+<summary>📋 ABC Discussion Prompt (click to expand and copy)</summary>
 
+```
+Can we go through all open suggested changes and questions step by step?
+You explain, ask and I answer until we discussed all topics?
+Please offer, whenever possible, simple options like 
+- A
+- B
+- C
+
+We will use the discussion later to add more tasks to the implementation plan files under pr_info\steps
+```
+
+</details>
 
 **Key Steps:**
+
 - Review implementation completeness
 - Check code quality and tests
 - Run additional validation
@@ -727,6 +787,7 @@ flowchart TD
 **See detailed prompts below in section 5.2**
 
 **🔄 Alternative Paths:**
+
 - **Minor Fixes Needed:** Review the suggestion and do a few one-shot additional implementations - with adhoc prompting (stay in `status:code-review`)
 - **Major Issues Found:** Ask the LLM to draft additional implementation steps, then change to `status:plan-ready` to implement them
   <details>
@@ -757,9 +818,11 @@ flowchart TD
   ```
 
   - Commit the changes with the extended implementation plan with
+
     ```
       Implementation plan extended based on code review findings
     ```
+
   - Adjust the status to `status:plan-ready`
   </details>
 - **Fundamental Problems:** Return to `status:plan-review` or `status:created` for complete redesign
@@ -773,6 +836,7 @@ After all implementation steps are complete:
 ##### 5.1 Run more detailed checks / additional checks and update tasks
 
 Run certain checks in an automated way and deal with possibly highlighted issues:
+
 - Pylint warnings
 - (custom checks - to be developed)
 - Check pytest runtime
@@ -783,6 +847,7 @@ Run certain checks in an automated way and deal with possibly highlighted issues
 ##### 5.2 PR Review
 
 **Process:**
+
 - Review the entire pull request for the feature via an LLM prompt
   - `tools/pr_review.bat` - Generate detailed PR review prompt with git diff
 - Review of LLM review output, decide on next steps based on findings
@@ -824,6 +889,7 @@ flowchart LR
 **Output:** Pull request created on GitHub with summary
 
 **Process:**
+
 - Generates PR summary from git diff using LLM
 - Cleans up pr_info folder (deletes steps/, clears TASK_TRACKER.md tasks)
 - Commits cleanup changes
@@ -840,12 +906,14 @@ flowchart LR
 ##### 6.1 Create Summary (Manual Process - Now Automated)
 
 **Process:**
+
 - Generate comprehensive feature summary
 - Document what was implemented and why
 - Create PR description for external review
 - Clean up PR_Info folder
 
 **Tools:**
+
 - `tools/pr_summary.bat` - Generate PR summary creation prompt
   - Reads PR_Info folder context
   - Includes full git diff for comprehensive summary
@@ -853,6 +921,7 @@ flowchart LR
   - Provides structured prompt for LLM summary generation
   - Cleans up development artifacts: deletes `steps/` subfolder and clears Tasks section from `TASK_TRACKER.md`
   - commit everything except `PR_Info/summary.md` with commit message
+
     ```
     pr_info\steps cleaned up
     ```
@@ -940,8 +1009,8 @@ flowchart LR
 
 **Tools:** GitHub PR interface  
 **Key Steps:**
+
 - Final review of changes
 - Check CI/CD passes
 - Approve and merge PR
 - Close related issue (automatically done by GitHub)
-

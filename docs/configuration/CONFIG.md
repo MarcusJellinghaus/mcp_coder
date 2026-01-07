@@ -440,6 +440,57 @@ which mcp-coder && mcp-coder --version
 
 **Note**: The test command is currently hardcoded in the coordinator implementation. Future versions may support custom test commands per repository via configuration.
 
+## Dependency Architecture for Automated Workflows
+
+When using mcp-coder in automated Jenkins workflows, there are two separate Python environments:
+
+### Two-Environment Model
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Execution Environment (VENV_BASE_DIR/.venv)                │
+│  Pre-provisioned: mcp-coder, mcp-code-checker,              │
+│  mcp-server-filesystem, claude CLI, pytest, mypy, pylint    │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           │ 1. uv sync --extra types (in repo/)
+                           │ 2. mcp-coder implement
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Project Environment (repo/.venv)                           │
+│  Per-run: project dependencies + type stubs                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why Type Stubs Need Separate Installation
+
+The MCP code-checker runs mypy against **project code** using the **project's virtual environment**. For mypy to resolve types correctly, type stub packages (e.g., `types-requests`, `types-pyperclip`) must be installed in the project's `.venv`, not the execution environment.
+
+The coordinator command templates automatically run `uv sync --extra types` in the project directory before executing mcp-coder commands.
+
+### Configuring Your Project for Automated Workflows
+
+If your project uses mcp-coder workflows, define a `types` extra in your `pyproject.toml`:
+
+```toml
+[project.optional-dependencies]
+# Type stubs required for mypy in automated workflows
+types = [
+    "types-requests>=2.28.0",
+    # Add other type stubs your project needs
+]
+
+# Full dev setup for local development
+dev = [
+    "your-project[types]",
+    # Other dev dependencies...
+]
+```
+
+This ensures:
+- Automated workflows install only type stubs (`uv sync --extra types`)
+- Local development installs everything (`pip install -e ".[dev]"`)
+
 ## Troubleshooting
 
 ### Error: Repository not found

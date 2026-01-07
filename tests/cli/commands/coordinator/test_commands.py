@@ -12,7 +12,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
+    CREATE_PLAN_COMMAND_TEMPLATE,
+    CREATE_PLAN_COMMAND_WINDOWS,
+    CREATE_PR_COMMAND_TEMPLATE,
+    CREATE_PR_COMMAND_WINDOWS,
     DEFAULT_TEST_COMMAND,
+    DEFAULT_TEST_COMMAND_WINDOWS,
+    IMPLEMENT_COMMAND_TEMPLATE,
+    IMPLEMENT_COMMAND_WINDOWS,
     execute_coordinator_run,
     execute_coordinator_test,
     format_job_output,
@@ -252,3 +259,51 @@ class TestExecuteCoordinatorRun:
         # Verify message printed
         captured = capsys.readouterr()
         assert "Created default config file" in captured.out
+
+
+class TestLinuxTemplatesUseTypesExtra:
+    """Verify Linux templates use --extra types instead of --extra dev."""
+
+    def test_default_test_command_uses_types_extra(self) -> None:
+        """DEFAULT_TEST_COMMAND should use --extra types."""
+        assert "uv sync --extra types" in DEFAULT_TEST_COMMAND
+        assert "uv sync --extra dev" not in DEFAULT_TEST_COMMAND
+
+    def test_create_plan_command_uses_types_extra(self) -> None:
+        """CREATE_PLAN_COMMAND_TEMPLATE should use --extra types."""
+        assert "uv sync --extra types" in CREATE_PLAN_COMMAND_TEMPLATE
+        assert "uv sync --extra dev" not in CREATE_PLAN_COMMAND_TEMPLATE
+
+    def test_implement_command_uses_types_extra(self) -> None:
+        """IMPLEMENT_COMMAND_TEMPLATE should use --extra types."""
+        assert "uv sync --extra types" in IMPLEMENT_COMMAND_TEMPLATE
+        assert "uv sync --extra dev" not in IMPLEMENT_COMMAND_TEMPLATE
+
+    def test_create_pr_command_uses_types_extra(self) -> None:
+        """CREATE_PR_COMMAND_TEMPLATE should use --extra types."""
+        assert "uv sync --extra types" in CREATE_PR_COMMAND_TEMPLATE
+        assert "uv sync --extra dev" not in CREATE_PR_COMMAND_TEMPLATE
+
+
+class TestWindowsTemplatesInstallTypeStubs:
+    """Verify Windows templates include type stub installation."""
+
+    def test_default_test_command_windows_installs_type_stubs(self) -> None:
+        """DEFAULT_TEST_COMMAND_WINDOWS should install type stubs."""
+        assert "uv sync --project %WORKSPACE%" in DEFAULT_TEST_COMMAND_WINDOWS
+        assert "--extra types" in DEFAULT_TEST_COMMAND_WINDOWS
+
+    def test_create_plan_command_windows_installs_type_stubs(self) -> None:
+        """CREATE_PLAN_COMMAND_WINDOWS should install type stubs."""
+        assert "uv sync --project %WORKSPACE%" in CREATE_PLAN_COMMAND_WINDOWS
+        assert "--extra types" in CREATE_PLAN_COMMAND_WINDOWS
+
+    def test_implement_command_windows_installs_type_stubs(self) -> None:
+        """IMPLEMENT_COMMAND_WINDOWS should install type stubs."""
+        assert "uv sync --project %WORKSPACE%" in IMPLEMENT_COMMAND_WINDOWS
+        assert "--extra types" in IMPLEMENT_COMMAND_WINDOWS
+
+    def test_create_pr_command_windows_installs_type_stubs(self) -> None:
+        """CREATE_PR_COMMAND_WINDOWS should install type stubs."""
+        assert "uv sync --project %WORKSPACE%" in CREATE_PR_COMMAND_WINDOWS
+        assert "--extra types" in CREATE_PR_COMMAND_WINDOWS

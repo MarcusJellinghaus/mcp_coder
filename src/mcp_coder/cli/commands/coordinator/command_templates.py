@@ -21,7 +21,7 @@ export DISABLE_AUTOUPDATER=1
 # Environment setup
 export MCP_CODER_PROJECT_DIR='/workspace/repo'
 export MCP_CODER_VENV_DIR='/workspace/.venv'
-uv sync --extra dev
+uv sync --extra types
 # Claude CLI verification
 which claude
 claude --mcp-config .mcp.json --strict-mcp-config mcp list
@@ -38,7 +38,8 @@ ls -la logs
 """
 
 # Windows equivalent of DEFAULT_TEST_COMMAND
-DEFAULT_TEST_COMMAND_WINDOWS: str = """@echo ON
+# Note: Using raw string (r""") for cleaner Windows path handling
+DEFAULT_TEST_COMMAND_WINDOWS: str = r"""@echo ON
 
 echo current WORKSPACE directory===================================
 cd %WORKSPACE%
@@ -56,7 +57,7 @@ if "%VENV_BASE_DIR%"=="" (
 
 if "%VIRTUAL_ENV%"=="" (
     echo Activating virtual environment...
-    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
 )
 
 echo %VIRTUAL_ENV%
@@ -77,6 +78,9 @@ mcp-config --version
 
 set DISABLE_AUTOUPDATER=1
 
+echo Install type stubs in project environment ====================
+uv sync --project %WORKSPACE%\repo --extra types
+
 echo llm verification =====================================
 mcp-coder verify
 claude --mcp-config .mcp.json --strict-mcp-config mcp list 
@@ -84,10 +88,10 @@ claude --mcp-config .mcp.json --strict-mcp-config -p "What is 1 + 1?"
 
 mcp-coder --log-level debug prompt "What is 1 + 1?"
 mcp-coder --log-level {log_level} prompt "Which MCP server can you use?"
-mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir %WORKSPACE%\\repo --mcp-config .mcp.json
+mcp-coder --log-level {log_level} prompt --timeout 300 "For testing, please create a file, edit it, read it to verify, delete it, and tell me whether these actions worked well with the MCP server." --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 
 echo archive after execution =======================================
-dir .mcp-coder\\create_plan_sessions
+dir .mcp-coder\create_plan_sessions
 dir logs
 """
 
@@ -111,7 +115,7 @@ git pull
 export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-uv sync --extra dev
+uv sync --extra types
 mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
@@ -123,7 +127,7 @@ git pull
 export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-uv sync --extra dev
+uv sync --extra types
 mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
@@ -135,7 +139,7 @@ git pull
 export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-uv sync --extra dev
+uv sync --extra types
 mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
@@ -143,7 +147,8 @@ ls -la logs
 """
 
 # Windows workflow command templates
-CREATE_PLAN_COMMAND_WINDOWS: str = """@echo ON
+# Note: Using raw strings (r""") for cleaner Windows path handling
+CREATE_PLAN_COMMAND_WINDOWS: str = r"""@echo ON
 
 echo current WORKSPACE directory===================================
 cd %WORKSPACE%
@@ -158,20 +163,23 @@ if "%VENV_BASE_DIR%"=="" (
 )
 
 if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
 )
 
 set DISABLE_AUTOUPDATER=1
 
+echo Install type stubs in project environment ====================
+uv sync --project %WORKSPACE%\repo --extra types
+
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\\\\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json --update-labels
 
 echo archive after execution =======================================
-dir .mcp-coder\\create_plan_sessions
+dir .mcp-coder\create_plan_sessions
 dir logs
 """
 
-IMPLEMENT_COMMAND_WINDOWS: str = """@echo ON
+IMPLEMENT_COMMAND_WINDOWS: str = r"""@echo ON
 
 echo current WORKSPACE directory===================================
 cd %WORKSPACE%
@@ -186,20 +194,23 @@ if "%VENV_BASE_DIR%"=="" (
 )
 
 if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
 )
 
 set DISABLE_AUTOUPDATER=1
 
+echo Install type stubs in project environment ====================
+uv sync --project %WORKSPACE%\repo --extra types
+
 echo command execution  =====================================
-mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\\\\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\repo --mcp-config .mcp.json --update-labels
 
 echo archive after execution =======================================
-dir .mcp-coder\\create_plan_sessions
+dir .mcp-coder\create_plan_sessions
 dir logs
 """
 
-CREATE_PR_COMMAND_WINDOWS: str = """@echo ON
+CREATE_PR_COMMAND_WINDOWS: str = r"""@echo ON
 
 echo current WORKSPACE directory===================================
 cd %WORKSPACE%
@@ -214,16 +225,19 @@ if "%VENV_BASE_DIR%"=="" (
 )
 
 if "%VIRTUAL_ENV%"=="" (
-    %VENV_BASE_DIR%\\.venv\\Scripts\\activate.bat
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
 )
 
 set DISABLE_AUTOUPDATER=1
 
+echo Install type stubs in project environment ====================
+uv sync --project %WORKSPACE%\repo --extra types
+
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\\\\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\repo --mcp-config .mcp.json --update-labels
 
 echo archive after execution =======================================
-dir .mcp-coder\\create_plan_sessions
+dir .mcp-coder\create_plan_sessions
 dir logs
 """
 
