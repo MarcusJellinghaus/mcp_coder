@@ -14,13 +14,13 @@ import sys
 
 # Lazy imports from coordinator package to enable test patching
 # Tests can patch at 'mcp_coder.cli.commands.coordinator.<name>'
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from ....utils.github_operations.github_utils import RepoIdentifier
 from ....utils.jenkins_operations.models import JobStatus
 from ....utils.user_config import get_config_file_path, load_config
 from .command_templates import TEST_COMMAND_TEMPLATES
-from .core import validate_repo_config
+from .core import _get_coordinator, validate_repo_config
 from .workflow_constants import WORKFLOW_MAPPING
 
 __all__ = [
@@ -28,16 +28,6 @@ __all__ = [
     "execute_coordinator_run",
     "format_job_output",
 ]
-
-if TYPE_CHECKING:
-    from types import ModuleType
-
-
-def _get_coordinator() -> "ModuleType":
-    """Get coordinator package for late binding of patchable functions."""
-    from mcp_coder.cli.commands import coordinator
-
-    return coordinator
 
 
 logger = logging.getLogger(__name__)
