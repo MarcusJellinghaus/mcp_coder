@@ -101,11 +101,11 @@ See details: [pr_info/steps/step_7.md](steps/step_7.md)
 - [x] Create `test_core.py` with core.py test classes
 - [x] Create `test_commands.py` with commands.py test classes
 - [x] Create `test_integration.py` with integration test classes
-- [ ] Verify all tests pass in new locations
-- [ ] Verify test count matches original (no tests lost)
-- [ ] Delete original `tests/cli/commands/test_coordinator.py`
-- [ ] Run quality checks: pylint, pytest, mypy
-- [ ] Prepare git commit message for Step 7
+- [x] Verify all tests pass in new locations
+- [x] Verify test count matches original (no tests lost)
+- [x] Delete original `tests/cli/commands/test_coordinator.py`
+- [x] Run quality checks: pylint, pytest, mypy
+- [x] Prepare git commit message for Step 7
 
 ## Code Review
 
@@ -117,7 +117,7 @@ See details: [pr_info/steps/Decisions.md](steps/Decisions.md)
 
 ## Pull Request
 
-- [ ] Complete Steps 6-7
-- [ ] Run final quality checks on complete implementation
+- [x] Complete Steps 6-7
+- [x] Run final quality checks on complete implementation
 - [ ] Create comprehensive PR summary
 - [ ] Verify all acceptance criteria met

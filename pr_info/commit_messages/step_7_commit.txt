@@ -1,0 +1,15 @@
+test(coordinator): restructure tests into dedicated package
+
+- Create tests/cli/commands/coordinator/ package with __init__.py
+- Create test_core.py containing all core.py test classes:
+  - TestLoadRepoConfig, TestValidateRepoConfig, TestGetJenkinsCredentials
+  - TestGetCacheRefreshMinutes, TestGetEligibleIssues, TestDispatchWorkflow
+  - TestCacheFilePath, TestCacheFileOperations, TestStalenessLogging
+  - TestGetCachedEligibleIssues
+- Create test_commands.py containing commands.py test classes:
+  - TestFormatJobOutput, TestExecuteCoordinatorTest, TestExecuteCoordinatorRun
+- Create test_integration.py containing integration test classes:
+  - TestCoordinatorRunCacheIntegration, TestCacheUpdateIntegration
+- Delete original tests/cli/commands/test_coordinator.py (1,848 lines)
+- All 44 tests preserved and passing in new locations
+- Quality checks (pylint, pytest, mypy) passed

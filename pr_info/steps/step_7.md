@@ -163,14 +163,14 @@ pytest tests/cli/commands/coordinator/ -v
 ```
 
 ## Success Criteria
-- [ ] `tests/cli/commands/coordinator/` package created
-- [ ] `test_core.py` contains all core.py test classes
-- [ ] `test_commands.py` contains all commands.py test classes
-- [ ] `test_integration.py` contains all integration test classes
-- [ ] All tests pass in new locations
-- [ ] Test count matches original (no tests lost)
-- [ ] Original `test_coordinator.py` deleted
-- [ ] pylint, pytest, mypy quality checks pass
+- [x] `tests/cli/commands/coordinator/` package created
+- [x] `test_core.py` contains all core.py test classes
+- [x] `test_commands.py` contains all commands.py test classes
+- [x] `test_integration.py` contains all integration test classes
+- [x] All tests pass in new locations
+- [x] Test count matches original (no tests lost)
+- [x] Original `test_coordinator.py` deleted
+- [x] pylint, pytest, mypy quality checks pass
 
 ## Dependencies
 - **Requires**: Step 6 completion (constants modules exist for correct imports)
