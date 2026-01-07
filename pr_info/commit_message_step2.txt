@@ -1,0 +1,26 @@
+Update command templates to use --extra types for type stub installation
+
+Changes:
+- Linux templates (4): Replace `uv sync --extra dev` with `uv sync --extra types`
+  - DEFAULT_TEST_COMMAND
+  - CREATE_PLAN_COMMAND_TEMPLATE
+  - IMPLEMENT_COMMAND_TEMPLATE
+  - CREATE_PR_COMMAND_TEMPLATE
+
+- Windows templates (4): Add type stub installation block before command execution
+  - DEFAULT_TEST_COMMAND_WINDOWS
+  - CREATE_PLAN_COMMAND_WINDOWS
+  - IMPLEMENT_COMMAND_WINDOWS
+  - CREATE_PR_COMMAND_WINDOWS
+
+- Tests: Add unit tests verifying template changes
+  - TestLinuxTemplatesUseTypesExtra (4 tests)
+  - TestWindowsTemplatesInstallTypeStubs (4 tests)
+
+This ensures type stubs are installed in the project environment before
+mcp-coder commands execute, enabling proper type checking in automated
+workflows.
+
+Files modified:
+- src/mcp_coder/cli/commands/coordinator/command_templates.py
+- tests/cli/commands/coordinator/test_commands.py

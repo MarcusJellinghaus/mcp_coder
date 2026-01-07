@@ -27,11 +27,11 @@ Reference: [pr_info/steps/step_1.md](steps/step_1.md)
 ### Step 2: Update Command Templates
 Reference: [pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Implement Step 2: Update Linux templates to use `--extra types` instead of `--extra dev`
-- [ ] Implement Step 2: Add `uv sync --project %WORKSPACE%\repo --extra types` to Windows templates
-- [ ] Add unit tests for template verification
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Implement Step 2: Update Linux templates to use `--extra types` instead of `--extra dev`
+- [x] Implement Step 2: Add `uv sync --project %WORKSPACE%\repo --extra types` to Windows templates
+- [x] Add unit tests for template verification
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Add Documentation to CONFIG.md
 Reference: [pr_info/steps/step_3.md](steps/step_3.md)
