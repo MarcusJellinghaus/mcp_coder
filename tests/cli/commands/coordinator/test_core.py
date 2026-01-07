@@ -1,30 +1,32 @@
-"""Tests for coordinator CLI command."""
+"""Tests for coordinator core.py functions.
 
-import argparse
+This module contains tests for:
+- Configuration management functions (load_repo_config, validate_repo_config, get_jenkins_credentials)
+- Cache refresh settings (get_cache_refresh_minutes)
+- Issue filtering functions (get_eligible_issues)
+- Workflow dispatch function (dispatch_workflow)
+- Cache file operations (_get_cache_file_path, _load_cache_file, _save_cache_file)
+- Cache staleness logging (_log_stale_cache_entries)
+- Cached issue retrieval (get_cached_eligible_issues)
+"""
+
 import json
 import logging
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
-    DEFAULT_TEST_COMMAND,
-    DEFAULT_TEST_COMMAND_WINDOWS,
     CacheData,
-    _filter_eligible_issues,
     _get_cache_file_path,
     _load_cache_file,
     _log_stale_cache_entries,
     _save_cache_file,
-    _update_issue_labels_in_cache,
     dispatch_workflow,
-    execute_coordinator_run,
-    execute_coordinator_test,
-    format_job_output,
     get_cache_refresh_minutes,
     get_cached_eligible_issues,
     get_eligible_issues,
@@ -32,9 +34,7 @@ from mcp_coder.cli.commands.coordinator import (
     load_repo_config,
     validate_repo_config,
 )
-from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from mcp_coder.utils.jenkins_operations.models import JobStatus
 
 
 class TestLoadRepoConfig:
@@ -306,106 +306,48 @@ class TestGetJenkinsCredentials:
         assert api_token == "configtoken456"
 
 
-class TestFormatJobOutput:
-    """Tests for format_job_output function."""
+class TestGetCacheRefreshMinutes:
+    """Tests for get_cache_refresh_minutes function."""
 
-    def test_format_job_output_with_url(self) -> None:
-        """Test formatting output when job URL is available."""
-        # Execute
-        result = format_job_output(
-            "MCP_Coder/test-job",
-            12345,
-            "https://jenkins.example.com/job/MCP_Coder/job/test-job/42/",
-        )
-
-        # Verify
-        assert "Job triggered: MCP_Coder/test-job - test - queue: 12345" in result
-        assert "https://jenkins.example.com/job/MCP_Coder/job/test-job/42/" in result
-
-    def test_format_job_output_without_url(self) -> None:
-        """Test formatting output when job URL is not yet available."""
-        # Execute
-        result = format_job_output("MCP_Coder/test-job", 12345, None)
-
-        # Verify
-        assert "Job triggered: MCP_Coder/test-job - test - queue: 12345" in result
-        assert "will be available once build starts" in result
-
-
-class TestExecuteCoordinatorTest:
-    """Tests for execute_coordinator_test command function."""
-
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
-    def test_execute_coordinator_test_success(
-        self,
-        mock_create_config: MagicMock,
-        mock_load_repo: MagicMock,
-        mock_get_creds: MagicMock,
-        mock_jenkins_class: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_default(
+        self, mock_get_config: MagicMock
     ) -> None:
-        """Test successful command execution."""
-        # Setup
-        args = argparse.Namespace(
-            repo_name="mcp_coder", branch_name="feature-x", log_level="DEBUG"
-        )
+        """Test default value when config not set."""
+        mock_get_config.return_value = None
 
-        # Config already exists
-        mock_create_config.return_value = False
+        result = get_cache_refresh_minutes()
+        assert result == 1440  # 24 hours
 
-        # Repo config is valid
-        mock_load_repo.return_value = {
-            "repo_url": "https://github.com/user/repo.git",
-            "executor_job_path": "MCP/test-job",
-            "github_credentials_id": "github-pat",
-            "executor_os": "linux",
-        }
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_custom_value(
+        self, mock_get_config: MagicMock
+    ) -> None:
+        """Test custom value from config."""
+        mock_get_config.return_value = "720"
 
-        # Jenkins credentials available
-        mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
+        result = get_cache_refresh_minutes()
+        assert result == 720  # 12 hours
 
-        # Mock Jenkins client
-        mock_client = MagicMock()
-        mock_jenkins_class.return_value = mock_client
-        mock_client.start_job.return_value = 12345
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_invalid_value(
+        self, mock_get_config: MagicMock
+    ) -> None:
+        """Test fallback to default for invalid values."""
+        mock_get_config.return_value = "invalid"
 
-        # Mock job status with URL
-        mock_client.get_job_status.return_value = JobStatus(
-            status="queued",
-            build_number=None,
-            duration_ms=None,
-            url="https://jenkins:8080/queue/item/12345/",
-        )
+        result = get_cache_refresh_minutes()
+        assert result == 1440  # Falls back to default
 
-        # Execute
-        result = execute_coordinator_test(args)
+    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    def test_get_cache_refresh_minutes_negative_value(
+        self, mock_get_config: MagicMock
+    ) -> None:
+        """Test fallback to default for negative values."""
+        mock_get_config.return_value = "-60"
 
-        # Verify
-        assert result == 0
-
-        # Verify JenkinsClient created with credentials
-        mock_jenkins_class.assert_called_once_with(
-            "http://jenkins:8080", "user", "token"
-        )
-
-        # Verify job started with correct params
-        mock_client.start_job.assert_called_once_with(
-            "MCP/test-job",
-            {
-                "REPO_URL": "https://github.com/user/repo.git",
-                "BRANCH_NAME": "feature-x",
-                "COMMAND": DEFAULT_TEST_COMMAND.format(log_level="DEBUG"),
-                "GITHUB_CREDENTIALS_ID": "github-pat",
-            },
-        )
-
-        # Verify output printed
-        captured = capsys.readouterr()
-        assert "Job triggered: MCP/test-job - test - queue: 12345" in captured.out
-        assert "https://jenkins:8080/queue/item/12345/" in captured.out
+        result = get_cache_refresh_minutes()
+        assert result == 1440  # Falls back to default
 
 
 class TestGetEligibleIssues:
@@ -698,142 +640,6 @@ class TestDispatchWorkflow:
             123, "status-05:plan-ready"
         )
         mock_issue_mgr.add_labels.assert_called_once_with(123, "status-06:implementing")
-
-
-class TestExecuteCoordinatorRun:
-    """Tests for execute_coordinator_run function."""
-
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
-    def test_execute_coordinator_run_single_repo_success(
-        self,
-        mock_create_config: MagicMock,
-        mock_dispatch_workflow: MagicMock,
-        mock_get_cached_issues: MagicMock,
-        mock_load_repo: MagicMock,
-        mock_get_creds: MagicMock,
-        mock_jenkins_class: MagicMock,
-        mock_branch_mgr_class: MagicMock,
-        mock_issue_mgr_class: MagicMock,
-    ) -> None:
-        """Test successful execution for single repository using cache."""
-        # Setup - Mock args for single repository mode
-        args = argparse.Namespace(
-            command="coordinator",
-            coordinator_subcommand="run",
-            repo="mcp_coder",
-            all=False,
-            log_level="INFO",
-            force_refresh=False,
-        )
-
-        # Setup - Config already exists
-        mock_create_config.return_value = False
-
-        # Setup - Valid repository configuration
-        mock_load_repo.return_value = {
-            "repo_url": "https://github.com/user/mcp_coder.git",
-            "executor_job_path": "MCP_Coder/executor-test",
-            "github_credentials_id": "github-pat-123",
-            "executor_os": "linux",
-        }
-
-        # Setup - Jenkins credentials available
-        mock_get_creds.return_value = (
-            "https://jenkins.example.com",
-            "jenkins_user",
-            "jenkins_token_123",
-        )
-
-        # Setup - Mock Jenkins client
-        mock_jenkins = MagicMock()
-        mock_jenkins_class.return_value = mock_jenkins
-
-        # Setup - Mock IssueManager and IssueBranchManager
-        mock_issue_mgr = MagicMock()
-        mock_branch_mgr = MagicMock()
-        mock_issue_mgr_class.return_value = mock_issue_mgr
-        mock_branch_mgr_class.return_value = mock_branch_mgr
-
-        # Setup - Mock 2 eligible issues from cache
-        mock_get_cached_issues.return_value = [
-            IssueData(
-                number=124,
-                title="Create PR for feature",
-                body="Ready for PR",
-                state="open",
-                labels=["status-08:ready-pr"],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="https://github.com/user/mcp_coder/issues/124",
-                locked=False,
-            ),
-            IssueData(
-                number=123,
-                title="Implement feature",
-                body="Plan ready",
-                state="open",
-                labels=["status-05:plan-ready"],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="https://github.com/user/mcp_coder/issues/123",
-                locked=False,
-            ),
-        ]
-
-        # Setup - Mock dispatch_workflow succeeds (no exception)
-        mock_dispatch_workflow.return_value = None
-
-        # Execute
-        result = execute_coordinator_run(args)
-
-        # Verify - Exit code 0 (success)
-        assert result == 0
-
-        # Verify - get_cached_eligible_issues was called with correct parameters
-        mock_get_cached_issues.assert_called_once()
-        call_args = mock_get_cached_issues.call_args[1]
-        assert call_args["repo_full_name"] == "user/mcp_coder"
-        assert call_args["issue_manager"] == mock_issue_mgr
-        assert call_args["force_refresh"] == False
-
-        # Verify - dispatch_workflow was called twice (once for each issue)
-        assert mock_dispatch_workflow.call_count == 2
-
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
-    def test_execute_coordinator_run_creates_config_if_missing(
-        self, mock_create_config: MagicMock, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """Test config file is auto-created on first run."""
-        # Setup
-        args = argparse.Namespace(repo="mcp_coder", branch_name="feature-x")
-        mock_create_config.return_value = True  # Config was created
-
-        # Execute
-        result = execute_coordinator_test(args)
-
-        # Verify
-        assert result == 1  # Exit to let user configure
-        mock_create_config.assert_called_once()
-
-        # Verify message printed
-        captured = capsys.readouterr()
-        assert "Created default config file" in captured.out
-
-
-# ========================================
-# NEW CACHING FUNCTIONALITY TESTS
-# ========================================
 
 
 class TestCacheFilePath:
@@ -1214,635 +1020,3 @@ class TestGetCachedEligibleIssues:
             # Should fall back to get_eligible_issues
             assert result == []
             mock_fallback.assert_called_once_with(mock_issue_manager)
-
-
-class TestGetCacheRefreshMinutes:
-    """Tests for get_cache_refresh_minutes function."""
-
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
-    def test_get_cache_refresh_minutes_default(
-        self, mock_get_config: MagicMock
-    ) -> None:
-        """Test default value when config not set."""
-        mock_get_config.return_value = None
-
-        result = get_cache_refresh_minutes()
-        assert result == 1440  # 24 hours
-
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
-    def test_get_cache_refresh_minutes_custom_value(
-        self, mock_get_config: MagicMock
-    ) -> None:
-        """Test custom value from config."""
-        mock_get_config.return_value = "720"
-
-        result = get_cache_refresh_minutes()
-        assert result == 720  # 12 hours
-
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
-    def test_get_cache_refresh_minutes_invalid_value(
-        self, mock_get_config: MagicMock
-    ) -> None:
-        """Test fallback to default for invalid values."""
-        mock_get_config.return_value = "invalid"
-
-        result = get_cache_refresh_minutes()
-        assert result == 1440  # Falls back to default
-
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
-    def test_get_cache_refresh_minutes_negative_value(
-        self, mock_get_config: MagicMock
-    ) -> None:
-        """Test fallback to default for negative values."""
-        mock_get_config.return_value = "-60"
-
-        result = get_cache_refresh_minutes()
-        assert result == 1440  # Falls back to default
-
-
-class TestCoordinatorRunCacheIntegration:
-    """Integration tests for coordinator run with caching."""
-
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
-    def test_execute_coordinator_run_with_force_refresh(
-        self,
-        mock_create_config: MagicMock,
-        mock_dispatch_workflow: MagicMock,
-        mock_get_cached_issues: MagicMock,
-        mock_load_repo: MagicMock,
-        mock_get_creds: MagicMock,
-        mock_jenkins_class: MagicMock,
-        mock_branch_mgr_class: MagicMock,
-        mock_issue_mgr_class: MagicMock,
-    ) -> None:
-        """Test execute_coordinator_run with force_refresh flag."""
-        # Setup - Mock args with force_refresh enabled
-        args = argparse.Namespace(
-            command="coordinator",
-            coordinator_subcommand="run",
-            repo="test_repo",
-            all=False,
-            log_level="INFO",
-            force_refresh=True,  # Force refresh enabled
-        )
-
-        # Setup - Config already exists
-        mock_create_config.return_value = False
-
-        # Setup - Valid repository configuration
-        mock_load_repo.return_value = {
-            "repo_url": "https://github.com/user/test_repo.git",
-            "executor_job_path": "Test/executor",
-            "github_credentials_id": "github-pat",
-            "executor_os": "linux",
-        }
-
-        # Setup - Jenkins credentials
-        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
-
-        # Setup - Mock clients
-        mock_jenkins = MagicMock()
-        mock_issue_mgr = MagicMock()
-        mock_branch_mgr = MagicMock()
-        mock_jenkins_class.return_value = mock_jenkins
-        mock_issue_mgr_class.return_value = mock_issue_mgr
-        mock_branch_mgr_class.return_value = mock_branch_mgr
-
-        # Setup - Mock eligible issues from cache (force refresh scenario)
-        mock_get_cached_issues.return_value = [
-            {
-                "number": 456,
-                "state": "open",
-                "labels": ["status-02:awaiting-planning"],
-                "title": "Force refresh test",
-                "body": "Test",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/456",
-                "locked": False,
-            }
-        ]
-
-        # Execute
-        result = execute_coordinator_run(args)
-
-        # Verify - Exit code 0 (success)
-        assert result == 0
-
-        # Verify - get_cached_eligible_issues was called with force_refresh=True
-        mock_get_cached_issues.assert_called_once()
-        call_args = mock_get_cached_issues.call_args[1]
-        assert call_args["force_refresh"] is True
-        assert call_args["repo_full_name"] == "user/test_repo"
-
-        # Verify - dispatch_workflow was called for the issue
-        mock_dispatch_workflow.assert_called_once()
-
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.get_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
-    def test_execute_coordinator_run_cache_fallback(
-        self,
-        mock_create_config: MagicMock,
-        mock_get_eligible_issues: MagicMock,
-        mock_get_cached_issues: MagicMock,
-        mock_load_repo: MagicMock,
-        mock_get_creds: MagicMock,
-        mock_jenkins_class: MagicMock,
-        mock_branch_mgr_class: MagicMock,
-        mock_issue_mgr_class: MagicMock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Test execute_coordinator_run falls back when cache fails."""
-        # Setup - Mock args
-        args = argparse.Namespace(
-            command="coordinator",
-            coordinator_subcommand="run",
-            repo="test_repo",
-            all=False,
-            log_level="INFO",
-            force_refresh=False,
-        )
-
-        # Setup - Config exists
-        mock_create_config.return_value = False
-
-        # Setup - Valid repo config
-        mock_load_repo.return_value = {
-            "repo_url": "https://github.com/user/test_repo.git",
-            "executor_job_path": "Test/executor",
-            "github_credentials_id": "github-pat",
-            "executor_os": "linux",
-        }
-
-        # Setup - Jenkins credentials
-        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
-
-        # Setup - Mock clients
-        mock_jenkins = MagicMock()
-        mock_issue_mgr = MagicMock()
-        mock_branch_mgr = MagicMock()
-        mock_jenkins_class.return_value = mock_jenkins
-        mock_issue_mgr_class.return_value = mock_issue_mgr
-        mock_branch_mgr_class.return_value = mock_branch_mgr
-
-        # Setup - Cache fails, fallback succeeds
-        mock_get_cached_issues.side_effect = Exception("Cache error")
-        mock_get_eligible_issues.return_value = []
-
-        # Execute
-        result = execute_coordinator_run(args)
-
-        # Verify - Exit code 0 (success despite cache failure)
-        assert result == 0
-
-        # Verify - Cache was attempted
-        mock_get_cached_issues.assert_called_once()
-
-        # Verify - Fallback was called
-        mock_get_eligible_issues.assert_called_once_with(mock_issue_mgr)
-
-        # Verify - Warning was logged
-        assert "Cache failed" in caplog.text or "using direct fetch" in caplog.text
-
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
-    def test_execute_coordinator_run_continues_processing_after_dispatch_failure(
-        self,
-        mock_create_config: MagicMock,
-        mock_dispatch_workflow: MagicMock,
-        mock_get_cached_issues: MagicMock,
-        mock_load_repo: MagicMock,
-        mock_get_creds: MagicMock,
-        mock_jenkins_class: MagicMock,
-        mock_branch_mgr_class: MagicMock,
-        mock_issue_mgr_class: MagicMock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Test that coordinator fails fast when dispatch_workflow raises an exception."""
-        # Setup - Mock args for single repository mode
-        args = argparse.Namespace(
-            command="coordinator",
-            coordinator_subcommand="run",
-            repo="test_repo",
-            all=False,
-            log_level="INFO",
-            force_refresh=False,
-        )
-
-        # Setup - Config already exists
-        mock_create_config.return_value = False
-
-        # Setup - Valid repository configuration
-        mock_load_repo.return_value = {
-            "repo_url": "https://github.com/user/test_repo.git",
-            "executor_job_path": "Test/executor",
-            "github_credentials_id": "github-pat",
-            "executor_os": "linux",
-        }
-
-        # Setup - Jenkins credentials available
-        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
-
-        # Setup - Mock clients
-        mock_jenkins = MagicMock()
-        mock_issue_mgr = MagicMock()
-        mock_branch_mgr = MagicMock()
-        mock_jenkins_class.return_value = mock_jenkins
-        mock_issue_mgr_class.return_value = mock_issue_mgr
-        mock_branch_mgr_class.return_value = mock_branch_mgr
-
-        # Setup - Multiple eligible issues
-        mock_get_cached_issues.return_value = [
-            {
-                "number": 156,
-                "state": "open",
-                "labels": ["status-08:ready-pr"],
-                "title": "First issue - will fail",
-                "body": "This will cause dispatch to fail",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/156",
-                "locked": False,
-            },
-            {
-                "number": 157,
-                "state": "open",
-                "labels": ["status-05:plan-ready"],
-                "title": "Second issue - would succeed",
-                "body": "This should not be processed due to fail-fast",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/157",
-                "locked": False,
-            },
-        ]
-
-        # Setup - First dispatch fails with ValueError (missing branch)
-        mock_dispatch_workflow.side_effect = ValueError(
-            "No linked branch found for issue #156"
-        )
-
-        # Execute
-        result = execute_coordinator_run(args)
-
-        # Verify - Exit code 1 (failure due to fail-fast)
-        assert result == 1
-
-        # Verify - dispatch_workflow was called only once (fail-fast behavior)
-        assert mock_dispatch_workflow.call_count == 1
-
-        # Verify - Error was logged
-        assert "Failed processing issue #156" in caplog.text
-        assert "No linked branch found for issue #156" in caplog.text
-
-
-class TestCacheUpdateIntegration:
-    """End-to-end tests for cache update integration in execute_coordinator_run."""
-
-    @patch("mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache")
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
-    def test_execute_coordinator_run_updates_cache_after_successful_dispatch(
-        self,
-        mock_create_config: MagicMock,
-        mock_dispatch_workflow: MagicMock,
-        mock_get_cached_issues: MagicMock,
-        mock_load_repo: MagicMock,
-        mock_get_creds: MagicMock,
-        mock_jenkins_class: MagicMock,
-        mock_branch_mgr_class: MagicMock,
-        mock_issue_mgr_class: MagicMock,
-        mock_update_cache: MagicMock,
-    ) -> None:
-        """Test that successful dispatch updates cache labels."""
-        # Setup - Mock args
-        args = argparse.Namespace(
-            command="coordinator",
-            coordinator_subcommand="run",
-            repo="test_repo",
-            all=False,
-            log_level="INFO",
-            force_refresh=False,
-        )
-
-        # Setup - Config exists
-        mock_create_config.return_value = False
-
-        # Setup - Valid repo config
-        mock_load_repo.return_value = {
-            "repo_url": "https://github.com/user/test_repo.git",
-            "executor_job_path": "Test/executor",
-            "github_credentials_id": "github-pat",
-            "executor_os": "linux",
-        }
-
-        # Setup - Jenkins credentials
-        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
-
-        # Setup - Mock clients
-        mock_jenkins = MagicMock()
-        mock_issue_mgr = MagicMock()
-        mock_branch_mgr = MagicMock()
-        mock_jenkins_class.return_value = mock_jenkins
-        mock_issue_mgr_class.return_value = mock_issue_mgr
-        mock_branch_mgr_class.return_value = mock_branch_mgr
-
-        # Setup - Mock issue with status-02:awaiting-planning
-        test_issue = {
-            "number": 123,
-            "state": "open",
-            "labels": ["status-02:awaiting-planning", "enhancement"],
-            "title": "Test issue",
-            "body": "Test",
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "updated_at": "2025-12-31T09:00:00Z",
-            "url": "https://github.com/user/test_repo/issues/123",
-            "locked": False,
-        }
-        mock_get_cached_issues.return_value = [test_issue]
-
-        # Setup - dispatch_workflow succeeds (no exception)
-        mock_dispatch_workflow.return_value = None
-
-        # Execute
-        result = execute_coordinator_run(args)
-
-        # Verify - Exit code 0 (success)
-        assert result == 0
-
-        # Verify - dispatch_workflow was called
-        mock_dispatch_workflow.assert_called_once()
-
-        # Verify - cache update was called with correct parameters
-        mock_update_cache.assert_called_once_with(
-            repo_full_name="user/test_repo",
-            issue_number=123,
-            old_label="status-02:awaiting-planning",
-            new_label="status-03:planning",
-        )
-
-    @patch("mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache")
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
-    def test_cache_update_failure_does_not_break_dispatch(
-        self,
-        mock_create_config: MagicMock,
-        mock_dispatch_workflow: MagicMock,
-        mock_get_cached_issues: MagicMock,
-        mock_load_repo: MagicMock,
-        mock_get_creds: MagicMock,
-        mock_jenkins_class: MagicMock,
-        mock_branch_mgr_class: MagicMock,
-        mock_issue_mgr_class: MagicMock,
-        mock_update_cache: MagicMock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Test that cache update errors don't affect dispatch success."""
-        # Setup - Mock args
-        args = argparse.Namespace(
-            command="coordinator",
-            coordinator_subcommand="run",
-            repo="test_repo",
-            all=False,
-            log_level="INFO",
-            force_refresh=False,
-        )
-
-        # Setup - Config exists
-        mock_create_config.return_value = False
-
-        # Setup - Valid repo config
-        mock_load_repo.return_value = {
-            "repo_url": "https://github.com/user/test_repo.git",
-            "executor_job_path": "Test/executor",
-            "github_credentials_id": "github-pat",
-            "executor_os": "linux",
-        }
-
-        # Setup - Jenkins credentials
-        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
-
-        # Setup - Mock clients
-        mock_jenkins = MagicMock()
-        mock_issue_mgr = MagicMock()
-        mock_branch_mgr = MagicMock()
-        mock_jenkins_class.return_value = mock_jenkins
-        mock_issue_mgr_class.return_value = mock_issue_mgr
-        mock_branch_mgr_class.return_value = mock_branch_mgr
-
-        # Setup - Mock issue
-        test_issue = {
-            "number": 456,
-            "state": "open",
-            "labels": ["status-05:plan-ready"],
-            "title": "Test issue",
-            "body": "Test",
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "updated_at": "2025-12-31T09:00:00Z",
-            "url": "https://github.com/user/test_repo/issues/456",
-            "locked": False,
-        }
-        mock_get_cached_issues.return_value = [test_issue]
-
-        # Setup - dispatch_workflow succeeds, but cache update fails
-        mock_dispatch_workflow.return_value = None
-        mock_update_cache.side_effect = Exception("Cache update error")
-
-        # Execute
-        result = execute_coordinator_run(args)
-
-        # Verify - Exit code 0 (success despite cache update failure)
-        assert result == 0
-
-        # Verify - dispatch_workflow was still called
-        mock_dispatch_workflow.assert_called_once()
-
-        # Verify - cache update was attempted
-        mock_update_cache.assert_called_once_with(
-            repo_full_name="user/test_repo",
-            issue_number=456,
-            old_label="status-05:plan-ready",
-            new_label="status-06:implementing",
-        )
-
-        # Note: Cache update error is handled within _update_issue_labels_in_cache
-        # itself and logged as warning, so no exception propagates to coordinator
-
-    @patch("mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache")
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
-    def test_multiple_dispatches_keep_cache_synchronized(
-        self,
-        mock_create_config: MagicMock,
-        mock_dispatch_workflow: MagicMock,
-        mock_get_cached_issues: MagicMock,
-        mock_load_repo: MagicMock,
-        mock_get_creds: MagicMock,
-        mock_jenkins_class: MagicMock,
-        mock_branch_mgr_class: MagicMock,
-        mock_issue_mgr_class: MagicMock,
-        mock_update_cache: MagicMock,
-    ) -> None:
-        """Test processing multiple issues keeps cache in sync."""
-        # Setup - Mock args
-        args = argparse.Namespace(
-            command="coordinator",
-            coordinator_subcommand="run",
-            repo="test_repo",
-            all=False,
-            log_level="INFO",
-            force_refresh=False,
-        )
-
-        # Setup - Config exists
-        mock_create_config.return_value = False
-
-        # Setup - Valid repo config
-        mock_load_repo.return_value = {
-            "repo_url": "https://github.com/user/test_repo.git",
-            "executor_job_path": "Test/executor",
-            "github_credentials_id": "github-pat",
-            "executor_os": "linux",
-        }
-
-        # Setup - Jenkins credentials
-        mock_get_creds.return_value = ("https://jenkins.com", "user", "token")
-
-        # Setup - Mock clients
-        mock_jenkins = MagicMock()
-        mock_issue_mgr = MagicMock()
-        mock_branch_mgr = MagicMock()
-        mock_jenkins_class.return_value = mock_jenkins
-        mock_issue_mgr_class.return_value = mock_issue_mgr
-        mock_branch_mgr_class.return_value = mock_branch_mgr
-
-        # Setup - Multiple issues with different priority labels (sorted by priority)
-        test_issues = [
-            {
-                "number": 101,
-                "state": "open",
-                "labels": ["status-08:ready-pr"],  # Highest priority
-                "title": "PR ready issue",
-                "body": "Test",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/101",
-                "locked": False,
-            },
-            {
-                "number": 102,
-                "state": "open",
-                "labels": ["status-05:plan-ready"],  # Medium priority
-                "title": "Plan ready issue",
-                "body": "Test",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/102",
-                "locked": False,
-            },
-            {
-                "number": 103,
-                "state": "open",
-                "labels": ["status-02:awaiting-planning"],  # Lower priority
-                "title": "Planning needed issue",
-                "body": "Test",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/103",
-                "locked": False,
-            },
-        ]
-        mock_get_cached_issues.return_value = test_issues
-
-        # Setup - All dispatches succeed
-        mock_dispatch_workflow.return_value = None
-
-        # Execute
-        result = execute_coordinator_run(args)
-
-        # Verify - Exit code 0 (success)
-        assert result == 0
-
-        # Verify - dispatch_workflow was called for each issue (3 times)
-        assert mock_dispatch_workflow.call_count == 3
-
-        # Verify - cache update was called for each issue with correct mappings
-        expected_cache_calls = [
-            # Issue 101: status-08:ready-pr -> status-09:pr-creating
-            ("user/test_repo", 101, "status-08:ready-pr", "status-09:pr-creating"),
-            # Issue 102: status-05:plan-ready -> status-06:implementing
-            ("user/test_repo", 102, "status-05:plan-ready", "status-06:implementing"),
-            # Issue 103: status-02:awaiting-planning -> status-03:planning
-            (
-                "user/test_repo",
-                103,
-                "status-02:awaiting-planning",
-                "status-03:planning",
-            ),
-        ]
-
-        assert mock_update_cache.call_count == 3
-        actual_calls = [
-            (
-                call[1]["repo_full_name"],
-                call[1]["issue_number"],
-                call[1]["old_label"],
-                call[1]["new_label"],
-            )
-            for call in mock_update_cache.call_args_list
-        ]
-
-        assert actual_calls == expected_cache_calls
