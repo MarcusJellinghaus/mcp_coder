@@ -51,7 +51,7 @@ dev = ["mcp-coder[types,test,mcp]"]  # Combines all
 
 ### Command Template Changes
 
-- **Windows templates**: Add `uv sync --extra types` step (currently missing)
+- **Windows templates**: Add `uv sync --project %WORKSPACE%\repo --extra types` step (currently missing)
 - **Linux templates**: Change `uv sync --extra dev` → `uv sync --extra types` (install only what's needed)
 
 ## Files to Modify

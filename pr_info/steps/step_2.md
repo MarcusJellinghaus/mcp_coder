@@ -46,7 +46,7 @@ uv sync --extra types
 
 ### Windows Templates (4 templates)
 
-**Change**: Add `uv sync --extra types` step before mcp-coder command execution
+**Change**: Add `uv sync --project %WORKSPACE%\repo --extra types` step before mcp-coder command execution
 
 Templates to modify:
 1. `DEFAULT_TEST_COMMAND_WINDOWS`
@@ -54,16 +54,14 @@ Templates to modify:
 3. `IMPLEMENT_COMMAND_WINDOWS`
 4. `CREATE_PR_COMMAND_WINDOWS`
 
-**Pattern for Windows templates** - Add this block before `echo command execution`:
+**Pattern for Windows templates** - Add this line before `echo command execution`:
 
 ```batch
 echo Install type stubs in project environment ====================
-cd %WORKSPACE%\repo
-uv sync --extra types
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
+uv sync --project %WORKSPACE%\repo --extra types
 ```
+
+Using `--project` flag avoids directory changes and is cleaner than `cd` + `uv sync` + `cd back`.
 
 ## HOW
 
@@ -80,21 +78,12 @@ uv sync --extra types
 
 ### Windows Template Changes
 
-For each Windows template, insert the type stub installation block. The insertion point is **before** the `echo command execution` line.
+For each Windows template, insert the type stub installation line. The insertion point is **before** the `echo command execution` line (after `set DISABLE_AUTOUPDATER=1`).
 
 **Example for `IMPLEMENT_COMMAND_WINDOWS`**:
 
 Before:
 ```batch
-@echo ON
-
-echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
-
-echo python environment ================================
 ...
 set DISABLE_AUTOUPDATER=1
 
@@ -104,21 +93,11 @@ mcp-coder --log-level {log_level} implement ...
 
 After:
 ```batch
-@echo ON
-
-echo current WORKSPACE directory===================================
-cd %WORKSPACE%
-
-echo Install type stubs in project environment ====================
-cd %WORKSPACE%\repo
-uv sync --extra types
-
-echo switch to python execution environment =====================
-cd %VENV_BASE_DIR%
-
-echo python environment ================================
 ...
 set DISABLE_AUTOUPDATER=1
+
+echo Install type stubs in project environment ====================
+uv sync --project %WORKSPACE%\repo --extra types
 
 echo command execution  =====================================
 mcp-coder --log-level {log_level} implement ...
@@ -127,12 +106,11 @@ mcp-coder --log-level {log_level} implement ...
 ## ALGORITHM (for Windows template modification)
 
 ```
-1. Locate "echo current WORKSPACE directory" line
-2. After "cd %WORKSPACE%" line, insert:
-   - "echo Install type stubs in project environment =="
-   - "cd %WORKSPACE%\repo"
-   - "uv sync --extra types"
+1. Locate "set DISABLE_AUTOUPDATER=1" line
+2. After that line, insert:
    - blank line
+   - "echo Install type stubs in project environment =="
+   - "uv sync --project %WORKSPACE%\repo --extra types"
 3. Keep remaining template structure unchanged
 ```
 
@@ -196,12 +174,12 @@ def test_windows_templates_install_type_stubs():
     ]
     
     for template in windows_templates:
-        assert "uv sync --extra types" in template
-        assert "cd %WORKSPACE%\\repo" in template or "cd %WORKSPACE%/repo" in template
+        assert "uv sync --project %WORKSPACE%" in template
+        assert "--extra types" in template
 ```
 
 ## Notes
 
-- Windows templates use `%WORKSPACE%\repo` (backslash) for consistency with existing code
-- The `uv sync` command is run in the project directory (`repo/`), not the execution environment
-- After installing type stubs, the script returns to the execution environment (`VENV_BASE_DIR`)
+- Windows templates use `--project %WORKSPACE%\repo` to specify the project directory without changing directories
+- The `uv sync` command targets the project directory (`repo/`) while remaining in the execution environment
+- This approach is cleaner than `cd` + `uv sync` + `cd back`
