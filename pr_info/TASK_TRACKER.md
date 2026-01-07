@@ -20,9 +20,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Restructure pyproject.toml Optional Dependencies
 Reference: [pr_info/steps/step_1.md](steps/step_1.md)
 
-- [ ] Implement Step 1: Restructure optional dependencies into `types`, `test`, `mcp`, and `dev` groups
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement Step 1: Restructure optional dependencies into `types`, `test`, `mcp`, and `dev` groups
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update Command Templates
 Reference: [pr_info/steps/step_2.md](steps/step_2.md)
