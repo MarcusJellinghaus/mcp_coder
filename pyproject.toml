@@ -125,6 +125,9 @@ disable = ["W1203", "W0621"]
 
 [tool.mypy]
 python_version = "3.11"
+# Disable import-untyped errors for libraries without type stubs (e.g., requests)
+# The types-requests stub is available in optional-dependencies[types] for stricter checking
+disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = ["pytest.*"]
