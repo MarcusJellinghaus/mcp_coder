@@ -19,39 +19,14 @@ from typing import TYPE_CHECKING, Optional
 from ....utils.github_operations.github_utils import RepoIdentifier
 from ....utils.jenkins_operations.models import JobStatus
 from ....utils.user_config import get_config_file_path, load_config
-from .command_templates import (
-    CREATE_PLAN_COMMAND_TEMPLATE,
-    CREATE_PLAN_COMMAND_WINDOWS,
-    CREATE_PR_COMMAND_TEMPLATE,
-    CREATE_PR_COMMAND_WINDOWS,
-    DEFAULT_TEST_COMMAND,
-    DEFAULT_TEST_COMMAND_WINDOWS,
-    IMPLEMENT_COMMAND_TEMPLATE,
-    IMPLEMENT_COMMAND_WINDOWS,
-    PRIORITY_ORDER,
-    TEST_COMMAND_TEMPLATES,
-)
+from .command_templates import TEST_COMMAND_TEMPLATES
 from .core import validate_repo_config
 from .workflow_constants import WORKFLOW_MAPPING
 
-# Re-export constants for backward compatibility with __init__.py
-# These will be imported directly from command_templates.py in a later refactoring step
 __all__ = [
-    # Functions
     "execute_coordinator_test",
     "execute_coordinator_run",
     "format_job_output",
-    # Re-exported constants (from command_templates.py)
-    "CREATE_PLAN_COMMAND_TEMPLATE",
-    "CREATE_PLAN_COMMAND_WINDOWS",
-    "CREATE_PR_COMMAND_TEMPLATE",
-    "CREATE_PR_COMMAND_WINDOWS",
-    "DEFAULT_TEST_COMMAND",
-    "DEFAULT_TEST_COMMAND_WINDOWS",
-    "IMPLEMENT_COMMAND_TEMPLATE",
-    "IMPLEMENT_COMMAND_WINDOWS",
-    "PRIORITY_ORDER",
-    "TEST_COMMAND_TEMPLATES",
 ]
 
 if TYPE_CHECKING:
