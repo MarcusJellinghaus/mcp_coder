@@ -36,6 +36,7 @@ from .command_templates import (
     CREATE_PR_COMMAND_WINDOWS,
     IMPLEMENT_COMMAND_TEMPLATE,
     IMPLEMENT_COMMAND_WINDOWS,
+    PRIORITY_ORDER,
 )
 from .workflow_constants import WORKFLOW_MAPPING
 
@@ -462,13 +463,6 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
 
     ignore_labels_set = set(labels_config.get("ignore_labels", []))
 
-    # Priority order for processing issues (highest to lowest)
-    PRIORITY_ORDER = [
-        "status-08:ready-pr",
-        "status-05:plan-ready",
-        "status-02:awaiting-planning",
-    ]
-
     # Filter issues (only open state)
     eligible_issues = []
     for issue in issues:
@@ -543,13 +537,6 @@ def get_eligible_issues(
 
     # Extract ignore_labels set for filtering
     ignore_labels_set = set(labels_config.get("ignore_labels", []))
-
-    # Priority order for processing issues (highest to lowest)
-    PRIORITY_ORDER = [
-        "status-08:ready-pr",
-        "status-05:plan-ready",
-        "status-02:awaiting-planning",
-    ]
 
     # Query all open issues (exclude pull requests)
     all_issues = issue_manager.list_issues(state="open", include_pull_requests=False)
