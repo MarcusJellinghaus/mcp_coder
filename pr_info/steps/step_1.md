@@ -18,8 +18,8 @@ test first, which will initially fail until Step 2 is implemented.
 ## WHAT: Test Function
 
 ```python
-def test_cleanup_repository_deletes_conversations_directory(self) -> None:
-    """Test that cleanup_repository deletes pr_info/.conversations/ directory."""
+def test_cleanup_repository_includes_conversations_cleanup(self) -> None:
+    """Test that cleanup_repository includes pr_info/.conversations/ cleanup."""
 ```
 
 ## HOW: Integration Points
@@ -43,15 +43,9 @@ def test_cleanup_repository_deletes_conversations_directory(self) -> None:
 5. Assert all four mocked functions were called with correct arguments
 ```
 
-## DATA: Test Structure
-
-- **Input**: Temporary directory with `pr_info/.conversations/` containing test files
-- **Expected**: Directory deleted, function returns `True`
-
 ## Test Cases to Add
 
-1. **Happy path**: `.conversations/` exists and is deleted successfully
-2. **No-op path**: `.conversations/` doesn't exist (should still succeed)
+1. **Happy path**: `.conversations/` cleanup is included in repository cleanup
 
 ## Notes
 
