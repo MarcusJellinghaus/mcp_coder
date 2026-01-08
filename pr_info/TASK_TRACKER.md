@@ -76,7 +76,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [Details: pr_info/steps/step_5.md](steps/step_5.md)
 
 - [x] Delete `workflows/define_labels.py`
-- [ ] Delete `workflows/define_labels.bat`
+- [x] Delete `workflows/define_labels.bat`
 - [ ] Delete `docs/configuration/LABEL_WORKFLOW_SETUP.md`
 - [ ] Delete `tests/workflows/test_define_labels.py`
 - [ ] Search for and update any remaining references to deleted files
