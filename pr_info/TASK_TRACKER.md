@@ -20,11 +20,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Add Tests for `ignore_files` Parameter
 **Reference**: [pr_info/steps/step_1.md](steps/step_1.md)
 
-- [x] Add 4 test scenarios to `tests/utils/git_operations/test_repository.py`
+- [ ] Add 5 test scenarios to `tests/utils/git_operations/test_repository.py` *(4 done, missing empty list test)*
 - [x] Run pylint and fix any issues
 - [x] Run pytest and verify tests fail (TDD - tests written before implementation)
 - [x] Run mypy and fix any type issues
-- [x] Prepare git commit message for Step 1
+- [ ] Prepare git commit message for Step 1
 
 ---
 

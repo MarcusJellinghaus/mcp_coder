@@ -71,3 +71,32 @@ Decisions made during plan review discussion.
 **Decision:** A - Keep them
 
 **Rationale:** Helpful hints for locating code, even if they drift slightly.
+
+---
+
+## Decision 6: Missing 5th Test (Code Review)
+
+**Question:** Code review found only 4 tests were implemented, but Decision 3 specified 5. How to proceed?
+
+**Options:**
+- A: Add the missing test (align code with the plan)
+- B: Update the plan to 4 tests (decide this test isn't needed after all)
+- C: Skip - the `ignore_files=None` test already covers backward compatibility sufficiently
+
+**Decision:** A - Add the missing test
+
+**Rationale:** The 5th test (`ignore_files=[]`) verifies backward compatibility when an empty list is passed, which is a distinct case from `None`.
+
+---
+
+## Decision 7: Task Tracker Status (Code Review)
+
+**Question:** TASK_TRACKER.md shows Step 1 tests as complete, but 5th test is missing. How to update?
+
+**Options:**
+- A: Mark the test task as incomplete until 5th test is added
+- B: Keep as-is, just add the test in Step 2 implementation phase
+
+**Decision:** A - Mark test task as incomplete
+
+**Rationale:** Accurate tracking - the task isn't complete until all 5 tests are implemented.
