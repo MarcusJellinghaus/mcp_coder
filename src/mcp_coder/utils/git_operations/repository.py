@@ -184,15 +184,20 @@ def get_full_status(project_dir: Path) -> dict[str, list[str]]:
         return {"staged": [], "modified": [], "untracked": []}
 
 
-def is_working_directory_clean(project_dir: Path) -> bool:
+def is_working_directory_clean(
+    project_dir: Path, ignore_files: list[str] | None = None
+) -> bool:
     """
     Check if working directory has no uncommitted changes.
 
     Args:
         project_dir: Path to the project directory containing git repository
+        ignore_files: Optional list of filenames to ignore when checking for changes.
+            Files in this list will not be counted as uncommitted changes.
+            Useful for auto-generated files like uv.lock.
 
     Returns:
-        True if no staged, modified, or untracked files exist, False otherwise
+        True if no staged, modified, or untracked files exist (after filtering), False otherwise
 
     Raises:
         ValueError: If the directory is not a git repository
@@ -204,8 +209,18 @@ def is_working_directory_clean(project_dir: Path) -> bool:
         raise ValueError(f"Directory is not a git repository: {project_dir}")
 
     status = get_full_status(project_dir)
-    total_changes = (
-        len(status["staged"]) + len(status["modified"]) + len(status["untracked"])
-    )
+
+    # Filter out ignored files from each category
+    if ignore_files:
+        ignore_set = set(ignore_files)
+        staged = [f for f in status["staged"] if f not in ignore_set]
+        modified = [f for f in status["modified"] if f not in ignore_set]
+        untracked = [f for f in status["untracked"] if f not in ignore_set]
+    else:
+        staged = status["staged"]
+        modified = status["modified"]
+        untracked = status["untracked"]
+
+    total_changes = len(staged) + len(modified) + len(untracked)
 
     return total_changes == 0

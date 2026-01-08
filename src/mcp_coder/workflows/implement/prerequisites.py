@@ -41,7 +41,7 @@ def check_git_clean(project_dir: Path) -> bool:
     logger.info("Checking git working directory status...")
 
     try:
-        is_clean = is_working_directory_clean(project_dir)
+        is_clean = is_working_directory_clean(project_dir, ignore_files=["uv.lock"])
 
         if not is_clean:
             logger.error(

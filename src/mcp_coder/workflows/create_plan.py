@@ -68,7 +68,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
 
     # Check if git working directory is clean
     try:
-        if not is_working_directory_clean(project_dir):
+        if not is_working_directory_clean(project_dir, ignore_files=["uv.lock"]):
             logger.error(
                 "✗ Git working directory is not clean. "
                 "Please commit or stash your changes before creating a plan."
