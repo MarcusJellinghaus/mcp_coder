@@ -16,3 +16,35 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### Step 1: Add Tests for `ignore_files` Parameter
+**Reference**: [pr_info/steps/step_1.md](steps/step_1.md)
+
+- [ ] Add 4 test scenarios to `tests/utils/git_operations/test_repository.py`
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and verify tests fail (TDD - tests written before implementation)
+- [ ] Run mypy and fix any type issues
+- [ ] Prepare git commit message for Step 1
+
+---
+
+### Step 2: Implement `ignore_files` Parameter and Update Callers
+**Reference**: [pr_info/steps/step_2.md](steps/step_2.md)
+
+- [ ] Implement `ignore_files` parameter in `is_working_directory_clean()` function
+- [ ] Update caller: `src/mcp_coder/workflows/create_plan.py`
+- [ ] Update caller: `src/mcp_coder/workflows/implement/prerequisites.py`
+- [ ] Update caller: `src/mcp_coder/workflows/create_pr/core.py` (2 locations)
+- [ ] Remove `uv.lock` from `.gitignore`
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and verify all tests pass
+- [ ] Run mypy and fix any type issues
+- [ ] Prepare git commit message for Step 2
+
+---
+
+## Pull Request
+
+- [ ] Review all changes for Issue #254
+- [ ] Verify backward compatibility
+- [ ] Prepare PR summary with test results
