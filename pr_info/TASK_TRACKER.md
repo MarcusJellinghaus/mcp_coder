@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [Details: pr_info/steps/step_1.md](steps/step_1.md)
 
 - [x] Refactor `resolve_project_dir` in `workflows/utils.py` to raise `ValueError` instead of `sys.exit(1)`
-- [ ] Update `workflows/validate_labels.py` with try/except wrapper for `resolve_project_dir`
+- [x] Update `workflows/validate_labels.py` with try/except wrapper for `resolve_project_dir`
 - [ ] Create CLI command module at `src/mcp_coder/cli/commands/define_labels.py`
 - [ ] Implement `calculate_label_changes` function
 - [ ] Implement `apply_labels` function (raises exceptions instead of `sys.exit`)
