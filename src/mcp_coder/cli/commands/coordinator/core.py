@@ -39,7 +39,7 @@ from .command_templates import (
     IMPLEMENT_COMMAND_WINDOWS,
     PRIORITY_ORDER,
 )
-from .workflow_constants import WORKFLOW_MAPPING
+from .workflow_constants import DUPLICATE_PROTECTION_SECONDS, WORKFLOW_MAPPING
 
 
 def _get_coordinator() -> ModuleType:

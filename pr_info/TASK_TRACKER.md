@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 Reference: [pr_info/steps/step_1.md](steps/step_1.md)
 
 - [x] Add `DUPLICATE_PROTECTION_SECONDS = 50.0` constant to `workflow_constants.py`
-- [ ] Import `DUPLICATE_PROTECTION_SECONDS` in `core.py`
+- [x] Import `DUPLICATE_PROTECTION_SECONDS` in `core.py`
 - [ ] Replace hardcoded `60.0` with `DUPLICATE_PROTECTION_SECONDS` constant and add explanatory comment
 - [ ] Run pylint and fix any issues found
 - [ ] Run pytest and verify all tests pass
