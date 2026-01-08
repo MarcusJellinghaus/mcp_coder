@@ -10,43 +10,44 @@ Reference: pr_info/steps/summary.md for context.
 This step involves a single line change to reduce the duplicate protection window.
 ```
 
-## WHERE: File Location
+## WHERE: File Locations
 
-- **File**: `src/mcp_coder/cli/commands/coordinator/core.py`
-- **Line**: ~460 (inside `get_cached_eligible_issues` function)
+- **File 1**: `src/mcp_coder/cli/commands/coordinator/workflow_constants.py`
+- **File 2**: `src/mcp_coder/cli/commands/coordinator/core.py` (~line 464, inside `get_cached_eligible_issues` function)
 
 ## WHAT: Change Description
 
-Modify the `is_within_duration` call to use 50.0 seconds instead of 60.0 seconds.
+### workflow_constants.py - Add constant
+```python
+DUPLICATE_PROTECTION_SECONDS = 50.0
+```
 
-### Before
+### core.py - Import and use constant
+
+**Add import:**
+```python
+from .workflow_constants import (
+    ...
+    DUPLICATE_PROTECTION_SECONDS,
+)
+```
+
+**Before:**
 ```python
 if is_within_duration(last_checked, 60.0, now):
 ```
 
-### After
+**After:**
 ```python
-if is_within_duration(last_checked, 50.0, now):
+# 50s: buffer for Jenkins ~60s scheduler variance
+if is_within_duration(last_checked, DUPLICATE_PROTECTION_SECONDS, now):
 ```
 
 ## HOW: Integration Points
 
-- No new imports required
-- No decorator changes
+- New import for `DUPLICATE_PROTECTION_SECONDS` constant
 - No interface changes
 - Function signature unchanged
-
-## ALGORITHM
-
-```
-1. Locate is_within_duration call in get_cached_eligible_issues function
-2. Change first numeric argument from 60.0 to 50.0
-3. No other changes needed
-```
-
-## DATA: Return Values and Structures
-
-No changes to return values or data structures. The `is_within_duration` function continues to return a boolean.
 
 ## TEST VERIFICATION
 

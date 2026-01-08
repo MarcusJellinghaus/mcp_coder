@@ -31,11 +31,8 @@ Change the hardcoded 60-second threshold to 50 seconds, providing:
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `src/mcp_coder/cli/commands/coordinator/core.py` | Modify | Change threshold constant from `60.0` to `50.0` |
-
-## Files to Create
-
-None.
+| `src/mcp_coder/cli/commands/coordinator/workflow_constants.py` | Modify | Add `DUPLICATE_PROTECTION_SECONDS = 50.0` constant |
+| `src/mcp_coder/cli/commands/coordinator/core.py` | Modify | Import and use the new constant with explanatory comment |
 
 ## Test Impact
 
