@@ -34,7 +34,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Integrate Command into CLI
 [Details: pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Add import for `execute_define_labels` in `main.py`
+- [x] Add import for `execute_define_labels` in `main.py`
 - [ ] Add `define-labels` subparser with `--project-dir` and `--dry-run` options
 - [ ] Add command routing to call `execute_define_labels(args)`
 - [ ] Add `define-labels` command to help text in `help.py`

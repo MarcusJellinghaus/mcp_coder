@@ -10,6 +10,7 @@ from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.coordinator import execute_coordinator_run, execute_coordinator_test
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
+from .commands.define_labels import execute_define_labels
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
 from .commands.prompt import execute_prompt
