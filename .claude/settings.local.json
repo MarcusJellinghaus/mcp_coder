@@ -18,7 +18,8 @@
       "mcp__filesystem__edit_file",
       "Bash(git diff:*)",
       "Bash(gh run view:*)",
-      "Bash(./tools/format_all.sh:*)"
+      "Bash(./tools/format_all.sh:*)",
+      "Bash(gh issue view:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
