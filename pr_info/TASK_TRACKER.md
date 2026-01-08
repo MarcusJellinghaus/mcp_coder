@@ -20,10 +20,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Add Test for Conversations Directory Cleanup
 *Reference: [pr_info/steps/step_1.md](steps/step_1.md)*
 
-- [ ] Implement test `test_cleanup_repository_includes_conversations_cleanup` in `tests/workflows/create_pr/test_repository.py`
-- [ ] Update existing tests to mock `clean_profiler_output` for full isolation
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement test `test_cleanup_repository_includes_conversations_cleanup` in `tests/workflows/create_pr/test_repository.py`
+- [x] Update existing tests to mock `clean_profiler_output` for full isolation
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Implement Conversations Directory Deletion
 *Reference: [pr_info/steps/step_2.md](steps/step_2.md)*
