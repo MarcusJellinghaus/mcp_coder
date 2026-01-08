@@ -121,6 +121,22 @@ For detailed configuration documentation including:
 
 See the [Configuration Guide](docs/configuration/CONFIG.md).
 
+## 🔧 Setup
+
+### Workflow Labels
+
+To set up GitHub workflow labels for issue tracking:
+
+```bash
+mcp-coder define-labels --dry-run  # Preview changes
+mcp-coder define-labels            # Apply labels
+```
+
+See [Label Setup Guide](docs/getting-started/LABEL_SETUP.md) for complete setup instructions including:
+- Label configuration customization
+- GitHub Actions for auto-labeling new issues
+- The `/approve` command for status promotion
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -180,6 +196,12 @@ mcp-coder prompt "What's next?" --continue
 ```
 
 ### CLI Commands
+
+#### Label Management
+
+- `mcp-coder define-labels` - Sync workflow status labels to GitHub repository
+  - `--project-dir PATH` - Project directory (default: current)
+  - `--dry-run` - Preview changes without applying
 
 #### Create Pull Request
 
@@ -513,7 +535,7 @@ mypy src/
 
 - [Development Process](pr_info/DEVELOPMENT_PROCESS.md) - Detailed methodology
 - [Project Vision](project_idea.md) - Comprehensive project overview
-- [Label Workflow Setup](docs/configuration/LABEL_WORKFLOW_SETUP.md) - GitHub Actions for auto-labeling issues
+- [Label Setup Guide](docs/getting-started/LABEL_SETUP.md) - GitHub workflow labels and setup
 
 ## 🔗 Related Projects
 

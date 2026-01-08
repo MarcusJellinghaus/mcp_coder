@@ -748,4 +748,4 @@ docker run -v ~/.config/mcp_coder:/root/.config/mcp_coder my-container
 
 - [README.md](../../README.md) - Installation and quick start
 - [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - System architecture
-- [LABEL_WORKFLOW_SETUP.md](LABEL_WORKFLOW_SETUP.md) - GitHub Actions for issue labels
+- [Label Setup Guide](../getting-started/LABEL_SETUP.md) - GitHub workflow labels and setup
