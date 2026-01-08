@@ -39,7 +39,7 @@ from .command_templates import (
     IMPLEMENT_COMMAND_WINDOWS,
     PRIORITY_ORDER,
 )
-from .workflow_constants import WORKFLOW_MAPPING
+from .workflow_constants import DUPLICATE_PROTECTION_SECONDS, WORKFLOW_MAPPING
 
 
 def _get_coordinator() -> ModuleType:
@@ -640,12 +640,13 @@ def get_cached_eligible_issues(
                     f"Invalid timestamp in cache: {cache_data['last_checked']}, error: {e}"
                 )
 
-        # Duplicate protection: skip if checked within last minute
+        # Duplicate protection: skip if checked recently
+        # 50s threshold provides buffer for Jenkins ~60s scheduler variance
         now = now_utc()
         if (
             not force_refresh
             and last_checked
-            and is_within_duration(last_checked, 60.0, now)
+            and is_within_duration(last_checked, DUPLICATE_PROTECTION_SECONDS, now)
         ):
             age_seconds = int((now - last_checked).total_seconds())
             coordinator._log_cache_metrics(
