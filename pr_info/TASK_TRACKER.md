@@ -80,7 +80,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Delete `docs/configuration/LABEL_WORKFLOW_SETUP.md`
 - [x] Delete `tests/workflows/test_define_labels.py`
 - [x] Search for and update any remaining references to deleted files
-- [ ] Verify `resolve_project_dir` raises `ValueError` (not `sys.exit`)
+- [x] Verify `resolve_project_dir` raises `ValueError` (not `sys.exit`)
 - [ ] Verify `apply_labels` raises `RuntimeError` on API errors
 - [ ] Run full test suite: `pytest tests/ -m "not github_integration and not git_integration"`
 - [ ] Verify CLI commands work: `mcp-coder define-labels --help`, `mcp-coder help`
