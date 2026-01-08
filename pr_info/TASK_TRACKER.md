@@ -78,7 +78,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Delete `workflows/define_labels.py`
 - [x] Delete `workflows/define_labels.bat`
 - [x] Delete `docs/configuration/LABEL_WORKFLOW_SETUP.md`
-- [ ] Delete `tests/workflows/test_define_labels.py`
+- [x] Delete `tests/workflows/test_define_labels.py`
 - [ ] Search for and update any remaining references to deleted files
 - [ ] Verify `resolve_project_dir` raises `ValueError` (not `sys.exit`)
 - [ ] Verify `apply_labels` raises `RuntimeError` on API errors
