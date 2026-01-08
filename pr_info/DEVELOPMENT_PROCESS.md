@@ -348,7 +348,7 @@ flowchart LR
 
 4. **Commit updated implementation plan**
    <details>
-   <summary>📋 Commit updated implementation plan with</summary>
+   <summary>📋 Commit updated implementation plan with message</summary>
 
    ```
    Updated implementation plan
