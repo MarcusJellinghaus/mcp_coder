@@ -25,18 +25,22 @@ def test_cleanup_repository_deletes_conversations_directory(self) -> None:
 ## HOW: Integration Points
 
 - Add test to existing `TestCleanupRepository` class
-- Use `TemporaryDirectory` for real filesystem testing (same pattern as `test_file_operations.py`)
+- Use `@patch` decorators for mocking (same pattern as existing tests in file)
+- Mock all four cleanup helpers for consistent, isolated unit tests:
+  - `delete_steps_directory`
+  - `truncate_task_tracker`
+  - `clean_profiler_output`
+  - New conversations deletion logic
 - Import `cleanup_repository` (already imported in test file)
 
 ## ALGORITHM: Test Pseudocode
 
 ```
-1. Create temp directory as project_dir
-2. Create pr_info/.conversations/ with test files inside
-3. Create pr_info/TASK_TRACKER.md (required by cleanup_repository)
-4. Call cleanup_repository(project_dir)
-5. Assert .conversations directory no longer exists
-6. Assert function returned True
+1. Set up @patch decorators for all four cleanup helpers
+2. Configure all mocks to return True (success case)
+3. Call cleanup_repository(Path("/test/project"))
+4. Assert function returned True
+5. Assert all four mocked functions were called with correct arguments
 ```
 
 ## DATA: Test Structure
@@ -52,4 +56,5 @@ def test_cleanup_repository_deletes_conversations_directory(self) -> None:
 ## Notes
 
 - The test will FAIL initially (expected for TDD) until Step 2 implements the functionality
-- Use real filesystem operations, not mocks, for this integration-style test
+- Use mocks for consistency with existing tests in the file
+- Also update existing tests to mock `clean_profiler_output` for full isolation

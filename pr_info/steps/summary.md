@@ -30,7 +30,7 @@ Add deletion of `pr_info/.conversations/` directory inline within the existing `
 
 ## Acceptance Criteria
 
-- [x] `pr_info/.conversations/` is deleted during `create_pr` workflow
-- [x] Cleanup changes are committed and pushed with appropriate message
-- [x] CI passes (no forbidden folders present)
-- [x] Tests added for the new cleanup functionality
+- [ ] `pr_info/.conversations/` is deleted during `create_pr` workflow
+- [ ] Cleanup changes are committed and pushed with appropriate message
+- [ ] CI passes (no forbidden folders present)
+- [ ] Tests added for the new cleanup functionality
