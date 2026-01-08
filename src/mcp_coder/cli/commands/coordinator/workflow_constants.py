@@ -30,6 +30,10 @@ class WorkflowConfig(TypedDict):
     next_label: str
 
 
+# Duplicate protection threshold (seconds)
+# Buffer for Jenkins ~60s scheduler variance - issues checked within this window are skipped
+DUPLICATE_PROTECTION_SECONDS = 50.0
+
 # Workflow configuration mapping
 # IMPORTANT: Label names must match those defined in config/labels.json
 # Uses GitHub API label names directly (not internal_ids) for simpler code
