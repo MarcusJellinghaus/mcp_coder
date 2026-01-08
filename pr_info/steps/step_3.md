@@ -2,38 +2,63 @@
 
 ## Overview
 
-Move existing tests from `tests/workflows/test_define_labels.py` to `tests/cli/commands/test_define_labels.py` and update imports.
+Move existing tests from `tests/workflows/test_define_labels.py` to `tests/cli/commands/test_define_labels.py`, update imports, and fix tests that expect `SystemExit` to expect `ValueError`.
 
 ## WHERE
 
 - **Create**: `tests/cli/commands/test_define_labels.py`
+- **Modify**: `tests/workflows/implement/test_core.py` (update `SystemExit` → `ValueError`)
 - **Delete**: `tests/workflows/test_define_labels.py` (in Step 5)
 
 ## WHAT
 
-### Test classes to move (update imports only):
+### Test classes to move (with import updates):
 
 1. `TestWorkflowLabelsFromConfig` - Tests loading labels from JSON config
 2. `TestWorkflowLabelsContent` - Tests label metadata and coverage
 3. `TestCalculateLabelChanges` - Unit tests for pure function
-4. `TestApplyLabels` - Mocked integration tests for orchestrator
-5. `TestArgumentParsing` - CLI argument parsing tests (REMOVE - handled by main.py now)
-6. `TestResolveProjectDir` - Project directory validation tests
+4. `TestApplyLabels` - Mocked integration tests for orchestrator (update for new exception pattern)
+5. `TestResolveProjectDir` - Project directory validation tests (update `SystemExit` → `ValueError`)
 
-### New test class to add:
+### Test class to REMOVE:
+
+- `TestArgumentParsing` - No longer needed; argument parsing is handled by `main.py`'s argparse
+
+### New test class to add (MINIMAL):
 
 ```python
 class TestExecuteDefineLabels:
-    """Test the CLI execute function."""
+    """Test the CLI execute function - minimal tests for wiring."""
     
-    def test_execute_define_labels_success(self, ...)
-    def test_execute_define_labels_dry_run(self, ...)
-    def test_execute_define_labels_invalid_project_dir(self, ...)
+    def test_execute_define_labels_dry_run_returns_zero(self, ...):
+        """Test successful dry-run execution returns 0."""
+        ...
+    
+    def test_execute_define_labels_invalid_dir_returns_one(self, ...):
+        """Test invalid project dir returns 1."""
+        ...
+```
+
+Only 1-2 tests needed - the core logic is already tested by `TestApplyLabels`.
+
+### Update `tests/workflows/implement/test_core.py`:
+
+Change tests that expect `SystemExit` from `resolve_project_dir` to expect `ValueError`:
+
+```python
+# BEFORE
+with pytest.raises(SystemExit) as exc_info:
+    resolve_project_dir("/invalid/path")
+assert exc_info.value.code == 1
+
+# AFTER
+with pytest.raises(ValueError, match="does not exist"):
+    resolve_project_dir("/invalid/path")
 ```
 
 ## HOW
 
-### Import changes:
+### Import changes in new test file:
 
 **Old imports:**
 ```python
@@ -51,8 +76,8 @@ from mcp_coder.cli.commands.define_labels import (
     apply_labels,
     calculate_label_changes,
     execute_define_labels,
-    resolve_project_dir,
 )
+from mcp_coder.workflows.utils import resolve_project_dir
 ```
 
 ### Mock path changes:
@@ -67,9 +92,37 @@ from mcp_coder.cli.commands.define_labels import (
 @patch("mcp_coder.cli.commands.define_labels.LabelsManager")
 ```
 
+### Update `TestApplyLabels` for exception pattern:
+
+The `apply_labels` function now raises `RuntimeError` instead of calling `sys.exit(1)`:
+
+```python
+# BEFORE: Test expected SystemExit
+with pytest.raises(SystemExit) as exc_info:
+    apply_labels(tmp_path, workflow_labels, dry_run=False)
+assert exc_info.value.code == 1
+
+# AFTER: Test expects RuntimeError
+with pytest.raises(RuntimeError, match="Failed to create label"):
+    apply_labels(tmp_path, workflow_labels, dry_run=False)
+```
+
+### Update `TestResolveProjectDir` for exception pattern:
+
+```python
+# BEFORE
+with pytest.raises(SystemExit) as exc_info:
+    resolve_project_dir(nonexistent_path)
+assert exc_info.value.code == 1
+
+# AFTER
+with pytest.raises(ValueError, match="does not exist"):
+    resolve_project_dir(nonexistent_path)
+```
+
 ## ALGORITHM
 
-N/A - This step is moving/renaming only.
+N/A - This step is moving/renaming and updating exception expectations.
 
 ## DATA
 
@@ -88,26 +141,41 @@ Task: Move and update the tests:
 
 2. Update all imports:
    - Change `from workflows.define_labels import ...` to `from mcp_coder.cli.commands.define_labels import ...`
+   - Import `resolve_project_dir` from `mcp_coder.workflows.utils`
    - Update mock patches from `@patch("workflows.define_labels.LabelsManager")` to `@patch("mcp_coder.cli.commands.define_labels.LabelsManager")`
 
-3. Remove `TestArgumentParsing` class (argument parsing is now handled by main.py's argparse)
+3. Remove `TestArgumentParsing` class entirely (argument parsing is now handled by main.py)
 
-4. Add a new `TestExecuteDefineLabels` class with tests:
-   - `test_execute_define_labels_dry_run_success` - Test successful dry-run execution
-   - Mock the dependencies appropriately
+4. Update `TestResolveProjectDir` tests:
+   - Change `pytest.raises(SystemExit)` to `pytest.raises(ValueError)`
+   - Remove assertions on `exc_info.value.code`
+   - Add `match=` parameter to verify error messages
 
-5. Keep all existing test logic - only change imports and mock paths
+5. Update `TestApplyLabels` tests:
+   - Change `pytest.raises(SystemExit)` to `pytest.raises(RuntimeError)` for API errors
+   - Update error message match patterns
 
-Reference: Look at `tests/cli/commands/test_verify.py` for patterns.
+6. Add minimal `TestExecuteDefineLabels` class with only 1-2 tests:
+   - `test_execute_define_labels_dry_run_returns_zero` - Mock dependencies, verify returns 0
+   - `test_execute_define_labels_invalid_dir_returns_one` - Invalid path returns 1
+
+7. Update `tests/workflows/implement/test_core.py`:
+   - Find all tests using `pytest.raises(SystemExit)` for `resolve_project_dir`
+   - Change to `pytest.raises(ValueError)`
+
+Reference: Look at `tests/cli/commands/test_create_pr.py` for patterns.
 
 Do not delete the old test file yet - that happens in Step 5.
 ```
 
 ## Verification
 
-- [ ] New test file created at correct location
-- [ ] All imports updated to new module path
-- [ ] All mock patches updated to new module path
+- [ ] New test file created at `tests/cli/commands/test_define_labels.py`
+- [ ] All imports updated to new module paths
+- [ ] All mock patches updated to new module paths
 - [ ] `TestArgumentParsing` class removed
-- [ ] New `TestExecuteDefineLabels` class added
-- [ ] All tests pass: `pytest tests/cli/commands/test_define_labels.py -v`
+- [ ] `TestResolveProjectDir` tests expect `ValueError` instead of `SystemExit`
+- [ ] `TestApplyLabels` API error tests expect `RuntimeError` instead of `SystemExit`
+- [ ] Minimal `TestExecuteDefineLabels` class added (1-2 tests)
+- [ ] `tests/workflows/implement/test_core.py` updated to expect `ValueError`
+- [ ] All tests pass: `pytest tests/cli/commands/test_define_labels.py tests/workflows/implement/test_core.py -v`

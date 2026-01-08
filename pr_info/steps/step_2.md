@@ -36,6 +36,11 @@ define_labels_parser.add_argument(
 )
 ```
 
+**Note**: No `--log-level` argument - the parent parser already provides this. Users use:
+```bash
+mcp-coder --log-level DEBUG define-labels
+```
+
 3. Add routing in `main()`:
 ```python
 elif args.command == "define-labels":
@@ -55,13 +60,13 @@ Add to the COMMANDS section in `get_help_text()`:
 
 ### Integration points in `main.py`:
 
-1. Import at top with other command imports (around line 10)
-2. Subparser after `coordinator_parser` block (around line 240)
-3. Command routing after the coordinator elif block (around line 300)
+1. Import at top with other command imports (after existing imports like `execute_verify`)
+2. Subparser after the `coordinator_parser` block
+3. Command routing in the `main()` function after the coordinator elif block
 
 ### Integration point in `help.py`:
 
-Add in `get_help_text()` function, in the COMMANDS section after the `commit` commands.
+Add in `get_help_text()` function, in the COMMANDS section. Place it logically - either alphabetically or grouped with similar commands.
 
 ## ALGORITHM
 
@@ -89,12 +94,15 @@ Task: Integrate the `define-labels` command into the CLI:
 
 1. In `src/mcp_coder/cli/main.py`:
    - Add import for `execute_define_labels` from `.commands.define_labels`
-   - Add `define-labels` subparser with `--project-dir` and `--dry-run` options
+   - Add `define-labels` subparser with ONLY these options:
+     - `--project-dir` (type=str, default=None)
+     - `--dry-run` (action="store_true")
+   - Do NOT add `--log-level` - parent parser already provides it
    - Add command routing to call `execute_define_labels(args)`
    
 2. In `src/mcp_coder/cli/commands/help.py`:
    - Add `define-labels` command to the COMMANDS section in `get_help_text()`
-   - Document both options
+   - Document both options (--project-dir and --dry-run)
 
 Follow the existing patterns for other commands like `verify`, `commit`, `create-pr`.
 
@@ -103,7 +111,8 @@ Do not modify any other files in this step.
 
 ## Verification
 
-- [ ] `mcp-coder define-labels --help` shows correct usage
-- [ ] `mcp-coder help` lists `define-labels` command
+- [ ] `mcp-coder define-labels --help` shows correct usage (only --project-dir and --dry-run)
+- [ ] `mcp-coder help` lists `define-labels` command with options
 - [ ] `mcp-coder --help` shows `define-labels` in command list
+- [ ] `mcp-coder --log-level DEBUG define-labels --dry-run` works (log level from parent)
 - [ ] No import errors when running CLI

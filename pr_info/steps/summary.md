@@ -23,7 +23,7 @@ workflows/
 ### After
 ```
 src/mcp_coder/cli/commands/
-├── define_labels.py      # CLI command with all logic (moved here)
+├── define_labels.py      # CLI command with core logic (moved here)
 
 tests/cli/commands/
 ├── test_define_labels.py # Tests (moved from tests/workflows/)
@@ -34,9 +34,12 @@ docs/getting-started/
 
 ### Design Decisions
 
-1. **Single module approach**: All logic (`calculate_label_changes`, `apply_labels`, `resolve_project_dir`) lives in the CLI command module - no separate `label_sync.py` needed since there's no external reuse
-2. **Reuse existing infrastructure**: `LabelsManager` and `label_config.py` already provide GitHub API and config handling
-3. **Follow existing CLI patterns**: Mirror structure of `verify.py`, `commit.py` commands
+1. **Import shared utilities**: `resolve_project_dir` is imported from `mcp_coder.workflows.utils` (not copied) to avoid code duplication
+2. **Exception-based error handling**: Refactor `resolve_project_dir` and `apply_labels` to raise `ValueError` instead of calling `sys.exit(1)` - matches CLI pattern used by `resolve_execution_dir`
+3. **Reuse existing infrastructure**: `LabelsManager` and `label_config.py` already provide GitHub API and config handling
+4. **Follow existing CLI patterns**: Mirror structure of `verify.py`, `commit.py` commands
+5. **Parent parser handles --log-level**: No `--log-level` on subparser (consistent with other commands)
+6. **Config file fallback**: Keep existing behavior - tries local `workflows/config/labels.json` first, falls back to bundled package config
 
 ## Files to Create
 
@@ -52,8 +55,12 @@ docs/getting-started/
 |------|---------|
 | `src/mcp_coder/cli/main.py` | Add subparser and command routing |
 | `src/mcp_coder/cli/commands/help.py` | Add command to help text |
+| `src/mcp_coder/workflows/utils.py` | Refactor `resolve_project_dir` to raise `ValueError` |
+| `workflows/validate_labels.py` | Add try/except for `resolve_project_dir` |
+| `tests/workflows/implement/test_core.py` | Update tests to expect `ValueError` |
 | `README.md` | Add Setup section and command docs |
 | `pr_info/DEVELOPMENT_PROCESS.md` | Update documentation link |
+| `docs/configuration/CONFIG.md` | Update link to new documentation |
 
 ## Files to Delete
 
@@ -66,11 +73,20 @@ docs/getting-started/
 
 ## Implementation Steps Overview
 
-1. **Step 1**: Create CLI command module with core logic
+1. **Step 1**: Create CLI command module with core logic; refactor `resolve_project_dir` to exceptions
 2. **Step 2**: Integrate command into CLI (main.py + help.py)
-3. **Step 3**: Move and update tests
-4. **Step 4**: Update documentation
+3. **Step 3**: Move and update tests (minimal `TestExecuteDefineLabels`)
+4. **Step 4**: Update documentation (including CONFIG.md and config location docs)
 5. **Step 5**: Remove old files and verify
+
+## Label Configuration
+
+The command uses a two-location config system (documented in Step 4):
+
+1. **Local override**: `project_dir/workflows/config/labels.json` - if exists
+2. **Bundled fallback**: `mcp_coder/config/labels.json` - package default
+
+This allows projects to customize labels while providing sensible defaults.
 
 ## Acceptance Criteria
 
@@ -80,3 +96,4 @@ docs/getting-started/
 - [ ] `mcp-coder help` includes `define-labels` in command list
 - [ ] All tests pass (unit + mocked integration)
 - [ ] Documentation complete and cross-referenced
+- [ ] `resolve_project_dir` uses exception pattern (not `sys.exit`)

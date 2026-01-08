@@ -2,7 +2,7 @@
 
 ## Overview
 
-Delete the old standalone script, batch file, documentation, and test file. Run comprehensive verification.
+Delete the old standalone script, batch file, documentation, and test file. Run comprehensive verification including the `resolve_project_dir` refactoring.
 
 ## WHERE
 
@@ -27,6 +27,7 @@ Delete the old standalone script, batch file, documentation, and test file. Run 
 2. Verify CLI command works end-to-end
 3. Check for any remaining references to deleted files
 4. Verify documentation links work
+5. Verify `resolve_project_dir` refactoring is complete (raises `ValueError`, not `sys.exit`)
 
 ## HOW
 
@@ -36,6 +37,24 @@ Delete the old standalone script, batch file, documentation, and test file. Run 
 # Search for references to old paths
 grep -r "workflows/define_labels" --include="*.py" --include="*.md" --include="*.bat"
 grep -r "LABEL_WORKFLOW_SETUP" --include="*.md"
+
+# Verify no sys.exit in resolve_project_dir
+grep -n "sys.exit" src/mcp_coder/workflows/utils.py
+```
+
+### Verify exception pattern is working:
+
+```python
+# Quick verification that resolve_project_dir raises ValueError
+python -c "
+from mcp_coder.workflows.utils import resolve_project_dir
+try:
+    resolve_project_dir('/nonexistent/path')
+except ValueError as e:
+    print(f'OK: raises ValueError: {e}')
+except SystemExit:
+    print('FAIL: still calls sys.exit()')
+"
 ```
 
 ## ALGORITHM
@@ -66,14 +85,21 @@ Task: Clean up old files and verify the implementation:
    - `LABEL_WORKFLOW_SETUP`
    - Update any found references
 
-3. Run verification:
+3. Verify the resolve_project_dir refactoring:
+   - Confirm `src/mcp_coder/workflows/utils.py` raises ValueError (no sys.exit)
+   - Confirm `workflows/validate_labels.py` has try/except wrapper
+   - Confirm all tests expect ValueError instead of SystemExit
+
+4. Run verification:
    - `pytest tests/cli/commands/test_define_labels.py -v` - New tests pass
-   - `pytest tests/ -v` - All project tests pass
+   - `pytest tests/workflows/implement/test_core.py -v` - Updated tests pass
+   - `pytest tests/ -m "not github_integration and not git_integration" -v` - All unit tests pass
    - `mcp-coder define-labels --help` - CLI help works
    - `mcp-coder help` - Shows define-labels command
 
-4. Verify no import errors:
+5. Verify no import errors:
    - `python -c "from mcp_coder.cli.commands.define_labels import execute_define_labels"`
+   - `python -c "from mcp_coder.workflows.utils import resolve_project_dir"`
 ```
 
 ## Verification
@@ -82,14 +108,22 @@ Task: Clean up old files and verify the implementation:
 - [ ] `mcp-coder define-labels --help` displays usage
 - [ ] `mcp-coder define-labels --dry-run` works (in a git repo with GitHub token)
 - [ ] `mcp-coder help` shows `define-labels` command
+- [ ] `mcp-coder --log-level DEBUG define-labels --dry-run` works (parent parser log level)
+
+### Exception pattern verification:
+- [ ] `resolve_project_dir` raises `ValueError` (not `sys.exit`)
+- [ ] `apply_labels` raises `RuntimeError` on API errors (not `sys.exit`)
+- [ ] `execute_define_labels` catches exceptions and returns exit codes
 
 ### Test suite:
 - [ ] `pytest tests/cli/commands/test_define_labels.py -v` - All pass
-- [ ] `pytest tests/ -m "not github_integration"` - All pass (excluding live API tests)
+- [ ] `pytest tests/workflows/implement/test_core.py -v` - All pass (ValueError expectations)
+- [ ] `pytest tests/ -m "not github_integration and not git_integration"` - All pass
 
 ### Code quality:
 - [ ] `pylint src/mcp_coder/cli/commands/define_labels.py` - No errors
 - [ ] `mypy src/mcp_coder/cli/commands/define_labels.py` - No errors
+- [ ] `pylint src/mcp_coder/workflows/utils.py` - No errors
 
 ### Cleanup verification:
 - [ ] `workflows/define_labels.py` deleted
@@ -108,3 +142,5 @@ After this step, all acceptance criteria from the issue should be met:
 - [x] `mcp-coder help` includes `define-labels` in command list
 - [x] All tests pass (unit + mocked integration)
 - [x] Documentation complete and cross-referenced
+- [x] `resolve_project_dir` uses exception pattern (not `sys.exit`)
+- [x] Config file locations documented (local override + bundled fallback)

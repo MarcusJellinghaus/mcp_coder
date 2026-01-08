@@ -2,13 +2,14 @@
 
 ## Overview
 
-Create new consolidated documentation and update cross-references throughout the project.
+Create new consolidated documentation and update cross-references throughout the project. Include documentation of the config file locations.
 
 ## WHERE
 
 - **Create**: `docs/getting-started/LABEL_SETUP.md`
 - **Modify**: `README.md`
 - **Modify**: `pr_info/DEVELOPMENT_PROCESS.md`
+- **Modify**: `docs/configuration/CONFIG.md`
 - **Delete**: `docs/configuration/LABEL_WORKFLOW_SETUP.md` (in Step 5)
 
 ## WHAT
@@ -18,10 +19,56 @@ Create new consolidated documentation and update cross-references throughout the
 Content structure:
 1. **Introduction** - What workflow labels are and why they matter
 2. **Prerequisites** - GitHub token configuration
-3. **Using the define-labels command** - CLI usage with examples
-4. **GitHub Actions Setup** - `label-new-issues.yml` and `approve-command.yml`
-5. **Label Reference** - Brief description of status labels
-6. **Cross-references** - Link to DEVELOPMENT_PROCESS.md
+3. **Label Configuration** - Document the two config file locations:
+   - Local override: `workflows/config/labels.json` (project-specific)
+   - Bundled fallback: `mcp_coder/config/labels.json` (package default)
+4. **Using the define-labels command** - CLI usage with examples
+5. **GitHub Actions Setup** - `label-new-issues.yml` and `approve-command.yml`
+6. **Label Reference** - Brief description of status labels
+7. **Cross-references** - Link to DEVELOPMENT_PROCESS.md
+
+### Label Configuration Section (important new content):
+
+```markdown
+## Label Configuration
+
+The `define-labels` command uses a two-location configuration system:
+
+### Configuration Priority
+
+1. **Local project config** (checked first):
+   ```
+   your-project/workflows/config/labels.json
+   ```
+   Use this to customize labels for your specific project.
+
+2. **Bundled package config** (fallback):
+   ```
+   mcp_coder/config/labels.json
+   ```
+   Used when no local config exists. Provides sensible defaults.
+
+### Customizing Labels
+
+To use custom labels for your project:
+
+1. Create the config directory:
+   ```bash
+   mkdir -p workflows/config
+   ```
+
+2. Copy the default config as a starting point:
+   ```bash
+   # Find the bundled config location
+   python -c "from mcp_coder.utils.github_operations.label_config import get_labels_config_path; print(get_labels_config_path(None))"
+   
+   # Or create your own based on the structure
+   ```
+
+3. Edit `workflows/config/labels.json` with your custom labels
+
+4. Run `mcp-coder define-labels --dry-run` to preview changes
+```
 
 ### Modifications to `README.md`:
 
@@ -76,10 +123,27 @@ python workflows/define_labels.py
 mcp-coder define-labels
 ```
 
+### Modifications to `docs/configuration/CONFIG.md`:
+
+Update the link to label documentation:
+
+**Old:**
+```markdown
+- [LABEL_WORKFLOW_SETUP.md](LABEL_WORKFLOW_SETUP.md) - GitHub Actions for issue labels
+```
+
+**New:**
+```markdown
+- [Label Setup Guide](../getting-started/LABEL_SETUP.md) - GitHub workflow labels and setup
+```
+
 ## HOW
 
 ### Directory creation:
-The `docs/getting-started/` directory may need to be created.
+The `docs/getting-started/` directory may need to be created:
+```bash
+mkdir -p docs/getting-started
+```
 
 ## ALGORITHM
 
@@ -103,6 +167,10 @@ Task: Update documentation:
    - Update command from `python workflows/define_labels.py` to `mcp-coder define-labels`
    - Add introduction explaining the workflow label system
    - Document `--dry-run` and `--project-dir` options
+   - **IMPORTANT**: Add "Label Configuration" section documenting the two config locations:
+     - Local: `workflows/config/labels.json` (project-specific override)
+     - Bundled: `mcp_coder/config/labels.json` (package default fallback)
+   - Include instructions for customizing labels
    - Keep the GitHub Actions YAML examples
    - Add cross-reference to `pr_info/DEVELOPMENT_PROCESS.md`
 
@@ -115,14 +183,20 @@ Task: Update documentation:
    - Change the prerequisites link from `docs/configuration/LABEL_WORKFLOW_SETUP.md` to `docs/getting-started/LABEL_SETUP.md`
    - Update any references from `python workflows/define_labels.py` to `mcp-coder define-labels`
 
+4. Update `docs/configuration/CONFIG.md`:
+   - Update the link from `LABEL_WORKFLOW_SETUP.md` to `../getting-started/LABEL_SETUP.md`
+   - Update the description if needed
+
 Do not delete the old documentation file yet - that happens in Step 5.
 ```
 
 ## Verification
 
 - [ ] New guide created at `docs/getting-started/LABEL_SETUP.md`
+- [ ] New guide includes "Label Configuration" section with two-location explanation
 - [ ] README.md updated with Setup section
 - [ ] README.md documents `define-labels` command
 - [ ] DEVELOPMENT_PROCESS.md link updated
+- [ ] CONFIG.md link updated
 - [ ] All internal links work correctly
 - [ ] No broken references to old file paths
