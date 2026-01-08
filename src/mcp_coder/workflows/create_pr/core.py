@@ -374,7 +374,8 @@ def generate_pr_summary(
 
 def cleanup_repository(project_dir: Path) -> bool:
     """
-    Clean up repository by deleting steps directory, truncating task tracker, and cleaning profiler output.
+    Clean up repository by deleting steps directory, conversations directory,
+    truncating task tracker, and cleaning profiler output.
 
     Args:
         project_dir: Path to project directory
@@ -403,6 +404,18 @@ def cleanup_repository(project_dir: Path) -> bool:
     if not clean_profiler_output(project_dir):
         logger.error("Failed to clean profiler output")
         success = False
+
+    # Delete conversations directory
+    conversations_dir = project_dir / "pr_info" / ".conversations"
+    if conversations_dir.exists():
+        try:
+            shutil.rmtree(conversations_dir)
+            logger.info(f"Successfully deleted: {conversations_dir}")
+        except Exception as e:
+            logger.error(f"Failed to delete conversations: {e}")
+            success = False
+    else:
+        logger.info(f"Directory {conversations_dir} does not exist - nothing to delete")
 
     if success:
         logger.info("Repository cleanup completed successfully")
@@ -593,7 +606,7 @@ def run_create_pr_workflow(
         # Commit cleanup changes
         log_step("Committing cleanup changes...")
         commit_result = commit_all_changes(
-            "Clean up pr_info/steps planning files", project_dir
+            "Clean up pr_info temporary folders", project_dir
         )
 
         if not commit_result["success"]:

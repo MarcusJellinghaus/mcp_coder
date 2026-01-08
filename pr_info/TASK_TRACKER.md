@@ -28,11 +28,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Implement Conversations Directory Deletion
 *Reference: [pr_info/steps/step_2.md](steps/step_2.md)*
 
-- [ ] Update `cleanup_repository()` docstring in `src/mcp_coder/workflows/create_pr/core.py`
-- [ ] Add `.conversations` directory deletion logic in `cleanup_repository()`
-- [ ] Update commit message from "Clean up pr_info/steps planning files" to "Clean up pr_info temporary folders"
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Update `cleanup_repository()` docstring in `src/mcp_coder/workflows/create_pr/core.py`
+- [x] Add `.conversations` directory deletion logic in `cleanup_repository()`
+- [x] Update commit message from "Clean up pr_info/steps planning files" to "Clean up pr_info temporary folders"
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 2
 
 ---
 
