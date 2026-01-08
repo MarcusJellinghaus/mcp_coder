@@ -22,14 +22,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Refactor `resolve_project_dir` in `workflows/utils.py` to raise `ValueError` instead of `sys.exit(1)`
 - [x] Update `workflows/validate_labels.py` with try/except wrapper for `resolve_project_dir`
-- [ ] Create CLI command module at `src/mcp_coder/cli/commands/define_labels.py`
-- [ ] Implement `calculate_label_changes` function
-- [ ] Implement `apply_labels` function (raises exceptions instead of `sys.exit`)
-- [ ] Implement `execute_define_labels` function with exception handling
-- [ ] Run pylint on new/modified files
-- [ ] Run pytest on related tests
-- [ ] Run mypy on new/modified files
-- [ ] Prepare git commit message for Step 1
+- [x] Create CLI command module at `src/mcp_coder/cli/commands/define_labels.py`
+- [x] Implement `calculate_label_changes` function
+- [x] Implement `apply_labels` function (raises exceptions instead of `sys.exit`)
+- [x] Implement `execute_define_labels` function with exception handling
+- [x] Run pylint on new/modified files
+- [x] Run pytest on related tests
+- [x] Run mypy on new/modified files
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Integrate Command into CLI
 [Details: pr_info/steps/step_2.md](steps/step_2.md)
