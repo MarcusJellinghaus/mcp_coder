@@ -9,6 +9,9 @@ Create the `define_labels.py` CLI command module containing core logic for label
 - **Create**: `src/mcp_coder/cli/commands/define_labels.py`
 - **Modify**: `src/mcp_coder/workflows/utils.py` (refactor `resolve_project_dir`)
 - **Modify**: `workflows/validate_labels.py` (add try/except wrapper)
+- **Modify**: `tests/workflows/implement/test_core.py` (update to expect `ValueError`)
+
+**Note**: `workflows/define_labels.py` contains its own duplicate copy of `resolve_project_dir`. We do NOT refactor that copy - the entire file gets deleted in Step 5. We only refactor the shared utility in `workflows/utils.py`.
 
 ## WHAT
 
@@ -38,6 +41,35 @@ except ValueError as e:
     logger.error(str(e))
     sys.exit(1)
 ```
+
+### Part B2: Update `tests/workflows/implement/test_core.py`
+
+Update tests that expect `SystemExit` from `resolve_project_dir` to expect `ValueError`:
+
+```python
+# BEFORE
+with pytest.raises(SystemExit) as exc_info:
+    resolve_project_dir("/invalid/path")
+assert exc_info.value.code == 1
+
+# AFTER
+with pytest.raises(ValueError, match="does not exist"):
+    resolve_project_dir("/invalid/path")
+```
+
+### >>> CHECKPOINT: Verify Refactoring Before Proceeding <<<
+
+After completing Parts A, B, and B2, verify the refactoring works before creating the CLI command:
+
+```bash
+# Run tests to verify resolve_project_dir refactoring
+pytest tests/workflows/implement/test_core.py -v
+
+# Verify validate_labels.py still works
+python -c "from workflows.validate_labels import main"
+```
+
+Only proceed to Part C after these checks pass.
 
 ### Part C: Create CLI Command Module
 
@@ -207,11 +239,21 @@ Do not modify main.py or help.py in this step - that's Step 2.
 
 ## Verification
 
+### Refactoring (Parts A, B, B2):
 - [ ] `resolve_project_dir` in `workflows/utils.py` raises `ValueError` instead of `sys.exit(1)`
 - [ ] `workflows/validate_labels.py` has try/except wrapper for `resolve_project_dir`
+- [ ] `tests/workflows/implement/test_core.py` updated to expect `ValueError`
+- [ ] Checkpoint passed: `pytest tests/workflows/implement/test_core.py -v`
+
+### CLI Command (Part C):
 - [ ] CLI command file created at correct location
 - [ ] `calculate_label_changes` and `apply_labels` functions implemented
 - [ ] `apply_labels` raises exceptions instead of `sys.exit(1)`
 - [ ] `execute_define_labels` handles exceptions and returns exit codes
 - [ ] Imports use package structure (imports `resolve_project_dir` from `workflows.utils`)
 - [ ] No syntax errors: `python -c "from mcp_coder.cli.commands.define_labels import execute_define_labels"`
+
+### Code Quality Checks:
+- [ ] `mcp__code-checker__run_pylint_check()` - No errors
+- [ ] `mcp__code-checker__run_pytest_check()` - All tests pass
+- [ ] `mcp__code-checker__run_mypy_check()` - No type errors

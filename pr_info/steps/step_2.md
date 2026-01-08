@@ -116,3 +116,8 @@ Do not modify any other files in this step.
 - [ ] `mcp-coder --help` shows `define-labels` in command list
 - [ ] `mcp-coder --log-level DEBUG define-labels --dry-run` works (log level from parent)
 - [ ] No import errors when running CLI
+
+### Code Quality Checks:
+- [ ] `mcp__code-checker__run_pylint_check()` - No errors
+- [ ] `mcp__code-checker__run_pytest_check()` - All tests pass
+- [ ] `mcp__code-checker__run_mypy_check()` - No type errors

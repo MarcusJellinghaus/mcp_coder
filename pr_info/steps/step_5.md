@@ -120,10 +120,10 @@ Task: Clean up old files and verify the implementation:
 - [ ] `pytest tests/workflows/implement/test_core.py -v` - All pass (ValueError expectations)
 - [ ] `pytest tests/ -m "not github_integration and not git_integration"` - All pass
 
-### Code quality:
-- [ ] `pylint src/mcp_coder/cli/commands/define_labels.py` - No errors
-- [ ] `mypy src/mcp_coder/cli/commands/define_labels.py` - No errors
-- [ ] `pylint src/mcp_coder/workflows/utils.py` - No errors
+### Code Quality Checks (MCP tools):
+- [ ] `mcp__code-checker__run_pylint_check()` - No errors
+- [ ] `mcp__code-checker__run_pytest_check()` - All tests pass
+- [ ] `mcp__code-checker__run_mypy_check()` - No type errors
 
 ### Cleanup verification:
 - [ ] `workflows/define_labels.py` deleted

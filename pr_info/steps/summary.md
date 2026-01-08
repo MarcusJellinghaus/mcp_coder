@@ -73,7 +73,7 @@ docs/getting-started/
 
 ## Implementation Steps Overview
 
-1. **Step 1**: Create CLI command module with core logic; refactor `resolve_project_dir` to exceptions
+1. **Step 1**: Create CLI command module with core logic; refactor `resolve_project_dir` to exceptions; update `test_core.py` (with checkpoint)
 2. **Step 2**: Integrate command into CLI (main.py + help.py)
 3. **Step 3**: Move and update tests (minimal `TestExecuteDefineLabels`)
 4. **Step 4**: Update documentation (including CONFIG.md and config location docs)

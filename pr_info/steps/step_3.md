@@ -7,8 +7,9 @@ Move existing tests from `tests/workflows/test_define_labels.py` to `tests/cli/c
 ## WHERE
 
 - **Create**: `tests/cli/commands/test_define_labels.py`
-- **Modify**: `tests/workflows/implement/test_core.py` (update `SystemExit` → `ValueError`)
 - **Delete**: `tests/workflows/test_define_labels.py` (in Step 5)
+
+**Note**: `tests/workflows/implement/test_core.py` was already updated in Step 1 as part of the refactoring checkpoint.
 
 ## WHAT
 
@@ -40,21 +41,6 @@ class TestExecuteDefineLabels:
 ```
 
 Only 1-2 tests needed - the core logic is already tested by `TestApplyLabels`.
-
-### Update `tests/workflows/implement/test_core.py`:
-
-Change tests that expect `SystemExit` from `resolve_project_dir` to expect `ValueError`:
-
-```python
-# BEFORE
-with pytest.raises(SystemExit) as exc_info:
-    resolve_project_dir("/invalid/path")
-assert exc_info.value.code == 1
-
-# AFTER
-with pytest.raises(ValueError, match="does not exist"):
-    resolve_project_dir("/invalid/path")
-```
 
 ## HOW
 
@@ -159,11 +145,9 @@ Task: Move and update the tests:
    - `test_execute_define_labels_dry_run_returns_zero` - Mock dependencies, verify returns 0
    - `test_execute_define_labels_invalid_dir_returns_one` - Invalid path returns 1
 
-7. Update `tests/workflows/implement/test_core.py`:
-   - Find all tests using `pytest.raises(SystemExit)` for `resolve_project_dir`
-   - Change to `pytest.raises(ValueError)`
-
 Reference: Look at `tests/cli/commands/test_create_pr.py` for patterns.
+
+Note: `tests/workflows/implement/test_core.py` was already updated in Step 1.
 
 Do not delete the old test file yet - that happens in Step 5.
 ```
@@ -177,5 +161,9 @@ Do not delete the old test file yet - that happens in Step 5.
 - [ ] `TestResolveProjectDir` tests expect `ValueError` instead of `SystemExit`
 - [ ] `TestApplyLabels` API error tests expect `RuntimeError` instead of `SystemExit`
 - [ ] Minimal `TestExecuteDefineLabels` class added (1-2 tests)
-- [ ] `tests/workflows/implement/test_core.py` updated to expect `ValueError`
-- [ ] All tests pass: `pytest tests/cli/commands/test_define_labels.py tests/workflows/implement/test_core.py -v`
+- [ ] All tests pass: `pytest tests/cli/commands/test_define_labels.py -v`
+
+### Code Quality Checks:
+- [ ] `mcp__code-checker__run_pylint_check()` - No errors
+- [ ] `mcp__code-checker__run_pytest_check()` - All tests pass
+- [ ] `mcp__code-checker__run_mypy_check()` - No type errors

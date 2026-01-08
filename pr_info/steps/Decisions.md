@@ -108,3 +108,51 @@ Decisions made during plan review discussion.
 2. Bundled fallback: `mcp_coder/config/labels.json`
 
 This ensures consistency since other components (`validate_labels.py`, `issue_stats.py`, coordinator) already use the same two-location config system.
+
+---
+
+## Decision 8: Clarify Duplicate `resolve_project_dir`
+
+**Question**: Should Step 1 explicitly note that `workflows/define_labels.py` has its own duplicate copy of `resolve_project_dir` that will simply be deleted (not refactored)?
+
+**Options discussed**:
+- A) Yes, add a clarifying note to Step 1
+- B) No, it's already implied since the file gets deleted in Step 5
+
+**Decision**: **A** - Add clarifying note to Step 1
+
+---
+
+## Decision 9: Consolidate Refactoring in Step 1
+
+**Question**: Should we move the `tests/workflows/implement/test_core.py` update from Step 3 to Step 1 so the refactoring is self-contained?
+
+**Options discussed**:
+- A) Yes, move to Step 1 (keeps refactoring self-contained, tests pass immediately)
+- B) No, keep in Step 3 (groups all test changes together)
+
+**Decision**: **A** - Move `test_core.py` update to Step 1
+
+---
+
+## Decision 10: Explicit Code Quality Checks
+
+**Question**: Should each step's verification section explicitly include running code quality checks (pylint/pytest/mypy)?
+
+**Options discussed**:
+- A) Yes, add explicit reminder to each step's verification section
+- B) No, it's already in CLAUDE.md - implementer should know
+
+**Decision**: **A** - Add explicit code quality check reminders to each step
+
+---
+
+## Decision 11: Verification Checkpoint in Step 1
+
+**Question**: Should Step 1 include an explicit verification checkpoint between the refactoring (Parts A+B) and the CLI command creation (Part C)?
+
+**Options discussed**:
+- A) Yes, add checkpoint (verify refactoring before proceeding)
+- B) No, keep as continuous flow (simpler structure)
+
+**Decision**: **A** - Add verification checkpoint after refactoring parts

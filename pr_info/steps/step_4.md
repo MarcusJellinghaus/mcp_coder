@@ -200,3 +200,8 @@ Do not delete the old documentation file yet - that happens in Step 5.
 - [ ] CONFIG.md link updated
 - [ ] All internal links work correctly
 - [ ] No broken references to old file paths
+
+### Code Quality Checks:
+- [ ] `mcp__code-checker__run_pylint_check()` - No errors
+- [ ] `mcp__code-checker__run_pytest_check()` - All tests pass
+- [ ] `mcp__code-checker__run_mypy_check()` - No type errors
