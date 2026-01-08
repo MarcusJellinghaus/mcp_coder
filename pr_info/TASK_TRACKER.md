@@ -35,13 +35,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [Details: pr_info/steps/step_2.md](steps/step_2.md)
 
 - [x] Add import for `execute_define_labels` in `main.py`
-- [ ] Add `define-labels` subparser with `--project-dir` and `--dry-run` options
-- [ ] Add command routing to call `execute_define_labels(args)`
-- [ ] Add `define-labels` command to help text in `help.py`
-- [ ] Run pylint on modified files
-- [ ] Run pytest on CLI tests
-- [ ] Run mypy on modified files
-- [ ] Prepare git commit message for Step 2
+- [x] Add `define-labels` subparser with `--project-dir` and `--dry-run` options
+- [x] Add command routing to call `execute_define_labels(args)`
+- [x] Add `define-labels` command to help text in `help.py`
+- [x] Run pylint on modified files
+- [x] Run pytest on CLI tests
+- [x] Run mypy on modified files
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Move and Update Tests
 [Details: pr_info/steps/step_3.md](steps/step_3.md)

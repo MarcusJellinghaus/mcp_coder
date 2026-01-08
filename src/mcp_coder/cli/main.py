@@ -353,6 +353,22 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="Force full cache refresh, bypass all caching",
     )
 
+    # Define-labels command - Sync workflow status labels to GitHub
+    define_labels_parser = subparsers.add_parser(
+        "define-labels", help="Sync workflow status labels to GitHub repository"
+    )
+    define_labels_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    define_labels_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview changes without applying them",
+    )
+
     return parser
 
 
@@ -428,6 +444,8 @@ def main() -> int:
                     "Error: Please specify a coordinator subcommand (e.g., 'test', 'run')"
                 )
                 return 1
+        elif args.command == "define-labels":
+            return execute_define_labels(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")
