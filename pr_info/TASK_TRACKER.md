@@ -46,18 +46,18 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Move and Update Tests
 [Details: pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Create `tests/cli/commands/test_define_labels.py` from old test file
-- [ ] Update all imports to new module paths
-- [ ] Update all mock patches to new module paths
-- [ ] Remove `TestArgumentParsing` class
-- [ ] Update `TestResolveProjectDir` tests to expect `ValueError` instead of `SystemExit`
-- [ ] Update `TestApplyLabels` tests to expect `RuntimeError` instead of `SystemExit`
-- [ ] Add minimal `TestExecuteDefineLabels` class
-- [ ] Update `tests/workflows/implement/test_core.py` to expect `ValueError`
-- [ ] Run pylint on test files
-- [ ] Run pytest on all updated tests
-- [ ] Run mypy on test files
-- [ ] Prepare git commit message for Step 3
+- [x] Create `tests/cli/commands/test_define_labels.py` from old test file
+- [x] Update all imports to new module paths
+- [x] Update all mock patches to new module paths
+- [x] Remove `TestArgumentParsing` class
+- [x] Update `TestResolveProjectDir` tests to expect `ValueError` instead of `SystemExit`
+- [x] Update `TestApplyLabels` tests to expect `RuntimeError` instead of `SystemExit`
+- [x] Add minimal `TestExecuteDefineLabels` class
+- [x] Update `tests/workflows/implement/test_core.py` to expect `ValueError`
+- [x] Run pylint on test files
+- [x] Run pytest on all updated tests
+- [x] Run mypy on test files
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Update Documentation
 [Details: pr_info/steps/step_4.md](steps/step_4.md)

@@ -36,30 +36,33 @@ class TestResolveProjectDir:
         result = resolve_project_dir(str(tmp_path))
         assert result == tmp_path
 
-    def test_resolve_project_dir_invalid_path_exits(self) -> None:
-        """Test resolve_project_dir with invalid path exits with code 1."""
-        with pytest.raises(SystemExit) as exc_info:
+    def test_resolve_project_dir_invalid_path_raises_value_error(self) -> None:
+        """Test resolve_project_dir with invalid path raises ValueError."""
+        with pytest.raises(ValueError, match="does not exist"):
             resolve_project_dir("/invalid/nonexistent/path")
-        assert exc_info.value.code == 1
 
-    def test_resolve_project_dir_not_directory_exits(self, tmp_path: Path) -> None:
-        """Test resolve_project_dir with non-directory path exits with code 1."""
+    def test_resolve_project_dir_not_directory_raises_value_error(
+        self, tmp_path: Path
+    ) -> None:
+        """Test resolve_project_dir with non-directory path raises ValueError."""
         # Create a file instead of directory
         test_file = tmp_path / "test_file"
         test_file.write_text("test content")
 
-        with pytest.raises(SystemExit) as exc_info:
+        with pytest.raises(ValueError, match="not a directory"):
             resolve_project_dir(str(test_file))
-        assert exc_info.value.code == 1
 
-    def test_resolve_project_dir_no_git_exits(self, tmp_path: Path) -> None:
-        """Test resolve_project_dir without .git directory exits with code 1."""
-        with pytest.raises(SystemExit) as exc_info:
+    def test_resolve_project_dir_no_git_raises_value_error(
+        self, tmp_path: Path
+    ) -> None:
+        """Test resolve_project_dir without .git directory raises ValueError."""
+        with pytest.raises(ValueError, match="not a git repository"):
             resolve_project_dir(str(tmp_path))
-        assert exc_info.value.code == 1
 
-    def test_resolve_project_dir_permission_error_exits(self, tmp_path: Path) -> None:
-        """Test resolve_project_dir with permission error exits with code 1."""
+    def test_resolve_project_dir_permission_error_raises_value_error(
+        self, tmp_path: Path
+    ) -> None:
+        """Test resolve_project_dir with permission error raises ValueError."""
         # Create .git directory
         git_dir = tmp_path / ".git"
         git_dir.mkdir()
@@ -68,17 +71,15 @@ class TestResolveProjectDir:
         with patch.object(
             Path, "iterdir", side_effect=PermissionError("Access denied")
         ):
-            with pytest.raises(SystemExit) as exc_info:
+            with pytest.raises(ValueError, match="No read access"):
                 resolve_project_dir(str(tmp_path))
-            assert exc_info.value.code == 1
 
-    def test_resolve_project_dir_resolve_error_exits(self) -> None:
-        """Test resolve_project_dir with path resolve error exits with code 1."""
+    def test_resolve_project_dir_resolve_error_raises_value_error(self) -> None:
+        """Test resolve_project_dir with path resolve error raises ValueError."""
         # Mock OSError during path resolution
         with patch.object(Path, "resolve", side_effect=OSError("Path error")):
-            with pytest.raises(SystemExit) as exc_info:
+            with pytest.raises(ValueError, match="Invalid project directory path"):
                 resolve_project_dir("/some/path")
-            assert exc_info.value.code == 1
 
 
 class TestPrepareTaskTracker:
@@ -715,7 +716,7 @@ class TestIntegration:
     def test_error_recovery_workflow(self, tmp_path: Path) -> None:
         """Test workflow behavior during various error conditions."""
         # Test without .git directory
-        with pytest.raises(SystemExit):
+        with pytest.raises(ValueError, match="not a git repository"):
             resolve_project_dir(str(tmp_path))
 
         # Test with .git directory but no steps
