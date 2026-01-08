@@ -19,7 +19,7 @@ Add an `ignore_files` parameter to `is_working_directory_clean()` that allows ca
 | Explicit `ignore_files` parameter | Clear, maintainable - each caller explicitly states what to ignore |
 | `list[str] \| None = None` signature | Pythonic, avoids mutable default argument anti-pattern |
 | Exact filename matching only | Simple and predictable behavior |
-| No hardcoded defaults | Flexibility for future use cases |
+| Constant for ignored files | DRY - single source of truth for build artifacts |
 
 ### No New Abstractions
 - No new classes, modules, or patterns introduced
@@ -32,21 +32,21 @@ Add an `ignore_files` parameter to `is_working_directory_clean()` that allows ca
 
 | File | Change Type | Description |
 |------|-------------|-------------|
+| `src/mcp_coder/constants.py` | **MODIFY** | Add `DEFAULT_IGNORED_BUILD_ARTIFACTS` constant |
 | `src/mcp_coder/utils/git_operations/repository.py` | **MODIFY** | Add `ignore_files` parameter to `is_working_directory_clean()` |
-| `src/mcp_coder/workflows/create_plan.py` | **MODIFY** | Update call to pass `ignore_files=["uv.lock"]` |
-| `src/mcp_coder/workflows/implement/prerequisites.py` | **MODIFY** | Update call to pass `ignore_files=["uv.lock"]` |
-| `src/mcp_coder/workflows/create_pr/core.py` | **MODIFY** | Update 2 calls to pass `ignore_files=["uv.lock"]` |
-| `tests/utils/git_operations/test_repository.py` | **MODIFY** | Add 4 test scenarios for new parameter |
+| `src/mcp_coder/workflows/create_plan.py` | **MODIFY** | Update call to use constant |
+| `src/mcp_coder/workflows/implement/prerequisites.py` | **MODIFY** | Update call to use constant |
+| `src/mcp_coder/workflows/create_pr/core.py` | **MODIFY** | Update 2 calls to use constant |
+| `tests/utils/git_operations/test_repository.py` | **MODIFY** | Add 5 test scenarios for new parameter |
 | `.gitignore` | **MODIFY** | Remove temporary `uv.lock` workaround |
 
 ---
 
 ## Implementation Steps Overview
 
-| Step | Focus | TDD Approach |
-|------|-------|--------------|
-| **Step 1** | Tests for `ignore_files` parameter | Write 4 test scenarios first |
-| **Step 2** | Implement function change + update callers + cleanup | Make tests pass, update all call sites, remove `.gitignore` entry |
+| Step | Focus | Description |
+|------|-------|-------------|
+| **Step 1** | Complete implementation | Add 5 tests, implement function, update callers, cleanup |
 
 ---
 
