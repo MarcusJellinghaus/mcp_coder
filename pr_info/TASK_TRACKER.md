@@ -72,7 +72,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run mypy (if applicable)
 - [x] Prepare git commit message for Step 4
 
-### Step 5: Remove Old Files and Final Verification
+### Step 5: Remove Old Files and Cleanup
 [Details: pr_info/steps/step_5.md](steps/step_5.md)
 
 - [x] Delete `workflows/define_labels.py`
@@ -81,12 +81,17 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Delete `tests/workflows/test_define_labels.py`
 - [x] Search for and update any remaining references to deleted files
 - [x] Verify `resolve_project_dir` raises `ValueError` (not `sys.exit`)
-- [ ] Verify `apply_labels` raises `RuntimeError` on API errors
-- [ ] Run full test suite: `pytest tests/ -m "not github_integration and not git_integration"`
+
+### Step 6: Final Verification and Code Quality Checks
+[Details: pr_info/steps/step_6.md](steps/step_6.md)
+
+- [ ] Verify `apply_labels` raises `RuntimeError` on API errors (run existing test)
+- [ ] Run full test suite (non-integration): `pytest tests/ -m "not github_integration and not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration" -n auto`
 - [ ] Verify CLI commands work: `mcp-coder define-labels --help`, `mcp-coder help`
-- [ ] Run pylint on all modified files
-- [ ] Run mypy on all modified files
-- [ ] Prepare git commit message for Step 5
+- [ ] Run pylint via MCP tool: `mcp__code-checker__run_pylint_check()`
+- [ ] Run mypy via MCP tool: `mcp__code-checker__run_mypy_check()`
+- [ ] Fix any issues found during verification
+- [ ] Mark Step 6 complete
 
 ---
 

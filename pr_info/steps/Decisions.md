@@ -156,3 +156,46 @@ This ensures consistency since other components (`validate_labels.py`, `issue_st
 - B) No, keep as continuous flow (simpler structure)
 
 **Decision**: **A** - Add verification checkpoint after refactoring parts
+
+---
+
+## Decision 12: Explicit Import of git_repo Fixture
+
+**Question**: Should the explicit import of `git_repo` fixture in `tests/cli/commands/test_define_labels.py` be removed?
+
+**Context**: Code review found this import:
+```python
+from tests.utils.conftest import git_repo
+```
+Pytest fixtures are normally auto-discovered through `conftest.py` hierarchy.
+
+**Options discussed**:
+- A) Remove the import - rely on pytest's automatic fixture discovery
+- B) Keep the import as-is - it works, and explicit imports make dependencies clearer
+- C) Move fixture to `tests/conftest.py` - make it discoverable by all tests
+
+**Decision**: **B** - Keep the import as-is
+
+**Rationale**: The explicit import works and makes the test file's dependencies clear to readers.
+
+---
+
+## Decision 13: Incomplete Step 5 Verification Items
+
+**Question**: What to do about the unchecked verification items in Step 5?
+
+**Context**: Code review identified these items were not completed:
+- Verify `apply_labels` raises `RuntimeError` on API errors
+- Run full test suite
+- Verify CLI commands work
+- Run pylint/mypy on all modified files
+- Prepare git commit message for Step 5
+
+**Options discussed**:
+- A) Mark them as completed - the work was done but tracker wasn't updated
+- B) These still need to be done - add tasks to implementation plan
+- C) Remove or simplify - they're verification steps that don't need tracking
+
+**Decision**: **B** - These still need to be done
+
+**Action**: Create Step 6 to complete remaining verification and finalization tasks.

@@ -1,8 +1,10 @@
-# Step 5: Remove Old Files and Final Verification
+# Step 5: Remove Old Files and Cleanup
 
 ## Overview
 
-Delete the old standalone script, batch file, documentation, and test file. Run comprehensive verification including the `resolve_project_dir` refactoring.
+Delete the old standalone script, batch file, documentation, and test file. Verify the `resolve_project_dir` refactoring is complete.
+
+**Note:** Final verification and code quality checks moved to Step 6 (added after code review).
 
 ## WHERE
 
@@ -104,33 +106,17 @@ Task: Clean up old files and verify the implementation:
 
 ## Verification
 
-### Functional tests:
-- [ ] `mcp-coder define-labels --help` displays usage
-- [ ] `mcp-coder define-labels --dry-run` works (in a git repo with GitHub token)
-- [ ] `mcp-coder help` shows `define-labels` command
-- [ ] `mcp-coder --log-level DEBUG define-labels --dry-run` works (parent parser log level)
-
-### Exception pattern verification:
-- [ ] `resolve_project_dir` raises `ValueError` (not `sys.exit`)
-- [ ] `apply_labels` raises `RuntimeError` on API errors (not `sys.exit`)
-- [ ] `execute_define_labels` catches exceptions and returns exit codes
-
-### Test suite:
-- [ ] `pytest tests/cli/commands/test_define_labels.py -v` - All pass
-- [ ] `pytest tests/workflows/implement/test_core.py -v` - All pass (ValueError expectations)
-- [ ] `pytest tests/ -m "not github_integration and not git_integration"` - All pass
-
-### Code Quality Checks (MCP tools):
-- [ ] `mcp__code-checker__run_pylint_check()` - No errors
-- [ ] `mcp__code-checker__run_pytest_check()` - All tests pass
-- [ ] `mcp__code-checker__run_mypy_check()` - No type errors
-
 ### Cleanup verification:
 - [ ] `workflows/define_labels.py` deleted
 - [ ] `workflows/define_labels.bat` deleted
 - [ ] `docs/configuration/LABEL_WORKFLOW_SETUP.md` deleted
 - [ ] `tests/workflows/test_define_labels.py` deleted
-- [ ] No remaining references to deleted files
+- [ ] No remaining references to deleted files in source code
+
+### Exception pattern verification (basic):
+- [ ] `resolve_project_dir` raises `ValueError` (not `sys.exit`)
+
+**Note:** Full verification (CLI commands, test suite, code quality) moved to Step 6.
 
 ## Acceptance Criteria Check
 

@@ -77,7 +77,8 @@ docs/getting-started/
 2. **Step 2**: Integrate command into CLI (main.py + help.py)
 3. **Step 3**: Move and update tests (minimal `TestExecuteDefineLabels`)
 4. **Step 4**: Update documentation (including CONFIG.md and config location docs)
-5. **Step 5**: Remove old files and verify
+5. **Step 5**: Remove old files and cleanup
+6. **Step 6**: Final verification and code quality checks (added after code review)
 
 ## Label Configuration
 
