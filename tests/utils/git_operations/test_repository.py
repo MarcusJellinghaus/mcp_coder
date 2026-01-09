@@ -107,3 +107,75 @@ class TestRepositoryOperations:
         assert any("staged.py" in f for f in status["staged"])
         assert any("README.md" in f for f in status["modified"])
         assert any("untracked.py" in f for f in status["untracked"])
+
+    def test_is_working_directory_clean_ignore_files_none(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Test ignore_files=None preserves existing behavior."""
+        _repo, project_dir = git_repo_with_commit
+
+        # Create untracked file
+        new_file = project_dir / "new.txt"
+        new_file.write_text("new content")
+
+        # Should return False - untracked file detected
+        assert is_working_directory_clean(project_dir, ignore_files=None) is False
+
+    def test_is_working_directory_clean_ignore_files_empty_list(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Test ignore_files=[] behaves same as None (backward compatibility)."""
+        _repo, project_dir = git_repo_with_commit
+
+        # Create untracked file
+        new_file = project_dir / "new.txt"
+        new_file.write_text("new content")
+
+        # Should return False - empty list should not filter anything
+        assert is_working_directory_clean(project_dir, ignore_files=[]) is False
+
+    def test_is_working_directory_clean_ignore_files_matches_untracked(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Test ignore_files filters matching untracked file."""
+        _repo, project_dir = git_repo_with_commit
+
+        # Create untracked file that should be ignored
+        uv_lock = project_dir / "uv.lock"
+        uv_lock.write_text("lock content")
+
+        # Should return True - uv.lock is ignored, directory is clean
+        assert is_working_directory_clean(project_dir, ignore_files=["uv.lock"]) is True
+
+    def test_is_working_directory_clean_ignore_files_other_untracked(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Test ignore_files does not filter non-matching files."""
+        _repo, project_dir = git_repo_with_commit
+
+        # Create untracked file that does NOT match ignore_files
+        other_file = project_dir / "other.txt"
+        other_file.write_text("other content")
+
+        # Should return False - other.txt is not ignored
+        assert (
+            is_working_directory_clean(project_dir, ignore_files=["uv.lock"]) is False
+        )
+
+    def test_is_working_directory_clean_ignore_files_with_other_changes(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Test ignore_files with matching file AND other changes."""
+        _repo, project_dir = git_repo_with_commit
+
+        # Create ignored file AND another untracked file
+        uv_lock = project_dir / "uv.lock"
+        uv_lock.write_text("lock content")
+
+        real_change = project_dir / "real_change.txt"
+        real_change.write_text("real change content")
+
+        # Should return False - real_change.txt is still detected
+        assert (
+            is_working_directory_clean(project_dir, ignore_files=["uv.lock"]) is False
+        )

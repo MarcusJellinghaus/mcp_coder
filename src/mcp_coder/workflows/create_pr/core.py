@@ -11,7 +11,7 @@ import shutil
 from pathlib import Path
 from typing import Optional, Tuple
 
-from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import (
@@ -244,7 +244,9 @@ def check_prerequisites(project_dir: Path) -> bool:
 
     # Check if git working directory is clean
     try:
-        if not is_working_directory_clean(project_dir):
+        if not is_working_directory_clean(
+            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        ):
             logger.error(
                 "Git working directory is not clean. Please commit or stash changes."
             )
@@ -589,7 +591,9 @@ def run_create_pr_workflow(
         return 1
 
     # Check if there are changes to commit
-    if not is_working_directory_clean(project_dir):
+    if not is_working_directory_clean(
+        project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+    ):
         # Commit cleanup changes
         log_step("Committing cleanup changes...")
         commit_result = commit_all_changes(

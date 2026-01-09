@@ -7,6 +7,7 @@ for the automated implementation workflow.
 import logging
 from pathlib import Path
 
+from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
 from mcp_coder.utils import (
     get_current_branch_name,
     get_default_branch_name,
@@ -41,7 +42,9 @@ def check_git_clean(project_dir: Path) -> bool:
     logger.info("Checking git working directory status...")
 
     try:
-        is_clean = is_working_directory_clean(project_dir)
+        is_clean = is_working_directory_clean(
+            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        )
 
         if not is_clean:
             logger.error(

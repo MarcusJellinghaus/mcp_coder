@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
 from mcp_coder.workflows.implement.prerequisites import (
     check_git_clean,
     check_main_branch,
@@ -24,7 +25,9 @@ class TestCheckGitClean:
         result = check_git_clean(Path("/test/project"))
 
         assert result is True
-        mock_is_clean.assert_called_once_with(Path("/test/project"))
+        mock_is_clean.assert_called_once_with(
+            Path("/test/project"), ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        )
 
     @patch("mcp_coder.workflows.implement.prerequisites.is_working_directory_clean")
     def test_git_clean_dirty_directory(self, mock_is_clean: MagicMock) -> None:
@@ -34,7 +37,9 @@ class TestCheckGitClean:
         result = check_git_clean(Path("/test/project"))
 
         assert result is False
-        mock_is_clean.assert_called_once_with(Path("/test/project"))
+        mock_is_clean.assert_called_once_with(
+            Path("/test/project"), ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        )
 
     @patch("mcp_coder.workflows.implement.prerequisites.get_full_status")
     @patch("mcp_coder.workflows.implement.prerequisites.is_working_directory_clean")
@@ -52,7 +57,9 @@ class TestCheckGitClean:
         result = check_git_clean(Path("/test/project"))
 
         assert result is False
-        mock_is_clean.assert_called_once_with(Path("/test/project"))
+        mock_is_clean.assert_called_once_with(
+            Path("/test/project"), ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        )
         mock_get_status.assert_called_once_with(Path("/test/project"))
 
     @patch("mcp_coder.workflows.implement.prerequisites.is_working_directory_clean")
@@ -63,7 +70,9 @@ class TestCheckGitClean:
         result = check_git_clean(Path("/test/project"))
 
         assert result is False
-        mock_is_clean.assert_called_once_with(Path("/test/project"))
+        mock_is_clean.assert_called_once_with(
+            Path("/test/project"), ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        )
 
 
 class TestCheckMainBranch:
