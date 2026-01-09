@@ -10,6 +10,7 @@ from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.coordinator import execute_coordinator_run, execute_coordinator_test
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
+from .commands.define_labels import execute_define_labels
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
 from .commands.prompt import execute_prompt
@@ -352,6 +353,22 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="Force full cache refresh, bypass all caching",
     )
 
+    # Define-labels command - Sync workflow status labels to GitHub
+    define_labels_parser = subparsers.add_parser(
+        "define-labels", help="Sync workflow status labels to GitHub repository"
+    )
+    define_labels_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    define_labels_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview changes without applying them",
+    )
+
     return parser
 
 
@@ -427,6 +444,8 @@ def main() -> int:
                     "Error: Please specify a coordinator subcommand (e.g., 'test', 'run')"
                 )
                 return 1
+        elif args.command == "define-labels":
+            return execute_define_labels(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")

@@ -1,12 +1,14 @@
-"""Unit tests for define_labels workflow module.
+"""Unit tests for define_labels CLI command module.
 
 Tests cover:
 - WORKFLOW_LABELS constant validation and structure
 - Color format validation
 - Module load-time validation
 - apply_labels() orchestrator function with mocked LabelsManager
+- execute_define_labels() CLI command function
 """
 
+import argparse
 import re
 from pathlib import Path
 from typing import Any
@@ -14,14 +16,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.utils.github_operations.label_config import load_labels_config
-from tests.utils.conftest import git_repo
-from workflows.define_labels import (
+from mcp_coder.cli.commands.define_labels import (
     apply_labels,
     calculate_label_changes,
-    parse_arguments,
-    resolve_project_dir,
+    execute_define_labels,
 )
+from mcp_coder.utils.github_operations.label_config import load_labels_config
+from mcp_coder.workflows.utils import resolve_project_dir
+from tests.utils.conftest import git_repo
 
 # Note: labels_config_path fixture is defined in conftest.py
 
@@ -335,7 +337,7 @@ class TestApplyLabels:
 
         return mock
 
-    @patch("workflows.define_labels.LabelsManager")
+    @patch("mcp_coder.cli.commands.define_labels.LabelsManager")
     def test_apply_labels_success_flow(
         self,
         mock_manager_class: MagicMock,
@@ -396,7 +398,7 @@ class TestApplyLabels:
         # Verify: delete_label was called with correct parameters
         mock_labels_manager.delete_label.assert_called_once_with("status-99:obsolete")
 
-    @patch("workflows.define_labels.LabelsManager")
+    @patch("mcp_coder.cli.commands.define_labels.LabelsManager")
     def test_apply_labels_dry_run_mode(
         self,
         mock_manager_class: MagicMock,
@@ -444,15 +446,15 @@ class TestApplyLabels:
         mock_labels_manager.update_label.assert_not_called()
         mock_labels_manager.delete_label.assert_not_called()
 
-    @patch("workflows.define_labels.LabelsManager")
-    def test_apply_labels_api_error_fails_fast(
+    @patch("mcp_coder.cli.commands.define_labels.LabelsManager")
+    def test_apply_labels_api_error_raises_runtime_error(
         self,
         mock_manager_class: MagicMock,
         mock_labels_manager: MagicMock,
         tmp_path: Path,
         labels_config_path: Path,
     ) -> None:
-        """Test apply_labels fails fast on first API error."""
+        """Test apply_labels raises RuntimeError on API error."""
         # Setup: Configure mock to return empty labels (all need creation)
         mock_labels_manager.get_labels.return_value = []
 
@@ -470,11 +472,9 @@ class TestApplyLabels:
             for label in labels_config["workflow_labels"]
         ]
 
-        # Execute & Verify: apply_labels should exit immediately with code 1
-        with pytest.raises(SystemExit) as exc_info:
+        # Execute & Verify: apply_labels should raise RuntimeError
+        with pytest.raises(RuntimeError, match="Failed to create label"):
             apply_labels(tmp_path, workflow_labels, dry_run=False)
-
-        assert exc_info.value.code == 1
 
         # Verify: create_label was called only once (failed fast)
         assert mock_labels_manager.create_label.call_count == 1
@@ -574,62 +574,6 @@ class TestApplyLabels:
         assert result["deleted"] == []
 
 
-class TestArgumentParsing:
-    """Test command line argument parsing."""
-
-    def test_parse_arguments_default_values(self) -> None:
-        """Test parse_arguments with default values (no arguments provided)."""
-        with patch("sys.argv", ["define_labels.py"]):
-            args = parse_arguments()
-
-            # Verify default values
-            assert args.project_dir is None, "Default project_dir should be None"
-            assert args.log_level == "INFO", "Default log_level should be INFO"
-            assert args.dry_run is False, "Default dry_run should be False"
-
-    def test_parse_arguments_custom_values(self) -> None:
-        """Test parse_arguments with custom values provided."""
-        with patch(
-            "sys.argv",
-            [
-                "define_labels.py",
-                "--project-dir",
-                "/custom/path",
-                "--log-level",
-                "DEBUG",
-                "--dry-run",
-            ],
-        ):
-            args = parse_arguments()
-
-            # Verify custom values
-            assert (
-                args.project_dir == "/custom/path"
-            ), "project_dir should match provided path"
-            assert args.log_level == "DEBUG", "log_level should be DEBUG"
-            assert args.dry_run is True, "dry_run should be True when flag is provided"
-
-    def test_parse_arguments_log_level_choices(self) -> None:
-        """Test parse_arguments accepts all valid log level choices."""
-        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-
-        for level in valid_levels:
-            with patch("sys.argv", ["define_labels.py", "--log-level", level]):
-                args = parse_arguments()
-                assert args.log_level == level, f"Should accept log level {level}"
-
-    def test_parse_arguments_invalid_log_level(self) -> None:
-        """Test parse_arguments rejects invalid log level."""
-        with patch("sys.argv", ["define_labels.py", "--log-level", "INVALID"]):
-            with pytest.raises(SystemExit) as exc_info:
-                parse_arguments()
-
-            # argparse exits with code 2 for invalid arguments
-            assert (
-                exc_info.value.code == 2
-            ), "Should exit with code 2 for invalid arguments"
-
-
 class TestResolveProjectDir:
     """Test project directory resolution and validation."""
 
@@ -661,39 +605,31 @@ class TestResolveProjectDir:
         ), "Should return resolved path from argument"
 
     def test_resolve_project_dir_nonexistent_directory(self) -> None:
-        """Test resolve_project_dir fails for nonexistent directory."""
+        """Test resolve_project_dir raises ValueError for nonexistent directory."""
         nonexistent_path = "/nonexistent/path/that/does/not/exist"
 
-        with pytest.raises(SystemExit) as exc_info:
+        with pytest.raises(ValueError, match="does not exist"):
             resolve_project_dir(nonexistent_path)
 
-        assert (
-            exc_info.value.code == 1
-        ), "Should exit with code 1 for nonexistent directory"
-
     def test_resolve_project_dir_not_git_repository(self, tmp_path: Path) -> None:
-        """Test resolve_project_dir fails for directory without .git subdirectory."""
+        """Test resolve_project_dir raises ValueError for directory without .git."""
         # Create a directory without .git
         non_git_dir = tmp_path / "not_a_git_repo"
         non_git_dir.mkdir()
 
-        with pytest.raises(SystemExit) as exc_info:
+        with pytest.raises(ValueError, match="not a git repository"):
             resolve_project_dir(str(non_git_dir))
-
-        assert exc_info.value.code == 1, "Should exit with code 1 for non-git directory"
 
     def test_resolve_project_dir_file_instead_of_directory(
         self, tmp_path: Path
     ) -> None:
-        """Test resolve_project_dir fails when path is a file, not a directory."""
+        """Test resolve_project_dir raises ValueError when path is a file."""
         # Create a file instead of a directory
         test_file = tmp_path / "test_file.txt"
         test_file.write_text("test content")
 
-        with pytest.raises(SystemExit) as exc_info:
+        with pytest.raises(ValueError, match="not a directory"):
             resolve_project_dir(str(test_file))
-
-        assert exc_info.value.code == 1, "Should exit with code 1 when path is a file"
 
     @pytest.mark.git_integration
     def test_resolve_project_dir_relative_path(
@@ -710,3 +646,73 @@ class TestResolveProjectDir:
         assert (
             result == project_dir.resolve()
         ), "Should resolve to correct absolute path"
+
+
+class TestExecuteDefineLabels:
+    """Test the CLI execute function - minimal tests for wiring."""
+
+    @patch("mcp_coder.cli.commands.define_labels.apply_labels")
+    @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.define_labels.resolve_project_dir")
+    def test_execute_define_labels_dry_run_returns_zero(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_apply_labels: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test successful dry-run execution returns 0."""
+        # Setup mocks
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "config" / "labels.json"
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {"name": "status-01:created", "color": "10b981", "description": "Test"}
+            ]
+        }
+        mock_apply_labels.return_value = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+
+        args = argparse.Namespace(
+            project_dir=str(project_dir),
+            dry_run=True,
+        )
+
+        result = execute_define_labels(args)
+
+        assert result == 0
+        mock_resolve_dir.assert_called_once_with(str(project_dir))
+        mock_apply_labels.assert_called_once()
+        # Verify dry_run was passed
+        call_kwargs = mock_apply_labels.call_args[1]
+        assert call_kwargs["dry_run"] is True
+
+    @patch("mcp_coder.cli.commands.define_labels.resolve_project_dir")
+    def test_execute_define_labels_invalid_dir_returns_one(
+        self,
+        mock_resolve_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test invalid project dir returns 1."""
+        # Setup mock to raise ValueError (invalid directory)
+        mock_resolve_dir.side_effect = ValueError("Project directory does not exist")
+
+        args = argparse.Namespace(
+            project_dir="/invalid/path",
+            dry_run=False,
+        )
+
+        result = execute_define_labels(args)
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "Error" in captured.err
+        assert "does not exist" in captured.err

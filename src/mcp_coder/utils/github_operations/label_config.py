@@ -4,7 +4,7 @@ This module provides functions to load and parse GitHub label configurations
 from JSON files. It supports two operational modes:
 
 1. LOCAL MODE: Workflow scripts with local project directory
-   - Used by: define_labels.py, validate_labels.py, issue_stats.py
+   - Used by: mcp-coder define-labels, validate_labels.py, issue_stats.py
    - Tries: project_dir/workflows/config/labels.json first
    - Falls back to: bundled package config
    - Use case: Development, testing, custom label configurations
@@ -16,7 +16,7 @@ from JSON files. It supports two operational modes:
 
 Usage patterns:
 
-    # LOCAL MODE: Workflow script with project directory
+    # LOCAL MODE: CLI command or workflow script with project directory
     config_path = get_labels_config_path(project_dir)
     labels_config = load_labels_config(config_path)
 
@@ -97,8 +97,9 @@ def get_labels_config_path(project_dir: Optional[Path] = None) -> Path:
 
     MODE 1: Local project with custom labels (project_dir provided)
     ----------------------------------------------------------------
-    Used by workflow scripts (define_labels.py, validate_labels.py, issue_stats.py)
-    that run in a local git repository and may want to customize labels.
+    Used by CLI commands (mcp-coder define-labels) and workflow scripts
+    (validate_labels.py, issue_stats.py) that run in a local git repository
+    and may want to customize labels.
 
     - If project_dir is provided AND local config exists:
       Returns: project_dir/workflows/config/labels.json

@@ -402,7 +402,11 @@ def main() -> None:
     setup_logging(args.log_level)
     
     # Now resolve project directory (which may use logger)
-    project_dir = resolve_project_dir(args.project_dir)
+    try:
+        project_dir = resolve_project_dir(args.project_dir)
+    except ValueError as e:
+        logger.error(str(e))
+        sys.exit(1)
     
     logger.info("Starting validate labels workflow...")
     logger.info(f"Project directory: {project_dir}")

@@ -54,6 +54,10 @@ COMMANDS:
     commit auto --llm-method METHOD   Communication method (default: claude_code_api)
     commit clipboard        Use commit message from clipboard
 
+    define-labels           Sync workflow status labels to GitHub repository
+                           --project-dir PATH    Project directory (default: current)
+                           --dry-run             Preview changes without applying
+
 {examples}
 
 For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder"""

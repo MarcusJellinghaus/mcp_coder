@@ -4,7 +4,6 @@ This module contains shared utility functions used across different workflow mod
 """
 
 import logging
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -22,7 +21,7 @@ def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
         Path: Validated absolute path to project directory
 
     Raises:
-        SystemExit: If path is invalid, doesn't exist, not a directory, not accessible, or not a git repo
+        ValueError: If path is invalid, doesn't exist, not a directory, not accessible, or not a git repo
     """
     # Use current directory if no argument provided
     if project_dir_arg is None:
@@ -34,31 +33,26 @@ def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
     try:
         project_path = project_path.resolve()
     except (OSError, ValueError) as e:
-        logger.error(f"Invalid project directory path: {e}")
-        sys.exit(1)
+        raise ValueError(f"Invalid project directory path: {e}") from e
 
     # Validate directory exists
     if not project_path.exists():
-        logger.error(f"Project directory does not exist: {project_path}")
-        sys.exit(1)
+        raise ValueError(f"Project directory does not exist: {project_path}")
 
     # Validate it's a directory
     if not project_path.is_dir():
-        logger.error(f"Project path is not a directory: {project_path}")
-        sys.exit(1)
+        raise ValueError(f"Project path is not a directory: {project_path}")
 
     # Validate directory is accessible
     try:
         # Test read access by listing directory
         list(project_path.iterdir())
-    except PermissionError:
-        logger.error(f"No read access to project directory: {project_path}")
-        sys.exit(1)
+    except PermissionError as e:
+        raise ValueError(f"No read access to project directory: {project_path}") from e
 
     # Validate directory contains .git subdirectory
     git_dir = project_path / ".git"
     if not git_dir.exists():
-        logger.error(f"Project directory is not a git repository: {project_path}")
-        sys.exit(1)
+        raise ValueError(f"Project directory is not a git repository: {project_path}")
 
     return project_path
