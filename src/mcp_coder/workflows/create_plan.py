@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.session import parse_llm_method
@@ -68,7 +68,9 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
 
     # Check if git working directory is clean
     try:
-        if not is_working_directory_clean(project_dir, ignore_files=["uv.lock"]):
+        if not is_working_directory_clean(
+            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        ):
             logger.error(
                 "✗ Git working directory is not clean. "
                 "Please commit or stash your changes before creating a plan."

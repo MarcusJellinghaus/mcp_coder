@@ -121,6 +121,19 @@ class TestRepositoryOperations:
         # Should return False - untracked file detected
         assert is_working_directory_clean(project_dir, ignore_files=None) is False
 
+    def test_is_working_directory_clean_ignore_files_empty_list(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Test ignore_files=[] behaves same as None (backward compatibility)."""
+        _repo, project_dir = git_repo_with_commit
+
+        # Create untracked file
+        new_file = project_dir / "new.txt"
+        new_file.write_text("new content")
+
+        # Should return False - empty list should not filter anything
+        assert is_working_directory_clean(project_dir, ignore_files=[]) is False
+
     def test_is_working_directory_clean_ignore_files_matches_untracked(
         self, git_repo_with_commit: tuple[Repo, Path]
     ) -> None:
