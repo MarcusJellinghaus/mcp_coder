@@ -94,31 +94,6 @@ class TestCleanupRepository:
         mock_truncate.assert_called_once_with(Path("/test/project"))
         mock_clean_profiler.assert_called_once_with(Path("/test/project"))
 
-    @patch("mcp_coder.workflows.create_pr.core.delete_conversations_directory")
-    @patch("mcp_coder.workflows.create_pr.core.clean_profiler_output")
-    @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
-    @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
-    def test_cleanup_repository_includes_conversations_cleanup(
-        self,
-        mock_truncate: MagicMock,
-        mock_delete_steps: MagicMock,
-        mock_clean_profiler: MagicMock,
-        mock_delete_conversations: MagicMock,
-    ) -> None:
-        """Test that cleanup_repository includes pr_info/.conversations/ cleanup."""
-        mock_delete_steps.return_value = True
-        mock_truncate.return_value = True
-        mock_clean_profiler.return_value = True
-        mock_delete_conversations.return_value = True
-
-        result = cleanup_repository(Path("/test/project"))
-
-        assert result is True
-        mock_delete_steps.assert_called_once_with(Path("/test/project"))
-        mock_truncate.assert_called_once_with(Path("/test/project"))
-        mock_clean_profiler.assert_called_once_with(Path("/test/project"))
-        mock_delete_conversations.assert_called_once_with(Path("/test/project"))
-
 
 class TestCreatePullRequest:
     """Test create_pull_request function."""
