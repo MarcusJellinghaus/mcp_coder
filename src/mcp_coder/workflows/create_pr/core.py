@@ -64,6 +64,37 @@ def delete_steps_directory(project_dir: Path) -> bool:
         return False
 
 
+def delete_conversations_directory(project_dir: Path) -> bool:
+    """
+    Delete the pr_info/.conversations/ directory and all its contents.
+
+    Args:
+        project_dir: Path to the project root directory
+
+    Returns:
+        True if successful or directory doesn't exist, False on error
+    """
+    conversations_dir = project_dir / "pr_info" / ".conversations"
+
+    # If directory doesn't exist, consider it success (no-op)
+    if not conversations_dir.exists():
+        logger.info(f"Directory {conversations_dir} does not exist - nothing to delete")
+        return True
+
+    try:
+        # Remove the entire directory tree
+        shutil.rmtree(conversations_dir)
+        logger.info(f"Successfully deleted directory: {conversations_dir}")
+        return True
+
+    except PermissionError as e:
+        logger.error(f"Permission error deleting {conversations_dir}: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Error deleting {conversations_dir}: {e}")
+        return False
+
+
 def clean_profiler_output(project_dir: Path) -> bool:
     """
     Clean up profiler output files from docs/tests/performance_data/prof/ directory.
@@ -376,7 +407,8 @@ def generate_pr_summary(
 
 def cleanup_repository(project_dir: Path) -> bool:
     """
-    Clean up repository by deleting steps directory, truncating task tracker, and cleaning profiler output.
+    Clean up repository by deleting steps directory, conversations directory,
+    truncating task tracker, and cleaning profiler output.
 
     Args:
         project_dir: Path to project directory
@@ -404,6 +436,12 @@ def cleanup_repository(project_dir: Path) -> bool:
     logger.info("Cleaning profiler output files...")
     if not clean_profiler_output(project_dir):
         logger.error("Failed to clean profiler output")
+        success = False
+
+    # Delete conversations directory
+    logger.info("Deleting pr_info/.conversations/ directory...")
+    if not delete_conversations_directory(project_dir):
+        logger.error("Failed to delete conversations directory")
         success = False
 
     if success:
@@ -597,7 +635,7 @@ def run_create_pr_workflow(
         # Commit cleanup changes
         log_step("Committing cleanup changes...")
         commit_result = commit_all_changes(
-            "Clean up pr_info/steps planning files", project_dir
+            "Clean up pr_info temporary folders", project_dir
         )
 
         if not commit_result["success"]:
