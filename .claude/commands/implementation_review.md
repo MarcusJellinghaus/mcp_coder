@@ -1,3 +1,7 @@
+---
+allowed-tools: Bash(git fetch:*), Bash(git status:*), Bash(git diff:*), Read, Glob, Grep
+---
+
 # Implementation Review (Code Review)
 
 **First, ensure we're up to date:**

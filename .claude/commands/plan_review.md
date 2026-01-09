@@ -1,3 +1,7 @@
+---
+allowed-tools: Bash(git fetch:*), Bash(git status:*), Read, Glob, Grep
+---
+
 # Review Implementation Plan
 
 **First, ensure we're up to date:**

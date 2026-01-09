@@ -340,7 +340,7 @@ flowchart LR
    > **Additional capability:** Checks git status and confirms branch before review.
 
    ```
-   Please review the project plan for a new feature in folder PR_Info\steps.
+   Please review the project plan for a new feature in folder `pr_info/steps`.
    Please revise the project plan with a balanced level of detail.
    Please let me know if any complexity could be reduced.
    Please let me know any questions / comments or suggestions you might have.
@@ -376,10 +376,10 @@ flowchart LR
    > **Slash Command:** `/plan_update` ([`.claude/commands/plan_update.md`](../../.claude/commands/plan_update.md))
 
    ```
-   Can you update the plan by updating the different files in folder `pr_info\steps`
+   Can you update the plan by updating the different files in folder `pr_info/steps`
    Please do targeted changes.
    
-   Please log the decisions from our discussion in `PR_Info\steps\Decisions.md`.
+   Please log the decisions from our discussion in `pr_info/steps/Decisions.md`.
    Only put those decisions that we discussed, no invented decisions 
    ( For each decision that you log, consider whether you discussed it with me and when I said so )
    ```
@@ -819,7 +819,7 @@ Please offer, whenever possible, simple options like
 - B
 - C
 
-We will use the discussion later to add more tasks to the implementation plan files under pr_info\steps
+We will use the discussion later to add more tasks to the implementation plan files under `pr_info/steps`
 ```
 
 </details>
@@ -846,7 +846,7 @@ We will use the discussion later to add more tasks to the implementation plan fi
   ```
   ## Request to append new implementation tasks to Python Project Implementation Plan
   Please expand the the **implementation plan** stored under `pr_info/steps`
-  Update the `PR_Info\steps\Decisions.md` with the decisions we took.
+  Update the `pr_info/steps/Decisions.md` with the decisions we took.
   Please create additional self-contained steps (`pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`, etc.).
   Please update the **summary** (`pr_info/steps/summary.md`).
   
