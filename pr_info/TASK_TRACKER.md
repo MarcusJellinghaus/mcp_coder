@@ -89,7 +89,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Run full test suite (non-integration): `pytest tests/ -m "not github_integration and not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration" -n auto`
 - [x] Verify CLI commands work: `mcp-coder define-labels --help`, `mcp-coder help`
 - [x] Run pylint via MCP tool: `mcp__code-checker__run_pylint_check()`
-- [ ] Run mypy via MCP tool: `mcp__code-checker__run_mypy_check()`
+- [x] Run mypy via MCP tool: `mcp__code-checker__run_mypy_check()`
 - [ ] Fix any issues found during verification
 - [ ] Mark Step 6 complete
 
