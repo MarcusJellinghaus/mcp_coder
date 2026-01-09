@@ -128,7 +128,7 @@ flowchart TD
 - **LLM Assistant** - Generates code, plans, documentation via structured prompts
 - **Automated Tools** - Quality checks (pylint, mypy, pytest), formatting, git operations
 
-**📋 Prerequisites:** Set up GitHub Actions for auto-labeling and `/approve` command. See [Label Setup Guide](../docs/getting-started/LABEL_SETUP.md).
+**📋 Prerequisites:** Set up GitHub Actions for auto-labeling and `/approve` command. See [Label Setup Guide](../getting-started/LABEL_SETUP.md).
 
 ---
 
@@ -177,6 +177,10 @@ flowchart LR
 <details>
 <summary>📋 Initiate discussion (click to expand and copy)</summary>
 
+> **Slash Command:** `/issue_analyse <issue_number>` ([`.claude/commands/issue_analyse.md`](../../.claude/commands/issue_analyse.md))
+> 
+> **Additional capability:** Automatically fetches issue details via `gh issue view` before analysis.
+
 ```
 Can we discuss a requirement / implementation idea and its feasibility?
 Please also look at the code base to understand the context (using the different tools with access to the project directory ).
@@ -188,6 +192,8 @@ At the end of our discussion, I want to have an even better issue description.
 
 <details>
 <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
+
+> **Slash Command:** `/discuss` ([`.claude/commands/discuss.md`](../../.claude/commands/discuss.md))
 
 ```
 Can we go through all open suggested changes and questions step by step?
@@ -204,11 +210,37 @@ Always just ask ONE question
 <details>
 <summary>📋 Draft Issue Text (click to expand and copy)</summary>
 
+> **Slash Command:** `/issue_update` ([`.claude/commands/issue_update.md`](../../.claude/commands/issue_update.md))
+>
+> **Additional capability:** Updates issue directly on GitHub, preserves original content.
+
 ```
 Let's draft the issue text, with some very limited, concise implementation ideas.
 The implementation plan should be developed later. Focus on the issue and include the discussed details.
 Please provide the issue text (with issue header!) as markdown artifact, so that I can easily update the issue on GitHub.
 ```
+
+</details>
+
+<details>
+<summary>📋 Create GitHub Issue from discussion</summary>
+
+> **Slash Command:** `/issue_create` ([`.claude/commands/issue_create.md`](../../.claude/commands/issue_create.md))
+>
+> **Additional capability:** Creates issue directly on GitHub via `gh issue create`.
+
+Use this command after discussing a new feature or bug to create a GitHub issue from the conversation context.
+
+</details>
+
+<details>
+<summary>📋 Approve Issue</summary>
+
+> **Slash Command:** `/issue_approve` ([`.claude/commands/issue_approve.md`](../../.claude/commands/issue_approve.md))
+>
+> **Additional capability:** Comments `/approve` on the issue to trigger status promotion via GitHub Actions.
+
+Use this command after issue analysis is complete to transition the issue to `status:awaiting-planning`.
 
 </details>
 
@@ -259,10 +291,10 @@ flowchart LR
 
 - Creates feature branch
 - Analyzes requirements
-- Generates plan using three prompts (🔗 [prompts.md](../src/mcp_coder/prompts/prompts.md#plan-generation-workflow)):
-  - 🔗 [Initial Analysis](../src/mcp_coder/prompts/prompts.md#initial-analysis)
-  - 🔗 [Simplification Review](../src/mcp_coder/prompts/prompts.md#simplification-review)
-  - 🔗 [Implementation Plan Creation](../src/mcp_coder/prompts/prompts.md#implementation-plan-creation)
+- Generates plan using three prompts (🔗 [prompts.md](../../src/mcp_coder/prompts/prompts.md#plan-generation-workflow)):
+  - 🔗 [Initial Analysis](../../src/mcp_coder/prompts/prompts.md#initial-analysis)
+  - 🔗 [Simplification Review](../../src/mcp_coder/prompts/prompts.md#simplification-review)
+  - 🔗 [Implementation Plan Creation](../../src/mcp_coder/prompts/prompts.md#implementation-plan-creation)
 
 ---
 
@@ -303,6 +335,10 @@ flowchart LR
    <details>
    <summary>📋 Review the implementation plan</summary>
 
+   > **Slash Command:** `/plan_review` ([`.claude/commands/plan_review.md`](../../.claude/commands/plan_review.md))
+   >
+   > **Additional capability:** Checks git status and confirms branch before review.
+
    ```
    Please review the project plan for a new feature in folder PR_Info\steps.
    Please revise the project plan with a balanced level of detail.
@@ -319,6 +355,8 @@ flowchart LR
    <details>
    <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
 
+   > **Slash Command:** `/discuss` ([`.claude/commands/discuss.md`](../../.claude/commands/discuss.md))
+
    ```
    Can we go through all open suggested changes and questions step by step?
    You explain, ask and I answer until we discussed all topics?
@@ -334,6 +372,8 @@ flowchart LR
 3. **Update plan files**
    <details>
    <summary>📋 Update Plan Files</summary>
+
+   > **Slash Command:** `/plan_update` ([`.claude/commands/plan_update.md`](../../.claude/commands/plan_update.md))
 
    ```
    Can you update the plan by updating the different files in folder `pr_info\steps`
@@ -459,10 +499,10 @@ flowchart LR
 - Runs quality checks (pylint → pytest → mypy) after each step
 - Formats code (black, isort, ruff)
 - Commits changes with descriptive messages
-- Uses prompts (🔗 [prompts.md](../src/mcp_coder/prompts/prompts.md)):
-  - 🔗 [Implementation Prompt Template](../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker)
-  - 🔗 [Task Tracker Update](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt)
-  - 🔗 [Mypy Fix](../src/mcp_coder/prompts/prompts.md#mypy-fix-prompt)
+- Uses prompts (🔗 [prompts.md](../../src/mcp_coder/prompts/prompts.md)):
+  - 🔗 [Implementation Prompt Template](../../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker)
+  - 🔗 [Task Tracker Update](../../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt)
+  - 🔗 [Mypy Fix](../../src/mcp_coder/prompts/prompts.md#mypy-fix-prompt)
 
 **🔄 Alternative Paths:**
 
@@ -478,7 +518,7 @@ flowchart LR
 
 ##### 4.1 Task Tracker Update Prompt
 
-See: [Task Tracker Update Prompt](../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt) in `src/mcp_coder/prompts/prompts.md`
+See: [Task Tracker Update Prompt](../../src/mcp_coder/prompts/prompts.md#task-tracker-update-prompt) in `src/mcp_coder/prompts/prompts.md`
 
 - commit afterwards with
 
@@ -529,7 +569,7 @@ Each step consists of two main phases:
 
 **Implementation Prompt Template using task tracker**
 
-See: [Implementation Prompt Template using task tracker](../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker) in `src/mcp_coder/prompts/prompts.md`
+See: [Implementation Prompt Template using task tracker](../../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker) in `src/mcp_coder/prompts/prompts.md`
 
 Possible follow up question:
 
@@ -661,6 +701,10 @@ This could benefit from `format_and_commit` tool.
 - `mcp-coder commit clipboard` - to commit all changes with a commit message from the clipboard
 - `mcp-coder commit auto` - to commit all changes with a commit message generated via LLM from the git diff
 
+> **Slash Command:** `/commit_push` ([`.claude/commands/commit_push.md`](../../.claude/commands/commit_push.md))
+>
+> **Additional capability:** Formats code, reviews changes, commits, and pushes in one command.
+
 ---
 
 ### 5. Code Review Workflow
@@ -731,6 +775,10 @@ or alternatively the following prompt:
 <details>
 <summary>📋 Code Review Prompt (click to expand and copy)</summary>
 
+> **Slash Command:** `/implementation_review` ([`.claude/commands/implementation_review.md`](../../.claude/commands/implementation_review.md))
+>
+> **Additional capability:** Checks git status and confirms branch before review.
+
 ````
 ## Code Review Request
 
@@ -792,6 +840,8 @@ We will use the discussion later to add more tasks to the implementation plan fi
 - **Major Issues Found:** Ask the LLM to draft additional implementation steps, then change to `status:plan-ready` to implement them
   <details>
   <summary>📋 Create further implementation tasks (click to expand and copy)</summary>
+
+  > **Slash Command:** `/implementation_tasks` ([`.claude/commands/implementation_tasks.md`](../../.claude/commands/implementation_tasks.md))
   
   ```
   ## Request to append new implementation tasks to Python Project Implementation Plan
@@ -895,7 +945,7 @@ flowchart LR
 - Commits cleanup changes
 - Pushes branch to remote
 - Creates pull request on GitHub with generated summary
-- Uses prompt 🔗 [PR Summary Generation](../src/mcp_coder/prompts/prompts.md#pr-summary-generation)
+- Uses prompt 🔗 [PR Summary Generation](../../src/mcp_coder/prompts/prompts.md#pr-summary-generation)
 
 **See detailed manual process below in section 6.1 for reference**
 
