@@ -533,7 +533,7 @@ mypy src/
 
 ## 📚 Documentation
 
-- [Development Process](pr_info/DEVELOPMENT_PROCESS.md) - Detailed methodology
+- [Development Process](docs/processes_prompts/DEVELOPMENT_PROCESS.md) - Detailed methodology
 - [Project Vision](project_idea.md) - Comprehensive project overview
 - [Label Setup Guide](docs/getting-started/LABEL_SETUP.md) - GitHub workflow labels and setup
 
