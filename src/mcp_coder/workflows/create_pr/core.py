@@ -64,6 +64,37 @@ def delete_steps_directory(project_dir: Path) -> bool:
         return False
 
 
+def delete_conversations_directory(project_dir: Path) -> bool:
+    """
+    Delete the pr_info/.conversations/ directory and all its contents.
+
+    Args:
+        project_dir: Path to the project root directory
+
+    Returns:
+        True if successful or directory doesn't exist, False on error
+    """
+    conversations_dir = project_dir / "pr_info" / ".conversations"
+
+    # If directory doesn't exist, consider it success (no-op)
+    if not conversations_dir.exists():
+        logger.info(f"Directory {conversations_dir} does not exist - nothing to delete")
+        return True
+
+    try:
+        # Remove the entire directory tree
+        shutil.rmtree(conversations_dir)
+        logger.info(f"Successfully deleted directory: {conversations_dir}")
+        return True
+
+    except PermissionError as e:
+        logger.error(f"Permission error deleting {conversations_dir}: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Error deleting {conversations_dir}: {e}")
+        return False
+
+
 def clean_profiler_output(project_dir: Path) -> bool:
     """
     Clean up profiler output files from docs/tests/performance_data/prof/ directory.
@@ -406,16 +437,10 @@ def cleanup_repository(project_dir: Path) -> bool:
         success = False
 
     # Delete conversations directory
-    conversations_dir = project_dir / "pr_info" / ".conversations"
-    if conversations_dir.exists():
-        try:
-            shutil.rmtree(conversations_dir)
-            logger.info(f"Successfully deleted: {conversations_dir}")
-        except Exception as e:
-            logger.error(f"Failed to delete conversations: {e}")
-            success = False
-    else:
-        logger.info(f"Directory {conversations_dir} does not exist - nothing to delete")
+    logger.info("Deleting pr_info/.conversations/ directory...")
+    if not delete_conversations_directory(project_dir):
+        logger.error("Failed to delete conversations directory")
+        success = False
 
     if success:
         logger.info("Repository cleanup completed successfully")

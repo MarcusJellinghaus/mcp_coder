@@ -9,6 +9,7 @@ from mcp_coder.workflows.create_pr.core import cleanup_repository, create_pull_r
 class TestCleanupRepository:
     """Test cleanup_repository function."""
 
+    @patch("mcp_coder.workflows.create_pr.core.delete_conversations_directory")
     @patch("mcp_coder.workflows.create_pr.core.clean_profiler_output")
     @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
     @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
@@ -17,11 +18,13 @@ class TestCleanupRepository:
         mock_truncate: MagicMock,
         mock_delete: MagicMock,
         mock_clean_profiler: MagicMock,
+        mock_delete_conversations: MagicMock,
     ) -> None:
         """Test successful repository cleanup."""
         mock_delete.return_value = True
         mock_truncate.return_value = True
         mock_clean_profiler.return_value = True
+        mock_delete_conversations.return_value = True
 
         result = cleanup_repository(Path("/test/project"))
 
@@ -29,7 +32,9 @@ class TestCleanupRepository:
         mock_delete.assert_called_once_with(Path("/test/project"))
         mock_truncate.assert_called_once_with(Path("/test/project"))
         mock_clean_profiler.assert_called_once_with(Path("/test/project"))
+        mock_delete_conversations.assert_called_once_with(Path("/test/project"))
 
+    @patch("mcp_coder.workflows.create_pr.core.delete_conversations_directory")
     @patch("mcp_coder.workflows.create_pr.core.clean_profiler_output")
     @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
     @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
@@ -38,11 +43,13 @@ class TestCleanupRepository:
         mock_truncate: MagicMock,
         mock_delete: MagicMock,
         mock_clean_profiler: MagicMock,
+        mock_delete_conversations: MagicMock,
     ) -> None:
         """Test repository cleanup when delete_steps_directory fails."""
         mock_delete.return_value = False
         mock_truncate.return_value = True
         mock_clean_profiler.return_value = True
+        mock_delete_conversations.return_value = True
 
         result = cleanup_repository(Path("/test/project"))
 
@@ -51,7 +58,9 @@ class TestCleanupRepository:
         # Should still call truncate even if delete fails
         mock_truncate.assert_called_once_with(Path("/test/project"))
         mock_clean_profiler.assert_called_once_with(Path("/test/project"))
+        mock_delete_conversations.assert_called_once_with(Path("/test/project"))
 
+    @patch("mcp_coder.workflows.create_pr.core.delete_conversations_directory")
     @patch("mcp_coder.workflows.create_pr.core.clean_profiler_output")
     @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
     @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
@@ -60,11 +69,13 @@ class TestCleanupRepository:
         mock_truncate: MagicMock,
         mock_delete: MagicMock,
         mock_clean_profiler: MagicMock,
+        mock_delete_conversations: MagicMock,
     ) -> None:
         """Test repository cleanup when truncate_task_tracker fails."""
         mock_delete.return_value = True
         mock_truncate.return_value = False
         mock_clean_profiler.return_value = True
+        mock_delete_conversations.return_value = True
 
         result = cleanup_repository(Path("/test/project"))
 
@@ -72,7 +83,9 @@ class TestCleanupRepository:
         mock_delete.assert_called_once_with(Path("/test/project"))
         mock_truncate.assert_called_once_with(Path("/test/project"))
         mock_clean_profiler.assert_called_once_with(Path("/test/project"))
+        mock_delete_conversations.assert_called_once_with(Path("/test/project"))
 
+    @patch("mcp_coder.workflows.create_pr.core.delete_conversations_directory")
     @patch("mcp_coder.workflows.create_pr.core.clean_profiler_output")
     @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
     @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
@@ -81,11 +94,13 @@ class TestCleanupRepository:
         mock_truncate: MagicMock,
         mock_delete: MagicMock,
         mock_clean_profiler: MagicMock,
+        mock_delete_conversations: MagicMock,
     ) -> None:
         """Test repository cleanup when both operations fail."""
         mock_delete.return_value = False
         mock_truncate.return_value = False
         mock_clean_profiler.return_value = True
+        mock_delete_conversations.return_value = True
 
         result = cleanup_repository(Path("/test/project"))
 
@@ -93,6 +108,59 @@ class TestCleanupRepository:
         mock_delete.assert_called_once_with(Path("/test/project"))
         mock_truncate.assert_called_once_with(Path("/test/project"))
         mock_clean_profiler.assert_called_once_with(Path("/test/project"))
+        mock_delete_conversations.assert_called_once_with(Path("/test/project"))
+
+    @patch("mcp_coder.workflows.create_pr.core.delete_conversations_directory")
+    @patch("mcp_coder.workflows.create_pr.core.clean_profiler_output")
+    @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
+    @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
+    def test_cleanup_repository_includes_conversations_cleanup(
+        self,
+        mock_truncate: MagicMock,
+        mock_delete: MagicMock,
+        mock_clean_profiler: MagicMock,
+        mock_delete_conversations: MagicMock,
+    ) -> None:
+        """Test that cleanup_repository includes pr_info/.conversations/ cleanup."""
+        mock_delete.return_value = True
+        mock_truncate.return_value = True
+        mock_clean_profiler.return_value = True
+        mock_delete_conversations.return_value = True
+
+        result = cleanup_repository(Path("/test/project"))
+
+        assert result is True
+        # Verify all four cleanup functions are called
+        mock_delete.assert_called_once_with(Path("/test/project"))
+        mock_truncate.assert_called_once_with(Path("/test/project"))
+        mock_clean_profiler.assert_called_once_with(Path("/test/project"))
+        mock_delete_conversations.assert_called_once_with(Path("/test/project"))
+
+    @patch("mcp_coder.workflows.create_pr.core.delete_conversations_directory")
+    @patch("mcp_coder.workflows.create_pr.core.clean_profiler_output")
+    @patch("mcp_coder.workflows.create_pr.core.delete_steps_directory")
+    @patch("mcp_coder.workflows.create_pr.core.truncate_task_tracker")
+    def test_cleanup_repository_conversations_cleanup_fails(
+        self,
+        mock_truncate: MagicMock,
+        mock_delete: MagicMock,
+        mock_clean_profiler: MagicMock,
+        mock_delete_conversations: MagicMock,
+    ) -> None:
+        """Test repository cleanup when delete_conversations_directory fails."""
+        mock_delete.return_value = True
+        mock_truncate.return_value = True
+        mock_clean_profiler.return_value = True
+        mock_delete_conversations.return_value = False
+
+        result = cleanup_repository(Path("/test/project"))
+
+        assert result is False
+        # All functions should still be called even if earlier ones succeed
+        mock_delete.assert_called_once_with(Path("/test/project"))
+        mock_truncate.assert_called_once_with(Path("/test/project"))
+        mock_clean_profiler.assert_called_once_with(Path("/test/project"))
+        mock_delete_conversations.assert_called_once_with(Path("/test/project"))
 
 
 class TestCreatePullRequest:
