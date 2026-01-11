@@ -100,6 +100,7 @@ jobs:
           - {name: "unit-tests", cmd: "pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration' --junitxml=unit-tests.xml"}
           - {name: "integration-tests", cmd: "pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
           - {name: "mypy", cmd: "mypy --strict src tests"}
+          - {name: "import-linter", cmd: "lint-imports"}
     name: ${{ matrix.check.name }}
     steps:
       - uses: actions/checkout@v4
