@@ -11,7 +11,7 @@
 # =============================================================================
 
 exclude = ["**/__pycache__", "build/", "dist/", ".venv/", "*.egg-info/"]
-source_roots = ["src"]
+source_roots = ["src", "."]
 exact = false
 forbid_circular_dependencies = true
 ignore_type_checking_imports = true
@@ -325,4 +325,101 @@ depends_on = [
 #     { path = "mcp_coder.formatters" },
 #     { path = "mcp_coder.prompt_manager" },
 #     # Intentionally NOT including mcp_coder.utils directly
+# ]
+
+
+# =============================================================================
+# TEST MODULE RULES
+# =============================================================================
+# These rules enforce that test modules only import from their target modules
+# and shared test utilities. This ensures:
+# - Unit tests are focused on testing one module
+# - Test isolation (test modules don't depend on each other)
+# - Clear test boundaries matching source architecture
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Test layer definition
+# -----------------------------------------------------------------------------
+# Tests sit above all source modules - they can import from any source module
+# but source modules should never import from tests.
+# -----------------------------------------------------------------------------
+
+[[modules]]
+path = "tests"
+# Root test module - shared fixtures and utilities via conftest.py
+# Can import from any mcp_coder module for testing purposes.
+depends_on = [
+    { path = "mcp_coder" },
+    { path = "mcp_coder.cli" },
+    { path = "mcp_coder.workflows" },
+    { path = "mcp_coder.workflow_utils" },
+    { path = "mcp_coder.llm" },
+    { path = "mcp_coder.formatters" },
+    { path = "mcp_coder.prompt_manager" },
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+    { path = "mcp_coder.mcp_code_checker" },
+]
+
+# -----------------------------------------------------------------------------
+# RULE: Test modules should only import their target module
+# -----------------------------------------------------------------------------
+# Why: Unit tests should be focused on testing one module at a time.
+#      This makes tests more maintainable and failures easier to diagnose.
+#
+# Note: These rules are commented out because they would require significant
+#       test refactoring. Enable gradually as tests are cleaned up.
+# -----------------------------------------------------------------------------
+
+# [[modules]]
+# path = "tests.cli"
+# # CLI tests should only import CLI module and test utilities
+# depends_on = [
+#     { path = "tests" },                  # Shared fixtures
+#     { path = "mcp_coder.cli" },          # Module under test
+#     { path = "mcp_coder.config" },       # Configuration for test setup
+#     { path = "mcp_coder.constants" },    # Constants for assertions
+# ]
+
+# [[modules]]
+# path = "tests.llm"
+# # LLM tests should only import LLM module and test utilities
+# depends_on = [
+#     { path = "tests" },                  # Shared fixtures
+#     { path = "mcp_coder.llm" },          # Module under test
+#     { path = "mcp_coder.config" },       # Configuration for test setup
+#     { path = "mcp_coder.constants" },    # Constants for assertions
+# ]
+
+# [[modules]]
+# path = "tests.utils"
+# # Utils tests should only import utils module and test utilities
+# depends_on = [
+#     { path = "tests" },                  # Shared fixtures
+#     { path = "mcp_coder.utils" },        # Module under test
+#     { path = "mcp_coder.config" },       # Configuration for test setup
+#     { path = "mcp_coder.constants" },    # Constants for assertions
+# ]
+
+# [[modules]]
+# path = "tests.workflows"
+# # Workflow tests should only import workflows module and test utilities
+# depends_on = [
+#     { path = "tests" },                  # Shared fixtures
+#     { path = "mcp_coder.workflows" },    # Module under test
+#     { path = "mcp_coder.workflow_utils" }, # Related workflow utilities
+#     { path = "mcp_coder.config" },       # Configuration for test setup
+#     { path = "mcp_coder.constants" },    # Constants for assertions
+# ]
+
+# [[modules]]
+# path = "tests.formatters"
+# # Formatter tests should only import formatters module and test utilities
+# depends_on = [
+#     { path = "tests" },                  # Shared fixtures
+#     { path = "mcp_coder.formatters" },   # Module under test
+#     { path = "mcp_coder.config" },       # Configuration for test setup
+#     { path = "mcp_coder.constants" },    # Constants for assertions
 # ]

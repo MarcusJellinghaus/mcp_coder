@@ -6,8 +6,12 @@
 # =============================================================================
 
 [importlinter]
-root_package = mcp_coder
-root_package_paths = src
+root_packages = 
+    mcp_coder
+    tests
+root_package_paths = 
+    src
+    .
 
 # -----------------------------------------------------------------------------
 # Contract: Layered Architecture
@@ -122,3 +126,104 @@ source_modules =
 forbidden_modules =
     mcp_coder.utils.github_operations
     mcp_coder.utils.jenkins_operations
+
+
+# =============================================================================
+# TEST MODULE CONTRACTS
+# =============================================================================
+# These contracts enforce that:
+# - Source modules never import from tests (no test dependencies in production)
+# - Test modules remain isolated from each other (test independence)
+# - Unit tests focus on their target module (test focus)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Contract: Source Code Independence from Tests
+# -----------------------------------------------------------------------------
+# Production code should never import from test modules.
+# This prevents test code from leaking into production.
+#
+# Why this matters:
+# - Tests are not deployed to production
+# - Prevents accidental test dependencies in release builds
+# - Keeps production code independent and testable
+# -----------------------------------------------------------------------------
+[importlinter:contract:no_test_imports_in_source]
+name = Source Code Independence from Tests
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    tests
+
+# -----------------------------------------------------------------------------
+# Contract: Test Module Independence
+# -----------------------------------------------------------------------------
+# Test directories should not import from each other.
+# Each test module should be independent and self-contained.
+#
+# Why this matters:
+# - Prevents test interdependencies that make debugging harder
+# - Allows running test subsets without failures from missing test imports
+# - Keeps test modules focused on their target
+#
+# Note: tests.conftest is allowed as shared fixtures, but direct cross-imports
+#       between test subdirectories should be avoided.
+# -----------------------------------------------------------------------------
+[importlinter:contract:test_module_independence]
+name = Test Module Independence
+type = independence
+modules =
+    tests.cli
+    tests.llm
+    tests.utils
+    tests.workflows
+    tests.formatters
+    tests.workflow_utils
+# Allowed: Importing shared fixtures from tests.utils.conftest
+# TODO: Refactor to use pytest's conftest discovery instead of explicit imports
+ignore_imports =
+    tests.workflows.test_create_pr_integration -> tests.utils.conftest
+    tests.cli.commands.test_define_labels -> tests.utils.conftest
+
+# -----------------------------------------------------------------------------
+# Contract: CLI Tests Focus (commented - has violations)
+# -----------------------------------------------------------------------------
+# CLI tests should primarily import from mcp_coder.cli and shared test fixtures.
+# They should not reach deep into other modules.
+#
+# Why this matters:
+# - Keeps CLI tests focused on CLI behavior
+# - Prevents CLI tests from becoming integration tests
+# - Makes test failures easier to diagnose
+#
+# Note: Commented out because tests currently import widely for fixtures.
+#       Enable after refactoring tests to use proper mocking.
+# -----------------------------------------------------------------------------
+# [importlinter:contract:cli_test_focus]
+# name = CLI Tests Focus
+# type = forbidden
+# source_modules =
+#     tests.cli
+# forbidden_modules =
+#     mcp_coder.workflows
+#     mcp_coder.llm.providers
+
+# -----------------------------------------------------------------------------
+# Contract: Utils Tests Should Not Import Application Layer (commented - has violations)
+# -----------------------------------------------------------------------------
+# Utils tests should test infrastructure without depending on application logic.
+#
+# Why this matters:
+# - Utils are infrastructure, tested independently
+# - Application layer changes shouldn't break utils tests
+# - Enforces proper layering even in tests
+# -----------------------------------------------------------------------------
+# [importlinter:contract:utils_test_layering]
+# name = Utils Tests Layering
+# type = forbidden
+# source_modules =
+#     tests.utils
+# forbidden_modules =
+#     mcp_coder.cli
+#     mcp_coder.workflows
