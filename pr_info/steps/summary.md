@@ -55,6 +55,7 @@ src/mcp_coder/
 | `tests/utils/test_commit_operations.py` | **DELETE** |
 | `tests/workflow_utils/test_commit_operations.py` | **CREATE** (moved content) |
 | `tests/cli/commands/test_commit.py` | Update import and mock paths |
+| `src/mcp_coder/workflow_utils/__init__.py` | Add exports for moved functions |
 
 ---
 
@@ -94,7 +95,7 @@ from mcp_coder.workflow_utils.commit_operations import generate_commit_message_w
 
 ## Design Decisions
 
-1. **No `__init__.py` exports**: Direct module imports are used throughout the codebase. Adding package-level exports would add complexity without benefit (YAGNI).
+1. **Add `__init__.py` exports**: Export the three public functions from `workflow_utils/__init__.py` for consistency and shorter import paths.
 
 2. **Test file follows source**: Test moves from `tests/utils/` to `tests/workflow_utils/` to mirror source structure.
 

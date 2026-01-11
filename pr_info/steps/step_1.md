@@ -69,11 +69,36 @@ The module exports these functions (no changes to signatures):
 
 ---
 
+### 4. Update `workflow_utils/__init__.py` exports
+
+Add exports for the moved functions to `src/mcp_coder/workflow_utils/__init__.py`:
+
+**Add import** (after existing imports):
+```python
+from .commit_operations import (
+    generate_commit_message_with_llm,
+    parse_llm_commit_response,
+    strip_claude_footers,
+)
+```
+
+**Add to `__all__`** (at the end of the list):
+```python
+    # Commit operations
+    "generate_commit_message_with_llm",
+    "parse_llm_commit_response",
+    "strip_claude_footers",
+```
+
+---
+
 ## Verification
 
 After this step:
 - File exists at `src/mcp_coder/workflow_utils/commit_operations.py`
 - File deleted from `src/mcp_coder/utils/commit_operations.py`
+- `workflow_utils/__init__.py` exports the three functions
 - Import syntax is valid (can be checked with `python -c "from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm"`)
+- Package-level import also works: `python -c "from mcp_coder.workflow_utils import generate_commit_message_with_llm"`
 
 Note: Tests will fail until Step 2 and Step 3 are completed.
