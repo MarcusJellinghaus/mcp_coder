@@ -1,0 +1,149 @@
+# =============================================================================
+# Tach Configuration
+# =============================================================================
+# Enforces architectural boundaries between modules.
+# Run with: tach check
+# =============================================================================
+
+exclude = ["**/__pycache__", "build/", "dist/", ".venv/", "*.egg-info/"]
+source_roots = ["src"]
+exact = false
+forbid_circular_dependencies = true
+ignore_type_checking_imports = true
+
+# Architectural layers (top to bottom)
+layers = [
+    "presentation",
+    "application", 
+    "domain",
+    "infrastructure",
+    "foundation"
+]
+
+# =============================================================================
+# Layer 1: Presentation (CLI)
+# =============================================================================
+
+[[modules]]
+path = "mcp_coder.cli"
+layer = "presentation"
+depends_on = [
+    { path = "mcp_coder" },
+    { path = "mcp_coder.workflows" },
+    { path = "mcp_coder.workflow_utils" },
+    { path = "mcp_coder.llm" },
+    { path = "mcp_coder.formatters" },
+    { path = "mcp_coder.prompt_manager" },
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+    { path = "mcp_coder.mcp_code_checker" },
+]
+
+# =============================================================================
+# Layer 2: Application (Workflows)
+# =============================================================================
+
+[[modules]]
+path = "mcp_coder.workflows"
+layer = "application"
+depends_on = [
+    { path = "mcp_coder.workflow_utils" },
+    { path = "mcp_coder.llm" },
+    { path = "mcp_coder.formatters" },
+    { path = "mcp_coder.prompt_manager" },
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+]
+
+[[modules]]
+path = "mcp_coder.workflow_utils"
+layer = "application"
+depends_on = [
+    { path = "mcp_coder.llm" },
+    { path = "mcp_coder.formatters" },
+    { path = "mcp_coder.prompt_manager" },
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+]
+
+# =============================================================================
+# Layer 3: Domain (LLM, Formatters, Prompts)
+# =============================================================================
+
+[[modules]]
+path = "mcp_coder.llm"
+layer = "domain"
+depends_on = [
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+]
+
+[[modules]]
+path = "mcp_coder.formatters"
+layer = "domain"
+depends_on = [
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+]
+
+[[modules]]
+path = "mcp_coder.prompt_manager"
+layer = "domain"
+depends_on = [
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+]
+
+# =============================================================================
+# Layer 4: Infrastructure (Utils, MCP Checker)
+# =============================================================================
+
+[[modules]]
+path = "mcp_coder.utils"
+layer = "infrastructure"
+# TODO: Refactor commit_operations.py - it imports from domain layer (llm, prompt_manager)
+# which violates layered architecture. Should be moved to application layer.
+depends_on = [
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+]
+
+[[modules]]
+path = "mcp_coder.mcp_code_checker"
+layer = "infrastructure"
+depends_on = [
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+]
+
+# =============================================================================
+# Layer 5: Foundation (Config, Constants)
+# =============================================================================
+
+[[modules]]
+path = "mcp_coder.config"
+layer = "foundation"
+depends_on = []
+
+[[modules]]
+path = "mcp_coder.constants"
+layer = "foundation"
+depends_on = []
+
+# =============================================================================
+# Root module (mcp_coder.__init__)
+# =============================================================================
+
+[[modules]]
+path = "mcp_coder"
+depends_on = [
+    { path = "mcp_coder.llm" },
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.prompt_manager" },
+]
