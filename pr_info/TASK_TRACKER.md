@@ -61,12 +61,25 @@ refactor: move test_commit_operations.py to tests/workflow_utils/
 
 - [x] Update `src/mcp_coder/cli/commands/commit.py` import (`...utils.commit_operations` → `...workflow_utils.commit_operations`)
 - [x] Update `src/mcp_coder/workflows/implement/task_processing.py` import (`mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
-- [ ] Update `tests/cli/commands/test_commit.py` import statements
-- [ ] Update `tests/cli/commands/test_commit.py` mock patch decorators
-- [ ] Run pylint on all modified files
-- [ ] Run mypy on all modified files
-- [ ] Run pytest on affected test files
-- [ ] Prepare git commit message for Step 3
+- [x] Update `tests/cli/commands/test_commit.py` import statements
+- [x] Update `tests/cli/commands/test_commit.py` mock patch decorators
+- [x] Run pylint on all modified files
+- [x] Run mypy on all modified files
+- [x] Run pytest on affected test files
+- [x] Prepare git commit message for Step 3
+
+**Commit Message:**
+```
+refactor: update imports in dependent files for commit_operations relocation
+
+- Update commit.py import from ...utils.commit_operations to 
+  ...workflow_utils.commit_operations
+- Update task_processing.py import from mcp_coder.utils.commit_operations to
+  mcp_coder.workflow_utils.commit_operations
+- Update test_commit.py import statements and all mock patch decorators
+  from mcp_coder.utils.commit_operations to 
+  mcp_coder.workflow_utils.commit_operations
+```
 
 ---
 
