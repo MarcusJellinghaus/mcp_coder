@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Coder - Dependency Report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 {
+            text-align: center;
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        a {
+            color: #00d9ff;
+        }
+        .toc {
+            max-width: 800px;
+            margin: 0 auto 30px;
+            padding: 20px;
+            background: #252540;
+            border-radius: 12px;
+        }
+        .toc h2 {
+            color: #00d9ff;
+            margin-top: 0;
+        }
+        .toc ul {
+            columns: 2;
+            column-gap: 40px;
+        }
+        .toc li {
+            margin-bottom: 8px;
+        }
+        .module-report {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #252540;
+            border-radius: 12px;
+        }
+        .module-report h2 {
+            color: #00d9ff;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        pre {
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <h1>MCP Coder - Dependency Report</h1>
+    <p class="subtitle">Detailed import-level dependencies and usages | <a href="dependency_graph.html">View Graph</a></p>
+    
+    <div class="toc">
+        <h2>Modules</h2>
+        <ul>
+            <li><a href="#mcp_coder-cli">mcp_coder.cli</a></li><li><a href="#mcp_coder-workflows">mcp_coder.workflows</a></li><li><a href="#mcp_coder-workflow_utils">mcp_coder.workflow_utils</a></li><li><a href="#mcp_coder-llm">mcp_coder.llm</a></li><li><a href="#mcp_coder-formatters">mcp_coder.formatters</a></li><li><a href="#mcp_coder-utils">mcp_coder.utils</a></li><li><a href="#mcp_coder-config">mcp_coder.config</a></li>
+        </ul>
+    </div>
+    
+    <div class="module-report" id="mcp_coder-cli"><h2>mcp_coder.cli</h2><pre>[ Dependency Report for 'src\mcp_coder\cli' ]
+-------------------------------
+[ Dependencies of 'src\mcp_coder\cli' ]
+mcp_coder\cli\commands\commit.py:10: Import 'mcp_coder.utils.clipboard.get_clipboard_text'
+mcp_coder\cli\commands\commit.py:11: Import 'mcp_coder.utils.clipboard.parse_commit_message'
+mcp_coder\cli\commands\commit.py:12: Import 'mcp_coder.utils.clipboard.validate_commit_message'
+mcp_coder\cli\commands\commit.py:14: Import 'mcp_coder.utils.commit_operations.generate_commit_message_with_llm'
+mcp_coder\cli\commands\commit.py:16: Import 'mcp_coder.utils.git_operations.commit_staged_files'
+mcp_coder\cli\commands\commit.py:17: Import 'mcp_coder.utils.git_operations.get_git_diff_for_commit'
+mcp_coder\cli\commands\commit.py:18: Import 'mcp_coder.utils.git_operations.is_git_repository'
+mcp_coder\cli\commands\commit.py:19: Import 'mcp_coder.utils.git_operations.stage_all_changes'
+mcp_coder\cli\commands\coordinator\__init__.py:5: Import 'mcp_coder.utils.github_operations.issue_branch_manager.IssueBranchManager'
+mcp_coder\cli\commands\coordinator\__init__.py:6: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\cli\commands\coordinator\__init__.py:7: Import 'mcp_coder.utils.github_operations.label_config.load_labels_config'
+mcp_coder\cli\commands\coordinator\__init__.py:8: Import 'mcp_coder.utils.jenkins_operations.client.JenkinsClient'
+mcp_coder\cli\commands\coordinator\__init__.py:9: Import 'mcp_coder.utils.user_config.create_default_config'
+mcp_coder\cli\commands\coordinator\__init__.py:9: Import 'mcp_coder.utils.user_config.get_config_value'
+mcp_coder\cli\commands\coordinator\commands.py:19: Import 'mcp_coder.utils.github_operations.github_utils.RepoIdentifier'
+mcp_coder\cli\commands\coordinator\commands.py:20: Import 'mcp_coder.utils.jenkins_operations.models.JobStatus'
+mcp_coder\cli\commands\coordinator\commands.py:21: Import 'mcp_coder.utils.user_config.get_config_file_path'
+mcp_coder\cli\commands\coordinator\commands.py:21: Import 'mcp_coder.utils.user_config.load_config'
+mcp_coder\cli\commands\coordinator\core.py:21: Import 'mcp_coder.utils.github_operations.github_utils.RepoIdentifier'
+mcp_coder\cli\commands\coordinator\core.py:22: Import 'mcp_coder.utils.github_operations.issue_branch_manager.IssueBranchManager'
+mcp_coder\cli\commands\coordinator\core.py:23: Import 'mcp_coder.utils.github_operations.issue_manager.IssueData'
+mcp_coder\cli\commands\coordinator\core.py:23: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\cli\commands\coordinator\core.py:24: Import 'mcp_coder.utils.jenkins_operations.client.JenkinsClient'
+mcp_coder\cli\commands\coordinator\core.py:25: Import 'mcp_coder.utils.jenkins_operations.models.JobStatus'
+mcp_coder\cli\commands\coordinator\core.py:27: Import 'mcp_coder.utils.timezone_utils.format_for_cache'
+mcp_coder\cli\commands\coordinator\core.py:28: Import 'mcp_coder.utils.timezone_utils.is_within_duration'
+mcp_coder\cli\commands\coordinator\core.py:29: Import 'mcp_coder.utils.timezone_utils.now_utc'
+mcp_coder\cli\commands\coordinator\core.py:30: Import 'mcp_coder.utils.timezone_utils.parse_iso_timestamp'
+mcp_coder\cli\commands\coordinator\core.py:32: Import 'mcp_coder.utils.user_config.get_config_file_path'
+mcp_coder\cli\commands\create_plan.py:11: Import 'mcp_coder.workflows.utils.resolve_project_dir'
+mcp_coder\cli\commands\create_plan.py:58: Import 'mcp_coder.workflows.create_plan.run_create_plan_workflow'
+mcp_coder\cli\commands\create_pr.py:12: Import 'mcp_coder.workflows.create_pr.core.run_create_pr_workflow'
+mcp_coder\cli\commands\create_pr.py:13: Import 'mcp_coder.workflows.utils.resolve_project_dir'
+mcp_coder\cli\commands\define_labels.py:14: Import 'mcp_coder.utils.github_operations.label_config.get_labels_config_path'
+mcp_coder\cli\commands\define_labels.py:15: Import 'mcp_coder.utils.github_operations.label_config.load_labels_config'
+mcp_coder\cli\commands\define_labels.py:17: Import 'mcp_coder.utils.github_operations.labels_manager.LabelsManager'
+mcp_coder\cli\commands\define_labels.py:18: Import 'mcp_coder.workflows.utils.resolve_project_dir'
+mcp_coder\cli\commands\implement.py:12: Import 'mcp_coder.workflows.implement.core.run_implement_workflow'
+mcp_coder\cli\commands\implement.py:13: Import 'mcp_coder.workflows.utils.resolve_project_dir'
+mcp_coder\cli\commands\prompt.py:31: Import 'mcp_coder.llm.env.prepare_llm_environment'
+mcp_coder\cli\commands\prompt.py:33: Import 'mcp_coder.llm.formatting.formatters.format_raw_response'
+mcp_coder\cli\commands\prompt.py:34: Import 'mcp_coder.llm.formatting.formatters.format_text_response'
+mcp_coder\cli\commands\prompt.py:35: Import 'mcp_coder.llm.formatting.formatters.format_verbose_response'
+mcp_coder\cli\commands\prompt.py:38: Import 'mcp_coder.llm.formatting.sdk_serialization.extract_tool_interactions'
+mcp_coder\cli\commands\prompt.py:39: Import 'mcp_coder.llm.formatting.sdk_serialization.get_message_role'
+mcp_coder\cli\commands\prompt.py:40: Import 'mcp_coder.llm.formatting.sdk_serialization.get_message_tool_calls'
+mcp_coder\cli\commands\prompt.py:41: Import 'mcp_coder.llm.formatting.sdk_serialization.is_sdk_message'
+mcp_coder\cli\commands\prompt.py:42: Import 'mcp_coder.llm.formatting.sdk_serialization.serialize_message_for_json'
+mcp_coder\cli\commands\prompt.py:44: Import 'mcp_coder.llm.interface.ask_llm'
+mcp_coder\cli\commands\prompt.py:46: Import 'mcp_coder.llm.providers.claude.claude_code_api.AssistantMessage'
+mcp_coder\cli\commands\prompt.py:47: Import 'mcp_coder.llm.providers.claude.claude_code_api.ResultMessage'
+mcp_coder\cli\commands\prompt.py:48: Import 'mcp_coder.llm.providers.claude.claude_code_api.SystemMessage'
+mcp_coder\cli\commands\prompt.py:49: Import 'mcp_coder.llm.providers.claude.claude_code_api.TextBlock'
+mcp_coder\cli\commands\prompt.py:50: Import 'mcp_coder.llm.providers.claude.claude_code_api.UserMessage'
+mcp_coder\cli\commands\prompt.py:51: Import 'mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync'
+mcp_coder\cli\commands\prompt.py:53: Import 'mcp_coder.llm.storage.extract_session_id'
+mcp_coder\cli\commands\prompt.py:53: Import 'mcp_coder.llm.storage.find_latest_session'
+mcp_coder\cli\commands\prompt.py:53: Import 'mcp_coder.llm.storage.store_session'
+mcp_coder\cli\commands\prompt.py:157: Import 'mcp_coder.llm.interface.prompt_llm'
+mcp_coder\cli\commands\verify.py:7: Import 'mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_cli_installation'
+mcp_coder\cli\main.py:7: Import 'mcp_coder.__version__'
+mcp_coder\cli\main.py:8: Import 'mcp_coder.utils.log_utils.setup_logging'
+mcp_coder\cli\utils.py:10: Import 'mcp_coder.llm.session.parse_llm_method'
+-------------------------------
+[ Usages of 'src\mcp_coder\cli' ]
+No usages found.
+-------------------------------
+
+</pre></div><div class="module-report" id="mcp_coder-workflows"><h2>mcp_coder.workflows</h2><pre>[ Dependency Report for 'src\mcp_coder\workflows' ]
+-------------------------------
+[ Dependencies of 'src\mcp_coder\workflows' ]
+mcp_coder\workflows\create_plan.py:15: Import 'mcp_coder.constants.DEFAULT_IGNORED_BUILD_ARTIFACTS'
+mcp_coder\workflows\create_plan.py:15: Import 'mcp_coder.constants.PROMPTS_FILE_PATH'
+mcp_coder\workflows\create_plan.py:16: Import 'mcp_coder.llm.env.prepare_llm_environment'
+mcp_coder\workflows\create_plan.py:17: Import 'mcp_coder.llm.interface.prompt_llm'
+mcp_coder\workflows\create_plan.py:18: Import 'mcp_coder.llm.session.parse_llm_method'
+mcp_coder\workflows\create_plan.py:19: Import 'mcp_coder.llm.storage.session_storage.store_session'
+mcp_coder\workflows\create_plan.py:20: Import 'mcp_coder.prompt_manager.get_prompt'
+mcp_coder\workflows\create_plan.py:21: Import 'mcp_coder.utils.git_operations.branches.checkout_branch'
+mcp_coder\workflows\create_plan.py:22: Import 'mcp_coder.utils.git_operations.commits.commit_all_changes'
+mcp_coder\workflows\create_plan.py:23: Import 'mcp_coder.utils.git_operations.remotes.git_push'
+mcp_coder\workflows\create_plan.py:24: Import 'mcp_coder.utils.git_operations.repository.is_working_directory_clean'
+mcp_coder\workflows\create_plan.py:25: Import 'mcp_coder.utils.github_operations.issue_branch_manager.IssueBranchManager'
+mcp_coder\workflows\create_plan.py:26: Import 'mcp_coder.utils.github_operations.issue_manager.IssueData'
+mcp_coder\workflows\create_plan.py:26: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\workflows\create_pr\core.py:14: Import 'mcp_coder.constants.DEFAULT_IGNORED_BUILD_ARTIFACTS'
+mcp_coder\workflows\create_pr\core.py:14: Import 'mcp_coder.constants.PROMPTS_FILE_PATH'
+mcp_coder\workflows\create_pr\core.py:15: Import 'mcp_coder.llm.interface.ask_llm'
+mcp_coder\workflows\create_pr\core.py:16: Import 'mcp_coder.prompt_manager.get_prompt'
+mcp_coder\workflows\create_pr\core.py:18: Import 'mcp_coder.utils.commit_all_changes'
+mcp_coder\workflows\create_pr\core.py:19: Import 'mcp_coder.utils.get_branch_diff'
+mcp_coder\workflows\create_pr\core.py:20: Import 'mcp_coder.utils.get_current_branch_name'
+mcp_coder\workflows\create_pr\core.py:21: Import 'mcp_coder.utils.get_parent_branch_name'
+mcp_coder\workflows\create_pr\core.py:22: Import 'mcp_coder.utils.git_push'
+mcp_coder\workflows\create_pr\core.py:23: Import 'mcp_coder.utils.is_working_directory_clean'
+mcp_coder\workflows\create_pr\core.py:25: Import 'mcp_coder.utils.git_operations.branches.extract_issue_number_from_branch'
+mcp_coder\workflows\create_pr\core.py:26: Import 'mcp_coder.utils.github_operations.issue_branch_manager.IssueBranchManager'
+mcp_coder\workflows\create_pr\core.py:27: Import 'mcp_coder.utils.github_operations.pr_manager.PullRequestManager'
+mcp_coder\workflows\create_pr\core.py:28: Import 'mcp_coder.workflow_utils.task_tracker.get_incomplete_tasks'
+mcp_coder\workflows\create_pr\core.py:671: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\workflows\implement\core.py:11: Import 'mcp_coder.constants.PROMPTS_FILE_PATH'
+mcp_coder\workflows\implement\core.py:12: Import 'mcp_coder.llm.env.prepare_llm_environment'
+mcp_coder\workflows\implement\core.py:13: Import 'mcp_coder.llm.interface.ask_llm'
+mcp_coder\workflows\implement\core.py:14: Import 'mcp_coder.prompt_manager.get_prompt'
+mcp_coder\workflows\implement\core.py:15: Import 'mcp_coder.utils.commit_all_changes'
+mcp_coder\workflows\implement\core.py:15: Import 'mcp_coder.utils.get_full_status'
+mcp_coder\workflows\implement\core.py:16: Import 'mcp_coder.workflow_utils.task_tracker.get_step_progress'
+mcp_coder\workflows\implement\core.py:355: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\workflows\implement\prerequisites.py:10: Import 'mcp_coder.constants.DEFAULT_IGNORED_BUILD_ARTIFACTS'
+mcp_coder\workflows\implement\prerequisites.py:12: Import 'mcp_coder.utils.get_current_branch_name'
+mcp_coder\workflows\implement\prerequisites.py:13: Import 'mcp_coder.utils.get_default_branch_name'
+mcp_coder\workflows\implement\prerequisites.py:14: Import 'mcp_coder.utils.get_full_status'
+mcp_coder\workflows\implement\prerequisites.py:15: Import 'mcp_coder.utils.is_working_directory_clean'
+mcp_coder\workflows\implement\prerequisites.py:18: Import 'mcp_coder.workflow_utils.task_tracker._find_implementation_section'
+mcp_coder\workflows\implement\prerequisites.py:19: Import 'mcp_coder.workflow_utils.task_tracker._parse_task_lines'
+mcp_coder\workflows\implement\prerequisites.py:20: Import 'mcp_coder.workflow_utils.task_tracker._read_task_tracker'
+mcp_coder\workflows\implement\task_processing.py:15: Import 'mcp_coder.constants.PROMPTS_FILE_PATH'
+mcp_coder\workflows\implement\task_processing.py:16: Import 'mcp_coder.formatters.format_code'
+mcp_coder\workflows\implement\task_processing.py:17: Import 'mcp_coder.llm.env.prepare_llm_environment'
+mcp_coder\workflows\implement\task_processing.py:18: Import 'mcp_coder.llm.interface.ask_llm'
+mcp_coder\workflows\implement\task_processing.py:20: Import 'mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync'
+mcp_coder\workflows\implement\task_processing.py:24: Import 'mcp_coder.prompt_manager.get_prompt'
+mcp_coder\workflows\implement\task_processing.py:25: Import 'mcp_coder.utils.commit_all_changes'
+mcp_coder\workflows\implement\task_processing.py:25: Import 'mcp_coder.utils.get_full_status'
+mcp_coder\workflows\implement\task_processing.py:25: Import 'mcp_coder.utils.git_push'
+mcp_coder\workflows\implement\task_processing.py:26: Import 'mcp_coder.utils.commit_operations.generate_commit_message_with_llm'
+mcp_coder\workflows\implement\task_processing.py:27: Import 'mcp_coder.workflow_utils.task_tracker.get_incomplete_tasks'
+mcp_coder\workflows\implement\task_processing.py:353: Import 'mcp_coder.mcp_code_checker.run_mypy_check'
+-------------------------------
+[ Usages of 'src\mcp_coder\workflows' ]
+mcp_coder\cli\commands\create_plan.py:11: Import 'mcp_coder.workflows.utils.resolve_project_dir'
+mcp_coder\cli\commands\create_plan.py:58: Import 'mcp_coder.workflows.create_plan.run_create_plan_workflow'
+mcp_coder\cli\commands\create_pr.py:12: Import 'mcp_coder.workflows.create_pr.core.run_create_pr_workflow'
+mcp_coder\cli\commands\create_pr.py:13: Import 'mcp_coder.workflows.utils.resolve_project_dir'
+mcp_coder\cli\commands\define_labels.py:18: Import 'mcp_coder.workflows.utils.resolve_project_dir'
+mcp_coder\cli\commands\implement.py:12: Import 'mcp_coder.workflows.implement.core.run_implement_workflow'
+mcp_coder\cli\commands\implement.py:13: Import 'mcp_coder.workflows.utils.resolve_project_dir'
+-------------------------------
+
+</pre></div><div class="module-report" id="mcp_coder-workflow_utils"><h2>mcp_coder.workflow_utils</h2><pre>[ Dependency Report for 'src\mcp_coder\workflow_utils' ]
+-------------------------------
+[ Dependencies of 'src\mcp_coder\workflow_utils' ]
+No dependencies found.
+-------------------------------
+[ Usages of 'src\mcp_coder\workflow_utils' ]
+mcp_coder\workflows\create_pr\core.py:28: Import 'mcp_coder.workflow_utils.task_tracker.get_incomplete_tasks'
+mcp_coder\workflows\implement\core.py:16: Import 'mcp_coder.workflow_utils.task_tracker.get_step_progress'
+mcp_coder\workflows\implement\prerequisites.py:18: Import 'mcp_coder.workflow_utils.task_tracker._find_implementation_section'
+mcp_coder\workflows\implement\prerequisites.py:19: Import 'mcp_coder.workflow_utils.task_tracker._parse_task_lines'
+mcp_coder\workflows\implement\prerequisites.py:20: Import 'mcp_coder.workflow_utils.task_tracker._read_task_tracker'
+mcp_coder\workflows\implement\task_processing.py:27: Import 'mcp_coder.workflow_utils.task_tracker.get_incomplete_tasks'
+-------------------------------
+
+</pre></div><div class="module-report" id="mcp_coder-llm"><h2>mcp_coder.llm</h2><pre>[ Dependency Report for 'src\mcp_coder\llm' ]
+-------------------------------
+[ Dependencies of 'src\mcp_coder\llm' ]
+mcp_coder\llm\providers\claude\claude_code_cli.py:14: Import 'mcp_coder.utils.subprocess_runner.CommandOptions'
+mcp_coder\llm\providers\claude\claude_code_cli.py:15: Import 'mcp_coder.utils.subprocess_runner.execute_command'
+mcp_coder\llm\providers\claude\claude_code_cli.py:16: Import 'mcp_coder.utils.subprocess_runner.execute_subprocess'
+mcp_coder\llm\providers\claude\claude_executable_finder.py:10: Import 'mcp_coder.utils.subprocess_runner.execute_command'
+-------------------------------
+[ Usages of 'src\mcp_coder\llm' ]
+mcp_coder\__init__.py:20: Import 'mcp_coder.llm.interface.ask_llm'
+mcp_coder\__init__.py:20: Import 'mcp_coder.llm.interface.prompt_llm'
+mcp_coder\__init__.py:21: Import 'mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code'
+mcp_coder\__init__.py:23: Import 'mcp_coder.llm.providers.claude.claude_executable_finder.find_claude_executable'
+mcp_coder\__init__.py:24: Import 'mcp_coder.llm.providers.claude.claude_executable_finder.verify_claude_installation'
+mcp_coder\__init__.py:26: Import 'mcp_coder.llm.serialization.deserialize_llm_response'
+mcp_coder\__init__.py:26: Import 'mcp_coder.llm.serialization.serialize_llm_response'
+mcp_coder\__init__.py:27: Import 'mcp_coder.llm.types.LLM_RESPONSE_VERSION'
+mcp_coder\__init__.py:27: Import 'mcp_coder.llm.types.LLMResponseDict'
+mcp_coder\cli\commands\prompt.py:31: Import 'mcp_coder.llm.env.prepare_llm_environment'
+mcp_coder\cli\commands\prompt.py:33: Import 'mcp_coder.llm.formatting.formatters.format_raw_response'
+mcp_coder\cli\commands\prompt.py:34: Import 'mcp_coder.llm.formatting.formatters.format_text_response'
+mcp_coder\cli\commands\prompt.py:35: Import 'mcp_coder.llm.formatting.formatters.format_verbose_response'
+mcp_coder\cli\commands\prompt.py:38: Import 'mcp_coder.llm.formatting.sdk_serialization.extract_tool_interactions'
+mcp_coder\cli\commands\prompt.py:39: Import 'mcp_coder.llm.formatting.sdk_serialization.get_message_role'
+mcp_coder\cli\commands\prompt.py:40: Import 'mcp_coder.llm.formatting.sdk_serialization.get_message_tool_calls'
+mcp_coder\cli\commands\prompt.py:41: Import 'mcp_coder.llm.formatting.sdk_serialization.is_sdk_message'
+mcp_coder\cli\commands\prompt.py:42: Import 'mcp_coder.llm.formatting.sdk_serialization.serialize_message_for_json'
+mcp_coder\cli\commands\prompt.py:44: Import 'mcp_coder.llm.interface.ask_llm'
+mcp_coder\cli\commands\prompt.py:46: Import 'mcp_coder.llm.providers.claude.claude_code_api.AssistantMessage'
+mcp_coder\cli\commands\prompt.py:47: Import 'mcp_coder.llm.providers.claude.claude_code_api.ResultMessage'
+mcp_coder\cli\commands\prompt.py:48: Import 'mcp_coder.llm.providers.claude.claude_code_api.SystemMessage'
+mcp_coder\cli\commands\prompt.py:49: Import 'mcp_coder.llm.providers.claude.claude_code_api.TextBlock'
+mcp_coder\cli\commands\prompt.py:50: Import 'mcp_coder.llm.providers.claude.claude_code_api.UserMessage'
+mcp_coder\cli\commands\prompt.py:51: Import 'mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync'
+mcp_coder\cli\commands\prompt.py:53: Import 'mcp_coder.llm.storage.extract_session_id'
+mcp_coder\cli\commands\prompt.py:53: Import 'mcp_coder.llm.storage.find_latest_session'
+mcp_coder\cli\commands\prompt.py:53: Import 'mcp_coder.llm.storage.store_session'
+mcp_coder\cli\commands\prompt.py:157: Import 'mcp_coder.llm.interface.prompt_llm'
+mcp_coder\cli\commands\verify.py:7: Import 'mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_cli_installation'
+mcp_coder\cli\utils.py:10: Import 'mcp_coder.llm.session.parse_llm_method'
+mcp_coder\workflows\create_plan.py:16: Import 'mcp_coder.llm.env.prepare_llm_environment'
+mcp_coder\workflows\create_plan.py:17: Import 'mcp_coder.llm.interface.prompt_llm'
+mcp_coder\workflows\create_plan.py:18: Import 'mcp_coder.llm.session.parse_llm_method'
+mcp_coder\workflows\create_plan.py:19: Import 'mcp_coder.llm.storage.session_storage.store_session'
+mcp_coder\workflows\create_pr\core.py:15: Import 'mcp_coder.llm.interface.ask_llm'
+mcp_coder\workflows\implement\core.py:12: Import 'mcp_coder.llm.env.prepare_llm_environment'
+mcp_coder\workflows\implement\core.py:13: Import 'mcp_coder.llm.interface.ask_llm'
+mcp_coder\workflows\implement\task_processing.py:17: Import 'mcp_coder.llm.env.prepare_llm_environment'
+mcp_coder\workflows\implement\task_processing.py:18: Import 'mcp_coder.llm.interface.ask_llm'
+mcp_coder\workflows\implement\task_processing.py:20: Import 'mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync'
+-------------------------------
+
+</pre></div><div class="module-report" id="mcp_coder-formatters"><h2>mcp_coder.formatters</h2><pre>[ Dependency Report for 'src\mcp_coder\formatters' ]
+-------------------------------
+[ Dependencies of 'src\mcp_coder\formatters' ]
+mcp_coder\formatters\black_formatter.py:13: Import 'mcp_coder.utils.subprocess_runner.execute_command'
+mcp_coder\formatters\isort_formatter.py:13: Import 'mcp_coder.utils.subprocess_runner.execute_command'
+-------------------------------
+[ Usages of 'src\mcp_coder\formatters' ]
+mcp_coder\workflows\implement\task_processing.py:16: Import 'mcp_coder.formatters.format_code'
+-------------------------------
+
+</pre></div><div class="module-report" id="mcp_coder-utils"><h2>mcp_coder.utils</h2><pre>[ Dependency Report for 'src\mcp_coder\utils' ]
+-------------------------------
+[ Dependencies of 'src\mcp_coder\utils' ]
+mcp_coder\utils\commit_operations.py:10: Import 'mcp_coder.constants.PROMPTS_FILE_PATH'
+-------------------------------
+[ Usages of 'src\mcp_coder\utils' ]
+mcp_coder\__init__.py:34: Import 'mcp_coder.utils.git_operations.CommitResult'
+mcp_coder\__init__.py:35: Import 'mcp_coder.utils.git_operations.commit_all_changes'
+mcp_coder\__init__.py:36: Import 'mcp_coder.utils.git_operations.commit_staged_files'
+mcp_coder\__init__.py:37: Import 'mcp_coder.utils.git_operations.get_full_status'
+mcp_coder\__init__.py:38: Import 'mcp_coder.utils.git_operations.git_push'
+mcp_coder\__init__.py:39: Import 'mcp_coder.utils.git_operations.is_git_repository'
+mcp_coder\__init__.py:41: Import 'mcp_coder.utils.github_operations.CommentData'
+mcp_coder\__init__.py:41: Import 'mcp_coder.utils.github_operations.IssueData'
+mcp_coder\__init__.py:41: Import 'mcp_coder.utils.github_operations.IssueManager'
+mcp_coder\__init__.py:41: Import 'mcp_coder.utils.github_operations.LabelData'
+mcp_coder\__init__.py:43: Import 'mcp_coder.utils.subprocess_runner.CommandOptions'
+mcp_coder\__init__.py:44: Import 'mcp_coder.utils.subprocess_runner.CommandResult'
+mcp_coder\__init__.py:45: Import 'mcp_coder.utils.subprocess_runner.execute_command'
+mcp_coder\__init__.py:46: Import 'mcp_coder.utils.subprocess_runner.execute_subprocess'
+mcp_coder\cli\commands\commit.py:10: Import 'mcp_coder.utils.clipboard.get_clipboard_text'
+mcp_coder\cli\commands\commit.py:11: Import 'mcp_coder.utils.clipboard.parse_commit_message'
+mcp_coder\cli\commands\commit.py:12: Import 'mcp_coder.utils.clipboard.validate_commit_message'
+mcp_coder\cli\commands\commit.py:14: Import 'mcp_coder.utils.commit_operations.generate_commit_message_with_llm'
+mcp_coder\cli\commands\commit.py:16: Import 'mcp_coder.utils.git_operations.commit_staged_files'
+mcp_coder\cli\commands\commit.py:17: Import 'mcp_coder.utils.git_operations.get_git_diff_for_commit'
+mcp_coder\cli\commands\commit.py:18: Import 'mcp_coder.utils.git_operations.is_git_repository'
+mcp_coder\cli\commands\commit.py:19: Import 'mcp_coder.utils.git_operations.stage_all_changes'
+mcp_coder\cli\commands\coordinator\__init__.py:5: Import 'mcp_coder.utils.github_operations.issue_branch_manager.IssueBranchManager'
+mcp_coder\cli\commands\coordinator\__init__.py:6: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\cli\commands\coordinator\__init__.py:7: Import 'mcp_coder.utils.github_operations.label_config.load_labels_config'
+mcp_coder\cli\commands\coordinator\__init__.py:8: Import 'mcp_coder.utils.jenkins_operations.client.JenkinsClient'
+mcp_coder\cli\commands\coordinator\__init__.py:9: Import 'mcp_coder.utils.user_config.create_default_config'
+mcp_coder\cli\commands\coordinator\__init__.py:9: Import 'mcp_coder.utils.user_config.get_config_value'
+mcp_coder\cli\commands\coordinator\commands.py:19: Import 'mcp_coder.utils.github_operations.github_utils.RepoIdentifier'
+mcp_coder\cli\commands\coordinator\commands.py:20: Import 'mcp_coder.utils.jenkins_operations.models.JobStatus'
+mcp_coder\cli\commands\coordinator\commands.py:21: Import 'mcp_coder.utils.user_config.get_config_file_path'
+mcp_coder\cli\commands\coordinator\commands.py:21: Import 'mcp_coder.utils.user_config.load_config'
+mcp_coder\cli\commands\coordinator\core.py:21: Import 'mcp_coder.utils.github_operations.github_utils.RepoIdentifier'
+mcp_coder\cli\commands\coordinator\core.py:22: Import 'mcp_coder.utils.github_operations.issue_branch_manager.IssueBranchManager'
+mcp_coder\cli\commands\coordinator\core.py:23: Import 'mcp_coder.utils.github_operations.issue_manager.IssueData'
+mcp_coder\cli\commands\coordinator\core.py:23: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\cli\commands\coordinator\core.py:24: Import 'mcp_coder.utils.jenkins_operations.client.JenkinsClient'
+mcp_coder\cli\commands\coordinator\core.py:25: Import 'mcp_coder.utils.jenkins_operations.models.JobStatus'
+mcp_coder\cli\commands\coordinator\core.py:27: Import 'mcp_coder.utils.timezone_utils.format_for_cache'
+mcp_coder\cli\commands\coordinator\core.py:28: Import 'mcp_coder.utils.timezone_utils.is_within_duration'
+mcp_coder\cli\commands\coordinator\core.py:29: Import 'mcp_coder.utils.timezone_utils.now_utc'
+mcp_coder\cli\commands\coordinator\core.py:30: Import 'mcp_coder.utils.timezone_utils.parse_iso_timestamp'
+mcp_coder\cli\commands\coordinator\core.py:32: Import 'mcp_coder.utils.user_config.get_config_file_path'
+mcp_coder\cli\commands\define_labels.py:14: Import 'mcp_coder.utils.github_operations.label_config.get_labels_config_path'
+mcp_coder\cli\commands\define_labels.py:15: Import 'mcp_coder.utils.github_operations.label_config.load_labels_config'
+mcp_coder\cli\commands\define_labels.py:17: Import 'mcp_coder.utils.github_operations.labels_manager.LabelsManager'
+mcp_coder\cli\main.py:8: Import 'mcp_coder.utils.log_utils.setup_logging'
+mcp_coder\formatters\black_formatter.py:13: Import 'mcp_coder.utils.subprocess_runner.execute_command'
+mcp_coder\formatters\isort_formatter.py:13: Import 'mcp_coder.utils.subprocess_runner.execute_command'
+mcp_coder\llm\providers\claude\claude_code_cli.py:14: Import 'mcp_coder.utils.subprocess_runner.CommandOptions'
+mcp_coder\llm\providers\claude\claude_code_cli.py:15: Import 'mcp_coder.utils.subprocess_runner.execute_command'
+mcp_coder\llm\providers\claude\claude_code_cli.py:16: Import 'mcp_coder.utils.subprocess_runner.execute_subprocess'
+mcp_coder\llm\providers\claude\claude_executable_finder.py:10: Import 'mcp_coder.utils.subprocess_runner.execute_command'
+mcp_coder\prompt_manager.py:82: Import 'mcp_coder.utils.data_files.find_data_file'
+mcp_coder\workflows\create_plan.py:21: Import 'mcp_coder.utils.git_operations.branches.checkout_branch'
+mcp_coder\workflows\create_plan.py:22: Import 'mcp_coder.utils.git_operations.commits.commit_all_changes'
+mcp_coder\workflows\create_plan.py:23: Import 'mcp_coder.utils.git_operations.remotes.git_push'
+mcp_coder\workflows\create_plan.py:24: Import 'mcp_coder.utils.git_operations.repository.is_working_directory_clean'
+mcp_coder\workflows\create_plan.py:25: Import 'mcp_coder.utils.github_operations.issue_branch_manager.IssueBranchManager'
+mcp_coder\workflows\create_plan.py:26: Import 'mcp_coder.utils.github_operations.issue_manager.IssueData'
+mcp_coder\workflows\create_plan.py:26: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\workflows\create_pr\core.py:18: Import 'mcp_coder.utils.commit_all_changes'
+mcp_coder\workflows\create_pr\core.py:19: Import 'mcp_coder.utils.get_branch_diff'
+mcp_coder\workflows\create_pr\core.py:20: Import 'mcp_coder.utils.get_current_branch_name'
+mcp_coder\workflows\create_pr\core.py:21: Import 'mcp_coder.utils.get_parent_branch_name'
+mcp_coder\workflows\create_pr\core.py:22: Import 'mcp_coder.utils.git_push'
+mcp_coder\workflows\create_pr\core.py:23: Import 'mcp_coder.utils.is_working_directory_clean'
+mcp_coder\workflows\create_pr\core.py:25: Import 'mcp_coder.utils.git_operations.branches.extract_issue_number_from_branch'
+mcp_coder\workflows\create_pr\core.py:26: Import 'mcp_coder.utils.github_operations.issue_branch_manager.IssueBranchManager'
+mcp_coder\workflows\create_pr\core.py:27: Import 'mcp_coder.utils.github_operations.pr_manager.PullRequestManager'
+mcp_coder\workflows\create_pr\core.py:671: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\workflows\implement\core.py:15: Import 'mcp_coder.utils.commit_all_changes'
+mcp_coder\workflows\implement\core.py:15: Import 'mcp_coder.utils.get_full_status'
+mcp_coder\workflows\implement\core.py:355: Import 'mcp_coder.utils.github_operations.issue_manager.IssueManager'
+mcp_coder\workflows\implement\prerequisites.py:12: Import 'mcp_coder.utils.get_current_branch_name'
+mcp_coder\workflows\implement\prerequisites.py:13: Import 'mcp_coder.utils.get_default_branch_name'
+mcp_coder\workflows\implement\prerequisites.py:14: Import 'mcp_coder.utils.get_full_status'
+mcp_coder\workflows\implement\prerequisites.py:15: Import 'mcp_coder.utils.is_working_directory_clean'
+mcp_coder\workflows\implement\task_processing.py:25: Import 'mcp_coder.utils.commit_all_changes'
+mcp_coder\workflows\implement\task_processing.py:25: Import 'mcp_coder.utils.get_full_status'
+mcp_coder\workflows\implement\task_processing.py:25: Import 'mcp_coder.utils.git_push'
+mcp_coder\workflows\implement\task_processing.py:26: Import 'mcp_coder.utils.commit_operations.generate_commit_message_with_llm'
+-------------------------------
+
+</pre></div><div class="module-report" id="mcp_coder-config"><h2>mcp_coder.config</h2><pre>[ Dependency Report for 'src\mcp_coder\config' ]
+-------------------------------
+[ Dependencies of 'src\mcp_coder\config' ]
+No dependencies found.
+-------------------------------
+[ Usages of 'src\mcp_coder\config' ]
+No usages found.
+-------------------------------
+
+</pre></div>
+</body>
+</html>

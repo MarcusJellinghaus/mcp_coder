@@ -1,8 +1,13 @@
 # =============================================================================
-# Tach Configuration
+# Tach Configuration - Architectural Boundary Enforcement
 # =============================================================================
-# Enforces architectural boundaries between modules.
-# Run with: tach check
+# Enforces architectural boundaries between modules to maintain clean architecture.
+# Run with: tach check (or tools/tach_check.bat)
+#
+# Architecture follows Clean Architecture / Hexagonal principles:
+# - Higher layers can depend on lower layers (not vice versa)
+# - Domain logic is isolated from infrastructure concerns
+# - Dependencies point inward toward the core
 # =============================================================================
 
 exclude = ["**/__pycache__", "build/", "dist/", ".venv/", "*.egg-info/"]
@@ -11,7 +16,16 @@ exact = false
 forbid_circular_dependencies = true
 ignore_type_checking_imports = true
 
-# Architectural layers (top to bottom)
+# =============================================================================
+# Architectural Layers (top to bottom, highest to lowest)
+# =============================================================================
+# presentation  - User-facing interfaces (CLI, API endpoints)
+# application   - Use cases, workflows, orchestration logic
+# domain        - Core business logic, domain models, services
+# infrastructure - Technical implementations (git, github, external services)
+# foundation    - Shared constants, configuration, base utilities
+# =============================================================================
+
 layers = [
     "presentation",
     "application", 
@@ -21,129 +35,260 @@ layers = [
 ]
 
 # =============================================================================
-# Layer 1: Presentation (CLI)
+# Layer 1: PRESENTATION
+# =============================================================================
+# Purpose: User-facing interfaces that handle input/output
+# Rationale: CLI is the entry point - it can depend on anything below it
+#            but nothing should depend on CLI (prevents coupling to UI)
 # =============================================================================
 
 [[modules]]
 path = "mcp_coder.cli"
 layer = "presentation"
+# CLI is the top-level entry point that orchestrates user interactions.
+# It imports from all layers below to compose functionality for users.
 depends_on = [
-    { path = "mcp_coder" },
-    { path = "mcp_coder.workflows" },
-    { path = "mcp_coder.workflow_utils" },
-    { path = "mcp_coder.llm" },
-    { path = "mcp_coder.formatters" },
-    { path = "mcp_coder.prompt_manager" },
-    { path = "mcp_coder.utils" },
-    { path = "mcp_coder.config" },
-    { path = "mcp_coder.constants" },
-    { path = "mcp_coder.mcp_code_checker" },
+    { path = "mcp_coder" },              # Root module exports for convenience
+    { path = "mcp_coder.workflows" },     # High-level workflow orchestration
+    { path = "mcp_coder.workflow_utils" }, # Workflow helper utilities
+    { path = "mcp_coder.llm" },           # LLM interaction services
+    { path = "mcp_coder.formatters" },    # Code formatting services
+    { path = "mcp_coder.prompt_manager" }, # Prompt template management
+    { path = "mcp_coder.utils" },         # General utilities
+    { path = "mcp_coder.config" },        # Configuration management
+    { path = "mcp_coder.constants" },     # Shared constants
+    { path = "mcp_coder.mcp_code_checker" }, # MCP code checking tools
 ]
 
 # =============================================================================
-# Layer 2: Application (Workflows)
+# Layer 2: APPLICATION
+# =============================================================================
+# Purpose: Use cases and workflow orchestration
+# Rationale: Workflows coordinate domain services to fulfill user requirements.
+#            They should not be imported by domain or infrastructure layers.
 # =============================================================================
 
 [[modules]]
 path = "mcp_coder.workflows"
 layer = "application"
+# Workflows implement high-level use cases (implement, create_pr, etc.)
+# They orchestrate domain services and utilities to complete tasks.
 depends_on = [
-    { path = "mcp_coder.workflow_utils" },
-    { path = "mcp_coder.llm" },
-    { path = "mcp_coder.formatters" },
-    { path = "mcp_coder.prompt_manager" },
-    { path = "mcp_coder.utils" },
-    { path = "mcp_coder.config" },
-    { path = "mcp_coder.constants" },
+    { path = "mcp_coder.workflow_utils" }, # Shared workflow helpers
+    { path = "mcp_coder.llm" },           # LLM for code generation
+    { path = "mcp_coder.formatters" },    # Code formatting after generation
+    { path = "mcp_coder.prompt_manager" }, # Load workflow-specific prompts
+    { path = "mcp_coder.utils" },         # Git, GitHub operations
+    { path = "mcp_coder.config" },        # Access configuration
+    { path = "mcp_coder.constants" },     # Shared constants
 ]
 
 [[modules]]
 path = "mcp_coder.workflow_utils"
 layer = "application"
+# Shared utilities specific to workflow execution (task tracking, progress, etc.)
+# Separated from workflows to avoid circular dependencies between workflows.
 depends_on = [
-    { path = "mcp_coder.llm" },
-    { path = "mcp_coder.formatters" },
-    { path = "mcp_coder.prompt_manager" },
-    { path = "mcp_coder.utils" },
-    { path = "mcp_coder.config" },
-    { path = "mcp_coder.constants" },
+    { path = "mcp_coder.llm" },           # LLM interaction for task analysis
+    { path = "mcp_coder.formatters" },    # Format workflow outputs
+    { path = "mcp_coder.prompt_manager" }, # Prompt management
+    { path = "mcp_coder.utils" },         # General utilities
+    { path = "mcp_coder.config" },        # Configuration access
+    { path = "mcp_coder.constants" },     # Shared constants
 ]
 
 # =============================================================================
-# Layer 3: Domain (LLM, Formatters, Prompts)
+# Layer 3: DOMAIN
+# =============================================================================
+# Purpose: Core business logic and domain services
+# Rationale: Domain services encapsulate core functionality (LLM, formatting).
+#            They should be independent of how they're invoked (CLI, API, etc.)
 # =============================================================================
 
 [[modules]]
 path = "mcp_coder.llm"
 layer = "domain"
+# LLM service handles all AI/Claude interactions.
+# Core domain service that should be reusable across different interfaces.
+# Depends on utils only for subprocess execution (running claude CLI).
 depends_on = [
-    { path = "mcp_coder.utils" },
-    { path = "mcp_coder.config" },
-    { path = "mcp_coder.constants" },
+    { path = "mcp_coder.utils" },     # subprocess_runner for CLI execution
+    { path = "mcp_coder.config" },    # LLM configuration (API keys, models)
+    { path = "mcp_coder.constants" }, # LLM-related constants
 ]
 
 [[modules]]
 path = "mcp_coder.formatters"
 layer = "domain"
+# Code formatting service (black, isort integration).
+# Pure domain service with no external dependencies beyond config.
 depends_on = [
-    { path = "mcp_coder.utils" },
-    { path = "mcp_coder.config" },
-    { path = "mcp_coder.constants" },
+    { path = "mcp_coder.utils" },     # File system utilities if needed
+    { path = "mcp_coder.config" },    # Formatter configuration
+    { path = "mcp_coder.constants" }, # Formatting constants
 ]
 
 [[modules]]
 path = "mcp_coder.prompt_manager"
 layer = "domain"
+# Prompt template management service.
+# Loads and parses prompt templates from markdown files.
+# Pure domain logic - no infrastructure dependencies.
 depends_on = [
-    { path = "mcp_coder.utils" },
-    { path = "mcp_coder.config" },
-    { path = "mcp_coder.constants" },
+    { path = "mcp_coder.utils" },     # File reading utilities
+    { path = "mcp_coder.config" },    # Prompt file paths configuration
+    { path = "mcp_coder.constants" }, # Default prompt paths
 ]
 
 # =============================================================================
-# Layer 4: Infrastructure (Utils, MCP Checker)
+# Layer 4: INFRASTRUCTURE  
+# =============================================================================
+# Purpose: Technical implementations and external service integrations
+# Rationale: Infrastructure provides technical capabilities (git, github, etc.)
+#            that domain services use. Should not contain business logic.
 # =============================================================================
 
 [[modules]]
 path = "mcp_coder.utils"
 layer = "infrastructure"
+# General infrastructure utilities: git operations, github API, subprocess runner.
+# These are technical implementations that support domain and application layers.
+#
 # TODO: Refactor commit_operations.py - it imports from domain layer (llm, prompt_manager)
 # which violates layered architecture. Should be moved to application layer.
+# See tach-ignore directives in commit_operations.py
 depends_on = [
-    { path = "mcp_coder.config" },
-    { path = "mcp_coder.constants" },
+    { path = "mcp_coder.config" },    # Access configuration for git/github
+    { path = "mcp_coder.constants" }, # Shared constants
 ]
 
 [[modules]]
 path = "mcp_coder.mcp_code_checker"
 layer = "infrastructure"
+# MCP code checking tool implementation.
+# Infrastructure service for running code quality checks.
+# Standalone module with no internal dependencies (uses only stdlib).
 depends_on = [
-    { path = "mcp_coder.config" },
-    { path = "mcp_coder.constants" },
+    { path = "mcp_coder.config" },    # Checker configuration
+    { path = "mcp_coder.constants" }, # Check-related constants
 ]
 
 # =============================================================================
-# Layer 5: Foundation (Config, Constants)
+# Layer 5: FOUNDATION
+# =============================================================================
+# Purpose: Shared constants, configuration, and base definitions
+# Rationale: Foundation modules have no dependencies on other internal modules.
+#            They provide the base that all other modules build upon.
 # =============================================================================
 
 [[modules]]
 path = "mcp_coder.config"
 layer = "foundation"
+# Configuration management for the entire application.
+# Must have no internal dependencies - it's the foundation everything builds on.
+# If config needs utilities, those utilities must also be in foundation.
 depends_on = []
 
 [[modules]]
 path = "mcp_coder.constants"
 layer = "foundation"
+# Shared constants used across the application.
+# No dependencies - pure value definitions.
 depends_on = []
 
 # =============================================================================
-# Root module (mcp_coder.__init__)
+# ROOT MODULE
+# =============================================================================
+# Purpose: Package entry point and public API exports
+# Rationale: The root __init__.py re-exports key functionality for external use.
+#            It imports from domain layer to expose a clean public API.
 # =============================================================================
 
 [[modules]]
 path = "mcp_coder"
+# Root module exports public API: ask_llm, get_prompt, utilities.
+# Consumers import from mcp_coder directly rather than deep paths.
 depends_on = [
-    { path = "mcp_coder.llm" },
-    { path = "mcp_coder.utils" },
-    { path = "mcp_coder.prompt_manager" },
+    { path = "mcp_coder.llm" },           # Export LLM functionality
+    { path = "mcp_coder.utils" },         # Export utility functions
+    { path = "mcp_coder.prompt_manager" }, # Export prompt management
 ]
+
+
+# =============================================================================
+# FUTURE RULES (commented out - create issues to fix violations)
+# =============================================================================
+# These rules would enforce stricter boundaries but currently have violations.
+# Each commented rule includes the reason and suggested fix.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# RULE: Separate git_operations as independent infrastructure module
+# -----------------------------------------------------------------------------
+# Why: Git operations are a distinct infrastructure concern that should be
+#      independently testable and replaceable.
+# Violations: utils imports git_operations internally (which is fine)
+# Status: Would work, but adds complexity without clear benefit for now
+# -----------------------------------------------------------------------------
+# [[modules]]
+# path = "mcp_coder.utils.git_operations"
+# layer = "infrastructure"
+# depends_on = [
+#     { path = "mcp_coder.config" },
+#     { path = "mcp_coder.constants" },
+# ]
+
+# -----------------------------------------------------------------------------
+# RULE: Separate github_operations as independent infrastructure module
+# -----------------------------------------------------------------------------
+# Why: GitHub API operations are external service integrations that should
+#      be isolated for testability and potential replacement.
+# Violations: github_operations imports from git_operations (cross-dependency)
+# Status: Needs refactoring to cleanly separate git and github concerns
+# -----------------------------------------------------------------------------
+# [[modules]]
+# path = "mcp_coder.utils.github_operations"
+# layer = "infrastructure"
+# depends_on = [
+#     { path = "mcp_coder.utils.git_operations" },  # GitHub needs git info
+#     { path = "mcp_coder.config" },
+#     { path = "mcp_coder.constants" },
+# ]
+
+# -----------------------------------------------------------------------------
+# RULE: LLM providers should only depend on LLM types (not utils)
+# -----------------------------------------------------------------------------
+# Why: Provider implementations should be isolated from infrastructure.
+#      This would make providers more portable and testable.
+# Violations: claude_code_cli.py imports subprocess_runner from utils
+# Fix: Move subprocess_runner to a shared low-level module or into llm
+# Status: Requires refactoring subprocess handling
+# -----------------------------------------------------------------------------
+# [[modules]]
+# path = "mcp_coder.llm.providers"
+# layer = "domain"
+# depends_on = [
+#     { path = "mcp_coder.llm.types" },
+#     { path = "mcp_coder.config" },
+#     { path = "mcp_coder.constants" },
+# ]
+
+# -----------------------------------------------------------------------------
+# RULE: Workflows should not directly import from utils.git_operations
+# -----------------------------------------------------------------------------
+# Why: Workflows should use a higher-level abstraction rather than
+#      reaching into infrastructure details.
+# Violations: workflows/implement imports git_operations directly
+# Fix: Create application-level git service in workflow_utils
+# Status: Needs architectural discussion
+# -----------------------------------------------------------------------------
+# [[modules]]
+# path = "mcp_coder.workflows"
+# layer = "application"
+# strict_depends_on = [
+#     { path = "mcp_coder.workflow_utils" },
+#     { path = "mcp_coder.llm" },
+#     { path = "mcp_coder.formatters" },
+#     { path = "mcp_coder.prompt_manager" },
+#     # Intentionally NOT including mcp_coder.utils directly
+# ]
