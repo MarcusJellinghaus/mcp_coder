@@ -71,6 +71,6 @@ Force-push is destructive. Always show summary and get confirmation.
 
 ## Future Considerations
 
-- Option B: `mcp-coder rebase` command for automated workflows
+- `mcp-coder rebase` command for automated workflows
 - Configurable resolution strategies per project
 - Integration with PR conflict detection
