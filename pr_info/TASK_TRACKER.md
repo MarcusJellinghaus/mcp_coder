@@ -34,14 +34,25 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Move Test File to tests/workflow_utils
 **Reference:** [pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Move `test_commit_operations.py` from `tests/utils/` to `tests/workflow_utils/`
-- [ ] Update import statements (`mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
-- [ ] Update ALL mock patch decorators (replace `mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
-- [ ] Delete original file `tests/utils/test_commit_operations.py`
-- [ ] Run pylint on moved test file
-- [ ] Run mypy on moved test file
-- [ ] Run pytest on `tests/workflow_utils/test_commit_operations.py`
-- [ ] Prepare git commit message for Step 2
+- [x] Move `test_commit_operations.py` from `tests/utils/` to `tests/workflow_utils/`
+- [x] Update import statements (`mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
+- [x] Update ALL mock patch decorators (replace `mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
+- [x] Delete original file `tests/utils/test_commit_operations.py`
+- [x] Run pylint on moved test file
+- [x] Run mypy on moved test file
+- [x] Run pytest on `tests/workflow_utils/test_commit_operations.py`
+- [x] Prepare git commit message for Step 2
+
+**Commit Message:**
+```
+refactor: move test_commit_operations.py to tests/workflow_utils/
+
+- Relocate test file from tests/utils/ to tests/workflow_utils/
+- Update imports from mcp_coder.utils.commit_operations to 
+  mcp_coder.workflow_utils.commit_operations
+- Update all mock patch decorators to use new module path
+- Delete original test file from tests/utils/
+```
 
 ---
 
