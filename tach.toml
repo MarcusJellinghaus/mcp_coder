@@ -223,36 +223,70 @@ depends_on = [
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# RULE: Separate git_operations as independent infrastructure module
+# REFACTORING: Split utils into separate top-level modules
 # -----------------------------------------------------------------------------
-# Why: Git operations are a distinct infrastructure concern that should be
-#      independently testable and replaceable.
-# Violations: utils imports git_operations internally (which is fine)
-# Status: Would work, but adds complexity without clear benefit for now
+# Current: mcp_coder.utils contains git_operations, github_operations, 
+#          jenkins_operations as submodules plus generic utilities.
+#
+# Proposed: Move to top-level modules for clearer architecture:
+#   - mcp_coder.git (from utils/git_operations)
+#   - mcp_coder.github (from utils/github_operations)  
+#   - mcp_coder.jenkins (from utils/jenkins_operations)
+#   - mcp_coder.utils (keep generic utilities: subprocess_runner, log_utils, etc.)
+#
+# Benefits:
+#   - Clearer dependency hierarchy (github depends on git, not circular)
+#   - Better testability (mock external services independently)
+#   - Cleaner imports (from mcp_coder.github import IssueManager)
+#   - Enforces that github can depend on git, but not vice versa
+#
+# Dependencies after refactoring:
+#   - utils: foundation utilities (subprocess_runner, log_utils, user_config)
+#   - git: depends on utils (for subprocess execution)
+#   - github: depends on utils AND git (needs git branch info)
+#   - jenkins: depends on utils (for config and logging)
+#
+# Files to update when refactoring:
+#   - src/mcp_coder/__init__.py (update re-exports)
+#   - src/mcp_coder/utils/__init__.py (remove git/github/jenkins exports)
+#   - All files importing from utils.git_operations, utils.github_operations, etc.
+#   - See: grep -r "from.*utils.git_operations" src/
+#   - See: grep -r "from.*utils.github_operations" src/
+#   - See: grep -r "from.*utils.jenkins_operations" src/
 # -----------------------------------------------------------------------------
+
 # [[modules]]
-# path = "mcp_coder.utils.git_operations"
+# path = "mcp_coder.git"
 # layer = "infrastructure"
+# # Git operations: branch management, commits, diffs, remotes, staging.
+# # Core version control infrastructure used by github module and workflows.
 # depends_on = [
-#     { path = "mcp_coder.config" },
-#     { path = "mcp_coder.constants" },
+#     { path = "mcp_coder.utils" },     # subprocess_runner for git commands
+#     { path = "mcp_coder.config" },    # Git configuration
+#     { path = "mcp_coder.constants" }, # Git-related constants
 # ]
 
-# -----------------------------------------------------------------------------
-# RULE: Separate github_operations as independent infrastructure module
-# -----------------------------------------------------------------------------
-# Why: GitHub API operations are external service integrations that should
-#      be isolated for testability and potential replacement.
-# Violations: github_operations imports from git_operations (cross-dependency)
-# Status: Needs refactoring to cleanly separate git and github concerns
-# -----------------------------------------------------------------------------
 # [[modules]]
-# path = "mcp_coder.utils.github_operations"
+# path = "mcp_coder.github"
 # layer = "infrastructure"
+# # GitHub API operations: issues, PRs, labels, CI status.
+# # External service integration that depends on git for branch info.
 # depends_on = [
-#     { path = "mcp_coder.utils.git_operations" },  # GitHub needs git info
-#     { path = "mcp_coder.config" },
-#     { path = "mcp_coder.constants" },
+#     { path = "mcp_coder.git" },       # Branch validation, issue number extraction
+#     { path = "mcp_coder.utils" },     # log_utils, user_config
+#     { path = "mcp_coder.config" },    # GitHub API configuration
+#     { path = "mcp_coder.constants" }, # GitHub-related constants
+# ]
+
+# [[modules]]
+# path = "mcp_coder.jenkins"
+# layer = "infrastructure"
+# # Jenkins CI/CD operations: job status, queue management.
+# # External service integration, independent of git/github.
+# depends_on = [
+#     { path = "mcp_coder.utils" },     # log_utils, user_config
+#     { path = "mcp_coder.config" },    # Jenkins configuration
+#     { path = "mcp_coder.constants" }, # Jenkins-related constants
 # ]
 
 # -----------------------------------------------------------------------------
