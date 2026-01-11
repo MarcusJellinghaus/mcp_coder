@@ -16,3 +16,72 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
+
+### Step 1: Move Source File to workflow_utils
+**Reference:** [pr_info/steps/step_1.md](steps/step_1.md)
+
+- [ ] Move `commit_operations.py` from `utils/` to `workflow_utils/`
+- [ ] Update internal import for git_operations (`from .git_operations` → `from ..utils.git_operations`)
+- [ ] Delete original file `src/mcp_coder/utils/commit_operations.py`
+- [ ] Update `workflow_utils/__init__.py` exports (add `generate_commit_message_with_llm`, `parse_llm_commit_response`, `strip_claude_footers`)
+- [ ] Run pylint on moved file
+- [ ] Run mypy on moved file
+- [ ] Run pytest on affected files
+- [ ] Prepare git commit message for Step 1
+
+---
+
+### Step 2: Move Test File to tests/workflow_utils
+**Reference:** [pr_info/steps/step_2.md](steps/step_2.md)
+
+- [ ] Move `test_commit_operations.py` from `tests/utils/` to `tests/workflow_utils/`
+- [ ] Update import statements (`mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
+- [ ] Update ALL mock patch decorators (replace `mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
+- [ ] Delete original file `tests/utils/test_commit_operations.py`
+- [ ] Run pylint on moved test file
+- [ ] Run mypy on moved test file
+- [ ] Run pytest on `tests/workflow_utils/test_commit_operations.py`
+- [ ] Prepare git commit message for Step 2
+
+---
+
+### Step 3: Update Imports in Dependent Files
+**Reference:** [pr_info/steps/step_3.md](steps/step_3.md)
+
+- [ ] Update `src/mcp_coder/cli/commands/commit.py` import (`...utils.commit_operations` → `...workflow_utils.commit_operations`)
+- [ ] Update `src/mcp_coder/workflows/implement/task_processing.py` import (`mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
+- [ ] Update `tests/cli/commands/test_commit.py` import statements
+- [ ] Update `tests/cli/commands/test_commit.py` mock patch decorators
+- [ ] Run pylint on all modified files
+- [ ] Run mypy on all modified files
+- [ ] Run pytest on affected test files
+- [ ] Prepare git commit message for Step 3
+
+---
+
+### Step 4: Verify All Tests Pass
+**Reference:** [pr_info/steps/step_4.md](steps/step_4.md)
+
+- [ ] Run `tests/workflow_utils/test_commit_operations.py` - All tests pass
+- [ ] Run `tests/cli/commands/test_commit.py` - All tests pass
+- [ ] Run `tests/workflows/implement/test_task_processing.py` - All tests pass
+- [ ] Run full test suite (excluding integration markers)
+- [ ] Run pylint on all moved/modified files
+- [ ] Run mypy on all moved/modified files
+- [ ] Verify old file `src/mcp_coder/utils/commit_operations.py` is deleted
+- [ ] Verify old test file `tests/utils/test_commit_operations.py` is deleted
+- [ ] Prepare git commit message for Step 4
+
+---
+
+## Pull Request
+
+- [ ] Review all implementation steps completed
+- [ ] Run final full test suite verification
+- [ ] Run final pylint check on all changed files
+- [ ] Run final mypy check on all changed files
+- [ ] Prepare PR summary with:
+  - Architectural changes summary
+  - Files modified/created/deleted
+  - Test verification results
+- [ ] Create pull request
