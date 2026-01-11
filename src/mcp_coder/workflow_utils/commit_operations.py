@@ -12,7 +12,7 @@ from ..llm.env import prepare_llm_environment
 from ..llm.interface import ask_llm
 from ..llm.providers.claude.claude_code_api import ClaudeAPIError
 from ..prompt_manager import get_prompt
-from .git_operations import get_git_diff_for_commit, stage_all_changes
+from ..utils.git_operations import get_git_diff_for_commit, stage_all_changes
 
 # Constants
 LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes for commit message generation

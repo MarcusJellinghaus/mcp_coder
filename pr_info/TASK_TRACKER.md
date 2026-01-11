@@ -20,14 +20,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Move Source File to workflow_utils
 **Reference:** [pr_info/steps/step_1.md](steps/step_1.md)
 
-- [ ] Move `commit_operations.py` from `utils/` to `workflow_utils/`
-- [ ] Update internal import for git_operations (`from .git_operations` → `from ..utils.git_operations`)
-- [ ] Delete original file `src/mcp_coder/utils/commit_operations.py`
-- [ ] Update `workflow_utils/__init__.py` exports (add `generate_commit_message_with_llm`, `parse_llm_commit_response`, `strip_claude_footers`)
-- [ ] Run pylint on moved file
-- [ ] Run mypy on moved file
-- [ ] Run pytest on affected files
-- [ ] Prepare git commit message for Step 1
+- [x] Move `commit_operations.py` from `utils/` to `workflow_utils/`
+- [x] Update internal import for git_operations (`from .git_operations` → `from ..utils.git_operations`)
+- [x] Delete original file `src/mcp_coder/utils/commit_operations.py`
+- [x] Update `workflow_utils/__init__.py` exports (add `generate_commit_message_with_llm`, `parse_llm_commit_response`, `strip_claude_footers`)
+- [x] Run pylint on moved file
+- [x] Run mypy on moved file
+- [x] Run pytest on affected files
+- [x] Prepare git commit message for Step 1
 
 ---
 
