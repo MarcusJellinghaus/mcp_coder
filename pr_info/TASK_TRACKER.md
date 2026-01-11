@@ -60,7 +60,7 @@ refactor: move test_commit_operations.py to tests/workflow_utils/
 **Reference:** [pr_info/steps/step_3.md](steps/step_3.md)
 
 - [x] Update `src/mcp_coder/cli/commands/commit.py` import (`...utils.commit_operations` → `...workflow_utils.commit_operations`)
-- [ ] Update `src/mcp_coder/workflows/implement/task_processing.py` import (`mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
+- [x] Update `src/mcp_coder/workflows/implement/task_processing.py` import (`mcp_coder.utils.commit_operations` → `mcp_coder.workflow_utils.commit_operations`)
 - [ ] Update `tests/cli/commands/test_commit.py` import statements
 - [ ] Update `tests/cli/commands/test_commit.py` mock patch decorators
 - [ ] Run pylint on all modified files
