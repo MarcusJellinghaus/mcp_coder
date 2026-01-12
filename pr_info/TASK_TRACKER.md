@@ -40,14 +40,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Refactor data_files.py
 [Detail: pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Remove `import structlog` line
-- [ ] Remove `structured_logger = structlog.get_logger(__name__)` line
-- [ ] Convert all `structured_logger.debug()` to `logger.debug()` with `extra={}`
-- [ ] Convert all `structured_logger.info()` to `logger.info()` with `extra={}`
-- [ ] Convert all `structured_logger.error()` to `logger.error()` with `extra={}`
-- [ ] Verify no remaining references to `structured_logger`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 3
+- [x] Remove `import structlog` line
+- [x] Remove `structured_logger = structlog.get_logger(__name__)` line
+- [x] Convert all `structured_logger.debug()` to `logger.debug()` with `extra={}`
+- [x] Convert all `structured_logger.info()` to `logger.info()` with `extra={}`
+- [x] Convert all `structured_logger.error()` to `logger.error()` with `extra={}`
+- [x] Verify no remaining references to `structured_logger`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Update Tests in test_data_files.py
 [Detail: pr_info/steps/step_4.md](steps/step_4.md)
