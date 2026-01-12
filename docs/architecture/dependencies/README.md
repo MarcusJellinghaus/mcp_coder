@@ -5,7 +5,7 @@ Tools for enforcing architectural boundaries and detecting dependency issues.
 ## Config Files
 
 | File | Purpose |
-|------|---------||
+|------|---------|
 | `.importlinter` | Import rules: layers, isolation, forbidden imports |
 | `tach.toml` | Module boundaries and layer definitions |
 
@@ -13,10 +13,10 @@ Tools for enforcing architectural boundaries and detecting dependency issues.
 
 | Tool | Purpose | Config | Script |
 |------|---------|--------|--------|
-| **import-linter** | Enforce import rules (layers, isolation, forbidden) | `.importlinter` | `tools/lint_imports.sh` |
-| **tach** | Module boundaries & layer enforcement | `tach.toml` | `tools/tach_check.sh` |
-| **pycycle** | Detect circular imports | - | `tools/pycycle_check.sh` |
-| **pydeps** | Visualize dependencies | - | `tools/pydeps_graph.bat` |
+| **import-linter** | Enforce import rules (layers, isolation, forbidden) | `.importlinter` | `tools/lint_imports.sh` / `.bat` |
+| **tach** | Module boundaries & layer enforcement | `tach.toml` | `tools/tach_check.sh` / `.bat` |
+| **pycycle** | Detect circular imports | - | `tools/pycycle_check.sh` / `.bat` |
+| **pydeps** | Visualize dependencies | - | `tools/pydeps_graph.sh` / `.bat` |
 
 ## Why Both import-linter and tach?
 
@@ -73,6 +73,5 @@ All checks run automatically on pull requests (see `.github/workflows/ci.yml`).
 
 ## Generated Files
 
-- `dependency_graph.html` - Interactive dependency visualization
-- `dependency_report.html` - Tach dependency report  
-- `pydeps_graph.html` - Pydeps visualization
+- `dependency_graph.html` - Interactive dependency visualization (committed)
+- `pydeps_graph.svg` / `.dot` - Pydeps visualization (generate with `tools/pydeps_graph.sh`)
