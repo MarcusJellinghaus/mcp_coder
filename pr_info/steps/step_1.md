@@ -57,6 +57,6 @@ The existing tests already cover `PullRequestManager` functionality. No new test
 
 ## ACCEPTANCE CRITERIA
 
-- [ ] Import statement changed to direct sibling import
-- [ ] All `test_pr_manager.py` tests pass
-- [ ] Module can be imported without errors: `python -c "from mcp_coder.utils.github_operations.pr_manager import PullRequestManager"`
+- [x] Import statement changed to direct sibling import
+- [x] All `test_pr_manager.py` tests pass
+- [x] Module can be imported without errors: `python -c "from mcp_coder.utils.github_operations.pr_manager import PullRequestManager"`

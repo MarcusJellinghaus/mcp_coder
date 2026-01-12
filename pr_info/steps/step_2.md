@@ -78,7 +78,7 @@ Expected output should show all contracts passing, including "External Service I
 
 ## ACCEPTANCE CRITERIA
 
-- [ ] "Known violation" comments removed
-- [ ] `ignore_imports` exception removed from `external_services` contract
-- [ ] `lint-imports` command passes without errors
-- [ ] Full test suite passes: `pytest tests/ -v`
+- [x] "Known violation" comments removed
+- [x] `ignore_imports` exception removed from `external_services` contract
+- [x] `lint-imports` command passes without errors
+- [x] Full test suite passes: `pytest tests/ -v`
