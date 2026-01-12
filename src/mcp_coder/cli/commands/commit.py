@@ -11,13 +11,13 @@ from ...utils.clipboard import (
     parse_commit_message,
     validate_commit_message,
 )
-from ...utils.commit_operations import generate_commit_message_with_llm
 from ...utils.git_operations import (
     commit_staged_files,
     get_git_diff_for_commit,
     is_git_repository,
     stage_all_changes,
 )
+from ...workflow_utils.commit_operations import generate_commit_message_with_llm
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,

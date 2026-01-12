@@ -441,7 +441,7 @@ class TestSubprocessCwdParameter:
         assert options.cwd == str(execution_dir)
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    @patch("mcp_coder.utils.commit_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     def test_commit_auto_passes_execution_dir_to_llm_subprocess(
