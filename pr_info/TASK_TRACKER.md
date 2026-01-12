@@ -20,11 +20,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Update pr_manager.py Import Statement
 [Details: pr_info/steps/step_1.md]
 
-- [ ] Change import in `pr_manager.py` from `mcp_coder.utils` to `mcp_coder.utils.git_operations`
-- [ ] Run pylint and fix any issues found
-- [ ] Run pytest and fix any issues found
-- [ ] Run mypy and fix any issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Change import in `pr_manager.py` from `mcp_coder.utils` to `mcp_coder.utils.git_operations`
+- [x] Run pylint and fix any issues found
+- [x] Run pytest and fix any issues found
+- [x] Run mypy and fix any issues found
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update .importlinter Configuration
 [Details: pr_info/steps/step_2.md]
