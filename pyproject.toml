@@ -54,6 +54,7 @@ dev = [
     "mcp-coder[types,test,mcp]",
     "import-linter>=2.0",
     "pycycle>=0.0.8",
+    "tach>=0.6.0",
 ]
 
 [project.scripts]
