@@ -43,6 +43,51 @@ STANDARD_LOG_FIELDS: frozenset[str] = frozenset(
     }
 )
 
+
+class ExtraFieldsFormatter(logging.Formatter):
+    """Formatter that appends extra fields to log messages.
+
+    This formatter extends the standard logging.Formatter to include any
+    extra fields passed via the `extra` parameter in logging calls.
+    Extra fields are appended to the log message as a JSON object.
+
+    Example:
+        >>> formatter = ExtraFieldsFormatter(
+        ...     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ... )
+        >>> handler.setFormatter(formatter)
+        >>> logger.info("User logged in", extra={"user_id": 123, "ip": "192.168.1.1"})
+        # Output: 2024-01-15 10:30:00 - myapp - INFO - User logged in {"user_id": 123, "ip": "192.168.1.1"}
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Format the log record, appending any extra fields as JSON.
+
+        Args:
+            record: The log record to format.
+
+        Returns:
+            The formatted log message with extra fields appended as JSON.
+        """
+        # Get the base formatted message
+        base_message = super().format(record)
+
+        # Extract extra fields (attributes not in standard LogRecord fields)
+        extra_fields = {
+            key: value
+            for key, value in record.__dict__.items()
+            if key not in STANDARD_LOG_FIELDS
+        }
+
+        # If there are extra fields, append them as JSON
+        if extra_fields:
+            # Use default=str to handle non-serializable values
+            suffix = json.dumps(extra_fields, default=str)
+            return f"{base_message} {suffix}"
+
+        return base_message
+
+
 # Create standard logger
 stdlogger = logging.getLogger(__name__)
 
