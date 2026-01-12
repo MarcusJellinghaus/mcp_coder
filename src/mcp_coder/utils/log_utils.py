@@ -14,6 +14,35 @@ from pythonjsonlogger.json import JsonFormatter
 # Type variable for function return types
 T = TypeVar("T")
 
+# Standard LogRecord fields to exclude when extracting extra fields
+# These are built-in attributes of logging.LogRecord that should not be treated as "extra" data
+STANDARD_LOG_FIELDS: frozenset[str] = frozenset(
+    {
+        "name",
+        "msg",
+        "args",
+        "created",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "module",
+        "msecs",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "exc_info",
+        "exc_text",
+        "thread",
+        "threadName",
+        "taskName",
+        "message",
+    }
+)
+
 # Create standard logger
 stdlogger = logging.getLogger(__name__)
 
