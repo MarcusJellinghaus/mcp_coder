@@ -52,11 +52,13 @@ logger.debug(
 
 4. **Message unchanged**: Keep the same log message strings
 
-### Minimal Merging
+### Merging Policy (Decision 4)
 
-Only merge where two consecutive calls log the same event with split data:
+**Rule: Merge only identical messages on literally adjacent lines.**
+
+Only merge where two consecutive calls have the exact same message string:
 ```python
-# Before - unnecessarily split
+# Before - identical messages on adjacent lines (MERGE)
 structured_logger.debug("Starting search", package=pkg)
 structured_logger.debug("Starting search", path=path)
 
@@ -64,7 +66,12 @@ structured_logger.debug("Starting search", path=path)
 logger.debug("Starting search", extra={"package": pkg, "path": path})
 ```
 
-Do NOT merge calls that represent different steps or phases - preserve debuggability.
+Do NOT merge:
+- Calls with different messages (even if related)
+- Calls that represent different steps or phases
+- Calls separated by any other code
+
+This preserves debuggability and keeps the diff minimal.
 
 ## ALGORITHM
 

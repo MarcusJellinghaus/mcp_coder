@@ -1,22 +1,56 @@
-# Step 5: Update Documentation in log_utils.py
+# Step 5: Finalization and Verification
 
 ## LLM Prompt
 ```
 Read pr_info/steps/summary.md for context, then implement Step 5.
-Update the log_utils.py module docstring with a usage example showing the correct logging pattern.
+Remove the structlog exceptions from .importlinter and run final verification.
 ```
 
 ## WHERE
-- **File**: `src/mcp_coder/utils/log_utils.py`
+- **File**: `.importlinter`
 
 ## WHAT
 
-### Current Docstring (line 1)
-```python
-"""Logging utilities for the MCP server."""
+### Remove .importlinter Exceptions
+
+Remove these lines from the `structlog_isolation` contract:
+```ini
+# TODO: Remove after fixing issue #275
+mcp_coder.utils.data_files -> structlog
+mcp_coder.utils.jenkins_operations.client -> structlog
 ```
 
-### New Docstring
+The contract should only have:
+```ini
+ignore_imports =
+    mcp_coder.utils.log_utils -> structlog
+```
+
+## HOW
+
+Edit `.importlinter` to remove the two exception lines for `data_files` and `client`.
+
+## ALGORITHM
+
+N/A - Configuration cleanup only.
+
+## DATA
+
+N/A - Configuration cleanup only.
+
+## IMPLEMENTATION CHECKLIST
+
+- [ ] Remove the two structlog exception lines from `.importlinter`
+- [ ] Run import linter: `./tools/lint_imports.sh`
+- [ ] Verify no structlog imports outside log_utils.py: `grep -r "import structlog" src/mcp_coder/ --include="*.py" | grep -v log_utils.py`
+- [ ] Run full test suite: `mcp__code-checker__run_pytest_check`
+- [ ] Run pylint: `mcp__code-checker__run_pylint_check`
+- [ ] Run mypy: `mcp__code-checker__run_mypy_check`
+
+## DOCSTRING REFERENCE
+
+Note: The module docstring update is now part of Step 1. The new docstring should be:
+
 ```python
 """Logging utilities for the MCP server.
 
@@ -67,41 +101,4 @@ Do NOT import structlog in other modules. This maintains library isolation
 and allows the logging implementation to be changed without affecting the
 rest of the codebase.
 """
-```
-
-## HOW
-
-Replace the single-line docstring at the top of `log_utils.py` with the expanded docstring above.
-
-## ALGORITHM
-
-N/A - Documentation only.
-
-## DATA
-
-N/A - Documentation only.
-
-## IMPLEMENTATION CHECKLIST
-
-- [ ] Replace module docstring in `log_utils.py`
-- [ ] Verify docstring renders correctly: `python -c "import mcp_coder.utils.log_utils; help(mcp_coder.utils.log_utils)"`
-- [ ] Run full test suite to ensure nothing broken: `pytest tests/ -v`
-
-## FINAL VERIFICATION
-
-After all steps complete, verify:
-
-```bash
-# 1. No structlog imports outside log_utils.py
-grep -r "import structlog" src/mcp_coder/ --include="*.py" | grep -v log_utils.py
-# Should return nothing
-
-# 2. All tests pass
-pytest tests/ -v
-
-# 3. Pylint passes
-pylint src/mcp_coder/utils/data_files.py src/mcp_coder/utils/jenkins_operations/client.py
-
-# 4. Mypy passes  
-mypy src/mcp_coder/utils/data_files.py src/mcp_coder/utils/jenkins_operations/client.py
 ```

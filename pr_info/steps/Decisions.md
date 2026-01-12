@@ -48,3 +48,47 @@
 **Decision**: **Option A - Fix numbering during refactor**
 
 **Rationale**: Since we're touching all log calls anyway, fix the inconsistency for correctness.
+
+---
+
+## Decision 4: Log Merging Policy
+
+**Discussion**: How aggressive should log call merging be when converting from structlog to standard logging.
+
+**Options Considered**:
+- A: No merging at all - convert each call 1:1 mechanically
+- B: Merge only identical messages that are literally adjacent lines
+- C: Merge where "obviously cleaner" using implementer judgment
+
+**Decision**: **Option B - Merge only identical messages on adjacent lines**
+
+**Rationale**: Clear criteria with minimal risk. Preserves debuggability while allowing obvious improvements.
+
+---
+
+## Decision 5: Empty Extra Dict Handling
+
+**Discussion**: What should the console output show when `extra={}` (empty dict) is passed.
+
+**Options Considered**:
+- A: Show nothing (no suffix)
+- B: Show empty object `{}`
+
+**Decision**: **Option A - Show nothing**
+
+**Rationale**: Cleaner output, avoids visual noise for empty extra dicts.
+
+---
+
+## Decision 6: Non-JSON-Serializable Values
+
+**Discussion**: How to handle extra fields containing values that `json.dumps()` can't serialize (e.g., `Path` objects).
+
+**Options Considered**:
+- A: Auto-convert with `str()` via custom JSON encoder
+- B: Let it fail (catches bugs early)
+- C: Fallback to `repr()` for the whole dict
+
+**Decision**: **Option A - Auto-convert with `str()`**
+
+**Rationale**: Most user-friendly approach, prevents logging from ever crashing at runtime.

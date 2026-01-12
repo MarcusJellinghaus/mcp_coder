@@ -4,6 +4,7 @@
 ```
 Read pr_info/steps/summary.md for context, then implement Step 1.
 Add an ExtraFieldsFormatter class to log_utils.py that displays extra fields in console output.
+Also update the module docstring with usage examples.
 Follow TDD: write test first, then implement.
 ```
 
@@ -39,9 +40,10 @@ Update console handler creation to use `ExtraFieldsFormatter` instead of basic `
 def format(self, record):
     base_message = super().format(record)
     extra_fields = get_non_standard_fields(record)
-    if extra_fields:
+    if extra_fields:  # Decision 5: Empty dict returns no suffix
         # Decision 1: Use JSON object format with json.dumps()
-        suffix = json.dumps(extra_fields)
+        # Decision 6: Use custom encoder to str() non-serializable values
+        suffix = json.dumps(extra_fields, default=str)
         return f"{base_message} {suffix}"
     return base_message
 ```
@@ -90,6 +92,7 @@ class TestExtraFieldsFormatter:
 
 - [ ] Add test class `TestExtraFieldsFormatter` to `tests/utils/test_log_utils.py`
 - [ ] Add `STANDARD_LOG_FIELDS` constant to `log_utils.py`
-- [ ] Add `ExtraFieldsFormatter` class to `log_utils.py`
+- [ ] Add `ExtraFieldsFormatter` class to `log_utils.py` (use `default=str` in json.dumps for non-serializable values)
 - [ ] Update `setup_logging()` console handler to use `ExtraFieldsFormatter`
+- [ ] Update module docstring with usage examples (see Step 5 content for docstring text)
 - [ ] Run tests: `pytest tests/utils/test_log_utils.py -v`

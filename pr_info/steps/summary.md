@@ -49,11 +49,11 @@ This implementation removes direct `structlog` imports from two modules that vio
 
 | Step | Description | TDD |
 |------|-------------|-----|
-| 1 | Update console formatter in `log_utils.py` | Yes |
+| 1 | Update console formatter in `log_utils.py` + module docstring | Yes |
 | 2 | Refactor `jenkins_operations/client.py` | No (no logging tests exist) |
 | 3 | Refactor `data_files.py` | No (tests updated in step 4) |
 | 4 | Update tests in `test_data_files.py` | N/A (test migration) |
-| 5 | Update documentation in `log_utils.py` | No |
+| 5 | Finalization: `.importlinter` cleanup + verification | No |
 
 ## Success Criteria
 
@@ -80,3 +80,6 @@ See [Decisions.md](Decisions.md) for discussion outcomes:
 1. Extra fields format: JSON object with `json.dumps()`
 2. `log_function_call` decorator: Leave as-is (allowed to use structlog)
 3. Numbering bug: Fix `/4` → `/5` during refactor
+4. Log merging policy: Merge only identical messages on adjacent lines
+5. Empty extra dict: Show nothing (no suffix)
+6. Non-JSON-serializable values: Auto-convert with `str()` via `default=str`
