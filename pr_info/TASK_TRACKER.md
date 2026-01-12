@@ -52,7 +52,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 4: Update Tests in test_data_files.py
 [Detail: pr_info/steps/step_4.md](steps/step_4.md)
 
-- [ ] Remove `import structlog` from imports
+- [x] Remove `import structlog` from imports
 - [ ] Remove `from structlog.testing import LogCapture` from imports
 - [ ] Add `import logging` if not present
 - [ ] Update `test_data_file_found_logs_debug_not_info` to use caplog

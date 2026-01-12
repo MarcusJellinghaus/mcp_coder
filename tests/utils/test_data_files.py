@@ -9,7 +9,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import structlog
 from structlog.testing import LogCapture
 
 from mcp_coder.utils.data_files import (
