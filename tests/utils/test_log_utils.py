@@ -265,7 +265,7 @@ class TestExtraFieldsFormatter:
             exc_info=None,
         )
         # Add extra field
-        record.custom_field = "custom_value"  # type: ignore[attr-defined]
+        record.custom_field = "custom_value"
 
         formatted = formatter.format(record)
 
@@ -289,9 +289,9 @@ class TestExtraFieldsFormatter:
             exc_info=None,
         )
         # Add multiple extra fields
-        record.user_id = 123  # type: ignore[attr-defined]
-        record.request_id = "abc-456"  # type: ignore[attr-defined]
-        record.action = "login"  # type: ignore[attr-defined]
+        record.user_id = 123
+        record.request_id = "abc-456"
+        record.action = "login"
 
         formatted = formatter.format(record)
 

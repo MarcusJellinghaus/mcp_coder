@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add `STANDARD_LOG_FIELDS` constant to `log_utils.py`
 - [x] Add `ExtraFieldsFormatter` class to `log_utils.py`
 - [x] Update `setup_logging()` console handler to use `ExtraFieldsFormatter`
-- [ ] Update module docstring with usage examples
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Update module docstring with usage examples
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Refactor jenkins_operations/client.py
 [Detail: pr_info/steps/step_2.md](steps/step_2.md)

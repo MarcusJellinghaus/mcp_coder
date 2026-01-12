@@ -1,4 +1,31 @@
-"""Logging utilities for the MCP server."""
+"""Logging utilities for the MCP server.
+
+This module provides centralized logging configuration and utilities.
+All other modules should use standard Python logging with the `extra`
+parameter for structured data - only this module handles the underlying
+logging infrastructure (including structlog for JSON file output).
+
+Usage:
+    >>> import logging
+    >>> from mcp_coder.utils.log_utils import setup_logging
+    >>>
+    >>> # Initialize logging (call once at application startup)
+    >>> setup_logging("INFO")  # Console output
+    >>> setup_logging("DEBUG", log_file="app.log")  # JSON file output
+    >>>
+    >>> # In your modules, use standard logging with extra={} for structured data
+    >>> logger = logging.getLogger(__name__)
+    >>> logger.info("User logged in", extra={"user_id": "123", "ip": "192.168.1.1"})
+    # Console: 2024-01-15 10:30:00 - mymodule - INFO - User logged in {"user_id": "123", "ip": "192.168.1.1"}
+    # JSON file: {"asctime": "2024-01-15 10:30:00", "levelname": "INFO", ..., "user_id": "123", "ip": "192.168.1.1"}
+
+Classes:
+    ExtraFieldsFormatter: Formatter that appends extra fields to console log messages.
+
+Functions:
+    setup_logging: Configure logging with console or JSON file output.
+    log_function_call: Decorator to log function calls with timing.
+"""
 
 import json
 import logging

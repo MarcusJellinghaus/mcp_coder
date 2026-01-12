@@ -1,0 +1,16 @@
+feat(log_utils): Add ExtraFieldsFormatter for console logging with extra fields
+
+Add ExtraFieldsFormatter class that appends extra fields from logging calls
+to console output as JSON. This enables modules to use standard Python logging
+with extra={} parameter while still getting structured data in console output.
+
+Changes:
+- Add STANDARD_LOG_FIELDS constant for filtering LogRecord attributes
+- Add ExtraFieldsFormatter class that formats extra fields as JSON suffix
+- Update setup_logging() console handler to use ExtraFieldsFormatter
+- Update module docstring with usage examples and documentation
+- Add TestExtraFieldsFormatter test class with comprehensive test coverage
+- Remove unused type: ignore comments from test file (mypy cleanup)
+
+This is part of the refactoring effort to remove direct structlog imports
+from modules other than log_utils.py (#275).
