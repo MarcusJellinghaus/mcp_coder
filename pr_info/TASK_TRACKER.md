@@ -29,12 +29,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Update .importlinter Configuration
 [Details: pr_info/steps/step_2.md]
 
-- [ ] Remove "Known violation (issue #277)" comments from `.importlinter`
-- [ ] Remove `ignore_imports` exception from `external_services` contract
-- [ ] Run pylint and fix any issues found
-- [ ] Run pytest and fix any issues found
-- [ ] Run mypy and fix any issues found
-- [ ] Prepare git commit message for Step 2
+- [x] Remove "Known violation (issue #277)" comments from `.importlinter`
+- [x] Remove `ignore_imports` exception from `external_services` contract
+- [x] Run pylint and fix any issues found
+- [x] Run pytest and fix any issues found
+- [x] Run mypy and fix any issues found
+- [x] Prepare git commit message for Step 2
 
 ---
 
