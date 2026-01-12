@@ -20,7 +20,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Update Console Formatter in log_utils.py
 [Detail: pr_info/steps/step_1.md](steps/step_1.md)
 
-- [ ] Add test class `TestExtraFieldsFormatter` to `tests/utils/test_log_utils.py`
+- [x] Add test class `TestExtraFieldsFormatter` to `tests/utils/test_log_utils.py`
 - [ ] Add `STANDARD_LOG_FIELDS` constant to `log_utils.py`
 - [ ] Add `ExtraFieldsFormatter` class to `log_utils.py`
 - [ ] Update `setup_logging()` console handler to use `ExtraFieldsFormatter`
