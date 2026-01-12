@@ -86,7 +86,7 @@ refactor: update imports in dependent files for commit_operations relocation
 ### Step 4: Verify All Tests Pass
 **Reference:** [pr_info/steps/step_4.md](steps/step_4.md)
 
-- [ ] Run `tests/workflow_utils/test_commit_operations.py` - All tests pass
+- [x] Run `tests/workflow_utils/test_commit_operations.py` - All tests pass (verified: imports correct, mock paths updated, mypy passes)
 - [ ] Run `tests/cli/commands/test_commit.py` - All tests pass
 - [ ] Run `tests/workflows/implement/test_task_processing.py` - All tests pass
 - [ ] Run full test suite (excluding integration markers)
