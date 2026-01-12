@@ -101,6 +101,7 @@ jobs:
           - {name: "integration-tests", cmd: "pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
           - {name: "mypy", cmd: "mypy --strict src tests"}
           - {name: "import-linter", cmd: "lint-imports"}
+          - {name: "tach", cmd: "tach check"}
     name: ${{ matrix.check.name }}
     steps:
       - uses: actions/checkout@v4
