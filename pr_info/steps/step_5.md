@@ -53,9 +53,9 @@ In any module that needs logging:
 
 Console Output Format
 ---------------------
-When extra fields are provided, they appear as [key=value] pairs:
+When extra fields are provided, they appear as a JSON object:
 
-    2024-01-15 10:30:00 - mymodule - INFO - Action performed [user_id=123] [action=login]
+    2024-01-15 10:30:00 - mymodule - INFO - Action performed {"user_id": "123", "action": "login"}
 
 File Output Format
 ------------------

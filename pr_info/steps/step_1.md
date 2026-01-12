@@ -40,7 +40,8 @@ def format(self, record):
     base_message = super().format(record)
     extra_fields = get_non_standard_fields(record)
     if extra_fields:
-        suffix = " ".join(f"[{k}={v}]" for k, v in extra_fields.items())
+        # Decision 1: Use JSON object format with json.dumps()
+        suffix = json.dumps(extra_fields)
         return f"{base_message} {suffix}"
     return base_message
 ```
@@ -62,7 +63,7 @@ STANDARD_FIELDS = {
 - `logging.LogRecord` with optional `extra` fields
 
 ### Output
-- Formatted string: `"2024-01-15 10:30:00 - module - INFO - Message [key1=val1] [key2=val2]"`
+- Formatted string: `"2024-01-15 10:30:00 - module - INFO - Message {"key1": "val1", "key2": 42}"`
 
 ## TEST CASES
 

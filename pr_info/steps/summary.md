@@ -71,5 +71,12 @@ logger = logging.getLogger(__name__)
 
 def my_function(user_id: str, action: str) -> None:
     logger.info("Action performed", extra={"user_id": user_id, "action": action})
-    # Console output: 2024-01-15 10:30:00 - module - INFO - Action performed [user_id=123] [action=login]
+    # Console output: 2024-01-15 10:30:00 - module - INFO - Action performed {"user_id": "123", "action": "login"}
 ```
+
+## Decisions
+
+See [Decisions.md](Decisions.md) for discussion outcomes:
+1. Extra fields format: JSON object with `json.dumps()`
+2. `log_function_call` decorator: Leave as-is (allowed to use structlog)
+3. Numbering bug: Fix `/4` → `/5` during refactor
