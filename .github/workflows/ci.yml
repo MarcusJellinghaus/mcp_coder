@@ -102,6 +102,7 @@ jobs:
           - {name: "mypy", cmd: "mypy --strict src tests"}
           - {name: "import-linter", cmd: "lint-imports"}
           - {name: "tach", cmd: "tach check"}
+          - {name: "pycycle", cmd: "pycycle --here --ignore .venv,__pycache__,build,dist,.git,.pytest_cache,.mypy_cache"}
     name: ${{ matrix.check.name }}
     steps:
       - uses: actions/checkout@v4
