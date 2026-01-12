@@ -118,6 +118,26 @@ forbidden_modules =
     mcp_coder.utils.github_operations
     mcp_coder.utils.jenkins_operations
 
+# -----------------------------------------------------------------------------
+# Contract: Jenkins Operations Independence
+# -----------------------------------------------------------------------------
+# Jenkins operations should not depend on git or github operations.
+# Jenkins is a CI/CD service that works via its own API.
+#
+# Why this matters:
+# - Jenkins integration can be used/tested independently
+# - Prevents coupling between unrelated external services
+# - Keeps the jenkins module focused on CI/CD concerns only
+# -----------------------------------------------------------------------------
+[importlinter:contract:jenkins_independence]
+name = Jenkins Operations Independence
+type = forbidden
+source_modules =
+    mcp_coder.utils.jenkins_operations
+forbidden_modules =
+    mcp_coder.utils.git_operations
+    mcp_coder.utils.github_operations
+
 
 # =============================================================================
 # TEST MODULE CONTRACTS
