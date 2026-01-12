@@ -2,6 +2,13 @@
 
 Tools for enforcing architectural boundaries and detecting dependency issues.
 
+## Config Files
+
+| File | Purpose |
+|------|---------||
+| `.importlinter` | Import rules: layers, isolation, forbidden imports |
+| `tach.toml` | Module boundaries and layer definitions |
+
 ## Tools
 
 | Tool | Purpose | Config | Script |
@@ -44,6 +51,21 @@ pycycle --here        # Circular imports
 **Tests (2)**: No test imports in source, test module independence
 
 > Each rule includes comments explaining its rationale. See `.importlinter` and `tach.toml` for details.
+
+## When to Add New Rules
+
+**Add a third-party isolation rule when:**
+- Adding a new external dependency
+- The library should only be used by a specific module (wrapper pattern)
+
+**Add an architecture rule when:**
+- Creating a new top-level module that needs layer assignment
+- Two modules should remain independent (no cross-imports)
+- A module should never import from another (forbidden)
+
+**Update existing rules when:**
+- Moving or renaming modules
+- Intentionally allowing a previously forbidden import (add to `ignore_imports`)
 
 ## Generated Files
 
