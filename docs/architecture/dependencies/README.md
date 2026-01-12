@@ -42,6 +42,10 @@ tach check            # Layer violations
 pycycle --here        # Circular imports
 ```
 
+## CI
+
+All checks run automatically on pull requests (see `.github/workflows/ci.yml`).
+
 ## Current Contracts (import-linter)
 
 **Architecture (6)**: Layered architecture, domain independence, formatter independence, external services independence, git local isolation, jenkins isolation
