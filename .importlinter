@@ -288,9 +288,6 @@ forbidden_modules =
     structlog
 ignore_imports =
     mcp_coder.utils.log_utils -> structlog
-    # TODO: Remove after fixing issue #275
-    mcp_coder.utils.data_files -> structlog
-    mcp_coder.utils.jenkins_operations.client -> structlog
 
 # -----------------------------------------------------------------------------
 # Contract: Python JSON Logger Isolation

@@ -64,12 +64,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 5: Finalization and Verification
 [Detail: pr_info/steps/step_5.md](steps/step_5.md)
 
-- [ ] Remove the two structlog exception lines from `.importlinter`
-- [ ] Run import linter verification
-- [ ] Verify no structlog imports outside log_utils.py
-- [ ] Run full test suite
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 5
+- [x] Remove the two structlog exception lines from `.importlinter`
+- [x] Run import linter verification
+- [x] Verify no structlog imports outside log_utils.py
+- [x] Run full test suite
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 5
 
 ---
 
