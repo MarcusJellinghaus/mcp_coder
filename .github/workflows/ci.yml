@@ -100,6 +100,33 @@ jobs:
           - {name: "unit-tests", cmd: "pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration' --junitxml=unit-tests.xml"}
           - {name: "integration-tests", cmd: "pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
           - {name: "mypy", cmd: "mypy --strict src tests"}
+    name: ${{ matrix.check.name }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+          python -m pip install .[dev]
+          
+      - name: Run ${{ matrix.check.name }}
+        run: ${{ matrix.check.cmd }}
+
+  # Architecture checks - only run on pull requests
+  # These validate module boundaries and import structure
+  architecture:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
           - {name: "import-linter", cmd: "lint-imports"}
           - {name: "tach", cmd: "tach check"}
           - {name: "pycycle", cmd: "pycycle --here --ignore .venv,__pycache__,build,dist,.git,.pytest_cache,.mypy_cache"}
