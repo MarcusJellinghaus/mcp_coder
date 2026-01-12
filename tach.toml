@@ -12,6 +12,10 @@
 
 exclude = ["**/__pycache__", "build/", "dist/", ".venv/", "*.egg-info/"]
 source_roots = ["src", "."]
+# Note: exact = false because tach checks only direct package files, not submodules.
+# With exact = true, we'd need separate [[modules]] entries for every subpackage
+# (e.g., mcp_coder.cli.commands, mcp_coder.cli.commands.coordinator, etc.)
+# Using false allows depends_on to define "allowed" rather than "required" dependencies.
 exact = false
 forbid_circular_dependencies = true
 ignore_type_checking_imports = true

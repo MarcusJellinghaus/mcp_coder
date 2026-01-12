@@ -86,7 +86,7 @@ modules =
 # - Keeps external service integrations focused
 # - Easier to add new integrations without entangling existing ones
 #
-# Known violation to address (TODO: create issue):
+# Known violation (issue #277):
 # - mcp_coder.utils.github_operations.pr_manager imports from mcp_coder.utils
 #   which transitively imports jenkins_operations via __init__.py
 #   -> Solution: Refactor utils/__init__.py to not re-export all submodules
@@ -195,7 +195,7 @@ forbidden_modules =
 ignore_imports =
     mcp_coder.utils.git_operations.** -> git
     # Known violation: github_operations uses git.Repo for repository path
-    # TODO: Refactor to use git_operations instead
+    # TODO: Refactor to use git_operations instead (issue #276)
     mcp_coder.utils.github_operations.base_manager -> git
 
 # -----------------------------------------------------------------------------
