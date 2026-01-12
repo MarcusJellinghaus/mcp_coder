@@ -85,11 +85,6 @@ modules =
 # - Allows using one service without the other
 # - Keeps external service integrations focused
 # - Easier to add new integrations without entangling existing ones
-#
-# Known violation (issue #277):
-# - mcp_coder.utils.github_operations.pr_manager imports from mcp_coder.utils
-#   which transitively imports jenkins_operations via __init__.py
-#   -> Solution: Refactor utils/__init__.py to not re-export all submodules
 # -----------------------------------------------------------------------------
 [importlinter:contract:external_services]
 name = External Service Integrations Independence
@@ -97,8 +92,6 @@ type = independence
 modules =
     mcp_coder.utils.github_operations
     mcp_coder.utils.jenkins_operations
-ignore_imports =
-    mcp_coder.utils.github_operations.pr_manager -> mcp_coder.utils
 
 # -----------------------------------------------------------------------------
 # Contract: Git Operations Local Independence

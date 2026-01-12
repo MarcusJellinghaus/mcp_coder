@@ -56,6 +56,22 @@ All checks run automatically on pull requests (see `.github/workflows/ci.yml`).
 
 > Each rule includes comments explaining its rationale. See `.importlinter` and `tach.toml` for details.
 
+## Best Practice: Submodule Imports
+
+**Rule:** Submodules should never import from their parent `__init__.py`. Import from siblings directly.
+
+```python
+# BAD - triggers loading of ALL sibling submodules
+from mcp_coder.utils import get_default_branch_name
+
+# GOOD - only loads the specific sibling module
+from mcp_coder.utils.git_operations import get_default_branch_name
+```
+
+**Why:** When `utils/__init__.py` re-exports symbols from all submodules, importing from the parent loads everything - creating unintended transitive dependencies between siblings.
+
+**The facade pattern:** Keep `__init__.py` as a convenient facade for *external* consumers (workflows, CLI), but *internal* submodules must import siblings directly.
+
 ## When to Add New Rules
 
 **Add a third-party isolation rule when:**
