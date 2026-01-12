@@ -26,9 +26,9 @@ Example:
     Job #42: SUCCESS (1234ms)
 """
 
+import logging
 from typing import Any, Optional, cast
 
-import structlog
 from jenkins import Jenkins
 
 from ..log_utils import log_function_call
@@ -36,7 +36,7 @@ from ..user_config import get_config_value
 from .models import JobStatus, QueueSummary
 
 # Setup logger
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class JenkinsError(Exception):
@@ -159,7 +159,8 @@ class JenkinsClient:
             # Cast to int as build_job returns the queue ID
             queue_id = cast(int, queue_id_result)
             logger.debug(
-                "Job started successfully", job_path=job_path, queue_id=queue_id
+                "Job started successfully",
+                extra={"job_path": job_path, "queue_id": queue_id},
             )
             return queue_id
         except Exception as e:

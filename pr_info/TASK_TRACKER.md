@@ -31,11 +31,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Refactor jenkins_operations/client.py
 [Detail: pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Change `import structlog` to `import logging`
-- [ ] Change `logger = structlog.get_logger(__name__)` to `logger = logging.getLogger(__name__)`
-- [ ] Update the `logger.debug()` call to use `extra={}`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Change `import structlog` to `import logging`
+- [x] Change `logger = structlog.get_logger(__name__)` to `logger = logging.getLogger(__name__)`
+- [x] Update the `logger.debug()` call to use `extra={}`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Refactor data_files.py
 [Detail: pr_info/steps/step_3.md](steps/step_3.md)

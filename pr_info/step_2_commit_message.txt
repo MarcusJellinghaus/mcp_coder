@@ -1,0 +1,8 @@
+refactor(jenkins_operations): Replace structlog with standard logging in client.py
+
+- Change `import structlog` to `import logging`
+- Replace `structlog.get_logger(__name__)` with `logging.getLogger(__name__)`
+- Update logger.debug() call to use `extra={}` parameter for structured data
+
+This is part of the migration from structlog to standard logging with
+ExtraFieldsFormatter for consistent log output across the codebase.
