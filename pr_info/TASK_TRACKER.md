@@ -53,13 +53,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 [Detail: pr_info/steps/step_4.md](steps/step_4.md)
 
 - [x] Remove `import structlog` from imports
-- [ ] Remove `from structlog.testing import LogCapture` from imports
-- [ ] Add `import logging` if not present
-- [ ] Update `test_data_file_found_logs_debug_not_info` to use caplog
-- [ ] Update `test_data_file_logging_with_info_level` to use caplog
-- [ ] Update `test_data_file_logging_with_debug_level` to use caplog
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 4
+- [x] Remove `from structlog.testing import LogCapture` from imports
+- [x] Add `import logging` if not present
+- [x] Update `test_data_file_found_logs_debug_not_info` to use caplog
+- [x] Update `test_data_file_logging_with_info_level` to use caplog
+- [x] Update `test_data_file_logging_with_debug_level` to use caplog
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Finalization and Verification
 [Detail: pr_info/steps/step_5.md](steps/step_5.md)
