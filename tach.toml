@@ -153,10 +153,6 @@ path = "mcp_coder.utils"
 layer = "infrastructure"
 # General infrastructure utilities: git operations, github API, subprocess runner.
 # These are technical implementations that support domain and application layers.
-#
-# TODO: Refactor commit_operations.py - it imports from domain layer (llm, prompt_manager)
-# which violates layered architecture. Should be moved to application layer.
-# See tach-ignore directives in commit_operations.py
 depends_on = [
     { path = "mcp_coder.config" },    # Access configuration for git/github
     { path = "mcp_coder.constants" }, # Shared constants

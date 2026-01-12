@@ -25,9 +25,6 @@ root_package_paths =
 # - Ensures workflows orchestrate but don't leak into infrastructure
 # - Maintains utils as reusable, independent components
 #
-# Known violations to address (TODO: create issues for these):
-# - mcp_coder.utils.commit_operations imports from llm and prompt_manager
-#   -> This module should be moved to workflows layer
 # -----------------------------------------------------------------------------
 [importlinter:contract:layered_architecture]
 name = Layered Architecture
@@ -39,12 +36,6 @@ layers =
     mcp_coder.llm | mcp_coder.formatters | mcp_coder.prompt_manager
     mcp_coder.utils | mcp_coder.mcp_code_checker
     mcp_coder.config | mcp_coder.constants
-ignore_imports =
-    mcp_coder.utils.commit_operations -> mcp_coder.llm.env
-    mcp_coder.utils.commit_operations -> mcp_coder.llm.interface
-    mcp_coder.utils.commit_operations -> mcp_coder.llm.providers.claude.claude_code_api
-    mcp_coder.utils.commit_operations -> mcp_coder.prompt_manager
-    mcp_coder.utils.commit_operations -> mcp_coder.constants
 
 # -----------------------------------------------------------------------------
 # Contract: Domain Services Independence
