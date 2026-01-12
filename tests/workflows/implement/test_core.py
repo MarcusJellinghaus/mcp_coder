@@ -317,6 +317,53 @@ class TestPrepareTaskTracker:
 
         assert result is False
 
+    @patch("mcp_coder.workflows.implement.core.commit_all_changes")
+    @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    def test_prepare_task_tracker_ignores_uv_lock(
+        self,
+        mock_prepare_env: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_has_tasks: MagicMock,
+        mock_commit: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test prepare_task_tracker ignores uv.lock in changed files.
+
+        When uv.lock is modified alongside TASK_TRACKER.md, the function should
+        succeed because uv.lock is in DEFAULT_IGNORED_BUILD_ARTIFACTS.
+        """
+        # Create steps directory
+        steps_dir = tmp_path / "pr_info" / "steps"
+        steps_dir.mkdir(parents=True)
+
+        # Setup mocks
+        mock_has_tasks.side_effect = [False, True]
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
+        mock_get_prompt.return_value = "Task tracker update prompt"
+        mock_ask_llm.return_value = "LLM updated the task tracker"
+        # uv.lock is also modified - should be ignored
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": ["pr_info/TASK_TRACKER.md"],
+            "untracked": ["uv.lock"],
+        }
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
+
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
+
+        # Should succeed - uv.lock should be filtered out
+        assert result is True
+        mock_commit.assert_called_once()
+
 
 class TestLogProgressSummary:
     """Test log_progress_summary function."""

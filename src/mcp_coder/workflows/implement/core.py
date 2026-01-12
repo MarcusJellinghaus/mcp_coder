@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
@@ -112,6 +112,11 @@ def prepare_task_tracker(
 
         # Only staged and modified files should contain TASK_TRACKER.md
         all_changed = status["staged"] + status["modified"] + status["untracked"]
+
+        # Filter out auto-generated build artifacts (e.g., uv.lock)
+        ignore_set = set(DEFAULT_IGNORED_BUILD_ARTIFACTS)
+        all_changed = [f for f in all_changed if f not in ignore_set]
+
         task_tracker_file = f"{PR_INFO_DIR}/TASK_TRACKER.md"
 
         # Check if only TASK_TRACKER.md was modified (case-insensitive comparison)
