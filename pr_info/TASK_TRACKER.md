@@ -23,7 +23,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Add test class `TestExtraFieldsFormatter` to `tests/utils/test_log_utils.py`
 - [x] Add `STANDARD_LOG_FIELDS` constant to `log_utils.py`
 - [x] Add `ExtraFieldsFormatter` class to `log_utils.py`
-- [ ] Update `setup_logging()` console handler to use `ExtraFieldsFormatter`
+- [x] Update `setup_logging()` console handler to use `ExtraFieldsFormatter`
 - [ ] Update module docstring with usage examples
 - [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
 - [ ] Prepare git commit message for Step 1

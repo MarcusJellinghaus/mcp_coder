@@ -193,7 +193,7 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
 
         console_handler = logging.StreamHandler()
         console_handler.setLevel(numeric_level)
-        console_formatter = logging.Formatter(
+        console_formatter = ExtraFieldsFormatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         console_handler.setFormatter(console_formatter)
