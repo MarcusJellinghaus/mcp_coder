@@ -12,6 +12,8 @@ root_packages =
 root_package_paths = 
     src
     .
+# Enable checking of third-party/external package imports
+include_external_packages = True
 
 # -----------------------------------------------------------------------------
 # Contract: Layered Architecture
@@ -137,6 +139,203 @@ source_modules =
 forbidden_modules =
     mcp_coder.utils.git_operations
     mcp_coder.utils.github_operations
+
+
+# =============================================================================
+# THIRD-PARTY LIBRARY ISOLATION CONTRACTS
+# =============================================================================
+# These contracts ensure that specific third-party libraries are only used
+# by the modules that are responsible for integrating with them.
+#
+# Why this matters:
+# - Prevents library-specific code from spreading across the codebase
+# - Makes it easier to swap out libraries (e.g., PyGithub -> ghapi)
+# - Keeps external API knowledge contained in dedicated modules
+# - Simplifies testing by limiting where mocking is needed
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Contract: GitHub Library Isolation
+# -----------------------------------------------------------------------------
+# The 'github' package (PyGithub) should only be imported by github_operations.
+# All other modules must use github_operations as an abstraction layer.
+#
+# Syntax: mcp_coder.** means "all submodules recursively"
+#         ignore_imports allows specific exceptions using wildcards
+# -----------------------------------------------------------------------------
+[importlinter:contract:github_library_isolation]
+name = GitHub Library Isolation
+type = forbidden
+# source_modules: which modules are checked (mcp_coder = all production code)
+source_modules =
+    mcp_coder
+# forbidden_modules: which external packages are forbidden
+forbidden_modules =
+    github
+# ignore_imports: exceptions - github_operations.** can import github
+ignore_imports =
+    mcp_coder.utils.github_operations.** -> github
+
+# -----------------------------------------------------------------------------
+# Contract: GitPython Library Isolation
+# -----------------------------------------------------------------------------
+# The 'git' package (GitPython) should only be imported by git_operations.
+# Other modules should use git_operations as an abstraction layer.
+#
+# Note: github_operations.base_manager currently imports git for Repo access.
+#       This is a known violation - ideally it should use git_operations instead.
+# -----------------------------------------------------------------------------
+[importlinter:contract:git_library_isolation]
+name = GitPython Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    git
+ignore_imports =
+    mcp_coder.utils.git_operations.** -> git
+    # Known violation: github_operations uses git.Repo for repository path
+    # TODO: Refactor to use git_operations instead
+    mcp_coder.utils.github_operations.base_manager -> git
+
+# -----------------------------------------------------------------------------
+# Contract: Jenkins Library Isolation
+# -----------------------------------------------------------------------------
+# The 'jenkins' package (python-jenkins) should only be used by jenkins_operations.
+# -----------------------------------------------------------------------------
+[importlinter:contract:jenkins_library_isolation]
+name = Jenkins Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    jenkins
+ignore_imports =
+    mcp_coder.utils.jenkins_operations.** -> jenkins
+
+# -----------------------------------------------------------------------------
+# Contract: Claude Code SDK Isolation
+# -----------------------------------------------------------------------------
+# The 'claude_code_sdk' should only be used by llm.providers.claude.
+# -----------------------------------------------------------------------------
+[importlinter:contract:claude_sdk_isolation]
+name = Claude Code SDK Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    claude_code_sdk
+ignore_imports =
+    mcp_coder.llm.providers.claude.** -> claude_code_sdk
+
+# -----------------------------------------------------------------------------
+# Contract: Pyperclip Library Isolation
+# -----------------------------------------------------------------------------
+# The 'pyperclip' package should only be used by utils.clipboard.
+# -----------------------------------------------------------------------------
+[importlinter:contract:pyperclip_isolation]
+name = Pyperclip Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    pyperclip
+ignore_imports =
+    mcp_coder.utils.clipboard -> pyperclip
+
+# -----------------------------------------------------------------------------
+# Contract: MCP Code Checker Isolation
+# -----------------------------------------------------------------------------
+# The 'mcp_code_checker' external package should only be used by mcp_code_checker module.
+# -----------------------------------------------------------------------------
+[importlinter:contract:mcp_checker_isolation]
+name = MCP Code Checker Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    mcp_code_checker
+ignore_imports =
+    mcp_coder.mcp_code_checker -> mcp_code_checker
+
+# -----------------------------------------------------------------------------
+# Contract: Requests Library Isolation
+# -----------------------------------------------------------------------------
+# The 'requests' library should only be used in github_operations.
+# -----------------------------------------------------------------------------
+[importlinter:contract:requests_library_isolation]
+name = Requests Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    requests
+ignore_imports =
+    mcp_coder.utils.github_operations.** -> requests
+
+# -----------------------------------------------------------------------------
+# Contract: Structlog Library Isolation
+# -----------------------------------------------------------------------------
+# The 'structlog' library should only be used by log_utils.
+# Other modules should use log_utils for logging setup.
+# -----------------------------------------------------------------------------
+[importlinter:contract:structlog_isolation]
+name = Structlog Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    structlog
+ignore_imports =
+    mcp_coder.utils.log_utils -> structlog
+    # TODO: Remove after fixing issue #275
+    mcp_coder.utils.data_files -> structlog
+    mcp_coder.utils.jenkins_operations.client -> structlog
+
+# -----------------------------------------------------------------------------
+# Contract: Python JSON Logger Isolation
+# -----------------------------------------------------------------------------
+# The 'pythonjsonlogger' should only be used by log_utils.
+# -----------------------------------------------------------------------------
+[importlinter:contract:jsonlogger_isolation]
+name = Python JSON Logger Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    pythonjsonlogger
+ignore_imports =
+    mcp_coder.utils.log_utils -> pythonjsonlogger
+
+# -----------------------------------------------------------------------------
+# Contract: Black Library Isolation
+# -----------------------------------------------------------------------------
+# The 'black' library is currently called via subprocess.
+# This rule prevents anyone from importing it directly.
+# If direct import is needed later, add: mcp_coder.formatters.black_formatter -> black
+# -----------------------------------------------------------------------------
+[importlinter:contract:black_isolation]
+name = Black Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    black
+
+# -----------------------------------------------------------------------------
+# Contract: Isort Library Isolation
+# -----------------------------------------------------------------------------
+# The 'isort' library is currently called via subprocess.
+# This rule prevents anyone from importing it directly.
+# If direct import is needed later, add: mcp_coder.formatters.isort_formatter -> isort
+# -----------------------------------------------------------------------------
+[importlinter:contract:isort_isolation]
+name = Isort Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    isort
 
 
 # =============================================================================
