@@ -358,6 +358,13 @@ mcp-coder implement --project-dir /path/to/project
 - **Architecture access**: `mcp_code_checker.py` - Quality check orchestration with direct API access for mcp_coder workflows
 - **Enforcement**: Documented in `CLAUDE.md` as mandatory requirements
 
+### Architectural Boundary Enforcement
+- **Tools**: import-linter, tach, pycycle for static analysis of module dependencies
+- **Configuration**: `.importlinter` (19 contracts), `tach.toml` (layer definitions)
+- **CI Integration**: Architecture checks run automatically on pull requests
+- **Documentation**: See `docs/architecture/dependencies/README.md` for detailed tool comparison, current contracts, and guidelines for adding new rules
+- **Visualization**: `docs/architecture/dependencies/dependency_graph.html` for interactive dependency graph
+
 ### Command Pattern (CLI)
 - **File organization**: `cli/commands/` - One command per file
 

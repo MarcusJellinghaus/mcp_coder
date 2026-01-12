@@ -1,0 +1,439 @@
+# =============================================================================
+# Import Linter Configuration
+# =============================================================================
+# Enforces architectural boundaries between modules to maintain clean layering.
+# Run with: lint-imports
+# =============================================================================
+
+[importlinter]
+root_packages = 
+    mcp_coder
+    tests
+root_package_paths = 
+    src
+    .
+# Enable checking of third-party/external package imports
+include_external_packages = True
+
+# -----------------------------------------------------------------------------
+# Contract: Layered Architecture
+# -----------------------------------------------------------------------------
+# Ensures dependencies flow downward through the architecture:
+#   cli -> workflows -> llm/formatters -> utils -> config
+#
+# Why this matters:
+# - Prevents circular dependencies between modules
+# - Keeps the CLI as a thin presentation layer
+# - Ensures workflows orchestrate but don't leak into infrastructure
+# - Maintains utils as reusable, independent components
+#
+# -----------------------------------------------------------------------------
+[importlinter:contract:layered_architecture]
+name = Layered Architecture
+type = layers
+layers =
+    mcp_coder.cli
+    mcp_coder.workflows
+    mcp_coder.workflow_utils
+    mcp_coder.llm | mcp_coder.formatters | mcp_coder.prompt_manager
+    mcp_coder.utils | mcp_coder.mcp_code_checker
+    mcp_coder.config | mcp_coder.constants
+
+# -----------------------------------------------------------------------------
+# Contract: Domain Services Independence
+# -----------------------------------------------------------------------------
+# LLM and Formatters are parallel domain services that should not depend on
+# each other. They serve different purposes and should remain decoupled.
+#
+# Why this matters:
+# - Allows independent evolution of LLM and formatting capabilities
+# - Prevents feature creep between unrelated domains
+# - Makes it easier to replace or modify one without affecting the other
+# -----------------------------------------------------------------------------
+[importlinter:contract:domain_services]
+name = Domain Services Independence
+type = independence
+modules =
+    mcp_coder.llm
+    mcp_coder.formatters
+
+# -----------------------------------------------------------------------------
+# Contract: Formatter Implementations Independence
+# -----------------------------------------------------------------------------
+# Black and isort formatters should not import from each other.
+# They are independent formatting tools that can be used separately.
+#
+# Why this matters:
+# - Each formatter can be replaced or updated independently
+# - Avoids coupling between different formatting strategies
+# - Keeps formatter implementations focused and simple
+# -----------------------------------------------------------------------------
+[importlinter:contract:formatter_implementations]
+name = Formatter Implementations Independence
+type = independence
+modules =
+    mcp_coder.formatters.black_formatter
+    mcp_coder.formatters.isort_formatter
+
+# -----------------------------------------------------------------------------
+# Contract: External Service Integrations Independence
+# -----------------------------------------------------------------------------
+# GitHub and Jenkins integrations should not depend on each other.
+# They are separate external services with independent APIs.
+#
+# Why this matters:
+# - Allows using one service without the other
+# - Keeps external service integrations focused
+# - Easier to add new integrations without entangling existing ones
+#
+# Known violation (issue #277):
+# - mcp_coder.utils.github_operations.pr_manager imports from mcp_coder.utils
+#   which transitively imports jenkins_operations via __init__.py
+#   -> Solution: Refactor utils/__init__.py to not re-export all submodules
+# -----------------------------------------------------------------------------
+[importlinter:contract:external_services]
+name = External Service Integrations Independence
+type = independence
+modules =
+    mcp_coder.utils.github_operations
+    mcp_coder.utils.jenkins_operations
+ignore_imports =
+    mcp_coder.utils.github_operations.pr_manager -> mcp_coder.utils
+
+# -----------------------------------------------------------------------------
+# Contract: Git Operations Local Independence
+# -----------------------------------------------------------------------------
+# Local git operations should not depend on remote service integrations.
+# Git operations work with the local repository only.
+#
+# Why this matters:
+# - Keeps git operations usable offline
+# - Maintains clear separation between local and remote operations
+# - Allows testing git operations without network mocking
+# -----------------------------------------------------------------------------
+[importlinter:contract:git_local]
+name = Git Operations Local Independence
+type = forbidden
+source_modules =
+    mcp_coder.utils.git_operations
+forbidden_modules =
+    mcp_coder.utils.github_operations
+    mcp_coder.utils.jenkins_operations
+
+# -----------------------------------------------------------------------------
+# Contract: Jenkins Operations Independence
+# -----------------------------------------------------------------------------
+# Jenkins operations should not depend on git or github operations.
+# Jenkins is a CI/CD service that works via its own API.
+#
+# Why this matters:
+# - Jenkins integration can be used/tested independently
+# - Prevents coupling between unrelated external services
+# - Keeps the jenkins module focused on CI/CD concerns only
+# -----------------------------------------------------------------------------
+[importlinter:contract:jenkins_independence]
+name = Jenkins Operations Independence
+type = forbidden
+source_modules =
+    mcp_coder.utils.jenkins_operations
+forbidden_modules =
+    mcp_coder.utils.git_operations
+    mcp_coder.utils.github_operations
+
+
+# =============================================================================
+# THIRD-PARTY LIBRARY ISOLATION CONTRACTS
+# =============================================================================
+# These contracts ensure that specific third-party libraries are only used
+# by the modules that are responsible for integrating with them.
+#
+# Why this matters:
+# - Prevents library-specific code from spreading across the codebase
+# - Makes it easier to swap out libraries (e.g., PyGithub -> ghapi)
+# - Keeps external API knowledge contained in dedicated modules
+# - Simplifies testing by limiting where mocking is needed
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Contract: GitHub Library Isolation
+# -----------------------------------------------------------------------------
+# The 'github' package (PyGithub) should only be imported by github_operations.
+# All other modules must use github_operations as an abstraction layer.
+#
+# Syntax: mcp_coder.** means "all submodules recursively"
+#         ignore_imports allows specific exceptions using wildcards
+# -----------------------------------------------------------------------------
+[importlinter:contract:github_library_isolation]
+name = GitHub Library Isolation
+type = forbidden
+# source_modules: which modules are checked (mcp_coder = all production code)
+source_modules =
+    mcp_coder
+# forbidden_modules: which external packages are forbidden
+forbidden_modules =
+    github
+# ignore_imports: exceptions - github_operations.** can import github
+ignore_imports =
+    mcp_coder.utils.github_operations.** -> github
+
+# -----------------------------------------------------------------------------
+# Contract: GitPython Library Isolation
+# -----------------------------------------------------------------------------
+# The 'git' package (GitPython) should only be imported by git_operations.
+# Other modules should use git_operations as an abstraction layer.
+#
+# Note: github_operations.base_manager currently imports git for Repo access.
+#       This is a known violation - ideally it should use git_operations instead.
+# -----------------------------------------------------------------------------
+[importlinter:contract:git_library_isolation]
+name = GitPython Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    git
+ignore_imports =
+    mcp_coder.utils.git_operations.** -> git
+    # Known violation: github_operations uses git.Repo for repository path
+    # TODO: Refactor to use git_operations instead (issue #276)
+    mcp_coder.utils.github_operations.base_manager -> git
+
+# -----------------------------------------------------------------------------
+# Contract: Jenkins Library Isolation
+# -----------------------------------------------------------------------------
+# The 'jenkins' package (python-jenkins) should only be used by jenkins_operations.
+# -----------------------------------------------------------------------------
+[importlinter:contract:jenkins_library_isolation]
+name = Jenkins Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    jenkins
+ignore_imports =
+    mcp_coder.utils.jenkins_operations.** -> jenkins
+
+# -----------------------------------------------------------------------------
+# Contract: Claude Code SDK Isolation
+# -----------------------------------------------------------------------------
+# The 'claude_code_sdk' should only be used by llm.providers.claude.
+# -----------------------------------------------------------------------------
+[importlinter:contract:claude_sdk_isolation]
+name = Claude Code SDK Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    claude_code_sdk
+ignore_imports =
+    mcp_coder.llm.providers.claude.** -> claude_code_sdk
+
+# -----------------------------------------------------------------------------
+# Contract: Pyperclip Library Isolation
+# -----------------------------------------------------------------------------
+# The 'pyperclip' package should only be used by utils.clipboard.
+# -----------------------------------------------------------------------------
+[importlinter:contract:pyperclip_isolation]
+name = Pyperclip Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    pyperclip
+ignore_imports =
+    mcp_coder.utils.clipboard -> pyperclip
+
+# -----------------------------------------------------------------------------
+# Contract: MCP Code Checker Isolation
+# -----------------------------------------------------------------------------
+# The 'mcp_code_checker' external package should only be used by mcp_code_checker module.
+# -----------------------------------------------------------------------------
+[importlinter:contract:mcp_checker_isolation]
+name = MCP Code Checker Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    mcp_code_checker
+ignore_imports =
+    mcp_coder.mcp_code_checker -> mcp_code_checker
+
+# -----------------------------------------------------------------------------
+# Contract: Requests Library Isolation
+# -----------------------------------------------------------------------------
+# The 'requests' library should only be used in github_operations.
+# -----------------------------------------------------------------------------
+[importlinter:contract:requests_library_isolation]
+name = Requests Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    requests
+ignore_imports =
+    mcp_coder.utils.github_operations.** -> requests
+
+# -----------------------------------------------------------------------------
+# Contract: Structlog Library Isolation
+# -----------------------------------------------------------------------------
+# The 'structlog' library should only be used by log_utils.
+# Other modules should use log_utils for logging setup.
+# -----------------------------------------------------------------------------
+[importlinter:contract:structlog_isolation]
+name = Structlog Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    structlog
+ignore_imports =
+    mcp_coder.utils.log_utils -> structlog
+    # TODO: Remove after fixing issue #275
+    mcp_coder.utils.data_files -> structlog
+    mcp_coder.utils.jenkins_operations.client -> structlog
+
+# -----------------------------------------------------------------------------
+# Contract: Python JSON Logger Isolation
+# -----------------------------------------------------------------------------
+# The 'pythonjsonlogger' should only be used by log_utils.
+# -----------------------------------------------------------------------------
+[importlinter:contract:jsonlogger_isolation]
+name = Python JSON Logger Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    pythonjsonlogger
+ignore_imports =
+    mcp_coder.utils.log_utils -> pythonjsonlogger
+
+# -----------------------------------------------------------------------------
+# Contract: Black Library Isolation
+# -----------------------------------------------------------------------------
+# The 'black' library is currently called via subprocess.
+# This rule prevents anyone from importing it directly.
+# If direct import is needed later, add: mcp_coder.formatters.black_formatter -> black
+# -----------------------------------------------------------------------------
+[importlinter:contract:black_isolation]
+name = Black Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    black
+
+# -----------------------------------------------------------------------------
+# Contract: Isort Library Isolation
+# -----------------------------------------------------------------------------
+# The 'isort' library is currently called via subprocess.
+# This rule prevents anyone from importing it directly.
+# If direct import is needed later, add: mcp_coder.formatters.isort_formatter -> isort
+# -----------------------------------------------------------------------------
+[importlinter:contract:isort_isolation]
+name = Isort Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    isort
+
+
+# =============================================================================
+# TEST MODULE CONTRACTS
+# =============================================================================
+# These contracts enforce that:
+# - Source modules never import from tests (no test dependencies in production)
+# - Test modules remain isolated from each other (test independence)
+# - Unit tests focus on their target module (test focus)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Contract: Source Code Independence from Tests
+# -----------------------------------------------------------------------------
+# Production code should never import from test modules.
+# This prevents test code from leaking into production.
+#
+# Why this matters:
+# - Tests are not deployed to production
+# - Prevents accidental test dependencies in release builds
+# - Keeps production code independent and testable
+# -----------------------------------------------------------------------------
+[importlinter:contract:no_test_imports_in_source]
+name = Source Code Independence from Tests
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    tests
+
+# -----------------------------------------------------------------------------
+# Contract: Test Module Independence
+# -----------------------------------------------------------------------------
+# Test directories should not import from each other.
+# Each test module should be independent and self-contained.
+#
+# Why this matters:
+# - Prevents test interdependencies that make debugging harder
+# - Allows running test subsets without failures from missing test imports
+# - Keeps test modules focused on their target
+#
+# Note: tests.conftest is allowed as shared fixtures, but direct cross-imports
+#       between test subdirectories should be avoided.
+# -----------------------------------------------------------------------------
+[importlinter:contract:test_module_independence]
+name = Test Module Independence
+type = independence
+modules =
+    tests.cli
+    tests.llm
+    tests.utils
+    tests.workflows
+    tests.formatters
+    tests.workflow_utils
+# Allowed: Importing shared fixtures from tests.utils.conftest
+# TODO: Refactor to use pytest's conftest discovery instead of explicit imports
+ignore_imports =
+    tests.workflows.test_create_pr_integration -> tests.utils.conftest
+    tests.cli.commands.test_define_labels -> tests.utils.conftest
+
+# -----------------------------------------------------------------------------
+# Contract: CLI Tests Focus (commented - has violations)
+# -----------------------------------------------------------------------------
+# CLI tests should primarily import from mcp_coder.cli and shared test fixtures.
+# They should not reach deep into other modules.
+#
+# Why this matters:
+# - Keeps CLI tests focused on CLI behavior
+# - Prevents CLI tests from becoming integration tests
+# - Makes test failures easier to diagnose
+#
+# Note: Commented out because tests currently import widely for fixtures.
+#       Enable after refactoring tests to use proper mocking.
+# -----------------------------------------------------------------------------
+# [importlinter:contract:cli_test_focus]
+# name = CLI Tests Focus
+# type = forbidden
+# source_modules =
+#     tests.cli
+# forbidden_modules =
+#     mcp_coder.workflows
+#     mcp_coder.llm.providers
+
+# -----------------------------------------------------------------------------
+# Contract: Utils Tests Should Not Import Application Layer (commented - has violations)
+# -----------------------------------------------------------------------------
+# Utils tests should test infrastructure without depending on application logic.
+#
+# Why this matters:
+# - Utils are infrastructure, tested independently
+# - Application layer changes shouldn't break utils tests
+# - Enforces proper layering even in tests
+# -----------------------------------------------------------------------------
+# [importlinter:contract:utils_test_layering]
+# name = Utils Tests Layering
+# type = forbidden
+# source_modules =
+#     tests.utils
+# forbidden_modules =
+#     mcp_coder.cli
+#     mcp_coder.workflows

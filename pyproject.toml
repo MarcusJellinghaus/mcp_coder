@@ -52,6 +52,9 @@ mcp = [
 # Full development setup - combines all groups for local development
 dev = [
     "mcp-coder[types,test,mcp]",
+    "import-linter>=2.0",
+    "pycycle>=0.0.8",
+    "tach>=0.6.0",
 ]
 
 [project.scripts]
@@ -159,3 +162,6 @@ ignore_missing_imports = true
 # Version is automatically determined from git tags
 # Tag format: v0.1.0 -> version 0.1.0
 # Between releases: 0.1.0.devN+gHASH (includes commit count and hash)
+
+# Note: import-linter configuration is in .importlinter file (INI format)
+# to reduce token usage when LLMs read pyproject.toml

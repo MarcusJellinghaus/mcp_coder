@@ -42,4 +42,7 @@ bash.exe.stackdump
 
 # profiler data
 docs/tests/performance_data/prof/*.prof
+
+# Generated dependency reports (regenerate with: tach report)
+docs/architecture/dependencies/dependency_report.html
 /.mcp-coder/create_plan_sessions
