@@ -117,7 +117,7 @@ def find_data_file(  # pylint: disable=too-many-statements
             )
             search_results.append(
                 {
-                    "method": "1/3 Development",
+                    "method": "1/5 Development",
                     "result": method_1_result,
                     "path": method_1_path or "",
                 }
@@ -194,7 +194,7 @@ def find_data_file(  # pylint: disable=too-many-statements
                     )
                     search_results.append(
                         {
-                            "method": "2/4 ImportLib",
+                            "method": "2/5 ImportLib",
                             "result": method_2_result,
                             "path": method_2_path or "",
                         }
@@ -292,7 +292,7 @@ def find_data_file(  # pylint: disable=too-many-statements
                 )
                 search_results.append(
                     {
-                        "method": "3/4 Module __file__",
+                        "method": "3/5 Module __file__",
                         "result": method_3_result,
                         "path": method_3_path or "",
                     }
@@ -401,7 +401,7 @@ def find_data_file(  # pylint: disable=too-many-statements
 
                     search_results.append(
                         {
-                            "method": "4/4 Site-packages",
+                            "method": "4/5 Site-packages",
                             "result": method_4_result,
                             "path": method_4_path,
                         }
@@ -413,7 +413,7 @@ def find_data_file(  # pylint: disable=too-many-statements
 
             except Exception as e:
                 logger.debug(
-                    "METHOD 4/4: Error checking site-packages directory",
+                    "METHOD 4/5: Error checking site-packages directory",
                     extra={
                         "method": "site_packages",
                         "site_dir": str(site_dir),

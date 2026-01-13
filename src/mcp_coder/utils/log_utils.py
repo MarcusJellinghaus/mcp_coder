@@ -48,6 +48,7 @@ STANDARD_LOG_FIELDS: frozenset[str] = frozenset(
         "name",
         "msg",
         "args",
+        "asctime",  # Added by Formatter.format()
         "created",
         "filename",
         "funcName",
