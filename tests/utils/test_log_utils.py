@@ -9,7 +9,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.utils.log_utils import log_function_call, setup_logging
+from mcp_coder.utils.log_utils import (
+    ExtraFieldsFormatter,
+    log_function_call,
+    setup_logging,
+)
 
 
 class TestSetupLogging:
@@ -221,3 +225,81 @@ class TestLogFunctionCall:
             # Both standard and structured logging should be used
             assert mock_stdlogger.debug.call_count == 2
             assert mock_structlogger.debug.call_count == 2
+
+
+class TestExtraFieldsFormatter:
+    """Tests for ExtraFieldsFormatter class."""
+
+    def test_format_without_extra_fields(self) -> None:
+        """Test formatting a log record with no extra fields."""
+        formatter = ExtraFieldsFormatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        record = logging.LogRecord(
+            name="test_logger",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
+        )
+        formatted = formatter.format(record)
+
+        # Standard message should remain unchanged (no extra fields suffix)
+        assert "Test message" in formatted
+        assert "{" not in formatted  # No JSON suffix
+
+    def test_format_with_extra_fields(self) -> None:
+        """Test formatting a log record with extra fields."""
+        formatter = ExtraFieldsFormatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        record = logging.LogRecord(
+            name="test_logger",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
+        )
+        # Add extra field
+        record.custom_field = "custom_value"
+
+        formatted = formatter.format(record)
+
+        # Extra fields should be appended as JSON
+        assert "Test message" in formatted
+        assert "custom_field" in formatted
+        assert "custom_value" in formatted
+
+    def test_format_with_multiple_extra_fields(self) -> None:
+        """Test formatting with multiple extra fields."""
+        formatter = ExtraFieldsFormatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        record = logging.LogRecord(
+            name="test_logger",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
+        )
+        # Add multiple extra fields
+        record.user_id = 123
+        record.request_id = "abc-456"
+        record.action = "login"
+
+        formatted = formatter.format(record)
+
+        # All extra fields should be included
+        assert "Test message" in formatted
+        assert "user_id" in formatted
+        assert "123" in formatted
+        assert "request_id" in formatted
+        assert "abc-456" in formatted
+        assert "action" in formatted
+        assert "login" in formatted

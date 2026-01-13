@@ -1,4 +1,31 @@
-"""Logging utilities for the MCP server."""
+"""Logging utilities for the MCP server.
+
+This module provides centralized logging configuration and utilities.
+All other modules should use standard Python logging with the `extra`
+parameter for structured data - only this module handles the underlying
+logging infrastructure (including structlog for JSON file output).
+
+Usage:
+    >>> import logging
+    >>> from mcp_coder.utils.log_utils import setup_logging
+    >>>
+    >>> # Initialize logging (call once at application startup)
+    >>> setup_logging("INFO")  # Console output
+    >>> setup_logging("DEBUG", log_file="app.log")  # JSON file output
+    >>>
+    >>> # In your modules, use standard logging with extra={} for structured data
+    >>> logger = logging.getLogger(__name__)
+    >>> logger.info("User logged in", extra={"user_id": "123", "ip": "192.168.1.1"})
+    # Console: 2024-01-15 10:30:00 - mymodule - INFO - User logged in {"user_id": "123", "ip": "192.168.1.1"}
+    # JSON file: {"asctime": "2024-01-15 10:30:00", "levelname": "INFO", ..., "user_id": "123", "ip": "192.168.1.1"}
+
+Classes:
+    ExtraFieldsFormatter: Formatter that appends extra fields to console log messages.
+
+Functions:
+    setup_logging: Configure logging with console or JSON file output.
+    log_function_call: Decorator to log function calls with timing.
+"""
 
 import json
 import logging
@@ -13,6 +40,81 @@ from pythonjsonlogger.json import JsonFormatter
 
 # Type variable for function return types
 T = TypeVar("T")
+
+# Standard LogRecord fields to exclude when extracting extra fields
+# These are built-in attributes of logging.LogRecord that should not be treated as "extra" data
+STANDARD_LOG_FIELDS: frozenset[str] = frozenset(
+    {
+        "name",
+        "msg",
+        "args",
+        "asctime",  # Added by Formatter.format()
+        "created",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "module",
+        "msecs",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "exc_info",
+        "exc_text",
+        "thread",
+        "threadName",
+        "taskName",
+        "message",
+    }
+)
+
+
+class ExtraFieldsFormatter(logging.Formatter):
+    """Formatter that appends extra fields to log messages.
+
+    This formatter extends the standard logging.Formatter to include any
+    extra fields passed via the `extra` parameter in logging calls.
+    Extra fields are appended to the log message as a JSON object.
+
+    Example:
+        >>> formatter = ExtraFieldsFormatter(
+        ...     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ... )
+        >>> handler.setFormatter(formatter)
+        >>> logger.info("User logged in", extra={"user_id": 123, "ip": "192.168.1.1"})
+        # Output: 2024-01-15 10:30:00 - myapp - INFO - User logged in {"user_id": 123, "ip": "192.168.1.1"}
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Format the log record, appending any extra fields as JSON.
+
+        Args:
+            record: The log record to format.
+
+        Returns:
+            The formatted log message with extra fields appended as JSON.
+        """
+        # Get the base formatted message
+        base_message = super().format(record)
+
+        # Extract extra fields (attributes not in standard LogRecord fields)
+        extra_fields = {
+            key: value
+            for key, value in record.__dict__.items()
+            if key not in STANDARD_LOG_FIELDS
+        }
+
+        # If there are extra fields, append them as JSON
+        if extra_fields:
+            # Use default=str to handle non-serializable values
+            suffix = json.dumps(extra_fields, default=str)
+            return f"{base_message} {suffix}"
+
+        return base_message
+
 
 # Create standard logger
 stdlogger = logging.getLogger(__name__)
@@ -119,7 +221,7 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
 
         console_handler = logging.StreamHandler()
         console_handler.setLevel(numeric_level)
-        console_formatter = logging.Formatter(
+        console_formatter = ExtraFieldsFormatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         console_handler.setFormatter(console_formatter)
