@@ -51,7 +51,7 @@ matrix:
 ### Expected CI Behavior
 - Vulture runs as part of the architecture matrix (PR-only)
 - Fails if dead code detected above 80% confidence
-- Whitelist excludes known false positives
+- Whitelist excludes known false positives and API completeness items
 - Checks both `src` and `tests` directories
 
 ## VERIFICATION
@@ -61,6 +61,9 @@ vulture src tests vulture_whitelist.py --min-confidence 80
 
 # Should return exit code 0 (success) after all cleanup is done
 echo $?
+
+# Verify YAML syntax:
+python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"
 ```
 
 ## INTEGRATION POINTS
@@ -68,3 +71,13 @@ echo $?
 - Runs in parallel with other architecture checks (import-linter, tach, pycycle)
 - Uses same fail-fast: false strategy as other checks
 - Only runs on pull requests (not on every push)
+
+## FINAL VERIFICATION
+After this step, the full vulture check should pass:
+```bash
+# Complete verification:
+vulture src tests vulture_whitelist.py --min-confidence 80
+
+# All code quality checks:
+mcp__code-checker__run_all_checks()
+```
