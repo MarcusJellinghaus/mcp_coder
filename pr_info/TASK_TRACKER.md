@@ -20,7 +20,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Update base_manager.py to Use git_operations Abstraction
 See: [pr_info/steps/step_1.md](steps/step_1.md)
 
-- [ ] Remove `import git` and add `from mcp_coder.utils import git_operations`
+- [x] Remove `import git` and add `from mcp_coder.utils import git_operations`
 - [ ] Remove `self._repo` attribute and all related assignments
 - [ ] Update `_init_with_project_dir()` to use `git_operations.is_git_repository()`
 - [ ] Update `_get_repository()` to use `git_operations.get_github_repository_url()`

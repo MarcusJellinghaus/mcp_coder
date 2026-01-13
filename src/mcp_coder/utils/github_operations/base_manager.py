@@ -9,12 +9,11 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar, cast
 
-import git
 from github import Auth, Github
 from github.GithubException import GithubException
 from github.Repository import Repository
 
-from mcp_coder.utils import user_config
+from mcp_coder.utils import git_operations, user_config
 from mcp_coder.utils.log_utils import log_function_call
 
 from .github_utils import parse_github_url
