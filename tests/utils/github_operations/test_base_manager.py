@@ -1,9 +1,8 @@
 """Unit tests for BaseGitHubManager error handling decorator."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
-import git
 import pytest
 from github import Auth
 from github.GithubException import GithubException
@@ -218,12 +217,11 @@ class TestBaseGitHubManagerWithProjectDir:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
@@ -232,22 +230,16 @@ class TestBaseGitHubManagerWithProjectDir:
                 "mcp_coder.utils.github_operations.base_manager.Github"
             ) as mock_github_class,
         ):
-            mock_repo_class.return_value = mock_repo
-
             manager = BaseGitHubManager(project_dir=mock_path)
 
             # Verify manager was initialized correctly
             assert manager.project_dir == mock_path
-            assert manager._repo == mock_repo
             assert manager.github_token == "fake_token"
             assert manager._repository is None  # Not fetched yet
             # repo_url mode attributes should be None
             assert manager._repo_owner is None
             assert manager._repo_name is None
             assert manager._repo_full_name is None
-
-            # Verify git.Repo was called with project_dir
-            mock_repo_class.assert_called_once_with(mock_path)
 
             # Verify GitHub client was initialized with Auth.Token
             mock_github_class.assert_called_once()
@@ -298,8 +290,8 @@ class TestBaseGitHubManagerWithProjectDir:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo",
-                side_effect=git.InvalidGitRepositoryError("Not a git repository"),
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=False,
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
@@ -318,20 +310,17 @@ class TestBaseGitHubManagerWithProjectDir:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value=None,  # No token configured
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
-            mock_repo_class.return_value = mock_repo
-
             with pytest.raises(ValueError) as exc_info:
                 BaseGitHubManager(project_dir=mock_path)
 
@@ -343,18 +332,17 @@ class TestBaseGitHubManagerWithProjectDir:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-        mock_remote = Mock()
-        mock_remote.name = "origin"
-        mock_remote.url = "https://github.com/test-owner/test-repo.git"
-        mock_repo.remotes = [mock_remote]
-
         mock_github_repo = Mock()
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                return_value="https://github.com/test-owner/test-repo.git",
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
@@ -363,7 +351,6 @@ class TestBaseGitHubManagerWithProjectDir:
                 "mcp_coder.utils.github_operations.base_manager.Github"
             ) as mock_github_class,
         ):
-            mock_repo_class.return_value = mock_repo
             mock_github_client = Mock()
             mock_github_client.get_repo.return_value = mock_github_repo
             mock_github_class.return_value = mock_github_client
@@ -405,7 +392,6 @@ class TestBaseGitHubManagerWithRepoUrl:
 
             # Verify manager was initialized correctly
             assert manager.project_dir is None
-            assert manager._repo is None
             assert manager._repo_owner == "test-owner"
             assert manager._repo_name == "test-repo"
             assert manager._repo_full_name == "test-owner/test-repo"
@@ -437,7 +423,6 @@ class TestBaseGitHubManagerWithRepoUrl:
 
             # Verify manager was initialized correctly
             assert manager.project_dir is None
-            assert manager._repo is None
             assert manager._repo_owner == "test-owner"
             assert manager._repo_name == "test-repo"
             assert manager._repo_full_name == "test-owner/test-repo"
@@ -467,7 +452,6 @@ class TestBaseGitHubManagerWithRepoUrl:
 
             # Verify manager was initialized correctly
             assert manager.project_dir is None
-            assert manager._repo is None
             assert manager._repo_owner == "test-owner"
             assert manager._repo_name == "test-repo"
             assert manager._repo_full_name == "test-owner/test-repo"
@@ -647,18 +631,17 @@ class TestBaseGitHubManagerWithRepoUrl:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-        mock_remote = Mock()
-        mock_remote.name = "origin"
-        mock_remote.url = "https://github.com/test-owner/test-repo.git"
-        mock_repo.remotes = [mock_remote]
-
         mock_github_repo = Mock()
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                return_value="https://github.com/test-owner/test-repo.git",
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
@@ -667,7 +650,6 @@ class TestBaseGitHubManagerWithRepoUrl:
                 "mcp_coder.utils.github_operations.base_manager.Github"
             ) as mock_github_class,
         ):
-            mock_repo_class.return_value = mock_repo
             mock_github_client = Mock()
             mock_github_client.get_repo.return_value = mock_github_repo
             mock_github_class.return_value = mock_github_client
@@ -691,24 +673,21 @@ class TestBaseGitHubManagerWithRepoUrl:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-        mock_remote = Mock()
-        mock_remote.name = "upstream"  # Not "origin"
-        mock_remote.url = "https://github.com/test-owner/test-repo.git"
-        mock_repo.remotes = [mock_remote]
-
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                return_value=None,  # No origin remote
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
-            mock_repo_class.return_value = mock_repo
-
             manager = BaseGitHubManager(project_dir=mock_path)
 
             # Call _get_repository
@@ -723,24 +702,21 @@ class TestBaseGitHubManagerWithRepoUrl:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-        mock_remote = Mock()
-        mock_remote.name = "origin"
-        mock_remote.url = "https://gitlab.com/test-owner/test-repo.git"  # Not GitHub
-        mock_repo.remotes = [mock_remote]
-
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                return_value="https://gitlab.com/test-owner/test-repo.git",  # Not GitHub
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
-            mock_repo_class.return_value = mock_repo
-
             manager = BaseGitHubManager(project_dir=mock_path)
 
             # Call _get_repository
@@ -755,16 +731,15 @@ class TestBaseGitHubManagerWithRepoUrl:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-        mock_remote = Mock()
-        mock_remote.name = "origin"
-        mock_remote.url = "https://github.com/test-owner/test-repo.git"
-        mock_repo.remotes = [mock_remote]
-
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                return_value="https://github.com/test-owner/test-repo.git",
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
@@ -773,7 +748,6 @@ class TestBaseGitHubManagerWithRepoUrl:
                 "mcp_coder.utils.github_operations.base_manager.Github"
             ) as mock_github_class,
         ):
-            mock_repo_class.return_value = mock_repo
             mock_github_client = Mock()
             mock_github_client.get_repo.side_effect = GithubException(
                 404, {"message": "Not Found"}, None
@@ -794,16 +768,15 @@ class TestBaseGitHubManagerWithRepoUrl:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-        mock_remote = Mock()
-        mock_remote.name = "origin"
-        mock_remote.url = "https://github.com/test-owner/test-repo.git"
-        mock_repo.remotes = [mock_remote]
-
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                return_value="https://github.com/test-owner/test-repo.git",
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
@@ -812,7 +785,6 @@ class TestBaseGitHubManagerWithRepoUrl:
                 "mcp_coder.utils.github_operations.base_manager.Github"
             ) as mock_github_class,
         ):
-            mock_repo_class.return_value = mock_repo
             mock_github_client = Mock()
             mock_github_client.get_repo.side_effect = RuntimeError("Unexpected error")
             mock_github_class.return_value = mock_github_client
@@ -831,18 +803,17 @@ class TestBaseGitHubManagerWithRepoUrl:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-        mock_remote = Mock()
-        mock_remote.name = "origin"
-        mock_remote.url = "git@github.com:test-owner/test-repo.git"  # SSH format
-        mock_repo.remotes = [mock_remote]
-
         mock_github_repo = Mock()
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                return_value="git@github.com:test-owner/test-repo.git",  # SSH format
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
@@ -851,7 +822,6 @@ class TestBaseGitHubManagerWithRepoUrl:
                 "mcp_coder.utils.github_operations.base_manager.Github"
             ) as mock_github_class,
         ):
-            mock_repo_class.return_value = mock_repo
             mock_github_client = Mock()
             mock_github_client.get_repo.return_value = mock_github_repo
             mock_github_class.return_value = mock_github_client
@@ -873,18 +843,17 @@ class TestBaseGitHubManagerWithRepoUrl:
         mock_path.exists.return_value = True
         mock_path.is_dir.return_value = True
 
-        mock_repo = Mock(spec=git.Repo)
-        mock_remote = Mock()
-        mock_remote.name = "origin"
-        mock_remote.url = "https://github.com/test-owner/test-repo"  # No .git
-        mock_repo.remotes = [mock_remote]
-
         mock_github_repo = Mock()
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git.Repo"
-            ) as mock_repo_class,
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                return_value="https://github.com/test-owner/test-repo",  # No .git
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
@@ -893,7 +862,6 @@ class TestBaseGitHubManagerWithRepoUrl:
                 "mcp_coder.utils.github_operations.base_manager.Github"
             ) as mock_github_class,
         ):
-            mock_repo_class.return_value = mock_repo
             mock_github_client = Mock()
             mock_github_client.get_repo.return_value = mock_github_repo
             mock_github_class.return_value = mock_github_client
