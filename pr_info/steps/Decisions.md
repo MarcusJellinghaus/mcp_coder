@@ -103,3 +103,40 @@
 **Decision:** Delete `tests/utils/test_detection.py` in Step 2 (alongside source removal), not Step 3.
 
 **Rationale:** Keep related changes together - remove source and its tests in the same step.
+
+---
+
+## Plan Review Discussion: 2026-01-13 (Second Review)
+
+### 16. Restructure Steps for Incremental Verification
+**Decision:** Reorder steps to allow vulture verification earlier:
+
+**Old structure (6 steps):**
+- Step 0: Add dependency (completed)
+- Step 1: Create whitelist
+- Step 2: Remove source dead code
+- Step 3: Clean up test files
+- Step 4: Add CI
+- Step 5: Documentation
+
+**New structure (5 steps):**
+- Step 0: Add dependency (completed)
+- Step 1: Remove ALL dead code (source + tests combined)
+- Step 2: Create whitelist
+- Step 3: Add CI
+- Step 4: Documentation
+
+**Rationale:**
+1. Creating whitelist AFTER removing dead code means you know exactly what needs whitelisting
+2. Vulture can be verified clean after Step 2 (earlier than before)
+3. Fewer steps overall (5 vs 6)
+4. Each step can be verified with tests AND vulture output
+
+**Verification strategy per step:**
+| Step | Tests Pass? | Vulture Clean? |
+|------|-------------|----------------|
+| 0 | Yes | No (dead code exists) |
+| 1 | Yes | No (whitelist items remain) |
+| 2 | Yes | **Yes** (first clean) |
+| 3 | Yes | Yes |
+| 4 | Yes | Yes |

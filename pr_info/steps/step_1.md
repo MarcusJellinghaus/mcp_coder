@@ -1,150 +1,159 @@
-# Step 1: Create Vulture Whitelist
+# Step 1: Remove All Dead Code (Source + Tests)
 
 ## LLM Prompt
 ```
 Reference: pr_info/steps/summary.md and this step file.
 
-Task: Create the whitelist file for false positives and API completeness items.
-Only include items that should be KEPT, not items that will be removed in Step 2.
-Do not modify any other files in this step.
+Task: Remove all dead code from source and test files identified by Vulture.
+This includes deleting entire modules, removing unused imports/functions, and fixing unused variables.
+Run code quality checks after completing all changes.
 ```
 
 ## WHERE
 | File | Action |
 |------|--------|
-| `vulture_whitelist.py` | Create - new file in project root |
+| `src/mcp_coder/utils/detection.py` | Delete entire file |
+| `tests/utils/test_detection.py` | Delete entire file |
+| `src/mcp_coder/utils/github_operations/pr_manager.py` | Remove unused import |
+| `src/mcp_coder/utils/data_files.py` | Remove 2 functions + fix variable |
+| `src/mcp_coder/utils/jenkins_operations/client.py` | Remove 2 items |
+| `src/mcp_coder/workflows/implement/task_processing.py` | Fix: use CONVERSATIONS_DIR constant |
+| `tests/test_mcp_code_checker_integration.py` | Remove unused import |
+| `tests/workflows/create_pr/test_file_operations.py` | Rename unused mock parameter |
+| `tests/workflows/test_create_pr_integration.py` | Remove unused import |
+| `tests/llm/providers/test_provider_structure.py` | Delete redundant test function |
 
 ## WHAT
 
-### vulture_whitelist.py
-Create attribute-style whitelist file with false positives and API completeness items:
+### 1. Delete entire modules
 
+**Delete `src/mcp_coder/utils/detection.py`:**
+All 8 functions are unused. The 5 main functions have no external callers, and the 3 helper functions are only called by those 5.
+
+**Delete `tests/utils/test_detection.py`:**
+Tests for the removed module.
+
+### 2. Source file changes
+
+**pr_manager.py - Remove unused import (line 12):**
 ```python
-"""Vulture whitelist - false positives and intentionally kept code.
-
-This file tells Vulture to ignore certain items that appear unused but are
-intentionally kept for:
-- API completeness (GitHub operations methods)
-- Future use (base class attributes, convenience functions)
-- False positives (TypedDict fields, pytest fixtures, argparse patterns)
-
-Format: _.attribute_name (attribute-style whitelist)
-
-Review this list periodically - items may become used or truly dead over time.
-"""
-
-# =============================================================================
-# API COMPLETENESS - GitHub Operations
-# =============================================================================
-# These methods are tested but not called internally. Kept for complete API.
-
-# issue_manager.py - Issue operations
-_.get_issue_events
-_.add_comment
-_.edit_comment
-_.delete_comment
-_.close_issue
-_.reopen_issue
-_.get_available_labels
-
-# pr_manager.py - Pull request operations
-_.get_pull_request
-_.list_pull_requests
-_.close_pull_request
-_.repository_name
-
-# ci_results_manager.py - CI status operations
-_.get_latest_ci_status
-_.get_run_logs
-
-# issue_branch_manager.py - Branch operations
-_.delete_linked_branch
-
-# github_utils.py - URL utilities (inverse of parse_github_url)
-_.format_github_https_url
-
-# =============================================================================
-# API COMPLETENESS - IssueEventType Enum Values
-# =============================================================================
-# issue_manager.py lines 47-81 - GitHub API event type constants
-_.LABELED
-_.UNLABELED
-_.CLOSED
-_.REOPENED
-_.ASSIGNED
-_.UNASSIGNED
-_.MILESTONED
-_.DEMILESTONED
-_.REFERENCED
-_.CROSS_REFERENCED
-_.COMMENTED
-_.MENTIONED
-_.SUBSCRIBED
-_.UNSUBSCRIBED
-_.RENAMED
-_.LOCKED
-_.UNLOCKED
-_.REVIEW_REQUESTED
-_.REVIEW_REQUEST_REMOVED
-_.CONVERTED_TO_DRAFT
-_.READY_FOR_REVIEW
-
-# =============================================================================
-# POTENTIAL FUTURE USE
-# =============================================================================
-
-# base_manager.py - Base class attributes for subclasses
-_._repo_owner
-_._repo_name
-
-# mcp_code_checker.py - Convenience function for simple pass/fail checks
-_.has_mypy_errors
-
-# claude_code_api.py - Retry utility for future API retry logic
-_._retry_with_backoff
-
-# task_tracker.py - Convenience function for simple yes/no checks
-_.has_incomplete_work
-
-# =============================================================================
-# FALSE POSITIVES - TypedDict Fields
-# =============================================================================
-# workflow_constants.py - WorkflowConfig TypedDict fields
-_.workflow
-_.branch_strategy
-_.next_label
-
-# =============================================================================
-# FALSE POSITIVES - Argparse Pattern
-# =============================================================================
-# main.py - Standard argparse subparser pattern
-_.help_parser
-_.verify_parser
-
-# =============================================================================
-# FALSE POSITIVES - Pytest Fixtures
-# =============================================================================
-# test_execution_dir_integration.py - Fixture triggers skip logic
-_.require_claude_cli
-
-# =============================================================================
-# API COMPLETENESS - CommandResult Dataclass Fields
-# =============================================================================
-# subprocess_runner.py - Fields set but not read; kept for complete result API
-_.execution_error
-_.runner_type
-
+# REMOVE this line:
+from github.PullRequest import PullRequest
 ```
 
-## HOW
-1. Create `vulture_whitelist.py` at project root with all whitelisted items
-2. Verify whitelist file is valid by running vulture on it
+**data_files.py - Remove 2 functions + fix variable:**
+
+Remove functions:
+- `find_package_data_files` (line ~593) - wrapper function, never called
+- `get_package_directory` (line ~632) - utility function, never called
+
+Fix unused variable (line ~259) - remove the variable, keep the log:
+```python
+# Before:
+module_file_absolute = str(Path(package_module.__file__).resolve())
+logger.debug(
+    "METHOD 3/5: Module __file__ found",
+    extra={"method": "module_file", "module_file": package_module.__file__},
+)
+
+# After (remove unused variable):
+logger.debug(
+    "METHOD 3/5: Module __file__ found",
+    extra={"method": "module_file", "module_file": str(Path(package_module.__file__).resolve())},
+)
+```
+
+**jenkins/client.py - Remove 2 items:**
+- `_get_jenkins_config` function (line ~52) - config loader never integrated
+- `get_queue_summary` method (line ~251) - queue monitoring never called
+
+**task_processing.py - Use CONVERSATIONS_DIR constant:**
+```python
+# Before (hardcoded):
+conversations_dir = project_dir / PR_INFO_DIR / ".conversations"
+
+# After (use constant):
+conversations_dir = project_dir / CONVERSATIONS_DIR
+```
+Apply in both `save_conversation` and `save_conversation_comprehensive` functions.
+
+### 3. Test file changes
+
+**test_mcp_code_checker_integration.py (line 12):**
+```python
+# Before:
+from mcp_coder.mcp_code_checker import has_mypy_errors, run_mypy_check
+
+# After:
+from mcp_coder.mcp_code_checker import run_mypy_check
+```
+
+**test_file_operations.py (line ~301):**
+```python
+# Before:
+def test_truncate_with_permission_error(
+    self, mock_logger: MagicMock, mock_read_text: MagicMock
+) -> None:
+
+# After (underscore prefix for intentionally unused):
+def test_truncate_with_permission_error(
+    self, mock_logger: MagicMock, _mock_read_text: MagicMock
+) -> None:
+```
+
+**test_create_pr_integration.py (line 25):**
+```python
+# Before:
+from tests.utils.conftest import git_repo, git_repo_with_files
+
+# After:
+from tests.utils.conftest import git_repo
+```
+
+**test_provider_structure.py - Delete entire function:**
+Delete `test_provider_modules_exist` function (redundant - other tests already import these modules).
+
+## ALGORITHM
+```
+1. Delete src/mcp_coder/utils/detection.py
+2. Delete tests/utils/test_detection.py
+3. Edit pr_manager.py - remove PullRequest import
+4. Edit data_files.py - remove 2 functions, fix variable
+5. Edit jenkins/client.py - remove 2 items
+6. Edit task_processing.py - use CONVERSATIONS_DIR constant
+7. Edit test_mcp_code_checker_integration.py - remove import
+8. Edit test_file_operations.py - rename parameter
+9. Edit test_create_pr_integration.py - remove import
+10. Edit test_provider_structure.py - delete function
+11. Run all code quality checks
+```
 
 ## VERIFICATION
-```bash
-# Verify whitelist file syntax is valid:
-python -m py_compile vulture_whitelist.py
 
-# Verify vulture accepts the whitelist:
-vulture vulture_whitelist.py
+After completing all changes:
+
+```python
+# Run all code quality checks
+mcp__code-checker__run_pylint_check()
+mcp__code-checker__run_mypy_check()
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"])
+
+# Run vulture - should only show whitelist-worthy items (API methods, enum values, etc.)
+Bash("vulture src tests --min-confidence 80")
 ```
+
+**Expected vulture output after this step:**
+- GitHub API methods (get_issue_events, add_comment, etc.)
+- IssueEventType enum values
+- Base class attributes (_repo_owner, _repo_name)
+- Convenience functions (has_mypy_errors, _retry_with_backoff, has_incomplete_work)
+- TypedDict fields, pytest fixtures, argparse patterns
+- Dataclass fields (execution_error, runner_type)
+
+These are all items that will be whitelisted in Step 2.
+
+## SUCCESS CRITERIA
+- [ ] All tests pass
+- [ ] Pylint clean
+- [ ] Mypy clean
+- [ ] Vulture only shows items intended for whitelist (no genuine dead code)

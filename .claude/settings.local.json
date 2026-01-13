@@ -24,7 +24,8 @@
       "Bash(./tools/tach_check.sh:*)",
       "Bash(start docs/architecture/dependency_graph.html)",
       "Bash(./tools/pycycle_check.sh:*)",
-      "Bash(vulture:*)"
+      "Bash(vulture:*)",
+      "Skill(plan_review)"
     ]
   },
   "enableAllProjectMcpServers": true,
