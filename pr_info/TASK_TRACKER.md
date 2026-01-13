@@ -64,9 +64,9 @@ See: [pr_info/steps/step_3.md](steps/step_3.md)
 - [x] `test_base_manager.py` has no `import git` statement
 - [x] `test_base_manager.py` mocks `git_operations` functions
 - [x] `.importlinter` has no exception for `base_manager -> git`
-- [ ] `lint-imports` passes
-- [ ] All tests pass
-- [ ] Error message `"Directory is not a git repository: {project_dir}"` preserved
+- [x] `lint-imports` passes
+- [x] All tests pass
+- [x] Error message `"Directory is not a git repository: {project_dir}"` preserved
 
 ---
 
