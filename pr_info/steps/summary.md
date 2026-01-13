@@ -32,7 +32,7 @@ Integrate Vulture into the project for detecting unused/dead code, with CI enfor
 
 ## Files to Modify
 - `pyproject.toml` - Add vulture dependency
-- `.github/workflows/ci.yml` - Add CI check
+- `.github/workflows/ci.yml` - Add CI check to architecture job
 - `src/mcp_coder/utils/github_operations/pr_manager.py` - Remove unused import
 - `tests/integration/test_execution_dir_integration.py` - Fix unused fixtures
 - `tests/llm/providers/test_provider_structure.py` - Remove unused imports
@@ -41,12 +41,13 @@ Integrate Vulture into the project for detecting unused/dead code, with CI enfor
 - `tests/workflows/test_create_pr_integration.py` - Remove unused import
 
 ## Implementation Steps Overview
-1. **Step 1**: Add Vulture dependency and create whitelist
+0. **Step 0**: Add Vulture dependency to pyproject.toml (COMPLETED)
+1. **Step 1**: Create whitelist file for false positives
 2. **Step 2**: Fix high-confidence dead code (unused imports in source)
 3. **Step 3**: Fix test file dead code (unused imports/variables)
-4. **Step 4**: Add CI integration
+4. **Step 4**: Add CI integration to architecture job
 
 ## Success Criteria
-- `vulture src vulture_whitelist.py --min-confidence 80` returns clean (exit 0)
-- CI pipeline includes vulture check
+- `vulture src tests vulture_whitelist.py --min-confidence 80` returns clean (exit 0)
+- CI pipeline includes vulture check in architecture job (PR-only)
 - No regression in existing tests
