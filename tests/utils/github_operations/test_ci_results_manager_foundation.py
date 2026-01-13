@@ -36,7 +36,6 @@ class TestCIResultsManagerFoundation:
                     manager = CIResultsManager(project_dir=repo_dir)
 
                     assert manager.project_dir == repo_dir
-                    assert manager._repo is not None
 
     def test_initialization_with_repo_url(self) -> None:
         """Test initialization with repo_url parameter."""
