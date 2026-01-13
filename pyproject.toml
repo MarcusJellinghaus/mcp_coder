@@ -55,6 +55,7 @@ dev = [
     "import-linter>=2.0",
     "pycycle>=0.0.8",
     "tach>=0.6.0",
+    "vulture>=2.14",
 ]
 
 [project.scripts]

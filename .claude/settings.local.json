@@ -23,7 +23,8 @@
       "Bash(./tools/lint_imports.sh:*)",
       "Bash(./tools/tach_check.sh:*)",
       "Bash(start docs/architecture/dependency_graph.html)",
-      "Bash(./tools/pycycle_check.sh:*)"
+      "Bash(./tools/pycycle_check.sh:*)",
+      "Bash(vulture:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
