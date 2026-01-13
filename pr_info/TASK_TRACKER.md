@@ -21,11 +21,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 See: [pr_info/steps/step_1.md](steps/step_1.md)
 
 - [x] Remove `import git` and add `from mcp_coder.utils import git_operations`
-- [ ] Remove `self._repo` attribute and all related assignments
-- [ ] Update `_init_with_project_dir()` to use `git_operations.is_git_repository()`
-- [ ] Update `_get_repository()` to use `git_operations.get_github_repository_url()`
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Remove `self._repo` attribute and all related assignments
+- [x] Update `_init_with_project_dir()` to use `git_operations.is_git_repository()`
+- [x] Update `_get_repository()` to use `git_operations.get_github_repository_url()`
+- [x] Run quality checks: pylint, pytest, mypy - fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update Tests to Mock git_operations Instead of git.Repo
 See: [pr_info/steps/step_2.md](steps/step_2.md)
