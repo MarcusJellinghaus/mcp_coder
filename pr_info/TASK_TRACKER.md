@@ -59,7 +59,7 @@ See: [pr_info/steps/step_3.md](steps/step_3.md)
 ## Acceptance Criteria Verification
 
 - [x] `base_manager.py` has no `import git` statement
-- [ ] `base_manager.py` uses `from mcp_coder.utils import git_operations`
+- [x] `base_manager.py` uses `from mcp_coder.utils import git_operations`
 - [ ] `base_manager.py` has no `self._repo` attribute
 - [ ] `test_base_manager.py` has no `import git` statement
 - [ ] `test_base_manager.py` mocks `git_operations` functions
