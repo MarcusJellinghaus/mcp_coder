@@ -49,11 +49,12 @@ class TestFindDataFile:
             test_file.write_text("# test script")
 
             # Mock importlib.util.find_spec to return our test location
+            # Patch directly on importlib.util module to ensure it works across platforms
             mock_spec = MagicMock()
             mock_spec.origin = str(package_dir / "__init__.py")
 
             with patch(
-                "mcp_coder.utils.data_files.importlib.util.find_spec",
+                "importlib.util.find_spec",
                 return_value=mock_spec,
             ):
                 result = find_data_file(
@@ -77,12 +78,13 @@ class TestFindDataFile:
             mock_module = MagicMock()
             mock_module.__file__ = str(package_dir / "__init__.py")
 
+            # Patch directly on importlib module to ensure it works across platforms
             with patch(
-                "mcp_coder.utils.data_files.importlib.util.find_spec",
+                "importlib.util.find_spec",
                 side_effect=Exception("not found"),
             ):
                 with patch(
-                    "mcp_coder.utils.data_files.importlib.import_module",
+                    "importlib.import_module",
                     return_value=mock_module,
                 ):
                     result = find_data_file(
@@ -224,8 +226,9 @@ class TestGetPackageDirectory:
             mock_spec = MagicMock()
             mock_spec.origin = str(package_dir / "__init__.py")
 
+            # Patch directly on importlib module to ensure it works across platforms
             with patch(
-                "mcp_coder.utils.data_files.importlib.util.find_spec",
+                "importlib.util.find_spec",
                 return_value=mock_spec,
             ):
                 result = get_package_directory("test_package")
@@ -241,12 +244,13 @@ class TestGetPackageDirectory:
             mock_module = MagicMock()
             mock_module.__file__ = str(package_dir / "__init__.py")
 
+            # Patch directly on importlib module to ensure it works across platforms
             with patch(
-                "mcp_coder.utils.data_files.importlib.util.find_spec",
+                "importlib.util.find_spec",
                 side_effect=Exception("not found"),
             ):
                 with patch(
-                    "mcp_coder.utils.data_files.importlib.import_module",
+                    "importlib.import_module",
                     return_value=mock_module,
                 ):
                     result = get_package_directory("test_package")
@@ -254,12 +258,13 @@ class TestGetPackageDirectory:
 
     def test_package_not_found_raises_exception(self) -> None:
         """Test that ImportError is raised when package is not found."""
+        # Patch directly on importlib module to ensure it works across platforms
         with patch(
-            "mcp_coder.utils.data_files.importlib.util.find_spec",
+            "importlib.util.find_spec",
             side_effect=Exception("not found"),
         ):
             with patch(
-                "mcp_coder.utils.data_files.importlib.import_module",
+                "importlib.import_module",
                 side_effect=ImportError("no module"),
             ):
                 with pytest.raises(ImportError) as exc_info:
