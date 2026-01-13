@@ -50,40 +50,36 @@ All tests that mock `git.Repo` or `git.InvalidGitRepositoryError` need updating.
 
 ### Test Class: `TestBaseGitHubManagerWithProjectDir`
 
-#### `test_successful_initialization_with_project_dir`
+**Complete list of tests requiring updates (11 tests):**
 
-**Change mocks:**
-- Remove: `mock_repo = Mock(spec=git.Repo)` and `mock_repo_class`
-- Add: Mock `git_operations.is_git_repository` to return `True`
-- Remove: Assertion `assert manager._repo == mock_repo`
+| Test | Mock Changes |
+|------|-------------|
+| `test_successful_initialization_with_project_dir` | `is_git_repository` → `True`, remove `_repo` assertion |
+| `test_initialization_fails_not_git_repository` | `is_git_repository` → `False` |
+| `test_initialization_fails_no_github_token` | `is_git_repository` → `True` |
+| `test_get_repository_with_project_dir_mode` | Both mocks (see pattern below) |
+| `test_get_repository_caching` | Both mocks |
+| `test_get_repository_no_origin_remote` | `is_git_repository` → `True`, `get_github_repository_url` → `None` |
+| `test_get_repository_invalid_github_url` | `is_git_repository` → `True`, `get_github_repository_url` → GitLab URL |
+| `test_get_repository_github_api_error` | Both mocks |
+| `test_get_repository_generic_exception` | Both mocks |
+| `test_ssh_url_format_parsing` | Both mocks |
+| `test_https_url_without_git_extension` | Both mocks |
 
-#### `test_initialization_fails_not_git_repository`
+### Combined Mock Pattern
 
-**Change mocks:**
-- Remove: `git.Repo` side_effect with `git.InvalidGitRepositoryError`
-- Add: Mock `git_operations.is_git_repository` to return `False`
+For tests that call both `__init__` and `_get_repository`, use both mocks:
 
-#### `test_get_repository_with_project_dir_mode`
-
-**Change mocks:**
-- Remove: `mock_repo.remotes` setup
-- Add: Mock `git_operations.get_github_repository_url` to return URL
-
-#### `test_get_repository_no_origin_remote`
-
-**Change mocks:**
-- Remove: Mock setup for `mock_repo.remotes` with non-origin remote
-- Add: Mock `git_operations.get_github_repository_url` to return `None`
-
-#### `test_get_repository_invalid_github_url`
-
-**Change mocks:**
-- Remove: Mock setup for GitLab URL in remotes
-- Add: Mock `git_operations.get_github_repository_url` to return GitLab URL
-
-#### Other tests in this class
-
-Apply similar pattern: Replace `git.Repo` mocks with `git_operations` function mocks.
+```python
+with (
+    patch("...base_manager.git_operations.is_git_repository", return_value=True),
+    patch("...base_manager.git_operations.get_github_repository_url", 
+          return_value="https://github.com/test-owner/test-repo"),
+    patch("...base_manager.user_config.get_config_value", return_value="fake_token"),
+    patch("...base_manager.Github") as mock_github_class,
+):
+    # Test code here
+```
 
 ### Test Class: `TestBaseGitHubManagerWithRepoUrl`
 
