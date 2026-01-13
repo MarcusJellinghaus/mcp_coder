@@ -60,10 +60,10 @@ See: [pr_info/steps/step_3.md](steps/step_3.md)
 
 - [x] `base_manager.py` has no `import git` statement
 - [x] `base_manager.py` uses `from mcp_coder.utils import git_operations`
-- [ ] `base_manager.py` has no `self._repo` attribute
-- [ ] `test_base_manager.py` has no `import git` statement
-- [ ] `test_base_manager.py` mocks `git_operations` functions
-- [ ] `.importlinter` has no exception for `base_manager -> git`
+- [x] `base_manager.py` has no `self._repo` attribute
+- [x] `test_base_manager.py` has no `import git` statement
+- [x] `test_base_manager.py` mocks `git_operations` functions
+- [x] `.importlinter` has no exception for `base_manager -> git`
 - [ ] `lint-imports` passes
 - [ ] All tests pass
 - [ ] Error message `"Directory is not a git repository: {project_dir}"` preserved
