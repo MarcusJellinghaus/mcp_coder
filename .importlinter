@@ -174,9 +174,6 @@ ignore_imports =
 # -----------------------------------------------------------------------------
 # The 'git' package (GitPython) should only be imported by git_operations.
 # Other modules should use git_operations as an abstraction layer.
-#
-# Note: github_operations.base_manager currently imports git for Repo access.
-#       This is a known violation - ideally it should use git_operations instead.
 # -----------------------------------------------------------------------------
 [importlinter:contract:git_library_isolation]
 name = GitPython Library Isolation
@@ -187,9 +184,6 @@ forbidden_modules =
     git
 ignore_imports =
     mcp_coder.utils.git_operations.** -> git
-    # Known violation: github_operations uses git.Repo for repository path
-    # TODO: Refactor to use git_operations instead (issue #276)
-    mcp_coder.utils.github_operations.base_manager -> git
 
 # -----------------------------------------------------------------------------
 # Contract: Jenkins Library Isolation

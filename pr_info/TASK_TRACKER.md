@@ -48,11 +48,11 @@ See: [pr_info/steps/step_2.md](steps/step_2.md)
 ### Step 3: Update .importlinter and Verify
 See: [pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Remove exception rule for `base_manager -> git` from `.importlinter`
-- [ ] Remove associated TODO and comment lines
-- [ ] Run `lint-imports` to verify GitPython Library Isolation contract passes
-- [ ] Run quality checks: pylint, pytest, mypy - fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Remove exception rule for `base_manager -> git` from `.importlinter`
+- [x] Remove associated TODO and comment lines
+- [x] Run `lint-imports` to verify GitPython Library Isolation contract passes
+- [x] Run quality checks: pylint, pytest, mypy - fix all issues
+- [x] Prepare git commit message for Step 3
 
 ---
 
