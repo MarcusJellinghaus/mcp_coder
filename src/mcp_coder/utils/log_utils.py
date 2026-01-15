@@ -41,6 +41,9 @@ from pythonjsonlogger.json import JsonFormatter
 # Type variable for function return types
 T = TypeVar("T")
 
+# Redaction placeholder for sensitive values
+REDACTED_VALUE = "***"
+
 # Standard LogRecord fields to exclude when extracting extra fields
 # These are built-in attributes of logging.LogRecord that should not be treated as "extra" data
 STANDARD_LOG_FIELDS: frozenset[str] = frozenset(
@@ -248,6 +251,29 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
             )
 
         stdlogger.debug("Logging initialized: console=%s", log_level)
+
+
+def _redact_for_logging(
+    data: dict[str, Any],
+    sensitive_fields: set[str],
+) -> dict[str, Any]:
+    """Create a copy of data with sensitive fields redacted for logging.
+
+    Args:
+        data: Dictionary containing data to be logged.
+        sensitive_fields: Set of field names whose values should be redacted.
+
+    Returns:
+        A shallow copy of data with sensitive field values replaced by "***".
+        Nested dictionaries are processed recursively.
+    """
+    result = data.copy()
+    for key in result:
+        if key in sensitive_fields:
+            result[key] = REDACTED_VALUE
+        elif isinstance(result[key], dict):
+            result[key] = _redact_for_logging(result[key], sensitive_fields)
+    return result
 
 
 def log_function_call(func: Callable[..., T]) -> Callable[..., T]:
