@@ -132,7 +132,10 @@ class BaseGitHubManager:
             self._init_with_repo_url(repo_url)  # type: ignore[arg-type]
 
         # Get GitHub token (after directory/repository validation)
-        github_token = user_config.get_config_value("github", "token")
+        config: dict[tuple[str, str], Optional[str]] = user_config.get_config_values(
+            [("github", "token", None)]
+        )
+        github_token = config[("github", "token")]
         if not github_token:
             raise ValueError(
                 "GitHub token not found. Configure it in ~/.mcp_coder/config.toml "
