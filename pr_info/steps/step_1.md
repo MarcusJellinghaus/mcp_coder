@@ -138,17 +138,27 @@ mcp__code-checker__run_pylint_check()
 mcp__code-checker__run_mypy_check()
 mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"])
 
-# Run vulture - should only show whitelist-worthy items (API methods, enum values, etc.)
-Bash("vulture src tests --min-confidence 80")
+# Run vulture to confirm dead code was removed
+# Remaining output should only be items intended for whitelisting in Step 2
+Bash("vulture src tests --min-confidence 60")
 ```
 
-**Expected vulture output after this step:**
+**Expected vulture output after this step (items to whitelist in Step 2):**
+
+*Source code - API completeness & false positives:*
+- TypedDict fields: `workflow`, `branch_strategy`, `next_label`
+- Argparse pattern: `help_parser`, `verify_parser`
+- API convenience: `has_mypy_errors`
+- Dataclass fields: `execution_error`, `runner_type`
+- IssueEventType enum values (~20 items)
 - GitHub API methods (get_issue_events, add_comment, etc.)
-- IssueEventType enum values
-- Base class attributes (_repo_owner, _repo_name)
-- Convenience functions (has_mypy_errors, _retry_with_backoff, has_incomplete_work)
-- TypedDict fields, pytest fixtures, argparse patterns
-- Dataclass fields (execution_error, runner_type)
+- Base class attributes: `_repo_owner`, `_repo_name`
+- Git operations: `index_status`
+
+*Test code - false positives:*
+- Mock `side_effect` attributes (~80 items) - mock framework configuration
+- Pytest fixtures from conftest files
+- Test helper functions and test data variables
 
 These are all items that will be whitelisted in Step 2.
 
@@ -156,4 +166,4 @@ These are all items that will be whitelisted in Step 2.
 - [ ] All tests pass
 - [ ] Pylint clean
 - [ ] Mypy clean
-- [ ] Vulture only shows items intended for whitelist (no genuine dead code)
+- [ ] Vulture output matches expected list above (no genuine dead code remains)

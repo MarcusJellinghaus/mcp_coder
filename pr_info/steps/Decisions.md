@@ -106,6 +106,30 @@
 
 ---
 
+## Plan Review Discussion: 2026-01-15
+
+### 17. Use 60% Confidence Threshold
+**Decision:** Use `--min-confidence 60` instead of `--min-confidence 80`.
+
+**Rationale:** The 80% threshold misses detection.py functions (reported at 60% confidence). Using 60% catches more genuine dead code. Trade-off: larger whitelist due to more false positives.
+
+### 18. Add Tool Scripts
+**Decision:** Create `tools/vulture_check.bat` and `tools/vulture_check.sh` scripts.
+
+**Rationale:** Consistent with other tools in the `tools/` directory (format_all.sh, tach_check.sh, etc.). Easier for developers to run locally.
+
+### 19. Whitelist Mock `side_effect` Attributes
+**Decision:** Add blanket `_.side_effect` to whitelist to cover all mock configuration patterns.
+
+**Rationale:** At 60% confidence, ~80 items are mock `side_effect` attributes - all false positives. The mock framework uses these internally; code doesn't read them directly. A single whitelist entry covers all occurrences.
+
+### 20. Step 1 Verification Strategy
+**Decision:** Update Step 1 verification wording AND add expected output list.
+
+**Rationale:** With 60% threshold, vulture reports many more items during Step 1. Clear wording and expected output list helps verify the step completed correctly.
+
+---
+
 ## Plan Review Discussion: 2026-01-13 (Second Review)
 
 ### 16. Restructure Steps for Incremental Verification

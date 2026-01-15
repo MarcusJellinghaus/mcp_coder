@@ -22,14 +22,16 @@ Integrate Vulture into the project for detecting unused/dead code, with CI enfor
 | Multiple test files | Remove unused imports/variables |
 
 ### Design Decisions
-1. **No wrapper scripts** - Direct CLI command is simple enough
+1. **Tool scripts provided** - `tools/vulture_check.bat` and `.sh` for consistency with other tools
 2. **No pyproject.toml config** - Vulture has limited support; CLI args suffice
 3. **Whitelist for API completeness** - GitHub operations methods kept for complete API
 4. **Remove genuinely unused code** - Detection utilities, Jenkins methods, dataclass fields
-5. **80% confidence threshold** - Balances detection accuracy vs false positives
+5. **60% confidence threshold** - Catches more dead code (e.g., detection.py); larger whitelist for false positives
 
 ## Files to Create
 - `vulture_whitelist.py` - Whitelist for false positives and API completeness
+- `tools/vulture_check.bat` - Windows batch script for running vulture
+- `tools/vulture_check.sh` - Bash script for running vulture
 
 ## Files to Delete
 | File | Reason |
@@ -90,7 +92,7 @@ After each step:
 3. Vulture output matches expected state (clean after Step 2)
 
 ## Success Criteria
-- `vulture src tests vulture_whitelist.py --min-confidence 80` returns clean (exit 0)
+- `vulture src tests vulture_whitelist.py --min-confidence 60` returns clean (exit 0)
 - CI pipeline includes vulture check in architecture job (PR-only)
 - No regression in existing tests
 - All code quality checks pass (pylint, mypy, pytest)

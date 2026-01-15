@@ -31,7 +31,7 @@ Add vulture to the "Architectural Boundary Enforcement" section (likely in Secti
 ### Dead Code Detection
 - **Tool**: Vulture for identifying unused code
 - **Configuration**: `vulture_whitelist.py` at project root for false positives and API completeness items
-- **CI Integration**: Runs in architecture job on PRs with 80% confidence threshold
+- **CI Integration**: Runs in architecture job on PRs with 60% confidence threshold
 - **Note**: The whitelist is intentionally liberal - review periodically for items that may become truly dead
 ```
 
@@ -46,7 +46,7 @@ Add a new section for vulture:
 
 **Command**: 
 ```bash
-vulture src tests vulture_whitelist.py --min-confidence 80
+vulture src tests vulture_whitelist.py --min-confidence 60
 ```
 
 **Whitelist**: `vulture_whitelist.py` contains items that appear unused but are intentionally kept:
@@ -75,7 +75,7 @@ Bash("grep -i vulture docs/architecture/ARCHITECTURE.md")
 Bash("grep -i vulture docs/architecture/dependencies/README.md")
 
 # Final verification - all checks still pass:
-Bash("vulture src tests vulture_whitelist.py --min-confidence 80")
+Bash("vulture src tests vulture_whitelist.py --min-confidence 60")
 mcp__code-checker__run_all_checks()
 ```
 

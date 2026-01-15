@@ -27,7 +27,7 @@ matrix:
     - {name: "import-linter", cmd: "lint-imports"}
     - {name: "tach", cmd: "tach check"}
     - {name: "pycycle", cmd: "pycycle --here --ignore .venv,__pycache__,build,dist,.git,.pytest_cache,.mypy_cache"}
-    - {name: "vulture", cmd: "vulture src tests vulture_whitelist.py --min-confidence 80"}
+    - {name: "vulture", cmd: "vulture src tests vulture_whitelist.py --min-confidence 60"}
 ```
 
 ## HOW
@@ -40,7 +40,7 @@ matrix:
 ```
 1. Read ci.yml
 2. Locate architecture job matrix check array
-3. Add new entry: {name: "vulture", cmd: "vulture src tests vulture_whitelist.py --min-confidence 80"}
+3. Add new entry: {name: "vulture", cmd: "vulture src tests vulture_whitelist.py --min-confidence 60"}
 4. Save file
 5. Verify YAML syntax is valid
 ```
@@ -54,7 +54,7 @@ matrix:
 
 ### Expected CI Behavior
 - Vulture runs as part of the architecture matrix (PR-only)
-- Fails if dead code detected above 80% confidence
+- Fails if dead code detected above 60% confidence
 - Whitelist excludes known false positives and API completeness items
 - Checks both `src` and `tests` directories
 
@@ -65,7 +65,7 @@ matrix:
 Bash("python -c \"import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))\"")
 
 # Verify vulture still passes locally:
-Bash("vulture src tests vulture_whitelist.py --min-confidence 80")
+Bash("vulture src tests vulture_whitelist.py --min-confidence 60")
 
 # Run full code quality checks:
 mcp__code-checker__run_pylint_check()
