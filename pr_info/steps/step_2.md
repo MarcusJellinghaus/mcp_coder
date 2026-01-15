@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add the parent branch detection logic and integrate the rebase step into the implement workflow. The detection function is a private helper in `core.py` since it's workflow-specific (uses PR manager, reads pr_info files).
+Add the parent branch detection logic and integrate the rebase step into the implement workflow. The detection function is a private helper in `core.py` since it's workflow-specific (uses PR manager, reads pr_info files). Also integrates force push support when rebase succeeds.
 
 ## LLM Prompt
 
@@ -21,6 +21,7 @@ Follow TDD: write tests first, then implement the function and integration.
 |------|--------|
 | `tests/workflows/implement/test_core.py` | ADD test class `TestGetRebaseTargetBranch` and `TestRebaseIntegration` |
 | `src/mcp_coder/workflows/implement/core.py` | ADD function `_get_rebase_target_branch()` and integrate into workflow |
+| `src/mcp_coder/workflows/implement/task_processing.py` | MODIFY `push_changes()` to accept and use `force_with_lease` parameter |
 
 ---
 
@@ -78,25 +79,49 @@ def run_implement_workflow(...) -> int:
         return 1
 
     # NEW: Step 1.5 - Attempt rebase onto parent branch (never blocks workflow)
-    _attempt_rebase(project_dir)
+    rebase_succeeded = _attempt_rebase(project_dir)
 
     # Step 2: Prepare task tracker if needed
     if not prepare_task_tracker(...):
         return 1
-    # ... rest of workflow
+    
+    # ... task processing loop ...
+    # Pass rebase_succeeded to task processing so push_changes() 
+    # can use force_with_lease=True when needed
 ```
 
 ### Helper for Clean Integration
 
 ```python
-def _attempt_rebase(project_dir: Path) -> None:
-    """Attempt to rebase onto parent branch. Never fails workflow."""
+def _attempt_rebase(project_dir: Path) -> bool:
+    """Attempt to rebase onto parent branch. Never fails workflow.
+    
+    Returns:
+        True if rebase succeeded (subsequent pushes need force_with_lease).
+        False if rebase skipped, failed, or no target detected.
+    """
     target = _get_rebase_target_branch(project_dir)
     if target:
         logger.info(f"Rebasing onto origin/{target}...")
-        rebase_onto_branch(project_dir, target)
+        return rebase_onto_branch(project_dir, target)
     else:
         logger.debug("Could not detect parent branch for rebase")
+        return False
+```
+
+### Modified: `push_changes()` in task_processing.py
+
+```python
+def push_changes(project_dir: Path, force_with_lease: bool = False) -> bool:
+    """Push committed changes to remote.
+    
+    Args:
+        project_dir: Path to the project directory
+        force_with_lease: If True, use --force-with-lease for safe force push
+    
+    Returns:
+        True if push succeeded, False otherwise
+    """
 ```
 
 ---
