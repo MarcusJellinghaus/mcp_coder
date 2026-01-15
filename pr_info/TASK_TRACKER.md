@@ -35,7 +35,7 @@ See: [pr_info/steps/step_2.md](steps/step_2.md)
 
 - [x] Add test class `TestGetRebaseTargetBranch` to `tests/workflows/implement/test_core.py`
 - [x] Add test class `TestRebaseIntegration` to `tests/workflows/implement/test_core.py`
-- [ ] Add private function `_get_rebase_target_branch()` to `src/mcp_coder/workflows/implement/core.py`
+- [x] Add private function `_get_rebase_target_branch()` to `src/mcp_coder/workflows/implement/core.py`
 - [ ] Add helper function `_attempt_rebase()` to `src/mcp_coder/workflows/implement/core.py`
 - [ ] Integrate rebase step into `run_implement_workflow()` in `src/mcp_coder/workflows/implement/core.py`
 - [ ] Modify `push_changes()` in `src/mcp_coder/workflows/implement/task_processing.py` to accept `force_with_lease` parameter

@@ -86,7 +86,7 @@ def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
     return default
 
 
-def _attempt_rebase(project_dir: Path) -> bool:
+def _attempt_rebase_and_push(project_dir: Path) -> bool:
     """Attempt to rebase onto parent branch. Never fails workflow.
 
     Args:
@@ -336,7 +336,7 @@ def run_implement_workflow(
         return 1
 
     # Step 1.5: Attempt rebase onto parent branch (never blocks workflow)
-    _attempt_rebase(project_dir)
+    _attempt_rebase_and_push(project_dir)
 
     # Step 2: Prepare task tracker if needed
     if not prepare_task_tracker(
