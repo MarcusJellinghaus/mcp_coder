@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 > See: [pr_info/steps/step_1.md](steps/step_1.md)
 
 - [x] Add `_redact_for_logging()` helper function
-- [ ] Modify `log_function_call` to accept optional `sensitive_fields` parameter
+- [x] Modify `log_function_call` to accept optional `sensitive_fields` parameter
 - [ ] Apply redaction to `serializable_params` before logging
 - [ ] Apply redaction to `result_for_log` before logging
 - [ ] Write tests first (TDD)
