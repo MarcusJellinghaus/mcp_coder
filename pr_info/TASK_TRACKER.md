@@ -24,9 +24,32 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Modify `log_function_call` to accept optional `sensitive_fields` parameter
 - [x] Apply redaction to `serializable_params` before logging
 - [x] Apply redaction to `result_for_log` before logging
-- [ ] Write tests first (TDD)
-- [ ] Run quality checks (pylint, pytest, mypy) and fix issues
-- [ ] Prepare git commit message for Step 1
+- [x] Write tests first (TDD)
+- [x] Run quality checks (pylint, pytest, mypy) and fix issues
+- [x] Prepare git commit message for Step 1
+
+**Commit message for Step 1:**
+```
+feat(log_utils): add sensitive field redaction to log_function_call decorator
+
+Add optional `sensitive_fields` parameter to the `@log_function_call` decorator
+that redacts sensitive values (tokens, API keys, passwords) before logging.
+
+Changes:
+- Add `_redact_for_logging()` helper function for recursive dict redaction
+- Modify `log_function_call` decorator to accept `sensitive_fields` parameter
+- Apply redaction to function parameters and return values before logging
+- Original function parameters and return values remain unchanged
+- Decorator remains backward compatible - works with or without parentheses
+
+Usage:
+  @log_function_call(sensitive_fields=["token", "api_token"])
+  def load_config() -> dict:
+      return {"token": "secret", "user": "admin"}
+  # Logs: {"token": "***", "user": "admin"}
+
+Addresses Issue #228 security vulnerability where secrets were logged in plaintext.
+```
 
 ---
 
