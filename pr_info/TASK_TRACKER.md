@@ -65,7 +65,7 @@ Note: Tests in tests/utils/test_data_files.py will fail until Step 2 updates the
 - [x] Remove `test_find_installed_file_via_module_file` test (redundant) (Decision #11)
 - [x] Update `test_pyproject_toml_consistency` to remove `development_base_dir` argument (Decision #8)
 - [x] Convert `test_data_file_found_logs_at_debug_level` to use real `mcp_coder` package (Decision #9)
-- [ ] Update `test_find_multiple_files` in `TestFindPackageDataFiles` to use real `mcp_coder` files (Decision #10)
+- [x] Update `test_find_multiple_files` in `TestFindPackageDataFiles` to use real `mcp_coder` files (Decision #10)
 - [ ] Keep `test_file_not_found_raises_exception` unchanged
 - [ ] Keep all `TestGetPackageDirectory` tests unchanged (Decision #5)
 - [ ] Run pylint check on test files

@@ -121,29 +121,14 @@ class TestFindPackageDataFiles:
     """Test the find_package_data_files function."""
 
     def test_find_multiple_files(self) -> None:
-        """Test finding multiple data files."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
+        """Test finding multiple data files using real mcp_coder package."""
+        result = find_package_data_files(
+            package_name="mcp_coder",
+            relative_paths=["prompts/prompts.md", "prompts/prompt_instructions.md"],
+        )
 
-            # Create multiple test files in the new src structure
-            files = [
-                temp_path / "src" / "mcp_coder" / "prompts" / "test1.md",
-                temp_path / "src" / "mcp_coder" / "prompts" / "test2.md",
-            ]
-
-            for file_path in files:
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                file_path.write_text("# test content")
-
-            result = find_package_data_files(
-                package_name="mcp_coder",
-                relative_paths=["prompts/test1.md", "prompts/test2.md"],
-                development_base_dir=temp_path,
-            )
-
-            assert len(result) == 2
-            assert result[0] == files[0]
-            assert result[1] == files[1]
+        assert len(result) == 2
+        assert all(path.exists() for path in result)
 
 
 class TestGetPackageDirectory:
