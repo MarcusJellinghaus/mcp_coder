@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.mcp_code_checker import has_mypy_errors, run_mypy_check
+from mcp_coder.mcp_code_checker import run_mypy_check
 
 
 @pytest.mark.formatter_integration
