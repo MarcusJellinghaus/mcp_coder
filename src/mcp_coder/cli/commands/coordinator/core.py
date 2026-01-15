@@ -198,10 +198,17 @@ def get_jenkins_credentials() -> tuple[str, str, str]:
     # Use late binding for patchable function access
     coordinator = _get_coordinator()
 
-    # get_config_value automatically checks environment variables first
-    server_url = coordinator.get_config_value("jenkins", "server_url")
-    username = coordinator.get_config_value("jenkins", "username")
-    api_token = coordinator.get_config_value("jenkins", "api_token")
+    # Batch fetch all Jenkins credentials in single disk read
+    config = coordinator.get_config_values(
+        [
+            ("jenkins", "server_url", None),
+            ("jenkins", "username", None),
+            ("jenkins", "api_token", None),
+        ]
+    )
+    server_url = config[("jenkins", "server_url")]
+    username = config[("jenkins", "username")]
+    api_token = config[("jenkins", "api_token")]
 
     # Check for missing credentials
     missing = []
