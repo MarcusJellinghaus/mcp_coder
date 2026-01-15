@@ -67,14 +67,22 @@ def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
 
     section = f"coordinator.repos.{repo_name}"
 
-    repo_url = coordinator.get_config_value(section, "repo_url")
-    executor_job_path = coordinator.get_config_value(section, "executor_job_path")
-    github_credentials_id = coordinator.get_config_value(
-        section, "github_credentials_id"
+    # Batch fetch all config values in single disk read
+    config = coordinator.get_config_values(
+        [
+            (section, "repo_url", None),
+            (section, "executor_job_path", None),
+            (section, "github_credentials_id", None),
+            (section, "executor_os", None),
+        ]
     )
 
+    repo_url = config[(section, "repo_url")]
+    executor_job_path = config[(section, "executor_job_path")]
+    github_credentials_id = config[(section, "github_credentials_id")]
+
     # Load executor_os with default and normalize to lowercase
-    executor_os = coordinator.get_config_value(section, "executor_os")
+    executor_os = config[(section, "executor_os")]
     if executor_os:
         executor_os = executor_os.lower()  # Normalize to lowercase
     else:
