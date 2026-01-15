@@ -50,16 +50,16 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Create Vulture Whitelist
 *Reference: [pr_info/steps/step_2.md](steps/step_2.md)*
 
-- [ ] Run vulture to confirm only whitelist-worthy items remain
-- [ ] Create `vulture_whitelist.py` at project root
-- [ ] Create `tools/vulture_check.bat` script
-- [ ] Create `tools/vulture_check.sh` script
-- [ ] Verify whitelist file has valid Python syntax
-- [ ] Verify `vulture src tests vulture_whitelist.py --min-confidence 60` returns exit code 0
-- [ ] Run pylint check and fix any issues
-- [ ] Run pytest and fix any failures
-- [ ] Run mypy check and fix any issues
-- [ ] Prepare git commit message
+- [x] Run vulture to confirm only whitelist-worthy items remain
+- [x] Create `vulture_whitelist.py` at project root
+- [x] Create `tools/vulture_check.bat` script
+- [x] Create `tools/vulture_check.sh` script
+- [x] Verify whitelist file has valid Python syntax
+- [x] Verify `vulture src tests vulture_whitelist.py --min-confidence 60` returns exit code 0
+- [x] Run pylint check and fix any issues
+- [x] Run pytest and fix any failures
+- [x] Run mypy check and fix any issues
+- [x] Prepare git commit message
 
 ---
 
