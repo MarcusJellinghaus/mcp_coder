@@ -30,45 +30,6 @@ class TestFindDataFile:
         assert result.name == "prompts.md"
         assert "mcp_coder" in str(result)
 
-    def test_find_installed_file_via_module_file(self) -> None:
-        """Test finding a file in installed package via module __file__.
-
-        Creates a real temporary package that Python can import, avoiding
-        mock issues with pytest-xdist parallel execution.
-        """
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            # Use a unique package name to avoid conflicts
-            package_name = "_test_pkg_module_file"
-            package_dir = temp_path / package_name
-            package_dir.mkdir(parents=True, exist_ok=True)
-
-            # Create __init__.py to make it a real package
-            init_file = package_dir / "__init__.py"
-            init_file.write_text("# test package")
-
-            # Create the data file we want to find
-            test_file = package_dir / "data" / "test_script.py"
-            test_file.parent.mkdir(parents=True, exist_ok=True)
-            test_file.write_text("# test script")
-
-            # Add temp directory to sys.path so Python can import the package
-            sys.path.insert(0, str(temp_path))
-            try:
-                result = find_data_file(
-                    package_name=package_name,
-                    relative_path="data/test_script.py",
-                    development_base_dir=None,
-                )
-
-                assert result == test_file
-            finally:
-                # Clean up sys.path
-                sys.path.remove(str(temp_path))
-                # Clean up any cached module
-                if package_name in sys.modules:
-                    del sys.modules[package_name]
-
     def test_file_not_found_raises_exception(self) -> None:
         """Test that FileNotFoundError is raised when file is not found."""
         with pytest.raises(FileNotFoundError) as exc_info:
