@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Add `astral-sh/setup-uv@v4` action after checkout in `test` job
 - [x] Add `astral-sh/setup-uv@v4` action after checkout in `architecture` job
-- [ ] Replace pip installation with `uv pip install --system ".[dev]"` in `test` job
+- [x] Replace pip installation with `uv pip install --system ".[dev]"` in `test` job
 - [ ] Replace pip installation with `uv pip install --system ".[dev]"` in `architecture` job
 - [ ] Run quality checks (pylint, pytest, mypy) for Step 1
 - [ ] Prepare git commit message for Step 1
