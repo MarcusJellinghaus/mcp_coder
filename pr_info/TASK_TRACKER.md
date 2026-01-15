@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Add `_redact_for_logging()` helper function
 - [x] Modify `log_function_call` to accept optional `sensitive_fields` parameter
-- [ ] Apply redaction to `serializable_params` before logging
+- [x] Apply redaction to `serializable_params` before logging
 - [ ] Apply redaction to `result_for_log` before logging
 - [ ] Write tests first (TDD)
 - [ ] Run quality checks (pylint, pytest, mypy) and fix issues
