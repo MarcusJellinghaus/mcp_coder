@@ -263,10 +263,12 @@ def find_data_file(  # pylint: disable=too-many-statements
         )
 
         if hasattr(package_module, "__file__") and package_module.__file__:
-            module_file_absolute = str(Path(package_module.__file__).resolve())
             logger.debug(
                 "METHOD 3/5: Module __file__ found",
-                extra={"method": "module_file", "module_file": package_module.__file__},
+                extra={
+                    "method": "module_file",
+                    "module_file": str(Path(package_module.__file__).resolve()),
+                },
             )
             package_dir = Path(package_module.__file__).parent
             package_dir_absolute = package_dir.resolve()
