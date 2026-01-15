@@ -17,6 +17,7 @@ Tools for enforcing architectural boundaries and detecting dependency issues.
 | **tach** | Module boundaries & layer enforcement | `tach.toml` | `tools/tach_check.sh` / `.bat` |
 | **pycycle** | Detect circular imports | - | `tools/pycycle_check.sh` / `.bat` |
 | **pydeps** | Visualize dependencies | - | `tools/pydeps_graph.sh` / `.bat` |
+| **vulture** | Dead code detection | `vulture_whitelist.py` | `tools/vulture_check.sh` / `.bat` |
 
 ## Why Both import-linter and tach?
 
@@ -34,13 +35,31 @@ Tools for enforcing architectural boundaries and detecting dependency issues.
 
 ```bash
 # All checks
-./tools/lint_imports.sh && ./tools/tach_check.sh && ./tools/pycycle_check.sh
+./tools/lint_imports.sh && ./tools/tach_check.sh && ./tools/pycycle_check.sh && ./tools/vulture_check.sh
 
 # Individual
 lint-imports          # 19 contracts
 tach check            # Layer violations
 pycycle --here        # Circular imports
+vulture src tests vulture_whitelist.py --min-confidence 60  # Dead code
 ```
+
+## Vulture - Dead Code Detection
+
+**Purpose**: Identifies unused code (imports, functions, variables, classes) that can be safely removed.
+
+**Command**: 
+```bash
+vulture src tests vulture_whitelist.py --min-confidence 60
+```
+
+**Whitelist**: `vulture_whitelist.py` contains items that appear unused but are intentionally kept:
+- API completeness methods (GitHub operations)
+- Enum values for API constants
+- Base class attributes for subclasses
+- TypedDict fields, pytest fixtures, argparse patterns (false positives)
+
+**Note**: The whitelist is intentionally liberal. Some items may be candidates for removal but were whitelisted to avoid blocking implementation. Review the whitelist periodically - items may become used or truly dead over time.
 
 ## CI
 

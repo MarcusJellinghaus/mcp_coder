@@ -81,12 +81,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Add vulture to architectural tools section in `docs/architecture/ARCHITECTURE.md`
 - [x] Add Dead Code Detection subsection in `docs/architecture/ARCHITECTURE.md`
-- [ ] Add Vulture section in `docs/architecture/dependencies/README.md`
-- [ ] Verify vulture check still clean
-- [ ] Run pylint check and fix any issues
-- [ ] Run pytest and fix any failures
-- [ ] Run mypy check and fix any issues
-- [ ] Prepare git commit message
+- [x] Add Vulture section in `docs/architecture/dependencies/README.md`
+- [x] Verify vulture check still clean
+- [x] Run pylint check and fix any issues
+- [x] Run pytest and fix any failures
+- [x] Run mypy check and fix any issues
+- [x] Prepare git commit message
 
 ---
 
