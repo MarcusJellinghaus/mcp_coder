@@ -176,7 +176,7 @@ Test file updates for test_user_config*.py will follow in Step 5.
 > See: [pr_info/steps/step_5.md](steps/step_5.md)
 
 - [x] Update `test_user_config.py` - rename class, update all test methods
-- [ ] Update `test_user_config_integration.py` - update all references
+- [x] Update `test_user_config_integration.py` - update all references
 - [ ] Update imports in both test files
 - [ ] Run grep to verify no old references remain
 - [ ] Run full test suite
