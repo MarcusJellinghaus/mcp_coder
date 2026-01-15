@@ -60,7 +60,7 @@ Note: Tests in tests/utils/test_data_files.py will fail until Step 2 updates the
 ### Step 2: Simplify Tests for find_data_file
 [Details: pr_info/steps/step_2.md]
 
-- [ ] Remove `test_find_development_file_new_structure` test (Decision #7)
+- [x] Remove `test_find_development_file_new_structure` test (Decision #7)
 - [ ] Rename and convert `test_find_installed_file_via_importlib` to `test_find_file_in_installed_package` using real `mcp_coder` package (Decision #11)
 - [ ] Remove `test_find_installed_file_via_module_file` test (redundant) (Decision #11)
 - [ ] Update `test_pyproject_toml_consistency` to remove `development_base_dir` argument (Decision #8)

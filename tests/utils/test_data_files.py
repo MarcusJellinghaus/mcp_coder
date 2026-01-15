@@ -16,25 +16,6 @@ from mcp_coder.utils.data_files import find_data_file
 class TestFindDataFile:
     """Test the find_data_file function."""
 
-    def test_find_development_file_new_structure(self) -> None:
-        """Test finding a file in development environment with new src/ structure."""
-        # Create a temporary directory structure matching the new layout
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            test_file = temp_path / "src" / "mcp_coder" / "prompts" / "test_prompt.md"
-            test_file.parent.mkdir(parents=True)
-            test_file.write_text("# test prompt")
-
-            # Should find the development file in new structure
-            result = find_data_file(
-                package_name="mcp_coder",
-                relative_path="prompts/test_prompt.md",
-                development_base_dir=temp_path,
-            )
-
-            assert result == test_file
-            assert result.exists()
-
     def test_find_installed_file_via_importlib(self) -> None:
         """Test finding a file in installed package via importlib.
 
