@@ -29,7 +29,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Remove All Dead Code (Source + Tests)
 *Reference: [pr_info/steps/step_1.md](steps/step_1.md)*
 
-- [ ] Delete `src/mcp_coder/utils/detection.py` (entire module - all 8 functions unused)
+- [x] Delete `src/mcp_coder/utils/detection.py` (entire module - all 8 functions unused)
 - [ ] Delete `tests/utils/test_detection.py` (tests for removed module)
 - [ ] Remove unused `PullRequest` import from `src/mcp_coder/utils/github_operations/pr_manager.py`
 - [ ] Remove `find_package_data_files` and `get_package_directory` functions from `src/mcp_coder/utils/data_files.py`
