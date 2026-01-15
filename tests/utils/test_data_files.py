@@ -76,9 +76,9 @@ class TestFindDataFile:
         result = find_data_file(
             package_name="mcp_coder",
             relative_path=f"prompts/{first_md_file.name}",
-            development_base_dir=project_root,
         )
-        assert result == first_md_file
+        assert result.exists()
+        assert result.name == first_md_file.name
 
     def test_data_file_found_logs_at_debug_level(
         self, caplog: pytest.LogCaptureFixture
