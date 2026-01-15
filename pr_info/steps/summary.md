@@ -18,7 +18,7 @@ This issue involves **CI/CD configuration changes only**. No changes to:
 
 1. **KISS Principle**: Prepend version commands to existing matrix `cmd` fields using `&&` instead of adding new steps or matrix fields
 2. **Single Environment Step**: One consolidated step for system/tool info instead of multiple steps
-3. **Unified Dependency Installation**: Single `uv pip install --system ".[dev,types]"` replaces three pip commands
+3. **Unified Dependency Installation**: Single `uv pip install --system ".[dev]"` replaces three pip commands
 
 ## Files Modified
 
@@ -29,7 +29,7 @@ This issue involves **CI/CD configuration changes only**. No changes to:
 ## Requirements Checklist
 
 - [x] CI migrated from `pip` to `uv` using `astral-sh/setup-uv` action
-- [x] Type stubs installed via `.[dev,types]`
+- [x] Type stubs installed via `.[dev]` (dev includes types)
 - [x] Environment info step added at the start of `test` and `architecture` jobs
 - [x] Each tool check shows its version before execution
 - [x] uv version displayed in environment info
@@ -39,7 +39,7 @@ This issue involves **CI/CD configuration changes only**. No changes to:
 
 ### Step 1: Migrate to uv and Update Dependencies
 - Add `astral-sh/setup-uv@v4` action to both jobs
-- Replace pip installation with `uv pip install --system ".[dev,types]"`
+- Replace pip installation with `uv pip install --system ".[dev]"`
 
 ### Step 2: Add Environment Info and Tool Versions
 - Add environment info step to both jobs

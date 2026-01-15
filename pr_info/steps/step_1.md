@@ -45,7 +45,7 @@ Add after `actions/checkout@v4`:
 **After:**
 ```yaml
 - name: Install dependencies
-  run: uv pip install --system ".[dev,types]"
+  run: uv pip install --system ".[dev]"
 ```
 
 ## HOW
@@ -54,7 +54,7 @@ Add after `actions/checkout@v4`:
 
 1. `astral-sh/setup-uv@v4` - Official uv GitHub Action
 2. `uv pip install --system` - Install to system Python (not virtualenv)
-3. `".[dev,types]"` - Install package with dev and types optional dependencies
+3. `".[dev]"` - Install package with dev dependencies (includes types via recursive dependency)
 
 ### Why `--system` Flag
 
