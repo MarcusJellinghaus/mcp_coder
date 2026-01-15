@@ -68,7 +68,6 @@ def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
     return "\n".join(lines)
 
 
-@log_function_call
 def get_config_file_path() -> Path:
     r"""Get the path to the user configuration file.
 
@@ -84,7 +83,7 @@ def get_config_file_path() -> Path:
         return Path.home() / ".config" / "mcp_coder" / "config.toml"
 
 
-@log_function_call
+@log_function_call(sensitive_fields=["token", "api_token"])
 def load_config() -> dict[str, Any]:
     """Load user configuration from TOML file.
 
@@ -108,83 +107,6 @@ def load_config() -> dict[str, Any]:
         raise ValueError(_format_toml_error(config_path, e)) from e
     except OSError as e:
         raise ValueError(f"Error reading config file: {config_path}\n{e}") from e
-
-
-@log_function_call
-def get_config_value(
-    section: str, key: str, env_var: Optional[str] = None
-) -> Optional[str]:
-    """Read a configuration value from environment or config file.
-
-    Priority: Environment variable > Config file > None
-
-    Args:
-        section: The TOML section name (supports dot notation for nested sections,
-                e.g., 'coordinator.repos.mcp_coder')
-        key: The configuration key within the section
-        env_var: Optional environment variable name to check first.
-                If not provided, attempts to construct from section and key.
-                For known mappings, uses standardized names:
-                - ('github', 'token') -> GITHUB_TOKEN
-                - ('jenkins', 'server_url') -> JENKINS_URL
-                - ('jenkins', 'username') -> JENKINS_USER
-                - ('jenkins', 'api_token') -> JENKINS_TOKEN
-
-    Returns:
-        The configuration value as a string, or None if not found
-
-    Raises:
-        ValueError: If config file exists but has invalid TOML syntax.
-
-    Note:
-        Returns None gracefully for any missing file, section, or key.
-        No exceptions are raised for missing resources.
-
-    Examples:
-        # Top-level section with automatic env var detection
-        get_config_value('jenkins', 'server_url')  # Checks JENKINS_URL first
-
-        # Explicit environment variable name
-        get_config_value('github', 'token', env_var='GITHUB_TOKEN')
-
-        # Nested section using dot notation
-        get_config_value('coordinator.repos.mcp_coder', 'repo_url')
-    """
-    # Step 1: Check environment variable first (highest priority)
-    if env_var is None:
-        # Attempt to construct standard environment variable name
-        env_var = _get_standard_env_var(section, key)
-
-    if env_var:
-        env_value = os.getenv(env_var)
-        if env_value:
-            return env_value
-
-    # Step 2: Fall back to config file
-    # load_config() raises ValueError on parse errors
-    config_data = load_config()
-
-    # Return None if config is empty (file doesn't exist)
-    if not config_data:
-        return None
-
-    # Navigate nested sections using dot notation
-    section_data: Any = config_data
-    section_parts = section.split(".")
-
-    for part in section_parts:
-        if not isinstance(section_data, dict) or part not in section_data:
-            return None
-        section_data = section_data[part]
-
-    # Return None if key doesn't exist in section
-    if not isinstance(section_data, dict) or key not in section_data:
-        return None
-
-    value = section_data[key]
-
-    # Convert to string if not already a string
-    return str(value) if value is not None else None
 
 
 def _get_standard_env_var(section: str, key: str) -> Optional[str]:
@@ -215,6 +137,109 @@ def _get_standard_env_var(section: str, key: str) -> Optional[str]:
     }
 
     return mappings.get((section, key))
+
+
+def _get_nested_value(
+    config_data: dict[str, Any], section: str, key: str
+) -> Optional[str]:
+    """Get a value from nested config data using dot notation for section.
+
+    Args:
+        config_data: The loaded config dictionary
+        section: Section name with dot notation for nesting (e.g., 'coordinator.repos.mcp_coder')
+        key: The key within the section
+
+    Returns:
+        The value as string, or None if not found
+    """
+    # Navigate nested sections using dot notation
+    section_data: Any = config_data
+    section_parts = section.split(".")
+
+    for part in section_parts:
+        if not isinstance(section_data, dict) or part not in section_data:
+            return None
+        section_data = section_data[part]
+
+    # Return None if key doesn't exist in section
+    if not isinstance(section_data, dict) or key not in section_data:
+        return None
+
+    value = section_data[key]
+
+    # Convert to string if not already a string
+    return str(value) if value is not None else None
+
+
+@log_function_call(sensitive_fields=["token", "api_token"])
+def get_config_values(
+    keys: list[tuple[str, str, str | None]],
+) -> dict[tuple[str, str], str | None]:
+    """Get multiple config values in one disk read.
+
+    Retrieves configuration values from environment variables or config file,
+    with environment variables taking priority. Reads the config file at most
+    once, regardless of how many keys are requested.
+
+    Args:
+        keys: List of (section, key, env_var) tuples where:
+            - section: The TOML section name (supports dot notation for nested
+                      sections, e.g., 'coordinator.repos.mcp_coder')
+            - key: The configuration key within the section
+            - env_var: Optional environment variable name to check first.
+                      Use None for auto-detection based on known mappings:
+                      - ('github', 'token') -> GITHUB_TOKEN
+                      - ('jenkins', 'server_url') -> JENKINS_URL
+                      - ('jenkins', 'username') -> JENKINS_USER
+                      - ('jenkins', 'api_token') -> JENKINS_TOKEN
+
+    Returns:
+        Dict mapping (section, key) tuples to their values (or None if not found).
+        Access values using: result[(section, key)]
+
+    Priority: Environment variable > Config file > None
+
+    Raises:
+        ValueError: If config file exists but has invalid TOML syntax.
+
+    Examples:
+        # Basic usage with auto-detected env vars
+        config = get_config_values([
+            ("github", "token", None),
+            ("jenkins", "server_url", None),
+        ])
+        token = config[("github", "token")]
+
+        # With explicit env var override
+        config = get_config_values([
+            ("custom", "setting", "MY_CUSTOM_VAR"),
+        ])
+
+        # Nested sections
+        config = get_config_values([
+            ("coordinator.repos.mcp_coder", "repo_url", None),
+        ])
+    """
+    results: dict[tuple[str, str], str | None] = {}
+    config_data: dict[str, Any] | None = None  # Lazy load
+
+    for section, key, env_var in keys:
+        # Check env var first
+        actual_env_var = env_var or _get_standard_env_var(section, key)
+        if actual_env_var:
+            env_value = os.getenv(actual_env_var)
+            if env_value:
+                results[(section, key)] = env_value
+                continue
+
+        # Lazy load config (only if needed, only once)
+        if config_data is None:
+            config_data = load_config()
+
+        # Navigate to value
+        results[(section, key)] = _get_nested_value(config_data, section, key)
+
+    return results
 
 
 @log_function_call
