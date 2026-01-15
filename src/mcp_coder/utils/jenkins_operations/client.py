@@ -74,7 +74,7 @@ def _get_jenkins_config() -> dict[str, Optional[str]]:
         and is handled separately in the test fixture.
     """
     # get_config_values automatically checks environment variables first
-    config = get_config_values(
+    config: dict[tuple[str, str], Optional[str]] = get_config_values(
         [
             ("jenkins", "server_url", None),
             ("jenkins", "username", None),

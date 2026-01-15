@@ -142,10 +142,33 @@ Test updates will follow in Step 5.
 - [x] Update `core.py` get_cache_refresh_minutes() - 1 call
 - [x] Update `core.py` get_jenkins_credentials() - 3 calls → 1 batch
 - [x] Update `tests/conftest.py` - 2 calls → 1 batch
-- [ ] Update `tests/utils/jenkins_operations/test_integration.py` - 4 calls → 1 batch
-- [ ] Verify no references to `get_config_value` remain (grep codebase)
-- [ ] Run quality checks (pylint, pytest, mypy) and fix issues
-- [ ] Prepare git commit message for Step 4
+- [x] Update `tests/utils/jenkins_operations/test_integration.py` - 4 calls → 1 batch
+- [x] Verify no references to `get_config_value` remain (grep codebase)
+- [x] Run quality checks (pylint, pytest, mypy) and fix issues
+- [x] Prepare git commit message for Step 4
+
+**Commit message for Step 4:**
+```
+refactor(config): migrate all callers from get_config_value to get_config_values
+
+Refactor all 8 call sites from the deprecated `get_config_value()` function
+to use the new batch `get_config_values()` function for improved performance
+through single disk reads.
+
+Changes:
+- Update `base_manager.py` - 1 call site
+- Update `client.py` - 3 calls → 1 batch call
+- Update `core.py` load_repo_config() - 4 calls → 1 batch call
+- Update `core.py` get_cache_refresh_minutes() - 1 call
+- Update `core.py` get_jenkins_credentials() - 3 calls → 1 batch call
+- Update `tests/conftest.py` - 2 calls → 1 batch call
+- Update `tests/utils/jenkins_operations/test_integration.py` - 4 calls → 1 batch
+- Update coordinator `__init__.py` exports: `get_config_value` → `get_config_values`
+- Add type annotations for config variables to satisfy mypy
+
+All production code and test fixtures now use the batch function.
+Test file updates for test_user_config*.py will follow in Step 5.
+```
 
 ---
 
