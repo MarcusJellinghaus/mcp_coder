@@ -20,7 +20,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Migrate to uv and Update Dependencies
 
 - [x] Add `astral-sh/setup-uv@v4` action after checkout in `test` job
-- [ ] Add `astral-sh/setup-uv@v4` action after checkout in `architecture` job
+- [x] Add `astral-sh/setup-uv@v4` action after checkout in `architecture` job
 - [ ] Replace pip installation with `uv pip install --system ".[dev]"` in `test` job
 - [ ] Replace pip installation with `uv pip install --system ".[dev]"` in `architecture` job
 - [ ] Run quality checks (pylint, pytest, mypy) for Step 1
