@@ -19,7 +19,9 @@ Add automatic rebase functionality to the `implement` workflow that keeps featur
 | Component | Responsibility |
 |-----------|----------------|
 | `branches.py` | Low-level git rebase operation with conflict detection/abort |
+| `remotes.py` | Extended `git_push()` with `force_with_lease` support |
 | `core.py` | Parent branch detection logic and workflow integration |
+| `task_processing.py` | Force push after successful rebase |
 
 ## Parent Branch Detection Priority
 
@@ -32,21 +34,24 @@ Add automatic rebase functionality to the `implement` workflow that keeps featur
 | File | Action | Description |
 |------|--------|-------------|
 | `src/mcp_coder/utils/git_operations/branches.py` | MODIFY | Add `rebase_onto_branch()` function |
+| `src/mcp_coder/utils/git_operations/remotes.py` | MODIFY | Add `force_with_lease` parameter to `git_push()` |
 | `src/mcp_coder/utils/git_operations/__init__.py` | MODIFY | Export `rebase_onto_branch` |
 | `src/mcp_coder/workflows/implement/core.py` | MODIFY | Add `_get_rebase_target_branch()` and integrate rebase step |
+| `src/mcp_coder/workflows/implement/task_processing.py` | MODIFY | Pass `force_with_lease=True` after successful rebase |
 | `tests/utils/git_operations/test_branches.py` | MODIFY | Add tests for `rebase_onto_branch()` |
+| `tests/utils/git_operations/test_remotes.py` | MODIFY | Add tests for `force_with_lease` parameter |
 | `tests/workflows/implement/test_core.py` | MODIFY | Add tests for `_get_rebase_target_branch()` |
 
 ## Behavior Summary
 
 ```
-After prerequisite checks pass:
+After prerequisite checks pass (including clean working directory):
 1. Detect parent branch (PR base → BASE_BRANCH file → default)
-2. Fetch from origin
-3. Attempt rebase onto origin/<parent>
-4. On conflict: abort rebase, log warning, continue
-5. On success: log info, continue
-6. On error: log warning, continue
+2. Attempt rebase onto origin/<parent> (fetch handled internally)
+3. On conflict: abort rebase, log warning, continue workflow
+4. On success: set flag for force push, log info, continue
+5. On error: log warning, continue workflow
+6. Subsequent pushes use --force-with-lease if rebase succeeded
 ```
 
 ## Logging Specification

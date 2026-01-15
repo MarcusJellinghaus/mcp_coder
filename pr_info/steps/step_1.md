@@ -1,16 +1,17 @@
-# Step 1: Add `rebase_onto_branch()` Function with Tests
+# Step 1: Add `rebase_onto_branch()` Function and `force_with_lease` Parameter with Tests
 
 ## Overview
 
-Add the core rebase function to `git_operations/branches.py` with comprehensive unit tests. This function handles the low-level git rebase operation including conflict detection and automatic abort.
+Add the core rebase function to `git_operations/branches.py` and extend `git_push()` in `remotes.py` with `force_with_lease` support. This step handles all low-level git operations including conflict detection, automatic abort, and safe force push capability.
 
 ## LLM Prompt
 
 ```
 Implement Step 1 of the auto-rebase feature as described in pr_info/steps/summary.md.
 
-Add the `rebase_onto_branch()` function to the git_operations module with tests.
-Follow TDD: write tests first, then implement the function.
+1. Add `force_with_lease` parameter to `git_push()` in remotes.py with tests.
+2. Add the `rebase_onto_branch()` function to branches.py with tests.
+Follow TDD: write tests first, then implement the functions.
 ```
 
 ---
@@ -19,13 +20,35 @@ Follow TDD: write tests first, then implement the function.
 
 | File | Action |
 |------|--------|
+| `tests/utils/git_operations/test_remotes.py` | ADD test class `TestGitPushForceWithLease` |
+| `src/mcp_coder/utils/git_operations/remotes.py` | MODIFY `git_push()` to add `force_with_lease` parameter |
 | `tests/utils/git_operations/test_branches.py` | ADD test class `TestRebaseOntoBranch` |
 | `src/mcp_coder/utils/git_operations/branches.py` | ADD function `rebase_onto_branch()` |
 | `src/mcp_coder/utils/git_operations/__init__.py` | ADD export `rebase_onto_branch` |
 
 ---
 
-## WHAT: Function Signature
+## WHAT: Function Signatures
+
+### Modified: `git_push()` in remotes.py
+
+```python
+def git_push(project_dir: Path, force_with_lease: bool = False) -> dict[str, Any]:
+    """
+    Push current branch to origin remote.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+        force_with_lease: If True, use --force-with-lease for safe force push (default: False)
+
+    Returns:
+        Dictionary containing:
+        - success: True if push succeeded, False otherwise
+        - error: Error message if failed, None if successful
+    """
+```
+
+### New: `rebase_onto_branch()` in branches.py
 
 ```python
 def rebase_onto_branch(project_dir: Path, target_branch: str) -> bool:
@@ -103,6 +126,31 @@ def rebase_onto_branch(project_dir, target_branch):
 ---
 
 ## TEST CASES
+
+### Test Class: `TestGitPushForceWithLease`
+
+```python
+@pytest.mark.git_integration
+class TestGitPushForceWithLease:
+    """Tests for git_push with force_with_lease parameter."""
+
+    def test_git_push_default_no_force(self, git_repo_with_remote):
+        """Test default push without force flag."""
+        # Setup: push normally
+        # Verify: regular push succeeds
+
+    def test_git_push_force_with_lease_after_rebase(self, git_repo_with_remote):
+        """Test force push with lease succeeds after rebase."""
+        # Setup: create diverged history (local rebased, remote has old commits)
+        # Call git_push with force_with_lease=True
+        # Verify: returns success=True
+
+    def test_git_push_force_with_lease_fails_on_unexpected_remote(self, git_repo_with_remote):
+        """Test force with lease fails if remote has unexpected commits."""
+        # Setup: someone else pushed to remote after our last fetch
+        # Call git_push with force_with_lease=True
+        # Verify: returns success=False (safe failure)
+```
 
 ### Test Class: `TestRebaseOntoBranch`
 
