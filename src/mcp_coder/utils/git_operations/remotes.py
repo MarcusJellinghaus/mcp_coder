@@ -12,12 +12,13 @@ from .core import _safe_repo_context, logger
 from .repository import is_git_repository
 
 
-def git_push(project_dir: Path) -> dict[str, Any]:
+def git_push(project_dir: Path, force_with_lease: bool = False) -> dict[str, Any]:
     """
     Push current branch to origin remote.
 
     Args:
         project_dir: Path to the project directory containing git repository
+        force_with_lease: If True, use --force-with-lease for safe force push (default: False)
 
     Returns:
         Dictionary containing:
@@ -38,9 +39,17 @@ def git_push(project_dir: Path) -> dict[str, Any]:
             logger.debug("Current branch: %s", current_branch)
 
             # Execute git push origin <current_branch>
-            repo.git.push("origin", current_branch)
-
-            logger.debug("Successfully pushed branch '%s' to origin", current_branch)
+            if force_with_lease:
+                repo.git.push("--force-with-lease", "origin", current_branch)
+                logger.debug(
+                    "Successfully force-pushed branch '%s' to origin with lease",
+                    current_branch,
+                )
+            else:
+                repo.git.push("origin", current_branch)
+                logger.debug(
+                    "Successfully pushed branch '%s' to origin", current_branch
+                )
             return {"success": True, "error": None}
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
