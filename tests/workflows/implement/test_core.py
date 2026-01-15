@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflows.implement.core import (
+    _get_rebase_target_branch,
     log_progress_summary,
     prepare_task_tracker,
     run_implement_workflow,
@@ -393,6 +394,88 @@ class TestLogProgressSummary:
         mock_get_progress.assert_called_once_with(
             str(Path("/test/project") / "pr_info")
         )
+
+
+class TestGetRebaseTargetBranch:
+    """Tests for _get_rebase_target_branch function."""
+
+    @patch("mcp_coder.workflows.implement.core.PullRequestManager")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    def test_returns_pr_base_branch(
+        self, mock_get_branch: MagicMock, mock_pr_manager: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test returns base_branch from open PR."""
+        mock_get_branch.return_value = "feature-123"
+        mock_pr_manager.return_value.list_pull_requests.return_value = [
+            {"head_branch": "feature-123", "base_branch": "develop"}
+        ]
+
+        result = _get_rebase_target_branch(tmp_path)
+        assert result == "develop"
+
+    @patch("mcp_coder.workflows.implement.core.get_default_branch_name")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    def test_returns_base_branch_file_content(
+        self, mock_get_branch: MagicMock, mock_default: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test returns content from BASE_BRANCH file."""
+        mock_get_branch.return_value = "feature-123"
+        mock_default.return_value = "main"
+
+        # Create BASE_BRANCH file
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        (pr_info / "BASE_BRANCH").write_text("release-2.0\n")
+
+        result = _get_rebase_target_branch(tmp_path)
+        assert result == "release-2.0"
+
+    @patch("mcp_coder.workflows.implement.core.get_default_branch_name")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    def test_returns_default_branch_as_fallback(
+        self, mock_get_branch: MagicMock, mock_default: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test falls back to default branch."""
+        mock_get_branch.return_value = "feature-123"
+        mock_default.return_value = "main"
+
+        result = _get_rebase_target_branch(tmp_path)
+        assert result == "main"
+
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    def test_returns_none_when_no_current_branch(
+        self, mock_get_branch: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test returns None in detached HEAD state."""
+        mock_get_branch.return_value = None
+
+        result = _get_rebase_target_branch(tmp_path)
+        assert result is None
+
+    @patch("mcp_coder.workflows.implement.core.PullRequestManager")
+    @patch("mcp_coder.workflows.implement.core.get_default_branch_name")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    def test_pr_takes_priority_over_file(
+        self,
+        mock_get_branch: MagicMock,
+        mock_default: MagicMock,
+        mock_pr_manager: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test PR base branch takes priority over BASE_BRANCH file."""
+        mock_get_branch.return_value = "feature-123"
+        mock_default.return_value = "main"
+        mock_pr_manager.return_value.list_pull_requests.return_value = [
+            {"head_branch": "feature-123", "base_branch": "develop"}
+        ]
+
+        # Create BASE_BRANCH file (should be ignored)
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        (pr_info / "BASE_BRANCH").write_text("release-2.0")
+
+        result = _get_rebase_target_branch(tmp_path)
+        assert result == "develop"
 
 
 class TestPrepareTaskTrackerExecutionDir:
