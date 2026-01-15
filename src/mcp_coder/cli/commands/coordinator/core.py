@@ -160,7 +160,11 @@ def get_cache_refresh_minutes() -> int:
     # Use late binding for patchable function access
     coordinator = _get_coordinator()
 
-    value = coordinator.get_config_value("coordinator", "cache_refresh_minutes")
+    # Batch fetch config value in single disk read
+    config = coordinator.get_config_values(
+        [("coordinator", "cache_refresh_minutes", None)]
+    )
+    value = config[("coordinator", "cache_refresh_minutes")]
 
     if value is None:
         return 1440  # Default: 24 hours

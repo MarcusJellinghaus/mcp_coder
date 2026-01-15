@@ -139,7 +139,7 @@ Test updates will follow in Step 5.
 - [x] Update `base_manager.py` - 1 call site
 - [x] Update `client.py` - 3 calls → 1 batch
 - [x] Update `core.py` load_repo_config() - 4 calls → 1 batch
-- [ ] Update `core.py` get_cache_refresh_minutes() - 1 call
+- [x] Update `core.py` get_cache_refresh_minutes() - 1 call
 - [ ] Update `core.py` get_jenkins_credentials() - 3 calls → 1 batch
 - [ ] Update `tests/conftest.py` - 2 calls → 1 batch
 - [ ] Update `tests/utils/jenkins_operations/test_integration.py` - 4 calls → 1 batch
