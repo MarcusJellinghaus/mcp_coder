@@ -476,3 +476,144 @@ class TestLogFunctionCallWithSensitiveFields:
         result: int = get_number()
         assert result == 42
         assert mock_stdlogger.debug.call_count == 2
+
+
+class TestLogFunctionCallLoggerName:
+    """Tests for log_function_call decorator using correct logger name.
+
+    These tests verify that the decorator uses the decorated function's module
+    name for logging, not the log_utils module name.
+    """
+
+    def test_log_function_call_uses_correct_logger_name(self) -> None:
+        """Verify logger name is the decorated function's module, not log_utils."""
+        captured_logger_names: list[str] = []
+
+        # Create a mock that captures the logger name
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            # Define function in a specific module context
+            @log_function_call
+            def my_func() -> int:
+                return 42
+
+            # Trigger the logging
+            my_func()
+
+            # Capture all logger names that were requested
+            captured_logger_names = [
+                call[0][0] for call in mock_get_logger.call_args_list if call[0]
+            ]
+
+            # Verify getLogger was called with the function's module
+            # The function is defined in this test module
+            assert any(
+                __name__ in name or "test_log_utils" in name
+                for name in captured_logger_names
+            ), f"Expected test module name in logger names: {captured_logger_names}"
+
+    def test_log_function_call_logger_not_log_utils_for_func_logs(self) -> None:
+        """Verify function logs don't use mcp_coder.utils.log_utils as logger name."""
+        func_logger_calls: list[str] = []
+
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            @log_function_call
+            def test_func() -> str:
+                return "result"
+
+            test_func()
+
+            # Get all logger name calls
+            func_logger_calls = [
+                call[0][0] for call in mock_get_logger.call_args_list if call[0]
+            ]
+
+            # The decorator should get a logger for the decorated function's module
+            # At least one call should NOT be for log_utils module
+            non_log_utils_calls = [
+                name for name in func_logger_calls if "log_utils" not in name
+            ]
+            assert (
+                len(non_log_utils_calls) > 0
+            ), f"Expected at least one logger not from log_utils: {func_logger_calls}"
+
+    def test_log_function_call_structlog_uses_correct_module(self) -> None:
+        """Verify structlog logger also uses decorated function's module."""
+        with patch("mcp_coder.utils.log_utils.structlog") as mock_structlog:
+            mock_structlogger = MagicMock()
+            mock_structlog.get_logger.return_value = mock_structlogger
+
+            # Simulate file handler present (triggers structlog path)
+            mock_file_handler = MagicMock(spec=logging.FileHandler)
+            with patch.object(logging.getLogger(), "handlers", [mock_file_handler]):
+
+                @log_function_call
+                def logged_func() -> int:
+                    return 1
+
+                logged_func()
+
+                # Verify structlog.get_logger was called
+                assert (
+                    mock_structlog.get_logger.called
+                ), "structlog.get_logger should be called"
+
+                # Verify it was called with the function's module (this test module)
+                call_args = mock_structlog.get_logger.call_args_list
+                module_names = [call[0][0] for call in call_args if call[0]]
+
+                # Should be called with test module name, not log_utils
+                assert any(
+                    __name__ in name or "test_log_utils" in name
+                    for name in module_names
+                ), f"Expected test module name in structlog calls: {module_names}"
+
+    def test_log_function_call_debug_uses_func_logger(self) -> None:
+        """Verify debug calls use the function-specific logger."""
+        with patch("logging.getLogger") as mock_get_logger:
+            # Create separate loggers for different modules
+            func_logger = MagicMock()
+            module_logger = MagicMock()
+
+            def get_logger_side_effect(name: str) -> MagicMock:
+                if "test_log_utils" in name or name == __name__:
+                    return func_logger
+                return module_logger
+
+            mock_get_logger.side_effect = get_logger_side_effect
+
+            @log_function_call
+            def my_test_func() -> int:
+                return 123
+
+            my_test_func()
+
+            # Verify the function-specific logger was used for debug calls
+            assert func_logger.debug.called, "Function logger should have debug calls"
+
+    def test_log_function_call_error_uses_func_logger(self) -> None:
+        """Verify error logs use the function-specific logger."""
+        with patch("logging.getLogger") as mock_get_logger:
+            func_logger = MagicMock()
+
+            def get_logger_side_effect(name: str) -> MagicMock:
+                if "test_log_utils" in name or name == __name__:
+                    return func_logger
+                return MagicMock()
+
+            mock_get_logger.side_effect = get_logger_side_effect
+
+            @log_function_call
+            def failing_func() -> None:
+                raise ValueError("Test error")
+
+            with pytest.raises(ValueError):
+                failing_func()
+
+            # Verify the function-specific logger was used for error calls
+            assert func_logger.error.called, "Function logger should have error calls"

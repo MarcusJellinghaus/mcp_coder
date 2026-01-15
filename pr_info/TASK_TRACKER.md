@@ -56,7 +56,7 @@ Addresses Issue #228 security vulnerability where secrets were logged in plainte
 ### Step 2: Fix Logger Name to Use Decorated Function's Module
 > See: [pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Write tests first (TDD)
+- [x] Write tests first (TDD)
 - [ ] Create `func_logger = logging.getLogger(func.__module__)` inside wrapper
 - [ ] Replace `stdlogger.debug(...)` → `func_logger.debug(...)`
 - [ ] Replace `stdlogger.error(...)` → `func_logger.error(...)`
