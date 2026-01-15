@@ -16,44 +16,19 @@ from mcp_coder.utils.data_files import find_data_file
 class TestFindDataFile:
     """Test the find_data_file function."""
 
-    def test_find_installed_file_via_importlib(self) -> None:
-        """Test finding a file in installed package via importlib.
+    def test_find_file_in_installed_package(self) -> None:
+        """Test finding a file in installed package using importlib.resources.
 
-        Creates a real temporary package that Python can import, avoiding
-        mock issues with pytest-xdist parallel execution.
+        Uses real mcp_coder package - no mocking or sys.path manipulation needed.
         """
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            # Use a unique package name to avoid conflicts
-            package_name = "_test_pkg_importlib"
-            package_dir = temp_path / package_name
-            package_dir.mkdir(parents=True, exist_ok=True)
+        result = find_data_file(
+            package_name="mcp_coder",
+            relative_path="prompts/prompts.md",
+        )
 
-            # Create __init__.py to make it a real package
-            init_file = package_dir / "__init__.py"
-            init_file.write_text("# test package")
-
-            # Create the data file we want to find
-            test_file = package_dir / "data" / "test_script.py"
-            test_file.parent.mkdir(parents=True, exist_ok=True)
-            test_file.write_text("# test script")
-
-            # Add temp directory to sys.path so Python can import the package
-            sys.path.insert(0, str(temp_path))
-            try:
-                result = find_data_file(
-                    package_name=package_name,
-                    relative_path="data/test_script.py",
-                    development_base_dir=None,  # Skip development lookup
-                )
-
-                assert result == test_file
-            finally:
-                # Clean up sys.path
-                sys.path.remove(str(temp_path))
-                # Clean up any cached module
-                if package_name in sys.modules:
-                    del sys.modules[package_name]
+        assert result.exists()
+        assert result.name == "prompts.md"
+        assert "mcp_coder" in str(result)
 
     def test_find_installed_file_via_module_file(self) -> None:
         """Test finding a file in installed package via module __file__.
