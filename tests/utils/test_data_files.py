@@ -120,16 +120,14 @@ class TestFindPackageDataFiles:
     """Test the find_package_data_files function."""
 
     def test_find_multiple_files(self) -> None:
-        """Test finding multiple data files using real package."""
-        # Use real mcp_coder package files
+        """Test finding multiple data files using real mcp_coder package."""
         result = find_package_data_files(
             package_name="mcp_coder",
-            relative_paths=["prompts/prompts.md"],
+            relative_paths=["prompts/prompts.md", "prompts/prompt_instructions.md"],
         )
 
-        assert len(result) == 1
-        assert result[0].exists()
-        assert result[0].name == "prompts.md"
+        assert len(result) == 2
+        assert all(path.exists() for path in result)
 
 
 class TestGetPackageDirectory:
