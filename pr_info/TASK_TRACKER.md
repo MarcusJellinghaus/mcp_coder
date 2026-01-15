@@ -66,13 +66,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Add CI Integration
 *Reference: [pr_info/steps/step_3.md](steps/step_3.md)*
 
-- [ ] Add vulture check to architecture job matrix in `.github/workflows/ci.yml`
-- [ ] Verify CI workflow YAML is valid
-- [ ] Verify local vulture check still passes
-- [ ] Run pylint check and fix any issues
-- [ ] Run pytest and fix any failures
-- [ ] Run mypy check and fix any issues
-- [ ] Prepare git commit message
+- [x] Add vulture check to architecture job matrix in `.github/workflows/ci.yml`
+- [x] Verify CI workflow YAML is valid
+- [x] Verify local vulture check still passes
+- [x] Run pylint check and fix any issues
+- [x] Run pytest and fix any failures
+- [x] Run mypy check and fix any issues
+- [x] Prepare git commit message
 
 ---
 

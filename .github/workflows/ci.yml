@@ -130,6 +130,7 @@ jobs:
           - {name: "import-linter", cmd: "lint-imports"}
           - {name: "tach", cmd: "tach check"}
           - {name: "pycycle", cmd: "pycycle --here --ignore .venv,__pycache__,build,dist,.git,.pytest_cache,.mypy_cache"}
+          - {name: "vulture", cmd: "vulture src tests vulture_whitelist.py --min-confidence 60"}
     name: ${{ matrix.check.name }}
     steps:
       - uses: actions/checkout@v4
