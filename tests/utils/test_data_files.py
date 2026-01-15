@@ -40,7 +40,6 @@ class TestFindDataFile:
             find_data_file(
                 package_name="nonexistent_package",
                 relative_path="data/missing_script.py",
-                development_base_dir=Path("/nonexistent/path"),
             )
 
         assert "not found" in str(exc_info.value).lower()
