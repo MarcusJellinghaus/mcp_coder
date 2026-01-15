@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 See: [pr_info/steps/step_1.md](steps/step_1.md)
 
 - [x] Add test class `TestGitPushForceWithLease` to `tests/utils/git_operations/test_remotes.py`
-- [ ] Modify `git_push()` in `src/mcp_coder/utils/git_operations/remotes.py` to add `force_with_lease` parameter
+- [x] Modify `git_push()` in `src/mcp_coder/utils/git_operations/remotes.py` to add `force_with_lease` parameter
 - [ ] Add test class `TestRebaseOntoBranch` to `tests/utils/git_operations/test_branches.py`
 - [ ] Add function `rebase_onto_branch()` to `src/mcp_coder/utils/git_operations/branches.py`
 - [ ] Add export `rebase_onto_branch` to `src/mcp_coder/utils/git_operations/__init__.py`
