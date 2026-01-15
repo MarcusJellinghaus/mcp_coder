@@ -476,7 +476,6 @@ def _resolve_package_path(source: str) -> Optional[Path]:
             resolved_file = find_data_file(
                 package_name=package_name,
                 relative_path=relative_path,
-                development_base_dir=None,  # Auto-detect environment
             )
             return resolved_file
         except (FileNotFoundError, ImportError):
@@ -491,7 +490,6 @@ def _resolve_package_path(source: str) -> Optional[Path]:
                 resolved_file = find_data_file(
                     package_name=package_name,
                     relative_path=relative_path,
-                    development_base_dir=None,
                 )
                 return resolved_file
             except (FileNotFoundError, ImportError):
