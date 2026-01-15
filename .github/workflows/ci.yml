@@ -134,7 +134,7 @@ jobs:
       fail-fast: false
       matrix:
         check:
-          - {name: "import-linter", cmd: "lint-imports --version && lint-imports"}
+          - {name: "import-linter", cmd: "uv pip show import-linter | grep Version && lint-imports"}
           - {name: "tach", cmd: "tach --version && tach check"}
           - {name: "pycycle", cmd: "pycycle --version && pycycle --here --ignore .venv,__pycache__,build,dist,.git,.pytest_cache,.mypy_cache"}
           - {name: "vulture", cmd: "vulture --version && vulture src tests vulture_whitelist.py --min-confidence 60"}
