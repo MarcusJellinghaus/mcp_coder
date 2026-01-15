@@ -14,9 +14,9 @@ Approve the current issue to transition it to the next status in the workflow.
    - Requirements are clear
    - No blocking questions remain
 
-3. Comment `/approve` on the issue:
+3. Comment `/approve` on the issue (use MSYS_NO_PATHCONV to prevent Windows Git Bash path conversion):
 ```bash
-gh issue comment <issue_number> --body "/approve"
+MSYS_NO_PATHCONV=1 gh issue comment <issue_number> --body "/approve"
 ```
 
 This triggers the GitHub Action to promote the issue status (e.g., `status-01:created` → `status-02:awaiting-planning`).
