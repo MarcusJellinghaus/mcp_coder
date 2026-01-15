@@ -80,7 +80,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 *Reference: [pr_info/steps/step_4.md](steps/step_4.md)*
 
 - [x] Add vulture to architectural tools section in `docs/architecture/ARCHITECTURE.md`
-- [ ] Add Dead Code Detection subsection in `docs/architecture/ARCHITECTURE.md`
+- [x] Add Dead Code Detection subsection in `docs/architecture/ARCHITECTURE.md`
 - [ ] Add Vulture section in `docs/architecture/dependencies/README.md`
 - [ ] Verify vulture check still clean
 - [ ] Run pylint check and fix any issues

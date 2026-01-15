@@ -365,6 +365,12 @@ mcp-coder implement --project-dir /path/to/project
 - **Documentation**: See `docs/architecture/dependencies/README.md` for detailed tool comparison, current contracts, and guidelines for adding new rules
 - **Visualization**: `docs/architecture/dependencies/dependency_graph.html` for interactive dependency graph
 
+### Dead Code Detection
+- **Tool**: Vulture for identifying unused code
+- **Configuration**: `vulture_whitelist.py` at project root for false positives and API completeness items
+- **CI Integration**: Runs in architecture job on PRs with 60% confidence threshold
+- **Note**: The whitelist is intentionally liberal - review periodically for items that may become truly dead
+
 ### Command Pattern (CLI)
 - **File organization**: `cli/commands/` - One command per file
 
