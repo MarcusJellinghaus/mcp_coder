@@ -33,7 +33,7 @@ See: [pr_info/steps/step_1.md](steps/step_1.md)
 
 See: [pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Add test class `TestGetRebaseTargetBranch` to `tests/workflows/implement/test_core.py`
+- [x] Add test class `TestGetRebaseTargetBranch` to `tests/workflows/implement/test_core.py`
 - [ ] Add test class `TestRebaseIntegration` to `tests/workflows/implement/test_core.py`
 - [ ] Add private function `_get_rebase_target_branch()` to `src/mcp_coder/workflows/implement/core.py`
 - [ ] Add helper function `_attempt_rebase()` to `src/mcp_coder/workflows/implement/core.py`
