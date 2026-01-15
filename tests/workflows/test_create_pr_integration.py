@@ -22,7 +22,7 @@ from mcp_coder.utils.git_operations import (
 )
 
 # Import git fixtures from utils
-from tests.utils.conftest import git_repo, git_repo_with_files
+from tests.utils.conftest import git_repo
 
 
 class TestCreatePRWorkflowIntegration:

@@ -10,11 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.utils.data_files import (
-    find_data_file,
-    find_package_data_files,
-    get_package_directory,
-)
+from mcp_coder.utils.data_files import find_data_file
 
 
 class TestFindDataFile:
@@ -204,102 +200,3 @@ class TestFindDataFile:
             ), f"Expected 1 success message, found {len(success_messages)}"
             # The development path success message is at INFO level per the code
             assert success_messages[0].levelname == "INFO"
-
-
-class TestFindPackageDataFiles:
-    """Test the find_package_data_files function."""
-
-    def test_find_multiple_files(self) -> None:
-        """Test finding multiple data files."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-
-            # Create multiple test files in the new src structure
-            files = [
-                temp_path / "src" / "mcp_coder" / "prompts" / "test1.md",
-                temp_path / "src" / "mcp_coder" / "prompts" / "test2.md",
-            ]
-
-            for file_path in files:
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                file_path.write_text("# test content")
-
-            result = find_package_data_files(
-                package_name="mcp_coder",
-                relative_paths=["prompts/test1.md", "prompts/test2.md"],
-                development_base_dir=temp_path,
-            )
-
-            assert len(result) == 2
-            assert result[0] == files[0]
-            assert result[1] == files[1]
-
-
-class TestGetPackageDirectory:
-    """Test the get_package_directory function."""
-
-    def test_get_directory_via_importlib(self) -> None:
-        """Test getting package directory via importlib.
-
-        Creates a real temporary package that Python can import, avoiding
-        mock issues with pytest-xdist parallel execution.
-        """
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            # Use a unique package name to avoid conflicts
-            package_name = "_test_pkg_dir_importlib"
-            package_dir = temp_path / package_name
-            package_dir.mkdir(parents=True, exist_ok=True)
-
-            # Create __init__.py to make it a real package
-            init_file = package_dir / "__init__.py"
-            init_file.write_text("# test package")
-
-            # Add temp directory to sys.path so Python can import the package
-            sys.path.insert(0, str(temp_path))
-            try:
-                result = get_package_directory(package_name)
-                assert result == package_dir
-            finally:
-                # Clean up sys.path
-                sys.path.remove(str(temp_path))
-                # Clean up any cached module
-                if package_name in sys.modules:
-                    del sys.modules[package_name]
-
-    def test_get_directory_via_module_file(self) -> None:
-        """Test getting package directory via module __file__.
-
-        Creates a real temporary package that Python can import, avoiding
-        mock issues with pytest-xdist parallel execution.
-        """
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            # Use a unique package name to avoid conflicts
-            package_name = "_test_pkg_dir_module_file"
-            package_dir = temp_path / package_name
-            package_dir.mkdir(parents=True, exist_ok=True)
-
-            # Create __init__.py to make it a real package
-            init_file = package_dir / "__init__.py"
-            init_file.write_text("# test package")
-
-            # Add temp directory to sys.path so Python can import the package
-            sys.path.insert(0, str(temp_path))
-            try:
-                result = get_package_directory(package_name)
-                assert result == package_dir
-            finally:
-                # Clean up sys.path
-                sys.path.remove(str(temp_path))
-                # Clean up any cached module
-                if package_name in sys.modules:
-                    del sys.modules[package_name]
-
-    def test_package_not_found_raises_exception(self) -> None:
-        """Test that ImportError is raised when package is not found."""
-        # Use a package name that definitely doesn't exist
-        with pytest.raises(ImportError) as exc_info:
-            get_package_directory("_nonexistent_package_12345")
-
-        assert "Cannot find package directory" in str(exc_info.value)

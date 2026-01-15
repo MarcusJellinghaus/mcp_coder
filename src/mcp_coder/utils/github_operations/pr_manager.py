@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict, cast
 
 from github.GithubException import GithubException
-from github.PullRequest import PullRequest
 from github.Repository import Repository
 
 from mcp_coder.utils.git_operations import (

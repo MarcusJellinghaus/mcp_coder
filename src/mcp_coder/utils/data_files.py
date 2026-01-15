@@ -12,7 +12,7 @@ import os
 import site
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -263,10 +263,12 @@ def find_data_file(  # pylint: disable=too-many-statements
         )
 
         if hasattr(package_module, "__file__") and package_module.__file__:
-            module_file_absolute = str(Path(package_module.__file__).resolve())
             logger.debug(
                 "METHOD 3/5: Module __file__ found",
-                extra={"method": "module_file", "module_file": package_module.__file__},
+                extra={
+                    "method": "module_file",
+                    "module_file": str(Path(package_module.__file__).resolve()),
+                },
             )
             package_dir = Path(package_module.__file__).parent
             package_dir_absolute = package_dir.resolve()
@@ -613,84 +615,3 @@ def find_data_file(  # pylint: disable=too-many-statements
         f"For installed packages, ensure the file is declared in pyproject.toml under "
         f"[tool.setuptools.package-data] with '{package_name}' = ['{relative_path}'] or ['{relative_path.split('/')[-1]}']."
     )
-
-
-def find_package_data_files(
-    package_name: str,
-    relative_paths: List[str],
-    development_base_dir: Optional[Path] = None,
-) -> List[Path]:
-    """
-    Find multiple data files for a package.
-
-    Args:
-        package_name: Name of the Python package
-        relative_paths: List of relative paths to find
-        development_base_dir: Base directory for development environment
-
-    Returns:
-        List of Path objects for found files
-
-    Raises:
-        FileNotFoundError: If any file cannot be found
-
-    Example:
-        >>> paths = find_package_data_files(
-        ...     "mcp_coder",
-        ...     ["tools/sleep_script.py", "config/defaults.json"],
-        ...     development_base_dir=Path("/project/root")
-        ... )
-    """
-    found_files = []
-
-    for relative_path in relative_paths:
-        file_path = find_data_file(
-            package_name=package_name,
-            relative_path=relative_path,
-            development_base_dir=development_base_dir,
-        )
-        found_files.append(file_path)
-
-    return found_files
-
-
-def get_package_directory(package_name: str) -> Path:
-    """
-    Get the directory where a package is installed.
-
-    Args:
-        package_name: Name of the Python package
-
-    Returns:
-        Path to the package directory
-
-    Raises:
-        ImportError: If the package cannot be found
-
-    Example:
-        >>> package_dir = get_package_directory("mcp_coder")
-        >>> print(package_dir)  # /path/to/site-packages/mcp_coder
-    """
-    try:
-        # First try using importlib.util.find_spec
-        spec = importlib.util.find_spec(package_name)
-        if spec and spec.origin:
-            return Path(spec.origin).parent
-    except Exception as e:
-        logger.debug(
-            "Error finding package directory via importlib.util.find_spec",
-            extra={"error": str(e), "package_name": package_name},
-        )
-
-    try:
-        # Fallback to importing the module and using __file__
-        package_module = importlib.import_module(package_name)
-        if hasattr(package_module, "__file__") and package_module.__file__:
-            return Path(package_module.__file__).parent
-    except Exception as e:
-        logger.debug(
-            "Error finding package directory via __file__",
-            extra={"error": str(e), "package_name": package_name},
-        )
-
-    raise ImportError(f"Cannot find package directory for '{package_name}'")

@@ -32,8 +32,7 @@ from typing import Any, Optional, cast
 from jenkins import Jenkins
 
 from ..log_utils import log_function_call
-from ..user_config import get_config_value
-from .models import JobStatus, QueueSummary
+from .models import JobStatus
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -47,42 +46,6 @@ class JenkinsError(Exception):
 
     The original exception is preserved via exception chaining for debugging.
     """
-
-
-def _get_jenkins_config() -> dict[str, Optional[str]]:
-    """Get Jenkins configuration from environment or config file.
-
-    Priority: Environment variables > Config file > None
-
-    Environment Variables:
-        JENKINS_URL: Jenkins server URL with port
-        JENKINS_USER: Jenkins username
-        JENKINS_TOKEN: Jenkins API token
-
-    Config File (~/.mcp_coder/config.toml):
-        [jenkins]
-        server_url = "https://jenkins.example.com:8080"
-        username = "user"
-        api_token = "token"
-
-    Returns:
-        Dict with keys: server_url, username, api_token
-        Values are None if not configured
-
-    Note:
-        test_job is NOT included here - it's only for integration tests
-        and is handled separately in the test fixture.
-    """
-    # get_config_value automatically checks environment variables first
-    server_url = get_config_value("jenkins", "server_url")
-    username = get_config_value("jenkins", "username")
-    api_token = get_config_value("jenkins", "api_token")
-
-    return {
-        "server_url": server_url,
-        "username": username,
-        "api_token": api_token,
-    }
 
 
 class JenkinsClient:
@@ -248,28 +211,3 @@ class JenkinsClient:
             raise JenkinsError(
                 f"Failed to get status for queue_id {queue_id}: {str(e)}"
             ) from e
-
-    @log_function_call
-    def get_queue_summary(self) -> QueueSummary:
-        """Get summary of Jenkins queue.
-
-        Returns:
-            QueueSummary with counts of running and queued jobs
-
-        Raises:
-            JenkinsError: For any Jenkins API errors
-        """
-        try:
-            # Get queue info and running builds
-            queue = self._client.get_queue_info()
-            builds = self._client.get_running_builds()
-
-            # Count queued and running jobs
-            queued_count = len(queue)
-            running_count = len(builds)
-
-            return QueueSummary(running=running_count, queued=queued_count)
-
-        except Exception as e:
-            # Wrap all exceptions as JenkinsError with context
-            raise JenkinsError(f"Failed to get queue summary: {str(e)}") from e
