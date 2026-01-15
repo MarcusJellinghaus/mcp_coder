@@ -46,7 +46,7 @@ def jenkins_test_setup() -> Generator[dict[str, str], None, None]:
     Raises:
         pytest.skip: If required configuration missing
     """
-    from mcp_coder.utils.user_config import get_config_value
+    from mcp_coder.utils.user_config import get_config_values
 
     # Check environment variables first
     server_url = os.getenv("JENKINS_URL")
@@ -54,15 +54,27 @@ def jenkins_test_setup() -> Generator[dict[str, str], None, None]:
     api_token = os.getenv("JENKINS_TOKEN")
     test_job = os.getenv("JENKINS_TEST_JOB")
 
-    # Fall back to config file for missing values
+    # Get any missing values from config file in one batch
+    missing_keys = []
     if not server_url:
-        server_url = get_config_value("jenkins", "server_url")
+        missing_keys.append(("jenkins", "server_url", None))
     if not username:
-        username = get_config_value("jenkins", "username")
+        missing_keys.append(("jenkins", "username", None))
     if not api_token:
-        api_token = get_config_value("jenkins", "api_token")
+        missing_keys.append(("jenkins", "api_token", None))
     if not test_job:
-        test_job = get_config_value("jenkins", "test_job")
+        missing_keys.append(("jenkins", "test_job", None))
+
+    if missing_keys:
+        config: dict[tuple[str, str], str | None] = get_config_values(missing_keys)
+        if not server_url:
+            server_url = config[("jenkins", "server_url")]
+        if not username:
+            username = config[("jenkins", "username")]
+        if not api_token:
+            api_token = config[("jenkins", "api_token")]
+        if not test_job:
+            test_job = config[("jenkins", "test_job")]
 
     # Check required configuration and skip if missing
     if not server_url or not username or not api_token or not test_job:

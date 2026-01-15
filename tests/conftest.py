@@ -234,7 +234,7 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
     config_file_path = get_config_file_path()
 
     if not github_token or not test_repo_url:
-        config = get_config_values(
+        config: dict[tuple[str, str], str | None] = get_config_values(
             [
                 ("github", "token", None),
                 ("github", "test_repo_url", None),
