@@ -302,6 +302,9 @@ def log_function_call(
             module_name = fn.__module__
             line_no = fn.__code__.co_firstlineno
 
+            # Get logger for the decorated function's module (not log_utils)
+            func_logger = logging.getLogger(module_name)
+
             # Prepare parameters for logging
             log_params: dict[str, Any] = {}
 
@@ -357,7 +360,7 @@ def log_function_call(
                     lineno=line_no,
                 )
 
-            stdlogger.debug(
+            func_logger.debug(
                 "Calling %s with parameters: %s",
                 func_name,
                 json.dumps(params_for_log, default=str),
@@ -409,7 +412,7 @@ def log_function_call(
                         lineno=line_no,
                     )
 
-                stdlogger.debug(
+                func_logger.debug(
                     "%s completed in %sms with result: %s",
                     func_name,
                     elapsed_ms,
@@ -433,7 +436,7 @@ def log_function_call(
                         exc_info=True,
                     )
 
-                stdlogger.error(
+                func_logger.error(
                     "%s failed after %sms with error: %s: %s",
                     func_name,
                     elapsed_ms,
