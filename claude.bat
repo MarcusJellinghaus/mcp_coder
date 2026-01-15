@@ -1,4 +1,5 @@
 @echo off
+cls
 setlocal enabledelayedexpansion
 REM Simple launcher for Claude Code with MCP servers
 REM Assumes you're running from the project root
