@@ -3,7 +3,7 @@
 import platform
 import tomllib
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -11,7 +11,7 @@ from mcp_coder.utils.user_config import (
     _format_toml_error,
     create_default_config,
     get_config_file_path,
-    get_config_value,
+    get_config_values,
     load_config,
 )
 
@@ -280,290 +280,233 @@ class TestGetConfigFilePath:
         assert result.name == "config.toml"
 
 
-class TestGetConfigValue:
-    """Tests for get_config_value function."""
+class TestGetConfigValues:
+    """Tests for get_config_values batch function."""
 
-    @pytest.fixture
-    def sample_config_content(self) -> str:
-        """Sample TOML config content for testing."""
-        return """
-[tokens]
-github = "ghp_test_token_123"
-api_key = "test_api_key_456"
-
-[settings]
-default_branch = "main"
-timeout = 30
-debug = true
-
-[coordinator.repos.mcp_coder]
-repo_url = "https://github.com/test/mcp_coder.git"
-test_job = "MCP_Coder/mcp-coder-test-job"
-github_credentials_id = "github-general-pat"
-
-[coordinator.repos.test_repo]
-repo_url = "https://github.com/test/test_repo.git"
-test_job = "Test/test-job"
-github_credentials_id = "github-pat"
-"""
-
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_success_string(
-        self, mock_get_path: MagicMock, sample_config_content: str
+    def test_get_config_values_returns_multiple_values(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test successful retrieval of string configuration value."""
+        """Test batch retrieval of multiple config values."""
         # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            """
+[github]
+token = "ghp_test"
 
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute
-            result = get_config_value("tokens", "github")
-
-            # Verify
-            assert result == "ghp_test_token_123"
-
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_success_non_string(
-        self, mock_get_path: MagicMock, sample_config_content: str
-    ) -> None:
-        """Test successful retrieval and conversion of non-string value."""
-        # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
-
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute - timeout is an integer in TOML, should be converted to string
-            result = get_config_value("settings", "timeout")
-
-            # Verify
-            assert result == "30"
-
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_success_boolean(
-        self, mock_get_path: MagicMock, sample_config_content: str
-    ) -> None:
-        """Test successful retrieval and conversion of boolean value."""
-        # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
-
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute - debug is a boolean in TOML, should be converted to string
-            result = get_config_value("settings", "debug")
-
-            # Verify
-            assert result == "True"
-
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_missing_file(self, mock_get_path: MagicMock) -> None:
-        """Test that None is returned when config file doesn't exist."""
-        # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = False
-        mock_get_path.return_value = mock_path
+[jenkins]
+server_url = "http://jenkins"
+username = "admin"
+""",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
 
         # Execute
-        result = get_config_value("tokens", "github")
+        result = get_config_values(
+            [
+                ("github", "token", None),
+                ("jenkins", "server_url", None),
+                ("jenkins", "username", None),
+            ]
+        )
 
         # Verify
-        assert result is None
+        assert result[("github", "token")] == "ghp_test"
+        assert result[("jenkins", "server_url")] == "http://jenkins"
+        assert result[("jenkins", "username")] == "admin"
 
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_missing_section(
-        self, mock_get_path: MagicMock, sample_config_content: str
+    def test_get_config_values_env_var_priority(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that None is returned when section doesn't exist."""
+        """Environment variables take priority over config file."""
         # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[github]\ntoken = "file_token"', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+        monkeypatch.setenv("GITHUB_TOKEN", "env_token")
 
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute
-            result = get_config_value("nonexistent_section", "some_key")
+        # Execute
+        result = get_config_values([("github", "token", None)])
 
-            # Verify
-            assert result is None
+        # Verify
+        assert result[("github", "token")] == "env_token"
 
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_missing_key(
-        self, mock_get_path: MagicMock, sample_config_content: str
+    def test_get_config_values_missing_returns_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that None is returned when key doesn't exist in section."""
+        """Missing keys return None without raising."""
         # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[github]\ntoken = "test"', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
 
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute
-            result = get_config_value("tokens", "nonexistent_key")
+        # Execute
+        result = get_config_values(
+            [
+                ("github", "token", None),
+                ("nonexistent", "key", None),
+            ]
+        )
 
-            # Verify
-            assert result is None
+        # Verify
+        assert result[("github", "token")] == "test"
+        assert result[("nonexistent", "key")] is None
 
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_invalid_toml_raises(
-        self, mock_get_path: MagicMock
+    def test_get_config_values_nested_sections(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that ValueError is raised when TOML file is invalid."""
+        """Test dot notation for nested sections."""
         # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            """
+[coordinator.repos.mcp_coder]
+repo_url = "https://github.com/test/repo"
+executor_os = "linux"
+""",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
 
-        invalid_toml = b"[invalid toml content without closing bracket"
+        # Execute
+        result = get_config_values(
+            [
+                ("coordinator.repos.mcp_coder", "repo_url", None),
+                ("coordinator.repos.mcp_coder", "executor_os", None),
+            ]
+        )
 
-        with patch("builtins.open", mock_open(read_data=invalid_toml)):
-            # Execute & Verify
-            with pytest.raises(ValueError) as exc_info:
-                get_config_value("tokens", "github")
+        # Verify
+        assert (
+            result[("coordinator.repos.mcp_coder", "repo_url")]
+            == "https://github.com/test/repo"
+        )
+        assert result[("coordinator.repos.mcp_coder", "executor_os")] == "linux"
 
-            # Verify error message includes file path
-            assert str(mock_path) in str(exc_info.value)
-
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_io_error_raises(self, mock_get_path: MagicMock) -> None:
-        """Test that ValueError is raised when file cannot be read (IO error)."""
-        # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
-
-        with patch("builtins.open", side_effect=IOError("Permission denied")):
-            # Execute & Verify
-            with pytest.raises(ValueError) as exc_info:
-                get_config_value("tokens", "github")
-
-            # Verify error message includes file path
-            assert str(mock_path) in str(exc_info.value)
-
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_null_value(self, mock_get_path: MagicMock) -> None:
-        """Test that None is returned when value is null in TOML."""
-        # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
-
-        # TOML content with null value isn't valid, but we test with empty string
-        toml_content = b'[section]\nkey = ""'
-
-        with patch("builtins.open", mock_open(read_data=toml_content)):
-            # Execute
-            result = get_config_value("section", "key")
-
-            # Verify - empty string should be converted to string
-            assert result == ""
-
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_nested_section_success(
-        self, mock_get_path: MagicMock, sample_config_content: str
+    def test_get_config_values_single_disk_read(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test successful retrieval from nested section using dot notation."""
+        """Verify config is loaded only once for multiple keys."""
         # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[a]\nx = "1"\n[b]\ny = "2"', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
 
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute
-            result = get_config_value("coordinator.repos.mcp_coder", "repo_url")
+        load_count = 0
+        original_load = load_config
 
-            # Verify
-            assert result == "https://github.com/test/mcp_coder.git"
+        def counting_load() -> dict[str, object]:
+            nonlocal load_count
+            load_count += 1
+            return original_load()
 
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_nested_section_different_repo(
-        self, mock_get_path: MagicMock, sample_config_content: str
+        monkeypatch.setattr("mcp_coder.utils.user_config.load_config", counting_load)
+
+        # Execute
+        get_config_values([("a", "x", None), ("b", "y", None)])
+
+        # Verify
+        assert load_count == 1  # Only one disk read
+
+    def test_get_config_values_explicit_env_var(
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test retrieval from different nested repository."""
+        """Test explicit env_var parameter overrides auto-detection."""
         # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
+        monkeypatch.setenv("CUSTOM_VAR", "custom_value")
 
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute
-            result = get_config_value("coordinator.repos.test_repo", "test_job")
+        # Execute
+        result = get_config_values([("any", "key", "CUSTOM_VAR")])
 
-            # Verify
-            assert result == "Test/test-job"
+        # Verify
+        assert result[("any", "key")] == "custom_value"
 
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_nested_section_missing_intermediate(
-        self, mock_get_path: MagicMock, sample_config_content: str
+    def test_get_config_values_empty_keys_returns_empty_dict(
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that None is returned when intermediate section doesn't exist."""
+        """Empty keys list returns empty dict without loading config."""
         # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
+        load_called = False
 
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute - 'nonexistent' is not a key in coordinator
-            result = get_config_value("coordinator.nonexistent.mcp_coder", "repo_url")
+        def mock_load() -> dict[str, object]:
+            nonlocal load_called
+            load_called = True
+            return {}
 
-            # Verify
-            assert result is None
+        monkeypatch.setattr("mcp_coder.utils.user_config.load_config", mock_load)
 
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_nested_section_missing_leaf(
-        self, mock_get_path: MagicMock, sample_config_content: str
+        # Execute
+        result = get_config_values([])
+
+        # Verify
+        assert result == {}
+        assert not load_called  # Config was never loaded
+
+    def test_get_config_values_all_env_vars_skips_disk(
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that None is returned when leaf section doesn't exist."""
+        """If all keys have env vars set, config file is not read."""
         # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
+        monkeypatch.setenv("GITHUB_TOKEN", "env_gh_token")
+        monkeypatch.setenv("JENKINS_URL", "env_jenkins_url")
 
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute - 'nonexistent_repo' doesn't exist in coordinator.repos
-            result = get_config_value("coordinator.repos.nonexistent_repo", "repo_url")
+        load_called = False
 
-            # Verify
-            assert result is None
+        def mock_load() -> dict[str, object]:
+            nonlocal load_called
+            load_called = True
+            return {}
 
-    @patch("mcp_coder.utils.user_config.get_config_file_path")
-    def test_get_config_value_nested_section_missing_key(
-        self, mock_get_path: MagicMock, sample_config_content: str
+        monkeypatch.setattr("mcp_coder.utils.user_config.load_config", mock_load)
+
+        # Execute
+        result = get_config_values(
+            [
+                ("github", "token", None),
+                ("jenkins", "server_url", None),
+            ]
+        )
+
+        # Verify
+        assert result[("github", "token")] == "env_gh_token"
+        assert result[("jenkins", "server_url")] == "env_jenkins_url"
+        assert not load_called  # Config was never loaded (lazy loading)
+
+    def test_get_config_values_converts_non_string_to_string(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that None is returned when key doesn't exist in nested section."""
+        """Non-string values (int, bool) are converted to string."""
         # Setup
-        mock_path = MagicMock(spec=Path)
-        mock_path.exists.return_value = True
-        mock_get_path.return_value = mock_path
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[settings]\ntimeout = 30\ndebug = true", encoding="utf-8"
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
 
-        with patch(
-            "builtins.open", mock_open(read_data=sample_config_content.encode())
-        ):
-            # Execute - section exists but key doesn't
-            result = get_config_value("coordinator.repos.mcp_coder", "nonexistent_key")
+        # Execute
+        result = get_config_values(
+            [
+                ("settings", "timeout", None),
+                ("settings", "debug", None),
+            ]
+        )
 
-            # Verify
-            assert result is None
+        # Verify
+        assert result[("settings", "timeout")] == "30"
+        assert result[("settings", "debug")] == "True"
 
 
 class TestCreateDefaultConfig:

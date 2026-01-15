@@ -94,14 +94,42 @@ function belongs to, enabling better filtering and debugging.
 ### Step 3: Add Batch `get_config_values()` Function
 > See: [pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Write tests first (TDD)
-- [ ] Remove `@log_function_call` from `get_config_file_path()`
-- [ ] Add `@log_function_call(sensitive_fields=["token", "api_token"])` to `load_config()`
-- [ ] Add helper `_get_nested_value(config_data, section, key)`
-- [ ] Implement `get_config_values()` function
-- [ ] Remove `get_config_value()` function
-- [ ] Run quality checks (pylint, pytest, mypy) and fix issues
-- [ ] Prepare git commit message for Step 3
+- [x] Write tests first (TDD)
+- [x] Remove `@log_function_call` from `get_config_file_path()`
+- [x] Add `@log_function_call(sensitive_fields=["token", "api_token"])` to `load_config()`
+- [x] Add helper `_get_nested_value(config_data, section, key)`
+- [x] Implement `get_config_values()` function
+- [x] Remove `get_config_value()` function
+- [x] Run quality checks (pylint, pytest, mypy) and fix issues
+- [x] Prepare git commit message for Step 3
+
+**Commit message for Step 3:**
+```
+feat(user_config): add batch get_config_values() function
+
+Add new `get_config_values()` batch function that retrieves multiple
+config values in a single disk read, improving performance for callers
+that need multiple configuration values.
+
+Changes:
+- Add `get_config_values()` function with lazy config loading
+- Add `_get_nested_value()` helper for dot-notation section navigation
+- Add `@log_function_call(sensitive_fields=[...])` to `load_config()`
+- Remove `@log_function_call` from `get_config_file_path()` (reduces noise)
+- Remove deprecated `get_config_value()` function (replaced by batch)
+- Update module exports in `__init__.py`
+- Add comprehensive tests for new batch function
+
+Usage:
+  config = get_config_values([
+      ("github", "token", None),
+      ("jenkins", "server_url", None),
+  ])
+  token = config[("github", "token")]
+
+Note: Callers still using get_config_value() will be migrated in Step 4.
+Test updates will follow in Step 5.
+```
 
 ---
 
