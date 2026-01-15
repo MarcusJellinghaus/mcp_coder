@@ -23,11 +23,11 @@ See: [pr_info/steps/step_1.md](steps/step_1.md)
 
 - [x] Add test class `TestGitPushForceWithLease` to `tests/utils/git_operations/test_remotes.py`
 - [x] Modify `git_push()` in `src/mcp_coder/utils/git_operations/remotes.py` to add `force_with_lease` parameter
-- [ ] Add test class `TestRebaseOntoBranch` to `tests/utils/git_operations/test_branches.py`
-- [ ] Add function `rebase_onto_branch()` to `src/mcp_coder/utils/git_operations/branches.py`
-- [ ] Add export `rebase_onto_branch` to `src/mcp_coder/utils/git_operations/__init__.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Add test class `TestRebaseOntoBranch` to `tests/utils/git_operations/test_branches.py`
+- [x] Add function `rebase_onto_branch()` to `src/mcp_coder/utils/git_operations/branches.py`
+- [x] Add export `rebase_onto_branch` to `src/mcp_coder/utils/git_operations/__init__.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Add Parent Branch Detection and Workflow Integration with Tests
 
