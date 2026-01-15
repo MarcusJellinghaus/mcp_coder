@@ -11,6 +11,7 @@ import pytest
 
 from mcp_coder.utils.log_utils import (
     ExtraFieldsFormatter,
+    _redact_for_logging,
     log_function_call,
     setup_logging,
 )
@@ -303,3 +304,175 @@ class TestExtraFieldsFormatter:
         assert "abc-456" in formatted
         assert "action" in formatted
         assert "login" in formatted
+
+
+class TestRedactForLogging:
+    """Tests for the _redact_for_logging helper function."""
+
+    def test_redact_flat_dict(self) -> None:
+        """Test redaction of flat dictionary."""
+        data = {"token": "secret123", "username": "user"}
+        result = _redact_for_logging(data, {"token"})
+
+        assert result["token"] == "***"
+        assert result["username"] == "user"
+        # Original should be unchanged
+        assert data["token"] == "secret123"
+
+    def test_redact_nested_dict(self) -> None:
+        """Test redaction of nested dictionary."""
+        data = {"outer": {"token": "secret", "safe": "visible"}}
+        result = _redact_for_logging(data, {"token"})
+
+        assert result["outer"]["token"] == "***"
+        assert result["outer"]["safe"] == "visible"
+        # Original should be unchanged
+        assert data["outer"]["token"] == "secret"
+
+    def test_redact_deeply_nested_dict(self) -> None:
+        """Test redaction of deeply nested dictionary."""
+        data = {
+            "github": {"token": "ghp_xxx"},
+            "jenkins": {"api_token": "jenkins_xxx", "url": "http://example.com"},
+        }
+        result = _redact_for_logging(data, {"token", "api_token"})
+
+        assert result["github"]["token"] == "***"
+        assert result["jenkins"]["api_token"] == "***"
+        assert result["jenkins"]["url"] == "http://example.com"
+        # Original should be unchanged
+        assert data["github"]["token"] == "ghp_xxx"
+        assert data["jenkins"]["api_token"] == "jenkins_xxx"
+
+    def test_redact_empty_sensitive_fields(self) -> None:
+        """Test with empty sensitive_fields set."""
+        data = {"token": "secret", "name": "test"}
+        result = _redact_for_logging(data, set())
+
+        assert result["token"] == "secret"
+        assert result["name"] == "test"
+
+    def test_redact_non_matching_fields(self) -> None:
+        """Test when no fields match sensitive_fields."""
+        data = {"name": "test", "value": 123}
+        result = _redact_for_logging(data, {"token", "password"})
+
+        assert result["name"] == "test"
+        assert result["value"] == 123
+
+
+class TestLogFunctionCallWithSensitiveFields:
+    """Tests for log_function_call decorator with sensitive_fields parameter."""
+
+    @patch("mcp_coder.utils.log_utils.stdlogger")
+    def test_log_function_call_without_sensitive_fields(
+        self, mock_stdlogger: MagicMock
+    ) -> None:
+        """Test that decorator works without sensitive_fields (backward compatible)."""
+
+        @log_function_call
+        def simple_func(x: int) -> int:
+            return x * 2
+
+        result = simple_func(5)
+        assert result == 10
+        assert mock_stdlogger.debug.call_count == 2
+
+    @patch("mcp_coder.utils.log_utils.stdlogger")
+    def test_log_function_call_with_parentheses_no_args(
+        self, mock_stdlogger: MagicMock
+    ) -> None:
+        """Test that decorator works with empty parentheses."""
+
+        @log_function_call()
+        def simple_func(x: int) -> int:
+            return x * 2
+
+        result: int = simple_func(5)
+        assert result == 10
+        assert mock_stdlogger.debug.call_count == 2
+
+    @patch("mcp_coder.utils.log_utils.stdlogger")
+    def test_log_function_call_redacts_sensitive_params(
+        self, mock_stdlogger: MagicMock
+    ) -> None:
+        """Test that sensitive parameter values are redacted in logs."""
+
+        @log_function_call(sensitive_fields=["token", "password"])
+        def auth_func(token: str, username: str) -> bool:
+            return True
+
+        auth_func(token="secret123", username="user")
+
+        # Verify log contains "***" for token, but "user" for username
+        first_call = mock_stdlogger.debug.call_args_list[0]
+        log_params = first_call[0][2]  # JSON string of parameters
+
+        assert "***" in log_params
+        assert "secret123" not in log_params
+        assert "user" in log_params
+
+    @patch("mcp_coder.utils.log_utils.stdlogger")
+    def test_log_function_call_redacts_sensitive_return_value(
+        self, mock_stdlogger: MagicMock
+    ) -> None:
+        """Test that sensitive values in return dict are redacted in logs."""
+
+        @log_function_call(sensitive_fields=["token"])
+        def get_config() -> dict[str, str]:
+            return {"token": "secret", "name": "test"}
+
+        result: dict[str, str] = get_config()
+
+        # Original return value should be unchanged
+        assert result["token"] == "secret"
+        assert result["name"] == "test"
+
+        # Log should have redacted value
+        second_call = mock_stdlogger.debug.call_args_list[1]  # completion log
+        result_str = str(second_call)
+
+        assert "***" in result_str
+        assert "secret" not in result_str
+        assert "test" in result_str
+
+    @patch("mcp_coder.utils.log_utils.stdlogger")
+    def test_log_function_call_redacts_nested_sensitive_values(
+        self, mock_stdlogger: MagicMock
+    ) -> None:
+        """Test that nested sensitive values in return dict are redacted."""
+
+        @log_function_call(sensitive_fields=["token", "api_token"])
+        def load_config() -> dict[str, dict[str, str]]:
+            return {
+                "github": {"token": "ghp_xxx"},
+                "jenkins": {"api_token": "jenkins_xxx", "url": "http://example.com"},
+            }
+
+        result: dict[str, dict[str, str]] = load_config()
+
+        # Original return value should be unchanged
+        assert result["github"]["token"] == "ghp_xxx"
+        assert result["jenkins"]["api_token"] == "jenkins_xxx"
+
+        # Log should have redacted values
+        second_call = mock_stdlogger.debug.call_args_list[1]
+        result_str = str(second_call)
+
+        assert "ghp_xxx" not in result_str
+        assert "jenkins_xxx" not in result_str
+        assert "http://example.com" in result_str
+
+    @patch("mcp_coder.utils.log_utils.stdlogger")
+    def test_log_function_call_non_dict_return_unchanged(
+        self, mock_stdlogger: MagicMock
+    ) -> None:
+        """Test that non-dict return values work correctly with sensitive_fields."""
+
+        @log_function_call(sensitive_fields=["token"])
+        def get_number() -> int:
+            return 42
+
+        result: int = get_number()
+        assert result == 42
+        assert mock_stdlogger.debug.call_count == 2
