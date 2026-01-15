@@ -72,7 +72,7 @@ def save_conversation(
     )
 
     # Create conversations directory if it doesn't exist
-    conversations_dir = project_dir / PR_INFO_DIR / ".conversations"
+    conversations_dir = project_dir / CONVERSATIONS_DIR
     conversations_dir.mkdir(parents=True, exist_ok=True)
 
     # Build base filename with optional type
@@ -225,7 +225,7 @@ def save_conversation_comprehensive(
             f"Saving comprehensive data for step {step_num} (type: {conversation_type or 'main'})..."
         )
 
-        conversations_dir = project_dir / PR_INFO_DIR / ".conversations"
+        conversations_dir = project_dir / CONVERSATIONS_DIR
         conversations_dir.mkdir(parents=True, exist_ok=True)
 
         # Build filename for comprehensive data
