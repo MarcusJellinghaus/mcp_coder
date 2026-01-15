@@ -57,13 +57,37 @@ Addresses Issue #228 security vulnerability where secrets were logged in plainte
 > See: [pr_info/steps/step_2.md](steps/step_2.md)
 
 - [x] Write tests first (TDD)
-- [ ] Create `func_logger = logging.getLogger(func.__module__)` inside wrapper
-- [ ] Replace `stdlogger.debug(...)` → `func_logger.debug(...)`
-- [ ] Replace `stdlogger.error(...)` → `func_logger.error(...)`
-- [ ] Update structlog call: `structlog.get_logger(module_name)` uses same module
-- [ ] Keep `stdlogger` for `setup_logging()` internal logs
-- [ ] Run quality checks (pylint, pytest, mypy) and fix issues
-- [ ] Prepare git commit message for Step 2
+- [x] Create `func_logger = logging.getLogger(func.__module__)` inside wrapper
+- [x] Replace `stdlogger.debug(...)` → `func_logger.debug(...)`
+- [x] Replace `stdlogger.error(...)` → `func_logger.error(...)`
+- [x] Update structlog call: `structlog.get_logger(module_name)` uses same module
+- [x] Keep `stdlogger` for `setup_logging()` internal logs
+- [x] Run quality checks (pylint, pytest, mypy) and fix issues
+- [x] Prepare git commit message for Step 2
+
+**Commit message for Step 2:**
+```
+fix(log_utils): use decorated function's module for logger name
+
+Fix the `@log_function_call` decorator to use the decorated function's module
+name for the logger instead of the log_utils module name.
+
+Changes:
+- Create `func_logger = logging.getLogger(func.__module__)` inside wrapper
+- Replace `stdlogger.debug()` with `func_logger.debug()` for function logs
+- Replace `stdlogger.error()` with `func_logger.error()` for error logs
+- Keep `stdlogger` for `setup_logging()` internal initialization logs
+- structlog already uses `module_name` (func.__module__) correctly
+
+Before:
+  2026-01-02 21:32:15 - mcp_coder.utils.log_utils - DEBUG - load_config completed...
+
+After:
+  2026-01-02 21:32:15 - mcp_coder.utils.user_config - DEBUG - load_config completed...
+
+This makes log output more useful by showing which module the decorated
+function belongs to, enabling better filtering and debugging.
+```
 
 ---
 
