@@ -177,13 +177,38 @@ Test file updates for test_user_config*.py will follow in Step 5.
 
 - [x] Update `test_user_config.py` - rename class, update all test methods
 - [x] Update `test_user_config_integration.py` - update all references
-- [ ] Update imports in both test files
-- [ ] Run grep to verify no old references remain
-- [ ] Run full test suite
-- [ ] Manual verification of log output format
-- [ ] Verify all acceptance criteria met
-- [ ] Run quality checks (pylint, pytest, mypy) and fix issues
-- [ ] Prepare git commit message for Step 5
+- [x] Update imports in both test files
+- [x] Run grep to verify no old references remain
+- [x] Run full test suite
+- [x] Manual verification of log output format
+- [x] Verify all acceptance criteria met
+- [x] Run quality checks (pylint, pytest, mypy) and fix issues
+- [x] Prepare git commit message for Step 5
+
+**Commit message for Step 5:**
+```
+test(user_config): update tests for batch get_config_values API
+
+Update all test files to use the new `get_config_values()` batch function
+and perform final verification that all acceptance criteria are met.
+
+Changes:
+- Rename TestGetConfigValue class to TestGetConfigValues in test_user_config.py
+- Update all test method names from get_config_value to get_config_values
+- Convert test assertions to use batch API return format: result[(section, key)]
+- Update test_user_config_integration.py to use batch API
+- Update imports in both test files
+- Verify no references to old get_config_value function remain
+
+All acceptance criteria verified:
+- @log_function_call accepts sensitive_fields parameter
+- Sensitive params/return values display as "***" in logs
+- Logger name reflects decorated function's module
+- get_config_value() removed, replaced with get_config_values()
+- All 8 callers refactored to use batch function
+- Config reading produces minimal log entries per batch call
+- All tests updated and passing
+```
 
 ---
 
