@@ -30,14 +30,48 @@ def get_config_values(
 ) -> dict[tuple[str, str], str | None]:
     """Get multiple config values in one disk read.
     
+    Retrieves configuration values from environment variables or config file,
+    with environment variables taking priority. Reads the config file at most
+    once, regardless of how many keys are requested.
+    
     Args:
-        keys: List of (section, key, env_var) tuples. 
-              env_var is optional (can be None for auto-detection).
+        keys: List of (section, key, env_var) tuples where:
+            - section: The TOML section name (supports dot notation for nested
+                      sections, e.g., 'coordinator.repos.mcp_coder')
+            - key: The configuration key within the section
+            - env_var: Optional environment variable name to check first.
+                      Use None for auto-detection based on known mappings:
+                      - ('github', 'token') -> GITHUB_TOKEN
+                      - ('jenkins', 'server_url') -> JENKINS_URL
+                      - ('jenkins', 'username') -> JENKINS_USER
+                      - ('jenkins', 'api_token') -> JENKINS_TOKEN
     
     Returns:
-        Dict mapping (section, key) to value (or None if not found)
+        Dict mapping (section, key) tuples to their values (or None if not found).
+        Access values using: result[(section, key)]
     
     Priority: Environment variable > Config file > None
+    
+    Raises:
+        ValueError: If config file exists but has invalid TOML syntax.
+    
+    Examples:
+        # Basic usage with auto-detected env vars
+        config = get_config_values([
+            ("github", "token", None),
+            ("jenkins", "server_url", None),
+        ])
+        token = config[("github", "token")]
+        
+        # With explicit env var override
+        config = get_config_values([
+            ("custom", "setting", "MY_CUSTOM_VAR"),
+        ])
+        
+        # Nested sections
+        config = get_config_values([
+            ("coordinator.repos.mcp_coder", "repo_url", None),
+        ])
     """
 ```
 
