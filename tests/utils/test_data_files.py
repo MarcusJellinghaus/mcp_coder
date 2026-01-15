@@ -6,6 +6,7 @@ Tests for the data_files utility module.
 import logging
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -47,8 +48,6 @@ class TestFindDataFile:
 
     def test_pyproject_toml_consistency(self) -> None:
         """Test that the package configuration in pyproject.toml matches actual usage."""
-        import tomllib
-
         # Read pyproject.toml
         pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
         with open(pyproject_path, "rb") as f:
