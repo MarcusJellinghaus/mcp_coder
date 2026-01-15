@@ -38,9 +38,9 @@ See: [pr_info/steps/step_2.md](steps/step_2.md)
 - [x] Add private function `_get_rebase_target_branch()` to `src/mcp_coder/workflows/implement/core.py`
 - [x] Add helper function `_attempt_rebase()` to `src/mcp_coder/workflows/implement/core.py`
 - [x] Integrate rebase step into `run_implement_workflow()` in `src/mcp_coder/workflows/implement/core.py`
-- [ ] Modify `push_changes()` in `src/mcp_coder/workflows/implement/task_processing.py` to accept `force_with_lease` parameter
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Modify `push_changes()` in `src/mcp_coder/workflows/implement/task_processing.py` to accept `force_with_lease` parameter
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 2
 
 ---
 
