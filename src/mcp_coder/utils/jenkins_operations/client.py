@@ -32,7 +32,7 @@ from typing import Any, Optional, cast
 from jenkins import Jenkins
 
 from ..log_utils import log_function_call
-from ..user_config import get_config_value
+from ..user_config import get_config_values
 from .models import JobStatus, QueueSummary
 
 # Setup logger
@@ -73,15 +73,19 @@ def _get_jenkins_config() -> dict[str, Optional[str]]:
         test_job is NOT included here - it's only for integration tests
         and is handled separately in the test fixture.
     """
-    # get_config_value automatically checks environment variables first
-    server_url = get_config_value("jenkins", "server_url")
-    username = get_config_value("jenkins", "username")
-    api_token = get_config_value("jenkins", "api_token")
+    # get_config_values automatically checks environment variables first
+    config = get_config_values(
+        [
+            ("jenkins", "server_url", None),
+            ("jenkins", "username", None),
+            ("jenkins", "api_token", None),
+        ]
+    )
 
     return {
-        "server_url": server_url,
-        "username": username,
-        "api_token": api_token,
+        "server_url": config[("jenkins", "server_url")],
+        "username": config[("jenkins", "username")],
+        "api_token": config[("jenkins", "api_token")],
     }
 
 
