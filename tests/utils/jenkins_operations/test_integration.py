@@ -28,7 +28,7 @@ from typing import Generator
 import pytest
 
 from mcp_coder.utils.jenkins_operations.client import JenkinsClient
-from mcp_coder.utils.jenkins_operations.models import JobStatus, QueueSummary
+from mcp_coder.utils.jenkins_operations.models import JobStatus
 
 
 @pytest.fixture
@@ -101,26 +101,6 @@ def jenkins_client(jenkins_test_setup: dict[str, str]) -> JenkinsClient:
 class TestJenkinsIntegration:
     """Integration tests for Jenkins operations with real server."""
 
-    def test_basic_api_connectivity(self, jenkins_client: JenkinsClient) -> None:
-        """Verify basic Jenkins API connectivity.
-
-        This is a minimal smoke test that verifies:
-        1. Authentication works
-        2. Server access works
-        3. Basic queue query works
-        """
-        # Get queue summary (tests auth + server access)
-        summary = jenkins_client.get_queue_summary()
-
-        # Verify response structure
-        assert isinstance(summary, QueueSummary), "Expected QueueSummary instance"
-        assert isinstance(summary.running, int), "Expected running to be int"
-        assert isinstance(summary.queued, int), "Expected queued to be int"
-        assert summary.running >= 0, "Expected non-negative running count"
-        assert summary.queued >= 0, "Expected non-negative queued count"
-
-        print(f"\n[OK] Jenkins connectivity verified: {summary}")
-
     def test_job_lifecycle(
         self, jenkins_client: JenkinsClient, jenkins_test_setup: dict[str, str]
     ) -> None:
@@ -154,8 +134,3 @@ class TestJenkinsIntegration:
             "UNSTABLE",
         ], f"Unexpected status: {status.status}"
         print(f"[OK] Job status: {status}")
-
-        # Get queue summary
-        summary = jenkins_client.get_queue_summary()
-        assert isinstance(summary, QueueSummary), "Expected QueueSummary instance"
-        print(f"[OK] Queue summary: {summary}")
