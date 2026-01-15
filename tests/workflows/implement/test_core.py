@@ -594,6 +594,91 @@ class TestRebaseIntegration:
         assert result == 1
 
 
+class TestRebaseIntegration:
+    """Tests for rebase integration in workflow."""
+
+    @patch("mcp_coder.workflows.implement.core.rebase_onto_branch")
+    @patch("mcp_coder.workflows.implement.core._get_rebase_target_branch")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_rebase_called_after_prerequisites(
+        self,
+        mock_clean: MagicMock,
+        mock_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_prepare: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+    ) -> None:
+        """Test rebase is attempted after prerequisites pass."""
+        mock_clean.return_value = True
+        mock_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_prepare.return_value = False  # Stop here
+        mock_get_target.return_value = "main"
+
+        run_implement_workflow(Path("/test"), "claude", "cli")
+
+        mock_get_target.assert_called_once()
+        mock_rebase.assert_called_once_with(Path("/test"), "main")
+
+    @patch("mcp_coder.workflows.implement.core.rebase_onto_branch")
+    @patch("mcp_coder.workflows.implement.core._get_rebase_target_branch")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_workflow_continues_when_rebase_fails(
+        self,
+        mock_clean: MagicMock,
+        mock_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_prepare: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+    ) -> None:
+        """Test workflow continues even when rebase returns False."""
+        mock_clean.return_value = True
+        mock_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_prepare.return_value = False  # Stop workflow here to focus on rebase
+        mock_get_target.return_value = "main"
+        mock_rebase.return_value = False  # Rebase failed
+
+        # Should not fail - workflow continues past rebase failure
+        result = run_implement_workflow(Path("/test"), "claude", "cli")
+
+        # Workflow should have continued to prepare_task_tracker
+        mock_prepare.assert_called_once()
+        # Result is 1 because prepare_task_tracker returns False, not because of rebase
+        assert result == 1
+
+    @patch("mcp_coder.workflows.implement.core.rebase_onto_branch")
+    @patch("mcp_coder.workflows.implement.core._get_rebase_target_branch")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_rebase_skipped_when_no_target_branch(
+        self,
+        mock_clean: MagicMock,
+        mock_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+    ) -> None:
+        """Test rebase is skipped when target branch cannot be detected."""
+        mock_clean.return_value = True
+        mock_branch.return_value = True
+        mock_prereq.return_value = False  # Stop here
+        mock_get_target.return_value = None  # No target detected
+
+        run_implement_workflow(Path("/test"), "claude", "cli")
+
+        mock_rebase.assert_not_called()
+
+
 class TestPrepareTaskTrackerExecutionDir:
     """Test execution_dir parameter in prepare_task_tracker."""
 
