@@ -38,7 +38,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Use `CONVERSATIONS_DIR` constant in `src/mcp_coder/workflows/implement/task_processing.py`
 - [x] Remove unused `has_mypy_errors` import from `tests/test_mcp_code_checker_integration.py`
 - [x] Rename `mock_read_text` to `_mock_read_text` in `tests/workflows/create_pr/test_file_operations.py`
-- [ ] Remove unused `git_repo_with_files` import from `tests/workflows/test_create_pr_integration.py`
+- [x] Remove unused `git_repo_with_files` import from `tests/workflows/test_create_pr_integration.py`
 - [ ] Delete redundant `test_provider_modules_exist` function from `tests/llm/providers/test_provider_structure.py`
 - [ ] Run pylint check and fix any issues
 - [ ] Run pytest and fix any failures
