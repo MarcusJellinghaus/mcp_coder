@@ -87,40 +87,34 @@ class TestFindDataFile:
     def test_data_file_found_logs_at_debug_level(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test that successful data file discovery logs at DEBUG level, not INFO.
+        """Test that successful data file discovery logs appropriately.
 
-        Uses development path lookup which doesn't require mocking importlib.
+        Uses real mcp_coder package - no temp directories needed.
         """
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            # Create file in development structure: src/package/relative_path
-            test_file = temp_path / "src" / "test_package" / "data" / "test_script.py"
-            test_file.parent.mkdir(parents=True, exist_ok=True)
-            test_file.write_text("# test script")
+        caplog.set_level(logging.DEBUG)
 
-            caplog.set_level(logging.DEBUG)
+        result = find_data_file(
+            package_name="mcp_coder",
+            relative_path="prompts/prompts.md",
+        )
 
-            result = find_data_file(
-                package_name="test_package",
-                relative_path="data/test_script.py",
-                development_base_dir=temp_path,
-            )
+        assert result.exists()
 
-            assert result == test_file
+        # Verify logging occurred - check for key log messages at DEBUG level
+        # The function logs "SEARCH STARTED" and "SUCCESS: Found data file" at DEBUG level
+        debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
+        assert len(debug_records) > 0, "Expected DEBUG level log messages"
 
-            # Check that the success message was logged at DEBUG level (development method uses INFO)
-            # The development method logs "Found data file in development environment"
-            success_messages = [
-                record
-                for record in caplog.records
-                if "Found data file in development environment" in record.message
-            ]
+        # Verify the search started message was logged
+        assert any(
+            "SEARCH STARTED" in record.message for record in debug_records
+        ), "Expected 'SEARCH STARTED' log message"
 
-            assert (
-                len(success_messages) == 1
-            ), f"Expected 1 success message, found {len(success_messages)}"
-            # The development path success message is at INFO level per the code
-            assert success_messages[0].levelname == "INFO"
+        # Verify the success message was logged (contains the file path)
+        assert any(
+            "SUCCESS" in record.message and "prompts.md" in record.message
+            for record in debug_records
+        ), "Expected 'SUCCESS' log message with file path"
 
 
 class TestFindPackageDataFiles:
