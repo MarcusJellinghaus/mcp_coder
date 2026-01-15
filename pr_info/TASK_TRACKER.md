@@ -136,7 +136,7 @@ Test updates will follow in Step 5.
 ### Step 4: Refactor All Callers to Use Batch Config Function
 > See: [pr_info/steps/step_4.md](steps/step_4.md)
 
-- [ ] Update `base_manager.py` - 1 call site
+- [x] Update `base_manager.py` - 1 call site
 - [ ] Update `client.py` - 3 calls → 1 batch
 - [ ] Update `core.py` load_repo_config() - 4 calls → 1 batch
 - [ ] Update `core.py` get_cache_refresh_minutes() - 1 call
