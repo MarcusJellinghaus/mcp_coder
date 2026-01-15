@@ -141,7 +141,7 @@ Test updates will follow in Step 5.
 - [x] Update `core.py` load_repo_config() - 4 calls → 1 batch
 - [x] Update `core.py` get_cache_refresh_minutes() - 1 call
 - [x] Update `core.py` get_jenkins_credentials() - 3 calls → 1 batch
-- [ ] Update `tests/conftest.py` - 2 calls → 1 batch
+- [x] Update `tests/conftest.py` - 2 calls → 1 batch
 - [ ] Update `tests/utils/jenkins_operations/test_integration.py` - 4 calls → 1 batch
 - [ ] Verify no references to `get_config_value` remain (grep codebase)
 - [ ] Run quality checks (pylint, pytest, mypy) and fix issues
