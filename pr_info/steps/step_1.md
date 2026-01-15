@@ -2,16 +2,18 @@
 
 ## LLM Prompt
 ```
-Read pr_info/steps/summary.md for context on Issue #285.
+Read pr_info/steps/summary.md and pr_info/steps/Decisions.md for context on Issue #285.
 Implement Step 1: Rewrite find_data_file() to use importlib.resources.files().
 
 Requirements:
 - Use importlib.resources.files() as primary mechanism
-- Keep development_base_dir parameter for backwards compatibility (log deprecation warning if used)
+- Remove development_base_dir parameter entirely (Decision #6)
 - Return Path for backwards compatibility
-- Include verbose logging (~10+ statements) for troubleshooting
+- Use Path(str(resource)) for Traversable to Path conversion (Decision #1)
+- Catch ModuleNotFoundError and convert to FileNotFoundError (Decision #2)
+- Include verbose logging (~10+ statements) for troubleshooting (Decision #3)
 - Detailed error message with searched location
-- ~50-80 lines total
+- ~50 lines total
 ```
 
 ## WHERE: File Paths
@@ -20,13 +22,12 @@ Requirements:
 |------|--------|
 | `src/mcp_coder/utils/data_files.py` | MODIFY - rewrite `find_data_file` function |
 
-## WHAT: Function Signature (unchanged)
+## WHAT: Function Signature (CHANGED - parameter removed)
 
 ```python
 def find_data_file(
     package_name: str,
     relative_path: str,
-    development_base_dir: Optional[Path] = None,
 ) -> Path:
     """Find a data file using importlib.resources (Python 3.9+ standard library)."""
 ```
@@ -38,7 +39,8 @@ def find_data_file(
 # REMOVE these imports:
 # - importlib.util
 # - site
-# - os (if no longer needed)
+# - os
+# - sys
 
 # ADD this import:
 from importlib.resources import files
@@ -47,19 +49,21 @@ from importlib.resources import files
 ### Keep Existing
 - `logging` import
 - `Path` from pathlib
-- `Optional` from typing
+- `List` from typing (for find_package_data_files)
 - Logger setup: `logger = logging.getLogger(__name__)`
 
 ## ALGORITHM: Core Logic (Pseudocode)
 
 ```python
-def find_data_file(package_name, relative_path, development_base_dir=None):
+def find_data_file(package_name, relative_path):
     # 1. Log search start with parameters
-    # 2. If development_base_dir provided, log deprecation warning
-    # 3. Try importlib.resources.files(package_name).joinpath(relative_path)
-    # 4. Convert Traversable to Path, check exists
-    # 5. If exists: log success, return Path
-    # 6. If not exists: raise FileNotFoundError with detailed message
+    # 2. Try importlib.resources.files(package_name)
+    #    - Catch ModuleNotFoundError -> raise FileNotFoundError (Decision #2)
+    # 3. joinpath(relative_path) to get resource
+    # 4. Convert Traversable to Path using Path(str(resource)) (Decision #1)
+    # 5. Check if path exists
+    # 6. If exists: log success, return Path
+    # 7. If not exists: raise FileNotFoundError with detailed message
 ```
 
 ## DATA: Return Values
@@ -86,17 +90,6 @@ logger.debug("FAILED: Path does not exist", extra={...})
 logger.error("SEARCH COMPLETE: Data file not found", extra={...})
 ```
 
-### Deprecation Warning for development_base_dir
-
-```python
-if development_base_dir is not None:
-    logger.warning(
-        "development_base_dir parameter is deprecated. "
-        "importlib.resources handles editable installs automatically. "
-        "This parameter will be removed in a future version."
-    )
-```
-
 ### Error Message Format
 
 ```python
@@ -108,8 +101,41 @@ raise FileNotFoundError(
 )
 ```
 
+## Additional Changes Required
+
+### Update `find_package_data_files` (same file)
+
+Remove `development_base_dir` parameter from this function too (Decision #12):
+
+```python
+def find_package_data_files(
+    package_name: str,
+    relative_paths: List[str],
+) -> List[Path]:
+```
+
+### Update `prompt_manager.py` caller
+
+Remove `development_base_dir=None` argument from two calls at lines 476 and 491:
+
+```python
+# Before:
+resolved_file = find_data_file(
+    package_name=package_name,
+    relative_path=relative_path,
+    development_base_dir=None,  # Remove this line
+)
+
+# After:
+resolved_file = find_data_file(
+    package_name=package_name,
+    relative_path=relative_path,
+)
+```
+
 ## Verification
 
-After implementation:
-1. Run: `pytest tests/utils/test_data_files.py -v`
-2. Verify `prompt_manager.py` still works: `pytest tests/test_prompt_manager.py -v`
+After implementation, use MCP tools:
+1. Run: `mcp__code-checker__run_pytest_check` with `extra_args=["tests/utils/test_data_files.py", "-v"]`
+2. Run: `mcp__code-checker__run_pytest_check` with `extra_args=["tests/test_prompt_manager.py", "-v"]`
+3. Run: `mcp__code-checker__run_mypy_check` with `target_directories=["src/mcp_coder/utils"]`

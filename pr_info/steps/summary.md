@@ -2,7 +2,7 @@
 
 ## Summary
 
-Replace the complex 5-method search implementation in `find_data_file` (~500 lines) with Python's standard library `importlib.resources` (~50-80 lines). This resolves test fragility with pytest-xdist on Linux CI.
+Replace the complex 5-method search implementation in `find_data_file` (~350 lines) with Python's standard library `importlib.resources` (~50 lines). This resolves test fragility with pytest-xdist on Linux CI.
 
 ## Architectural / Design Changes
 
@@ -15,7 +15,7 @@ find_data_file()
 ├── Method 4: Site-packages directory search
 └── Method 5: Virtual environment search
 ```
-- ~500 lines of complex fallback logic
+- ~350 lines of complex fallback logic
 - Requires mocking `importlib.util.find_spec` in tests (fragile with pytest-xdist)
 - Tests create temporary packages with `sys.path` manipulation
 
@@ -24,7 +24,7 @@ find_data_file()
 find_data_file()
 └── importlib.resources.files() (handles all cases)
 ```
-- ~50-80 lines using Python standard library
+- ~50 lines using Python standard library
 - `importlib.resources` automatically handles:
   - Editable installs (development mode)
   - Regular pip installs (production mode)
@@ -36,7 +36,7 @@ find_data_file()
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Primary mechanism | `importlib.resources.files()` | Python 3.9+ standard library, handles all install modes |
-| `development_base_dir` param | Keep but deprecate | Backwards compatibility; log deprecation warning |
+| `development_base_dir` param | Remove entirely | Cleaner API; `importlib.resources` handles all cases |
 | Return type | `Path` | Backwards compatibility with existing callers |
 | Logging | Verbose (~10+ statements) | Maintain troubleshooting capability per requirements |
 | Error messages | Detailed with locations | Help users diagnose configuration issues |
@@ -45,14 +45,14 @@ find_data_file()
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `src/mcp_coder/utils/data_files.py` | **MODIFY** | Rewrite `find_data_file` (~500 → ~50-80 lines) |
+| `src/mcp_coder/utils/data_files.py` | **MODIFY** | Rewrite `find_data_file` (~350 → ~50 lines) |
 | `tests/utils/test_data_files.py` | **MODIFY** | Simplify tests (remove temp package creation) |
 
 ## Files NOT Modified (Verified Compatible)
 
-| File | Reason |
+| File | Change |
 |------|--------|
-| `src/mcp_coder/prompt_manager.py` | Uses `find_data_file` via `.read_text()` on returned Path - API unchanged |
+| `src/mcp_coder/prompt_manager.py` | Remove `development_base_dir=None` argument from calls (trivial) |
 | `src/mcp_coder/utils/__init__.py` | `data_files` not exported from utils package |
 
 ## Requirements Preserved
