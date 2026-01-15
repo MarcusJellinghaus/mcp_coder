@@ -359,7 +359,7 @@ mcp-coder implement --project-dir /path/to/project
 - **Enforcement**: Documented in `CLAUDE.md` as mandatory requirements
 
 ### Architectural Boundary Enforcement
-- **Tools**: import-linter, tach, pycycle for static analysis of module dependencies
+- **Tools**: import-linter, tach, pycycle for static analysis of module dependencies; vulture for dead code detection
 - **Configuration**: `.importlinter` (19 contracts), `tach.toml` (layer definitions)
 - **CI Integration**: Architecture checks run automatically on pull requests
 - **Documentation**: See `docs/architecture/dependencies/README.md` for detailed tool comparison, current contracts, and guidelines for adding new rules
