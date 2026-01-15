@@ -13,6 +13,12 @@ from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status
+from mcp_coder.utils.git_operations import (
+    get_current_branch_name,
+    get_default_branch_name,
+    rebase_onto_branch,
+)
+from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
 
 from .prerequisites import (
@@ -36,6 +42,55 @@ LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS = 600  # 10 minutes
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+
+def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
+    """Determine the target branch for rebasing the current feature branch.
+
+    Detection priority:
+    1. GitHub PR base branch (if open PR exists for current branch)
+    2. pr_info/BASE_BRANCH file content (if file exists)
+    3. Default branch (main/master) via get_default_branch_name()
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        Branch name to rebase onto, or None if detection fails
+
+    Note:
+        All errors are handled gracefully - returns None on any failure.
+        Debug logging indicates which detection method was used.
+    """
+    # 1. Get current branch name
+    current_branch = get_current_branch_name(project_dir)
+    if not current_branch:
+        return None
+
+    # 2. Try GitHub PR lookup
+    try:
+        pr_manager = PullRequestManager(project_dir)
+        open_prs = pr_manager.list_pull_requests(state="open")
+        for pr in open_prs:
+            if pr["head_branch"] == current_branch:
+                logger.debug("Parent branch detected from: GitHub PR")
+                return pr["base_branch"]
+    except Exception:
+        pass  # Continue to next method
+
+    # 3. Try BASE_BRANCH file
+    base_branch_file = project_dir / "pr_info" / "BASE_BRANCH"
+    if base_branch_file.exists():
+        content = base_branch_file.read_text().strip()
+        if content:
+            logger.debug("Parent branch detected from: BASE_BRANCH file")
+            return content
+
+    # 4. Fall back to default branch
+    default = get_default_branch_name(project_dir)
+    if default:
+        logger.debug("Parent branch detected from: default branch")
+    return default
 
 
 def prepare_task_tracker(
