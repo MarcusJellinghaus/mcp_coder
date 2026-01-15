@@ -32,7 +32,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Delete `src/mcp_coder/utils/detection.py` (entire module - all 8 functions unused)
 - [x] Delete `tests/utils/test_detection.py` (tests for removed module)
 - [x] Remove unused `PullRequest` import from `src/mcp_coder/utils/github_operations/pr_manager.py`
-- [ ] Remove `find_package_data_files` and `get_package_directory` functions from `src/mcp_coder/utils/data_files.py`
+- [x] Remove `find_package_data_files` and `get_package_directory` functions from `src/mcp_coder/utils/data_files.py`
 - [ ] Fix unused `module_file_absolute` variable in `src/mcp_coder/utils/data_files.py`
 - [ ] Remove `_get_jenkins_config` and `get_queue_summary` from `src/mcp_coder/utils/jenkins_operations/client.py`
 - [ ] Use `CONVERSATIONS_DIR` constant in `src/mcp_coder/workflows/implement/task_processing.py`
