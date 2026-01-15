@@ -149,7 +149,9 @@ class TestGetLinkedBranches:
         mock_path.is_dir.return_value = True
 
         with (
-            patch("mcp_coder.utils.github_operations.base_manager.git.Repo"),
+            patch(
+                "mcp_coder.utils.git_operations.is_git_repository", return_value=True
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
@@ -349,7 +351,9 @@ class TestCreateLinkedBranch:
         mock_path.is_dir.return_value = True
 
         with (
-            patch("mcp_coder.utils.github_operations.base_manager.git.Repo"),
+            patch(
+                "mcp_coder.utils.git_operations.is_git_repository", return_value=True
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",
@@ -836,7 +840,9 @@ class TestDeleteLinkedBranch:
         mock_path.is_dir.return_value = True
 
         with (
-            patch("mcp_coder.utils.github_operations.base_manager.git.Repo"),
+            patch(
+                "mcp_coder.utils.git_operations.is_git_repository", return_value=True
+            ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
                 return_value="fake_token",

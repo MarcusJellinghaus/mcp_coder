@@ -23,10 +23,9 @@ class TestCIResultsManagerFoundation:
         repo_dir.mkdir()
 
         # Mock the git repository check
-        with patch("git.Repo") as mock_repo_class:
-            mock_repo = Mock()
-            mock_repo_class.return_value = mock_repo
-
+        with patch(
+            "mcp_coder.utils.git_operations.is_git_repository", return_value=True
+        ):
             # Mock user config to return a token
             with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
                 mock_config.return_value = "test_token"
@@ -36,7 +35,6 @@ class TestCIResultsManagerFoundation:
                     manager = CIResultsManager(project_dir=repo_dir)
 
                     assert manager.project_dir == repo_dir
-                    assert manager._repo is not None
 
     def test_initialization_with_repo_url(self) -> None:
         """Test initialization with repo_url parameter."""

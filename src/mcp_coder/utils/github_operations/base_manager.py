@@ -9,12 +9,11 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar, cast
 
-import git
 from github import Auth, Github
 from github.GithubException import GithubException
 from github.Repository import Repository
 
-from mcp_coder.utils import user_config
+from mcp_coder.utils import git_operations, user_config
 from mcp_coder.utils.log_utils import log_function_call
 
 from .github_utils import parse_github_url
@@ -81,7 +80,6 @@ class BaseGitHubManager:
     Attributes:
         project_dir: Optional path to the project directory (when using local git repo)
         github_token: GitHub personal access token
-        _repo: Optional GitPython repository object (None when using repo_url)
         _github_client: PyGithub client instance
         _repository: Cached GitHub repository object
         _repo_owner: Repository owner (when using repo_url)
@@ -122,7 +120,6 @@ class BaseGitHubManager:
 
         # Initialize attributes that may be set by helper methods
         self.project_dir: Optional[Path] = None
-        self._repo: Optional[git.Repo] = None
         self._repo_owner: Optional[str] = None
         self._repo_name: Optional[str] = None
         self._repo_full_name: Optional[str] = None
@@ -165,16 +162,11 @@ class BaseGitHubManager:
             raise ValueError(f"Path is not a directory: {project_dir}")
 
         # Check if it's a git repository
-        try:
-            repo = git.Repo(project_dir)
-        except git.InvalidGitRepositoryError as exc:
-            raise ValueError(
-                f"Directory is not a git repository: {project_dir}"
-            ) from exc
+        if not git_operations.is_git_repository(project_dir):
+            raise ValueError(f"Directory is not a git repository: {project_dir}")
 
         # Initialize attributes for project_dir mode
         self.project_dir = project_dir
-        self._repo = repo
         self._repo_owner = None
         self._repo_name = None
         self._repo_full_name = None
@@ -197,7 +189,6 @@ class BaseGitHubManager:
 
         # Initialize attributes for repo_url mode
         self.project_dir = None
-        self._repo = None
         self._repo_owner = owner
         self._repo_name = repo_name
         self._repo_full_name = f"{owner}/{repo_name}"
@@ -227,24 +218,16 @@ class BaseGitHubManager:
             if self._repo_full_name is not None:
                 # repo_url mode - use stored value
                 repo_full_name = self._repo_full_name
-            elif self._repo is not None:
-                # project_dir mode - extract from git remote
-                remote_url = None
-                for remote in self._repo.remotes:
-                    if remote.name == "origin":
-                        remote_url = remote.url
-                        break
-
-                if not remote_url:
-                    logger.warning("No 'origin' remote found in git repository")
+            elif self.project_dir is not None:
+                # project_dir mode - use git_operations abstraction
+                github_url = git_operations.get_github_repository_url(self.project_dir)
+                if not github_url:
+                    logger.warning("Could not get GitHub URL from repository")
                     return None
-
-                # Parse the GitHub URL
-                parsed = parse_github_url(remote_url)
+                parsed = parse_github_url(github_url)
                 if parsed is None:
-                    logger.warning("Could not parse GitHub URL: %s", remote_url)
+                    logger.warning("Could not parse GitHub URL: %s", github_url)
                     return None
-
                 owner, repo_name = parsed
                 repo_full_name = f"{owner}/{repo_name}"
 
