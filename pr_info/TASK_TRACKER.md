@@ -28,20 +28,20 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 2: Add Environment Info and Tool Versions
 
-- [ ] Add environment info step after dependency installation in `test` job
-- [ ] Add environment info step after dependency installation in `architecture` job
-- [ ] Prepend `black --version &&` to black matrix command
-- [ ] Prepend `isort --version &&` to isort matrix command
-- [ ] Prepend `pylint --version &&` to pylint matrix command
-- [ ] Prepend `pytest --version &&` to unit-tests matrix command
-- [ ] Prepend `pytest --version &&` to integration-tests matrix command
-- [ ] Prepend `mypy --version &&` to mypy matrix command
-- [ ] Prepend `lint-imports --version &&` to import-linter matrix command
-- [ ] Prepend `tach --version &&` to tach matrix command
-- [ ] Prepend `pycycle --version &&` to pycycle matrix command
-- [ ] Prepend `vulture --version &&` to vulture matrix command
-- [ ] Run quality checks (pylint, pytest, mypy) for Step 2
-- [ ] Prepare git commit message for Step 2
+- [x] Add environment info step after dependency installation in `test` job
+- [x] Add environment info step after dependency installation in `architecture` job
+- [x] Prepend `black --version &&` to black matrix command
+- [x] Prepend `isort --version &&` to isort matrix command
+- [x] Prepend `pylint --version &&` to pylint matrix command
+- [x] Prepend `pytest --version &&` to unit-tests matrix command
+- [x] Prepend `pytest --version &&` to integration-tests matrix command
+- [x] Prepend `mypy --version &&` to mypy matrix command
+- [x] Prepend `lint-imports --version &&` to import-linter matrix command
+- [x] Prepend `tach --version &&` to tach matrix command
+- [x] Prepend `pycycle --version &&` to pycycle matrix command
+- [x] Prepend `vulture --version &&` to vulture matrix command
+- [x] Run quality checks (pylint, pytest, mypy) for Step 2
+- [x] Prepare git commit message for Step 2
 
 ---
 
