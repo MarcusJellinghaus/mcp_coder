@@ -298,7 +298,7 @@ Content with specific formatting.
     @patch("pathlib.Path.read_text", side_effect=PermissionError("Access denied"))
     @patch("mcp_coder.workflows.create_pr.core.logger")
     def test_truncate_with_permission_error(
-        self, mock_logger: MagicMock, mock_read_text: MagicMock
+        self, mock_logger: MagicMock, _mock_read_text: MagicMock
     ) -> None:
         """Test handling of permission errors during file operations."""
         with TemporaryDirectory() as temp_dir:
