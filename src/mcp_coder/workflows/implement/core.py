@@ -49,8 +49,7 @@ def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
 
     Detection priority:
     1. GitHub PR base branch (if open PR exists for current branch)
-    2. pr_info/BASE_BRANCH file content (if file exists)
-    3. Default branch (main/master) via get_default_branch_name()
+    2. Default branch (main/master) via get_default_branch_name()
 
     Args:
         project_dir: Path to the project directory
@@ -73,23 +72,17 @@ def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
         open_prs = pr_manager.list_pull_requests(state="open")
         for pr in open_prs:
             if pr["head_branch"] == current_branch:
-                logger.debug("Parent branch detected from: GitHub PR")
+                logger.debug(
+                    f"Parent branch detected from GitHub PR: {pr['base_branch']}"
+                )
                 return pr["base_branch"]
-    except Exception:
-        pass  # Continue to next method
+    except Exception as e:
+        logger.debug(f"GitHub PR lookup failed (will use default branch): {e}")
 
-    # 3. Try BASE_BRANCH file
-    base_branch_file = project_dir / "pr_info" / "BASE_BRANCH"
-    if base_branch_file.exists():
-        content = base_branch_file.read_text().strip()
-        if content:
-            logger.debug("Parent branch detected from: BASE_BRANCH file")
-            return content
-
-    # 4. Fall back to default branch
+    # 3. Fall back to default branch
     default = get_default_branch_name(project_dir)
     if default:
-        logger.debug("Parent branch detected from: default branch")
+        logger.debug(f"Parent branch detected from default branch: {default}")
     return default
 
 
