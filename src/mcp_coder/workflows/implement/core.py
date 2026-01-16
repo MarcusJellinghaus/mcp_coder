@@ -100,13 +100,20 @@ def _attempt_rebase(project_dir: Path) -> bool:
         project_dir: Path to the project directory
 
     Returns:
-        True if rebase succeeded (subsequent pushes need force_with_lease).
+        True if rebase and push succeeded.
         False if rebase skipped, failed, or no target detected.
     """
     target = _get_rebase_target_branch(project_dir)
     if target:
-        logger.info(f"Rebasing onto origin/{target}...")
-        return rebase_onto_branch(project_dir, target)
+        logger.info("Rebasing onto origin/%s...", target)
+        if rebase_onto_branch(project_dir, target):
+            # Push rebased branch with force_with_lease
+            if push_changes(project_dir, force_with_lease=True):
+                return True
+            else:
+                logger.warning("Rebase succeeded but push failed")
+                return False
+        return False
     else:
         logger.debug("Could not detect parent branch for rebase")
         return False
@@ -336,7 +343,7 @@ def run_implement_workflow(
         return 1
 
     # Step 1.5: Attempt rebase onto parent branch (never blocks workflow)
-    _rebase_succeeded = _attempt_rebase(project_dir)
+    _attempt_rebase(project_dir)
 
     # Step 2: Prepare task tracker if needed
     if not prepare_task_tracker(

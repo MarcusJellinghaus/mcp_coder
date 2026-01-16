@@ -481,6 +481,7 @@ class TestGetRebaseTargetBranch:
 class TestRebaseIntegration:
     """Tests for rebase integration in workflow."""
 
+    @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.rebase_onto_branch")
     @patch("mcp_coder.workflows.implement.core._get_rebase_target_branch")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
@@ -495,6 +496,7 @@ class TestRebaseIntegration:
         mock_prepare: MagicMock,
         mock_get_target: MagicMock,
         mock_rebase: MagicMock,
+        mock_push: MagicMock,
     ) -> None:
         """Test rebase is attempted after prerequisites pass."""
         mock_clean.return_value = True
@@ -502,12 +504,46 @@ class TestRebaseIntegration:
         mock_prereq.return_value = True
         mock_prepare.return_value = False  # Stop here
         mock_get_target.return_value = "main"
+        mock_rebase.return_value = True  # Rebase succeeds
+        mock_push.return_value = True  # Push succeeds
 
         run_implement_workflow(Path("/test"), "claude", "cli")
 
         mock_get_target.assert_called_once()
         mock_rebase.assert_called_once_with(Path("/test"), "main")
 
+    @patch("mcp_coder.workflows.implement.core.push_changes")
+    @patch("mcp_coder.workflows.implement.core.rebase_onto_branch")
+    @patch("mcp_coder.workflows.implement.core._get_rebase_target_branch")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_push_with_force_with_lease_after_successful_rebase(
+        self,
+        mock_clean: MagicMock,
+        mock_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_prepare: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Test push is called with force_with_lease=True after successful rebase."""
+        mock_clean.return_value = True
+        mock_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_prepare.return_value = False  # Stop here
+        mock_get_target.return_value = "main"
+        mock_rebase.return_value = True  # Rebase succeeds
+        mock_push.return_value = True  # Push succeeds
+
+        run_implement_workflow(Path("/test"), "claude", "cli")
+
+        # Verify push was called with force_with_lease=True
+        mock_push.assert_called_once_with(Path("/test"), force_with_lease=True)
+
+    @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.rebase_onto_branch")
     @patch("mcp_coder.workflows.implement.core._get_rebase_target_branch")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
@@ -522,6 +558,7 @@ class TestRebaseIntegration:
         mock_prepare: MagicMock,
         mock_get_target: MagicMock,
         mock_rebase: MagicMock,
+        mock_push: MagicMock,
     ) -> None:
         """Test workflow continues even when rebase returns False."""
         mock_clean.return_value = True
@@ -536,6 +573,8 @@ class TestRebaseIntegration:
 
         # Workflow should have continued to prepare_task_tracker
         mock_prepare.assert_called_once()
+        # Push should not be called when rebase fails
+        mock_push.assert_not_called()
         # Result is 1 because prepare_task_tracker returns False, not because of rebase
         assert result == 1
 
@@ -561,6 +600,40 @@ class TestRebaseIntegration:
         run_implement_workflow(Path("/test"), "claude", "cli")
 
         mock_rebase.assert_not_called()
+
+    @patch("mcp_coder.workflows.implement.core.push_changes")
+    @patch("mcp_coder.workflows.implement.core.rebase_onto_branch")
+    @patch("mcp_coder.workflows.implement.core._get_rebase_target_branch")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_workflow_continues_when_push_after_rebase_fails(
+        self,
+        mock_clean: MagicMock,
+        mock_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_prepare: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Test workflow continues even when push after rebase fails."""
+        mock_clean.return_value = True
+        mock_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_prepare.return_value = False  # Stop workflow here
+        mock_get_target.return_value = "main"
+        mock_rebase.return_value = True  # Rebase succeeds
+        mock_push.return_value = False  # Push fails
+
+        # Should not fail - workflow continues past push failure
+        result = run_implement_workflow(Path("/test"), "claude", "cli")
+
+        # Workflow should have continued to prepare_task_tracker
+        mock_prepare.assert_called_once()
+        # Result is 1 because prepare_task_tracker returns False
+        assert result == 1
 
 
 class TestPrepareTaskTrackerExecutionDir:
