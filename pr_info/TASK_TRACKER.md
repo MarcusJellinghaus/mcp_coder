@@ -46,7 +46,7 @@ See: [pr_info/steps/step_2.md](steps/step_2.md)
 
 See: [pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Remove BASE_BRANCH file test cases from `tests/workflows/implement/test_core.py`
+- [x] Remove BASE_BRANCH file test cases from `tests/workflows/implement/test_core.py`
 - [ ] Modify `_get_rebase_target_branch()` in `src/mcp_coder/workflows/implement/core.py` to remove BASE_BRANCH file logic
 - [ ] Standardize branch name formatting in log messages in `src/mcp_coder/utils/git_operations/branches.py`
 - [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
