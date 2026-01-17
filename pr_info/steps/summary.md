@@ -26,8 +26,7 @@ Add automatic rebase functionality to the `implement` workflow that keeps featur
 ## Parent Branch Detection Priority
 
 1. **GitHub PR base branch** - If open PR exists for current branch, use its `base_branch`
-2. **Explicit configuration** - Read `pr_info/BASE_BRANCH` file (single line)
-3. **Default fallback** - Use `get_default_branch_name()` (main/master)
+2. **Default fallback** - Use `get_default_branch_name()` (main/master)
 
 ## Files to Modify
 
@@ -40,13 +39,13 @@ Add automatic rebase functionality to the `implement` workflow that keeps featur
 | `src/mcp_coder/workflows/implement/task_processing.py` | MODIFY | Pass `force_with_lease=True` after successful rebase |
 | `tests/utils/git_operations/test_branches.py` | MODIFY | Add tests for `rebase_onto_branch()` |
 | `tests/utils/git_operations/test_remotes.py` | MODIFY | Add tests for `force_with_lease` parameter |
-| `tests/workflows/implement/test_core.py` | MODIFY | Add tests for `_get_rebase_target_branch()` |
+| `tests/workflows/implement/test_core.py` | MODIFY | Add tests for `_get_rebase_target_branch()`, remove BASE_BRANCH tests |
 
 ## Behavior Summary
 
 ```
 After prerequisite checks pass (including clean working directory):
-1. Detect parent branch (PR base → BASE_BRANCH file → default)
+1. Detect parent branch (PR base → default)
 2. Attempt rebase onto origin/<parent> (fetch handled internally)
 3. On conflict: abort rebase, log warning, continue workflow
 4. On success: set flag for force push, log info, continue

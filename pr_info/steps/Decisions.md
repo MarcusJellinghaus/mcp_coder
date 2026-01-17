@@ -1,6 +1,6 @@
 # Decisions Log
 
-Decisions made during plan review discussion.
+Decisions made during plan review discussion and implementation review.
 
 ---
 
@@ -8,9 +8,9 @@ Decisions made during plan review discussion.
 
 **Question**: Should we include `pr_info/BASE_BRANCH` file as a fallback for parent branch detection?
 
-**Decision**: **Yes, include it**
+**Decision**: **No, remove it** (Updated during implementation review)
 
-**Rationale**: Supports use case where user branches off non-main branches (e.g., `develop`) before creating a PR.
+**Rationale**: Simplify detection logic to just GitHub PR → default branch fallback. Keep implementation minimal and maintainable.
 
 ---
 
@@ -61,3 +61,23 @@ Decisions made during plan review discussion.
 **Decision**: **Add to Step 1**
 
 **Rationale**: Keep 2 steps total. Step 1 covers all `git_operations` changes (both `branches.py` and `remotes.py`).
+
+---
+
+## Decision 7: Error Handling Specificity (Implementation Review)
+
+**Question**: Should `rebase_onto_branch()` use specific error handling for `GitCommandError` vs generic exceptions?
+
+**Decision**: **Keep generic approach**
+
+**Rationale**: Aligns with "never-fail workflow" principle. Simple and maintainable error handling is sufficient.
+
+---
+
+## Decision 8: Logging Consistency (Implementation Review)
+
+**Question**: Should branch names in log messages be formatted with or without quotes?
+
+**Decision**: **No quotes, clean formatting**
+
+**Rationale**: Consistent, clean log output. Example: `Successfully rebased onto origin/main` instead of `Successfully rebased onto origin/'main'`.
