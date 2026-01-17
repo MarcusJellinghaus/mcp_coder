@@ -25,36 +25,40 @@ No file changes - verification only.
 
 ### Verification Commands
 
-**Bash commands** (no MCP equivalent):
 ```bash
-# 1. Import Linter - verify architectural boundaries
+# 1. Import Linter
 lint-imports
 
-# 2. Tach - verify module dependencies
+# 2. Tach
 tach check
-```
 
-**MCP tools** (per CLAUDE.md requirements):
-```python
 # 3. Run moved tests
-mcp__code-checker__run_pytest_check(
-    extra_args=["-n", "auto", "tests/utils/github_operations/test_issue_cache.py", "-v"]
-)
+pytest tests/utils/github_operations/test_issue_cache.py -v
 
 # 4. Run coordinator tests (should still pass)
-mcp__code-checker__run_pytest_check(
-    extra_args=["-n", "auto", "tests/cli/commands/coordinator/", "-v"]
-)
+pytest tests/cli/commands/coordinator/ -v
 
 # 5. Type checking
-mcp__code-checker__run_mypy_check(
-    target_directories=["src/mcp_coder/utils/github_operations", "src/mcp_coder/cli/commands/coordinator"]
-)
+mypy src/mcp_coder/utils/github_operations/issue_cache.py
+mypy src/mcp_coder/cli/commands/coordinator/core.py
 
 # 6. Pylint
-mcp__code-checker__run_pylint_check(
+pylint src/mcp_coder/utils/github_operations/issue_cache.py
+pylint src/mcp_coder/cli/commands/coordinator/core.py
+```
+
+### Using MCP Tools
+
+```python
+# Run all checks
+mcp__code-checker__run_all_checks(
     target_directories=["src/mcp_coder/utils/github_operations", "src/mcp_coder/cli/commands/coordinator"],
     categories=["error", "fatal", "warning"]
+)
+
+# Run specific tests
+mcp__code-checker__run_pytest_check(
+    extra_args=["tests/utils/github_operations/test_issue_cache.py", "-v"]
 )
 ```
 
@@ -84,7 +88,6 @@ The verification ensures:
 ### Import Linter
 Should pass - moving cache to `utils.github_operations` follows the layered architecture:
 - `cli` → `utils` is allowed
-- `utils` does NOT import from `cli` (clean separation)
 
 ### Tach
 Should pass - no config changes needed:
@@ -101,34 +104,13 @@ No data changes.
 
 ### If import linter fails:
 - Check that `issue_cache.py` doesn't import from `cli` layer
-- Verify the split keeps coordinator-specific logic in coordinator
+- Verify the callback pattern is used correctly
 
 ### If tests fail:
 - Check patch paths are updated correctly
 - Verify logger names match new module path
 - Ensure fixtures are accessible from conftest.py
-- Check `_filter_eligible_issues` tests still patch at coordinator path
 
 ### If type checking fails:
 - Add missing type annotations
-- Check `IssueData` and `CacheData` imports are correct
-
-### If tach fails:
-- Verify no new cross-module dependencies were introduced
-- Check `issue_cache.py` only imports from allowed modules
-
-## Final Checklist
-
-- [ ] `tests/utils/test_coordinator_cache.py` deleted
-- [ ] `tests/utils/github_operations/test_issue_cache.py` exists and passes
-- [ ] `src/mcp_coder/utils/github_operations/issue_cache.py` exists
-- [ ] All cache helpers moved to issue_cache.py
-- [ ] `get_all_cached_issues()` created in issue_cache.py
-- [ ] `get_cached_eligible_issues()` is thin wrapper in coordinator
-- [ ] `_filter_eligible_issues()` unchanged in coordinator
-- [ ] All exports updated in `__init__.py` files
-- [ ] Import linter passes
-- [ ] Tach passes
-- [ ] All tests pass
-- [ ] Mypy passes
-- [ ] Pylint passes (no errors/fatals)
+- Ensure `Callable` types are correctly specified for callbacks

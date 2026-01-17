@@ -5,20 +5,16 @@
 ```
 Read pr_info/steps/summary.md for context.
 
-Implement Step 2: Update `src/mcp_coder/cli/commands/coordinator/core.py` to import from 
-the new issue_cache module and create thin wrappers.
+Implement Step 2: Update `src/mcp_coder/cli/commands/coordinator/core.py` to import from the new issue_cache module.
 
 Changes needed:
 1. Remove the moved functions (CacheData, _load_cache_file, _save_cache_file, etc.)
 2. Import these functions from `mcp_coder.utils.github_operations.issue_cache`
 3. Keep `_filter_eligible_issues` in place (it's coordinator-specific)
-4. Keep `get_eligible_issues` in place (it's the fallback)
-5. Rewrite `get_cached_eligible_issues` as a thin wrapper that:
-   - Calls `get_all_cached_issues()` from issue_cache
-   - Applies `_filter_eligible_issues()` to the result
-   - Falls back to `get_eligible_issues()` on error
+4. Update `get_cached_eligible_issues` to be a thin wrapper that calls the issue_cache version with appropriate callbacks
+5. Update `_update_issue_labels_in_cache` to be a thin wrapper if needed
 
-The late-binding pattern (`_get_coordinator()`) is no longer needed for cache functions.
+The late-binding pattern (`_get_coordinator()`) should be simplified since we're now using direct imports from the lower layer.
 ```
 
 ## WHERE
@@ -34,36 +30,26 @@ The late-binding pattern (`_get_coordinator()`) is no longer needed for cache fu
 - `_get_cache_file_path()`
 - `_log_cache_metrics()`
 - `_log_stale_cache_entries()`
-- `_update_issue_labels_in_cache()`
-- Most of `get_cached_eligible_issues()` body (replaced with thin wrapper)
 
 ### Add Imports
 ```python
 from ....utils.github_operations.issue_cache import (
     CacheData,
-    _update_issue_labels_in_cache,
-    get_all_cached_issues,
+    _get_cache_file_path,
+    _load_cache_file,
+    _log_cache_metrics,
+    _log_stale_cache_entries,
+    _save_cache_file,
+    get_cached_eligible_issues as _get_cached_eligible_issues_impl,
+    _update_issue_labels_in_cache as _update_issue_labels_in_cache_impl,
 )
 ```
 
-**Note:** Only import public API and functions needed by coordinator. Private helpers 
-(`_get_cache_file_path`, `_load_cache_file`, etc.) stay internal to `issue_cache.py`.
-
-### Update workflow_constants.py Import
-
-Update `workflow_constants.py` to import `DUPLICATE_PROTECTION_SECONDS` from the shared location:
-```python
-# In workflow_constants.py, change:
-# DUPLICATE_PROTECTION_SECONDS = 50
-# To:
-from ....constants import DUPLICATE_PROTECTION_SECONDS
-```
-
-### Keep in Place (unchanged)
+### Keep in Place
 - `_filter_eligible_issues()` - coordinator-specific logic
 - `get_eligible_issues()` - coordinator-specific logic
 
-### New Thin Wrapper
+### Update wrapper functions
 
 ```python
 def get_cached_eligible_issues(
@@ -72,58 +58,39 @@ def get_cached_eligible_issues(
     force_refresh: bool = False,
     cache_refresh_minutes: int = 1440,
 ) -> List[IssueData]:
-    """Get eligible issues using cache for performance and duplicate protection.
-    
-    Thin wrapper that:
-    1. Calls get_all_cached_issues() for cache operations
-    2. Filters results using _filter_eligible_issues()
-    3. Falls back to get_eligible_issues() on cache errors
-    
-    Args:
-        repo_full_name: Repository in "owner/repo" format
-        issue_manager: IssueManager for GitHub API calls
-        force_refresh: Bypass cache entirely
-        cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
-    
-    Returns:
-        List of eligible issues (filtered by bot_pickup labels, sorted by priority)
-    """
-    try:
-        all_issues = get_all_cached_issues(
-            repo_full_name=repo_full_name,
-            issue_manager=issue_manager,
-            force_refresh=force_refresh,
-            cache_refresh_minutes=cache_refresh_minutes,
-        )
-        return _filter_eligible_issues(all_issues)
-    except (ValueError, KeyError, TypeError) as e:
-        logger.warning(
-            f"Cache error for {repo_full_name}: {e}, falling back to direct fetch"
-        )
-        return get_eligible_issues(issue_manager)
+    """Get eligible issues using cache for performance and duplicate protection."""
+    return _get_cached_eligible_issues_impl(
+        repo_full_name=repo_full_name,
+        issue_manager=issue_manager,
+        filter_fn=_filter_eligible_issues,
+        fallback_fn=get_eligible_issues,
+        force_refresh=force_refresh,
+        cache_refresh_minutes=cache_refresh_minutes,
+    )
+
+def _update_issue_labels_in_cache(
+    repo_full_name: str, issue_number: int, old_label: str, new_label: str
+) -> None:
+    """Update issue labels in cache after successful dispatch."""
+    _update_issue_labels_in_cache_impl(repo_full_name, issue_number, old_label, new_label)
 ```
 
 ## HOW
 
 The coordinator module becomes a thin wrapper that:
-1. Imports cache implementation from `issue_cache`
-2. Keeps coordinator-specific business logic (`_filter_eligible_issues`, `get_eligible_issues`)
-3. Provides error handling and fallback behavior
-4. Maintains the same public API for backwards compatibility
-
-### Remove Late Binding for Cache Functions
-
-The `_get_coordinator()` pattern is no longer needed for cache functions since they're
-now imported directly. However, keep it for `_filter_eligible_issues` calls within
-the coordinator (if any internal calls exist).
+1. Imports the implementation from `issue_cache`
+2. Provides the coordinator-specific callbacks (`_filter_eligible_issues`, `get_eligible_issues`)
+3. Maintains the same public API for backwards compatibility
 
 ## ALGORITHM
 
 ```
-# Thin wrapper pattern:
-1. Try to get all cached issues from issue_cache module
-2. Filter using coordinator's _filter_eligible_issues
-3. On any error, fall back to get_eligible_issues (direct API fetch)
+# Wrapper pattern:
+1. Import implementation from issue_cache
+2. Define local _filter_eligible_issues (coordinator logic)
+3. Define local get_eligible_issues (coordinator logic)
+4. Wrap get_cached_eligible_issues to pass callbacks
+5. Wrap _update_issue_labels_in_cache (direct delegate)
 ```
 
 ## DATA
@@ -134,4 +101,5 @@ No data structure changes - the API remains identical.
 
 Existing tests should continue to work because:
 - The public API hasn't changed
-- Tests will patch at the new location: `mcp_coder.utils.github_operations.issue_cache.<function>`
+- Tests patch at `mcp_coder.cli.commands.coordinator.<function>` 
+- Re-exports in `coordinator/__init__.py` will be updated in Step 3

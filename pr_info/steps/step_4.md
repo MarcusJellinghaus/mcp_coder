@@ -12,23 +12,18 @@ Implement Step 4: Move the test file and update imports.
 2. Update all imports in the test file:
    - Change `from mcp_coder.cli.commands.coordinator import ...` 
    - To `from mcp_coder.utils.github_operations.issue_cache import ...`
-   - Keep `_filter_eligible_issues` import from coordinator (it stays there)
 
 3. Update all patch paths in tests:
    - Change `@patch("mcp_coder.cli.commands.coordinator._get_cache_file_path")`
    - To `@patch("mcp_coder.utils.github_operations.issue_cache._get_cache_file_path")`
    - (And similar for all other patched functions)
 
-4. Update logger paths in caplog.set_level calls
-
-5. Merge shared fixtures into `tests/utils/github_operations/conftest.py`:
+4. Move shared fixtures to `tests/utils/github_operations/conftest.py`:
    - sample_issue
    - sample_cache_data  
-   - mock_cache_issue_manager
+   - mock_issue_manager
 
-6. **VERIFY tests pass BEFORE deleting original file**
-
-7. Delete the original file `tests/utils/test_coordinator_cache.py` only after verification
+5. Delete the original file `tests/utils/test_coordinator_cache.py`
 
 The test logic should remain UNCHANGED - only imports and patch paths change.
 ```
@@ -37,7 +32,7 @@ The test logic should remain UNCHANGED - only imports and patch paths change.
 
 **Create**: `tests/utils/github_operations/test_issue_cache.py`
 **Modify**: `tests/utils/github_operations/conftest.py`
-**Delete** (after verification): `tests/utils/test_coordinator_cache.py`
+**Delete**: `tests/utils/test_coordinator_cache.py`
 
 ## WHAT
 
@@ -68,13 +63,10 @@ from mcp_coder.utils.github_operations.issue_cache import (
     _log_stale_cache_entries,
     _save_cache_file,
     _update_issue_labels_in_cache,
-    get_all_cached_issues,
+    get_cached_eligible_issues,
 )
 # _filter_eligible_issues stays in coordinator
-from mcp_coder.cli.commands.coordinator import (
-    _filter_eligible_issues,
-    get_cached_eligible_issues,  # thin wrapper
-)
+from mcp_coder.cli.commands.coordinator import _filter_eligible_issues
 ```
 
 ### Patch Path Changes
@@ -93,9 +85,8 @@ from mcp_coder.cli.commands.coordinator import (
 @patch("mcp_coder.utils.github_operations.issue_cache._get_cache_file_path")
 @patch("mcp_coder.utils.github_operations.issue_cache._load_cache_file")
 @patch("mcp_coder.utils.github_operations.issue_cache._save_cache_file")
-# These stay in coordinator:
-@patch("mcp_coder.cli.commands.coordinator._filter_eligible_issues")
-@patch("mcp_coder.cli.commands.coordinator.get_eligible_issues")
+# _filter_eligible_issues is passed as callback, may need different patching strategy
+# get_eligible_issues is passed as callback
 ```
 
 ### Logger Path Changes
@@ -110,14 +101,9 @@ caplog.set_level(logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
 caplog.set_level(logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache")
 ```
 
-### Fixtures to Merge into conftest.py
-
-Add to `tests/utils/github_operations/conftest.py`:
+### Fixtures to Move to conftest.py
 
 ```python
-from mcp_coder.utils.github_operations.issue_cache import CacheData
-from mcp_coder.utils.github_operations.issue_manager import IssueData
-
 @pytest.fixture
 def sample_issue() -> IssueData:
     """Sample issue data for testing."""
@@ -125,14 +111,7 @@ def sample_issue() -> IssueData:
         "number": 123,
         "state": "open",
         "labels": ["status-02:awaiting-planning"],
-        "updated_at": "2025-12-31T09:00:00Z",
-        "url": "https://github.com/test/repo/issues/123",
-        "title": "Test issue",
-        "body": "Test issue body",
-        "assignees": [],
-        "user": "testuser",
-        "created_at": "2025-12-31T08:00:00Z",
-        "locked": False,
+        # ... rest of fixture
     }
 
 @pytest.fixture
@@ -140,26 +119,12 @@ def sample_cache_data() -> CacheData:
     """Sample cache data structure."""
     return {
         "last_checked": "2025-12-31T10:30:00Z",
-        "issues": {
-            "123": {
-                "number": 123,
-                "state": "open",
-                "labels": ["status-02:awaiting-planning"],
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/test/repo/issues/123",
-                "title": "Test issue",
-                "body": "Test issue body",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "locked": False,
-            }
-        },
+        "issues": { ... }
     }
 
 @pytest.fixture
-def mock_cache_issue_manager() -> Mock:
-    """Mock IssueManager for cache testing."""
+def mock_issue_manager() -> Mock:
+    """Mock IssueManager for testing."""
     manager = Mock()
     manager.list_issues.return_value = []
     return manager
@@ -177,7 +142,7 @@ The test file structure remains the same:
 - `TestCacheIssueUpdate`
 - `TestCacheUpdateIntegration`
 
-Only imports, patch paths, and logger names change.
+Only imports and patch paths change.
 
 ## ALGORITHM
 
@@ -185,12 +150,11 @@ Only imports, patch paths, and logger names change.
 # Test migration steps:
 1. Copy test file to new location
 2. Update imports at top of file
-3. Find/replace all patch paths (coordinator → issue_cache for cache functions)
+3. Find/replace all patch paths (coordinator → issue_cache)
 4. Update logger names in caplog.set_level calls
 5. Move fixtures to conftest.py
-6. Remove fixture definitions from test file
-7. **RUN TESTS to verify they pass**
-8. Only after verification: delete original file
+6. Run tests to verify
+7. Delete original file
 ```
 
 ## DATA
@@ -199,34 +163,13 @@ No data structure changes.
 
 ## TESTS
 
-### Verification Before Deletion
-
+Run the moved tests:
 ```bash
-# Run moved tests - must pass before deleting original
 pytest tests/utils/github_operations/test_issue_cache.py -v
-
-# Verify coordinator tests still work
-pytest tests/cli/commands/coordinator/ -v
 ```
 
-### After Verification Passes
-
+Verify no tests remain in old location:
 ```bash
-# Delete original file
-rm tests/utils/test_coordinator_cache.py
-
-# Verify no tests remain in old location (should show "no tests collected")
-pytest tests/utils/test_coordinator_cache.py -v 2>&1 | grep -E "(no tests|not found)"
+# Should fail or show no tests
+pytest tests/utils/test_coordinator_cache.py -v
 ```
-
-## Troubleshooting
-
-### If tests fail after moving:
-- Check patch paths are updated correctly
-- Verify logger names match new module path
-- Ensure fixtures are accessible from conftest.py
-- Check that `_filter_eligible_issues` patches still point to coordinator
-
-### If imports fail:
-- Verify Step 3 exports are complete
-- Check both import paths work (github_operations and coordinator)
