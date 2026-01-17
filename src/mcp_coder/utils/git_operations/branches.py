@@ -589,3 +589,84 @@ def extract_issue_number_from_branch(branch_name: str) -> Optional[int]:
     if match:
         return int(match.group(1))
     return None
+
+
+def rebase_onto_branch(project_dir: Path, target_branch: str) -> bool:
+    """Attempt to rebase current branch onto origin/<target_branch>.
+
+    Fetches from origin, then attempts rebase. If conflicts are detected,
+    automatically aborts the rebase. All outcomes are logged internally.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+        target_branch: Name of the branch to rebase onto (without 'origin/' prefix)
+
+    Returns:
+        True if rebase succeeded or branch is already up-to-date.
+        False if rebase was skipped (conflicts, errors, etc.)
+
+    Note:
+        This function never raises exceptions - all errors are logged and
+        result in False return value. Safe to call without try/except.
+    """
+    # Import here to avoid circular import
+    from .remotes import fetch_remote
+
+    logger.debug("Attempting rebase onto origin/%s in %s", target_branch, project_dir)
+
+    # Validate inputs
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    if not target_branch or not target_branch.strip():
+        logger.debug("Target branch name is empty")
+        return False
+
+    try:
+        # Fetch from origin first
+        if not fetch_remote(project_dir):
+            logger.warning("Skipping rebase: failed to fetch from origin")
+            return False
+
+        with _safe_repo_context(project_dir) as repo:
+            # Attempt rebase onto origin/<target_branch>
+            try:
+                repo.git.rebase(f"origin/{target_branch}")
+                logger.info("Successfully rebased onto origin/%s", target_branch)
+                return True
+
+            except GitCommandError as e:
+                error_message = str(e).lower()
+
+                # Check if already up-to-date (some git versions report this)
+                if "up to date" in error_message or "up-to-date" in error_message:
+                    logger.info("Already up-to-date with origin/%s", target_branch)
+                    return True
+
+                # Check if rebase is in progress (conflicts detected)
+                rebase_merge_dir = project_dir / ".git" / "rebase-merge"
+                rebase_apply_dir = project_dir / ".git" / "rebase-apply"
+
+                if rebase_merge_dir.exists() or rebase_apply_dir.exists():
+                    logger.warning(
+                        "Skipping rebase: merge conflicts detected, aborting rebase"
+                    )
+                    # Abort the rebase to restore original state
+                    try:
+                        repo.git.rebase("--abort")
+                        logger.debug("Successfully aborted rebase")
+                    except GitCommandError as abort_error:
+                        logger.warning("Failed to abort rebase: %s", abort_error)
+                    return False
+
+                # Other git command error (e.g., invalid branch name)
+                logger.warning("Skipping rebase: %s", e)
+                return False
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.warning("Skipping rebase: %s", e)
+        return False
+    except Exception as e:
+        logger.warning("Unexpected error during rebase: %s", e)
+        return False

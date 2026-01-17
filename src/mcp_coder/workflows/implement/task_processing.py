@@ -329,18 +329,32 @@ def commit_changes(
         return False
 
 
-def push_changes(project_dir: Path) -> bool:
-    """Push changes to remote repository and return success status."""
-    logger.info("Pushing changes to remote...")
+def push_changes(project_dir: Path, force_with_lease: bool = False) -> bool:
+    """Push changes to remote repository and return success status.
+
+    Args:
+        project_dir: Path to the project directory
+        force_with_lease: If True, use --force-with-lease for safe force push
+
+    Returns:
+        True if push succeeded, False otherwise
+    """
+    if force_with_lease:
+        logger.info("Pushing changes to remote with --force-with-lease...")
+    else:
+        logger.info("Pushing changes to remote...")
 
     try:
-        push_result = git_push(project_dir)
+        push_result = git_push(project_dir, force_with_lease=force_with_lease)
 
         if not push_result["success"]:
             logger.error(f"Error pushing changes: {push_result['error']}")
             return False
 
-        logger.info("Changes pushed successfully to remote")
+        if force_with_lease:
+            logger.info("Changes force-pushed successfully to remote (with lease)")
+        else:
+            logger.info("Changes pushed successfully to remote")
         return True
 
     except Exception as e:

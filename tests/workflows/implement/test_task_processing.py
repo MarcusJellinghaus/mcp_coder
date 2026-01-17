@@ -304,7 +304,9 @@ class TestPushChanges:
         result = push_changes(Path("/test/project"))
 
         assert result is True
-        mock_git_push.assert_called_once_with(Path("/test/project"))
+        mock_git_push.assert_called_once_with(
+            Path("/test/project"), force_with_lease=False
+        )
 
     @patch("mcp_coder.workflows.implement.task_processing.git_push")
     def test_push_changes_failure(self, mock_git_push: MagicMock) -> None:
@@ -326,6 +328,35 @@ class TestPushChanges:
         result = push_changes(Path("/test/project"))
 
         assert result is False
+
+    @patch("mcp_coder.workflows.implement.task_processing.git_push")
+    def test_push_changes_with_force_with_lease(self, mock_git_push: MagicMock) -> None:
+        """Test pushing changes with force_with_lease=True."""
+        mock_git_push.return_value = {"success": True, "error": None}
+
+        result = push_changes(Path("/test/project"), force_with_lease=True)
+
+        assert result is True
+        mock_git_push.assert_called_once_with(
+            Path("/test/project"), force_with_lease=True
+        )
+
+    @patch("mcp_coder.workflows.implement.task_processing.git_push")
+    def test_push_changes_force_with_lease_failure(
+        self, mock_git_push: MagicMock
+    ) -> None:
+        """Test force push with lease when remote has new commits."""
+        mock_git_push.return_value = {
+            "success": False,
+            "error": "failed to push some refs: stale info",
+        }
+
+        result = push_changes(Path("/test/project"), force_with_lease=True)
+
+        assert result is False
+        mock_git_push.assert_called_once_with(
+            Path("/test/project"), force_with_lease=True
+        )
 
 
 class TestCheckAndFixMypy:

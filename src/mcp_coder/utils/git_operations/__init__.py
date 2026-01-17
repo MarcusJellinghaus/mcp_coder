@@ -10,6 +10,7 @@ from .branches import (
     get_current_branch_name,
     get_default_branch_name,
     get_parent_branch_name,
+    rebase_onto_branch,
     remote_branch_exists,
     validate_branch_name,
 )
@@ -54,6 +55,7 @@ __all__ = [
     "get_current_branch_name",
     "get_default_branch_name",
     "get_parent_branch_name",
+    "rebase_onto_branch",
     "remote_branch_exists",
     "validate_branch_name",
     # Commit operations
