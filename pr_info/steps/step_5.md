@@ -58,7 +58,7 @@ mcp__code-checker__run_all_checks(
 
 # Run specific tests
 mcp__code-checker__run_pytest_check(
-    extra_args=["tests/utils/github_operations/test_issue_cache.py", "-v"]
+    extra_args=["-n", "auto", "tests/utils/github_operations/test_issue_cache.py", "-v"]
 )
 ```
 
@@ -88,6 +88,7 @@ The verification ensures:
 ### Import Linter
 Should pass - moving cache to `utils.github_operations` follows the layered architecture:
 - `cli` → `utils` is allowed
+- `utils` does NOT import from `cli` (clean separation)
 
 ### Tach
 Should pass - no config changes needed:
@@ -104,13 +105,34 @@ No data changes.
 
 ### If import linter fails:
 - Check that `issue_cache.py` doesn't import from `cli` layer
-- Verify the callback pattern is used correctly
+- Verify the split keeps coordinator-specific logic in coordinator
 
 ### If tests fail:
 - Check patch paths are updated correctly
 - Verify logger names match new module path
 - Ensure fixtures are accessible from conftest.py
+- Check `_filter_eligible_issues` tests still patch at coordinator path
 
 ### If type checking fails:
 - Add missing type annotations
-- Ensure `Callable` types are correctly specified for callbacks
+- Check `IssueData` and `CacheData` imports are correct
+
+### If tach fails:
+- Verify no new cross-module dependencies were introduced
+- Check `issue_cache.py` only imports from allowed modules
+
+## Final Checklist
+
+- [ ] `tests/utils/test_coordinator_cache.py` deleted
+- [ ] `tests/utils/github_operations/test_issue_cache.py` exists and passes
+- [ ] `src/mcp_coder/utils/github_operations/issue_cache.py` exists
+- [ ] All cache helpers moved to issue_cache.py
+- [ ] `get_all_cached_issues()` created in issue_cache.py
+- [ ] `get_cached_eligible_issues()` is thin wrapper in coordinator
+- [ ] `_filter_eligible_issues()` unchanged in coordinator
+- [ ] All exports updated in `__init__.py` files
+- [ ] Import linter passes
+- [ ] Tach passes
+- [ ] All tests pass
+- [ ] Mypy passes
+- [ ] Pylint passes (no errors/fatals)
