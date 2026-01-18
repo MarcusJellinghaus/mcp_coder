@@ -56,9 +56,11 @@ tests/utils/github_operations/
 
 | File | Changes |
 |------|---------|
-| `src/mcp_coder/utils/github_operations/__init__.py` | Add issue_cache exports |
+| `src/mcp_coder/constants.py` | Add `DUPLICATE_PROTECTION_SECONDS` constant |
+| `src/mcp_coder/utils/github_operations/__init__.py` | Add issue_cache exports (public API only) |
 | `src/mcp_coder/cli/commands/coordinator/core.py` | Import from issue_cache, keep thin wrapper |
-| `src/mcp_coder/cli/commands/coordinator/__init__.py` | Update exports |
+| `src/mcp_coder/cli/commands/coordinator/__init__.py` | Update exports (remove private functions) |
+| `src/mcp_coder/cli/commands/coordinator/workflow_constants.py` | Import constant from shared location |
 | `tests/utils/github_operations/conftest.py` | Merge cache test fixtures |
 
 ## Files to Delete
@@ -102,5 +104,13 @@ tests/utils/github_operations/
 
 - **No functional changes**: Only move code and adjust imports
 - **Preserve test coverage**: All existing test logic maintained
-- **Maintain backwards compatibility**: Re-export from coordinator `__init__.py` for any external consumers
+- **Public API only**: Only export public functions from coordinator (no private helper re-exports)
 - **Verify tests before deletion**: Run moved tests before deleting original test file
+
+## Key Decisions
+
+See `Decisions.md` for detailed discussion outcomes:
+1. Error handling unchanged (standard exceptions, fallback in thin wrapper)
+2. `DUPLICATE_PROTECTION_SECONDS` moved to shared `constants.py`
+3. Private functions not re-exported from coordinator
+4. No grep needed for other patch paths
