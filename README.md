@@ -102,7 +102,7 @@ flowchart TD
 ## ✨ Current Features
 
 ### 🤖 Development Automation
-- **Integrated LLMs**: Claude Code CLI and API support (additional LLM providers planned)
+- **Integrated LLMs**: Claude Code CLI support (additional LLM providers planned)
 - **Automated Implementation**: Complete feature development via `mcp-coder implement`
 
 ### 🔄 Interactive Planning & Quality Assurance
