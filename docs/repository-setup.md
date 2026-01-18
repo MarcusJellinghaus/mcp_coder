@@ -416,13 +416,13 @@ mcp-coder prompt "List files in src/" --mcp-config .mcp.linux.json
 
 After setup is complete:
 
-1. **Read the development process:** [Development Process](docs/processes_prompts/DEVELOPMENT_PROCESS.md)
-2. **Learn the CLI commands:** [CLI Reference](docs/CLI_REFERENCE.md) 
-3. **Configure your environment:** [Configuration Guide](docs/configuration/CONFIG.md)
+1. **Read the development process:** [Development Process](docs/processes_prompts/development-process.md)
+2. **Learn the CLI commands:** [CLI Reference](docs/cli-reference.md) 
+3. **Configure your environment:** [Configuration Guide](docs/configuration/config.md)
 4. **Create your first automated workflow:** Start with a simple issue and test the full cycle
 
 ## Related Documentation
 
-- **[Label Setup Guide](docs/getting-started/LABEL_SETUP.md)** - Detailed label management
-- **[Configuration Guide](docs/configuration/CONFIG.md)** - User and system configuration
-- **[Development Process](docs/processes_prompts/DEVELOPMENT_PROCESS.md)** - Complete workflow methodology
+- **[Label Setup Guide](docs/getting-started/label-setup.md)** - Detailed label management
+- **[Configuration Guide](docs/configuration/config.md)** - User and system configuration
+- **[Development Process](docs/processes_prompts/development-process.md)** - Complete workflow methodology

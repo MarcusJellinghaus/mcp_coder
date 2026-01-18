@@ -443,6 +443,6 @@ mcp-coder coordinator run --all
 
 ## See Also
 
-- **[Repository Setup](REPOSITORY_SETUP.md)** - GitHub Actions, labels, and repository configuration
-- **[Configuration Guide](configuration/CONFIG.md)** - User config files and environment setup
-- **[Development Process](processes_prompts/DEVELOPMENT_PROCESS.md)** - Workflow methodology and best practices
+- **[Repository Setup](repository-setup.md)** - GitHub Actions, labels, and repository configuration
+- **[Configuration Guide](configuration/config.md)** - User config files and environment setup
+- **[Development Process](processes_prompts/development-process.md)** - Workflow methodology and best practices
