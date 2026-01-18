@@ -135,10 +135,28 @@ _See: [pr_info/steps/step_4.md](steps/step_4.md)_
 - [x] Run pytest on `tests/utils/github_operations/test_issue_cache.py` to verify tests pass
 - [x] Run pytest on coordinator tests to ensure they still pass
 - [x] Delete original `tests/utils/test_coordinator_cache.py` after verification
-- [ ] Run pylint on test files and fix any issues
-- [ ] Run mypy on test files and fix any type errors
-- [ ] Run full pytest suite and ensure all tests pass
-- [ ] Prepare git commit message for Step 4
+- [x] Run pylint on test files and fix any issues
+- [x] Run mypy on test files and fix any type errors
+- [x] Run full pytest suite and ensure all tests pass
+- [x] Prepare git commit message for Step 4
+
+**Commit message for Step 4:**
+```
+test(cache): move and update test file for issue_cache module
+
+Move tests from test_coordinator_cache.py to test_issue_cache.py:
+- Create tests/utils/github_operations/test_issue_cache.py
+- Update imports to use mcp_coder.utils.github_operations.issue_cache
+- Update all patch paths from coordinator to issue_cache module
+- Update logger paths in caplog.set_level calls
+- Add fixtures to conftest.py (sample_issue, sample_cache_data, mock_cache_issue_manager)
+- Delete original tests/utils/test_coordinator_cache.py
+
+Test structure remains unchanged - only imports, patch paths, and
+logger names updated to reflect new module location.
+
+Part of: Issue #257 - Refactor Cache Logic to github_operations
+```
 
 ### Step 5: Run Verification Checks
 _See: [pr_info/steps/step_5.md](steps/step_5.md)_
