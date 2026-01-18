@@ -104,7 +104,10 @@ def _attempt_rebase_and_push(project_dir: Path) -> bool:
             if push_changes(project_dir, force_with_lease=True):
                 return True
             else:
-                logger.warning("Rebase succeeded but push failed")
+                logger.warning(
+                    "Rebase succeeded but push failed - "
+                    "manual push with --force-with-lease may be required"
+                )
                 return False
         return False
     else:

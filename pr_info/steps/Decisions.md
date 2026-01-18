@@ -8,9 +8,9 @@ Decisions made during plan review discussion.
 
 **Question**: Should we include `pr_info/BASE_BRANCH` file as a fallback for parent branch detection?
 
-**Decision**: **Yes, include it**
+**Decision**: **No, do not include it**
 
-**Rationale**: Supports use case where user branches off non-main branches (e.g., `develop`) before creating a PR.
+**Rationale**: Keep implementation simple. GitHub PR base branch detection + default branch fallback is sufficient. If a PR exists, we use its base branch; otherwise, we fall back to main/master. The BASE_BRANCH file would add complexity for a rare edge case.
 
 ---
 
