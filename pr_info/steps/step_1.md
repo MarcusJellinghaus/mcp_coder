@@ -15,16 +15,16 @@ Move the following from `src/mcp_coder/cli/commands/coordinator/core.py`:
 - _log_cache_metrics()
 - _log_stale_cache_entries()
 - _update_issue_labels_in_cache()
-- get_cached_eligible_issues()
 
-Keep `_filter_eligible_issues` in coordinator/core.py (it has coordinator-specific logic).
+Create a NEW function `get_all_cached_issues()` by extracting the caching logic from 
+`get_cached_eligible_issues()`. This function should:
+- Handle all cache operations (load, save, refresh strategy, duplicate protection)
+- Return ALL cached issues (unfiltered)
+- NOT call _filter_eligible_issues (that stays in coordinator)
 
-The new module should:
-1. Import dependencies directly (no late binding needed for most functions)
-2. Accept `filter_fn` as a parameter to `get_cached_eligible_issues()` to call back to coordinator's `_filter_eligible_issues`
-3. Maintain the same function signatures and behavior
+The filtering wrapper stays in coordinator/core.py (Step 2).
 
-Do NOT modify any other files in this step.
+Do NOT modify coordinator/core.py in this step - only create the new module.
 ```
 
 ## WHERE
@@ -41,7 +41,7 @@ class CacheData(TypedDict):
     issues: Dict[str, IssueData]
 ```
 
-### Functions to Move
+### Helper Functions to Move (unchanged)
 
 ```python
 def _load_cache_file(cache_file_path: Path) -> CacheData:
@@ -69,16 +69,39 @@ def _update_issue_labels_in_cache(
     new_label: str
 ) -> None:
     """Update issue labels in cache after successful dispatch."""
+```
 
-def get_cached_eligible_issues(
+### NEW Function: `get_all_cached_issues()`
+
+```python
+def get_all_cached_issues(
     repo_full_name: str,
     issue_manager: IssueManager,
-    filter_fn: Callable[[List[IssueData]], List[IssueData]],
-    fallback_fn: Callable[[IssueManager], List[IssueData]],
     force_refresh: bool = False,
     cache_refresh_minutes: int = 1440,
 ) -> List[IssueData]:
-    """Get eligible issues using cache for performance and duplicate protection."""
+    """Get all cached issues using cache for performance and duplicate protection.
+    
+    This function handles:
+    - Cache loading and saving
+    - Duplicate protection (skip if checked < 50 seconds ago)
+    - Refresh strategy (full vs incremental based on age)
+    - Fetching fresh issues from GitHub API
+    - Merging fresh issues into cache
+    
+    Args:
+        repo_full_name: Repository in "owner/repo" format
+        issue_manager: IssueManager for GitHub API calls
+        force_refresh: Bypass cache entirely
+        cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
+    
+    Returns:
+        List of ALL cached issues (unfiltered). Caller is responsible for filtering.
+        Returns empty list if duplicate protection triggers.
+    
+    Raises:
+        CacheError: If cache operations fail (caller should handle fallback)
+    """
 ```
 
 ## HOW
@@ -89,10 +112,10 @@ import json
 import logging
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict
 
-from ..github_operations.github_utils import RepoIdentifier
-from ..github_operations.issue_manager import IssueData, IssueManager
+from .github_utils import RepoIdentifier
+from .issue_manager import IssueData, IssueManager
 from ..timezone_utils import (
     format_for_cache,
     is_within_duration,
@@ -101,26 +124,39 @@ from ..timezone_utils import (
 )
 ```
 
-### Key Change: Callback Pattern
+### Key Changes from Original
 
-The `get_cached_eligible_issues` function needs two callbacks:
-- `filter_fn`: To filter eligible issues (calls coordinator's `_filter_eligible_issues`)
-- `fallback_fn`: For error fallback (calls coordinator's `get_eligible_issues`)
+1. **`_update_issue_labels_in_cache`**: Remove late binding, call helpers directly:
+   ```python
+   # Before (in coordinator):
+   cache_file_path = coordinator._get_cache_file_path(repo_identifier)
+   
+   # After (in issue_cache):
+   cache_file_path = _get_cache_file_path(repo_identifier)
+   ```
 
-This avoids circular imports since issue_cache is in a lower layer than coordinator.
+2. **`get_all_cached_issues`**: Extract from `get_cached_eligible_issues`, but:
+   - Remove the `coordinator._filter_eligible_issues()` call
+   - Remove the `coordinator.get_eligible_issues()` fallback
+   - Return `list(cache_data["issues"].values())` directly
+   - Let caller handle filtering and error fallback
+
+### Constant to Define
+```python
+DUPLICATE_PROTECTION_SECONDS = 50  # From workflow_constants.py
+```
 
 ## ALGORITHM
 
 ```
-# get_cached_eligible_issues pseudocode:
+# get_all_cached_issues pseudocode:
 1. Parse repo_full_name -> RepoIdentifier
 2. Load cache file (or empty structure if not exists)
-3. Check duplicate protection (skip if checked < 50 seconds ago)
+3. Check duplicate protection (return empty list if checked < 50 seconds ago)
 4. Determine refresh strategy (full vs incremental based on age)
 5. Fetch fresh issues from GitHub API
 6. Merge fresh into cache, save cache
-7. Call filter_fn to get eligible issues
-8. Return filtered list
+7. Return ALL cached issues (unfiltered)
 ```
 
 ## DATA
@@ -136,11 +172,6 @@ This avoids circular imports since issue_cache is in a lower layer than coordina
 }
 ```
 
-### Constants (from workflow_constants.py)
-```python
-DUPLICATE_PROTECTION_SECONDS = 50  # Import from coordinator or define locally
-```
-
 ## TESTS
 
-No test changes in this step - tests will be updated in Step 3.
+No test changes in this step - tests will be updated in Step 4.
