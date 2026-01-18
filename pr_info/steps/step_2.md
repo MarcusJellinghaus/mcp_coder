@@ -41,14 +41,22 @@ The late-binding pattern (`_get_coordinator()`) is no longer needed for cache fu
 ```python
 from ....utils.github_operations.issue_cache import (
     CacheData,
-    _get_cache_file_path,
-    _load_cache_file,
-    _log_cache_metrics,
-    _log_stale_cache_entries,
-    _save_cache_file,
     _update_issue_labels_in_cache,
     get_all_cached_issues,
 )
+```
+
+**Note:** Only import public API and functions needed by coordinator. Private helpers 
+(`_get_cache_file_path`, `_load_cache_file`, etc.) stay internal to `issue_cache.py`.
+
+### Update workflow_constants.py Import
+
+Update `workflow_constants.py` to import `DUPLICATE_PROTECTION_SECONDS` from the shared location:
+```python
+# In workflow_constants.py, change:
+# DUPLICATE_PROTECTION_SECONDS = 50
+# To:
+from ....constants import DUPLICATE_PROTECTION_SECONDS
 ```
 
 ### Keep in Place (unchanged)
@@ -126,6 +134,4 @@ No data structure changes - the API remains identical.
 
 Existing tests should continue to work because:
 - The public API hasn't changed
-- Tests can patch at either location:
-  - `mcp_coder.utils.github_operations.issue_cache.<function>` (new location)
-  - `mcp_coder.cli.commands.coordinator.<function>` (re-exports)
+- Tests will patch at the new location: `mcp_coder.utils.github_operations.issue_cache.<function>`
