@@ -8,12 +8,12 @@ Read pr_info/steps/summary.md for context.
 Implement Step 3: Update the module exports in both `__init__.py` files.
 
 1. Update `src/mcp_coder/utils/github_operations/__init__.py`:
-   - Add exports for CacheData, get_all_cached_issues, and the cache helper functions
+   - Add exports for public API only: CacheData, get_all_cached_issues, _update_issue_labels_in_cache
+   - Private helpers stay internal to issue_cache.py
 
 2. Update `src/mcp_coder/cli/commands/coordinator/__init__.py`:
-   - Keep all existing exports (for backwards compatibility)
-   - The cache functions are now imported from core.py which imports from issue_cache
-   - Verify exports still work
+   - Remove private cache function exports (they no longer exist in core.py)
+   - Keep public API exports: CacheData, get_cached_eligible_issues, _update_issue_labels_in_cache
 
 Verify that existing code continues to work by checking that all __all__ exports resolve correctly.
 ```
@@ -31,11 +31,6 @@ Verify that existing code continues to work by checking that all __all__ exports
 ```python
 from .issue_cache import (
     CacheData,
-    _get_cache_file_path,
-    _load_cache_file,
-    _log_cache_metrics,
-    _log_stale_cache_entries,
-    _save_cache_file,
     _update_issue_labels_in_cache,
     get_all_cached_issues,
 )
@@ -43,31 +38,28 @@ from .issue_cache import (
 # Update __all__ to include:
 __all__ = [
     # ... existing exports ...
-    # Cache exports
+    # Cache exports (public API only)
     "CacheData",
     "get_all_cached_issues",
-    "_get_cache_file_path",
-    "_load_cache_file",
-    "_save_cache_file",
-    "_log_cache_metrics",
-    "_log_stale_cache_entries",
     "_update_issue_labels_in_cache",
 ]
 ```
 
-### coordinator/__init__.py - Verify Exports
+**Note:** Private helpers (`_get_cache_file_path`, `_load_cache_file`, etc.) stay internal to `issue_cache.py`.
 
-The coordinator `__init__.py` imports from `core.py`:
+### coordinator/__init__.py - Update Exports
+
+Remove private cache function exports. The coordinator `__init__.py` should only export:
 ```python
 from .core import (
     CacheData,
     _filter_eligible_issues,
-    _get_cache_file_path,
-    # ... etc
+    _update_issue_labels_in_cache,
+    get_cached_eligible_issues,
+    get_eligible_issues,
+    # ... other coordinator functions ...
 )
 ```
-
-Since `core.py` now imports these from `issue_cache` and re-exports them, the coordinator `__init__.py` should work unchanged.
 
 **Verify**: Run `python -c "from mcp_coder.cli.commands.coordinator import CacheData, get_cached_eligible_issues"` to confirm.
 
