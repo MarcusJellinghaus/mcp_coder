@@ -125,13 +125,13 @@ Part of: Issue #257 - Refactor Cache Logic to github_operations
 ### Step 4: Move and Update Test File
 _See: [pr_info/steps/step_4.md](steps/step_4.md)_
 
-- [ ] Create `tests/utils/github_operations/test_issue_cache.py`
-- [ ] Copy test content from `tests/utils/test_coordinator_cache.py`
-- [ ] Update imports to use `mcp_coder.utils.github_operations.issue_cache`
-- [ ] Update all patch paths from coordinator to issue_cache
-- [ ] Update logger paths in caplog.set_level calls
-- [ ] Add fixtures to `tests/utils/github_operations/conftest.py` (sample_issue, sample_cache_data, mock_cache_issue_manager)
-- [ ] Remove fixture definitions from test file (use conftest.py)
+- [x] Create `tests/utils/github_operations/test_issue_cache.py`
+- [x] Copy test content from `tests/utils/test_coordinator_cache.py`
+- [x] Update imports to use `mcp_coder.utils.github_operations.issue_cache`
+- [x] Update all patch paths from coordinator to issue_cache
+- [x] Update logger paths in caplog.set_level calls
+- [x] Add fixtures to `tests/utils/github_operations/conftest.py` (sample_issue, sample_cache_data, mock_cache_issue_manager)
+- [x] Remove fixture definitions from test file (use conftest.py)
 - [ ] Run pytest on `tests/utils/github_operations/test_issue_cache.py` to verify tests pass
 - [ ] Run pytest on coordinator tests to ensure they still pass
 - [ ] Delete original `tests/utils/test_coordinator_cache.py` after verification

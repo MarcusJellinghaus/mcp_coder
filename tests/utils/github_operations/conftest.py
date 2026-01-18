@@ -2,12 +2,13 @@
 
 import io
 import zipfile
-from typing import Generator
 from unittest.mock import Mock, patch
 
 import pytest
 
 from mcp_coder.utils.github_operations import CIResultsManager
+from mcp_coder.utils.github_operations.issue_cache import CacheData
+from mcp_coder.utils.github_operations.issue_manager import IssueData
 
 
 @pytest.fixture
@@ -50,3 +51,55 @@ def mock_zip_content() -> bytes:
         zf.writestr("results.xml", "<?xml version='1.0'?><testsuites></testsuites>")
         zf.writestr("coverage.json", '{"total": 85.5}')
     return buffer.getvalue()
+
+
+# Issue cache fixtures
+
+
+@pytest.fixture
+def sample_issue() -> IssueData:
+    """Sample issue data for testing."""
+    return {
+        "number": 123,
+        "state": "open",
+        "labels": ["status-02:awaiting-planning"],
+        "updated_at": "2025-12-31T09:00:00Z",
+        "url": "https://github.com/test/repo/issues/123",
+        "title": "Test issue",
+        "body": "Test issue body",
+        "assignees": [],
+        "user": "testuser",
+        "created_at": "2025-12-31T08:00:00Z",
+        "locked": False,
+    }
+
+
+@pytest.fixture
+def sample_cache_data() -> CacheData:
+    """Sample cache data structure."""
+    return {
+        "last_checked": "2025-12-31T10:30:00Z",
+        "issues": {
+            "123": {
+                "number": 123,
+                "state": "open",
+                "labels": ["status-02:awaiting-planning"],
+                "updated_at": "2025-12-31T09:00:00Z",
+                "url": "https://github.com/test/repo/issues/123",
+                "title": "Test issue",
+                "body": "Test issue body",
+                "assignees": [],
+                "user": "testuser",
+                "created_at": "2025-12-31T08:00:00Z",
+                "locked": False,
+            }
+        },
+    }
+
+
+@pytest.fixture
+def mock_cache_issue_manager() -> Mock:
+    """Mock IssueManager for cache testing."""
+    manager = Mock()
+    manager.list_issues.return_value = []
+    return manager
