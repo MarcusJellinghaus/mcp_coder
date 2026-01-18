@@ -31,7 +31,7 @@
 - **Section 8**: Cross-cutting concepts and patterns
 
 **Source Files for Validation**:
-- Main documentation: `docs/architecture/ARCHITECTURE.md`
+- Main documentation: `docs/architecture/architecture.md`
 - Project constraints: `.claude/CLAUDE.md`
 - Testing configuration: `pyproject.toml`
 
@@ -46,8 +46,8 @@
 5. **Test Navigation**: Validate LLM can locate components from documentation
 
 **Documentation Location**:
-- Building blocks: `docs/architecture/ARCHITECTURE.md` Section 5
-- Key files appendix: `docs/architecture/ARCHITECTURE.md` Appendix
+- Building blocks: `docs/architecture/architecture.md` Section 5
+- Key files appendix: `docs/architecture/architecture.md` Appendix
 
 **Validation Source**:
 - File structure: `src/mcp_coder/` directory tree
@@ -56,15 +56,15 @@
 **Process**: Ensure testing markers and strategy remain synchronized across configuration files
 
 **Maintenance Steps**:
-1. **Compare Sources**: Check consistency between `pyproject.toml` markers, `.claude/CLAUDE.md` examples, and `ARCHITECTURE.md` Section 8
+1. **Compare Sources**: Check consistency between `pyproject.toml` markers, `.claude/CLAUDE.md` examples, and `architecture.md` Section 8
 2. **Validate Markers**: Ensure all markers in `pyproject.toml` are documented with purpose and requirements
 3. **Update Execution Patterns**: Verify recommended test execution commands match current marker structure
-4. **Sync Documentation**: Update `ARCHITECTURE.md` Section 8 to reflect any marker changes
+4. **Sync Documentation**: Update `architecture.md` Section 8 to reflect any marker changes
 
 **Key Files to Monitor**:
 - `pyproject.toml` - Source of truth for marker definitions
 - `.claude/CLAUDE.md` - Execution examples and requirements
-- `ARCHITECTURE.md` Section 8 - Architectural documentation of testing strategy
+- `architecture.md` Section 8 - Architectural documentation of testing strategy
 
 ---
 
@@ -76,7 +76,7 @@
 **Maintenance Steps**:
 1. **Monitor Changes**: Watch for dependency modifications in `pyproject.toml`
 2. **Check Constraints**: Verify changes align with documented architecture constraints
-3. **Update Documentation**: Sync dependency changes to `ARCHITECTURE.md` Section 2
+3. **Update Documentation**: Sync dependency changes to `architecture.md` Section 2
 4. **Validate Requirements**: Ensure installation requirements stay current
 
 **Change Triggers**:
@@ -89,7 +89,7 @@
 - `pyproject.toml` - Source of truth for dependencies
 - `.claude/CLAUDE.md` - MCP server requirements
 - `README.md` - Installation and setup requirements
-- `ARCHITECTURE.md` Section 2 - Documented constraints
+- `architecture.md` Section 2 - Documented constraints
 
 ---
 
@@ -103,9 +103,9 @@
 - Changes to MCP server usage
 
 **Documentation Locations**:
-- Component responsibilities: `ARCHITECTURE.md` Section 4
-- File navigation: `ARCHITECTURE.md` Section 5  
-- Runtime flows: `ARCHITECTURE.md` Section 6
+- Component responsibilities: `architecture.md` Section 4
+- File navigation: `architecture.md` Section 5  
+- Runtime flows: `architecture.md` Section 6
 
 ### 3.2 Configuration Pattern Changes
 **Sources to Monitor**:
@@ -115,8 +115,8 @@
 - Logging configuration: `utils/log_utils.py`
 
 **Document Changes To**:
-- Configuration management: `ARCHITECTURE.md` Section 8
-- Cross-cutting concepts: `ARCHITECTURE.md` Section 8
+- Configuration management: `architecture.md` Section 8
+- Cross-cutting concepts: `architecture.md` Section 8
 
 ---
 
@@ -164,7 +164,7 @@ mcp-coder prompt "Analyze recent code changes and identify architectural impacts
    - Are new testing markers needed?
 
 3. DOCUMENTATION GAPS:
-   - What's missing from current ARCHITECTURE.md?
+   - What's missing from current architecture.md?
    - Which cross-cutting concepts changed?
 
 Provide specific file paths and section numbers for updates needed." --store-response
@@ -173,10 +173,10 @@ Provide specific file paths and section numbers for updates needed." --store-res
 ### 4.2 Documentation Update Process
 **Step 2: Update Architecture Document**
 ```bash
-mcp-coder prompt "Update docs/architecture/ARCHITECTURE.md based on analysis:
+mcp-coder prompt "Update docs/architecture/architecture.md based on analysis:
 
 1. READ CURRENT DOCUMENTATION:
-   - Read docs/architecture/ARCHITECTURE.md completely
+   - Read docs/architecture/architecture.md completely
    - Note current version and last updated date
    - Identify sections needing updates
 
@@ -205,7 +205,7 @@ mcp-coder prompt "Update docs/architecture/ARCHITECTURE.md based on analysis:
    - If no changes needed, state "No updates required"
    - Focus on accuracy over completeness
 
-Provide only the updated ARCHITECTURE.md sections that actually changed." --continue
+Provide only the updated architecture.md sections that actually changed." --continue
 ```
 
 ### 4.3 Decision Documentation
@@ -220,7 +220,7 @@ mcp-coder prompt "Document any significant architectural decisions made:
    - Note dependency addition/removal decisions
 
 2. DOCUMENT DECISIONS:
-   - Add rationale to relevant ARCHITECTURE.md sections
+   - Add rationale to relevant architecture.md sections
    - Include context for design choices
    - Document why alternatives were rejected
 
@@ -228,7 +228,7 @@ mcp-coder prompt "Document any significant architectural decisions made:
    - Add rationale to relevant sections if significant decisions were made
    - Update architecture document only, not maintenance document
 
-Provide decision documentation for docs/architecture/ARCHITECTURE.md" --continue
+Provide decision documentation for docs/architecture/architecture.md" --continue
 ```
 
 ### 4.4 Validation and Finalization
@@ -244,7 +244,7 @@ mcp-coder prompt "Perform final validation of architecture documentation:
    - ✅ Cross-cutting concepts current
 
 2. CONSISTENCY VALIDATION:
-   - Compare ARCHITECTURE.md with actual codebase
+   - Compare architecture.md with actual codebase
    - Verify file paths exist and are correct
    - Check component descriptions match implementation
    - Validate testing markers match pyproject.toml
@@ -271,13 +271,13 @@ State completion status: "Architecture documentation validated" or list remainin
 Before considering architecture documentation complete:
 
 **Core Documentation**:
-- [ ] **ARCHITECTURE.md Section 5**: All new files/folders documented with correct paths
+- [ ] **architecture.md Section 5**: All new files/folders documented with correct paths
 - [ ] **Component responsibilities**: Clear ownership and interaction patterns
 - [ ] **Testing strategy**: Reflects current pyproject.toml markers
 - [ ] **File navigation**: LLM can locate any component from description
 
 **Decision Documentation**:
-- [ ] **Decisions documented**: Major architectural choices noted in ARCHITECTURE.md
+- [ ] **Decisions documented**: Major architectural choices noted in architecture.md
 - [ ] **Impact assessment**: How changes affect existing architecture
 - [ ] **Rationale documented**: Why specific choices were made
 

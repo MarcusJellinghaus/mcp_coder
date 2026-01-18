@@ -128,7 +128,7 @@ flowchart TD
 - **LLM Assistant** - Generates code, plans, documentation via structured prompts
 - **Automated Tools** - Quality checks (pylint, mypy, pytest), formatting, git operations
 
-**📋 Prerequisites:** Set up GitHub Actions for auto-labeling and `/approve` command. See [Label Setup Guide](../getting-started/LABEL_SETUP.md).
+**📋 Prerequisites:** Set up GitHub Actions for auto-labeling and `/approve` command. See [Label Setup Guide](../getting-started/label-setup.md).
 
 ### Slash Command Quick Reference
 
@@ -818,7 +818,7 @@ No need to run all checks; do not use pylint warnings. Feel free to further anal
 - Tests for `__main__` functions should be removed (not needed)
 - Unnecessary debug code or print statements
 - Code that could break existing functionality
-- Compliance with existing architecture principles, see `docs/architecture/ARCHITECTURE.md`
+- Compliance with existing architecture principles, see `docs/architecture/architecture.md`
 
 ### Output Format:
 1. **Summary** - What changed (1-2 sentences)
@@ -1047,7 +1047,7 @@ After feature completion, the cleaned `TASK_TRACKER.md` should contain only the 
 
 This tracks **Feature Implementation** consisting of multiple **Implementation Steps** (tasks).
 
-**Development Process:** See [DEVELOPMENT_PROCESS.md](./DEVELOPMENT_PROCESS.md) for detailed workflow, prompts, and tools.
+**Development Process:** See [development-process.md](./development-process.md) for detailed workflow, prompts, and tools.
 
 **How to update tasks:**
 1. Change [ ] to [x] when implementation step is fully complete (code + checks pass)

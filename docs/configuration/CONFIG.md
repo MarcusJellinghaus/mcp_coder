@@ -8,8 +8,8 @@ Complete configuration documentation for MCP Coder, covering user configuration 
 |-------|----------|
 | **User Config** | `~/.config/mcp_coder/config.toml` (Linux/macOS)<br>`%USERPROFILE%\.mcp_coder\config.toml` (Windows) |
 | **Environment Variables** | `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN` |
-| **Repository Setup** | [Repository Setup Guide](../REPOSITORY_SETUP.md) |
-| **CLI Commands** | [CLI Reference](../CLI_REFERENCE.md) |
+| **Repository Setup** | [Repository Setup Guide](../repository-setup.md) |
+| **CLI Commands** | [CLI Reference](../cli-reference.md) |
 
 ## Configuration File Locations
 
@@ -758,10 +758,10 @@ docker run -v ~/.config/mcp_coder:/root/.config/mcp_coder my-container
 ## Related Documentation
 
 ### Setup and Usage
-- **[Repository Setup](../REPOSITORY_SETUP.md)** - GitHub Actions, labels, and repository configuration
-- **[CLI Reference](../CLI_REFERENCE.md)** - Complete command documentation
-- **[Development Process](../processes_prompts/DEVELOPMENT_PROCESS.md)** - Detailed workflow methodology
+- **[Repository Setup](../repository-setup.md)** - GitHub Actions, labels, and repository configuration
+- **[CLI Reference](../cli-reference.md)** - Complete command documentation
+- **[Development Process](../processes_prompts/development-process.md)** - Detailed workflow methodology
 
 ### Technical Documentation
-- **[Architecture Overview](../architecture/ARCHITECTURE.md)** - System architecture and design
+- **[Architecture Overview](../architecture/architecture.md)** - System architecture and design
 - **[Main README](../../README.md)** - Project overview and quick start
