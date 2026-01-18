@@ -14,6 +14,10 @@ from .issue_branch_manager import (
 )
 from .issue_cache import (
     CacheData,
+    _get_cache_file_path,
+    _load_cache_file,
+    _log_stale_cache_entries,
+    _save_cache_file,
     _update_issue_labels_in_cache,
     get_all_cached_issues,
 )
@@ -36,6 +40,11 @@ __all__ = [
     "LabelsManager",
     "PullRequestManager",
     "RepoIdentifier",
+    # Private cache functions (exported for testing)
+    "_get_cache_file_path",
+    "_load_cache_file",
+    "_log_stale_cache_entries",
+    "_save_cache_file",
     "_update_issue_labels_in_cache",
     "generate_branch_name_from_issue",
     "get_all_cached_issues",
