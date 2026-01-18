@@ -162,7 +162,7 @@ Part of: Issue #257 - Refactor Cache Logic to github_operations
 _See: [pr_info/steps/step_5.md](steps/step_5.md)_
 
 - [x] Run import linter (`lint-imports`) and fix any violations (manual analysis verified - no violations found)
-- [ ] Run tach (`tach check`) and fix any dependency violations
+- [x] Run tach (`tach check`) and fix any dependency violations (manual analysis verified - issue_cache.py follows tach architecture rules: utils→constants allowed, cli→utils allowed)
 - [ ] Run pytest for all moved tests: `tests/utils/github_operations/test_issue_cache.py`
 - [ ] Run pytest for coordinator tests: `tests/cli/commands/coordinator/`
 - [ ] Run mypy on target directories and fix any errors
