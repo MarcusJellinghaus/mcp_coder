@@ -46,7 +46,8 @@
       "Bash(PYTHONPATH=src lint-imports)",
       "Bash(find:*)",
       "Bash(git mv:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "WebFetch(*)"
     ]
   },
   "enableAllProjectMcpServers": true,
