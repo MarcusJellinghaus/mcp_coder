@@ -87,7 +87,7 @@ def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
 
 
 def _attempt_rebase_and_push(project_dir: Path) -> bool:
-    """Attempt to rebase onto parent branch. Never fails workflow.
+    """Attempt to rebase onto parent branch and push. Never fails workflow.
 
     Args:
         project_dir: Path to the project directory
