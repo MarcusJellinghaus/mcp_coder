@@ -19,14 +19,12 @@ class TestMypyIntegration:
     def test_mypy_check_clean_code(self, tmp_path: Path) -> None:
         """Test mypy check on valid typed code."""
         test_file = tmp_path / "clean.py"
-        test_file.write_text(
-            """
+        test_file.write_text("""
 def add(a: int, b: int) -> int:
     return a + b
 
 result: int = add(1, 2)
-"""
-        )
+""")
 
         result = run_mypy_check(tmp_path, target_directories=["."])
 
@@ -43,14 +41,12 @@ result: int = add(1, 2)
     def test_mypy_check_with_type_errors(self, tmp_path: Path) -> None:
         """Test mypy check on code with intentional type errors."""
         test_file = tmp_path / "errors.py"
-        test_file.write_text(
-            """
+        test_file.write_text("""
 def greet(name: str) -> str:
     return name + 123  # Type error: str + int
 
 x: int = "hello"  # Type error: str assigned to int
-"""
-        )
+""")
 
         result = run_mypy_check(tmp_path, target_directories=["."])
 
@@ -66,12 +62,10 @@ x: int = "hello"  # Type error: str assigned to int
         """Test the convenience function for checking mypy errors."""
         # Create clean code
         test_file = tmp_path / "clean.py"
-        test_file.write_text(
-            """
+        test_file.write_text("""
 def multiply(a: int, b: int) -> int:
     return a * b
-"""
-        )
+""")
 
         result = run_mypy_check(tmp_path, target_directories=["."])
         has_errors = (result.errors_found or 0) > 0
@@ -80,11 +74,9 @@ def multiply(a: int, b: int) -> int:
 
         # Create code with errors
         error_file = tmp_path / "errors.py"
-        error_file.write_text(
-            """
+        error_file.write_text("""
 x: int = "not an int"
-"""
-        )
+""")
 
         result = run_mypy_check(tmp_path, target_directories=["."])
         has_errors = (result.errors_found or 0) > 0

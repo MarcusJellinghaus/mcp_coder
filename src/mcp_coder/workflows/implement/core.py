@@ -86,8 +86,8 @@ def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
     return default
 
 
-def _attempt_rebase(project_dir: Path) -> bool:
-    """Attempt to rebase onto parent branch. Never fails workflow.
+def _attempt_rebase_and_push(project_dir: Path) -> bool:
+    """Attempt to rebase onto parent branch and push. Never fails workflow.
 
     Args:
         project_dir: Path to the project directory
@@ -104,7 +104,10 @@ def _attempt_rebase(project_dir: Path) -> bool:
             if push_changes(project_dir, force_with_lease=True):
                 return True
             else:
-                logger.warning("Rebase succeeded but push failed")
+                logger.warning(
+                    "Rebase succeeded but push failed - "
+                    "manual push with --force-with-lease may be required"
+                )
                 return False
         return False
     else:
@@ -336,7 +339,7 @@ def run_implement_workflow(
         return 1
 
     # Step 1.5: Attempt rebase onto parent branch (never blocks workflow)
-    _attempt_rebase(project_dir)
+    _attempt_rebase_and_push(project_dir)
 
     # Step 2: Prepare task tracker if needed
     if not prepare_task_tracker(

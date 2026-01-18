@@ -446,7 +446,7 @@ class TestRebaseIntegration:
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_rebase_called_after_prerequisites(
+    def test_rebase_and_push_called_after_prerequisites(
         self,
         mock_clean: MagicMock,
         mock_branch: MagicMock,

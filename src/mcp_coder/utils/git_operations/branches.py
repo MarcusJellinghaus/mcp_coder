@@ -612,7 +612,7 @@ def rebase_onto_branch(project_dir: Path, target_branch: str) -> bool:
     # Import here to avoid circular import
     from .remotes import fetch_remote
 
-    logger.debug("Attempting rebase onto origin/%s in %s", target_branch, project_dir)
+    logger.debug(f"Attempting rebase onto origin/{target_branch} in {project_dir}")
 
     # Validate inputs
     if not is_git_repository(project_dir):
@@ -633,7 +633,7 @@ def rebase_onto_branch(project_dir: Path, target_branch: str) -> bool:
             # Attempt rebase onto origin/<target_branch>
             try:
                 repo.git.rebase(f"origin/{target_branch}")
-                logger.info("Successfully rebased onto origin/%s", target_branch)
+                logger.info(f"Successfully rebased onto origin/{target_branch}")
                 return True
 
             except GitCommandError as e:
@@ -641,7 +641,7 @@ def rebase_onto_branch(project_dir: Path, target_branch: str) -> bool:
 
                 # Check if already up-to-date (some git versions report this)
                 if "up to date" in error_message or "up-to-date" in error_message:
-                    logger.info("Already up-to-date with origin/%s", target_branch)
+                    logger.info(f"Already up-to-date with origin/{target_branch}")
                     return True
 
                 # Check if rebase is in progress (conflicts detected)
@@ -657,16 +657,16 @@ def rebase_onto_branch(project_dir: Path, target_branch: str) -> bool:
                         repo.git.rebase("--abort")
                         logger.debug("Successfully aborted rebase")
                     except GitCommandError as abort_error:
-                        logger.warning("Failed to abort rebase: %s", abort_error)
+                        logger.warning(f"Failed to abort rebase: {abort_error}")
                     return False
 
                 # Other git command error (e.g., invalid branch name)
-                logger.warning("Skipping rebase: %s", e)
+                logger.warning(f"Skipping rebase: {e}")
                 return False
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
-        logger.warning("Skipping rebase: %s", e)
+        logger.warning(f"Skipping rebase: {e}")
         return False
     except Exception as e:
-        logger.warning("Unexpected error during rebase: %s", e)
+        logger.warning(f"Unexpected error during rebase: {e}")
         return False
