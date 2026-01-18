@@ -24,7 +24,7 @@ Implement Step 4: Move the test file and update imports.
 5. Merge shared fixtures into `tests/utils/github_operations/conftest.py`:
    - sample_issue
    - sample_cache_data  
-   - mock_issue_manager
+   - mock_cache_issue_manager
 
 6. **VERIFY tests pass BEFORE deleting original file**
 
@@ -158,8 +158,8 @@ def sample_cache_data() -> CacheData:
     }
 
 @pytest.fixture
-def mock_issue_manager() -> Mock:
-    """Mock IssueManager for testing."""
+def mock_cache_issue_manager() -> Mock:
+    """Mock IssueManager for cache testing."""
     manager = Mock()
     manager.list_issues.return_value = []
     return manager
