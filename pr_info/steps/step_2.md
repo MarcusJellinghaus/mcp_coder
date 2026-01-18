@@ -96,7 +96,7 @@ def get_cached_eligible_issues(
             cache_refresh_minutes=cache_refresh_minutes,
         )
         return _filter_eligible_issues(all_issues)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError) as e:
         logger.warning(
             f"Cache error for {repo_full_name}: {e}, falling back to direct fetch"
         )

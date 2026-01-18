@@ -49,7 +49,17 @@ __all__ = [
 
 ### coordinator/__init__.py - Update Exports
 
-Remove private cache function exports. The coordinator `__init__.py` should only export:
+**Remove these private cache function exports** (they no longer exist in `core.py`):
+```python
+# REMOVE from imports and __all__:
+"_get_cache_file_path",
+"_load_cache_file",
+"_save_cache_file",
+"_log_cache_metrics",
+"_log_stale_cache_entries",
+```
+
+**Keep these exports** (still in `core.py`):
 ```python
 from .core import (
     CacheData,
