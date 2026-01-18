@@ -92,16 +92,35 @@ Part of: Issue #257 - Refactor Cache Logic to github_operations
 ### Step 3: Update Module Exports
 _See: [pr_info/steps/step_3.md](steps/step_3.md)_
 
-- [ ] Update `src/mcp_coder/utils/github_operations/__init__.py` with issue_cache exports
-- [ ] Add `CacheData`, `get_all_cached_issues`, `_update_issue_labels_in_cache` to `__all__`
-- [ ] Update `src/mcp_coder/cli/commands/coordinator/__init__.py` exports
-- [ ] Remove private cache function exports from coordinator `__init__.py`
-- [ ] Verify imports work: `from mcp_coder.utils.github_operations import CacheData, get_all_cached_issues`
-- [ ] Verify imports work: `from mcp_coder.cli.commands.coordinator import CacheData, get_cached_eligible_issues`
-- [ ] Run pylint on __init__.py files and fix any issues
-- [ ] Run mypy on __init__.py files and fix any type errors
-- [ ] Run pytest for module export tests and ensure they pass
-- [ ] Prepare git commit message for Step 3
+- [x] Update `src/mcp_coder/utils/github_operations/__init__.py` with issue_cache exports
+- [x] Add `CacheData`, `get_all_cached_issues`, `_update_issue_labels_in_cache` to `__all__`
+- [x] Update `src/mcp_coder/cli/commands/coordinator/__init__.py` exports
+- [x] Remove private cache function exports from coordinator `__init__.py`
+- [x] Verify imports work: `from mcp_coder.utils.github_operations import CacheData, get_all_cached_issues`
+- [x] Verify imports work: `from mcp_coder.cli.commands.coordinator import CacheData, get_cached_eligible_issues`
+- [x] Run pylint on __init__.py files and fix any issues
+- [x] Run mypy on __init__.py files and fix any type errors
+- [x] Run pytest for module export tests and ensure they pass
+- [x] Prepare git commit message for Step 3
+
+**Commit message for Step 3:**
+```
+feat(exports): update module exports for issue_cache
+
+Update __init__.py files to expose cache functionality:
+
+github_operations/__init__.py:
+- Add exports: CacheData, get_all_cached_issues, _update_issue_labels_in_cache
+- Private helpers stay internal to issue_cache.py
+
+coordinator/__init__.py:
+- Remove private cache function exports (now internal to issue_cache)
+- Keep public API: CacheData, get_cached_eligible_issues, _update_issue_labels_in_cache
+
+Note: Tests patching private functions will be updated in Step 4.
+
+Part of: Issue #257 - Refactor Cache Logic to github_operations
+```
 
 ### Step 4: Move and Update Test File
 _See: [pr_info/steps/step_4.md](steps/step_4.md)_
