@@ -15,6 +15,8 @@ Uses GitHub API label names directly (not internal_ids) for simpler code.
 
 from typing import TypedDict
 
+from ....constants import DUPLICATE_PROTECTION_SECONDS
+
 
 class WorkflowConfig(TypedDict):
     """Configuration for a single workflow stage.
@@ -30,9 +32,8 @@ class WorkflowConfig(TypedDict):
     next_label: str
 
 
-# Duplicate protection threshold (seconds)
-# Buffer for Jenkins ~60s scheduler variance - issues checked within this window are skipped
-DUPLICATE_PROTECTION_SECONDS = 50.0
+# Re-export DUPLICATE_PROTECTION_SECONDS for backwards compatibility
+__all__ = ["WorkflowConfig", "WORKFLOW_MAPPING", "DUPLICATE_PROTECTION_SECONDS"]
 
 # Workflow configuration mapping
 # IMPORTANT: Label names must match those defined in config/labels.json
