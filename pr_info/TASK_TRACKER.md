@@ -132,7 +132,7 @@ _See: [pr_info/steps/step_4.md](steps/step_4.md)_
 - [x] Update logger paths in caplog.set_level calls
 - [x] Add fixtures to `tests/utils/github_operations/conftest.py` (sample_issue, sample_cache_data, mock_cache_issue_manager)
 - [x] Remove fixture definitions from test file (use conftest.py)
-- [ ] Run pytest on `tests/utils/github_operations/test_issue_cache.py` to verify tests pass
+- [x] Run pytest on `tests/utils/github_operations/test_issue_cache.py` to verify tests pass
 - [ ] Run pytest on coordinator tests to ensure they still pass
 - [ ] Delete original `tests/utils/test_coordinator_cache.py` after verification
 - [ ] Run pylint on test files and fix any issues
