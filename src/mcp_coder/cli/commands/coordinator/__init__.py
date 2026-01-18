@@ -5,14 +5,9 @@
 from ....utils.github_operations.issue_branch_manager import IssueBranchManager
 
 # Import cache-related functions from issue_cache module
-# These are re-exported for backward compatibility and test patching
+# Only public API is re-exported; private helpers stay internal to issue_cache.py
 from ....utils.github_operations.issue_cache import (
     CacheData,
-    _get_cache_file_path,
-    _load_cache_file,
-    _log_cache_metrics,
-    _log_stale_cache_entries,
-    _save_cache_file,
     _update_issue_labels_in_cache,
 )
 from ....utils.github_operations.issue_manager import IssueManager
@@ -84,12 +79,7 @@ __all__ = [
     "WORKFLOW_MAPPING",
     # Private functions (for testing)
     "_filter_eligible_issues",
-    "_get_cache_file_path",
-    "_load_cache_file",
-    "_save_cache_file",
     "_update_issue_labels_in_cache",
-    "_log_cache_metrics",
-    "_log_stale_cache_entries",
     # External dependencies (for test patching)
     "create_default_config",
     "get_config_values",
