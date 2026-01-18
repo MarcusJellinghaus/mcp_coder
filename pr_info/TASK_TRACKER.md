@@ -20,7 +20,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Create issue_cache.py Module
 _See: [pr_info/steps/step_1.md](steps/step_1.md)_
 
-- [ ] Move `DUPLICATE_PROTECTION_SECONDS` constant to `src/mcp_coder/constants.py`
+- [x] Move `DUPLICATE_PROTECTION_SECONDS` constant to `src/mcp_coder/constants.py`
 - [ ] Create `src/mcp_coder/utils/github_operations/issue_cache.py` module
 - [ ] Move `CacheData` TypedDict to issue_cache.py
 - [ ] Move `_load_cache_file()` to issue_cache.py
