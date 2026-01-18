@@ -134,7 +134,7 @@ _See: [pr_info/steps/step_4.md](steps/step_4.md)_
 - [x] Remove fixture definitions from test file (use conftest.py)
 - [x] Run pytest on `tests/utils/github_operations/test_issue_cache.py` to verify tests pass
 - [x] Run pytest on coordinator tests to ensure they still pass
-- [ ] Delete original `tests/utils/test_coordinator_cache.py` after verification
+- [x] Delete original `tests/utils/test_coordinator_cache.py` after verification
 - [ ] Run pylint on test files and fix any issues
 - [ ] Run mypy on test files and fix any type errors
 - [ ] Run full pytest suite and ensure all tests pass
