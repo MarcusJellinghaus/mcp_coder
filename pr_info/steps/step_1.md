@@ -99,8 +99,9 @@ def get_all_cached_issues(
         List of ALL cached issues (unfiltered). Caller is responsible for filtering.
         Returns empty list if duplicate protection triggers.
     
-    Raises:
-        CacheError: If cache operations fail (caller should handle fallback)
+    Note:
+        May raise ValueError, KeyError, or TypeError on cache errors.
+        Caller (thin wrapper) should handle fallback to direct API fetch.
     """
 ```
 
@@ -114,6 +115,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict
 
+from ...constants import DUPLICATE_PROTECTION_SECONDS
 from .github_utils import RepoIdentifier
 from .issue_manager import IssueData, IssueManager
 from ..timezone_utils import (
@@ -141,9 +143,17 @@ from ..timezone_utils import (
    - Return `list(cache_data["issues"].values())` directly
    - Let caller handle filtering and error fallback
 
-### Constant to Define
+### Constant to Move
+
+Move `DUPLICATE_PROTECTION_SECONDS` from `workflow_constants.py` to `src/mcp_coder/constants.py`:
 ```python
-DUPLICATE_PROTECTION_SECONDS = 50  # From workflow_constants.py
+# In src/mcp_coder/constants.py (add to existing file):
+DUPLICATE_PROTECTION_SECONDS = 50  # Cache duplicate protection window
+```
+
+Then import in `issue_cache.py`:
+```python
+from ...constants import DUPLICATE_PROTECTION_SECONDS
 ```
 
 ## ALGORITHM
