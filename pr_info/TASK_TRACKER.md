@@ -21,19 +21,36 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 _See: [pr_info/steps/step_1.md](steps/step_1.md)_
 
 - [x] Move `DUPLICATE_PROTECTION_SECONDS` constant to `src/mcp_coder/constants.py`
-- [ ] Create `src/mcp_coder/utils/github_operations/issue_cache.py` module
-- [ ] Move `CacheData` TypedDict to issue_cache.py
-- [ ] Move `_load_cache_file()` to issue_cache.py
-- [ ] Move `_save_cache_file()` to issue_cache.py
-- [ ] Move `_get_cache_file_path()` to issue_cache.py
-- [ ] Move `_log_cache_metrics()` to issue_cache.py
-- [ ] Move `_log_stale_cache_entries()` to issue_cache.py
-- [ ] Move `_update_issue_labels_in_cache()` to issue_cache.py
-- [ ] Create new `get_all_cached_issues()` function extracting caching logic
-- [ ] Run pylint on issue_cache.py and fix any issues
-- [ ] Run mypy on issue_cache.py and fix any type errors
-- [ ] Run pytest for related tests and ensure they pass
-- [ ] Prepare git commit message for Step 1
+- [x] Create `src/mcp_coder/utils/github_operations/issue_cache.py` module
+- [x] Move `CacheData` TypedDict to issue_cache.py
+- [x] Move `_load_cache_file()` to issue_cache.py
+- [x] Move `_save_cache_file()` to issue_cache.py
+- [x] Move `_get_cache_file_path()` to issue_cache.py
+- [x] Move `_log_cache_metrics()` to issue_cache.py
+- [x] Move `_log_stale_cache_entries()` to issue_cache.py
+- [x] Move `_update_issue_labels_in_cache()` to issue_cache.py
+- [x] Create new `get_all_cached_issues()` function extracting caching logic
+- [x] Run pylint on issue_cache.py and fix any issues
+- [x] Run mypy on issue_cache.py and fix any type errors
+- [x] Run pytest for related tests and ensure they pass
+- [x] Prepare git commit message for Step 1
+
+**Commit message for Step 1:**
+```
+feat(cache): add issue_cache module to github_operations
+
+Create new issue_cache.py module in utils/github_operations/ with:
+- CacheData TypedDict for cache structure
+- Cache file operations (_load_cache_file, _save_cache_file, _get_cache_file_path)
+- Cache metrics logging (_log_cache_metrics, _log_stale_cache_entries)
+- Cache update function (_update_issue_labels_in_cache)
+- New get_all_cached_issues() function extracting caching logic
+
+This is Step 1 of the cache refactoring - the new module is created but
+coordinator/core.py still has the original functions (to be removed in Step 2).
+
+Part of: Issue #257 - Refactor Cache Logic to github_operations
+```
 
 ### Step 2: Update coordinator/core.py to Use issue_cache
 _See: [pr_info/steps/step_2.md](steps/step_2.md)_
