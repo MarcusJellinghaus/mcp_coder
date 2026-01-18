@@ -2,7 +2,15 @@
 
 **What is MCP Coder?**
 
-An AI-powered software development automation toolkit with human oversight and quality controls. MCP Coder combines intelligent planning discussions with automated implementation, using Claude Code CLI and MCP servers for comprehensive code analysis, testing, and workflow management.
+MCP coder enhances source code with a structured development process that turns GitHub issues into working code automatically. AI supported discussions allow to specify and review the relevant items of the specification, implementation plan and resulting code. Code quality is also ensured by rigorous usage of classical code quality assurance. 
+
+**The Complete Development Workflow:**
+- **Interactive Planning**: Human-guided requirement analysis and architectural decisions using AI-powered discussions
+- **Automated Implementation**: Full feature development with integrated testing, code quality checks, and git operations  
+- **Quality Assurance**: Built-in pylint, pytest, and mypy validation ensures production-ready code
+- **Intelligent Orchestration**: Process automation across multiple repositories with Jenkins integration
+
+MCP Coder combines the efficiency of AI automation with the reliability of human oversight, creating a development experience that's both faster and more robust than traditional approaches.
 
 > ⚠️ **Currently in active development** - Core features are being implemented
 
@@ -94,7 +102,7 @@ flowchart TD
 ## ✨ Current Features
 
 ### 🤖 Development Automation
-- **Integrated LLMs**: Claude Code CLI and API support (additional LLM providers planned)
+- **Integrated LLMs**: Claude Code CLI support (additional LLM providers planned)
 - **Automated Implementation**: Complete feature development via `mcp-coder implement`
 
 ### 🔄 Interactive Planning & Quality Assurance
@@ -129,14 +137,14 @@ pip install -e ".[dev]"
 ## 📚 Documentation
 
 ### Command Reference
-- **[CLI Reference](docs/CLI_REFERENCE.md)** - Complete command documentation and usage examples
+- **[CLI Reference](docs/cli-reference.md)** - Complete command documentation and usage examples
 
 ### Setup Guides  
-- **[Repository Setup](docs/REPOSITORY_SETUP.md)** - GitHub Actions, labels, and repository configuration
-- **[Configuration Guide](docs/configuration/CONFIG.md)** - User config files, environment variables, and platform setup
+- **[Repository Setup](docs/repository-setup.md)** - GitHub Actions, labels, and repository configuration
+- **[Configuration Guide](docs/configuration/config.md)** - User config files, environment variables, and platform setup
 
 ### Development
-- **[Development Process](docs/processes_prompts/DEVELOPMENT_PROCESS.md)** - Detailed methodology and workflow documentation
+- **[Development Process](docs/processes-prompts/development-process.md)** - Detailed methodology and workflow documentation
 
 ## 🔗 Related Projects
 
