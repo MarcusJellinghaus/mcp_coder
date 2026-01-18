@@ -25,40 +25,36 @@ No file changes - verification only.
 
 ### Verification Commands
 
+**Bash commands** (no MCP equivalent):
 ```bash
-# 1. Import Linter
+# 1. Import Linter - verify architectural boundaries
 lint-imports
 
-# 2. Tach
+# 2. Tach - verify module dependencies
 tach check
-
-# 3. Run moved tests
-pytest tests/utils/github_operations/test_issue_cache.py -v
-
-# 4. Run coordinator tests (should still pass)
-pytest tests/cli/commands/coordinator/ -v
-
-# 5. Type checking
-mypy src/mcp_coder/utils/github_operations/issue_cache.py
-mypy src/mcp_coder/cli/commands/coordinator/core.py
-
-# 6. Pylint
-pylint src/mcp_coder/utils/github_operations/issue_cache.py
-pylint src/mcp_coder/cli/commands/coordinator/core.py
 ```
 
-### Using MCP Tools
-
+**MCP tools** (per CLAUDE.md requirements):
 ```python
-# Run all checks
-mcp__code-checker__run_all_checks(
-    target_directories=["src/mcp_coder/utils/github_operations", "src/mcp_coder/cli/commands/coordinator"],
-    categories=["error", "fatal", "warning"]
-)
-
-# Run specific tests
+# 3. Run moved tests
 mcp__code-checker__run_pytest_check(
     extra_args=["-n", "auto", "tests/utils/github_operations/test_issue_cache.py", "-v"]
+)
+
+# 4. Run coordinator tests (should still pass)
+mcp__code-checker__run_pytest_check(
+    extra_args=["-n", "auto", "tests/cli/commands/coordinator/", "-v"]
+)
+
+# 5. Type checking
+mcp__code-checker__run_mypy_check(
+    target_directories=["src/mcp_coder/utils/github_operations", "src/mcp_coder/cli/commands/coordinator"]
+)
+
+# 6. Pylint
+mcp__code-checker__run_pylint_check(
+    target_directories=["src/mcp_coder/utils/github_operations", "src/mcp_coder/cli/commands/coordinator"],
+    categories=["error", "fatal", "warning"]
 )
 ```
 

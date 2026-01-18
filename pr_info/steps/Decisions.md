@@ -37,3 +37,27 @@ Decisions made during plan review discussion.
 **Question:** Should we add a verification step to grep for other test files patching coordinator cache functions?
 
 **Decision:** Not needed - the test file being moved is the only one testing cache functionality.
+
+---
+
+## Decision 5: Fixture Naming in conftest.py
+
+**Question:** Should the new `mock_issue_manager` fixture in `tests/utils/github_operations/conftest.py` be renamed to avoid confusion with other mocks?
+
+**Decision:** Yes - rename to `mock_cache_issue_manager` for clarity in the cache testing context.
+
+---
+
+## Decision 6: Coordinator Export Removal List
+
+**Question:** Should Step 3 explicitly list which private functions to remove from coordinator's `__init__.py`?
+
+**Decision:** Yes - add explicit "Remove from exports" list for clarity.
+
+---
+
+## Decision 7: Verification Tool Usage
+
+**Question:** Which tools should be used for verification in Step 5?
+
+**Decision:** Use bash commands for `lint-imports` and `tach check` (no MCP equivalent), and MCP tools for pytest/mypy/pylint.
