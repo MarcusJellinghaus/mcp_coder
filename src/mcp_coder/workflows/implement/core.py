@@ -47,21 +47,21 @@ LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS = 600  # 10 minutes
 LLM_FINALISATION_TIMEOUT_SECONDS = 600  # 10 minutes
 
 # Finalisation prompt for completing remaining tasks
-FINALISATION_PROMPT = """
-Please check pr_info/TASK_TRACKER.md for unchecked tasks (- [ ]).
+FINALISATION_PROMPT = f"""
+Please check {PR_INFO_DIR}/TASK_TRACKER.md for unchecked tasks (- [ ]).
 
 For each unchecked task:
 1. If it's a "commit message" task and changes are already committed → mark [x] and skip
 2. Otherwise: verify if done, complete it if not, then mark [x]
 
-If step files exist in pr_info/steps/, use them for context.
+If step files exist in {PR_INFO_DIR}/steps/, use them for context.
 If not, analyse based on task names and codebase.
 
 If you cannot complete a task, DO NOT mark the box as done.
 Instead, briefly explain the issue.
 
 Run quality checks (pylint, pytest, mypy) if any code changes were made.
-Write commit message to pr_info/.commit_message.txt.
+Write commit message to {PR_INFO_DIR}/{COMMIT_MESSAGE_FILE}.
 """
 
 # Setup logger
@@ -331,7 +331,6 @@ def run_finalisation(
     method: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
-    auto_push: bool = False,
 ) -> bool:
     """Run implementation finalisation to verify and complete remaining tasks.
 
@@ -341,7 +340,6 @@ def run_finalisation(
         method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
-        auto_push: If True, push changes after commit (workflow mode)
 
     Returns:
         bool: True if finalisation succeeded or was skipped (no tasks), False on error
@@ -379,15 +377,43 @@ def run_finalisation(
         logger.error("Finalisation LLM returned empty response")
         return False
 
-    logger.info("Finalisation LLM response received")
+    logger.debug("Finalisation LLM response received")
 
-    # 4. If auto_push and changes were made, push
-    if auto_push:
-        status = get_full_status(project_dir)
-        if status["staged"] or status["modified"]:
-            logger.info("Pushing finalisation changes...")
-            if not push_changes(project_dir):
-                logger.warning("Failed to push finalisation changes")
+    # 4. Check if there are changes to commit
+    status = get_full_status(project_dir)
+    if not status["staged"] and not status["modified"] and not status["untracked"]:
+        logger.info("No changes after finalisation - nothing to commit")
+        return True
+
+    # 5. Read commit message from file (or generate fallback)
+    commit_msg_path = project_dir / PR_INFO_DIR / COMMIT_MESSAGE_FILE
+    if commit_msg_path.exists():
+        commit_message = commit_msg_path.read_text(encoding="utf-8").strip()
+        # Delete the commit message file after reading
+        commit_msg_path.unlink()
+        logger.debug("Read and deleted commit message file")
+    else:
+        commit_message = "Finalisation: complete remaining tasks"
+        logger.warning(
+            f"Commit message file not found at {commit_msg_path}, using default message"
+        )
+
+    if not commit_message:
+        commit_message = "Finalisation: complete remaining tasks"
+        logger.warning("Commit message file was empty, using default message")
+
+    # 6. Stage all changes and commit
+    logger.info("Committing finalisation changes...")
+    commit_result = commit_all_changes(commit_message, project_dir)
+    if not commit_result["success"]:
+        logger.error(f"Failed to commit finalisation changes: {commit_result['error']}")
+        return False
+
+    # 7. Push changes
+    logger.info("Pushing finalisation changes...")
+    if not push_changes(project_dir):
+        logger.warning("Failed to push finalisation changes")
+        return False
 
     return True
 
@@ -514,7 +540,6 @@ def run_implement_workflow(
             method,
             mcp_config,
             execution_dir,
-            auto_push=update_labels,  # Auto-push only in workflow mode
         )
         if not finalisation_success:
             logger.warning("Finalisation encountered issues - continuing anyway")

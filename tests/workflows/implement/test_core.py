@@ -707,6 +707,7 @@ class TestRunFinalisation:
         assert result is True
         mock_has_incomplete.assert_called_once_with(str(tmp_path / "pr_info"))
 
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
@@ -715,12 +716,19 @@ class TestRunFinalisation:
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
         mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test run_finalisation calls LLM when there are incomplete tasks."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
         mock_ask_llm.return_value = "Finalisation completed"
+        # No changes after LLM call
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": [],
+            "untracked": [],
+        }
 
         result = run_finalisation(tmp_path, "claude", "cli")
 
@@ -733,63 +741,111 @@ class TestRunFinalisation:
         assert "unchecked tasks" in prompt
 
     @patch("mcp_coder.workflows.implement.core.push_changes")
+    @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
-    def test_run_finalisation_pushes_in_workflow_mode(
+    def test_run_finalisation_commits_and_pushes_when_changes_exist(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
+        mock_commit: MagicMock,
         mock_push: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test run_finalisation pushes changes when auto_push=True."""
+        """Test run_finalisation commits and pushes changes when they exist."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
         mock_ask_llm.return_value = "Finalisation completed"
         mock_get_status.return_value = {
-            "staged": ["some_file.py"],
-            "modified": [],
+            "staged": [],
+            "modified": ["some_file.py"],
             "untracked": [],
         }
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
         mock_push.return_value = True
 
-        result = run_finalisation(tmp_path, "claude", "cli", auto_push=True)
+        # Create commit message file
+        pr_info_dir = tmp_path / "pr_info"
+        pr_info_dir.mkdir(parents=True)
+        commit_msg_file = pr_info_dir / ".commit_message.txt"
+        commit_msg_file.write_text("Test commit message")
+
+        result = run_finalisation(tmp_path, "claude", "cli")
 
         assert result is True
+        mock_commit.assert_called_once_with("Test commit message", tmp_path)
         mock_push.assert_called_once_with(tmp_path)
+        # Verify commit message file was deleted
+        assert not commit_msg_file.exists()
 
     @patch("mcp_coder.workflows.implement.core.push_changes")
+    @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
-    def test_run_finalisation_no_push_in_slash_command_mode(
+    def test_run_finalisation_uses_default_message_when_file_missing(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
+        mock_commit: MagicMock,
         mock_push: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test run_finalisation does not push when auto_push=False."""
+        """Test run_finalisation uses default message when commit file missing."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
         mock_ask_llm.return_value = "Finalisation completed"
         mock_get_status.return_value = {
-            "staged": ["some_file.py"],
+            "staged": [],
+            "modified": ["some_file.py"],
+            "untracked": [],
+        }
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
+        mock_push.return_value = True
+
+        # Don't create commit message file
+
+        result = run_finalisation(tmp_path, "claude", "cli")
+
+        assert result is True
+        mock_commit.assert_called_once_with(
+            "Finalisation: complete remaining tasks", tmp_path
+        )
+        mock_push.assert_called_once_with(tmp_path)
+
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_no_commit_when_no_changes(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test run_finalisation skips commit when no changes after LLM."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_ask_llm.return_value = "Finalisation completed"
+        mock_get_status.return_value = {
+            "staged": [],
             "modified": [],
             "untracked": [],
         }
 
-        result = run_finalisation(tmp_path, "claude", "cli", auto_push=False)
+        result = run_finalisation(tmp_path, "claude", "cli")
 
         assert result is True
-        mock_push.assert_not_called()
+        # No commit or push should be called
 
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
     def test_run_finalisation_returns_false_when_task_tracker_missing(
@@ -818,6 +874,67 @@ class TestRunFinalisation:
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
         mock_ask_llm.return_value = ""  # Empty response
+
+        result = run_finalisation(tmp_path, "claude", "cli")
+
+        assert result is False
+
+    @patch("mcp_coder.workflows.implement.core.commit_all_changes")
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_returns_false_when_commit_fails(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_commit: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test run_finalisation returns False when commit fails."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_ask_llm.return_value = "Finalisation completed"
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": ["some_file.py"],
+            "untracked": [],
+        }
+        mock_commit.return_value = {"success": False, "error": "Commit failed"}
+
+        result = run_finalisation(tmp_path, "claude", "cli")
+
+        assert result is False
+
+    @patch("mcp_coder.workflows.implement.core.push_changes")
+    @patch("mcp_coder.workflows.implement.core.commit_all_changes")
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_returns_false_when_push_fails(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test run_finalisation returns False when push fails."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_ask_llm.return_value = "Finalisation completed"
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": ["some_file.py"],
+            "untracked": [],
+        }
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
+        mock_push.return_value = False
 
         result = run_finalisation(tmp_path, "claude", "cli")
 

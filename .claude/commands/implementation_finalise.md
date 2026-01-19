@@ -15,12 +15,13 @@ If all tasks are already checked (`- [x]`), report that no finalisation is neede
 For each unchecked task:
 
 #### Commit Message Tasks
+
 If the task contains "commit message" (case-insensitive):
-- Check `git log --oneline -5` for recent commits
-- If relevant commits already exist for the current step → mark task as `[x]`
-- If no commits exist → write an appropriate commit message to `pr_info/.commit_message.txt`
+
+- if the tasks before are already, done ignore this task by marking it as done `[x]`
 
 #### Other Tasks
+
 - Check `pr_info/steps/` for related step files that provide context
 - If step files don't exist, analyse based on task name and codebase
 - Verify if the task is already complete
@@ -31,24 +32,16 @@ If the task contains "commit message" (case-insensitive):
 ### 3. Quality Checks (If Code Changed)
 
 If any code changes were made during this process:
-```
-- Run pylint (fix all errors)
-- Run pytest (fix all failures)
-- Run mypy (fix all type errors)
-```
 
-### 4. Stage and Commit
-
-1. Stage all changes: `git add -A`
-2. Write commit message to `pr_info/.commit_message.txt` if not already done
-3. Commit changes with the message from `.commit_message.txt`
-
-**Important**: Do NOT push changes. The slash command mode is for manual use only.
+- Run pylint checks using the mcp server(fix all errors)
+- Run pytest checks using the mcp server(fix all failures)
+- Run mypy checks  using the mcp server(fix all type errors)
 
 ## Output
 
 Report:
+
 1. Which tasks were processed
 2. Which tasks were marked complete
 3. Any issues encountered
-4. Location of commit message file
+4. Summarize the changes in a commit message and report it
