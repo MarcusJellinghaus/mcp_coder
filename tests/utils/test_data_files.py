@@ -88,8 +88,11 @@ class TestFindDataFile:
         """Test that successful data file discovery logs appropriately.
 
         Uses real mcp_coder package - no temp directories needed.
+        Note: Explicitly sets level on the specific logger for pytest-xdist compatibility.
         """
-        caplog.set_level(logging.DEBUG)
+        # Set DEBUG level on specific logger for reliable capture with pytest-xdist
+        logger_name = "mcp_coder.utils.data_files"
+        caplog.set_level(logging.DEBUG, logger=logger_name)
 
         result = find_data_file(
             package_name="mcp_coder",
@@ -100,7 +103,11 @@ class TestFindDataFile:
 
         # Verify logging occurred - check for key log messages at DEBUG level
         # The function logs "SEARCH STARTED" and "SUCCESS: Found data file" at DEBUG level
-        debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
+        debug_records = [
+            r
+            for r in caplog.records
+            if r.levelno == logging.DEBUG and r.name == logger_name
+        ]
         assert len(debug_records) > 0, "Expected DEBUG level log messages"
 
         # Verify the search started message was logged
