@@ -19,7 +19,11 @@ from mcp_coder.utils.git_operations import (
     rebase_onto_branch,
 )
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
-from mcp_coder.workflow_utils.task_tracker import get_step_progress
+from mcp_coder.workflow_utils.task_tracker import (
+    TaskTrackerFileNotFoundError,
+    get_step_progress,
+    has_incomplete_work,
+)
 
 from .prerequisites import (
     check_git_clean,
@@ -38,7 +42,27 @@ from .task_processing import (
 
 # Constants
 PR_INFO_DIR = "pr_info"
+COMMIT_MESSAGE_FILE = ".commit_message.txt"  # Combined with PR_INFO_DIR in code
 LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS = 600  # 10 minutes
+LLM_FINALISATION_TIMEOUT_SECONDS = 600  # 10 minutes
+
+# Finalisation prompt for completing remaining tasks
+FINALISATION_PROMPT = """
+Please check pr_info/TASK_TRACKER.md for unchecked tasks (- [ ]).
+
+For each unchecked task:
+1. If it's a "commit message" task and changes are already committed → mark [x] and skip
+2. Otherwise: verify if done, complete it if not, then mark [x]
+
+If step files exist in pr_info/steps/, use them for context.
+If not, analyse based on task names and codebase.
+
+If you cannot complete a task, DO NOT mark the box as done.
+Instead, briefly explain the issue.
+
+Run quality checks (pylint, pytest, mypy) if any code changes were made.
+Write commit message to pr_info/.commit_message.txt.
+"""
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -299,6 +323,73 @@ def log_progress_summary(project_dir: Path) -> None:
 
     except Exception as e:
         logger.debug(f"Could not generate progress summary: {e}")
+
+
+def run_finalisation(
+    project_dir: Path,
+    provider: str,
+    method: str,
+    mcp_config: Optional[str] = None,
+    execution_dir: Optional[Path] = None,
+    auto_push: bool = False,
+) -> bool:
+    """Run implementation finalisation to verify and complete remaining tasks.
+
+    Args:
+        project_dir: Path to the project directory
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'cli' or 'api')
+        mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess
+        auto_push: If True, push changes after commit (workflow mode)
+
+    Returns:
+        bool: True if finalisation succeeded or was skipped (no tasks), False on error
+    """
+    logger.info("Running implementation finalisation...")
+
+    # 1. Check if there are incomplete tasks
+    try:
+        pr_info_path = str(project_dir / PR_INFO_DIR)
+        if not has_incomplete_work(pr_info_path):
+            logger.info("No incomplete tasks - skipping finalisation")
+            return True
+    except TaskTrackerFileNotFoundError:
+        logger.error("Task tracker not found - cannot run finalisation")
+        return False
+
+    logger.info("Found incomplete tasks - calling LLM to finalise...")
+
+    # 2. Prepare environment and call LLM with finalisation prompt
+    env_vars = prepare_llm_environment(project_dir)
+
+    response = ask_llm(
+        FINALISATION_PROMPT,
+        provider=provider,
+        method=method,
+        timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
+        env_vars=env_vars,
+        project_dir=str(project_dir),
+        execution_dir=str(execution_dir) if execution_dir else None,
+        mcp_config=mcp_config,
+    )
+
+    # 3. Check for empty/failed response
+    if not response or not response.strip():
+        logger.error("Finalisation LLM returned empty response")
+        return False
+
+    logger.info("Finalisation LLM response received")
+
+    # 4. If auto_push and changes were made, push
+    if auto_push:
+        status = get_full_status(project_dir)
+        if status["staged"] or status["modified"]:
+            logger.info("Pushing finalisation changes...")
+            if not push_changes(project_dir):
+                logger.warning("Failed to push finalisation changes")
+
+    return True
 
 
 def run_implement_workflow(
