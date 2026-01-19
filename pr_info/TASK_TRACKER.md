@@ -20,9 +20,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Update Implementation Prompt
 See [step_1.md](steps/step_1.md)
 
-- [ ] Update `src/mcp_coder/prompts/prompts.md` - Change commit message instruction from "Prepare commit message when that sub-task appears" to "Write commit message to `pr_info/.commit_message.txt`"
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message
+- [x] Update `src/mcp_coder/prompts/prompts.md` - Change commit message instruction from "Prepare commit message when that sub-task appears" to "Write commit message to `pr_info/.commit_message.txt`"
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message
 
 ### Step 2: Update task_processing.py - Commit Message File Handling
 See [step_2.md](steps/step_2.md)

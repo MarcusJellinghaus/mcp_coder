@@ -116,8 +116,8 @@ Implement ONE step from the task tracker.
 
 **3. COMPLETE THE STEP**
 - All sub-tasks must be `[x]` before finishing
-- Prepare commit message when that sub-task appears
-- Do NOT commit - just prepare the message
+- Write commit message to `pr_info/.commit_message.txt`
+- Do NOT commit - just write the message to the file
 
 **RULES:**
 - ONE step per run (but complete all its sub-tasks)
