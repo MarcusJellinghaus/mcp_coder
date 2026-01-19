@@ -528,6 +528,14 @@ Mypy fix generated on: {datetime.now().isoformat()}
         return False
 
 
+def _cleanup_commit_message_file(project_dir: Path) -> None:
+    """Remove stale commit message file from previous failed runs."""
+    commit_msg_path = project_dir / COMMIT_MESSAGE_FILE
+    if commit_msg_path.exists():
+        commit_msg_path.unlink()
+        logger.debug("Cleaned up stale commit message file")
+
+
 def process_single_task(
     project_dir: Path,
     provider: str,
