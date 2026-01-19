@@ -784,21 +784,23 @@ class TestRunFinalisation:
 
     @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
+    @patch("mcp_coder.workflows.implement.core.generate_commit_message_with_llm")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
-    def test_run_finalisation_uses_default_message_when_file_missing(
+    def test_run_finalisation_uses_llm_generated_message_when_file_missing(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
         mock_ask_llm: MagicMock,
         mock_get_status: MagicMock,
+        mock_generate_commit_msg: MagicMock,
         mock_commit: MagicMock,
         mock_push: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test run_finalisation uses default message when commit file missing."""
+        """Test run_finalisation uses LLM-generated message when commit file missing."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
         mock_ask_llm.return_value = "Finalisation completed"
@@ -807,14 +809,62 @@ class TestRunFinalisation:
             "modified": ["some_file.py"],
             "untracked": [],
         }
+        # LLM generates commit message successfully
+        mock_generate_commit_msg.return_value = (
+            True,
+            "LLM generated commit message",
+            None,
+        )
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
         mock_push.return_value = True
 
-        # Don't create commit message file
+        # Don't create commit message file - should fall back to LLM
 
         result = run_finalisation(tmp_path, "claude", "cli")
 
         assert result is True
+        mock_generate_commit_msg.assert_called_once()
+        mock_commit.assert_called_once_with("LLM generated commit message", tmp_path)
+        mock_push.assert_called_once_with(tmp_path)
+
+    @patch("mcp_coder.workflows.implement.core.push_changes")
+    @patch("mcp_coder.workflows.implement.core.commit_all_changes")
+    @patch("mcp_coder.workflows.implement.core.generate_commit_message_with_llm")
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_uses_default_message_when_llm_fails(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_generate_commit_msg: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test run_finalisation uses default message when both file and LLM fail."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_ask_llm.return_value = "Finalisation completed"
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": ["some_file.py"],
+            "untracked": [],
+        }
+        # LLM fails to generate commit message
+        mock_generate_commit_msg.return_value = (False, "", "LLM error")
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
+        mock_push.return_value = True
+
+        # Don't create commit message file - LLM also fails - should use default
+
+        result = run_finalisation(tmp_path, "claude", "cli")
+
+        assert result is True
+        mock_generate_commit_msg.assert_called_once()
         mock_commit.assert_called_once_with(
             "Finalisation: complete remaining tasks", tmp_path
         )

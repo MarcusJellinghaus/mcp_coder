@@ -18,7 +18,7 @@ For each unchecked task:
 
 If the task contains "commit message" (case-insensitive):
 
-- if the tasks before are already, done ignore this task by marking it as done `[x]`
+- if the tasks before are already done, ignore this task by marking it as done `[x]`
 
 #### Other Tasks
 
@@ -33,9 +33,9 @@ If the task contains "commit message" (case-insensitive):
 
 If any code changes were made during this process:
 
-- Run pylint checks using the mcp server(fix all errors)
-- Run pytest checks using the mcp server(fix all failures)
-- Run mypy checks  using the mcp server(fix all type errors)
+- Run pylint checks using the MCP server (fix all errors)
+- Run pytest checks using the MCP server (fix all failures)
+- Run mypy checks using the MCP server (fix all type errors)
 
 ## Output
 
