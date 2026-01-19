@@ -20,10 +20,9 @@ from mcp_coder.workflow_utils.task_tracker import (
     _read_task_tracker,
 )
 
-logger = logging.getLogger(__name__)
+from .constants import PR_INFO_DIR
 
-# Constants
-PR_INFO_DIR = "pr_info"
+logger = logging.getLogger(__name__)
 
 
 def check_git_clean(project_dir: Path) -> bool:

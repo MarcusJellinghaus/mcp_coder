@@ -29,14 +29,13 @@ from mcp_coder.workflow_utils.commit_operations import (
 )
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
-# Constants
-PR_INFO_DIR = "pr_info"
-CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
-COMMIT_MESSAGE_FILE = "pr_info/.commit_message.txt"
-LLM_IMPLEMENTATION_TIMEOUT_SECONDS = 3600  # 60 minutes
-
-# Mypy checking behavior
-RUN_MYPY_AFTER_EACH_TASK = False  # If False, mypy runs once after all tasks complete
+from .constants import (
+    COMMIT_MESSAGE_FILE,
+    CONVERSATIONS_DIR,
+    LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+    PR_INFO_DIR,
+    RUN_MYPY_AFTER_EACH_TASK,
+)
 
 # Setup logger
 logger = logging.getLogger(__name__)
