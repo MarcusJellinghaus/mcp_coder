@@ -329,10 +329,8 @@ class CIResultsManager(BaseGitHubManager):
                 artifacts = filtered_artifacts
 
             if not artifacts:
-                logger.info(
-                    f"No artifacts found for run ID {run_id}"
-                    + (f" with filter '{name_filter}'" if name_filter else "")
-                )
+                filter_msg = f" with filter '{name_filter}'" if name_filter else ""
+                logger.info(f"No artifacts found for run ID {run_id}{filter_msg}")
                 return {}
 
             # Download and extract each artifact

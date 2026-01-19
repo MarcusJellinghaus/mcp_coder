@@ -36,8 +36,8 @@ See [step_2.md](steps/step_2.md)
 - [x] Add `test_commit_changes_uses_file_when_present` test to `TestCommitChanges`
 - [x] Add `test_commit_changes_falls_back_to_llm_when_no_file` test to `TestCommitChanges`
 - [x] Add `test_commit_changes_logs_message_on_failure` test to `TestCommitChanges`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message
 
 ### Step 3: Update CI Pipeline - Forbidden File Check
 See [step_3.md](steps/step_3.md)
