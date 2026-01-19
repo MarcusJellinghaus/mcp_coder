@@ -367,6 +367,29 @@ class TestCommitChanges:
 
         assert result is False
 
+    @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
+    def test_commit_changes_logs_message_on_failure(
+        self, mock_commit: MagicMock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test commit message is logged when commit fails."""
+        # Create commit message file
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        commit_file = pr_info / ".commit_message.txt"
+        commit_file.write_text("feat: important message")
+
+        mock_commit.return_value = {
+            "success": False,
+            "commit_hash": None,
+            "error": "Git failed",
+        }
+
+        result = commit_changes(tmp_path)
+
+        assert result is False
+        # Message should be logged so it's not lost
+        assert "feat: important message" in caplog.text
+
 
 class TestPushChanges:
     """Test push_changes function."""

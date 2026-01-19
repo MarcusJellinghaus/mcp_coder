@@ -35,7 +35,7 @@ See [step_2.md](steps/step_2.md)
 - [x] Add `TestCommitMessageFile` test class with `test_cleanup_removes_existing_file` and `test_cleanup_handles_missing_file` tests
 - [x] Add `test_commit_changes_uses_file_when_present` test to `TestCommitChanges`
 - [x] Add `test_commit_changes_falls_back_to_llm_when_no_file` test to `TestCommitChanges`
-- [ ] Add `test_commit_changes_logs_message_on_failure` test to `TestCommitChanges`
+- [x] Add `test_commit_changes_logs_message_on_failure` test to `TestCommitChanges`
 - [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
 - [ ] Prepare git commit message
 
