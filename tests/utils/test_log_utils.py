@@ -114,105 +114,12 @@ class TestSetupLogging:
 class TestLogFunctionCall:
     """Tests for the log_function_call decorator."""
 
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_basic(self, mock_stdlogger: MagicMock) -> None:
+    def test_log_function_call_basic(self) -> None:
         """Test the basic functionality of the decorator."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
 
-        # Define a test function
-        @log_function_call
-        def test_func(a: int, b: int) -> int:
-            return a + b
-
-        # Execute
-        result = test_func(1, 2)
-
-        # Verify
-        assert result == 3
-        assert mock_stdlogger.debug.call_count == 2  # Called for start and end logging
-
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_with_path_param(self, mock_stdlogger: MagicMock) -> None:
-        """Test that Path objects are properly serialized."""
-
-        # Define a test function with a Path parameter
-        @log_function_call
-        def path_func(file_path: Path) -> str:
-            return str(file_path)
-
-        # Execute
-        test_path = Path("/test/path")
-        result = path_func(test_path)
-
-        # Verify
-        assert result == str(test_path)
-        assert mock_stdlogger.debug.call_count == 2
-
-        # Check that mock was called with correct parameters
-        # After the lazy formatting change, debug is now called with format string and parameters
-        # First call should be: debug("Calling %s with parameters: %s", func_name, params)
-        first_call = mock_stdlogger.debug.call_args_list[0]
-        assert first_call[0][0] == "Calling %s with parameters: %s"
-        assert first_call[0][1] == "path_func"
-        # The second argument should be a JSON string of parameters
-        params_json = first_call[0][2]
-
-        # NOTE: There's a bug in the decorator where Path objects with __class__.__module__ != "builtins"
-        # are incorrectly treated as 'self' parameters and skipped. This results in empty params.
-        # For now, we'll just verify the decorator was called and the result is correct.
-        params = json.loads(params_json)
-        # Due to the bug, params will be empty, but the function still works correctly
-        assert params == {}  # Known issue with Path parameter detection
-
-        # Second call should be the completion log
-        second_call = mock_stdlogger.debug.call_args_list[1]
-        assert second_call[0][0] == "%s completed in %sms with result: %s"
-        assert second_call[0][1] == "path_func"
-        # Verify result is the string representation of the path
-        # The result is the third parameter (after func_name and elapsed_ms)
-        result_arg = second_call[0][3]
-        # On Windows, the path might be represented differently
-        assert str(test_path).replace("/", "\\") in str(result_arg) or str(
-            test_path
-        ) in str(result_arg)
-
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_with_large_result(
-        self, mock_stdlogger: MagicMock
-    ) -> None:
-        """Test that large results are properly truncated in logs."""
-
-        # Define a test function that returns a large list
-        @log_function_call
-        def large_result_func() -> list[int]:
-            return list(range(1000))
-
-        # Execute
-        result = large_result_func()
-
-        # Verify
-        assert len(result) == 1000
-        assert mock_stdlogger.debug.call_count == 2
-
-        # Get the call args for the second debug call (completion log)
-        second_call = mock_stdlogger.debug.call_args_list[1]
-        # The format is now: debug("%s completed in %sms with result: %s", func_name, elapsed, result)
-        assert second_call[0][0] == "%s completed in %sms with result: %s"
-        assert second_call[0][1] == "large_result_func"
-        # The result (third argument after format string and func_name) should be the truncated message
-        result_arg = second_call[0][3]
-        assert "<Large result of type list" in result_arg
-
-    @patch("mcp_coder.utils.log_utils.structlog")
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_with_structured_logging(
-        self, mock_stdlogger: MagicMock, mock_structlog: MagicMock
-    ) -> None:
-        """Test that structured logging is used when available."""
-        # Setup mock for structlog and for checking if FileHandler is present
-        mock_structlogger = mock_structlog.get_logger.return_value
-
-        # Mock to simulate FileHandler being present
-        with patch("mcp_coder.utils.log_utils.any", return_value=True):
             # Define a test function
             @log_function_call
             def test_func(a: int, b: int) -> int:
@@ -223,9 +130,107 @@ class TestLogFunctionCall:
 
             # Verify
             assert result == 3
-            # Both standard and structured logging should be used
-            assert mock_stdlogger.debug.call_count == 2
-            assert mock_structlogger.debug.call_count == 2
+            assert mock_logger.debug.call_count == 2  # Called for start and end logging
+
+    def test_log_function_call_with_path_param(self) -> None:
+        """Test that Path objects are properly serialized."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            # Define a test function with a Path parameter
+            @log_function_call
+            def path_func(file_path: Path) -> str:
+                return str(file_path)
+
+            # Execute
+            test_path = Path("/test/path")
+            result = path_func(test_path)
+
+            # Verify
+            assert result == str(test_path)
+            assert mock_logger.debug.call_count == 2
+
+            # Check that mock was called with correct parameters
+            # After the lazy formatting change, debug is now called with format string and parameters
+            # First call should be: debug("Calling %s with parameters: %s", func_name, params)
+            first_call = mock_logger.debug.call_args_list[0]
+            assert first_call[0][0] == "Calling %s with parameters: %s"
+            assert first_call[0][1] == "path_func"
+            # The second argument should be a JSON string of parameters
+            params_json = first_call[0][2]
+
+            # NOTE: There's a bug in the decorator where Path objects with __class__.__module__ != "builtins"
+            # are incorrectly treated as 'self' parameters and skipped. This results in empty params.
+            # For now, we'll just verify the decorator was called and the result is correct.
+            params = json.loads(params_json)
+            # Due to the bug, params will be empty, but the function still works correctly
+            assert params == {}  # Known issue with Path parameter detection
+
+            # Second call should be the completion log
+            second_call = mock_logger.debug.call_args_list[1]
+            assert second_call[0][0] == "%s completed in %sms with result: %s"
+            assert second_call[0][1] == "path_func"
+            # Verify result is the string representation of the path
+            # The result is the third parameter (after func_name and elapsed_ms)
+            result_arg = second_call[0][3]
+            # On Windows, the path might be represented differently
+            assert str(test_path).replace("/", "\\") in str(result_arg) or str(
+                test_path
+            ) in str(result_arg)
+
+    def test_log_function_call_with_large_result(self) -> None:
+        """Test that large results are properly truncated in logs."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            # Define a test function that returns a large list
+            @log_function_call
+            def large_result_func() -> list[int]:
+                return list(range(1000))
+
+            # Execute
+            result = large_result_func()
+
+            # Verify
+            assert len(result) == 1000
+            assert mock_logger.debug.call_count == 2
+
+            # Get the call args for the second debug call (completion log)
+            second_call = mock_logger.debug.call_args_list[1]
+            # The format is now: debug("%s completed in %sms with result: %s", func_name, elapsed, result)
+            assert second_call[0][0] == "%s completed in %sms with result: %s"
+            assert second_call[0][1] == "large_result_func"
+            # The result (third argument after format string and func_name) should be the truncated message
+            result_arg = second_call[0][3]
+            assert "<Large result of type list" in result_arg
+
+    def test_log_function_call_with_structured_logging(self) -> None:
+        """Test that structured logging is used when available."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            with patch("mcp_coder.utils.log_utils.structlog") as mock_structlog:
+                # Setup mock for structlog and for checking if FileHandler is present
+                mock_structlogger = mock_structlog.get_logger.return_value
+
+                # Mock to simulate FileHandler being present
+                with patch("mcp_coder.utils.log_utils.any", return_value=True):
+                    # Define a test function
+                    @log_function_call
+                    def test_func(a: int, b: int) -> int:
+                        return a + b
+
+                    # Execute
+                    result = test_func(1, 2)
+
+                    # Verify
+                    assert result == 3
+                    # Both standard and structured logging should be used
+                    assert mock_logger.debug.call_count == 2
+                    assert mock_structlogger.debug.call_count == 2
 
 
 class TestExtraFieldsFormatter:
@@ -364,118 +369,121 @@ class TestRedactForLogging:
 class TestLogFunctionCallWithSensitiveFields:
     """Tests for log_function_call decorator with sensitive_fields parameter."""
 
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_without_sensitive_fields(
-        self, mock_stdlogger: MagicMock
-    ) -> None:
+    def test_log_function_call_without_sensitive_fields(self) -> None:
         """Test that decorator works without sensitive_fields (backward compatible)."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
 
-        @log_function_call
-        def simple_func(x: int) -> int:
-            return x * 2
+            @log_function_call
+            def simple_func(x: int) -> int:
+                return x * 2
 
-        result = simple_func(5)
-        assert result == 10
-        assert mock_stdlogger.debug.call_count == 2
+            result = simple_func(5)
+            assert result == 10
+            assert mock_logger.debug.call_count == 2
 
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_with_parentheses_no_args(
-        self, mock_stdlogger: MagicMock
-    ) -> None:
+    def test_log_function_call_with_parentheses_no_args(self) -> None:
         """Test that decorator works with empty parentheses."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
 
-        @log_function_call()
-        def simple_func(x: int) -> int:
-            return x * 2
+            @log_function_call()
+            def simple_func(x: int) -> int:
+                return x * 2
 
-        result: int = simple_func(5)
-        assert result == 10
-        assert mock_stdlogger.debug.call_count == 2
+            result: int = simple_func(5)
+            assert result == 10
+            assert mock_logger.debug.call_count == 2
 
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_redacts_sensitive_params(
-        self, mock_stdlogger: MagicMock
-    ) -> None:
+    def test_log_function_call_redacts_sensitive_params(self) -> None:
         """Test that sensitive parameter values are redacted in logs."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
 
-        @log_function_call(sensitive_fields=["token", "password"])
-        def auth_func(token: str, username: str) -> bool:
-            return True
+            @log_function_call(sensitive_fields=["token", "password"])
+            def auth_func(token: str, username: str) -> bool:
+                return True
 
-        auth_func(token="secret123", username="user")
+            auth_func(token="secret123", username="user")
 
-        # Verify log contains "***" for token, but "user" for username
-        first_call = mock_stdlogger.debug.call_args_list[0]
-        log_params = first_call[0][2]  # JSON string of parameters
+            # Verify log contains "***" for token, but "user" for username
+            first_call = mock_logger.debug.call_args_list[0]
+            log_params = first_call[0][2]  # JSON string of parameters
 
-        assert "***" in log_params
-        assert "secret123" not in log_params
-        assert "user" in log_params
+            assert "***" in log_params
+            assert "secret123" not in log_params
+            assert "user" in log_params
 
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_redacts_sensitive_return_value(
-        self, mock_stdlogger: MagicMock
-    ) -> None:
+    def test_log_function_call_redacts_sensitive_return_value(self) -> None:
         """Test that sensitive values in return dict are redacted in logs."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
 
-        @log_function_call(sensitive_fields=["token"])
-        def get_config() -> dict[str, str]:
-            return {"token": "secret", "name": "test"}
+            @log_function_call(sensitive_fields=["token"])
+            def get_config() -> dict[str, str]:
+                return {"token": "secret", "name": "test"}
 
-        result: dict[str, str] = get_config()
+            result: dict[str, str] = get_config()
 
-        # Original return value should be unchanged
-        assert result["token"] == "secret"
-        assert result["name"] == "test"
+            # Original return value should be unchanged
+            assert result["token"] == "secret"
+            assert result["name"] == "test"
 
-        # Log should have redacted value
-        second_call = mock_stdlogger.debug.call_args_list[1]  # completion log
-        result_str = str(second_call)
+            # Log should have redacted value
+            second_call = mock_logger.debug.call_args_list[1]  # completion log
+            result_str = str(second_call)
 
-        assert "***" in result_str
-        assert "secret" not in result_str
-        assert "test" in result_str
+            assert "***" in result_str
+            assert "secret" not in result_str
+            assert "test" in result_str
 
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_redacts_nested_sensitive_values(
-        self, mock_stdlogger: MagicMock
-    ) -> None:
+    def test_log_function_call_redacts_nested_sensitive_values(self) -> None:
         """Test that nested sensitive values in return dict are redacted."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
 
-        @log_function_call(sensitive_fields=["token", "api_token"])
-        def load_config() -> dict[str, dict[str, str]]:
-            return {
-                "github": {"token": "ghp_xxx"},
-                "jenkins": {"api_token": "jenkins_xxx", "url": "http://example.com"},
-            }
+            @log_function_call(sensitive_fields=["token", "api_token"])
+            def load_config() -> dict[str, dict[str, str]]:
+                return {
+                    "github": {"token": "ghp_xxx"},
+                    "jenkins": {
+                        "api_token": "jenkins_xxx",
+                        "url": "http://example.com",
+                    },
+                }
 
-        result: dict[str, dict[str, str]] = load_config()
+            result: dict[str, dict[str, str]] = load_config()
 
-        # Original return value should be unchanged
-        assert result["github"]["token"] == "ghp_xxx"
-        assert result["jenkins"]["api_token"] == "jenkins_xxx"
+            # Original return value should be unchanged
+            assert result["github"]["token"] == "ghp_xxx"
+            assert result["jenkins"]["api_token"] == "jenkins_xxx"
 
-        # Log should have redacted values
-        second_call = mock_stdlogger.debug.call_args_list[1]
-        result_str = str(second_call)
+            # Log should have redacted values
+            second_call = mock_logger.debug.call_args_list[1]
+            result_str = str(second_call)
 
-        assert "ghp_xxx" not in result_str
-        assert "jenkins_xxx" not in result_str
-        assert "http://example.com" in result_str
+            assert "ghp_xxx" not in result_str
+            assert "jenkins_xxx" not in result_str
+            assert "http://example.com" in result_str
 
-    @patch("mcp_coder.utils.log_utils.stdlogger")
-    def test_log_function_call_non_dict_return_unchanged(
-        self, mock_stdlogger: MagicMock
-    ) -> None:
+    def test_log_function_call_non_dict_return_unchanged(self) -> None:
         """Test that non-dict return values work correctly with sensitive_fields."""
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
 
-        @log_function_call(sensitive_fields=["token"])
-        def get_number() -> int:
-            return 42
+            @log_function_call(sensitive_fields=["token"])
+            def get_number() -> int:
+                return 42
 
-        result: int = get_number()
-        assert result == 42
-        assert mock_stdlogger.debug.call_count == 2
+            result: int = get_number()
+            assert result == 42
+            assert mock_logger.debug.call_count == 2
 
 
 class TestLogFunctionCallLoggerName:
@@ -520,7 +528,16 @@ class TestLogFunctionCallLoggerName:
 
         with patch("logging.getLogger") as mock_get_logger:
             mock_logger = MagicMock()
-            mock_get_logger.return_value = mock_logger
+            # Root logger mock (returned when called without arguments)
+            root_logger_mock = MagicMock()
+            root_logger_mock.handlers = []  # No file handlers
+
+            def get_logger_side_effect(name: str = "") -> MagicMock:
+                if not name:  # Root logger
+                    return root_logger_mock
+                return mock_logger
+
+            mock_get_logger.side_effect = get_logger_side_effect
 
             @log_function_call
             def test_func() -> str:
@@ -528,19 +545,23 @@ class TestLogFunctionCallLoggerName:
 
             test_func()
 
-            # Get all logger name calls
+            # Get all logger name calls (filter out empty string for root logger)
             func_logger_calls = [
-                call[0][0] for call in mock_get_logger.call_args_list if call[0]
+                call[0][0]
+                for call in mock_get_logger.call_args_list
+                if call[0] and call[0][0]
             ]
 
             # The decorator should get a logger for the decorated function's module
-            # At least one call should NOT be for log_utils module
-            non_log_utils_calls = [
-                name for name in func_logger_calls if "log_utils" not in name
+            # No call should be for mcp_coder.utils.log_utils (the decorator module itself)
+            log_utils_module_calls = [
+                name
+                for name in func_logger_calls
+                if name == "mcp_coder.utils.log_utils"
             ]
             assert (
-                len(non_log_utils_calls) > 0
-            ), f"Expected at least one logger not from log_utils: {func_logger_calls}"
+                len(log_utils_module_calls) == 0
+            ), f"Logger should not be from mcp_coder.utils.log_utils: {func_logger_calls}"
 
     def test_log_function_call_structlog_uses_correct_module(self) -> None:
         """Verify structlog logger also uses decorated function's module."""
@@ -579,8 +600,13 @@ class TestLogFunctionCallLoggerName:
             # Create separate loggers for different modules
             func_logger = MagicMock()
             module_logger = MagicMock()
+            # Root logger mock (returned when called without arguments)
+            root_logger_mock = MagicMock()
+            root_logger_mock.handlers = []  # No file handlers
 
-            def get_logger_side_effect(name: str) -> MagicMock:
+            def get_logger_side_effect(name: str = "") -> MagicMock:
+                if not name:  # Root logger
+                    return root_logger_mock
                 if "test_log_utils" in name or name == __name__:
                     return func_logger
                 return module_logger
@@ -600,8 +626,13 @@ class TestLogFunctionCallLoggerName:
         """Verify error logs use the function-specific logger."""
         with patch("logging.getLogger") as mock_get_logger:
             func_logger = MagicMock()
+            # Root logger mock (returned when called without arguments)
+            root_logger_mock = MagicMock()
+            root_logger_mock.handlers = []  # No file handlers
 
-            def get_logger_side_effect(name: str) -> MagicMock:
+            def get_logger_side_effect(name: str = "") -> MagicMock:
+                if not name:  # Root logger
+                    return root_logger_mock
                 if "test_log_utils" in name or name == __name__:
                     return func_logger
                 return MagicMock()

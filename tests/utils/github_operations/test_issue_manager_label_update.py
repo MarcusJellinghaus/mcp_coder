@@ -139,7 +139,7 @@ class TestIssueManagerLabelUpdate:
 
         # Setup mocks
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -156,7 +156,7 @@ class TestIssueManagerLabelUpdate:
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure mocks
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             mock_set_labels.return_value = mock_issue_data
 
             # Create manager and call update
@@ -201,7 +201,7 @@ class TestIssueManagerLabelUpdate:
         )
 
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -213,7 +213,7 @@ class TestIssueManagerLabelUpdate:
             ),
         ):
             # Configure mock token
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
 
             # Create manager and call update
             manager = IssueManager(project_dir=tmp_path)
@@ -249,7 +249,7 @@ class TestIssueManagerLabelUpdate:
         )
 
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -266,7 +266,7 @@ class TestIssueManagerLabelUpdate:
             ),
         ):
             # Configure mock token
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
 
             # Create manager and call update
             manager = IssueManager(project_dir=tmp_path)
@@ -317,7 +317,7 @@ class TestIssueManagerLabelUpdate:
         }
 
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -334,7 +334,7 @@ class TestIssueManagerLabelUpdate:
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure mock token
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
 
             # Create manager and call update
             manager = IssueManager(project_dir=tmp_path)
@@ -385,7 +385,7 @@ class TestIssueManagerLabelUpdate:
         }
 
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -402,7 +402,7 @@ class TestIssueManagerLabelUpdate:
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure mocks
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             mock_set_labels.return_value = mock_issue_data
 
             # Create manager and call update
@@ -444,7 +444,7 @@ class TestIssueManagerLabelUpdate:
         )
 
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -459,7 +459,7 @@ class TestIssueManagerLabelUpdate:
             ),
         ):
             # Configure mock token
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
 
             # Create manager and call update with invalid internal_id
             manager = IssueManager(project_dir=tmp_path)
@@ -513,7 +513,7 @@ class TestIssueManagerLabelUpdate:
 
         # Configure set_labels to raise exception
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -534,7 +534,7 @@ class TestIssueManagerLabelUpdate:
             ),
         ):
             # Configure mock token
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
 
             # Create manager and call update
             manager = IssueManager(project_dir=tmp_path)
@@ -586,7 +586,7 @@ class TestIssueManagerLabelUpdate:
 
         # Setup mocks
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -603,7 +603,7 @@ class TestIssueManagerLabelUpdate:
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure mocks
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             mock_set_labels.return_value = mock_issue_data
 
             # Create manager and call update without branch parameter
@@ -667,7 +667,7 @@ class TestIssueManagerLabelUpdate:
         }
 
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -684,7 +684,7 @@ class TestIssueManagerLabelUpdate:
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure mocks
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             mock_set_labels.return_value = mock_issue_data
 
             # Create manager and call update
@@ -750,7 +750,7 @@ class TestIssueManagerLabelUpdate:
 
         # Setup mocks - importantly, get_linked_branches returns empty list (post-PR state)
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -763,7 +763,7 @@ class TestIssueManagerLabelUpdate:
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure mocks
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             mock_set_labels.return_value = mock_issue_data
 
             # Create manager and call update with validated_issue_number
@@ -824,7 +824,7 @@ class TestIssueManagerLabelUpdate:
         }
 
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -833,7 +833,7 @@ class TestIssueManagerLabelUpdate:
             patch.object(IssueManager, "get_issue", return_value=empty_issue_data),
         ):
             # Configure mock token
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
 
             # Create manager and call update with invalid validated_issue_number
             manager = IssueManager(project_dir=tmp_path)
@@ -886,7 +886,7 @@ class TestIssueManagerLabelUpdate:
         }
 
         with (
-            patch("mcp_coder.utils.user_config.get_config_value") as mock_config,
+            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
@@ -898,7 +898,7 @@ class TestIssueManagerLabelUpdate:
             patch.object(IssueManager, "set_labels") as mock_set_labels,
         ):
             # Configure mocks
-            mock_config.return_value = "dummy-token"
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             mock_set_labels.return_value = mock_issue_data
 
             # Create manager and call update with validated_issue_number

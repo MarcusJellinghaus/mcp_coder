@@ -1,5 +1,6 @@
 """Tests for Jenkins client module."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -8,8 +9,113 @@ from jenkins import JenkinsException
 from mcp_coder.utils.jenkins_operations.client import (
     JenkinsClient,
     JenkinsError,
+    _get_jenkins_config,
 )
 from mcp_coder.utils.jenkins_operations.models import JobStatus
+
+
+class TestGetJenkinsConfig:
+    """Tests for _get_jenkins_config helper."""
+
+    def test_config_from_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test configuration from environment variables."""
+        # Setup - set all env vars
+        monkeypatch.setenv("JENKINS_URL", "http://jenkins-env:8080")
+        monkeypatch.setenv("JENKINS_USER", "env-user")
+        monkeypatch.setenv("JENKINS_TOKEN", "env-token")
+
+        # Execute
+        config = _get_jenkins_config()
+
+        # Verify
+        assert config["server_url"] == "http://jenkins-env:8080"
+        assert config["username"] == "env-user"
+        assert config["api_token"] == "env-token"
+
+    @patch("mcp_coder.utils.jenkins_operations.client.get_config_values")
+    def test_config_from_config_file(
+        self, mock_get_config: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test configuration from config file."""
+        # Setup - no env vars, use config file
+        monkeypatch.delenv("JENKINS_URL", raising=False)
+        monkeypatch.delenv("JENKINS_USER", raising=False)
+        monkeypatch.delenv("JENKINS_TOKEN", raising=False)
+
+        # Mock config file values - the new batch API returns a dict
+        mock_get_config.return_value = {
+            ("jenkins", "server_url"): "http://jenkins-config:8080",
+            ("jenkins", "username"): "config-user",
+            ("jenkins", "api_token"): "config-token",
+        }
+
+        # Execute
+        config = _get_jenkins_config()
+
+        # Verify
+        assert config["server_url"] == "http://jenkins-config:8080"
+        assert config["username"] == "config-user"
+        assert config["api_token"] == "config-token"
+
+    @patch("mcp_coder.utils.user_config.get_config_file_path")
+    def test_config_env_priority(
+        self,
+        mock_config_path: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Test environment variables take priority over config file.
+
+        Note: get_config_value now handles environment variables internally,
+        so we must let the real function run. We mock the config file instead.
+        """
+        # Setup - set env vars for URL and user, but not token
+        monkeypatch.setenv("JENKINS_URL", "http://jenkins-env:8080")
+        monkeypatch.setenv("JENKINS_USER", "env-user")
+        monkeypatch.delenv("JENKINS_TOKEN", raising=False)  # Only token from config
+
+        # Create a mock config file with all values
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[jenkins]\n"
+            'server_url = "http://jenkins-config:8080"\n'
+            'username = "config-user"\n'
+            'api_token = "config-token"\n'
+        )
+        mock_config_path.return_value = config_file
+
+        # Execute
+        config = _get_jenkins_config()
+
+        # Verify - env vars win for URL and user, config for token
+        assert config["server_url"] == "http://jenkins-env:8080"
+        assert config["username"] == "env-user"
+        assert config["api_token"] == "config-token"
+
+    @patch("mcp_coder.utils.jenkins_operations.client.get_config_values")
+    def test_config_missing_returns_none(
+        self, mock_get_config: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test missing config returns None values."""
+        # Setup - no env vars, no config file
+        monkeypatch.delenv("JENKINS_URL", raising=False)
+        monkeypatch.delenv("JENKINS_USER", raising=False)
+        monkeypatch.delenv("JENKINS_TOKEN", raising=False)
+
+        # The new batch API returns a dict with None values for missing config
+        mock_get_config.return_value = {
+            ("jenkins", "server_url"): None,
+            ("jenkins", "username"): None,
+            ("jenkins", "api_token"): None,
+        }
+
+        # Execute
+        config = _get_jenkins_config()
+
+        # Verify
+        assert config["server_url"] is None
+        assert config["username"] is None
+        assert config["api_token"] is None
 
 
 class TestJenkinsClientInit:

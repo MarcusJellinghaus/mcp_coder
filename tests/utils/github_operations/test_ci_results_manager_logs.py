@@ -21,8 +21,8 @@ class TestDownloadAndExtractZip:
         """CIResultsManager instance for testing."""
         repo_url = "https://github.com/test/repo.git"
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test_token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "test_token"}
 
             with patch("github.Github"):
                 return CIResultsManager(repo_url=repo_url)

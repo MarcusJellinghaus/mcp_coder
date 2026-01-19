@@ -33,7 +33,7 @@ import os
 import time
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Any, Callable, Optional, TypeVar, cast, overload
 
 import structlog
 from pythonjsonlogger.json import JsonFormatter
@@ -274,6 +274,19 @@ def _redact_for_logging(
         elif isinstance(result[key], dict):
             result[key] = _redact_for_logging(result[key], sensitive_fields)
     return result
+
+
+# Overload signatures for proper typing
+@overload
+def log_function_call(func: Callable[..., T]) -> Callable[..., T]: ...
+
+
+@overload
+def log_function_call(
+    func: None = None,
+    *,
+    sensitive_fields: list[str] | None = None,
+) -> Callable[[Callable[..., T]], Callable[..., T]]: ...
 
 
 def log_function_call(
