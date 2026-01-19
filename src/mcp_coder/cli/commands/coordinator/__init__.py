@@ -6,7 +6,7 @@ from ....utils.github_operations.issue_branch_manager import IssueBranchManager
 from ....utils.github_operations.issue_manager import IssueManager
 from ....utils.github_operations.label_config import load_labels_config
 from ....utils.jenkins_operations.client import JenkinsClient
-from ....utils.user_config import create_default_config, get_config_value
+from ....utils.user_config import create_default_config, get_config_values
 
 # Import from command_templates module (constants)
 from .command_templates import (
@@ -87,7 +87,7 @@ __all__ = [
     "_log_stale_cache_entries",
     # External dependencies (for test patching)
     "create_default_config",
-    "get_config_value",
+    "get_config_values",
     "load_labels_config",
     "JenkinsClient",
     "IssueManager",

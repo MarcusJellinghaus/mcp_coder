@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.utils.user_config import get_config_file_path, get_config_value
+from mcp_coder.utils.user_config import get_config_file_path, get_config_values
 
 
 class TestRealConfigFileWorkflow:
@@ -41,18 +41,38 @@ port = 5432
             return_value=config_file,
         ):
             # Test successful value retrieval
-            assert get_config_value("tokens", "github") == "ghp_real_integration_token"
-            assert get_config_value("tokens", "claude") == "cl_test_token_456"
-            assert get_config_value("settings", "default_branch") == "develop"
+            result = get_config_values(
+                [
+                    ("tokens", "github", None),
+                    ("tokens", "claude", None),
+                    ("settings", "default_branch", None),
+                ]
+            )
+            assert result[("tokens", "github")] == "ghp_real_integration_token"
+            assert result[("tokens", "claude")] == "cl_test_token_456"
+            assert result[("settings", "default_branch")] == "develop"
 
             # Test type conversion
-            assert get_config_value("settings", "timeout") == "45"
-            assert get_config_value("settings", "enabled") == "True"
-            assert get_config_value("database", "port") == "5432"
+            result = get_config_values(
+                [
+                    ("settings", "timeout", None),
+                    ("settings", "enabled", None),
+                    ("database", "port", None),
+                ]
+            )
+            assert result[("settings", "timeout")] == "45"
+            assert result[("settings", "enabled")] == "True"
+            assert result[("database", "port")] == "5432"
 
             # Test missing section/key
-            assert get_config_value("nonexistent", "key") is None
-            assert get_config_value("tokens", "missing") is None
+            result = get_config_values(
+                [
+                    ("nonexistent", "key", None),
+                    ("tokens", "missing", None),
+                ]
+            )
+            assert result[("nonexistent", "key")] is None
+            assert result[("tokens", "missing")] is None
 
     def test_config_directory_creation_path_verification(self, tmp_path: Path) -> None:
         """Test that config file path points to correct directory structure."""
@@ -129,7 +149,7 @@ port = 5432
 
                 # Should raise ValueError for malformed TOML files
                 with pytest.raises(ValueError) as exc_info:
-                    get_config_value("section", "key")
+                    get_config_values([("section", "key", None)])
 
                 # Error message should contain file path and TOML error info
                 assert "TOML parse error" in str(exc_info.value)
@@ -144,21 +164,21 @@ port = 5432
         ):
             # Test non-existent file
             assert not config_file.exists()
-            result = get_config_value("section", "key")
-            assert result is None
+            result = get_config_values([("section", "key", None)])
+            assert result[("section", "key")] is None
 
             # Test empty file
             config_file.parent.mkdir(parents=True, exist_ok=True)
             config_file.write_text("", encoding="utf-8")
-            result = get_config_value("section", "key")
-            assert result is None
+            result = get_config_values([("section", "key", None)])
+            assert result[("section", "key")] is None
 
             # Test file with only comments
             config_file.write_text(
                 "# This is just a comment\n# Another comment", encoding="utf-8"
             )
-            result = get_config_value("section", "key")
-            assert result is None
+            result = get_config_values([("section", "key", None)])
+            assert result[("section", "key")] is None
 
     def test_file_permission_scenarios(self, tmp_path: Path) -> None:
         """Test behavior when file permissions prevent reading.
@@ -180,7 +200,7 @@ key = "value"
             # Simulate file permission error by patching open
             with patch("builtins.open", side_effect=PermissionError("Access denied")):
                 with pytest.raises(ValueError) as exc_info:
-                    get_config_value("section", "key")
+                    get_config_values([("section", "key", None)])
 
                 # Error message should contain file path and permission error info
                 assert str(config_file) in str(exc_info.value)
@@ -206,12 +226,18 @@ project_name = "mcp_cöder"
             return_value=config_file,
         ):
             # Test Unicode value retrieval
-            assert get_config_value("tokens", "github") == "ghp_token_with_émojis_🚀"
-            assert (
-                get_config_value("tokens", "description")
-                == "Testing with üñíçødé characters"
+            result = get_config_values(
+                [
+                    ("tokens", "github", None),
+                    ("tokens", "description", None),
+                    ("paths", "project_name", None),
+                ]
             )
-            assert get_config_value("paths", "project_name") == "mcp_cöder"
+            assert result[("tokens", "github")] == "ghp_token_with_émojis_🚀"
+            assert (
+                result[("tokens", "description")] == "Testing with üñíçødé characters"
+            )
+            assert result[("paths", "project_name")] == "mcp_cöder"
 
     def test_complex_toml_structures(self, tmp_path: Path) -> None:
         """Test handling of complex TOML structures like arrays and nested tables."""
@@ -237,18 +263,27 @@ nested_key = "nested_value"
             return_value=config_file,
         ):
             # Test simple values
-            assert get_config_value("simple", "string_value") == "simple string"
-            assert get_config_value("simple", "number_value") == "42"
-            assert get_config_value("simple", "boolean_value") == "True"
+            result = get_config_values(
+                [
+                    ("simple", "string_value", None),
+                    ("simple", "number_value", None),
+                    ("simple", "boolean_value", None),
+                ]
+            )
+            assert result[("simple", "string_value")] == "simple string"
+            assert result[("simple", "number_value")] == "42"
+            assert result[("simple", "boolean_value")] == "True"
 
             # Test arrays (should be converted to string representation)
-            array_result = get_config_value("arrays", "string_array")
+            result = get_config_values([("arrays", "string_array", None)])
+            array_result = result[("arrays", "string_array")]
             assert array_result is not None
             assert (
                 "one" in array_result
             )  # Array converted to string should contain elements
 
             # Test nested tables
+            result = get_config_values([("nested", "table", None)])
             assert (
-                get_config_value("nested", "table") is not None
+                result[("nested", "table")] is not None
             )  # Should find the nested table

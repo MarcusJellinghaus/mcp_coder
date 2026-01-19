@@ -44,8 +44,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = None
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): None}
             with pytest.raises(ValueError, match="GitHub token not found"):
                 LabelsManager(git_dir)
 
@@ -60,8 +60,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             # Valid names
@@ -86,8 +86,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             # Valid colors
@@ -112,8 +112,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             assert manager._normalize_color("#FF0000") == "FF0000"
@@ -147,8 +147,8 @@ class TestLabelsManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.create_label("bug", "d73a4a", "Something isn't working")
@@ -186,8 +186,8 @@ class TestLabelsManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.create_label("enhancement", "#a2eeef", "New feature")
@@ -206,8 +206,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.create_label("", "FF0000", "Description")
@@ -223,8 +223,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.create_label("bug", "red", "Description")
@@ -258,8 +258,8 @@ class TestLabelsManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.get_label("bug")
@@ -275,8 +275,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.get_label("")
@@ -325,8 +325,8 @@ class TestLabelsManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.get_labels()
@@ -370,8 +370,8 @@ class TestLabelsManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.update_label("bug", color="FF0000")
@@ -403,8 +403,8 @@ class TestLabelsManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.update_label("bug", description="Updated description")
@@ -438,8 +438,8 @@ class TestLabelsManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.update_label("bug", new_name="defect")
@@ -456,8 +456,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.update_label("", color="FF0000")
@@ -473,8 +473,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.update_label("bug", new_name="")
@@ -490,8 +490,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.update_label("bug", color="red")
@@ -521,8 +521,8 @@ class TestLabelsManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.delete_label("bug")
@@ -537,8 +537,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             result = manager.delete_label("")
@@ -571,8 +571,8 @@ class TestLabelsManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             # Errors should return empty dict

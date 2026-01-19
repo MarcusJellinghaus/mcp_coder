@@ -173,8 +173,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             # Test empty title
@@ -193,8 +193,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             # Test invalid head branch
@@ -243,8 +243,8 @@ class TestPullRequestManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.create_pull_request(
@@ -276,8 +276,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/testuser/testrepo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             assert manager.repository_name == "testuser/testrepo"
@@ -568,8 +568,8 @@ class TestPullRequestManagerIntegration:
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
         # Test that direct instantiation creates instance
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "test-token"}
             direct_manager = PullRequestManager(git_dir)
             assert isinstance(direct_manager, PullRequestManager)
             assert direct_manager.repository_url == "https://github.com/test/repo"
@@ -649,8 +649,8 @@ class TestPullRequestManagerIntegration:
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
         # Create manager with mocked token for validation tests
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
         # Test invalid PR numbers
@@ -718,8 +718,8 @@ class TestLabelsManagerUnit:
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
         # Mock config to return None (no token)
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = None
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): None}
             with pytest.raises(ValueError, match="GitHub token not found"):
                 LabelsManager(git_dir)
 
@@ -731,8 +731,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             # Valid names - should pass validation
@@ -756,8 +756,8 @@ class TestLabelsManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = LabelsManager(git_dir)
 
             # Valid colors - should pass validation

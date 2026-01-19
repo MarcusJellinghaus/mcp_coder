@@ -223,7 +223,7 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
     Raises:
         pytest.skip: When GitHub token or test repository not configured
     """
-    from mcp_coder.utils.user_config import get_config_file_path, get_config_value
+    from mcp_coder.utils.user_config import get_config_file_path, get_config_values
 
     # Check for required GitHub configuration
     # Priority 1: Environment variables
@@ -233,11 +233,17 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
     # Priority 2: Config system fallback
     config_file_path = get_config_file_path()
 
-    if not github_token:
-        github_token = get_config_value("github", "token")
-
-    if not test_repo_url:
-        test_repo_url = get_config_value("github", "test_repo_url")
+    if not github_token or not test_repo_url:
+        config: dict[tuple[str, str], str | None] = get_config_values(
+            [
+                ("github", "token", None),
+                ("github", "test_repo_url", None),
+            ]
+        )
+        if not github_token:
+            github_token = config[("github", "token")]
+        if not test_repo_url:
+            test_repo_url = config[("github", "test_repo_url")]
 
     # Summary of what was found
     token_source = (

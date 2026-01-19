@@ -37,8 +37,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = None
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): None}
             with pytest.raises(ValueError, match="GitHub token not found"):
                 IssueManager(git_dir)
 
@@ -49,8 +49,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             assert manager._validate_issue_number(1) is True
@@ -65,8 +65,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             assert manager._validate_comment_id(1) is True
@@ -113,8 +113,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.get_issue(123)
@@ -160,8 +160,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.create_issue("Test Issue", "Test description")
@@ -210,8 +210,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.create_issue(
@@ -234,8 +234,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.create_issue("")
@@ -273,8 +273,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.close_issue(123)
@@ -294,8 +294,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.close_issue(0)
@@ -333,8 +333,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.reopen_issue(123)
@@ -354,8 +354,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.reopen_issue(0)
@@ -383,8 +383,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -412,8 +412,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -441,8 +441,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -481,8 +481,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.get_available_labels()
@@ -517,8 +517,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -559,8 +559,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.add_labels(123, "bug", "high-priority")
@@ -605,8 +605,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.add_labels(123, "bug")
@@ -623,8 +623,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.add_labels(0, "bug")
@@ -640,8 +640,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.add_labels(123)
@@ -669,8 +669,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -709,8 +709,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.remove_labels(123, "bug", "high-priority")
@@ -755,8 +755,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.remove_labels(123, "bug")
@@ -773,8 +773,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.remove_labels(0, "bug")
@@ -790,8 +790,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.remove_labels(123)
@@ -819,8 +819,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -861,8 +861,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.set_labels(123, "bug", "high-priority")
@@ -905,8 +905,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.set_labels(123)
@@ -949,8 +949,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.set_labels(123, "bug")
@@ -967,8 +967,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.set_labels(0, "bug")
@@ -999,8 +999,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -1035,8 +1035,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.add_comment(123, "This is a test comment")
@@ -1058,8 +1058,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.add_comment(123, "")
@@ -1075,8 +1075,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.add_comment(0, "Test comment")
@@ -1107,8 +1107,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -1153,8 +1153,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.get_comments(123)
@@ -1187,8 +1187,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.get_comments(123)
@@ -1203,8 +1203,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.get_comments(0)
@@ -1235,8 +1235,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -1271,8 +1271,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.edit_comment(123, 456789, "Updated comment text")
@@ -1297,8 +1297,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.edit_comment(123, 456789, "")
@@ -1314,8 +1314,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.edit_comment(0, 456789, "Updated text")
@@ -1331,8 +1331,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.edit_comment(123, 0, "Updated text")
@@ -1366,8 +1366,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -1394,8 +1394,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.delete_comment(123, 456789)
@@ -1412,8 +1412,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.delete_comment(0, 456789)
@@ -1429,8 +1429,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.delete_comment(123, 0)
@@ -1464,8 +1464,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             with pytest.raises(GithubException):
@@ -1522,8 +1522,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.list_issues()
@@ -1565,8 +1565,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.list_issues(state="open")
@@ -1623,8 +1623,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.list_issues(include_pull_requests=True)
@@ -1670,8 +1670,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.list_issues()
@@ -1699,8 +1699,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.list_issues()
@@ -1727,8 +1727,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             # Non-auth errors should be handled gracefully and return empty list
@@ -1773,8 +1773,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.get_issue_events(123)
@@ -1804,8 +1804,8 @@ class TestIssueManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.get_issue_events(0)
@@ -1859,8 +1859,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             # Filter for only labeled events
@@ -1895,8 +1895,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             # Verify that GithubException is raised (not handled)
@@ -1948,8 +1948,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             # Filter for only unlabeled events
@@ -1981,8 +1981,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             result = manager.get_issue_events(123)
@@ -2022,8 +2022,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             # Test with since parameter
@@ -2084,8 +2084,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             # Test with since parameter
@@ -2132,8 +2132,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             # Test without since parameter (existing behavior)
@@ -2181,8 +2181,8 @@ class TestIssueManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = IssueManager(git_dir)
 
             # Test with since parameter

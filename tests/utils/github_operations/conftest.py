@@ -21,8 +21,8 @@ def ci_manager(mock_repo: Mock) -> CIResultsManager:
     """CIResultsManager instance for testing with mocked dependencies."""
     repo_url = "https://github.com/test/repo.git"
 
-    with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-        mock_config.return_value = "test_token"
+    with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+        mock_config.return_value = {("github", "token"): "test_token"}
 
         with patch("github.Github") as mock_github:
             mock_github.return_value.get_repo.return_value = mock_repo

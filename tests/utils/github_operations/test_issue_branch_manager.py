@@ -153,8 +153,8 @@ class TestGetLinkedBranches:
                 "mcp_coder.utils.git_operations.is_git_repository", return_value=True
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -355,8 +355,8 @@ class TestCreateLinkedBranch:
                 "mcp_coder.utils.git_operations.is_git_repository", return_value=True
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -844,8 +844,8 @@ class TestDeleteLinkedBranch:
                 "mcp_coder.utils.git_operations.is_git_repository", return_value=True
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):

@@ -33,13 +33,16 @@ import os
 import time
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Any, Callable, Optional, TypeVar, cast, overload
 
 import structlog
 from pythonjsonlogger.json import JsonFormatter
 
 # Type variable for function return types
 T = TypeVar("T")
+
+# Redaction placeholder for sensitive values
+REDACTED_VALUE = "***"
 
 # Standard LogRecord fields to exclude when extracting extra fields
 # These are built-in attributes of logging.LogRecord that should not be treated as "extra" data
@@ -250,134 +253,217 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
         stdlogger.debug("Logging initialized: console=%s", log_level)
 
 
-def log_function_call(func: Callable[..., T]) -> Callable[..., T]:
-    """Decorator to log function calls with parameters, timing, and results."""
+def _redact_for_logging(
+    data: dict[str, Any],
+    sensitive_fields: set[str],
+) -> dict[str, Any]:
+    """Create a copy of data with sensitive fields redacted for logging.
 
-    @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> T:
-        func_name = func.__name__
-        module_name = func.__module__
-        line_no = func.__code__.co_firstlineno
+    Args:
+        data: Dictionary containing data to be logged.
+        sensitive_fields: Set of field names whose values should be redacted.
 
-        # Prepare parameters for logging
-        log_params = {}
+    Returns:
+        A shallow copy of data with sensitive field values replaced by "***".
+        Nested dictionaries are processed recursively.
+    """
+    result = data.copy()
+    for key in result:
+        if key in sensitive_fields:
+            result[key] = REDACTED_VALUE
+        elif isinstance(result[key], dict):
+            result[key] = _redact_for_logging(result[key], sensitive_fields)
+    return result
 
-        # Handle method calls (skip self/cls)
-        if (
-            args
-            and hasattr(args[0], "__class__")
-            and args[0].__class__.__module__ != "builtins"
-        ):
-            log_params.update(
-                dict(zip(func.__code__.co_varnames[1 : len(args)], args[1:]))
-            )
-        else:
-            log_params.update(dict(zip(func.__code__.co_varnames[: len(args)], args)))
 
-        # Add keyword arguments
-        log_params.update(kwargs)
+# Overload signatures for proper typing
+@overload
+def log_function_call(func: Callable[..., T]) -> Callable[..., T]: ...
 
-        # Convert Path objects to strings and handle other non-serializable types
-        serializable_params = {}
-        for k, v in log_params.items():
-            if isinstance(v, Path):
-                serializable_params[k] = str(v)
+
+@overload
+def log_function_call(
+    func: None = None,
+    *,
+    sensitive_fields: list[str] | None = None,
+) -> Callable[[Callable[..., T]], Callable[..., T]]: ...
+
+
+def log_function_call(
+    func: Callable[..., T] | None = None,
+    *,
+    sensitive_fields: list[str] | None = None,
+) -> Callable[..., T] | Callable[[Callable[..., T]], Callable[..., T]]:
+    """Decorator to log function calls with parameters, timing, and results.
+
+    Can be used as @log_function_call or @log_function_call(sensitive_fields=[...]).
+
+    Args:
+        func: The function to decorate (when used without parentheses).
+        sensitive_fields: Optional list of field names whose values should be
+            redacted in logs. Applies to both parameters and return values.
+
+    Returns:
+        Decorated function or decorator depending on usage.
+    """
+    sensitive_set = set(sensitive_fields) if sensitive_fields else set()
+
+    def decorator(fn: Callable[..., T]) -> Callable[..., T]:
+        @wraps(fn)
+        def wrapper(*args: Any, **kwargs: Any) -> T:
+            func_name = fn.__name__
+            module_name = fn.__module__
+            line_no = fn.__code__.co_firstlineno
+
+            # Get logger for the decorated function's module (not log_utils)
+            func_logger = logging.getLogger(module_name)
+
+            # Prepare parameters for logging
+            log_params: dict[str, Any] = {}
+
+            # Handle method calls (skip self/cls)
+            if (
+                args
+                and hasattr(args[0], "__class__")
+                and args[0].__class__.__module__ != "builtins"
+            ):
+                log_params.update(
+                    dict(zip(fn.__code__.co_varnames[1 : len(args)], args[1:]))
+                )
             else:
-                try:
-                    # Test if it's JSON serializable
-                    json.dumps(v)
-                    serializable_params[k] = v
-                except (TypeError, OverflowError):
-                    # If not serializable, convert to string
+                log_params.update(dict(zip(fn.__code__.co_varnames[: len(args)], args)))
+
+            # Add keyword arguments
+            log_params.update(kwargs)
+
+            # Convert Path objects to strings and handle other non-serializable types
+            serializable_params: dict[str, Any] = {}
+            for k, v in log_params.items():
+                if isinstance(v, Path):
                     serializable_params[k] = str(v)
+                else:
+                    try:
+                        # Test if it's JSON serializable
+                        json.dumps(v)
+                        serializable_params[k] = v
+                    except (TypeError, OverflowError):
+                        # If not serializable, convert to string
+                        serializable_params[k] = str(v)
 
-        # Check if structured logging is enabled
-        has_structured = any(
-            isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers
-        )
-
-        # Log function call
-        if has_structured:
-            structlogger = structlog.get_logger(module_name)
-            structlogger.debug(
-                "Calling function",
-                function=func_name,
-                parameters=serializable_params,
-                module=module_name,
-                lineno=line_no,
+            # Apply redaction for sensitive fields
+            params_for_log = (
+                _redact_for_logging(serializable_params, sensitive_set)
+                if sensitive_set
+                else serializable_params
             )
 
-        stdlogger.debug(
-            "Calling %s with parameters: %s",
-            func_name,
-            json.dumps(serializable_params, default=str),
-        )
+            # Check if structured logging is enabled
+            has_structured = any(
+                isinstance(h, logging.FileHandler) for h in logging.getLogger().handlers
+            )
 
-        # Execute function and measure time
-        start_time = time.time()
-        try:
-            result = func(*args, **kwargs)
-            elapsed_ms = round((time.time() - start_time) * 1000, 2)
-
-            # Prepare result for logging
-            result_for_log: Any
-            serializable_result: Any
-            if isinstance(result, (list, dict)) and len(str(result)) > 1000:
-                result_for_log = f"<Large result of type {type(result).__name__}, length: {len(str(result))}>"
-                serializable_result = result_for_log
-            else:
-                result_for_log = result
-                # Make result JSON serializable for structured logging
-                try:
-                    json.dumps(result)  # Test if result is JSON serializable
-                    serializable_result = result
-                except (TypeError, OverflowError):
-                    serializable_result = str(result) if result is not None else None
-
-            # Log completion
+            # Log function call
             if has_structured:
+                structlogger = structlog.get_logger(module_name)
                 structlogger.debug(
-                    "Function completed",
+                    "Calling function",
                     function=func_name,
-                    execution_time_ms=elapsed_ms,
-                    status="success",
-                    result=serializable_result,
+                    parameters=params_for_log,
                     module=module_name,
                     lineno=line_no,
                 )
 
-            stdlogger.debug(
-                "%s completed in %sms with result: %s",
+            func_logger.debug(
+                "Calling %s with parameters: %s",
                 func_name,
-                elapsed_ms,
-                result_for_log,
+                json.dumps(params_for_log, default=str),
             )
-            return result
 
-        except Exception as e:
-            # Log exceptions
-            elapsed_ms = round((time.time() - start_time) * 1000, 2)
+            # Execute function and measure time
+            start_time = time.time()
+            try:
+                result = fn(*args, **kwargs)
+                elapsed_ms = round((time.time() - start_time) * 1000, 2)
 
-            if has_structured:
-                structlogger.error(
-                    "Function failed",
-                    function=func_name,
-                    execution_time_ms=elapsed_ms,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
-                    module=module_name,
-                    lineno=line_no,
+                # Prepare result for logging
+                result_for_log: Any
+                serializable_result: Any
+                if isinstance(result, (list, dict)) and len(str(result)) > 1000:
+                    result_for_log = (
+                        f"<Large result of type {type(result).__name__}, "
+                        f"length: {len(str(result))}>"
+                    )
+                    serializable_result = result_for_log
+                else:
+                    result_for_log = result
+                    # Make result JSON serializable for structured logging
+                    try:
+                        json.dumps(result)  # Test if result is JSON serializable
+                        serializable_result = result
+                    except (TypeError, OverflowError):
+                        serializable_result = (
+                            str(result) if result is not None else None
+                        )
+
+                # Apply redaction to result if it's a dict
+                if sensitive_set and isinstance(serializable_result, dict):
+                    serializable_result = _redact_for_logging(
+                        serializable_result, sensitive_set
+                    )
+                if sensitive_set and isinstance(result_for_log, dict):
+                    result_for_log = _redact_for_logging(result_for_log, sensitive_set)
+
+                # Log completion
+                if has_structured:
+                    structlogger.debug(
+                        "Function completed",
+                        function=func_name,
+                        execution_time_ms=elapsed_ms,
+                        status="success",
+                        result=serializable_result,
+                        module=module_name,
+                        lineno=line_no,
+                    )
+
+                func_logger.debug(
+                    "%s completed in %sms with result: %s",
+                    func_name,
+                    elapsed_ms,
+                    result_for_log,
+                )
+                return result
+
+            except Exception as e:
+                # Log exceptions
+                elapsed_ms = round((time.time() - start_time) * 1000, 2)
+
+                if has_structured:
+                    structlogger.error(
+                        "Function failed",
+                        function=func_name,
+                        execution_time_ms=elapsed_ms,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                        module=module_name,
+                        lineno=line_no,
+                        exc_info=True,
+                    )
+
+                func_logger.error(
+                    "%s failed after %sms with error: %s: %s",
+                    func_name,
+                    elapsed_ms,
+                    type(e).__name__,
+                    str(e),
                     exc_info=True,
                 )
+                raise
 
-            stdlogger.error(
-                "%s failed after %sms with error: %s: %s",
-                func_name,
-                elapsed_ms,
-                type(e).__name__,
-                str(e),
-                exc_info=True,
-            )
-            raise
+        return cast(Callable[..., T], wrapper)
 
-    return cast(Callable[..., T], wrapper)
+    # Handle both @log_function_call and @log_function_call(sensitive_fields=[...])
+    if func is not None:
+        # Called without parentheses: @log_function_call
+        return decorator(func)
+    # Called with parentheses: @log_function_call(sensitive_fields=[...])
+    return decorator

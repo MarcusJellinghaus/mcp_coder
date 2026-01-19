@@ -32,6 +32,7 @@ from typing import Any, Optional, cast
 from jenkins import Jenkins
 
 from ..log_utils import log_function_call
+from ..user_config import get_config_values
 from .models import JobStatus
 
 # Setup logger
@@ -46,6 +47,46 @@ class JenkinsError(Exception):
 
     The original exception is preserved via exception chaining for debugging.
     """
+
+
+def _get_jenkins_config() -> dict[str, Optional[str]]:
+    """Get Jenkins configuration from environment or config file.
+
+    Priority: Environment variables > Config file > None
+
+    Environment Variables:
+        JENKINS_URL: Jenkins server URL with port
+        JENKINS_USER: Jenkins username
+        JENKINS_TOKEN: Jenkins API token
+
+    Config File (~/.mcp_coder/config.toml):
+        [jenkins]
+        server_url = "https://jenkins.example.com:8080"
+        username = "user"
+        api_token = "token"
+
+    Returns:
+        Dict with keys: server_url, username, api_token
+        Values are None if not configured
+
+    Note:
+        test_job is NOT included here - it's only for integration tests
+        and is handled separately in the test fixture.
+    """
+    # get_config_values automatically checks environment variables first
+    config: dict[tuple[str, str], Optional[str]] = get_config_values(
+        [
+            ("jenkins", "server_url", None),
+            ("jenkins", "username", None),
+            ("jenkins", "api_token", None),
+        ]
+    )
+
+    return {
+        "server_url": config[("jenkins", "server_url")],
+        "username": config[("jenkins", "username")],
+        "api_token": config[("jenkins", "api_token")],
+    }
 
 
 class JenkinsClient:

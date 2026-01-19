@@ -27,8 +27,8 @@ class TestCIResultsManagerFoundation:
             "mcp_coder.utils.git_operations.is_git_repository", return_value=True
         ):
             # Mock user config to return a token
-            with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-                mock_config.return_value = "test_token"
+            with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+                mock_config.return_value = {("github", "token"): "test_token"}
 
                 # Mock Github client
                 with patch("github.Github"):
@@ -41,8 +41,8 @@ class TestCIResultsManagerFoundation:
         repo_url = "https://github.com/test/repo.git"
 
         # Mock user config to return a token
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test_token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "test_token"}
 
             # Mock Github client
             with patch("github.Github"):
@@ -74,8 +74,8 @@ class TestCIResultsManagerFoundation:
         repo_url = "https://github.com/test/repo.git"
 
         # Mock user config and Github client
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test_token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "test_token"}
 
             with patch("github.Github"):
                 manager = CIResultsManager(repo_url=repo_url)
@@ -112,8 +112,8 @@ class TestCIResultsManagerFoundation:
         repo_url = "https://github.com/test/repo.git"
 
         # Mock user config and Github client
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test_token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "test_token"}
 
             with patch("github.Github"):
                 manager = CIResultsManager(repo_url=repo_url)
@@ -166,8 +166,8 @@ class TestCIResultsManagerFoundation:
         repo_url = "https://github.com/test/repo.git"
 
         # Mock user config and Github client
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test_token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "test_token"}
 
             with patch("github.Github"):
                 manager = CIResultsManager(repo_url=repo_url)

@@ -43,8 +43,10 @@ class TestPullRequestManagerUnit:
         git_dir.mkdir()
         git.Repo.init(git_dir)  # No remote configured
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"  # Provide token to pass that check
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {
+                ("github", "token"): "dummy-token"
+            }  # Provide token to pass that check
             with pytest.raises(
                 ValueError, match="Could not detect GitHub repository URL"
             ):
@@ -57,8 +59,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = None
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): None}
             with pytest.raises(ValueError, match="GitHub token not found"):
                 PullRequestManager(git_dir)
 
@@ -73,8 +75,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             # Valid PR numbers
@@ -94,8 +96,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             # Valid branch names
@@ -132,8 +134,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/testuser/testrepo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "test-token"}
             manager = PullRequestManager(git_dir)
 
             assert manager.repository_name == "testuser/testrepo"
@@ -145,8 +147,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/testuser/testrepo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "test-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "test-token"}
             manager = PullRequestManager(git_dir)
 
             assert manager.repository_url == "https://github.com/testuser/testrepo"
@@ -188,8 +190,8 @@ class TestPullRequestManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.create_pull_request(
@@ -220,8 +222,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             # Empty title
@@ -239,8 +241,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.create_pull_request(
@@ -255,8 +257,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.create_pull_request(
@@ -299,8 +301,8 @@ class TestPullRequestManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.get_pull_request(123)
@@ -316,8 +318,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.get_pull_request(-1)
@@ -378,8 +380,8 @@ class TestPullRequestManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.list_pull_requests(state="open")
@@ -415,8 +417,8 @@ class TestPullRequestManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             manager.list_pull_requests(state="all", base_branch="develop")
@@ -431,8 +433,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.list_pull_requests(base_branch="invalid~branch")
@@ -475,8 +477,8 @@ class TestPullRequestManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.close_pull_request(123)
@@ -496,8 +498,8 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             result = manager.close_pull_request(0)
@@ -530,8 +532,8 @@ class TestPullRequestManagerUnit:
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
 
-        with patch("mcp_coder.utils.user_config.get_config_value") as mock_config:
-            mock_config.return_value = "dummy-token"
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
             # Errors should return empty dict

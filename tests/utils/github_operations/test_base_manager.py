@@ -223,8 +223,8 @@ class TestBaseGitHubManagerWithProjectDir:
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -254,8 +254,8 @@ class TestBaseGitHubManagerWithProjectDir:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -272,8 +272,8 @@ class TestBaseGitHubManagerWithProjectDir:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -294,8 +294,8 @@ class TestBaseGitHubManagerWithProjectDir:
                 return_value=False,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -316,8 +316,8 @@ class TestBaseGitHubManagerWithProjectDir:
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value=None,  # No token configured
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): None},  # No token configured
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -344,8 +344,8 @@ class TestBaseGitHubManagerWithProjectDir:
                 return_value="https://github.com/test-owner/test-repo.git",
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -379,8 +379,8 @@ class TestBaseGitHubManagerWithRepoUrl:
         """Test successful initialization with valid HTTPS repo_url."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -410,8 +410,8 @@ class TestBaseGitHubManagerWithRepoUrl:
         """Test successful initialization with HTTPS repo_url without .git extension."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -439,8 +439,8 @@ class TestBaseGitHubManagerWithRepoUrl:
         """Test successful initialization with valid SSH repo_url."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -468,8 +468,8 @@ class TestBaseGitHubManagerWithRepoUrl:
         """Test initialization fails with invalid GitHub repo_url."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -484,8 +484,8 @@ class TestBaseGitHubManagerWithRepoUrl:
         """Test initialization fails with malformed repo_url."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -498,8 +498,8 @@ class TestBaseGitHubManagerWithRepoUrl:
         """Test initialization fails when GitHub token is not configured."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value=None,  # No token configured
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): None},  # No token configured
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -516,8 +516,8 @@ class TestBaseGitHubManagerWithRepoUrl:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -547,8 +547,8 @@ class TestBaseGitHubManagerWithRepoUrl:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -577,8 +577,8 @@ class TestBaseGitHubManagerWithRepoUrl:
         """Test _get_repository() returns None when GitHub API returns error."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -604,8 +604,8 @@ class TestBaseGitHubManagerWithRepoUrl:
         """Test _get_repository() returns None on unexpected exceptions."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -643,8 +643,8 @@ class TestBaseGitHubManagerWithRepoUrl:
                 return_value="https://github.com/test-owner/test-repo.git",
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -683,8 +683,8 @@ class TestBaseGitHubManagerWithRepoUrl:
                 return_value=None,  # No origin remote
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -712,8 +712,8 @@ class TestBaseGitHubManagerWithRepoUrl:
                 return_value="https://gitlab.com/test-owner/test-repo.git",  # Not GitHub
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -741,8 +741,8 @@ class TestBaseGitHubManagerWithRepoUrl:
                 return_value="https://github.com/test-owner/test-repo.git",
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -778,8 +778,8 @@ class TestBaseGitHubManagerWithRepoUrl:
                 return_value="https://github.com/test-owner/test-repo.git",
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -815,8 +815,8 @@ class TestBaseGitHubManagerWithRepoUrl:
                 return_value="git@github.com:test-owner/test-repo.git",  # SSH format
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -855,8 +855,8 @@ class TestBaseGitHubManagerWithRepoUrl:
                 return_value="https://github.com/test-owner/test-repo",  # No .git
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.Github"
@@ -889,8 +889,8 @@ class TestBaseGitHubManagerParameterValidation:
         """Test initialization fails when neither project_dir nor repo_url provided."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):
@@ -909,8 +909,8 @@ class TestBaseGitHubManagerParameterValidation:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_value",
-                return_value="fake_token",
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "fake_token"},
             ),
             patch("mcp_coder.utils.github_operations.base_manager.Github"),
         ):

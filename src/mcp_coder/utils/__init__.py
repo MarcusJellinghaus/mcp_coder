@@ -26,7 +26,7 @@ from .subprocess_runner import (
     execute_command,
     execute_subprocess,
 )
-from .user_config import create_default_config, get_config_file_path, get_config_value
+from .user_config import create_default_config, get_config_file_path, get_config_values
 
 # Layer 2: Operations (depend on Layer 1)
 from .git_operations import (
@@ -99,7 +99,7 @@ __all__ = [
     # User configuration
     "create_default_config",
     "get_config_file_path",
-    "get_config_value",
+    "get_config_values",
     # Subprocess operations
     "CommandOptions",
     "CommandResult",

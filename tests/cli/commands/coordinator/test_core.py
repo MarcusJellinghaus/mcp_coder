@@ -40,27 +40,19 @@ from mcp_coder.utils.github_operations.issue_manager import IssueData
 class TestLoadRepoConfig:
     """Tests for load_repo_config function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
     def test_load_repo_config_success(self, mock_get_config: MagicMock) -> None:
         """Test successful loading of repository configuration."""
-
-        # Setup
-        def config_side_effect(section: str, key: str) -> str | None:
-            config_map = {
-                (
-                    "coordinator.repos.mcp_coder",
-                    "repo_url",
-                ): "https://github.com/user/repo.git",
-                (
-                    "coordinator.repos.mcp_coder",
-                    "executor_job_path",
-                ): "Folder/job-name",
-                ("coordinator.repos.mcp_coder", "github_credentials_id"): "github-pat",
-                ("coordinator.repos.mcp_coder", "executor_os"): None,
-            }
-            return config_map.get((section, key))
-
-        mock_get_config.side_effect = config_side_effect
+        # Setup - return batch config values dict
+        mock_get_config.return_value = {
+            (
+                "coordinator.repos.mcp_coder",
+                "repo_url",
+            ): "https://github.com/user/repo.git",
+            ("coordinator.repos.mcp_coder", "executor_job_path"): "Folder/job-name",
+            ("coordinator.repos.mcp_coder", "github_credentials_id"): "github-pat",
+            ("coordinator.repos.mcp_coder", "executor_os"): None,
+        }
 
         # Execute
         result = load_repo_config("mcp_coder")
@@ -72,11 +64,16 @@ class TestLoadRepoConfig:
         assert result["github_credentials_id"] == "github-pat"
         assert result["executor_os"] == "linux"  # Default
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
     def test_load_repo_config_missing_repo(self, mock_get_config: MagicMock) -> None:
         """Test that missing repository returns dict with None values."""
-        # Setup - return None for all keys
-        mock_get_config.return_value = None
+        # Setup - return dict with None values for all keys
+        mock_get_config.return_value = {
+            ("coordinator.repos.nonexistent_repo", "repo_url"): None,
+            ("coordinator.repos.nonexistent_repo", "executor_job_path"): None,
+            ("coordinator.repos.nonexistent_repo", "github_credentials_id"): None,
+            ("coordinator.repos.nonexistent_repo", "executor_os"): None,
+        }
 
         # Execute
         result = load_repo_config("nonexistent_repo")
@@ -88,35 +85,21 @@ class TestLoadRepoConfig:
         assert result["github_credentials_id"] is None
         assert result["executor_os"] == "linux"  # Default
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
     def test_load_repo_config_defaults_executor_os(
         self, mock_get_config: MagicMock
     ) -> None:
         """Test executor_os defaults to 'linux' when not specified."""
-
-        # Setup
-        def config_side_effect(section: str, key: str) -> str | None:
-            config_map = {
-                (
-                    "coordinator.repos.test_repo",
-                    "repo_url",
-                ): "https://github.com/test/repo.git",
-                (
-                    "coordinator.repos.test_repo",
-                    "executor_job_path",
-                ): "Tests/test",
-                (
-                    "coordinator.repos.test_repo",
-                    "github_credentials_id",
-                ): "cred-id",
-                (
-                    "coordinator.repos.test_repo",
-                    "executor_os",
-                ): None,  # Not in config
-            }
-            return config_map.get((section, key))
-
-        mock_get_config.side_effect = config_side_effect
+        # Setup - return batch config values dict with executor_os as None
+        mock_get_config.return_value = {
+            (
+                "coordinator.repos.test_repo",
+                "repo_url",
+            ): "https://github.com/test/repo.git",
+            ("coordinator.repos.test_repo", "executor_job_path"): "Tests/test",
+            ("coordinator.repos.test_repo", "github_credentials_id"): "cred-id",
+            ("coordinator.repos.test_repo", "executor_os"): None,  # Not in config
+        }
 
         # Execute
         config = load_repo_config("test_repo")
@@ -124,35 +107,21 @@ class TestLoadRepoConfig:
         # Verify
         assert config["executor_os"] == "linux"
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
     def test_load_repo_config_normalizes_executor_os(
         self, mock_get_config: MagicMock
     ) -> None:
         """Test executor_os is normalized to lowercase."""
-
-        # Setup
-        def config_side_effect(section: str, key: str) -> str | None:
-            config_map = {
-                (
-                    "coordinator.repos.test_repo",
-                    "repo_url",
-                ): "https://github.com/test/repo.git",
-                (
-                    "coordinator.repos.test_repo",
-                    "executor_job_path",
-                ): "Tests/test",
-                (
-                    "coordinator.repos.test_repo",
-                    "github_credentials_id",
-                ): "cred-id",
-                (
-                    "coordinator.repos.test_repo",
-                    "executor_os",
-                ): "Windows",  # Mixed case
-            }
-            return config_map.get((section, key))
-
-        mock_get_config.side_effect = config_side_effect
+        # Setup - return batch config values dict with mixed case executor_os
+        mock_get_config.return_value = {
+            (
+                "coordinator.repos.test_repo",
+                "repo_url",
+            ): "https://github.com/test/repo.git",
+            ("coordinator.repos.test_repo", "executor_job_path"): "Tests/test",
+            ("coordinator.repos.test_repo", "github_credentials_id"): "cred-id",
+            ("coordinator.repos.test_repo", "executor_os"): "Windows",  # Mixed case
+        }
 
         # Execute
         config = load_repo_config("test_repo")
@@ -277,7 +246,7 @@ class TestGetJenkinsCredentials:
         assert username == "testuser"
         assert api_token == "testtoken123"
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
     def test_get_jenkins_credentials_from_config(
         self, mock_get_config: MagicMock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -287,15 +256,12 @@ class TestGetJenkinsCredentials:
         monkeypatch.delenv("JENKINS_USER", raising=False)
         monkeypatch.delenv("JENKINS_TOKEN", raising=False)
 
-        def config_side_effect(section: str, key: str) -> str | None:
-            config_map = {
-                ("jenkins", "server_url"): "https://jenkins.config.com",
-                ("jenkins", "username"): "configuser",
-                ("jenkins", "api_token"): "configtoken456",
-            }
-            return config_map.get((section, key))
-
-        mock_get_config.side_effect = config_side_effect
+        # Setup - return batch config values dict
+        mock_get_config.return_value = {
+            ("jenkins", "server_url"): "https://jenkins.config.com",
+            ("jenkins", "username"): "configuser",
+            ("jenkins", "api_token"): "configtoken456",
+        }
 
         # Execute
         server_url, username, api_token = get_jenkins_credentials()
@@ -309,42 +275,54 @@ class TestGetJenkinsCredentials:
 class TestGetCacheRefreshMinutes:
     """Tests for get_cache_refresh_minutes function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
     def test_get_cache_refresh_minutes_default(
         self, mock_get_config: MagicMock
     ) -> None:
         """Test default value when config not set."""
-        mock_get_config.return_value = None
+        # Setup - return batch config values dict with None value
+        mock_get_config.return_value = {
+            ("coordinator", "cache_refresh_minutes"): None,
+        }
 
         result = get_cache_refresh_minutes()
         assert result == 1440  # 24 hours
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
     def test_get_cache_refresh_minutes_custom_value(
         self, mock_get_config: MagicMock
     ) -> None:
         """Test custom value from config."""
-        mock_get_config.return_value = "720"
+        # Setup - return batch config values dict with custom value
+        mock_get_config.return_value = {
+            ("coordinator", "cache_refresh_minutes"): "720",
+        }
 
         result = get_cache_refresh_minutes()
         assert result == 720  # 12 hours
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
     def test_get_cache_refresh_minutes_invalid_value(
         self, mock_get_config: MagicMock
     ) -> None:
         """Test fallback to default for invalid values."""
-        mock_get_config.return_value = "invalid"
+        # Setup - return batch config values dict with invalid value
+        mock_get_config.return_value = {
+            ("coordinator", "cache_refresh_minutes"): "invalid",
+        }
 
         result = get_cache_refresh_minutes()
         assert result == 1440  # Falls back to default
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_value")
+    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
     def test_get_cache_refresh_minutes_negative_value(
         self, mock_get_config: MagicMock
     ) -> None:
         """Test fallback to default for negative values."""
-        mock_get_config.return_value = "-60"
+        # Setup - return batch config values dict with negative value
+        mock_get_config.return_value = {
+            ("coordinator", "cache_refresh_minutes"): "-60",
+        }
 
         result = get_cache_refresh_minutes()
         assert result == 1440  # Falls back to default
