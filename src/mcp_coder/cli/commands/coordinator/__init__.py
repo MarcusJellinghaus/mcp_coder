@@ -3,6 +3,13 @@
 # Import external dependencies for test patching support
 # Tests patch these at 'mcp_coder.cli.commands.coordinator.<name>'
 from ....utils.github_operations.issue_branch_manager import IssueBranchManager
+
+# Import cache-related functions from issue_cache module
+# Only public API is re-exported; private helpers stay internal to issue_cache.py
+from ....utils.github_operations.issue_cache import (
+    CacheData,
+    _update_issue_labels_in_cache,
+)
 from ....utils.github_operations.issue_manager import IssueManager
 from ....utils.github_operations.label_config import load_labels_config
 from ....utils.jenkins_operations.client import JenkinsClient
@@ -30,15 +37,8 @@ from .commands import (
 )
 
 # Import from core module
-from .core import (  # All private functions for test access
-    CacheData,
+from .core import (
     _filter_eligible_issues,
-    _get_cache_file_path,
-    _load_cache_file,
-    _log_cache_metrics,
-    _log_stale_cache_entries,
-    _save_cache_file,
-    _update_issue_labels_in_cache,
     dispatch_workflow,
     get_cache_refresh_minutes,
     get_cached_eligible_issues,
@@ -79,12 +79,7 @@ __all__ = [
     "WORKFLOW_MAPPING",
     # Private functions (for testing)
     "_filter_eligible_issues",
-    "_get_cache_file_path",
-    "_load_cache_file",
-    "_save_cache_file",
     "_update_issue_labels_in_cache",
-    "_log_cache_metrics",
-    "_log_stale_cache_entries",
     # External dependencies (for test patching)
     "create_default_config",
     "get_config_value",
