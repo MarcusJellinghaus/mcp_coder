@@ -557,6 +557,9 @@ def process_single_task(
         - success: True if task completed successfully
         - reason: 'completed' | 'no_tasks' | 'error'
     """
+    # Cleanup stale commit message file from previous failed runs
+    _cleanup_commit_message_file(project_dir)
+
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
 
