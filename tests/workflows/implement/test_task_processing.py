@@ -280,6 +280,26 @@ class TestCommitChanges:
     @patch(
         "mcp_coder.workflows.implement.task_processing.generate_commit_message_with_llm"
     )
+    def test_commit_changes_falls_back_to_llm_when_no_file(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test commit_changes falls back to LLM when file doesn't exist."""
+        mock_generate_message.return_value = (True, "feat: llm message", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(tmp_path)
+
+        assert result is True
+        mock_generate_message.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.generate_commit_message_with_llm"
+    )
     def test_commit_changes_success(
         self, mock_generate_message: MagicMock, mock_commit: MagicMock
     ) -> None:
