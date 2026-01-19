@@ -40,7 +40,7 @@ from mcp_coder.workflow_utils.commit_operations import (
 
 ### 2.3 Defensive Cleanup in process_single_task() (task_processing.py)
 
-**Location**: After `env_vars = prepare_llm_environment(project_dir)` (around line 340)
+**Location**: At the very start of `process_single_task()`, before `env_vars = prepare_llm_environment(project_dir)` (around line 339)
 
 ```python
 def _cleanup_commit_message_file(project_dir: Path) -> None:
@@ -51,7 +51,7 @@ def _cleanup_commit_message_file(project_dir: Path) -> None:
         logger.debug("Cleaned up stale commit message file")
 ```
 
-Call at start of `process_single_task()`:
+Call at very start of `process_single_task()` (first line of function body):
 ```python
 # Cleanup stale commit message file from previous failed runs
 _cleanup_commit_message_file(project_dir)

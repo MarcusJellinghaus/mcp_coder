@@ -45,6 +45,13 @@ If the file doesn't exist or is empty, the existing LLM-generated commit message
 | `tests/workflows/implement/test_task_processing.py` | Edit | Add tests for new functionality (~60 lines) |
 | `.github/workflows/ci.yml` | Edit | Add forbidden file check (~5 lines) |
 
+## Decisions
+
+See [Decisions.md](Decisions.md) for discussion outcomes on:
+- Cleanup function placement (at very start of `process_single_task()`)
+- Invalid content handling (trust LLM, use `parse_llm_commit_response()` as-is)
+- Test coverage scope (no extra test for deletion timing)
+
 ## Key Design Decisions
 
 1. **File location**: `pr_info/.commit_message.txt` (dot prefix = transient/technical file)
