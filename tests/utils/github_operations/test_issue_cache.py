@@ -1,6 +1,6 @@
-"""Tests for coordinator caching functionality.
+"""Tests for issue cache functionality.
 
-Tests the get_cached_eligible_issues() function and its helper functions
+Tests the get_all_cached_issues() function and its helper functions
 for proper cache storage, duplicate protection, and incremental fetching.
 """
 
@@ -9,73 +9,26 @@ import logging
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, List
 from unittest.mock import Mock, patch
 
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
-    CacheData,
     _filter_eligible_issues,
+    get_cached_eligible_issues,
+)
+from mcp_coder.utils.github_operations.github_utils import RepoIdentifier
+from mcp_coder.utils.github_operations.issue_cache import (
+    CacheData,
     _get_cache_file_path,
     _load_cache_file,
     _log_cache_metrics,
     _log_stale_cache_entries,
     _save_cache_file,
     _update_issue_labels_in_cache,
-    get_cached_eligible_issues,
 )
-from mcp_coder.utils.github_operations.github_utils import RepoIdentifier
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-
-
-@pytest.fixture
-def sample_issue() -> IssueData:
-    """Sample issue data for testing."""
-    return {
-        "number": 123,
-        "state": "open",
-        "labels": ["status-02:awaiting-planning"],
-        "updated_at": "2025-12-31T09:00:00Z",
-        "url": "https://github.com/test/repo/issues/123",
-        "title": "Test issue",
-        "body": "Test issue body",
-        "assignees": [],
-        "user": "testuser",
-        "created_at": "2025-12-31T08:00:00Z",
-        "locked": False,
-    }
-
-
-@pytest.fixture
-def sample_cache_data() -> CacheData:
-    """Sample cache data structure."""
-    return {
-        "last_checked": "2025-12-31T10:30:00Z",
-        "issues": {
-            "123": {
-                "number": 123,
-                "state": "open",
-                "labels": ["status-02:awaiting-planning"],
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/test/repo/issues/123",
-                "title": "Test issue",
-                "body": "Test issue body",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "locked": False,
-            }
-        },
-    }
-
-
-@pytest.fixture
-def mock_issue_manager() -> Mock:
-    """Mock IssueManager for testing."""
-    manager = Mock()
-    manager.list_issues.return_value = []
-    return manager
 
 
 class TestCacheMetricsLogging:
@@ -84,7 +37,7 @@ class TestCacheMetricsLogging:
     def test_log_cache_metrics_hit(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache hit metrics logging."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
         )
 
         _log_cache_metrics("hit", "test-repo", age_minutes=15, issue_count=5)
@@ -94,7 +47,7 @@ class TestCacheMetricsLogging:
     def test_log_cache_metrics_miss(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache miss metrics logging."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
         )
 
         _log_cache_metrics("miss", "test-repo", reason="no_cache")
@@ -104,7 +57,7 @@ class TestCacheMetricsLogging:
     def test_log_cache_metrics_refresh(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache refresh metrics logging."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
         )
 
         _log_cache_metrics("refresh", "test-repo", refresh_type="full", issue_count=10)
@@ -114,7 +67,7 @@ class TestCacheMetricsLogging:
     def test_log_cache_metrics_save(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache save metrics logging."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
         )
 
         _log_cache_metrics("save", "test-repo", total_issues=25)
@@ -228,7 +181,9 @@ class TestStalenessLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test logging when issue state changes."""
-        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator.core")
+        caplog.set_level(
+            logging.INFO, logger="mcp_coder.utils.github_operations.issue_cache"
+        )
 
         cached_issues: Dict[str, IssueData] = {
             "123": {
@@ -269,7 +224,9 @@ class TestStalenessLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test logging when issue labels change."""
-        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator.core")
+        caplog.set_level(
+            logging.INFO, logger="mcp_coder.utils.github_operations.issue_cache"
+        )
 
         cached_issues: Dict[str, IssueData] = {
             "123": {
@@ -312,7 +269,9 @@ class TestStalenessLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test logging when cached issue no longer exists."""
-        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator.core")
+        caplog.set_level(
+            logging.INFO, logger="mcp_coder.utils.github_operations.issue_cache"
+        )
 
         cached_issues: Dict[str, IssueData] = {
             "123": {
@@ -506,18 +465,22 @@ class TestGetCachedEligibleIssues:
     """Tests for get_cached_eligible_issues main function."""
 
     def test_get_cached_eligible_issues_first_run(
-        self, mock_issue_manager: Mock, sample_issue: IssueData
+        self, mock_cache_issue_manager: Mock, sample_issue: IssueData
     ) -> None:
         """Test first run with no existing cache."""
-        mock_issue_manager.list_issues.return_value = [sample_issue]
-        mock_issue_manager.repo_url = "https://github.com/owner/repo"
+        mock_cache_issue_manager.list_issues.return_value = [sample_issue]
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
-            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
-            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+            ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
             ) as mock_filter,
@@ -528,29 +491,33 @@ class TestGetCachedEligibleIssues:
             mock_save.return_value = True
             mock_filter.return_value = [sample_issue]
 
-            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+            result = get_cached_eligible_issues("owner/repo", mock_cache_issue_manager)
 
             assert result == [sample_issue]
-            mock_issue_manager.list_issues.assert_called_once_with(
+            mock_cache_issue_manager.list_issues.assert_called_once_with(
                 state="open", include_pull_requests=False
             )
             mock_save.assert_called_once()
 
     def test_get_cached_eligible_issues_incremental_update(
-        self, mock_issue_manager: Mock, sample_issue: IssueData
+        self, mock_cache_issue_manager: Mock, sample_issue: IssueData
     ) -> None:
         """Test incremental update with recent cache."""
         # Cache checked 30 minutes ago (within 24-hour window)
         cache_time = datetime.now().astimezone() - timedelta(minutes=30)
-        mock_issue_manager.list_issues.return_value = [sample_issue]
-        mock_issue_manager.repo_url = "https://github.com/owner/repo"
+        mock_cache_issue_manager.list_issues.return_value = [sample_issue]
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
-            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
-            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+            ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
             ) as mock_filter,
@@ -564,34 +531,38 @@ class TestGetCachedEligibleIssues:
             mock_save.return_value = True
             mock_filter.return_value = [sample_issue]
 
-            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+            result = get_cached_eligible_issues("owner/repo", mock_cache_issue_manager)
 
             assert result == [sample_issue]
             # Should call with since parameter for incremental update
-            mock_issue_manager.list_issues.assert_called_once_with(
+            mock_cache_issue_manager.list_issues.assert_called_once_with(
                 state="open", include_pull_requests=False, since=cache_time
             )
 
     def test_get_cached_eligible_issues_full_refresh(
-        self, mock_issue_manager: Mock, sample_issue: IssueData
+        self, mock_cache_issue_manager: Mock, sample_issue: IssueData
     ) -> None:
         """Test full refresh when cache is old."""
         # Cache checked 25 hours ago (beyond 24-hour window)
         old_cache_time = datetime.now().astimezone() - timedelta(hours=25)
-        mock_issue_manager.list_issues.return_value = [sample_issue]
-        mock_issue_manager.repo_url = "https://github.com/owner/repo"
+        mock_cache_issue_manager.list_issues.return_value = [sample_issue]
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
-            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
-            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+            ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
             ) as mock_filter,
             patch(
-                "mcp_coder.cli.commands.coordinator._log_stale_cache_entries"
+                "mcp_coder.utils.github_operations.issue_cache._log_stale_cache_entries"
             ) as mock_log_stale,
         ):
 
@@ -603,29 +574,31 @@ class TestGetCachedEligibleIssues:
             mock_save.return_value = True
             mock_filter.return_value = [sample_issue]
 
-            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+            result = get_cached_eligible_issues("owner/repo", mock_cache_issue_manager)
 
             assert result == [sample_issue]
             # Should call without since parameter for full refresh
-            mock_issue_manager.list_issues.assert_called_once_with(
+            mock_cache_issue_manager.list_issues.assert_called_once_with(
                 state="open", include_pull_requests=False
             )
             # Should log staleness since we had cached data
             mock_log_stale.assert_called_once()
 
     def test_get_cached_eligible_issues_duplicate_protection(
-        self, mock_issue_manager: Mock
+        self, mock_cache_issue_manager: Mock
     ) -> None:
         """Test duplicate protection skips recent checks."""
         # Cache checked 30 seconds ago (within 1-minute window)
         recent_time = datetime.now().astimezone() - timedelta(seconds=30)
-        mock_issue_manager.repo_url = "https://github.com/owner/repo"
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
-            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+            ) as mock_load,
         ):
 
             mock_path.return_value = Path("/fake/cache.json")
@@ -634,26 +607,30 @@ class TestGetCachedEligibleIssues:
                 "issues": {},
             }
 
-            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+            result = get_cached_eligible_issues("owner/repo", mock_cache_issue_manager)
 
             assert result == []
             # Should not call issue_manager at all due to duplicate protection
-            mock_issue_manager.list_issues.assert_not_called()
+            mock_cache_issue_manager.list_issues.assert_not_called()
 
     def test_get_cached_eligible_issues_force_refresh(
-        self, mock_issue_manager: Mock, sample_issue: IssueData
+        self, mock_cache_issue_manager: Mock, sample_issue: IssueData
     ) -> None:
         """Test force refresh bypasses cache and duplicate protection."""
         # Cache checked 30 seconds ago, but force_refresh should bypass it
         recent_time = datetime.now().astimezone() - timedelta(seconds=30)
-        mock_issue_manager.list_issues.return_value = [sample_issue]
+        mock_cache_issue_manager.list_issues.return_value = [sample_issue]
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
-            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
-            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+            ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
             ) as mock_filter,
@@ -668,54 +645,58 @@ class TestGetCachedEligibleIssues:
             mock_filter.return_value = [sample_issue]
 
             result = get_cached_eligible_issues(
-                "owner/repo", mock_issue_manager, force_refresh=True
+                "owner/repo", mock_cache_issue_manager, force_refresh=True
             )
 
             assert result == [sample_issue]
             # Should call issue_manager despite recent check
-            mock_issue_manager.list_issues.assert_called_once()
+            mock_cache_issue_manager.list_issues.assert_called_once()
 
     def test_get_cached_eligible_issues_corrupted_cache(
-        self, mock_issue_manager: Mock
+        self, mock_cache_issue_manager: Mock
     ) -> None:
         """Test graceful fallback when cache operations fail."""
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.cli.commands.coordinator._load_cache_file",
-                side_effect=Exception("Cache error"),
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file",
+                side_effect=ValueError("Cache error"),
             ),
             patch(
-                "mcp_coder.cli.commands.coordinator.get_eligible_issues"
+                "mcp_coder.cli.commands.coordinator.core.get_eligible_issues"
             ) as mock_fallback,
         ):
 
             mock_path.return_value = Path("/fake/cache.json")
             mock_fallback.return_value = []
 
-            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+            result = get_cached_eligible_issues("owner/repo", mock_cache_issue_manager)
 
             # Should fall back to get_eligible_issues
             assert result == []
-            mock_fallback.assert_called_once_with(mock_issue_manager)
+            mock_fallback.assert_called_once_with(mock_cache_issue_manager)
 
     def test_get_cached_eligible_issues_custom_cache_refresh_minutes(
-        self, mock_issue_manager: Mock, sample_issue: IssueData
+        self, mock_cache_issue_manager: Mock, sample_issue: IssueData
     ) -> None:
         """Test custom cache refresh threshold."""
         # Cache checked 10 minutes ago, with custom 5-minute threshold
         cache_time = datetime.now().astimezone() - timedelta(minutes=10)
-        mock_issue_manager.list_issues.return_value = [sample_issue]
-        mock_issue_manager.repo_url = "https://github.com/owner/repo"
+        mock_cache_issue_manager.list_issues.return_value = [sample_issue]
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
-            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
-            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+            ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
             ) as mock_filter,
@@ -730,34 +711,38 @@ class TestGetCachedEligibleIssues:
             mock_filter.return_value = [sample_issue]
 
             result = get_cached_eligible_issues(
-                "owner/repo", mock_issue_manager, cache_refresh_minutes=5
+                "owner/repo", mock_cache_issue_manager, cache_refresh_minutes=5
             )
 
             assert result == [sample_issue]
             # Should do full refresh since 10 minutes > 5 minute threshold
-            mock_issue_manager.list_issues.assert_called_once_with(
+            mock_cache_issue_manager.list_issues.assert_called_once_with(
                 state="open", include_pull_requests=False
             )
 
     def test_get_cached_eligible_issues_metrics_logging(
         self,
-        mock_issue_manager: Mock,
+        mock_cache_issue_manager: Mock,
         sample_issue: IssueData,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that cache metrics are logged properly."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
         )
-        mock_issue_manager.list_issues.return_value = [sample_issue]
-        mock_issue_manager.repo_url = "https://github.com/owner/repo"
+        mock_cache_issue_manager.list_issues.return_value = [sample_issue]
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
-            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
-            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+            ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
             ) as mock_filter,
@@ -767,7 +752,7 @@ class TestGetCachedEligibleIssues:
             mock_save.return_value = True
             mock_filter.return_value = [sample_issue]
 
-            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+            result = get_cached_eligible_issues("owner/repo", mock_cache_issue_manager)
 
             assert result == [sample_issue]
             # Should log cache metrics
@@ -778,23 +763,27 @@ class TestGetCachedEligibleIssues:
 
     def test_no_spurious_warnings_with_repo_identifier(
         self,
-        mock_issue_manager: Mock,
+        mock_cache_issue_manager: Mock,
         sample_issue: IssueData,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that using RepoIdentifier does not generate spurious warnings."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
         )
-        mock_issue_manager.list_issues.return_value = [sample_issue]
-        mock_issue_manager.repo_url = "https://github.com/owner/repo"
+        mock_cache_issue_manager.list_issues.return_value = [sample_issue]
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
-            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
-            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+            ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
             ) as mock_filter,
@@ -805,7 +794,7 @@ class TestGetCachedEligibleIssues:
             mock_filter.return_value = [sample_issue]
 
             # This should complete without any warnings
-            result = get_cached_eligible_issues("owner/repo", mock_issue_manager)
+            result = get_cached_eligible_issues("owner/repo", mock_cache_issue_manager)
 
             assert result == [sample_issue]
             # Should not contain any warnings related to repo identifier parsing
@@ -852,7 +841,7 @@ class TestCacheIssueUpdate:
 
             # Mock _get_cache_file_path to return our test path
             with patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -899,7 +888,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -942,7 +931,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -963,7 +952,7 @@ class TestCacheIssueUpdate:
     ) -> None:
         """Test graceful handling when issue not found in cache."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -991,7 +980,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1013,7 +1002,7 @@ class TestCacheIssueUpdate:
     ) -> None:
         """Test handling of corrupted cache file structure."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1024,7 +1013,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(invalid_cache))
 
             with patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1044,15 +1033,19 @@ class TestCacheIssueUpdate:
     ) -> None:
         """Test handling of file permission errors."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
         )
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
-            patch("mcp_coder.cli.commands.coordinator._load_cache_file") as mock_load,
-            patch("mcp_coder.cli.commands.coordinator._save_cache_file") as mock_save,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+            ) as mock_save,
         ):
             mock_path.return_value = Path("/fake/cache.json")
             mock_load.return_value = {
@@ -1088,7 +1081,7 @@ class TestCacheIssueUpdate:
     ) -> None:
         """Test proper logging behavior during successful updates."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1115,7 +1108,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1177,7 +1170,7 @@ class TestCacheUpdateIntegration:
 
             # Mock only the cache file path to point to our test cache
             with patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1237,7 +1230,7 @@ class TestCacheUpdateIntegration:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1268,15 +1261,15 @@ class TestCacheUpdateIntegration:
     ) -> None:
         """Test that cache update failures don't interrupt dispatch workflow."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.cli.commands.coordinator.core"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
         )
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.cli.commands.coordinator._load_cache_file",
+                "mcp_coder.utils.github_operations.issue_cache._load_cache_file",
                 side_effect=Exception("Cache error"),
             ),
         ):
