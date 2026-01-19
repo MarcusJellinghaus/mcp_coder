@@ -6,10 +6,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_utils.task_tracker import TaskTrackerFileNotFoundError
 from mcp_coder.workflows.implement.core import (
     _get_rebase_target_branch,
     log_progress_summary,
     prepare_task_tracker,
+    run_finalisation,
     run_implement_workflow,
 )
 from mcp_coder.workflows.utils import resolve_project_dir
@@ -688,6 +690,138 @@ class TestPrepareTaskTrackerExecutionDir:
         # Verify execution_dir was passed as None
         call_kwargs = mock_ask_llm.call_args[1]
         assert call_kwargs.get("execution_dir") is None
+
+
+class TestRunFinalisation:
+    """Tests for run_finalisation function."""
+
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_skips_when_no_incomplete_tasks(
+        self, mock_has_incomplete: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test run_finalisation skips LLM call when no incomplete tasks."""
+        mock_has_incomplete.return_value = False
+
+        result = run_finalisation(tmp_path, "claude", "cli")
+
+        assert result is True
+        mock_has_incomplete.assert_called_once_with(str(tmp_path / "pr_info"))
+
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_calls_llm_when_incomplete_tasks(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_ask_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test run_finalisation calls LLM when there are incomplete tasks."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_ask_llm.return_value = "Finalisation completed"
+
+        result = run_finalisation(tmp_path, "claude", "cli")
+
+        assert result is True
+        mock_ask_llm.assert_called_once()
+        # Verify the prompt contains key finalisation instructions
+        call_args = mock_ask_llm.call_args
+        prompt = call_args[0][0] if call_args[0] else call_args[1].get("prompt", "")
+        assert "TASK_TRACKER.md" in prompt
+        assert "unchecked tasks" in prompt
+
+    @patch("mcp_coder.workflows.implement.core.push_changes")
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_pushes_in_workflow_mode(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test run_finalisation pushes changes when auto_push=True."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_ask_llm.return_value = "Finalisation completed"
+        mock_get_status.return_value = {
+            "staged": ["some_file.py"],
+            "modified": [],
+            "untracked": [],
+        }
+        mock_push.return_value = True
+
+        result = run_finalisation(tmp_path, "claude", "cli", auto_push=True)
+
+        assert result is True
+        mock_push.assert_called_once_with(tmp_path)
+
+    @patch("mcp_coder.workflows.implement.core.push_changes")
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_no_push_in_slash_command_mode(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_ask_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test run_finalisation does not push when auto_push=False."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_ask_llm.return_value = "Finalisation completed"
+        mock_get_status.return_value = {
+            "staged": ["some_file.py"],
+            "modified": [],
+            "untracked": [],
+        }
+
+        result = run_finalisation(tmp_path, "claude", "cli", auto_push=False)
+
+        assert result is True
+        mock_push.assert_not_called()
+
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_returns_false_when_task_tracker_missing(
+        self, mock_has_incomplete: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test run_finalisation returns False when task tracker is missing."""
+        mock_has_incomplete.side_effect = TaskTrackerFileNotFoundError(
+            "TASK_TRACKER.md not found"
+        )
+
+        result = run_finalisation(tmp_path, "claude", "cli")
+
+        assert result is False
+
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_returns_false_on_empty_llm_response(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_ask_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test run_finalisation returns False when LLM returns empty response."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_ask_llm.return_value = ""  # Empty response
+
+        result = run_finalisation(tmp_path, "claude", "cli")
+
+        assert result is False
 
 
 class TestRunImplementWorkflow:

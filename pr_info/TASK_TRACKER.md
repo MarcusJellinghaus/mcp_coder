@@ -29,11 +29,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Add `run_finalisation()` function to `src/mcp_coder/workflows/implement/core.py`
 - [x] Integrate finalisation call into `run_implement_workflow()` after final mypy check
-- [ ] Add unit tests to `tests/workflows/implement/test_core.py`
-- [ ] Run pylint and fix all issues found
-- [ ] Run pytest and fix all issues found
-- [ ] Run mypy and fix all issues found
-- [ ] Prepare git commit message for Step 2
+- [x] Add unit tests to `tests/workflows/implement/test_core.py`
+- [x] Run pylint and fix all issues found
+- [x] Run pytest and fix all issues found
+- [x] Run mypy and fix all issues found
+- [x] Prepare git commit message for Step 2
 
 ---
 
