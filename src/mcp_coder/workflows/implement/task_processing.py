@@ -303,21 +303,37 @@ def commit_changes(
         method: LLM method (e.g., 'cli' or 'api')
     """
     logger.info("Committing changes...")
+    commit_message = ""
 
     try:
-        success, commit_message, error = generate_commit_message_with_llm(
-            project_dir, provider, method
-        )
+        # Check for prepared commit message file
+        commit_msg_path = project_dir / COMMIT_MESSAGE_FILE
+        if commit_msg_path.exists():
+            file_content = commit_msg_path.read_text(encoding="utf-8").strip()
+            if file_content:
+                # Delete file before git operations
+                commit_msg_path.unlink()
+                # Parse the commit message
+                commit_message, _ = parse_llm_commit_response(file_content)
+                logger.info("Using prepared commit message from file")
 
-        if not success:
-            logger.error(f"Error generating commit message: {error}")
-            return False
+        # Fall back to LLM generation if no prepared message
+        if not commit_message:
+            success, commit_message, error = generate_commit_message_with_llm(
+                project_dir, provider, method
+            )
 
-        # Commit using the generated message
+            if not success:
+                logger.error(f"Error generating commit message: {error}")
+                return False
+
+        # Commit using the message
         commit_result = commit_all_changes(commit_message, project_dir)
 
         if not commit_result["success"]:
             logger.error(f"Error committing changes: {commit_result['error']}")
+            # Log commit message so it's not lost
+            logger.error(f"Commit message was: {commit_message}")
             return False
 
         # Show commit message first line along with hash
@@ -330,6 +346,8 @@ def commit_changes(
 
     except Exception as e:
         logger.error(f"Error committing changes: {e}")
+        if commit_message:
+            logger.error(f"Commit message was: {commit_message}")
         return False
 
 
