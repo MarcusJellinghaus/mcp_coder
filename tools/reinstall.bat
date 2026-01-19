@@ -44,13 +44,13 @@ echo.
 
 echo [1/7] Uninstalling existing packages...
 echo Uninstalling mcp-coder...
-uv pip uninstall mcp-coder --yes
+uv pip uninstall mcp-coder 2>nul
 echo Uninstalling mcp-config...
-uv pip uninstall mcp-config --yes
+uv pip uninstall mcp-config 2>nul
 echo Uninstalling mcp-code-checker...
-uv pip uninstall mcp-code-checker --yes
+uv pip uninstall mcp-code-checker 2>nul
 echo Uninstalling mcp-server-filesystem...
-uv pip uninstall mcp-server-filesystem --yes
+uv pip uninstall mcp-server-filesystem 2>nul
 if %ERRORLEVEL% NEQ 0 (
     echo Warning: Some packages may not have been installed
 ) else (
@@ -105,10 +105,11 @@ echo.
 echo [6/7] Testing CLI basic functionality...
 echo Testing mcp-coder command without arguments (should exit with code 1):
 mcp-coder
-if %ERRORLEVEL% EQU 1 (
-    echo [OK] CLI basic functionality working (expected exit code 1)
+set CLI_EXIT_CODE=%ERRORLEVEL%
+if %CLI_EXIT_CODE% EQU 1 (
+    echo [OK] CLI basic functionality working ^(expected exit code 1^)
 ) else (
-    echo [ERROR] CLI not working as expected (exit code was %ERRORLEVEL%)
+    echo [ERROR] CLI not working as expected ^(exit code was %CLI_EXIT_CODE%^)
 )
 echo.
 
