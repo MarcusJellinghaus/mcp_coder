@@ -28,7 +28,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Workflow Integration and Tests
 
 - [x] Add `run_finalisation()` function to `src/mcp_coder/workflows/implement/core.py`
-- [ ] Integrate finalisation call into `run_implement_workflow()` after final mypy check
+- [x] Integrate finalisation call into `run_implement_workflow()` after final mypy check
 - [ ] Add unit tests to `tests/workflows/implement/test_core.py`
 - [ ] Run pylint and fix all issues found
 - [ ] Run pytest and fix all issues found

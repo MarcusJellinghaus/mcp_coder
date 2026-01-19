@@ -506,6 +506,19 @@ def run_implement_workflow(
         else:
             logger.info("No changes from final mypy check - skipping commit")
 
+    # Step 5.5: Run finalisation to complete any remaining tasks
+    if not error_occurred:
+        finalisation_success = run_finalisation(
+            project_dir,
+            provider,
+            method,
+            mcp_config,
+            execution_dir,
+            auto_push=update_labels,  # Auto-push only in workflow mode
+        )
+        if not finalisation_success:
+            logger.warning("Finalisation encountered issues - continuing anyway")
+
     # Step 6: Show final progress summary with appropriate messaging
     if error_occurred:
         logger.info(
