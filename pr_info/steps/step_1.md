@@ -16,22 +16,7 @@ A markdown file with:
 
 ### Allowed Tools
 
-```yaml
-allowed-tools: 
-  - Bash(git status:*)
-  - Bash(git diff:*)
-  - Bash(git log:*)
-  - Bash(git add:*)
-  - Bash(git commit:*)
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - mcp__code-checker__run_pylint_check
-  - mcp__code-checker__run_pytest_check
-  - mcp__code-checker__run_mypy_check
-```
+Omit `allowed-tools` from the YAML frontmatter - the command will inherit whatever tools are configured for the session (including MCP tools if available).
 
 ### Prompt Content
 

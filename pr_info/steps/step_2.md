@@ -20,7 +20,7 @@ Add a new function and integrate it into `run_implement_workflow()`.
 
 ```python
 LLM_FINALISATION_TIMEOUT_SECONDS = 600  # 10 minutes
-COMMIT_MESSAGE_FILE = ".commit_message.txt"
+COMMIT_MESSAGE_FILE = ".commit_message.txt"  # Combined with PR_INFO_DIR in code
 ```
 
 #### New Function Signature
@@ -105,14 +105,23 @@ Note: `has_incomplete_work` may already be available via `get_step_progress` imp
 ```python
 def run_finalisation(...) -> bool:
     # 1. Check if there are incomplete tasks
-    if not has_incomplete_work(str(project_dir / PR_INFO_DIR)):
-        logger.info("No incomplete tasks - skipping finalisation")
-        return True
+    try:
+        if not has_incomplete_work(str(project_dir / PR_INFO_DIR)):
+            logger.info("No incomplete tasks - skipping finalisation")
+            return True
+    except TaskTrackerFileNotFoundError:
+        logger.error("Task tracker not found - cannot run finalisation")
+        return False
     
     # 2. Call LLM with finalisation prompt
     response = ask_llm(FINALISATION_PROMPT, ...)
     
-    # 3. If auto_push and changes were made, push
+    # 3. Check for empty/failed response
+    if not response or not response.strip():
+        logger.error("Finalisation LLM returned empty response")
+        return False
+    
+    # 4. If auto_push and changes were made, push
     if auto_push:
         status = get_full_status(project_dir)
         if status["staged"] or status["modified"]:
@@ -153,6 +162,11 @@ Add tests to `tests/workflows/implement/test_core.py`:
 4. **test_run_finalisation_no_push_in_slash_command_mode**
    - Same as above but `auto_push=False`
    - Verify `push_changes` is NOT called
+
+5. **test_run_finalisation_returns_false_when_task_tracker_missing**
+   - Mock `has_incomplete_work` to raise `TaskTrackerFileNotFoundError`
+   - Verify returns `False`
+   - Verify error is logged
 
 ## LLM PROMPT FOR THIS STEP
 
