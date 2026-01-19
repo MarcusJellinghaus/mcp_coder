@@ -8,6 +8,7 @@ from unittest.mock import ANY, MagicMock, patch
 import pytest
 
 from mcp_coder.workflows.implement.task_processing import (
+    _cleanup_commit_message_file,
     check_and_fix_mypy,
     commit_changes,
     get_next_task,
@@ -170,6 +171,28 @@ class TestSaveConversationComprehensive:
         # No JSON file should be created
         json_file = conversations_dir / "step_2_comprehensive.json"
         assert not json_file.exists()
+
+
+class TestCommitMessageFile:
+    """Test commit message file handling."""
+
+    def test_cleanup_removes_existing_file(self, tmp_path: Path) -> None:
+        """Test that cleanup removes existing commit message file."""
+        # Create the file
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        commit_file = pr_info / ".commit_message.txt"
+        commit_file.write_text("old message")
+
+        # Call cleanup
+        _cleanup_commit_message_file(tmp_path)
+
+        assert not commit_file.exists()
+
+    def test_cleanup_handles_missing_file(self, tmp_path: Path) -> None:
+        """Test that cleanup handles missing file gracefully."""
+        # Should not raise
+        _cleanup_commit_message_file(tmp_path)
 
 
 class TestRunFormatters:
