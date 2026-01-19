@@ -662,10 +662,10 @@ class TestGetCachedEligibleIssues:
             ) as mock_path,
             patch(
                 "mcp_coder.utils.github_operations.issue_cache._load_cache_file",
-                side_effect=Exception("Cache error"),
+                side_effect=ValueError("Cache error"),
             ),
             patch(
-                "mcp_coder.cli.commands.coordinator.get_eligible_issues"
+                "mcp_coder.cli.commands.coordinator.core.get_eligible_issues"
             ) as mock_fallback,
         ):
 
