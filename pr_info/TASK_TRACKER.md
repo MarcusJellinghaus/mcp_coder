@@ -42,9 +42,9 @@ See [step_2.md](steps/step_2.md)
 ### Step 3: Update CI Pipeline - Forbidden File Check
 See [step_3.md](steps/step_3.md)
 
-- [ ] Add file existence check for `pr_info/.commit_message.txt` to `.github/workflows/ci.yml` in `check-forbidden-folders` job
-- [ ] Verify YAML syntax is valid
-- [ ] Prepare git commit message
+- [x] Add file existence check for `pr_info/.commit_message.txt` to `.github/workflows/ci.yml` in `check-forbidden-folders` job
+- [x] Verify YAML syntax is valid
+- [x] Prepare git commit message
 
 ---
 
