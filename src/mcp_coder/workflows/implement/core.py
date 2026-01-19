@@ -26,6 +26,13 @@ from mcp_coder.workflow_utils.task_tracker import (
     has_incomplete_work,
 )
 
+from .constants import (
+    COMMIT_MESSAGE_FILE,
+    LLM_FINALISATION_TIMEOUT_SECONDS,
+    LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
+    PR_INFO_DIR,
+    RUN_MYPY_AFTER_EACH_TASK,
+)
 from .prerequisites import (
     check_git_clean,
     check_main_branch,
@@ -33,19 +40,12 @@ from .prerequisites import (
     has_implementation_tasks,
 )
 from .task_processing import (
-    RUN_MYPY_AFTER_EACH_TASK,
     check_and_fix_mypy,
     commit_changes,
     process_single_task,
     push_changes,
     run_formatters,
 )
-
-# Constants
-PR_INFO_DIR = "pr_info"
-COMMIT_MESSAGE_FILE = ".commit_message.txt"  # Combined with PR_INFO_DIR in code
-LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS = 600  # 10 minutes
-LLM_FINALISATION_TIMEOUT_SECONDS = 600  # 10 minutes
 
 # Finalisation prompt for completing remaining tasks
 FINALISATION_PROMPT = f"""
@@ -388,17 +388,17 @@ def run_finalisation(
 
     # 5. Get commit message (3-level fallback: file → LLM → default)
     commit_message = None
-    commit_msg_path = project_dir / PR_INFO_DIR / COMMIT_MESSAGE_FILE
+    commit_msg_path = project_dir / COMMIT_MESSAGE_FILE
 
     # Level 1: Read from file
     if commit_msg_path.exists():
         commit_message = commit_msg_path.read_text(encoding="utf-8").strip()
+        # Always delete file after reading (even if empty)
+        commit_msg_path.unlink()
         if commit_message:
-            # Delete the commit message file after reading
-            commit_msg_path.unlink()
             logger.debug("Read and deleted commit message file")
         else:
-            logger.debug("Commit message file was empty")
+            logger.debug("Commit message file was empty, deleted")
 
     # Level 2: Generate with LLM
     if not commit_message:

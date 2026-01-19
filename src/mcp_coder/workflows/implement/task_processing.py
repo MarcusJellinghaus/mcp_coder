@@ -23,16 +23,19 @@ from mcp_coder.llm.providers.claude.claude_code_api import (
 # Import removed - using structured parameters instead
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status, git_push
-from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
+from mcp_coder.workflow_utils.commit_operations import (
+    generate_commit_message_with_llm,
+    parse_llm_commit_response,
+)
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
-# Constants
-PR_INFO_DIR = "pr_info"
-CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
-LLM_IMPLEMENTATION_TIMEOUT_SECONDS = 3600  # 60 minutes
-
-# Mypy checking behavior
-RUN_MYPY_AFTER_EACH_TASK = False  # If False, mypy runs once after all tasks complete
+from .constants import (
+    COMMIT_MESSAGE_FILE,
+    CONVERSATIONS_DIR,
+    LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+    PR_INFO_DIR,
+    RUN_MYPY_AFTER_EACH_TASK,
+)
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -299,21 +302,37 @@ def commit_changes(
         method: LLM method (e.g., 'cli' or 'api')
     """
     logger.info("Committing changes...")
+    commit_message = ""
 
     try:
-        success, commit_message, error = generate_commit_message_with_llm(
-            project_dir, provider, method
-        )
+        # Check for prepared commit message file
+        commit_msg_path = project_dir / COMMIT_MESSAGE_FILE
+        if commit_msg_path.exists():
+            file_content = commit_msg_path.read_text(encoding="utf-8").strip()
+            # Delete file before git operations (even if empty)
+            commit_msg_path.unlink()
+            if file_content:
+                # Parse the commit message
+                commit_message, _ = parse_llm_commit_response(file_content)
+                logger.info("Using prepared commit message from file")
 
-        if not success:
-            logger.error(f"Error generating commit message: {error}")
-            return False
+        # Fall back to LLM generation if no prepared message
+        if not commit_message:
+            success, commit_message, error = generate_commit_message_with_llm(
+                project_dir, provider, method
+            )
 
-        # Commit using the generated message
+            if not success:
+                logger.error(f"Error generating commit message: {error}")
+                return False
+
+        # Commit using the message
         commit_result = commit_all_changes(commit_message, project_dir)
 
         if not commit_result["success"]:
             logger.error(f"Error committing changes: {commit_result['error']}")
+            # Log commit message so it's not lost
+            logger.error(f"Commit message was: {commit_message}")
             return False
 
         # Show commit message first line along with hash
@@ -326,6 +345,8 @@ def commit_changes(
 
     except Exception as e:
         logger.error(f"Error committing changes: {e}")
+        if commit_message:
+            logger.error(f"Commit message was: {commit_message}")
         return False
 
 
@@ -524,6 +545,14 @@ Mypy fix generated on: {datetime.now().isoformat()}
         return False
 
 
+def _cleanup_commit_message_file(project_dir: Path) -> None:
+    """Remove stale commit message file from previous failed runs."""
+    commit_msg_path = project_dir / COMMIT_MESSAGE_FILE
+    if commit_msg_path.exists():
+        commit_msg_path.unlink()
+        logger.debug("Cleaned up stale commit message file")
+
+
 def process_single_task(
     project_dir: Path,
     provider: str,
@@ -545,6 +574,9 @@ def process_single_task(
         - success: True if task completed successfully
         - reason: 'completed' | 'no_tasks' | 'error'
     """
+    # Cleanup stale commit message file from previous failed runs
+    _cleanup_commit_message_file(project_dir)
+
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
 

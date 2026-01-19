@@ -8,6 +8,7 @@ from unittest.mock import ANY, MagicMock, patch
 import pytest
 
 from mcp_coder.workflows.implement.task_processing import (
+    _cleanup_commit_message_file,
     check_and_fix_mypy,
     commit_changes,
     get_next_task,
@@ -172,6 +173,28 @@ class TestSaveConversationComprehensive:
         assert not json_file.exists()
 
 
+class TestCommitMessageFile:
+    """Test commit message file handling."""
+
+    def test_cleanup_removes_existing_file(self, tmp_path: Path) -> None:
+        """Test that cleanup removes existing commit message file."""
+        # Create the file
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        commit_file = pr_info / ".commit_message.txt"
+        commit_file.write_text("old message")
+
+        # Call cleanup
+        _cleanup_commit_message_file(tmp_path)
+
+        assert not commit_file.exists()
+
+    def test_cleanup_handles_missing_file(self, tmp_path: Path) -> None:
+        """Test that cleanup handles missing file gracefully."""
+        # Should not raise
+        _cleanup_commit_message_file(tmp_path)
+
+
 class TestRunFormatters:
     """Test run_formatters function."""
 
@@ -220,6 +243,87 @@ class TestRunFormatters:
 
 class TestCommitChanges:
     """Test commit_changes function."""
+
+    @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.generate_commit_message_with_llm"
+    )
+    def test_commit_changes_uses_file_when_present(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test commit_changes uses prepared file instead of LLM."""
+        # Create commit message file
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        commit_file = pr_info / ".commit_message.txt"
+        commit_file.write_text("feat: prepared message\n\nBody text here.")
+
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(tmp_path)
+
+        assert result is True
+        # LLM should NOT be called
+        mock_generate_message.assert_not_called()
+        # File should be deleted
+        assert not commit_file.exists()
+        # Commit should use the prepared message
+        mock_commit.assert_called_once()
+        call_args = mock_commit.call_args[0]
+        assert "feat: prepared message" in call_args[0]
+
+    @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.generate_commit_message_with_llm"
+    )
+    def test_commit_changes_falls_back_to_llm_when_no_file(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test commit_changes falls back to LLM when file doesn't exist."""
+        mock_generate_message.return_value = (True, "feat: llm message", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(tmp_path)
+
+        assert result is True
+        mock_generate_message.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.generate_commit_message_with_llm"
+    )
+    def test_commit_changes_deletes_empty_file_and_falls_back_to_llm(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test commit_changes deletes empty file and falls back to LLM."""
+        # Create empty commit message file
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        commit_file = pr_info / ".commit_message.txt"
+        commit_file.write_text("   \n  ")  # Whitespace only
+
+        mock_generate_message.return_value = (True, "feat: llm message", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(tmp_path)
+
+        assert result is True
+        # File should be deleted even though it was empty
+        assert not commit_file.exists()
+        # LLM should be called as fallback
+        mock_generate_message.assert_called_once()
 
     @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
     @patch(
@@ -291,6 +395,29 @@ class TestCommitChanges:
         result = commit_changes(Path("/test/project"))
 
         assert result is False
+
+    @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
+    def test_commit_changes_logs_message_on_failure(
+        self, mock_commit: MagicMock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test commit message is logged when commit fails."""
+        # Create commit message file
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        commit_file = pr_info / ".commit_message.txt"
+        commit_file.write_text("feat: important message")
+
+        mock_commit.return_value = {
+            "success": False,
+            "commit_hash": None,
+            "error": "Git failed",
+        }
+
+        result = commit_changes(tmp_path)
+
+        assert result is False
+        # Message should be logged so it's not lost
+        assert "feat: important message" in caplog.text
 
 
 class TestPushChanges:

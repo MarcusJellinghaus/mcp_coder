@@ -93,7 +93,7 @@ class RepoIdentifier:
             ValueError: If URL is not a valid GitHub URL
         """
         if not isinstance(url, str):
-            raise ValueError(f"Repository URL must be a string")
+            raise ValueError("Repository URL must be a string")
 
         # Pattern for HTTPS URLs: https://github.com/owner/repo(.git)?
         https_pattern = r"https://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$"

@@ -49,3 +49,6 @@ docs/architecture/dependencies/dependency_report.html
 
 # Lock files (regenerate with: uv sync)
 uv.lock
+
+# Transient commit message file (used by implement workflow)
+pr_info/.commit_message.txt
