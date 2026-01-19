@@ -1,4 +1,3 @@
-# copied from mcp_code_checker
 """
 Utilities for finding data files in both development and installed environments.
 
@@ -7,11 +6,10 @@ using importlib.resources (Python 3.9+ standard library).
 """
 
 import importlib
-import importlib.util
 import logging
 from importlib.resources import files
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 logger = logging.getLogger(__name__)
 

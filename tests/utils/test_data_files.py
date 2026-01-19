@@ -1,4 +1,3 @@
-# copied from mcp_code_checker
 """
 Tests for the data_files utility module.
 """
