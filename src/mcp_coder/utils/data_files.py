@@ -5,7 +5,7 @@ This module provides functions to locate data files that are included with the p
 using importlib.resources (Python 3.9+ standard library).
 """
 
-import importlib
+import importlib.util
 import logging
 from importlib.resources import files
 from pathlib import Path
