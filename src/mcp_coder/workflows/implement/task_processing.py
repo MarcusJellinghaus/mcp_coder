@@ -310,9 +310,9 @@ def commit_changes(
         commit_msg_path = project_dir / COMMIT_MESSAGE_FILE
         if commit_msg_path.exists():
             file_content = commit_msg_path.read_text(encoding="utf-8").strip()
+            # Delete file before git operations (even if empty)
+            commit_msg_path.unlink()
             if file_content:
-                # Delete file before git operations
-                commit_msg_path.unlink()
                 # Parse the commit message
                 commit_message, _ = parse_llm_commit_response(file_content)
                 logger.info("Using prepared commit message from file")

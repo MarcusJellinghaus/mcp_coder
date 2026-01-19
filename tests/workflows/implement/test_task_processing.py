@@ -300,6 +300,35 @@ class TestCommitChanges:
     @patch(
         "mcp_coder.workflows.implement.task_processing.generate_commit_message_with_llm"
     )
+    def test_commit_changes_deletes_empty_file_and_falls_back_to_llm(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test commit_changes deletes empty file and falls back to LLM."""
+        # Create empty commit message file
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        commit_file = pr_info / ".commit_message.txt"
+        commit_file.write_text("   \n  ")  # Whitespace only
+
+        mock_generate_message.return_value = (True, "feat: llm message", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(tmp_path)
+
+        assert result is True
+        # File should be deleted even though it was empty
+        assert not commit_file.exists()
+        # LLM should be called as fallback
+        mock_generate_message.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.generate_commit_message_with_llm"
+    )
     def test_commit_changes_success(
         self, mock_generate_message: MagicMock, mock_commit: MagicMock
     ) -> None:
