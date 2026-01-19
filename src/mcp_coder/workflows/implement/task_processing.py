@@ -23,7 +23,10 @@ from mcp_coder.llm.providers.claude.claude_code_api import (
 # Import removed - using structured parameters instead
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status, git_push
-from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
+from mcp_coder.workflow_utils.commit_operations import (
+    generate_commit_message_with_llm,
+    parse_llm_commit_response,
+)
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 # Constants

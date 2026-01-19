@@ -28,7 +28,7 @@ See [step_1.md](steps/step_1.md)
 See [step_2.md](steps/step_2.md)
 
 - [x] Add `COMMIT_MESSAGE_FILE` constant to `src/mcp_coder/workflows/implement/task_processing.py`
-- [ ] Add `parse_llm_commit_response` import from `commit_operations`
+- [x] Add `parse_llm_commit_response` import from `commit_operations`
 - [ ] Implement `_cleanup_commit_message_file()` helper function
 - [ ] Call cleanup function at start of `process_single_task()`
 - [ ] Modify `commit_changes()` to read commit message file if present (with fallback to LLM)
