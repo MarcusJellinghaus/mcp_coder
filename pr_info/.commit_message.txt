@@ -1,0 +1,12 @@
+feat(commands): add implementation_finalise slash command
+
+Add new slash command for manual invocation of the finalisation process
+that completes unchecked tasks in TASK_TRACKER.md before code review.
+
+The command:
+- Identifies and processes unchecked tasks from the task tracker
+- Auto-marks commit message tasks if commits already exist
+- Works without step files by analysing task names and codebase
+- Runs quality checks only if code changes were made
+- Writes commit message to pr_info/.commit_message.txt
+- Does not auto-push (manual use only)

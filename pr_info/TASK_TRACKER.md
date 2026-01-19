@@ -19,11 +19,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 1: Create Slash Command
 
-- [ ] Implement slash command `.claude/commands/implementation_finalise.md`
-- [ ] Run pylint and fix all issues found
-- [ ] Run pytest and fix all issues found
-- [ ] Run mypy and fix all issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Implement slash command `.claude/commands/implementation_finalise.md`
+- [x] Run pylint and fix all issues found
+- [x] Run pytest and fix all issues found
+- [x] Run mypy and fix all issues found
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Workflow Integration and Tests
 
