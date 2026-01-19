@@ -248,6 +248,38 @@ class TestCommitChanges:
     @patch(
         "mcp_coder.workflows.implement.task_processing.generate_commit_message_with_llm"
     )
+    def test_commit_changes_uses_file_when_present(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test commit_changes uses prepared file instead of LLM."""
+        # Create commit message file
+        pr_info = tmp_path / "pr_info"
+        pr_info.mkdir()
+        commit_file = pr_info / ".commit_message.txt"
+        commit_file.write_text("feat: prepared message\n\nBody text here.")
+
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(tmp_path)
+
+        assert result is True
+        # LLM should NOT be called
+        mock_generate_message.assert_not_called()
+        # File should be deleted
+        assert not commit_file.exists()
+        # Commit should use the prepared message
+        mock_commit.assert_called_once()
+        call_args = mock_commit.call_args[0]
+        assert "feat: prepared message" in call_args[0]
+
+    @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.generate_commit_message_with_llm"
+    )
     def test_commit_changes_success(
         self, mock_generate_message: MagicMock, mock_commit: MagicMock
     ) -> None:
