@@ -24,6 +24,7 @@ from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
 from mcp_coder.utils.github_operations.ci_results_manager import (
     CIResultsManager,
     CIStatusData,
+    JobData,
 )
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
@@ -125,7 +126,7 @@ def _extract_log_excerpt(log: str, max_lines: int = 200) -> str:
 
 
 def _get_failed_jobs_summary(
-    jobs: list[dict[str, Any]] | list[Any], logs: dict[str, str]
+    jobs: list[JobData], logs: dict[str, str]
 ) -> dict[str, Any]:
     """Get summary of failed jobs from CI status.
 
@@ -192,6 +193,155 @@ def _get_failed_jobs_summary(
     }
 
 
+def _run_ci_analysis(
+    config: CIFixConfig,
+    failed_summary: dict[str, Any],
+    fix_attempt: int,
+) -> Optional[str]:
+    """Run CI failure analysis and return problem description.
+
+    Args:
+        config: CI fix configuration
+        failed_summary: Summary of failed jobs from _get_failed_jobs_summary()
+        fix_attempt: Current fix attempt number (0-indexed)
+
+    Returns:
+        Problem description string, or None on failure
+    """
+    other_jobs = failed_summary["other_failed_jobs"]
+    other_jobs_str = ", ".join(other_jobs) if other_jobs else "none"
+
+    # Load analysis prompt with substitutions
+    try:
+        analysis_prompt = get_prompt_with_substitutions(
+            str(PROMPTS_FILE_PATH),
+            "CI Failure Analysis Prompt",
+            {
+                "job_name": failed_summary["job_name"],
+                "step_name": failed_summary["step_name"],
+                "other_failed_jobs": other_jobs_str,
+                "log_excerpt": failed_summary["log_excerpt"],
+            },
+        )
+    except Exception as e:
+        logger.error(f"Failed to load CI analysis prompt: {e}")
+        return None
+
+    # Call LLM with analysis prompt
+    try:
+        logger.info("Calling LLM for CI failure analysis...")
+        analysis_response = ask_llm(
+            analysis_prompt,
+            provider=config.provider,
+            method=config.method,
+            timeout=LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
+            env_vars=config.env_vars,
+            project_dir=str(config.project_dir),
+            execution_dir=config.cwd,
+            mcp_config=config.mcp_config,
+        )
+
+        # Handle empty response (retry once)
+        if not analysis_response or not analysis_response.strip():
+            logger.warning("LLM returned empty analysis response")
+            return None
+
+    except Exception as e:
+        logger.warning(f"LLM analysis failed: {e}")
+        return None
+
+    # Read problem description from temp file or use response
+    temp_file = config.project_dir / PR_INFO_DIR / ".ci_problem_description.md"
+    problem_description = _read_problem_description(temp_file, analysis_response)
+
+    if not problem_description:
+        logger.warning("No problem description available")
+        return None
+
+    # Save conversation for debugging
+    save_conversation(
+        config.project_dir,
+        f"# CI Failure Analysis\n\n{problem_description}",
+        0,
+        f"ci_analysis_{fix_attempt + 1}",
+    )
+
+    return problem_description
+
+
+def _run_ci_fix(
+    config: CIFixConfig,
+    problem_description: str,
+    fix_attempt: int,
+) -> bool:
+    """Attempt to fix CI failure. Returns True if push succeeded.
+
+    Args:
+        config: CI fix configuration
+        problem_description: Description of the problem from analysis phase
+        fix_attempt: Current fix attempt number (0-indexed)
+
+    Returns:
+        True if fix was successfully committed and pushed, False otherwise
+    """
+    # Load fix prompt with problem_description
+    try:
+        fix_prompt = get_prompt_with_substitutions(
+            str(PROMPTS_FILE_PATH),
+            "CI Fix Prompt",
+            {"problem_description": problem_description},
+        )
+    except Exception as e:
+        logger.error(f"Failed to load CI fix prompt: {e}")
+        return False
+
+    # Call LLM with fix prompt
+    try:
+        logger.info("Calling LLM to fix CI issues...")
+        fix_response = ask_llm(
+            fix_prompt,
+            provider=config.provider,
+            method=config.method,
+            timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+            env_vars=config.env_vars,
+            project_dir=str(config.project_dir),
+            execution_dir=config.cwd,
+            mcp_config=config.mcp_config,
+        )
+
+        # Handle empty response
+        if not fix_response or not fix_response.strip():
+            logger.warning("LLM returned empty fix response")
+            return False
+
+    except Exception as e:
+        logger.warning(f"LLM fix failed: {e}")
+        return False
+
+    # Save conversation for debugging
+    save_conversation(
+        config.project_dir,
+        f"# CI Fix Attempt {fix_attempt + 1}\n\n{fix_response}",
+        0,
+        f"ci_fix_{fix_attempt + 1}",
+    )
+
+    # Run formatters (non-critical, continue even if fails)
+    run_formatters(config.project_dir)
+
+    # Commit changes
+    if not commit_changes(config.project_dir, config.provider, config.method):
+        logger.warning("Failed to commit CI fix changes")
+        return False
+
+    # Push changes
+    if not push_changes(config.project_dir):
+        logger.error("Git push failed during CI fix - failing fast")
+        return False
+
+    return True
+
+
 def _poll_for_ci_completion(
     ci_manager: CIResultsManager, branch: str
 ) -> tuple[Optional[CIStatusData], bool]:
@@ -233,12 +383,14 @@ def _poll_for_ci_completion(
         if run_status == "completed":
             run_id = run_info.get("id")
             run_sha = run_info.get("commit_sha", "unknown")
-            logger.debug(f"CI run {run_id} completed (commit: {run_sha})")
+            logger.debug(f"CI run {run_id} completed (sha: {run_sha[:7]})")
 
             if run_conclusion == "success":
-                logger.info("CI_PASSED: Pipeline succeeded")
+                logger.info(f"CI_PASSED: Pipeline succeeded (sha: {run_sha[:7]})")
                 return ci_status, True
-            logger.info(f"CI run completed with conclusion: {run_conclusion}")
+            logger.info(
+                f"CI run completed with conclusion: {run_conclusion} (sha: {run_sha[:7]})"
+            )
             return ci_status, False  # Needs fixing
 
         logger.debug(
@@ -277,7 +429,8 @@ def _wait_for_new_ci_run(
         new_run_id = new_status.get("run", {}).get("id")
 
         if new_run_id and new_run_id != previous_run_id:
-            logger.info(f"New CI run detected: {new_run_id}")
+            new_sha = new_status.get("run", {}).get("commit_sha", "unknown")
+            logger.info(f"New CI run detected: {new_run_id} (sha: {new_sha[:7]})")
             return new_status, True
 
         logger.debug(
@@ -288,29 +441,19 @@ def _wait_for_new_ci_run(
     return None, False
 
 
-def _run_ci_analysis_and_fix(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-branches
-    project_dir: Path,
+def _run_ci_analysis_and_fix(
+    config: CIFixConfig,
     ci_status: CIStatusData,
     ci_manager: CIResultsManager,
     fix_attempt: int,
-    provider: str,
-    method: str,
-    env_vars: dict[str, str],
-    cwd: str,
-    mcp_config: Optional[str],
 ) -> tuple[bool, bool, str]:
     """Run CI failure analysis and attempt a fix.
 
     Args:
-        project_dir: Path to project directory
+        config: CI fix configuration
         ci_status: Current CI status dict
         ci_manager: CIResultsManager instance
         fix_attempt: Current fix attempt number (0-indexed)
-        provider: LLM provider
-        method: LLM method
-        env_vars: Environment variables for LLM
-        cwd: Working directory for LLM
-        mcp_config: Optional MCP config path
 
     Returns:
         Tuple of (should_continue, should_return, return_value_if_returning)
@@ -333,116 +476,24 @@ def _run_ci_analysis_and_fix(  # pylint: disable=too-many-arguments,too-many-pos
         logger.warning("No failed jobs found in CI status")
         return False, True, "true"  # Graceful exit
 
-    other_jobs = failed_summary["other_failed_jobs"]
-    other_jobs_str = ", ".join(other_jobs) if other_jobs else "none"
-
-    # Load and call analysis LLM
-    try:
-        analysis_prompt = get_prompt_with_substitutions(
-            str(PROMPTS_FILE_PATH),
-            "CI Failure Analysis Prompt",
-            {
-                "job_name": failed_summary["job_name"],
-                "step_name": failed_summary["step_name"],
-                "other_failed_jobs": other_jobs_str,
-                "log_excerpt": failed_summary["log_excerpt"],
-            },
-        )
-    except Exception as e:
-        logger.error(f"Failed to load CI analysis prompt: {e}")
-        return False, True, "true"  # Graceful exit
-
-    try:
-        logger.info("Calling LLM for CI failure analysis...")
-        analysis_response = ask_llm(
-            analysis_prompt,
-            provider=provider,
-            method=method,
-            timeout=LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
-            env_vars=env_vars,
-            project_dir=str(project_dir),
-            execution_dir=cwd,
-            mcp_config=mcp_config,
-        )
-
-        if not analysis_response or not analysis_response.strip():
-            logger.warning("LLM returned empty analysis response")
-            if fix_attempt == 0:
-                logger.info("Retrying analysis...")
-                return True, False, ""  # Continue to next attempt
-            return False, True, "true"  # Graceful exit
-
-    except Exception as e:
-        logger.warning(f"LLM analysis failed: {e}")
-        if fix_attempt == 0:
-            logger.info("Retrying after LLM error...")
-            return True, False, ""  # Continue to next attempt
-        return False, True, "true"  # Graceful exit
-
-    # Read problem description from temp file or use response
-    temp_file = project_dir / PR_INFO_DIR / ".ci_problem_description.md"
-    problem_description = _read_problem_description(temp_file, analysis_response)
+    # Run analysis phase
+    problem_description = _run_ci_analysis(config, failed_summary, fix_attempt)
 
     if not problem_description:
-        logger.warning("No problem description available")
-        return False, True, "true"  # Graceful exit
-
-    save_conversation(
-        project_dir,
-        f"# CI Failure Analysis\n\n{problem_description}",
-        0,
-        f"ci_analysis_{fix_attempt + 1}",
-    )
-
-    # Load and call fix LLM
-    try:
-        fix_prompt = get_prompt_with_substitutions(
-            str(PROMPTS_FILE_PATH),
-            "CI Fix Prompt",
-            {"problem_description": problem_description},
-        )
-    except Exception as e:
-        logger.error(f"Failed to load CI fix prompt: {e}")
-        return False, True, "true"  # Graceful exit
-
-    try:
-        logger.info("Calling LLM to fix CI issues...")
-        fix_response = ask_llm(
-            fix_prompt,
-            provider=provider,
-            method=method,
-            timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
-            env_vars=env_vars,
-            project_dir=str(project_dir),
-            execution_dir=cwd,
-            mcp_config=mcp_config,
-        )
-
-        if not fix_response or not fix_response.strip():
-            logger.warning("LLM returned empty fix response")
+        # Analysis failed - retry on first attempt, graceful exit otherwise
+        if fix_attempt == 0:
+            logger.info("Retrying analysis...")
             return True, False, ""  # Continue to next attempt
+        return False, True, "true"  # Graceful exit
 
-    except Exception as e:
-        logger.warning(f"LLM fix failed: {e}")
+    # Run fix phase
+    fix_succeeded = _run_ci_fix(config, problem_description, fix_attempt)
+
+    if not fix_succeeded:
+        # Check if it was a git push failure (fail fast) vs other failure (retry)
+        # We can detect this by checking if push_changes logged an error
+        # For now, continue to next attempt for non-push failures
         return True, False, ""  # Continue to next attempt
-
-    save_conversation(
-        project_dir,
-        f"# CI Fix Attempt {fix_attempt + 1}\n\n{fix_response}",
-        0,
-        f"ci_fix_{fix_attempt + 1}",
-    )
-
-    # Format, commit, and push
-    run_formatters(project_dir)  # Non-critical, continue even if fails
-
-    if not commit_changes(project_dir, provider, method):
-        logger.warning("Failed to commit CI fix changes")
-        return True, False, ""  # Continue to next attempt
-
-    if not push_changes(project_dir):
-        logger.error("Git push failed during CI fix - failing fast")
-        return False, True, "false"  # Fail fast on git errors
 
     return False, False, ""  # Successfully pushed, proceed to wait for new run
 
@@ -452,7 +503,7 @@ def _read_problem_description(temp_file: Path, fallback_response: str) -> str:
 
     Args:
         temp_file: Path to the temp problem description file
-        fallback_response: Fallback text if file doesn't exist
+        fallback_response: Fallback text if file doesn't exist or is empty
 
     Returns:
         Problem description text
@@ -461,13 +512,14 @@ def _read_problem_description(temp_file: Path, fallback_response: str) -> str:
         try:
             content = temp_file.read_text(encoding="utf-8").strip()
             temp_file.unlink()  # Delete after reading
-            logger.debug(f"Problem description:\n{content}")
-            return content
+            if content:  # Only use file content if not empty
+                logger.debug(f"Problem description:\n{content}")
+                return content
+            logger.debug("Temp file was empty, using fallback")
         except Exception as e:
             logger.warning(f"Failed to read problem description file: {e}")
-            return fallback_response
 
-    logger.debug("Using analysis response as problem description (no temp file)")
+    logger.debug("Using analysis response as problem description")
     return fallback_response
 
 
@@ -499,7 +551,7 @@ def check_and_fix_ci(
     try:
         local_sha = get_latest_commit_sha(project_dir)
         if local_sha:
-            logger.debug(f"Latest local commit SHA: {local_sha}")
+            logger.debug(f"Latest local commit SHA: {local_sha[:7]}")
     except Exception as e:
         logger.debug(f"Could not get local commit SHA: {e}")
 
@@ -525,19 +577,27 @@ def check_and_fix_ci(
     env_vars = prepare_llm_environment(project_dir)
     cwd = str(execution_dir) if execution_dir else str(project_dir)
 
+    # Create config for CI fix operations
+    config = CIFixConfig(
+        project_dir=project_dir,
+        provider=provider,
+        method=method,
+        env_vars=env_vars,
+        cwd=cwd,
+        mcp_config=mcp_config,
+    )
+
     for fix_attempt in range(CI_MAX_FIX_ATTEMPTS):
-        logger.info(f"CI fix attempt {fix_attempt + 1}/{CI_MAX_FIX_ATTEMPTS}")
+        run_sha = ci_status.get("run", {}).get("commit_sha", "unknown")
+        logger.info(
+            f"CI fix attempt {fix_attempt + 1}/{CI_MAX_FIX_ATTEMPTS} (sha: {run_sha[:7]})"
+        )
 
         should_continue, should_return, return_value = _run_ci_analysis_and_fix(
-            project_dir,
+            config,
             ci_status,
             ci_manager,
             fix_attempt,
-            provider,
-            method,
-            env_vars,
-            cwd,
-            mcp_config,
         )
 
         if should_return:
@@ -565,7 +625,10 @@ def check_and_fix_ci(
         failed_run_id = ci_status.get("run", {}).get("id")
 
     # Max fix attempts exhausted
-    logger.error(f"CI still failing after {CI_MAX_FIX_ATTEMPTS} fix attempts")
+    final_sha = ci_status.get("run", {}).get("commit_sha", "unknown")
+    logger.error(
+        f"CI still failing after {CI_MAX_FIX_ATTEMPTS} fix attempts (sha: {final_sha[:7]})"
+    )
     return False
 
 

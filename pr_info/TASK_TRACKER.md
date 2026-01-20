@@ -153,18 +153,35 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 - [x] Fix `commit_sha` field lookup in `_poll_for_ci_completion()`
 - [x] Change branch check log level from WARNING to ERROR
 - [x] Create `CIFixConfig` dataclass for CI fix configuration
-- [ ] Extract `_run_ci_analysis()` helper function
-- [ ] Extract `_run_ci_fix()` helper function
-- [ ] Simplify `_run_ci_analysis_and_fix()` to use new helpers
-- [ ] Remove pylint disables from refactored functions
-- [ ] Update `_get_failed_jobs_summary` type annotation to use `List[JobData]`
-- [ ] Add short SHA (7 chars) to all CI status log messages
-- [ ] Update `_read_problem_description` to use fallback when file is empty
-- [ ] Add tests for `_read_problem_description` edge cases
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 5
+- [x] Extract `_run_ci_analysis()` helper function
+- [x] Extract `_run_ci_fix()` helper function
+- [x] Simplify `_run_ci_analysis_and_fix()` to use new helpers
+- [x] Remove pylint disables from refactored functions
+- [x] Update `_get_failed_jobs_summary` type annotation to use `List[JobData]`
+- [x] Add short SHA (7 chars) to all CI status log messages
+- [x] Update `_read_problem_description` to use fallback when file is empty
+- [x] Add tests for `_read_problem_description` edge cases
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 5
+
+**Commit Message:**
+```
+refactor(ci): extract helper functions and improve CI fix workflow
+
+- Extract _run_ci_analysis() helper to run CI failure analysis phase
+- Extract _run_ci_fix() helper to run CI fix phase with commit/push
+- Simplify _run_ci_analysis_and_fix() to use new helper functions
+- Create CIFixConfig dataclass to bundle CI fix configuration
+- Remove pylint disables from refactored functions (simpler signatures)
+- Update _get_failed_jobs_summary type annotation to use List[JobData]
+- Add short SHA (7 chars) to all CI status log messages for debugging
+- Handle empty temp file in _read_problem_description with fallback
+- Add comprehensive tests for _read_problem_description edge cases
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
 
 ---
 
