@@ -219,7 +219,7 @@ def _poll_for_ci_completion(
 
         if run_status == "completed":
             run_id = run_info.get("id")
-            run_sha = run_info.get("head_sha", "unknown")
+            run_sha = run_info.get("commit_sha", "unknown")
             logger.debug(f"CI run {run_id} completed (commit: {run_sha})")
 
             if run_conclusion == "success":

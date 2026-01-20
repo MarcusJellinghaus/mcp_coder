@@ -150,7 +150,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ### Step 5: Code Review Fixes
 > See: [pr_info/steps/step_5.md](steps/step_5.md)
 
-- [ ] Fix `commit_sha` field lookup in `_poll_for_ci_completion()`
+- [x] Fix `commit_sha` field lookup in `_poll_for_ci_completion()`
 - [ ] Change branch check log level from WARNING to ERROR
 - [ ] Create `CIFixConfig` dataclass for CI fix configuration
 - [ ] Extract `_run_ci_analysis()` helper function
