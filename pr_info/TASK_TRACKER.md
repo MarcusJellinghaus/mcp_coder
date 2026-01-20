@@ -94,15 +94,32 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 - [x] Write tests for `check_and_fix_ci()` in `test_ci_check.py`
 - [x] Add required imports to `core.py`
-- [ ] Implement `check_and_fix_ci()` main function
-- [ ] Implement CI polling logic (max 50 attempts, 15s interval)
-- [ ] Implement fix loop (max 3 attempts)
-- [ ] Implement new run detection (6 attempts at 5s intervals)
-- [ ] Implement error handling (API errors → exit 0, git errors → exit 1)
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 3
+- [x] Implement `check_and_fix_ci()` main function
+- [x] Implement CI polling logic (max 50 attempts, 15s interval)
+- [x] Implement fix loop (max 3 attempts)
+- [x] Implement new run detection (6 attempts at 5s intervals)
+- [x] Implement error handling (API errors → exit 0, git errors → exit 1)
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 3
+
+**Commit Message:**
+```
+feat(ci): implement check_and_fix_ci() main CI monitoring function
+
+- Add check_and_fix_ci() to monitor CI status and auto-fix failures
+- Implement CI polling with configurable max attempts (50) and interval (15s)
+- Add fix loop with up to 3 attempts using two-phase LLM (analysis + fix)
+- Implement new run detection (6 attempts at 5s intervals) after push
+- Add hybrid error handling: API errors → exit 0, git errors → exit 1
+- Refactor into helper functions: _poll_for_ci_completion, _wait_for_new_ci_run,
+  _run_ci_analysis_and_fix, _read_problem_description
+- Import CIStatusData TypedDict for proper type hints
+- Update _get_failed_jobs_summary to accept JobData list type
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
 
 ---
 

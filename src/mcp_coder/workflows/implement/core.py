@@ -12,7 +12,7 @@ from typing import Any, Optional
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import ask_llm
-from mcp_coder.prompt_manager import get_prompt
+from mcp_coder.prompt_manager import get_prompt, get_prompt_with_substitutions
 from mcp_coder.utils import commit_all_changes, get_full_status
 from mcp_coder.utils.git_operations import (
     get_current_branch_name,
@@ -20,7 +20,10 @@ from mcp_coder.utils.git_operations import (
     rebase_onto_branch,
 )
 from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
-from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
+from mcp_coder.utils.github_operations.ci_results_manager import (
+    CIResultsManager,
+    CIStatusData,
+)
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.task_tracker import (
@@ -55,6 +58,7 @@ from .task_processing import (
     process_single_task,
     push_changes,
     run_formatters,
+    save_conversation,
 )
 
 # Finalisation prompt for completing remaining tasks
@@ -108,7 +112,7 @@ def _extract_log_excerpt(log: str, max_lines: int = 200) -> str:
 
 
 def _get_failed_jobs_summary(
-    jobs: list[dict[str, Any]], logs: dict[str, str]
+    jobs: list[dict[str, Any]] | list[Any], logs: dict[str, str]
 ) -> dict[str, Any]:
     """Get summary of failed jobs from CI status.
 
@@ -173,6 +177,383 @@ def _get_failed_jobs_summary(
         "log_excerpt": log_excerpt,
         "other_failed_jobs": other_failed_jobs,
     }
+
+
+def _poll_for_ci_completion(
+    ci_manager: CIResultsManager, branch: str
+) -> tuple[Optional[CIStatusData], bool]:
+    """Poll for CI run completion.
+
+    Args:
+        ci_manager: CIResultsManager instance
+        branch: Branch name to check
+
+    Returns:
+        Tuple of (ci_status dict or None, success bool).
+        success=True means CI passed, success=False means CI failed or needs fixing.
+        If ci_status is None and success is True, it means graceful exit (no CI found).
+    """
+    for poll_attempt in range(CI_MAX_POLL_ATTEMPTS):
+        try:
+            ci_status = ci_manager.get_latest_ci_status(branch)
+        except Exception as e:
+            logger.warning(f"API error getting CI status: {e}")
+            return None, True  # Graceful exit on API errors
+
+        run_info = ci_status.get("run", {})
+
+        if not run_info:
+            if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1:
+                logger.debug(
+                    f"No CI run found yet (attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS})"
+                )
+                time.sleep(CI_POLL_INTERVAL_SECONDS)
+                continue
+            logger.warning(
+                "No CI run found after polling - continuing without CI check"
+            )
+            return None, True  # Graceful exit
+
+        run_status = run_info.get("status")
+        run_conclusion = run_info.get("conclusion")
+
+        if run_status == "completed":
+            run_id = run_info.get("id")
+            run_sha = run_info.get("head_sha", "unknown")
+            logger.debug(f"CI run {run_id} completed (commit: {run_sha})")
+
+            if run_conclusion == "success":
+                logger.info("CI_PASSED: Pipeline succeeded")
+                return ci_status, True
+            logger.info(f"CI run completed with conclusion: {run_conclusion}")
+            return ci_status, False  # Needs fixing
+
+        logger.debug(
+            f"CI run in progress (status: {run_status}, "
+            f"attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS})"
+        )
+        time.sleep(CI_POLL_INTERVAL_SECONDS)
+
+    return None, True  # Graceful exit after max polling
+
+
+def _wait_for_new_ci_run(
+    ci_manager: CIResultsManager, branch: str, previous_run_id: Any
+) -> tuple[Optional[CIStatusData], bool]:
+    """Wait for a new CI run to start after pushing changes.
+
+    Args:
+        ci_manager: CIResultsManager instance
+        branch: Branch name to check
+        previous_run_id: Run ID to compare against
+
+    Returns:
+        Tuple of (new ci_status or None, new_run_detected bool)
+    """
+    logger.info("Waiting for new CI run to start...")
+
+    for attempt in range(CI_NEW_RUN_MAX_POLL_ATTEMPTS):
+        time.sleep(CI_NEW_RUN_POLL_INTERVAL_SECONDS)
+
+        try:
+            new_status = ci_manager.get_latest_ci_status(branch)
+        except Exception as e:
+            logger.warning(f"API error checking for new CI run: {e}")
+            continue
+
+        new_run_id = new_status.get("run", {}).get("id")
+
+        if new_run_id and new_run_id != previous_run_id:
+            logger.info(f"New CI run detected: {new_run_id}")
+            return new_status, True
+
+        logger.debug(
+            f"Waiting for new CI run (attempt {attempt + 1}/{CI_NEW_RUN_MAX_POLL_ATTEMPTS})"
+        )
+
+    logger.warning("No new CI run detected after 30s")
+    return None, False
+
+
+def _run_ci_analysis_and_fix(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-branches
+    project_dir: Path,
+    ci_status: CIStatusData,
+    ci_manager: CIResultsManager,
+    fix_attempt: int,
+    provider: str,
+    method: str,
+    env_vars: dict[str, str],
+    cwd: str,
+    mcp_config: Optional[str],
+) -> tuple[bool, bool, str]:
+    """Run CI failure analysis and attempt a fix.
+
+    Args:
+        project_dir: Path to project directory
+        ci_status: Current CI status dict
+        ci_manager: CIResultsManager instance
+        fix_attempt: Current fix attempt number (0-indexed)
+        provider: LLM provider
+        method: LLM method
+        env_vars: Environment variables for LLM
+        cwd: Working directory for LLM
+        mcp_config: Optional MCP config path
+
+    Returns:
+        Tuple of (should_continue, should_return, return_value_if_returning)
+        - should_continue: True if should continue to next fix attempt
+        - should_return: True if function should return immediately
+        - return_value_if_returning: "true"/"false" if returning, empty if continuing
+    """
+    jobs = ci_status.get("jobs", [])
+    run_id = ci_status.get("run", {}).get("id")
+
+    try:
+        logs = ci_manager.get_run_logs(run_id) if run_id else {}
+    except Exception as e:
+        logger.warning(f"Failed to get CI logs: {e}")
+        logs = {}
+
+    failed_summary = _get_failed_jobs_summary(jobs, logs)
+
+    if not failed_summary["job_name"]:
+        logger.warning("No failed jobs found in CI status")
+        return False, True, "true"  # Graceful exit
+
+    other_jobs = failed_summary["other_failed_jobs"]
+    other_jobs_str = ", ".join(other_jobs) if other_jobs else "none"
+
+    # Load and call analysis LLM
+    try:
+        analysis_prompt = get_prompt_with_substitutions(
+            str(PROMPTS_FILE_PATH),
+            "CI Failure Analysis Prompt",
+            {
+                "job_name": failed_summary["job_name"],
+                "step_name": failed_summary["step_name"],
+                "other_failed_jobs": other_jobs_str,
+                "log_excerpt": failed_summary["log_excerpt"],
+            },
+        )
+    except Exception as e:
+        logger.error(f"Failed to load CI analysis prompt: {e}")
+        return False, True, "true"  # Graceful exit
+
+    try:
+        logger.info("Calling LLM for CI failure analysis...")
+        analysis_response = ask_llm(
+            analysis_prompt,
+            provider=provider,
+            method=method,
+            timeout=LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
+            env_vars=env_vars,
+            project_dir=str(project_dir),
+            execution_dir=cwd,
+            mcp_config=mcp_config,
+        )
+
+        if not analysis_response or not analysis_response.strip():
+            logger.warning("LLM returned empty analysis response")
+            if fix_attempt == 0:
+                logger.info("Retrying analysis...")
+                return True, False, ""  # Continue to next attempt
+            return False, True, "true"  # Graceful exit
+
+    except Exception as e:
+        logger.warning(f"LLM analysis failed: {e}")
+        if fix_attempt == 0:
+            logger.info("Retrying after LLM error...")
+            return True, False, ""  # Continue to next attempt
+        return False, True, "true"  # Graceful exit
+
+    # Read problem description from temp file or use response
+    temp_file = project_dir / PR_INFO_DIR / ".ci_problem_description.md"
+    problem_description = _read_problem_description(temp_file, analysis_response)
+
+    if not problem_description:
+        logger.warning("No problem description available")
+        return False, True, "true"  # Graceful exit
+
+    save_conversation(
+        project_dir,
+        f"# CI Failure Analysis\n\n{problem_description}",
+        0,
+        f"ci_analysis_{fix_attempt + 1}",
+    )
+
+    # Load and call fix LLM
+    try:
+        fix_prompt = get_prompt_with_substitutions(
+            str(PROMPTS_FILE_PATH),
+            "CI Fix Prompt",
+            {"problem_description": problem_description},
+        )
+    except Exception as e:
+        logger.error(f"Failed to load CI fix prompt: {e}")
+        return False, True, "true"  # Graceful exit
+
+    try:
+        logger.info("Calling LLM to fix CI issues...")
+        fix_response = ask_llm(
+            fix_prompt,
+            provider=provider,
+            method=method,
+            timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+            env_vars=env_vars,
+            project_dir=str(project_dir),
+            execution_dir=cwd,
+            mcp_config=mcp_config,
+        )
+
+        if not fix_response or not fix_response.strip():
+            logger.warning("LLM returned empty fix response")
+            return True, False, ""  # Continue to next attempt
+
+    except Exception as e:
+        logger.warning(f"LLM fix failed: {e}")
+        return True, False, ""  # Continue to next attempt
+
+    save_conversation(
+        project_dir,
+        f"# CI Fix Attempt {fix_attempt + 1}\n\n{fix_response}",
+        0,
+        f"ci_fix_{fix_attempt + 1}",
+    )
+
+    # Format, commit, and push
+    run_formatters(project_dir)  # Non-critical, continue even if fails
+
+    if not commit_changes(project_dir, provider, method):
+        logger.warning("Failed to commit CI fix changes")
+        return True, False, ""  # Continue to next attempt
+
+    if not push_changes(project_dir):
+        logger.error("Git push failed during CI fix - failing fast")
+        return False, True, "false"  # Fail fast on git errors
+
+    return False, False, ""  # Successfully pushed, proceed to wait for new run
+
+
+def _read_problem_description(temp_file: Path, fallback_response: str) -> str:
+    """Read problem description from temp file or use fallback.
+
+    Args:
+        temp_file: Path to the temp problem description file
+        fallback_response: Fallback text if file doesn't exist
+
+    Returns:
+        Problem description text
+    """
+    if temp_file.exists():
+        try:
+            content = temp_file.read_text(encoding="utf-8").strip()
+            temp_file.unlink()  # Delete after reading
+            logger.debug(f"Problem description:\n{content}")
+            return content
+        except Exception as e:
+            logger.warning(f"Failed to read problem description file: {e}")
+            return fallback_response
+
+    logger.debug("Using analysis response as problem description (no temp file)")
+    return fallback_response
+
+
+def check_and_fix_ci(
+    project_dir: Path,
+    branch: str,
+    provider: str,
+    method: str,
+    mcp_config: Optional[str] = None,
+    execution_dir: Optional[Path] = None,
+) -> bool:
+    """Check CI status after finalisation and attempt fixes if needed.
+
+    Args:
+        project_dir: Path to the project directory
+        branch: Branch name to check CI for
+        provider: LLM provider (e.g., 'claude')
+        method: LLM method (e.g., 'api')
+        mcp_config: Optional path to MCP configuration file
+        execution_dir: Optional working directory for Claude subprocess
+
+    Returns:
+        True if CI passes or on API errors (exit 0 scenarios)
+        False if max fix attempts exhausted (exit 1 scenario)
+    """
+    logger.info("Starting CI check and fix process...")
+
+    # Log latest local commit SHA for debugging
+    try:
+        local_sha = get_latest_commit_sha(project_dir)
+        if local_sha:
+            logger.debug(f"Latest local commit SHA: {local_sha}")
+    except Exception as e:
+        logger.debug(f"Could not get local commit SHA: {e}")
+
+    # Initialize CI Results Manager
+    try:
+        ci_manager = CIResultsManager(project_dir)
+    except Exception as e:
+        logger.warning(f"Failed to initialize CIResultsManager: {e}")
+        logger.warning("Continuing without CI check (graceful exit)")
+        return True  # Graceful exit on API errors
+
+    # Phase 1: Poll for CI completion
+    logger.info("Polling for CI completion...")
+    ci_status, ci_passed = _poll_for_ci_completion(ci_manager, branch)
+
+    if ci_status is None or ci_passed:
+        return True  # Graceful exit or CI passed
+
+    # Store failed run ID for comparison after fixes
+    failed_run_id = ci_status.get("run", {}).get("id")
+
+    # Phase 2: Fix loop (max 3 attempts)
+    env_vars = prepare_llm_environment(project_dir)
+    cwd = str(execution_dir) if execution_dir else str(project_dir)
+
+    for fix_attempt in range(CI_MAX_FIX_ATTEMPTS):
+        logger.info(f"CI fix attempt {fix_attempt + 1}/{CI_MAX_FIX_ATTEMPTS}")
+
+        should_continue, should_return, return_value = _run_ci_analysis_and_fix(
+            project_dir,
+            ci_status,
+            ci_manager,
+            fix_attempt,
+            provider,
+            method,
+            env_vars,
+            cwd,
+            mcp_config,
+        )
+
+        if should_return:
+            return return_value == "true"
+        if should_continue:
+            continue
+
+        # Successfully pushed, wait for new CI run
+        new_status, new_run_detected = _wait_for_new_ci_run(
+            ci_manager, branch, failed_run_id
+        )
+
+        if not new_run_detected:
+            return True  # Graceful exit per Decision 17
+
+        # Wait for new CI run to complete
+        logger.info("Waiting for new CI run to complete...")
+        new_status, ci_passed = _poll_for_ci_completion(ci_manager, branch)
+
+        if new_status is None or ci_passed:
+            return True  # CI passed or graceful exit
+
+        # CI still failing, update for next attempt
+        ci_status = new_status
+        failed_run_id = ci_status.get("run", {}).get("id")
+
+    # Max fix attempts exhausted
+    logger.error(f"CI still failing after {CI_MAX_FIX_ATTEMPTS} fix attempts")
+    return False
 
 
 def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
