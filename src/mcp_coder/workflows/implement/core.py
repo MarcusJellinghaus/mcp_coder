@@ -5,6 +5,7 @@ prerequisites checking, task tracker preparation, and task processing loops.
 """
 
 import logging
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -18,6 +19,8 @@ from mcp_coder.utils.git_operations import (
     get_default_branch_name,
     rebase_onto_branch,
 )
+from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
+from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.task_tracker import (
@@ -27,8 +30,15 @@ from mcp_coder.workflow_utils.task_tracker import (
 )
 
 from .constants import (
+    CI_MAX_FIX_ATTEMPTS,
+    CI_MAX_POLL_ATTEMPTS,
+    CI_NEW_RUN_MAX_POLL_ATTEMPTS,
+    CI_NEW_RUN_POLL_INTERVAL_SECONDS,
+    CI_POLL_INTERVAL_SECONDS,
     COMMIT_MESSAGE_FILE,
+    LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
     LLM_FINALISATION_TIMEOUT_SECONDS,
+    LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
     LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
