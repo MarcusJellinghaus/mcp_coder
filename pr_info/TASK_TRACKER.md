@@ -65,15 +65,27 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ### Step 2: Add Helper Functions with Tests (TDD)
 > See: [pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Create test file `tests/workflows/implement/test_ci_check.py`
-- [ ] Write tests for `_extract_log_excerpt()` function
-- [ ] Write tests for `_get_failed_jobs_summary()` function
-- [ ] Implement `_extract_log_excerpt()` in `core.py`
-- [ ] Implement `_get_failed_jobs_summary()` in `core.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 2
+- [x] Create test file `tests/workflows/implement/test_ci_check.py`
+- [x] Write tests for `_extract_log_excerpt()` function
+- [x] Write tests for `_get_failed_jobs_summary()` function
+- [x] Implement `_extract_log_excerpt()` in `core.py`
+- [x] Implement `_get_failed_jobs_summary()` in `core.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 2
+
+**Commit Message:**
+```
+feat(ci): add helper functions for CI log processing
+
+- Add _extract_log_excerpt() function to truncate long logs (first 30 + last 170 lines)
+- Add _get_failed_jobs_summary() function to extract failed job details and log excerpts
+- Add comprehensive tests for both helper functions in test_ci_check.py
+- Follow TDD approach: tests written first, then implementation
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
 
 ---
 
