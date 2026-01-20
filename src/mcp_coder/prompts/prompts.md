@@ -235,3 +235,62 @@ Also list the folders \ modules \ files that should be created or modified by th
 - **ALGORITHM**: 5-6 line pseudocode for core logic (if any)
 - **DATA**: Return values and data structures
 ```
+
+## CI Pipeline Checks
+
+### CI Failure Analysis
+
+This prompt analyzes CI pipeline failures to produce a problem description for fixing.
+Placeholders: `[job_name]`, `[step_name]`, `[other_failed_jobs]`, `[log_excerpt]`
+
+#### CI Failure Analysis Prompt
+```
+Analyze the CI pipeline failure and write a problem description.
+
+**Context:**
+- Failed job: [job_name]
+- Failed step: [step_name]
+- Other failed jobs: [other_failed_jobs]
+- Implementation plan is in `pr_info/steps/`
+
+**CI Log Excerpt:**
+[log_excerpt]
+
+**Your Task:**
+1. Identify the root cause of the failure
+2. Determine which files/code likely need changes
+3. Write a clear problem description to `pr_info/.ci_problem_description.md`
+
+**Output Format:**
+Write a concise problem description (2-5 paragraphs) to the file that includes:
+- What failed and why
+- Which files are likely involved
+- What changes are needed to fix it
+
+Write ONLY the problem description to the file - no code, no markdown headers, just the analysis text.
+```
+
+### CI Fix
+
+This prompt fixes CI issues based on the problem description from analysis.
+Placeholders: `[problem_description]`
+
+#### CI Fix Prompt
+```
+Fix the CI pipeline failure based on the problem description below.
+
+**Problem Description:**
+[problem_description]
+
+**Your Task:**
+1. Read the problem description carefully
+2. Make the necessary code changes to fix the issue
+3. Run quality checks: pylint, pytest, mypy
+4. Fix any issues found by quality checks
+5. Write a commit message to `pr_info/.commit_message.txt`
+
+**Rules:**
+- Make minimal, focused changes
+- Ensure all quality checks pass
+- Do NOT commit - just write the commit message file
+```

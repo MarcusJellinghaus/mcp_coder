@@ -50,15 +50,15 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ### Step 1: Add Constants, Prompts, and .gitignore Entry
 > See: [pr_info/steps/step_1.md](steps/step_1.md)
 
-- [ ] Add CI check constants to `src/mcp_coder/workflows/implement/constants.py`
-- [ ] Add CI Failure Analysis and CI Fix prompts to `src/mcp_coder/prompts/prompts.md`
-- [ ] Update `.gitignore` with `pr_info/.ci_problem_description.md`
-- [ ] Add `get_prompt_with_substitutions()` helper to `prompt_manager.py`
-- [ ] Write tests for `get_prompt_with_substitutions()` in `tests/test_prompt_manager.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 1
+- [x] Add CI check constants to `src/mcp_coder/workflows/implement/constants.py`
+- [x] Add CI Failure Analysis and CI Fix prompts to `src/mcp_coder/prompts/prompts.md`
+- [x] Update `.gitignore` with `pr_info/.ci_problem_description.md`
+- [x] Add `get_prompt_with_substitutions()` helper to `prompt_manager.py`
+- [x] Write tests for `get_prompt_with_substitutions()` in `tests/test_prompt_manager.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 1
 
 ---
 
