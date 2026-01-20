@@ -1,7 +1,9 @@
 """Git commit operations for creating commits."""
 
 import logging
+import subprocess
 from pathlib import Path
+from typing import Optional
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
@@ -145,3 +147,25 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
         error_msg = f"Unexpected error during commit all changes: {e}"
         logger.error(error_msg)
         return {"success": False, "commit_hash": None, "error": error_msg}
+
+
+def get_latest_commit_sha(project_dir: Path) -> Optional[str]:
+    """Get the SHA of the current HEAD commit.
+
+    Args:
+        project_dir: Path to the git repository
+
+    Returns:
+        The full SHA of HEAD, or None if not in a git repository
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return None

@@ -8,7 +8,7 @@ import io
 import logging
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict, cast
 
 import requests
 
@@ -20,9 +20,31 @@ from .base_manager import BaseGitHubManager, _handle_github_errors
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "StepData",
+    "JobData",
     "CIStatusData",
     "CIResultsManager",
 ]
+
+
+class StepData(TypedDict):
+    """TypedDict for workflow job step data."""
+
+    number: int
+    name: str
+    conclusion: Optional[str]  # "success", "failure", "skipped", None
+
+
+class JobData(TypedDict):
+    """TypedDict for workflow job data."""
+
+    id: int
+    name: str
+    status: str
+    conclusion: Optional[str]
+    started_at: Optional[str]
+    completed_at: Optional[str]
+    steps: List[StepData]
 
 
 class CIStatusData(TypedDict):
@@ -34,9 +56,7 @@ class CIStatusData(TypedDict):
     run: Dict[
         str, Any
     ]  # {id, status, conclusion, workflow_name, event, workflow_path, branch, commit_sha, created_at, url}
-    jobs: List[
-        Dict[str, Any]
-    ]  # [{id, name, status, conclusion, started_at, completed_at}]
+    jobs: List[JobData]
 
 
 class CIResultsManager(BaseGitHubManager):
@@ -162,9 +182,9 @@ class CIResultsManager(BaseGitHubManager):
             }
 
             # Transform job data
-            jobs_data = []
+            jobs_data: List[JobData] = []
             for job in jobs:
-                job_data = {
+                job_data: JobData = {
                     "id": job.id,
                     "name": job.name,
                     "status": job.status,
@@ -174,6 +194,17 @@ class CIResultsManager(BaseGitHubManager):
                     ),
                     "completed_at": (
                         job.completed_at.isoformat() if job.completed_at else None
+                    ),
+                    "steps": cast(
+                        List[StepData],
+                        [
+                            {
+                                "number": step.number,
+                                "name": step.name,
+                                "conclusion": step.conclusion,
+                            }
+                            for step in job.steps
+                        ],
                     ),
                 }
                 jobs_data.append(job_data)

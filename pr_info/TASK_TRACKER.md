@@ -20,16 +20,30 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 0: Foundational Enhancements
 > See: [pr_info/steps/step_0.md](steps/step_0.md)
 
-- [ ] Write tests for step-level data in `tests/utils/github_operations/test_ci_results_manager_status.py`
-- [ ] Add `StepData` and `JobData` TypedDicts to `ci_results_manager.py`
-- [ ] Update `CIStatusData` to use `List[JobData]`
-- [ ] Update `get_latest_ci_status()` to include steps in job data
-- [ ] Add `get_latest_commit_sha()` helper to `commits.py`
-- [ ] Write tests for `get_latest_commit_sha()` in `test_commits.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 0
+- [x] Write tests for step-level data in `tests/utils/github_operations/test_ci_results_manager_status.py`
+- [x] Add `StepData` and `JobData` TypedDicts to `ci_results_manager.py`
+- [x] Update `CIStatusData` to use `List[JobData]`
+- [x] Update `get_latest_ci_status()` to include steps in job data
+- [x] Add `get_latest_commit_sha()` helper to `commits.py`
+- [x] Write tests for `get_latest_commit_sha()` in `test_commits.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 0
+
+**Commit Message:**
+```
+feat(ci): add step-level data to CI status and commit SHA helper
+
+- Add StepData and JobData TypedDicts for improved type safety
+- Update CIStatusData.jobs to use List[JobData] instead of List[Dict]
+- Enhance get_latest_ci_status() to include step data for each job
+- Add get_latest_commit_sha() helper for debug logging support
+- Add comprehensive tests for step-level data in CI status
+- Add tests for get_latest_commit_sha() function
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
 
 ---
 
