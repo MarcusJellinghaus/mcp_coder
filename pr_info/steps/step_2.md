@@ -177,7 +177,7 @@ class TestGetFailedJobsSummary:
         """Should construct log filename from job name, step number, and step name.
         
         Note: Uses exact filename matching only (Decision 10). If no match found,
-        log_excerpt will be empty.
+        log_excerpt will be empty and a warning is logged with expected/found filenames (Decision 16).
         """
         jobs = [
             {
@@ -256,10 +256,12 @@ def _get_failed_jobs_summary(
 3. First failed job = failed_jobs[0]
 4. Find first step with conclusion == "failure" in job["steps"]
 5. Construct log filename: f"{job_name}/{step_number}_{step_name}.txt"
+   # Note: GitHub log filename format assumption (Decision 16)
 6. Look up log content from logs dict
-7. Extract log excerpt using _extract_log_excerpt
-8. Other failed jobs = [j["name"] for j in failed_jobs[1:]]
-9. Return result dict
+7. If no match found: log WARNING with expected filename AND available filenames (Decision 16)
+8. Extract log excerpt using _extract_log_excerpt
+9. Other failed jobs = [j["name"] for j in failed_jobs[1:]]
+10. Return result dict
 ```
 
 ### DATA

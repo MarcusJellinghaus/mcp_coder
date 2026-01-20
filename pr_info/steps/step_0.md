@@ -48,28 +48,43 @@ Append to existing test file, using existing mock patterns.
 
 ---
 
-## Part 2: Update CIStatusData TypedDict
+## Part 2: Add TypedDicts for Step and Job Data (Decision 15)
 
 ### WHERE
 `src/mcp_coder/utils/github_operations/ci_results_manager.py`
 
 ### WHAT
-Update the jobs type hint to include steps:
+Add explicit TypedDicts for full type safety:
 
 ```python
+class StepData(TypedDict):
+    """TypedDict for workflow job step data."""
+
+    number: int
+    name: str
+    conclusion: Optional[str]  # "success", "failure", "skipped", None
+
+
+class JobData(TypedDict):
+    """TypedDict for workflow job data."""
+
+    id: int
+    name: str
+    status: str
+    conclusion: Optional[str]
+    started_at: Optional[str]
+    completed_at: Optional[str]
+    steps: List[StepData]
+
+
 class CIStatusData(TypedDict):
     """TypedDict for CI status data structure."""
 
     run: Dict[str, Any]
-    jobs: List[Dict[str, Any]]  # Now includes 'steps' key
+    jobs: List[JobData]
 ```
 
-Add docstring note:
-```python
-# jobs structure:
-# [{id, name, status, conclusion, started_at, completed_at,
-#   steps: [{number, name, conclusion}]}]
-```
+Add `Optional` to imports if not already present.
 
 ---
 

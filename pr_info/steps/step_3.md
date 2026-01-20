@@ -263,7 +263,8 @@ from .constants import (
    - If completed → log CI run commit SHA (for debugging), proceed
    - If no CI run found after timeout → warn, return True
 5. If CI passed → log "CI_PASSED: Pipeline succeeded", return True (see Decision 14)
-6. Fix loop (max 3 attempts):
+6. Store failed run ID for later comparison (Decision 17)
+7. Fix loop (max 3 attempts):
    a. Get failed jobs summary (includes step info, log filename construction, and excerpt)
    b. Load analysis prompt from prompts.md, substitute [placeholders]
    c. Call LLM for analysis → writes to temp file
@@ -273,9 +274,13 @@ from .constants import (
    g. Format code
    h. Commit using 3-level fallback: file → LLM generation → default (see Decision 13)
    i. Push changes (fail fast on git errors → return False)
-   j. Poll for new CI run (get latest, wait for completion)
+   j. Poll for new CI run:
+      - Get latest run on branch
+      - Compare run ID with stored ID (Decision 17)
+      - If same ID after polling → log WARNING "No new CI run triggered", continue to next attempt
+      - If different ID → wait for completion
    k. If CI passes → return True
-7. Max attempts exhausted → return False
+8. Max attempts exhausted → return False
 ```
 
 ### DATA

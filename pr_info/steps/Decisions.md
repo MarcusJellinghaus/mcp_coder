@@ -158,4 +158,39 @@ jobs: [{
 
 ---
 
+## Decision 15: Explicit TypedDicts for Step and Job Data
+
+**Question:** Should step-level data use `Dict[str, Any]` with comments or explicit TypedDicts?
+
+**Decision:** Add explicit `StepData` and `JobData` TypedDicts in `ci_results_manager.py` for full type safety.
+
+**Rationale:** Provides mypy full type checking on step fields. Keeps all CI-related types together.
+
+---
+
+## Decision 16: Log Filename Format Debugging
+
+**Question:** How to handle potential mismatches in GitHub log filename format?
+
+**Decision:** 
+1. Add a code comment documenting the assumed format: `{job_name}/{step_number}_{step_name}.txt`
+2. When no matching log file is found, log a WARNING with both the expected filename AND the available filenames
+
+**Rationale:** Allows debugging format mismatches without adding complexity. Can improve matching later if needed.
+
+---
+
+## Decision 17: Detect New CI Run After Push Using Run ID
+
+**Question:** How to detect if a new CI run was triggered after pushing a fix?
+
+**Decision:** 
+1. Store the failed run's ID before pushing the fix
+2. After push, verify the latest run has a different ID
+3. Log a warning if no new run was triggered (same ID after polling)
+
+**Rationale:** Run IDs are monotonically increasing and simpler to compare than timestamps. Avoids clock skew concerns.
+
+---
+
 

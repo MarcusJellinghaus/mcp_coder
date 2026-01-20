@@ -13,6 +13,7 @@ See `Decisions.md` for full details on architectural decisions made during plan 
 ### New Components
 
 1. **CIResultsManager Enhancement** (`src/mcp_coder/utils/github_operations/ci_results_manager.py`)
+   - Add explicit `StepData` and `JobData` TypedDicts for full type safety (Decision 15)
    - Add step-level data to job info: `steps: [{number, name, conclusion}]`
    - Enables precise identification of failed step and correct log file
 
@@ -109,6 +110,7 @@ Max attempts exhausted → exit 1
 7. **Quality checks in prompt**: LLM runs pylint/pytest/mypy as part of fix prompt (consistent with existing pattern)
 8. **Multiple failures**: Detail first failed job only, mention others by name (keeps prompts focused)
 9. **SHA debug logging**: Log local commit SHA and CI run SHA at INFO level for debugging
-10. **Exact filename matching**: Log filename lookup uses exact match only (Decision 10)
+10. **Exact filename matching**: Log filename lookup uses exact match only, warns with expected/found filenames on mismatch (Decision 10, 16)
 11. **3-level commit fallback**: CI fix commits use file → LLM → default fallback (Decision 13)
 12. **Distinct log prefixes**: Exit 0 scenarios have searchable prefixes (Decision 14)
+13. **Run ID comparison**: After push, compare run IDs to detect if new CI run triggered (Decision 17)
