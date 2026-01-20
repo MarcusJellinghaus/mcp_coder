@@ -362,4 +362,62 @@ return fallback_response
 
 ---
 
+## Decision 29: Refactor _run_ci_analysis_and_fix Return Type
+
+**Question:** The function returns `tuple[bool, bool, str]` with string "true"/"false" encoding - is this idiomatic?
+
+**Decision:** Refactor to `tuple[bool, Optional[bool]]` where:
+- First element: `should_continue` (True to continue to next fix attempt)
+- Second element: `return_value` (None to continue loop, True for success, False for failure)
+
+**Rationale:** Using `Optional[bool]` is more Pythonic than string encoding. Cleaner caller code.
+
+---
+
+## Decision 30: Defensive SHA Handling
+
+**Question:** What if `commit_sha` is explicitly `None` rather than missing from the dict?
+
+**Decision:** Use `or "unknown"` pattern instead of default parameter:
+```python
+# BEFORE:
+run_sha = ci_status.get("run", {}).get("commit_sha", "unknown")
+
+# AFTER:
+run_sha = ci_status.get("run", {}).get("commit_sha") or "unknown"
+```
+
+**Rationale:** The `or` pattern handles both missing keys AND explicit `None` values, preventing `TypeError` on `None[:7]`.
+
+---
+
+## Decision 31: Create _short_sha() Helper Function
+
+**Question:** Should the duplicate `sha[:7]` pattern be consolidated?
+
+**Decision:** Create a helper function:
+```python
+def _short_sha(sha: str) -> str:
+    """Return first 7 characters of SHA for display."""
+    if not sha or sha == "unknown":
+        return "unknown"
+    return sha[:7]
+```
+
+**Rationale:** Centralizes the logic, makes it easier to change (e.g., if we want 8 chars later), and provides a single point for defensive handling.
+
+---
+
+## Decision 32: Standardize Type Annotations to Python 3.9+ Style
+
+**Question:** The code mixes `List[X]` (typing module) with `list[X]` (Python 3.9+ style) - which to use?
+
+**Decision:** Standardize to Python 3.9+ style throughout the CI check code:
+- Use lowercase `list`, `dict`, `tuple` instead of `List`, `Dict`, `Tuple`
+- Remove unnecessary imports from `typing` module
+
+**Rationale:** More modern, cleaner syntax. The project requires Python 3.11+ so this is safe.
+
+---
+
 

@@ -185,6 +185,36 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ---
 
+### Step 6: Code Quality Improvements
+> See: [pr_info/steps/step_6.md](steps/step_6.md)
+
+- [ ] Refactor `_run_ci_analysis_and_fix` return type to `tuple[bool, Optional[bool]]`
+- [ ] Update caller code in `check_and_fix_ci()` to handle new return type
+- [ ] Update docstring for `_run_ci_analysis_and_fix`
+- [ ] Fix defensive SHA handling with `or "unknown"` pattern (4 locations)
+- [ ] Create `_short_sha()` helper function
+- [ ] Replace all `sha[:7]` with `_short_sha(sha)` (7 locations)
+- [ ] Standardize type annotations to Python 3.9+ style
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and fix any failing tests
+- [ ] Run mypy and fix any type errors
+- [ ] Prepare git commit message for Step 6
+
+**Commit Message:**
+```
+refactor(ci): improve code quality in CI check implementation
+
+- Refactor _run_ci_analysis_and_fix return type to tuple[bool, Optional[bool]]
+- Replace string "true"/"false" encoding with Optional[bool] semantics
+- Add _short_sha() helper to consolidate SHA truncation pattern
+- Fix defensive SHA handling with `or "unknown"` for None values
+- Standardize type annotations to Python 3.9+ style (lowercase list, dict)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+---
+
 ## Pull Request
 
 - [ ] Review all implementation steps are complete

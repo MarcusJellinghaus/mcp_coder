@@ -147,3 +147,16 @@ After code review, the following refinements were identified (Decisions 23-28):
 - `_run_ci_analysis()` - Extracted helper for LLM analysis phase
 - `_run_ci_fix()` - Extracted helper for LLM fix phase
 - Tests for `_read_problem_description` edge cases
+
+## Code Quality Improvements (Step 6)
+
+After implementation review discussion, the following code quality improvements were identified (Decisions 29-32):
+
+1. **Refactor return type**: Change `_run_ci_analysis_and_fix` from `tuple[bool, bool, str]` to `tuple[bool, Optional[bool]]` for cleaner semantics (Decision 29)
+2. **Defensive SHA handling**: Use `or "unknown"` pattern to handle both missing keys and explicit `None` values (Decision 30)
+3. **Create `_short_sha()` helper**: Consolidate duplicate `sha[:7]` pattern into a single helper function (Decision 31)
+4. **Standardize type annotations**: Use Python 3.9+ style (lowercase `list`, `dict`, `tuple`) throughout (Decision 32)
+
+### New Components (Step 6)
+
+- `_short_sha()` - Helper function for consistent SHA truncation to 7 characters
