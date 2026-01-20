@@ -4,6 +4,8 @@
 
 Implement two helper functions for CI log processing. Follow TDD: write tests first, then implement.
 
+**Prerequisites:** Step 0 must be complete (CIResultsManager has step-level data).
+
 ## LLM Prompt for This Step
 
 ```
@@ -81,27 +83,49 @@ class TestExtractLogExcerpt:
 class TestGetFailedJobsSummary:
     """Tests for _get_failed_jobs_summary function."""
 
-    def test_single_failed_job_returns_details(self):
-        """Single failed job should return its name and log."""
+    def test_single_failed_job_returns_details_with_step_info(self):
+        """Single failed job should return its name, step info, and log."""
         jobs = [
-            {"name": "build", "conclusion": "success"},
-            {"name": "test", "conclusion": "failure"},
+            {"name": "build", "conclusion": "success", "steps": []},
+            {
+                "name": "test",
+                "conclusion": "failure",
+                "steps": [
+                    {"number": 1, "name": "Set up job", "conclusion": "success"},
+                    {"number": 2, "name": "Checkout", "conclusion": "success"},
+                    {"number": 3, "name": "Run tests", "conclusion": "failure"},
+                ],
+            },
         ]
-        logs = {"test/1_Run tests.txt": "Error: test failed\nAssertionError"}
+        logs = {"test/3_Run tests.txt": "Error: test failed\nAssertionError"}
         from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
         
-        job_name, log_excerpt, other_jobs = _get_failed_jobs_summary(jobs, logs)
+        result = _get_failed_jobs_summary(jobs, logs)
         
-        assert job_name == "test"
-        assert "Error: test failed" in log_excerpt
-        assert other_jobs == []
+        assert result["job_name"] == "test"
+        assert result["step_name"] == "Run tests"
+        assert result["step_number"] == 3
+        assert "Error: test failed" in result["log_excerpt"]
+        assert result["other_failed_jobs"] == []
 
     def test_multiple_failed_jobs_returns_first_with_others_listed(self):
         """Multiple failed jobs should detail first, list others."""
         jobs = [
-            {"name": "lint", "conclusion": "failure"},
-            {"name": "test", "conclusion": "failure"},
-            {"name": "build", "conclusion": "failure"},
+            {
+                "name": "lint",
+                "conclusion": "failure",
+                "steps": [{"number": 1, "name": "Run lint", "conclusion": "failure"}],
+            },
+            {
+                "name": "test",
+                "conclusion": "failure",
+                "steps": [{"number": 1, "name": "Run tests", "conclusion": "failure"}],
+            },
+            {
+                "name": "build",
+                "conclusion": "failure",
+                "steps": [{"number": 1, "name": "Build", "conclusion": "failure"}],
+            },
         ]
         logs = {
             "lint/1_Run lint.txt": "Lint error",
@@ -110,40 +134,68 @@ class TestGetFailedJobsSummary:
         }
         from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
         
-        job_name, log_excerpt, other_jobs = _get_failed_jobs_summary(jobs, logs)
+        result = _get_failed_jobs_summary(jobs, logs)
         
-        assert job_name == "lint"  # First failed job
-        assert "Lint error" in log_excerpt
-        assert "test" in other_jobs
-        assert "build" in other_jobs
-        assert len(other_jobs) == 2
+        assert result["job_name"] == "lint"  # First failed job
+        assert "Lint error" in result["log_excerpt"]
+        assert "test" in result["other_failed_jobs"]
+        assert "build" in result["other_failed_jobs"]
+        assert len(result["other_failed_jobs"]) == 2
 
     def test_no_failed_jobs_returns_empty(self):
         """No failed jobs should return empty values."""
         jobs = [
-            {"name": "build", "conclusion": "success"},
-            {"name": "test", "conclusion": "success"},
+            {"name": "build", "conclusion": "success", "steps": []},
+            {"name": "test", "conclusion": "success", "steps": []},
         ]
         logs = {}
         from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
         
-        job_name, log_excerpt, other_jobs = _get_failed_jobs_summary(jobs, logs)
+        result = _get_failed_jobs_summary(jobs, logs)
         
-        assert job_name == ""
-        assert log_excerpt == ""
-        assert other_jobs == []
+        assert result["job_name"] == ""
+        assert result["step_name"] == ""
+        assert result["log_excerpt"] == ""
+        assert result["other_failed_jobs"] == []
 
     def test_failed_job_with_no_matching_log(self):
-        """Failed job without matching log should return job name but empty excerpt."""
-        jobs = [{"name": "test", "conclusion": "failure"}]
+        """Failed job without matching log should return job/step info but empty excerpt."""
+        jobs = [
+            {
+                "name": "test",
+                "conclusion": "failure",
+                "steps": [{"number": 1, "name": "Run tests", "conclusion": "failure"}],
+            }
+        ]
         logs = {}  # No logs available
         from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
         
-        job_name, log_excerpt, other_jobs = _get_failed_jobs_summary(jobs, logs)
+        result = _get_failed_jobs_summary(jobs, logs)
         
-        assert job_name == "test"
-        assert log_excerpt == ""
-        assert other_jobs == []
+        assert result["job_name"] == "test"
+        assert result["step_name"] == "Run tests"
+        assert result["log_excerpt"] == ""
+        assert result["other_failed_jobs"] == []
+
+    def test_constructs_correct_log_filename(self):
+        """Should construct log filename from job name, step number, and step name."""
+        jobs = [
+            {
+                "name": "test",
+                "conclusion": "failure",
+                "steps": [
+                    {"number": 1, "name": "Set up job", "conclusion": "success"},
+                    {"number": 2, "name": "Run tests", "conclusion": "failure"},
+                ],
+            }
+        ]
+        # Log filename format: {job_name}/{step_number}_{step_name}.txt
+        logs = {"test/2_Run tests.txt": "Test failure output"}
+        from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
+        
+        result = _get_failed_jobs_summary(jobs, logs)
+        
+        assert "Test failure output" in result["log_excerpt"]
 ```
 
 ### HOW
@@ -175,15 +227,15 @@ def _extract_log_excerpt(log: str, max_lines: int = 200) -> str:
 
 def _get_failed_jobs_summary(
     jobs: list[dict], logs: dict[str, str]
-) -> tuple[str, str, list[str]]:
+) -> dict[str, Any]:
     """Get summary of failed jobs from CI status.
     
     Args:
-        jobs: List of job dicts with 'name' and 'conclusion' keys
+        jobs: List of job dicts with 'name', 'conclusion', and 'steps' keys
         logs: Dict mapping log filenames to content
     
     Returns:
-        Tuple of (first_failed_job_name, log_excerpt, other_failed_job_names)
+        Dict with keys: job_name, step_name, step_number, log_excerpt, other_failed_jobs
     """
     pass  # Implement based on tests
 ```
@@ -201,12 +253,14 @@ def _get_failed_jobs_summary(
 ### ALGORITHM for _get_failed_jobs_summary
 ```
 1. Filter jobs where conclusion == "failure"
-2. If no failed jobs: return ("", "", [])
-3. First failed job = failed_jobs[0]["name"]
-4. Find matching log (job name appears in log filename)
-5. Extract log excerpt using _extract_log_excerpt
-6. Other failed jobs = [j["name"] for j in failed_jobs[1:]]
-7. Return (first_job_name, excerpt, other_jobs)
+2. If no failed jobs: return empty result dict
+3. First failed job = failed_jobs[0]
+4. Find first step with conclusion == "failure" in job["steps"]
+5. Construct log filename: f"{job_name}/{step_number}_{step_name}.txt"
+6. Look up log content from logs dict
+7. Extract log excerpt using _extract_log_excerpt
+8. Other failed jobs = [j["name"] for j in failed_jobs[1:]]
+9. Return result dict
 ```
 
 ### DATA
@@ -216,8 +270,17 @@ def _get_failed_jobs_summary(
 - Output: `str` (possibly truncated log)
 
 **_get_failed_jobs_summary:**
-- Input: `list[dict]` (jobs from CIStatusData), `dict[str, str]` (logs)
-- Output: `tuple[str, str, list[str]]` (job_name, log_excerpt, other_job_names)
+- Input: `list[dict]` (jobs from CIStatusData with steps), `dict[str, str]` (logs)
+- Output: `dict` with structure:
+  ```python
+  {
+      "job_name": str,
+      "step_name": str,
+      "step_number": int,
+      "log_excerpt": str,
+      "other_failed_jobs": list[str],
+  }
+  ```
 
 ---
 

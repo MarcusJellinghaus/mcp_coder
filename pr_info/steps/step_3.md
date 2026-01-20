@@ -4,6 +4,11 @@
 
 Implement the main `check_and_fix_ci()` function that orchestrates CI polling, failure analysis, and auto-fix attempts. Follow TDD: write tests first, then implement.
 
+**Key design decisions:**
+- No SHA validation - poll for any completed CI run on branch
+- Two-phase LLM: analysis writes to temp file, Python reads/deletes/logs it, then fix LLM receives content in prompt
+- Quality checks run by LLM in fix prompt (consistent with existing pattern)
+
 ## LLM Prompt for This Step
 
 ```
@@ -44,14 +49,13 @@ class TestCheckAndFixCI:
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
         mock_manager.get_latest_ci_status.return_value = {
-            "run": {"status": "completed", "conclusion": "success", "commit_sha": "abc123"},
-            "jobs": [{"name": "test", "conclusion": "success"}],
+            "run": {"status": "completed", "conclusion": "success"},
+            "jobs": [{"name": "test", "conclusion": "success", "steps": []}],
         }
         
         result = check_and_fix_ci(
             project_dir=Path("/fake/path"),
             branch="feature-branch",
-            expected_sha="abc123",
             provider="claude",
             method="api",
         )
@@ -73,35 +77,11 @@ class TestCheckAndFixCI:
         result = check_and_fix_ci(
             project_dir=Path("/fake/path"),
             branch="feature-branch",
-            expected_sha="abc123",
             provider="claude",
             method="api",
         )
         
         assert result is True  # Graceful exit
-
-    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.time.sleep")
-    def test_sha_mismatch_warns_and_returns_true(self, mock_sleep, mock_ci_manager):
-        """When CI run SHA doesn't match expected, should warn and return True."""
-        from mcp_coder.workflows.implement.core import check_and_fix_ci
-        
-        mock_manager = MagicMock()
-        mock_ci_manager.return_value = mock_manager
-        mock_manager.get_latest_ci_status.return_value = {
-            "run": {"status": "completed", "conclusion": "success", "commit_sha": "different_sha"},
-            "jobs": [],
-        }
-        
-        result = check_and_fix_ci(
-            project_dir=Path("/fake/path"),
-            branch="feature-branch",
-            expected_sha="abc123",
-            provider="claude",
-            method="api",
-        )
-        
-        assert result is True  # Continue despite mismatch
 
     @patch("mcp_coder.workflows.implement.core.CIResultsManager")
     @patch("mcp_coder.workflows.implement.core.ask_llm")
@@ -121,15 +101,19 @@ class TestCheckAndFixCI:
         # First call: CI failed, Second call: CI passed
         mock_manager.get_latest_ci_status.side_effect = [
             {
-                "run": {"id": 1, "status": "completed", "conclusion": "failure", "commit_sha": "abc123"},
-                "jobs": [{"name": "test", "conclusion": "failure"}],
+                "run": {"id": 1, "status": "completed", "conclusion": "failure"},
+                "jobs": [{
+                    "name": "test",
+                    "conclusion": "failure",
+                    "steps": [{"number": 1, "name": "Run tests", "conclusion": "failure"}],
+                }],
             },
             {
-                "run": {"id": 2, "status": "completed", "conclusion": "success", "commit_sha": "def456"},
-                "jobs": [{"name": "test", "conclusion": "success"}],
+                "run": {"id": 2, "status": "completed", "conclusion": "success"},
+                "jobs": [{"name": "test", "conclusion": "success", "steps": []}],
             },
         ]
-        mock_manager.get_run_logs.return_value = {"test/1_Run.txt": "Error: test failed"}
+        mock_manager.get_run_logs.return_value = {"test/1_Run tests.txt": "Error: test failed"}
         
         mock_llm.return_value = "Analysis complete"
         mock_format.return_value = True
@@ -139,7 +123,6 @@ class TestCheckAndFixCI:
         result = check_and_fix_ci(
             project_dir=Path("/fake/path"),
             branch="feature-branch",
-            expected_sha="abc123",
             provider="claude",
             method="api",
         )
@@ -163,10 +146,14 @@ class TestCheckAndFixCI:
         
         # Always return failed CI
         mock_manager.get_latest_ci_status.return_value = {
-            "run": {"id": 1, "status": "completed", "conclusion": "failure", "commit_sha": "abc123"},
-            "jobs": [{"name": "test", "conclusion": "failure"}],
+            "run": {"id": 1, "status": "completed", "conclusion": "failure"},
+            "jobs": [{
+                "name": "test",
+                "conclusion": "failure",
+                "steps": [{"number": 1, "name": "Run tests", "conclusion": "failure"}],
+            }],
         }
-        mock_manager.get_run_logs.return_value = {"test/1_Run.txt": "Error"}
+        mock_manager.get_run_logs.return_value = {"test/1_Run tests.txt": "Error"}
         
         mock_llm.return_value = "Analysis/fix response"
         mock_format.return_value = True
@@ -176,7 +163,6 @@ class TestCheckAndFixCI:
         result = check_and_fix_ci(
             project_dir=Path("/fake/path"),
             branch="feature-branch",
-            expected_sha="abc123",
             provider="claude",
             method="api",
         )
@@ -195,12 +181,24 @@ class TestCheckAndFixCI:
         result = check_and_fix_ci(
             project_dir=Path("/fake/path"),
             branch="feature-branch",
-            expected_sha="abc123",
             provider="claude",
             method="api",
         )
         
         assert result is True  # Graceful handling
+
+    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
+    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.time.sleep")
+    def test_analysis_writes_to_temp_file_then_deleted(
+        self, mock_sleep, mock_llm, mock_ci_manager, tmp_path
+    ):
+        """Analysis should write to temp file, which is then read, logged, and deleted."""
+        # This test verifies the two-phase LLM flow:
+        # 1. Analysis LLM writes to temp file
+        # 2. Python reads temp file, deletes it, logs content
+        # 3. Fix LLM receives content in prompt
+        pass  # Implementation details in test
 ```
 
 ### HOW
@@ -220,7 +218,6 @@ Add the main `check_and_fix_ci()` function:
 def check_and_fix_ci(
     project_dir: Path,
     branch: str,
-    expected_sha: str,
     provider: str,
     method: str,
     mcp_config: Optional[str] = None,
@@ -231,7 +228,6 @@ def check_and_fix_ci(
     Args:
         project_dir: Path to the project directory
         branch: Branch name to check CI for
-        expected_sha: Expected commit SHA (from latest push)
         provider: LLM provider (e.g., 'claude')
         method: LLM method (e.g., 'api')
         mcp_config: Optional path to MCP configuration file
@@ -250,6 +246,7 @@ Add imports at top of file:
 ```python
 import time
 from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
+from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
 ```
 
 Add import for constants:
@@ -260,30 +257,33 @@ from .constants import (
     CI_MAX_POLL_ATTEMPTS,
     CI_POLL_INTERVAL_SECONDS,
     LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
+    LLM_CI_FIX_TIMEOUT_SECONDS,
 )
 ```
 
 ### ALGORITHM
 ```
 1. Initialize CIResultsManager
-2. Try to get CI status (handle API errors gracefully → return True)
-3. Poll loop: wait for CI completion (max 50 attempts, 15s interval)
+2. Get and log latest local commit SHA (for debugging)
+3. Try to get CI status (handle API errors gracefully → return True)
+4. Poll loop: wait for CI completion (max 50 attempts, 15s interval)
+   - Log CI run commit SHA when found (for debugging)
    - If no CI run found after timeout → warn, return True
-   - If SHA mismatch → warn, continue with available data
-4. If CI passed → log "CI passed ✓", return True
-5. Fix loop (max 3 attempts):
-   a. Get failed jobs summary
-   b. Get logs for failed job
-   c. Delete temp file (clean slate)
-   d. Call LLM for analysis → write to temp file + log to console
-   e. Call LLM for fix
-   f. Run local checks (use existing mcp_code_checker functions)
-   g. Format code
-   h. Commit and push
-   i. Delete temp file (cleanup)
-   j. Poll for new CI run
-   k. If CI passes → return True
-6. Max attempts exhausted → return False
+5. If CI passed → log "CI passed ✓", return True
+6. Fix loop (max 3 attempts):
+   a. Get failed jobs summary (includes step info from Step 0)
+   b. Construct log filename: f"{job_name}/{step_number}_{step_name}.txt"
+   c. Get logs for failed job from CIResultsManager
+   d. Load analysis prompt from prompts.md, substitute placeholders
+   e. Call LLM for analysis → writes to temp file
+   f. Read temp file content, delete file, log content to console
+   g. Load fix prompt from prompts.md, substitute {problem_description}
+   h. Call LLM for fix (LLM runs quality checks as part of prompt)
+   i. Format code
+   j. Commit and push
+   k. Poll for new CI run (any completed run on branch)
+   l. If CI passes → return True
+7. Max attempts exhausted → return False
 ```
 
 ### DATA

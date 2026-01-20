@@ -4,6 +4,8 @@
 
 Integrate the `check_and_fix_ci()` function into the main `run_implement_workflow()` function, calling it after finalisation.
 
+**Note:** Integration tests are simplified to only verify `check_and_fix_ci()` is called with correct parameters (see Decision 6 in Decisions.md).
+
 ## LLM Prompt for This Step
 
 ```
@@ -17,17 +19,21 @@ Add the integration call and update tests to verify the integration.
 
 ---
 
-## Part 1: Add Integration Test
+## Part 1: Add Simplified Integration Test
 
 ### WHERE
 `tests/workflows/implement/test_ci_check.py` (append to existing file)
 
 ### WHAT
-Add integration test:
+Add simplified integration tests that only verify `check_and_fix_ci()` is called with correct parameters:
 
 ```python
 class TestWorkflowIntegration:
-    """Tests for CI check integration in run_implement_workflow."""
+    """Simplified tests for CI check integration in run_implement_workflow.
+    
+    These tests only verify that check_and_fix_ci() is called with correct parameters.
+    The function's behavior is tested in its own unit tests (TestCheckAndFixCI).
+    """
 
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
@@ -38,10 +44,8 @@ class TestWorkflowIntegration:
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.implement.core.get_latest_commit_sha")
-    def test_ci_check_called_after_finalisation(
+    def test_ci_check_called_with_correct_parameters(
         self,
-        mock_get_sha,
         mock_get_branch,
         mock_rebase,
         mock_git_clean,
@@ -52,7 +56,7 @@ class TestWorkflowIntegration:
         mock_finalise,
         mock_ci_check,
     ):
-        """CI check should be called after successful finalisation."""
+        """CI check should be called with branch name and provider/method."""
         from mcp_coder.workflows.implement.core import run_implement_workflow
         
         # Setup mocks for successful workflow
@@ -61,65 +65,23 @@ class TestWorkflowIntegration:
         mock_prereqs.return_value = True
         mock_rebase.return_value = True
         mock_prepare.return_value = True
-        mock_process.return_value = (False, "no_tasks")  # No tasks to process
-        mock_finalise.return_value = True
-        mock_get_branch.return_value = "feature-branch"
-        mock_get_sha.return_value = "abc123"
-        mock_ci_check.return_value = True
-        
-        result = run_implement_workflow(
-            project_dir=Path("/fake/path"),
-            provider="claude",
-            method="api",
-        )
-        
-        assert result == 0
-        mock_ci_check.assert_called_once()
-
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
-    @patch("mcp_coder.workflows.implement.core.run_finalisation")
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.implement.core.get_latest_commit_sha")
-    def test_ci_check_failure_returns_exit_code_1(
-        self,
-        mock_get_sha,
-        mock_get_branch,
-        mock_rebase,
-        mock_git_clean,
-        mock_main_branch,
-        mock_prereqs,
-        mock_prepare,
-        mock_process,
-        mock_finalise,
-        mock_ci_check,
-    ):
-        """When CI check returns False, workflow should return exit code 1."""
-        from mcp_coder.workflows.implement.core import run_implement_workflow
-        
-        mock_git_clean.return_value = True
-        mock_main_branch.return_value = True
-        mock_prereqs.return_value = True
-        mock_rebase.return_value = True
-        mock_prepare.return_value = True
         mock_process.return_value = (False, "no_tasks")
         mock_finalise.return_value = True
         mock_get_branch.return_value = "feature-branch"
-        mock_get_sha.return_value = "abc123"
-        mock_ci_check.return_value = False  # CI check failed
+        mock_ci_check.return_value = True
         
-        result = run_implement_workflow(
+        run_implement_workflow(
             project_dir=Path("/fake/path"),
             provider="claude",
             method="api",
         )
         
-        assert result == 1  # Should fail
+        # Verify check_and_fix_ci was called with expected parameters
+        mock_ci_check.assert_called_once()
+        call_kwargs = mock_ci_check.call_args.kwargs
+        assert call_kwargs["branch"] == "feature-branch"
+        assert call_kwargs["provider"] == "claude"
+        assert call_kwargs["method"] == "api"
 
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
@@ -157,7 +119,7 @@ class TestWorkflowIntegration:
         )
         
         assert result == 1
-        mock_ci_check.assert_not_called()  # Should not be called on error
+        mock_ci_check.assert_not_called()
 ```
 
 ### HOW
@@ -175,25 +137,18 @@ Add CI check call in `run_implement_workflow()` after finalisation (Step 5.5).
 
 ### HOW
 
-1. Add import at top of file:
-```python
-from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
-```
-
-2. Add CI check after finalisation (after Step 5.5, before Step 6):
+1. Add CI check after finalisation (after Step 5.5, before Step 6):
 
 ```python
     # Step 6: Check CI pipeline and auto-fix if needed
     if not error_occurred:
         logger.info("Checking CI pipeline status...")
         current_branch = get_current_branch_name(project_dir)
-        expected_sha = get_latest_commit_sha(project_dir)
         
-        if current_branch and expected_sha:
+        if current_branch:
             ci_success = check_and_fix_ci(
                 project_dir=project_dir,
                 branch=current_branch,
-                expected_sha=expected_sha,
                 provider=provider,
                 method=method,
                 mcp_config=mcp_config,
@@ -201,31 +156,28 @@ from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
             )
             if not ci_success:
                 logger.error("CI check failed after maximum fix attempts")
-                # TODO: Update to failed status label when #272 is implemented
                 return 1
         else:
-            logger.warning("Could not determine branch or SHA for CI check - skipping")
+            logger.warning("Could not determine branch for CI check - skipping")
 ```
 
-3. Update Step 6 comment to Step 7 (renumber existing step).
+2. Update Step 6 comment to Step 7 (renumber existing step).
 
 ### ALGORITHM
 ```
 1. Check if error_occurred is False
 2. Get current branch name
-3. Get latest commit SHA
-4. If both available:
+3. If branch available:
    a. Call check_and_fix_ci()
    b. If returns False → log error, return 1
-5. If branch/SHA unavailable → warn, continue
-6. Continue to progress summary
+4. If branch unavailable → warn, continue
+5. Continue to progress summary
 ```
 
 ### DATA
 
 No new data structures. Uses existing:
 - `get_current_branch_name()` → str
-- `get_latest_commit_sha()` → str
 - `check_and_fix_ci()` → bool
 
 ---

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add the foundational configuration: CI-related constants, LLM prompts for analysis and fixing, and update .gitignore for the temporary problem description file.
+Add the foundational configuration: CI-related constants, LLM prompts for analysis and fixing (with placeholders for runtime substitution), and update .gitignore for the temporary problem description file.
 
 ## LLM Prompt for This Step
 
@@ -23,11 +23,12 @@ No tests required for this step - it's configuration only.
 `src/mcp_coder/workflows/implement/constants.py`
 
 ### WHAT
-Add 4 new constants at the end of the file:
+Add 5 new constants at the end of the file:
 
 ```python
 # CI check constants
 LLM_CI_ANALYSIS_TIMEOUT_SECONDS = 300  # 5 minutes for CI failure analysis
+LLM_CI_FIX_TIMEOUT_SECONDS = 600  # 10 minutes for CI fix (includes quality checks)
 CI_POLL_INTERVAL_SECONDS = 15  # Poll CI status every 15 seconds
 CI_MAX_POLL_ATTEMPTS = 50  # Max 50 attempts = 12.5 minutes max wait
 CI_MAX_FIX_ATTEMPTS = 3  # Max 3 fix attempts before giving up
@@ -47,39 +48,43 @@ Constants are integers used by the CI check function in core.py.
 `src/mcp_coder/prompts/prompts.md`
 
 ### WHAT
-Add two new prompts at the end of the file:
+Add two new prompts at the end of the file. Use `{placeholder}` syntax for runtime substitution with `.format()` or `.replace()`.
 
 #### CI Failure Analysis Prompt
 
 ```markdown
+## CI Pipeline Checks
+
 ### CI Failure Analysis
 
 This prompt analyzes CI pipeline failures to produce a problem description for fixing.
+Placeholders: `{job_name}`, `{other_failed_jobs}`, `{log_excerpt}`
 
 #### CI Failure Analysis Prompt
 \`\`\`
 Analyze the CI pipeline failure and write a problem description.
 
 **Context:**
-- Failed job: [job_name]
-- Other failed jobs: [other_failed_jobs]
+- Failed job: {job_name}
+- Failed step: {step_name}
+- Other failed jobs: {other_failed_jobs}
 - Implementation plan is in `pr_info/steps/`
 
 **CI Log Excerpt:**
-[log_excerpt]
+{log_excerpt}
 
 **Your Task:**
 1. Identify the root cause of the failure
 2. Determine which files/code likely need changes
-3. Write a clear problem description
+3. Write a clear problem description to `pr_info/.ci_problem_description.md`
 
 **Output Format:**
-Write a concise problem description (2-5 paragraphs) that includes:
+Write a concise problem description (2-5 paragraphs) to the file that includes:
 - What failed and why
 - Which files are likely involved
 - What changes are needed to fix it
 
-Write ONLY the problem description - no code, no markdown headers, just the analysis text.
+Write ONLY the problem description to the file - no code, no markdown headers, just the analysis text.
 \`\`\`
 ```
 
@@ -89,13 +94,14 @@ Write ONLY the problem description - no code, no markdown headers, just the anal
 ### CI Fix
 
 This prompt fixes CI issues based on the problem description from analysis.
+Placeholders: `{problem_description}`
 
 #### CI Fix Prompt
 \`\`\`
 Fix the CI pipeline failure based on the problem description below.
 
 **Problem Description:**
-[problem_description]
+{problem_description}
 
 **Your Task:**
 1. Read the problem description carefully
@@ -119,8 +125,8 @@ Append to the end of prompts.md, following the existing format with `###` header
 1. Open prompts.md
 2. Scroll to end of file
 3. Add "## CI Pipeline Checks" section header
-4. Add "CI Failure Analysis Prompt" with template
-5. Add "CI Fix Prompt" with template
+4. Add "CI Failure Analysis Prompt" with template and placeholders
+5. Add "CI Fix Prompt" with template and placeholder
 ```
 
 ---
