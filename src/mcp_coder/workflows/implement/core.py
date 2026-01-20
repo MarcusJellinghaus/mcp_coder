@@ -97,6 +97,20 @@ class CIFixConfig:
     mcp_config: Optional[str]
 
 
+def _short_sha(sha: str) -> str:
+    """Return first 7 characters of SHA for display.
+
+    Args:
+        sha: Full SHA string or "unknown"
+
+    Returns:
+        First 7 characters of SHA, or "unknown" if input is empty/unknown
+    """
+    if not sha or sha == "unknown":
+        return "unknown"
+    return sha[:7]
+
+
 def _extract_log_excerpt(log: str, max_lines: int = 200) -> str:
     """Extract log excerpt: first 30 + last 170 lines if log exceeds max_lines.
 
@@ -382,14 +396,16 @@ def _poll_for_ci_completion(
 
         if run_status == "completed":
             run_id = run_info.get("id")
-            run_sha = run_info.get("commit_sha", "unknown")
-            logger.debug(f"CI run {run_id} completed (sha: {run_sha[:7]})")
+            run_sha = run_info.get("commit_sha") or "unknown"
+            logger.debug(f"CI run {run_id} completed (sha: {_short_sha(run_sha)})")
 
             if run_conclusion == "success":
-                logger.info(f"CI_PASSED: Pipeline succeeded (sha: {run_sha[:7]})")
+                logger.info(
+                    f"CI_PASSED: Pipeline succeeded (sha: {_short_sha(run_sha)})"
+                )
                 return ci_status, True
             logger.info(
-                f"CI run completed with conclusion: {run_conclusion} (sha: {run_sha[:7]})"
+                f"CI run completed with conclusion: {run_conclusion} (sha: {_short_sha(run_sha)})"
             )
             return ci_status, False  # Needs fixing
 
@@ -429,8 +445,10 @@ def _wait_for_new_ci_run(
         new_run_id = new_status.get("run", {}).get("id")
 
         if new_run_id and new_run_id != previous_run_id:
-            new_sha = new_status.get("run", {}).get("commit_sha", "unknown")
-            logger.info(f"New CI run detected: {new_run_id} (sha: {new_sha[:7]})")
+            new_sha = new_status.get("run", {}).get("commit_sha") or "unknown"
+            logger.info(
+                f"New CI run detected: {new_run_id} (sha: {_short_sha(new_sha)})"
+            )
             return new_status, True
 
         logger.debug(
@@ -446,7 +464,7 @@ def _run_ci_analysis_and_fix(
     ci_status: CIStatusData,
     ci_manager: CIResultsManager,
     fix_attempt: int,
-) -> tuple[bool, bool, str]:
+) -> tuple[bool, Optional[bool]]:
     """Run CI failure analysis and attempt a fix.
 
     Args:
@@ -456,10 +474,9 @@ def _run_ci_analysis_and_fix(
         fix_attempt: Current fix attempt number (0-indexed)
 
     Returns:
-        Tuple of (should_continue, should_return, return_value_if_returning)
+        Tuple of (should_continue, return_value):
         - should_continue: True if should continue to next fix attempt
-        - should_return: True if function should return immediately
-        - return_value_if_returning: "true"/"false" if returning, empty if continuing
+        - return_value: None to continue loop, True for success (exit 0), False for failure (exit 1)
     """
     jobs = ci_status.get("jobs", [])
     run_id = ci_status.get("run", {}).get("id")
@@ -474,7 +491,7 @@ def _run_ci_analysis_and_fix(
 
     if not failed_summary["job_name"]:
         logger.warning("No failed jobs found in CI status")
-        return False, True, "true"  # Graceful exit
+        return False, True  # Graceful exit (success)
 
     # Run analysis phase
     problem_description = _run_ci_analysis(config, failed_summary, fix_attempt)
@@ -483,8 +500,8 @@ def _run_ci_analysis_and_fix(
         # Analysis failed - retry on first attempt, graceful exit otherwise
         if fix_attempt == 0:
             logger.info("Retrying analysis...")
-            return True, False, ""  # Continue to next attempt
-        return False, True, "true"  # Graceful exit
+            return True, None  # Continue to next attempt
+        return False, True  # Graceful exit (success)
 
     # Run fix phase
     fix_succeeded = _run_ci_fix(config, problem_description, fix_attempt)
@@ -493,9 +510,9 @@ def _run_ci_analysis_and_fix(
         # Check if it was a git push failure (fail fast) vs other failure (retry)
         # We can detect this by checking if push_changes logged an error
         # For now, continue to next attempt for non-push failures
-        return True, False, ""  # Continue to next attempt
+        return True, None  # Continue to next attempt
 
-    return False, False, ""  # Successfully pushed, proceed to wait for new run
+    return False, None  # Successfully pushed, proceed to wait for new run
 
 
 def _read_problem_description(temp_file: Path, fallback_response: str) -> str:
@@ -551,7 +568,7 @@ def check_and_fix_ci(
     try:
         local_sha = get_latest_commit_sha(project_dir)
         if local_sha:
-            logger.debug(f"Latest local commit SHA: {local_sha[:7]}")
+            logger.debug(f"Latest local commit SHA: {_short_sha(local_sha)}")
     except Exception as e:
         logger.debug(f"Could not get local commit SHA: {e}")
 
@@ -588,20 +605,20 @@ def check_and_fix_ci(
     )
 
     for fix_attempt in range(CI_MAX_FIX_ATTEMPTS):
-        run_sha = ci_status.get("run", {}).get("commit_sha", "unknown")
+        run_sha = ci_status.get("run", {}).get("commit_sha") or "unknown"
         logger.info(
-            f"CI fix attempt {fix_attempt + 1}/{CI_MAX_FIX_ATTEMPTS} (sha: {run_sha[:7]})"
+            f"CI fix attempt {fix_attempt + 1}/{CI_MAX_FIX_ATTEMPTS} (sha: {_short_sha(run_sha)})"
         )
 
-        should_continue, should_return, return_value = _run_ci_analysis_and_fix(
+        should_continue, return_value = _run_ci_analysis_and_fix(
             config,
             ci_status,
             ci_manager,
             fix_attempt,
         )
 
-        if should_return:
-            return return_value == "true"
+        if return_value is not None:
+            return return_value
         if should_continue:
             continue
 
@@ -625,9 +642,9 @@ def check_and_fix_ci(
         failed_run_id = ci_status.get("run", {}).get("id")
 
     # Max fix attempts exhausted
-    final_sha = ci_status.get("run", {}).get("commit_sha", "unknown")
+    final_sha = ci_status.get("run", {}).get("commit_sha") or "unknown"
     logger.error(
-        f"CI still failing after {CI_MAX_FIX_ATTEMPTS} fix attempts (sha: {final_sha[:7]})"
+        f"CI still failing after {CI_MAX_FIX_ATTEMPTS} fix attempts (sha: {_short_sha(final_sha)})"
     )
     return False
 
