@@ -1049,6 +1049,25 @@ def run_implement_workflow(
         if not finalisation_success:
             logger.warning("Finalisation encountered issues - continuing anyway")
 
+    # Step 5.6: Check CI pipeline and auto-fix if needed
+    if not error_occurred:
+        logger.info("Checking CI pipeline status...")
+        current_branch = get_current_branch_name(project_dir)
+        if current_branch:
+            ci_success = check_and_fix_ci(
+                project_dir=project_dir,
+                branch=current_branch,
+                provider=provider,
+                method=method,
+                mcp_config=mcp_config,
+                execution_dir=execution_dir,
+            )
+            if not ci_success:
+                logger.error("CI check failed after maximum fix attempts")
+                return 1
+        else:
+            logger.warning("Could not determine current branch - skipping CI check")
+
     # Step 6: Show final progress summary with appropriate messaging
     if error_occurred:
         logger.info(

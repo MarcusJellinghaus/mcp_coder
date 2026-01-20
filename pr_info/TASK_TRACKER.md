@@ -126,12 +126,24 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ### Step 4: Integrate CI Check into Workflow
 > See: [pr_info/steps/step_4.md](steps/step_4.md)
 
-- [ ] Add CI check call as Step 5.6 in `run_implement_workflow()`
-- [ ] Handle CI check failure (return 1 if `check_and_fix_ci()` returns False)
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 4
+- [x] Add CI check call as Step 5.6 in `run_implement_workflow()`
+- [x] Handle CI check failure (return 1 if `check_and_fix_ci()` returns False)
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 4
+
+**Commit Message:**
+```
+feat(ci): integrate CI check into implement workflow
+
+- Add check_and_fix_ci() call as Step 5.6 in run_implement_workflow()
+- Call CI check after finalisation, before progress summary
+- Return exit code 1 if CI check fails after max fix attempts
+- Handle None branch gracefully by skipping CI check with warning
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
 
 ---
 
