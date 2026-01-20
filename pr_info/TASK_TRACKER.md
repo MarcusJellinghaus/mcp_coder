@@ -152,7 +152,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 - [x] Fix `commit_sha` field lookup in `_poll_for_ci_completion()`
 - [x] Change branch check log level from WARNING to ERROR
-- [ ] Create `CIFixConfig` dataclass for CI fix configuration
+- [x] Create `CIFixConfig` dataclass for CI fix configuration
 - [ ] Extract `_run_ci_analysis()` helper function
 - [ ] Extract `_run_ci_fix()` helper function
 - [ ] Simplify `_run_ci_analysis_and_fix()` to use new helpers

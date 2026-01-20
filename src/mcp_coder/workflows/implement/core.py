@@ -6,6 +6,7 @@ prerequisites checking, task tracker preparation, and task processing loops.
 
 import logging
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
@@ -81,6 +82,18 @@ Write commit message to {PR_INFO_DIR}/{COMMIT_MESSAGE_FILE}.
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CIFixConfig:
+    """Configuration for CI fix operations."""
+
+    project_dir: Path
+    provider: str
+    method: str
+    env_vars: dict[str, str]
+    cwd: str
+    mcp_config: Optional[str]
 
 
 def _extract_log_excerpt(log: str, max_lines: int = 200) -> str:
