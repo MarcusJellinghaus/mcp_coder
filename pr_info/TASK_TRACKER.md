@@ -92,7 +92,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ### Step 3: Implement Main CI Check Function with Tests (TDD)
 > See: [pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Write tests for `check_and_fix_ci()` in `test_ci_check.py`
+- [x] Write tests for `check_and_fix_ci()` in `test_ci_check.py`
 - [ ] Add required imports to `core.py`
 - [ ] Implement `check_and_fix_ci()` main function
 - [ ] Implement CI polling logic (max 50 attempts, 15s interval)
