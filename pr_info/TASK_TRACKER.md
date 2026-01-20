@@ -147,6 +147,27 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ---
 
+### Step 5: Code Review Fixes
+> See: [pr_info/steps/step_5.md](steps/step_5.md)
+
+- [ ] Fix `commit_sha` field lookup in `_poll_for_ci_completion()`
+- [ ] Change branch check log level from WARNING to ERROR
+- [ ] Create `CIFixConfig` dataclass for CI fix configuration
+- [ ] Extract `_run_ci_analysis()` helper function
+- [ ] Extract `_run_ci_fix()` helper function
+- [ ] Simplify `_run_ci_analysis_and_fix()` to use new helpers
+- [ ] Remove pylint disables from refactored functions
+- [ ] Update `_get_failed_jobs_summary` type annotation to use `List[JobData]`
+- [ ] Add short SHA (7 chars) to all CI status log messages
+- [ ] Update `_read_problem_description` to use fallback when file is empty
+- [ ] Add tests for `_read_problem_description` edge cases
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and fix any failing tests
+- [ ] Run mypy and fix any type errors
+- [ ] Prepare git commit message for Step 5
+
+---
+
 ## Pull Request
 
 - [ ] Review all implementation steps are complete

@@ -129,3 +129,21 @@ Max attempts exhausted → exit 1
 11. **3-level commit fallback**: CI fix commits use file → LLM → default fallback (Decision 13)
 12. **Distinct log prefixes**: Exit 0 scenarios have searchable prefixes (Decision 14)
 13. **Run ID comparison**: After push, compare run IDs to detect if new CI run triggered (Decision 17)
+
+## Code Review Refinements (Step 5)
+
+After code review, the following refinements were identified (Decisions 23-28):
+
+1. **Defensive branch check**: Keep branch check after finalisation, log at ERROR level (Decision 23)
+2. **Fix commit_sha lookup**: Use correct field name `commit_sha` instead of `head_sha` (Decision 24)
+3. **Refactor large function**: Split `_run_ci_analysis_and_fix` into smaller helpers with config dataclass (Decision 25)
+4. **Type safety**: Use `List[JobData]` instead of `list[dict[str, Any]]` (Decision 26)
+5. **SHA in logs**: Add short SHA (7 chars) to CI status log messages (Decision 27)
+6. **Empty file handling**: Use fallback when temp file is empty, add test (Decision 28)
+
+### New Components (Step 5)
+
+- `CIFixConfig` dataclass - Configuration holder for CI fix operations
+- `_run_ci_analysis()` - Extracted helper for LLM analysis phase
+- `_run_ci_fix()` - Extracted helper for LLM fix phase
+- Tests for `_read_problem_description` edge cases

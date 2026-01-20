@@ -271,4 +271,95 @@ def get_prompt_with_substitutions(
 
 ---
 
+## Decision 23: Branch Check with Defensive Error Logging
+
+**Question:** Should Step 4 check if `get_current_branch_name()` returns None after finalisation?
+
+**Decision:** Keep the branch check as a defensive measure, but log at ERROR level instead of WARNING.
+
+**Update to Decision 20:** Decision 20 originally said to remove the check. After code review, we decided to keep it for defensive programming.
+
+**Implementation:**
+```python
+if current_branch:
+    ci_success = check_and_fix_ci(...)
+else:
+    logger.error("Could not determine current branch - skipping CI check")
+```
+
+**Rationale:** Defensive programming - while the branch should always be available after finalisation, logging at ERROR level ensures visibility if something unexpected occurs.
+
+---
+
+## Decision 24: Fix commit_sha Field Lookup
+
+**Question:** The code uses `run_info.get("head_sha")` but the field is named `commit_sha` in CIResultsManager.
+
+**Decision:** Fix the lookup to use `"commit_sha"` to match the actual field name in `CIStatusData`.
+
+**Rationale:** Simple bug fix. The field name `commit_sha` is more descriptive than `head_sha`.
+
+---
+
+## Decision 25: Refactor _run_ci_analysis_and_fix into Smaller Functions
+
+**Question:** The `_run_ci_analysis_and_fix` function has too many arguments and branches (requires pylint disables).
+
+**Decision:** 
+1. Extract into separate helpers: `_run_ci_analysis()` and `_run_ci_fix()`
+2. Use a config dataclass to reduce argument count
+3. Remove pylint disables after refactoring
+
+**Rationale:** Improves readability, testability, and maintainability.
+
+---
+
+## Decision 26: Use List[JobData] Type Annotation
+
+**Question:** `_get_failed_jobs_summary` uses `list[dict[str, Any]] | list[Any]` - should it use the TypedDict?
+
+**Decision:** Update type annotation to use `List[JobData]` for better type safety.
+
+**Rationale:** Leverages the existing TypedDict for full type checking.
+
+---
+
+## Decision 27: Add Short SHA to CI Log Messages
+
+**Question:** Should CI status log messages include the commit SHA for debugging?
+
+**Decision:** Add short SHA (7 characters) to all CI status log messages.
+
+**Implementation:**
+```python
+logger.info(f"CI_PASSED: Pipeline succeeded (sha: {run_sha[:7]})")
+```
+
+**Rationale:** Improves debuggability while keeping messages concise.
+
+---
+
+## Decision 28: Handle Empty Temp File with Fallback
+
+**Question:** What should happen if the temp problem description file exists but is empty?
+
+**Decision:** 
+1. Update `_read_problem_description` to use fallback when file content is empty
+2. Add a test for this edge case
+
+**Implementation:**
+```python
+if temp_file.exists():
+    content = temp_file.read_text(encoding="utf-8").strip()
+    temp_file.unlink()
+    if content:  # Only use file content if not empty
+        return content
+    logger.debug("Temp file was empty, using fallback")
+return fallback_response
+```
+
+**Rationale:** Ensures robust handling of edge cases.
+
+---
+
 
