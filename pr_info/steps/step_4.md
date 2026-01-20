@@ -38,22 +38,20 @@ Add CI check call in `run_implement_workflow()` after finalisation (Step 5.5), b
     if not error_occurred:
         logger.info("Checking CI pipeline status...")
         current_branch = get_current_branch_name(project_dir)
-        
-        if current_branch:
-            ci_success = check_and_fix_ci(
-                project_dir=project_dir,
-                branch=current_branch,
-                provider=provider,
-                method=method,
-                mcp_config=mcp_config,
-                execution_dir=execution_dir,
-            )
-            if not ci_success:
-                logger.error("CI check failed after maximum fix attempts")
-                return 1
-        else:
-            logger.warning("Could not determine branch for CI check - skipping")
+        ci_success = check_and_fix_ci(
+            project_dir=project_dir,
+            branch=current_branch,
+            provider=provider,
+            method=method,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+        )
+        if not ci_success:
+            logger.error("CI check failed after maximum fix attempts")
+            return 1
 ```
+
+Note: Branch check removed per Decision 20 - trust branch is available after successful finalisation.
 
 No renumbering of existing steps required.
 
@@ -61,10 +59,8 @@ No renumbering of existing steps required.
 ```
 1. Check if error_occurred is False
 2. Get current branch name
-3. If branch available:
-   a. Call check_and_fix_ci()
-   b. If returns False → log error, return 1
-4. If branch unavailable → warn, continue
+3. Call check_and_fix_ci()
+4. If returns False → log error, return 1
 5. Continue to progress summary
 ```
 

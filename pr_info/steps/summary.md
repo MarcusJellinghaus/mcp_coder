@@ -17,19 +17,24 @@ See `Decisions.md` for full details on architectural decisions made during plan 
    - Add step-level data to job info: `steps: [{number, name, conclusion}]`
    - Enables precise identification of failed step and correct log file
 
-2. **CI Check Integration** (`src/mcp_coder/workflows/implement/core.py`)
+2. **Git Helper Function** (`src/mcp_coder/utils/git_operations/commits.py`)
+   - Add `get_latest_commit_sha()` for debug logging (Decision 19)
+
+3. **CI Check Integration** (`src/mcp_coder/workflows/implement/core.py`)
    - `check_and_fix_ci()` - Main orchestration function for CI checking and fixing
    - `_extract_log_excerpt()` - Helper to truncate long logs (first 30 + last 170 lines)
    - `_get_failed_jobs_summary()` - Helper to extract failed job info from CI status
 
-3. **New Constants** (`src/mcp_coder/workflows/implement/constants.py`)
+4. **New Constants** (`src/mcp_coder/workflows/implement/constants.py`)
    - `LLM_CI_ANALYSIS_TIMEOUT_SECONDS = 300`
    - `CI_POLL_INTERVAL_SECONDS = 15`
    - `CI_MAX_POLL_ATTEMPTS = 50`
    - `CI_MAX_FIX_ATTEMPTS = 3`
-   - Note: CI fix reuses `LLM_IMPLEMENTATION_TIMEOUT_SECONDS` (Decision 9) - so 4 new constants total
+   - `CI_NEW_RUN_POLL_INTERVAL_SECONDS = 5`
+   - `CI_NEW_RUN_MAX_POLL_ATTEMPTS = 6`
+   - Note: CI fix reuses `LLM_IMPLEMENTATION_TIMEOUT_SECONDS` (Decision 9) - so 6 new constants total
 
-4. **New Prompts** (`src/mcp_coder/prompts/prompts.md`)
+5. **New Prompts** (`src/mcp_coder/prompts/prompts.md`)
    - "CI Failure Analysis Prompt" - Analyzes CI failure with log excerpts
    - "CI Fix Prompt" - Implements fixes based on problem description
 
@@ -60,7 +65,10 @@ For up to 3 attempts:
     ├── Read temp file, delete it, log content to console
     ├── LLM Fix (with analysis content in prompt) → code changes + quality checks
     ├── Format, commit, push (fail fast on git errors)
-    └── Poll for new CI run (get latest, wait for completion)
+    └── Poll for new CI run:
+      - 6 attempts at 5s intervals (30s max) to detect new run ID
+      - If no new run → log warning, exit gracefully (exit 0)
+      - If new run found → wait for completion
         ↓
 Max attempts exhausted → exit 1
 ```
@@ -87,7 +95,9 @@ Max attempts exhausted → exit 1
 |------|--------|-------------|
 | `src/mcp_coder/utils/github_operations/ci_results_manager.py` | Modify | Add step-level data to jobs |
 | `tests/utils/github_operations/test_ci_results_manager_*.py` | Modify | Add tests for step data |
-| `src/mcp_coder/workflows/implement/constants.py` | Modify | Add 5 CI-related constants |
+| `src/mcp_coder/utils/git_operations/commits.py` | Modify | Add `get_latest_commit_sha()` helper |
+| `tests/utils/git_operations/test_commits.py` | Modify | Add tests for new helper |
+| `src/mcp_coder/workflows/implement/constants.py` | Modify | Add 6 CI-related constants |
 | `src/mcp_coder/prompts/prompts.md` | Modify | Add 2 CI prompts with placeholders |
 | `.gitignore` | Modify | Add temp file exclusion |
 | `src/mcp_coder/workflows/implement/core.py` | Modify | Add CI check function + workflow integration |

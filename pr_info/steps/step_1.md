@@ -31,6 +31,8 @@ LLM_CI_ANALYSIS_TIMEOUT_SECONDS = 300  # 5 minutes for CI failure analysis
 CI_POLL_INTERVAL_SECONDS = 15  # Poll CI status every 15 seconds
 CI_MAX_POLL_ATTEMPTS = 50  # Max 50 attempts = 12.5 minutes max wait
 CI_MAX_FIX_ATTEMPTS = 3  # Max 3 fix attempts before giving up
+CI_NEW_RUN_POLL_INTERVAL_SECONDS = 5  # Poll for new CI run every 5 seconds
+CI_NEW_RUN_MAX_POLL_ATTEMPTS = 6  # Max 6 attempts = 30 seconds to detect new run
 # Note: CI fix uses existing LLM_IMPLEMENTATION_TIMEOUT_SECONDS (3600s) - see Decision 9
 ```
 
@@ -149,7 +151,7 @@ This ensures the temporary analysis file is never accidentally committed.
 ## Verification
 
 After completing this step:
-1. Constants file should have 4 new CI-related constants (see Decision 9 - no separate fix timeout)
+1. Constants file should have 6 new CI-related constants (see Decision 9 - no separate fix timeout)
 2. Prompts file should have 2 new prompts (CI Failure Analysis, CI Fix)
 3. .gitignore should include `pr_info/.ci_problem_description.md`
 

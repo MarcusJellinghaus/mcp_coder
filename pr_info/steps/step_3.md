@@ -9,6 +9,8 @@ Implement the main `check_and_fix_ci()` function that orchestrates CI polling, f
 - Two-phase LLM: analysis writes to temp file, Python reads/deletes/logs it, then fix LLM receives content in prompt
 - Quality checks run by LLM in fix prompt (consistent with existing pattern)
 - Hybrid error handling: API errors → graceful exit 0, git errors during fix → fail fast exit 1
+- LLM error handling: retry once, then graceful exit 0 (Decision 18)
+- New run detection: 6 attempts at 5s intervals after push (Decision 17)
 
 ## LLM Prompt for This Step
 
@@ -246,6 +248,8 @@ from .constants import (
     # ... existing imports ...
     CI_MAX_FIX_ATTEMPTS,
     CI_MAX_POLL_ATTEMPTS,
+    CI_NEW_RUN_MAX_POLL_ATTEMPTS,
+    CI_NEW_RUN_POLL_INTERVAL_SECONDS,
     CI_POLL_INTERVAL_SECONDS,
     LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
     LLM_IMPLEMENTATION_TIMEOUT_SECONDS,  # Reused for CI fix - see Decision 9
@@ -274,11 +278,11 @@ from .constants import (
    g. Format code
    h. Commit using 3-level fallback: file → LLM generation → default (see Decision 13)
    i. Push changes (fail fast on git errors → return False)
-   j. Poll for new CI run:
-      - Get latest run on branch
-      - Compare run ID with stored ID (Decision 17)
-      - If same ID after polling → log WARNING "No new CI run triggered", continue to next attempt
-      - If different ID → wait for completion
+   j. Poll for new CI run (Decision 17):
+      - Poll 6 times at 5s intervals (30s total)
+      - Compare run ID with stored ID
+      - If no new run after 30s → log WARNING, exit gracefully (return True)
+      - If new run found → wait for completion
    k. If CI passes → return True
 8. Max attempts exhausted → return False
 ```

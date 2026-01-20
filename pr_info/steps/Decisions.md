@@ -186,10 +186,41 @@ jobs: [{
 
 **Decision:** 
 1. Store the failed run's ID before pushing the fix
-2. After push, verify the latest run has a different ID
-3. Log a warning if no new run was triggered (same ID after polling)
+2. After push, poll for new run: 6 attempts at 5-second intervals (30 seconds total)
+3. If new run ID found → proceed to poll for completion
+4. If no new run after 30 seconds → log warning, exit gracefully (exit 0)
 
-**Rationale:** Run IDs are monotonically increasing and simpler to compare than timestamps. Avoids clock skew concerns.
+**Rationale:** Run IDs are monotonically increasing and simpler to compare than timestamps. The 30-second window gives GitHub time to trigger the new run without waiting too long.
+
+---
+
+## Decision 18: LLM Error Handling
+
+**Question:** How should LLM errors (timeout, connection failure) during analysis or fix be handled?
+
+**Decision:** Retry the LLM call once, then graceful exit 0 if still failing.
+
+**Rationale:** Keeps the workflow from being blocked by transient LLM issues while giving it one more chance.
+
+---
+
+## Decision 19: Create get_latest_commit_sha Helper
+
+**Question:** The plan references `get_latest_commit_sha` for debug logging, but it doesn't exist in the codebase.
+
+**Decision:** Create `get_latest_commit_sha()` helper function in `commits.py` as part of Step 0.
+
+**Rationale:** Reusable helper function. Runs `git rev-parse HEAD` to get current commit SHA.
+
+---
+
+## Decision 20: Branch Detection After Finalisation
+
+**Question:** Should Step 4 check if `get_current_branch_name()` returns None after finalisation?
+
+**Decision:** Remove the check. Trust that branch is always available after successful finalisation.
+
+**Rationale:** Simplifies the code. After successful finalisation (which includes push), the branch will always be available.
 
 ---
 

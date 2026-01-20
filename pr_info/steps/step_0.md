@@ -1,8 +1,10 @@
-# Step 0: Enhance CIResultsManager with Step-Level Data
+# Step 0: Foundational Enhancements
 
 ## Overview
 
-Enhance `CIResultsManager.get_latest_ci_status()` to include step-level information for each job. This enables precise identification of which step failed and construction of the correct log filename.
+This step adds foundational components needed for the CI check feature:
+1. Enhance `CIResultsManager.get_latest_ci_status()` to include step-level information for each job
+2. Add `get_latest_commit_sha()` helper function for debug logging (Decision 19)
 
 ## LLM Prompt for This Step
 
@@ -11,7 +13,10 @@ Implement Step 0 from pr_info/steps/step_0.md.
 
 Reference the summary at pr_info/steps/summary.md for context.
 
-This step enhances CIResultsManager to include step-level data for each job.
+This step adds foundational components:
+1. Enhance CIResultsManager to include step-level data for each job
+2. Add get_latest_commit_sha() helper function
+
 Follow TDD: write tests first, then implement.
 ```
 
@@ -137,8 +142,76 @@ job_data = {
 
 ---
 
+---
+
+## Part 4: Add get_latest_commit_sha Helper (Decision 19)
+
+### WHERE
+`src/mcp_coder/utils/git_operations/commits.py`
+
+### WHAT
+Add helper function to get the current HEAD commit SHA:
+
+```python
+def get_latest_commit_sha(project_dir: Path) -> Optional[str]:
+    """Get the SHA of the current HEAD commit.
+    
+    Args:
+        project_dir: Path to the git repository
+    
+    Returns:
+        The full SHA of HEAD, or None if not in a git repository
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return None
+```
+
+### HOW
+Add after existing functions in commits.py. Uses subprocess to run `git rev-parse HEAD`.
+
+---
+
+## Part 5: Write Tests for get_latest_commit_sha
+
+### WHERE
+`tests/utils/git_operations/test_commits.py`
+
+### WHAT
+Add tests for the new helper function:
+
+```python
+class TestGetLatestCommitSha:
+    """Tests for get_latest_commit_sha function."""
+
+    def test_returns_sha_in_git_repo(self, temp_git_repo):
+        """Should return SHA string in a valid git repo."""
+        sha = get_latest_commit_sha(temp_git_repo)
+        
+        assert sha is not None
+        assert len(sha) == 40  # Full SHA length
+        assert all(c in '0123456789abcdef' for c in sha)
+
+    def test_returns_none_outside_git_repo(self, tmp_path):
+        """Should return None when not in a git repository."""
+        sha = get_latest_commit_sha(tmp_path)
+        
+        assert sha is None
+```
+
+---
+
 ## Verification
 
-1. Run tests: `pytest tests/utils/github_operations/test_ci_results_manager_status.py -v`
-2. All tests should pass
-3. Verify step data is correctly extracted from GitHub API
+1. Run CIResultsManager tests: `pytest tests/utils/github_operations/test_ci_results_manager_status.py -v`
+2. Run commits tests: `pytest tests/utils/git_operations/test_commits.py -v`
+3. All tests should pass
+4. Verify step data is correctly extracted from GitHub API
