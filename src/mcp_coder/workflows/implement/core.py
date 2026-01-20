@@ -1066,7 +1066,7 @@ def run_implement_workflow(
                 logger.error("CI check failed after maximum fix attempts")
                 return 1
         else:
-            logger.warning("Could not determine current branch - skipping CI check")
+            logger.error("Could not determine current branch - skipping CI check")
 
     # Step 6: Show final progress summary with appropriate messaging
     if error_occurred:

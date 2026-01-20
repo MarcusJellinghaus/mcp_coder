@@ -151,7 +151,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 > See: [pr_info/steps/step_5.md](steps/step_5.md)
 
 - [x] Fix `commit_sha` field lookup in `_poll_for_ci_completion()`
-- [ ] Change branch check log level from WARNING to ERROR
+- [x] Change branch check log level from WARNING to ERROR
 - [ ] Create `CIFixConfig` dataclass for CI fix configuration
 - [ ] Extract `_run_ci_analysis()` helper function
 - [ ] Extract `_run_ci_fix()` helper function
