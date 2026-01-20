@@ -1,9 +1,10 @@
 """Tests for CI check helper functions."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
+from mcp_coder.utils.github_operations.ci_results_manager import JobData
 from mcp_coder.workflows.implement.core import (
     _extract_log_excerpt,
     _get_failed_jobs_summary,
@@ -56,18 +57,21 @@ class TestGetFailedJobsSummary:
 
     def test_single_failed_job_returns_details_with_step_info(self) -> None:
         """Single failed job should return its name, step info, and log."""
-        jobs: list[dict[str, Any]] = [
-            {"name": "build", "conclusion": "success", "steps": []},
-            {
-                "name": "test",
-                "conclusion": "failure",
-                "steps": [
-                    {"number": 1, "name": "Set up job", "conclusion": "success"},
-                    {"number": 2, "name": "Checkout", "conclusion": "success"},
-                    {"number": 3, "name": "Run tests", "conclusion": "failure"},
-                ],
-            },
-        ]
+        jobs = cast(
+            list[JobData],
+            [
+                {"name": "build", "conclusion": "success", "steps": []},
+                {
+                    "name": "test",
+                    "conclusion": "failure",
+                    "steps": [
+                        {"number": 1, "name": "Set up job", "conclusion": "success"},
+                        {"number": 2, "name": "Checkout", "conclusion": "success"},
+                        {"number": 3, "name": "Run tests", "conclusion": "failure"},
+                    ],
+                },
+            ],
+        )
         logs = {"test/3_Run tests.txt": "Error: test failed\nAssertionError"}
 
         result = _get_failed_jobs_summary(jobs, logs)
@@ -80,23 +84,30 @@ class TestGetFailedJobsSummary:
 
     def test_multiple_failed_jobs_returns_first_with_others_listed(self) -> None:
         """Multiple failed jobs should detail first, list others."""
-        jobs: list[dict[str, Any]] = [
-            {
-                "name": "lint",
-                "conclusion": "failure",
-                "steps": [{"number": 1, "name": "Run lint", "conclusion": "failure"}],
-            },
-            {
-                "name": "test",
-                "conclusion": "failure",
-                "steps": [{"number": 1, "name": "Run tests", "conclusion": "failure"}],
-            },
-            {
-                "name": "build",
-                "conclusion": "failure",
-                "steps": [{"number": 1, "name": "Build", "conclusion": "failure"}],
-            },
-        ]
+        jobs = cast(
+            list[JobData],
+            [
+                {
+                    "name": "lint",
+                    "conclusion": "failure",
+                    "steps": [
+                        {"number": 1, "name": "Run lint", "conclusion": "failure"}
+                    ],
+                },
+                {
+                    "name": "test",
+                    "conclusion": "failure",
+                    "steps": [
+                        {"number": 1, "name": "Run tests", "conclusion": "failure"}
+                    ],
+                },
+                {
+                    "name": "build",
+                    "conclusion": "failure",
+                    "steps": [{"number": 1, "name": "Build", "conclusion": "failure"}],
+                },
+            ],
+        )
         logs = {
             "lint/1_Run lint.txt": "Lint error",
             "test/1_Run tests.txt": "Test error",
@@ -113,10 +124,13 @@ class TestGetFailedJobsSummary:
 
     def test_no_failed_jobs_returns_empty(self) -> None:
         """No failed jobs should return empty values."""
-        jobs: list[dict[str, Any]] = [
-            {"name": "build", "conclusion": "success", "steps": []},
-            {"name": "test", "conclusion": "success", "steps": []},
-        ]
+        jobs = cast(
+            list[JobData],
+            [
+                {"name": "build", "conclusion": "success", "steps": []},
+                {"name": "test", "conclusion": "success", "steps": []},
+            ],
+        )
         logs: dict[str, str] = {}
 
         result = _get_failed_jobs_summary(jobs, logs)
@@ -128,13 +142,18 @@ class TestGetFailedJobsSummary:
 
     def test_failed_job_with_no_matching_log(self) -> None:
         """Failed job without matching log should return job/step info but empty excerpt."""
-        jobs: list[dict[str, Any]] = [
-            {
-                "name": "test",
-                "conclusion": "failure",
-                "steps": [{"number": 1, "name": "Run tests", "conclusion": "failure"}],
-            }
-        ]
+        jobs = cast(
+            list[JobData],
+            [
+                {
+                    "name": "test",
+                    "conclusion": "failure",
+                    "steps": [
+                        {"number": 1, "name": "Run tests", "conclusion": "failure"}
+                    ],
+                }
+            ],
+        )
         logs: dict[str, str] = {}  # No logs available
 
         result = _get_failed_jobs_summary(jobs, logs)
@@ -150,16 +169,19 @@ class TestGetFailedJobsSummary:
         Note: Uses exact filename matching only (Decision 10). If no match found,
         log_excerpt will be empty and a warning is logged with expected/found filenames (Decision 16).
         """
-        jobs: list[dict[str, Any]] = [
-            {
-                "name": "test",
-                "conclusion": "failure",
-                "steps": [
-                    {"number": 1, "name": "Set up job", "conclusion": "success"},
-                    {"number": 2, "name": "Run tests", "conclusion": "failure"},
-                ],
-            }
-        ]
+        jobs = cast(
+            list[JobData],
+            [
+                {
+                    "name": "test",
+                    "conclusion": "failure",
+                    "steps": [
+                        {"number": 1, "name": "Set up job", "conclusion": "success"},
+                        {"number": 2, "name": "Run tests", "conclusion": "failure"},
+                    ],
+                }
+            ],
+        )
         # Log filename format: {job_name}/{step_number}_{step_name}.txt
         logs = {"test/2_Run tests.txt": "Test failure output"}
 
