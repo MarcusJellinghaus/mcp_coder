@@ -96,4 +96,66 @@ jobs: [{
 
 ---
 
+## Decision 9: CI Fix Timeout
+
+**Question:** Should we add a new `LLM_CI_FIX_TIMEOUT_SECONDS` constant or reuse existing?
+
+**Decision:** Reuse existing `LLM_IMPLEMENTATION_TIMEOUT_SECONDS` (3600s) for CI fixes.
+
+**Rationale:** Consistent with original issue specification. Avoids redundant constants.
+
+---
+
+## Decision 10: Log Filename Matching Strategy
+
+**Question:** How should we match step info to GitHub log filenames?
+
+**Decision:** Use a helper function (`_get_failed_jobs_summary`) that constructs expected filename and does exact match only.
+
+**Rationale:** Simpler implementation. If mismatches occur in practice, we can enhance with fuzzy matching later.
+
+---
+
+## Decision 11: Incomplete Test Stub
+
+**Question:** What to do with the `test_analysis_writes_to_temp_file_then_deleted` stub?
+
+**Decision:** Remove it from the plan. The behavior is implicitly tested by other tests.
+
+---
+
+## Decision 12: Integration Test Complexity
+
+**Question:** How to handle the 9-mock integration test in Step 4?
+
+**Decision:** Remove integration tests entirely. Trust unit tests for `check_and_fix_ci()` and manual verification of wiring.
+
+**Rationale:** Reduces test fragility and maintenance burden.
+
+---
+
+## Decision 13: Commit Message Handling in CI Fix
+
+**Question:** Should CI fix commits use the same fallback logic as finalisation?
+
+**Decision:** Yes, use the same 3-level fallback: file → LLM generation → default message.
+
+**Rationale:** Consistent behavior across the codebase.
+
+---
+
+## Decision 14: Distinguishing Exit 0 Scenarios in Logging
+
+**Question:** How to distinguish different exit 0 scenarios (CI passed, API error, no CI, timeout)?
+
+**Decision:** Use INFO level with distinct, searchable message prefixes:
+- `CI_PASSED: Pipeline succeeded`
+- `CI_NOT_CONFIGURED: No workflow runs found - skipping CI check`
+- `CI_TIMEOUT: No completed run after polling - skipping CI check`
+- `CI_API_ERROR: Could not retrieve CI status - skipping CI check`
+
+**Rationale:** Makes it easier to grep logs for specific outcomes.
+
+---
+
 

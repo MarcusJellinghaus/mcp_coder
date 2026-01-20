@@ -5,9 +5,10 @@
 Implement the main `check_and_fix_ci()` function that orchestrates CI polling, failure analysis, and auto-fix attempts. Follow TDD: write tests first, then implement.
 
 **Key design decisions:**
-- No SHA validation - poll for any completed CI run on branch
+- Polling: get latest CI run on branch, wait for it to complete (prevents picking up old runs)
 - Two-phase LLM: analysis writes to temp file, Python reads/deletes/logs it, then fix LLM receives content in prompt
 - Quality checks run by LLM in fix prompt (consistent with existing pattern)
+- Hybrid error handling: API errors → graceful exit 0, git errors during fix → fail fast exit 1
 
 ## LLM Prompt for This Step
 
@@ -187,18 +188,8 @@ class TestCheckAndFixCI:
         
         assert result is True  # Graceful handling
 
-    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
-    @patch("mcp_coder.workflows.implement.core.time.sleep")
-    def test_analysis_writes_to_temp_file_then_deleted(
-        self, mock_sleep, mock_llm, mock_ci_manager, tmp_path
-    ):
-        """Analysis should write to temp file, which is then read, logged, and deleted."""
-        # This test verifies the two-phase LLM flow:
-        # 1. Analysis LLM writes to temp file
-        # 2. Python reads temp file, deletes it, logs content
-        # 3. Fix LLM receives content in prompt
-        pass  # Implementation details in test
+    # Note: test_analysis_writes_to_temp_file_then_deleted removed per Decision 11
+    # The two-phase LLM flow is implicitly tested by other tests
 ```
 
 ### HOW
@@ -257,7 +248,7 @@ from .constants import (
     CI_MAX_POLL_ATTEMPTS,
     CI_POLL_INTERVAL_SECONDS,
     LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
-    LLM_CI_FIX_TIMEOUT_SECONDS,
+    LLM_IMPLEMENTATION_TIMEOUT_SECONDS,  # Reused for CI fix - see Decision 9
 )
 ```
 
@@ -267,22 +258,23 @@ from .constants import (
 2. Get and log latest local commit SHA (for debugging)
 3. Try to get CI status (handle API errors gracefully → return True)
 4. Poll loop: wait for CI completion (max 50 attempts, 15s interval)
-   - Log CI run commit SHA when found (for debugging)
+   - Get latest CI run on branch
+   - If not completed → wait 15s, retry
+   - If completed → log CI run commit SHA (for debugging), proceed
    - If no CI run found after timeout → warn, return True
-5. If CI passed → log "CI passed ✓", return True
+5. If CI passed → log "CI_PASSED: Pipeline succeeded", return True (see Decision 14)
 6. Fix loop (max 3 attempts):
-   a. Get failed jobs summary (includes step info from Step 0)
-   b. Construct log filename: f"{job_name}/{step_number}_{step_name}.txt"
-   c. Get logs for failed job from CIResultsManager
-   d. Load analysis prompt from prompts.md, substitute placeholders
-   e. Call LLM for analysis → writes to temp file
-   f. Read temp file content, delete file, log content to console
-   g. Load fix prompt from prompts.md, substitute {problem_description}
-   h. Call LLM for fix (LLM runs quality checks as part of prompt)
-   i. Format code
-   j. Commit and push
-   k. Poll for new CI run (any completed run on branch)
-   l. If CI passes → return True
+   a. Get failed jobs summary (includes step info, log filename construction, and excerpt)
+   b. Load analysis prompt from prompts.md, substitute [placeholders]
+   c. Call LLM for analysis → writes to temp file
+   d. Read temp file content, delete file, log content to console
+   e. Load fix prompt from prompts.md, substitute [problem_description]
+   f. Call LLM for fix (LLM runs quality checks as part of prompt)
+   g. Format code
+   h. Commit using 3-level fallback: file → LLM generation → default (see Decision 13)
+   i. Push changes (fail fast on git errors → return False)
+   j. Poll for new CI run (get latest, wait for completion)
+   k. If CI passes → return True
 7. Max attempts exhausted → return False
 ```
 

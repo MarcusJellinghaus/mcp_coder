@@ -23,10 +23,10 @@ See `Decisions.md` for full details on architectural decisions made during plan 
 
 3. **New Constants** (`src/mcp_coder/workflows/implement/constants.py`)
    - `LLM_CI_ANALYSIS_TIMEOUT_SECONDS = 300`
-   - `LLM_CI_FIX_TIMEOUT_SECONDS = 600`
    - `CI_POLL_INTERVAL_SECONDS = 15`
    - `CI_MAX_POLL_ATTEMPTS = 50`
    - `CI_MAX_FIX_ATTEMPTS = 3`
+   - Note: CI fix reuses `LLM_IMPLEMENTATION_TIMEOUT_SECONDS` (Decision 9) - so 4 new constants total
 
 4. **New Prompts** (`src/mcp_coder/prompts/prompts.md`)
    - "CI Failure Analysis Prompt" - Analyzes CI failure with log excerpts
@@ -34,7 +34,7 @@ See `Decisions.md` for full details on architectural decisions made during plan 
 
 ### Integration Point
 
-The CI check is called **once after finalisation** in `run_implement_workflow()`, between Step 5.5 (finalisation) and Step 6 (progress summary).
+The CI check is called **once after finalisation** in `run_implement_workflow()` as Step 5.6, between Step 5.5 (finalisation) and Step 6 (progress summary).
 
 ### Data Flow
 
@@ -43,33 +43,37 @@ Finalisation complete
         ↓
 Log local commit SHA (debug)
         ↓
-Poll for CI completion (15s interval, max 50 attempts)
+Poll for CI completion:
+  - Get latest CI run on branch
+  - If not completed → wait 15s, retry (max 50 attempts)
+  - If completed → check conclusion
         ↓
 Log CI run commit SHA (debug)
         ↓
-CI passed? → Done (exit 0)
+CI passed? → log CI_PASSED, Done (exit 0)
         ↓ (failed)
 For up to 3 attempts:
     ├── Get failed job info (including step-level data)
-    ├── Identify failed step → construct log filename
     ├── Get logs, extract excerpt (≤200 lines)
     ├── LLM Analysis → writes to temp file
     ├── Read temp file, delete it, log content to console
     ├── LLM Fix (with analysis content in prompt) → code changes + quality checks
-    ├── Format, commit, push
-    └── Poll for new CI run (any completed run on branch)
+    ├── Format, commit, push (fail fast on git errors)
+    └── Poll for new CI run (get latest, wait for completion)
         ↓
 Max attempts exhausted → exit 1
 ```
 
-### Exit Codes
+### Exit Codes and Logging (Decision 14)
 
-| Scenario | Exit Code |
-|----------|-----------|
-| CI passes (first check or after fix) | 0 |
-| API errors / no CI configured | 0 (with warning) |
-| CI timeout (no run found) | 0 (with warning) |
-| Max fix attempts exhausted | 1 |
+| Scenario | Exit Code | Log Message |
+|----------|-----------|-------------|
+| CI passes (first check or after fix) | 0 | `CI_PASSED: Pipeline succeeded` |
+| API errors (graceful) | 0 | `CI_API_ERROR: Could not retrieve CI status - skipping` |
+| No CI configured | 0 | `CI_NOT_CONFIGURED: No workflow runs found - skipping` |
+| CI timeout (no run found) | 0 | `CI_TIMEOUT: No completed run after polling - skipping` |
+| Git errors during fix (fail fast) | 1 | Error message |
+| Max fix attempts exhausted | 1 | Error message |
 
 ### Temporary Files
 
@@ -86,7 +90,7 @@ Max attempts exhausted → exit 1
 | `src/mcp_coder/prompts/prompts.md` | Modify | Add 2 CI prompts with placeholders |
 | `.gitignore` | Modify | Add temp file exclusion |
 | `src/mcp_coder/workflows/implement/core.py` | Modify | Add CI check function + workflow integration |
-| `tests/workflows/implement/test_ci_check.py` | Create | Unit tests for CI check functions |
+| `tests/workflows/implement/test_ci_check.py` | Create | Unit tests for CI check functions (no integration tests per Decision 12) |
 
 ## Dependencies
 
@@ -105,3 +109,6 @@ Max attempts exhausted → exit 1
 7. **Quality checks in prompt**: LLM runs pylint/pytest/mypy as part of fix prompt (consistent with existing pattern)
 8. **Multiple failures**: Detail first failed job only, mention others by name (keeps prompts focused)
 9. **SHA debug logging**: Log local commit SHA and CI run SHA at INFO level for debugging
+10. **Exact filename matching**: Log filename lookup uses exact match only (Decision 10)
+11. **3-level commit fallback**: CI fix commits use file → LLM → default fallback (Decision 13)
+12. **Distinct log prefixes**: Exit 0 scenarios have searchable prefixes (Decision 14)

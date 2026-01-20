@@ -32,6 +32,11 @@ Create test file with tests for helper functions:
 
 import pytest
 
+from mcp_coder.workflows.implement.core import (
+    _extract_log_excerpt,
+    _get_failed_jobs_summary,
+)
+
 
 class TestExtractLogExcerpt:
     """Tests for _extract_log_excerpt function."""
@@ -39,7 +44,6 @@ class TestExtractLogExcerpt:
     def test_short_log_returned_unchanged(self):
         """Logs under 200 lines should be returned as-is."""
         log = "\n".join([f"Line {i}" for i in range(100)])
-        from mcp_coder.workflows.implement.core import _extract_log_excerpt
         
         result = _extract_log_excerpt(log)
         
@@ -48,7 +52,6 @@ class TestExtractLogExcerpt:
     def test_exactly_200_lines_returned_unchanged(self):
         """Logs of exactly 200 lines should be returned as-is."""
         log = "\n".join([f"Line {i}" for i in range(200)])
-        from mcp_coder.workflows.implement.core import _extract_log_excerpt
         
         result = _extract_log_excerpt(log)
         
@@ -57,7 +60,6 @@ class TestExtractLogExcerpt:
     def test_long_log_truncated_to_first_30_last_170(self):
         """Logs over 200 lines should have first 30 + last 170 lines."""
         log = "\n".join([f"Line {i}" for i in range(300)])
-        from mcp_coder.workflows.implement.core import _extract_log_excerpt
         
         result = _extract_log_excerpt(log)
         lines = result.split("\n")
@@ -73,8 +75,6 @@ class TestExtractLogExcerpt:
 
     def test_empty_log_returns_empty(self):
         """Empty log should return empty string."""
-        from mcp_coder.workflows.implement.core import _extract_log_excerpt
-        
         result = _extract_log_excerpt("")
         
         assert result == ""
@@ -98,7 +98,6 @@ class TestGetFailedJobsSummary:
             },
         ]
         logs = {"test/3_Run tests.txt": "Error: test failed\nAssertionError"}
-        from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
         
         result = _get_failed_jobs_summary(jobs, logs)
         
@@ -132,7 +131,6 @@ class TestGetFailedJobsSummary:
             "test/1_Run tests.txt": "Test error",
             "build/1_Build.txt": "Build error",
         }
-        from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
         
         result = _get_failed_jobs_summary(jobs, logs)
         
@@ -149,7 +147,6 @@ class TestGetFailedJobsSummary:
             {"name": "test", "conclusion": "success", "steps": []},
         ]
         logs = {}
-        from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
         
         result = _get_failed_jobs_summary(jobs, logs)
         
@@ -168,7 +165,6 @@ class TestGetFailedJobsSummary:
             }
         ]
         logs = {}  # No logs available
-        from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
         
         result = _get_failed_jobs_summary(jobs, logs)
         
@@ -178,7 +174,11 @@ class TestGetFailedJobsSummary:
         assert result["other_failed_jobs"] == []
 
     def test_constructs_correct_log_filename(self):
-        """Should construct log filename from job name, step number, and step name."""
+        """Should construct log filename from job name, step number, and step name.
+        
+        Note: Uses exact filename matching only (Decision 10). If no match found,
+        log_excerpt will be empty.
+        """
         jobs = [
             {
                 "name": "test",
@@ -191,7 +191,6 @@ class TestGetFailedJobsSummary:
         ]
         # Log filename format: {job_name}/{step_number}_{step_name}.txt
         logs = {"test/2_Run tests.txt": "Test failure output"}
-        from mcp_coder.workflows.implement.core import _get_failed_jobs_summary
         
         result = _get_failed_jobs_summary(jobs, logs)
         
