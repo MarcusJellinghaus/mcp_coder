@@ -53,13 +53,15 @@ Append to existing test file, using existing mock patterns.
 
 ---
 
-## Part 2: Add TypedDicts for Step and Job Data (Decision 15)
+## Part 2: Add TypedDicts for Step and Job Data (Decision 15, 21)
 
 ### WHERE
 `src/mcp_coder/utils/github_operations/ci_results_manager.py`
 
 ### WHAT
-Add explicit TypedDicts for full type safety:
+Add explicit TypedDicts for full type safety and update existing `CIStatusData`:
+
+**Note:** This is a breaking change to `CIStatusData.jobs` (from `List[Dict[str, Any]]` to `List[JobData]`). This is acceptable per Decision 21 - the module is internal and better type safety outweighs compatibility concerns.
 
 ```python
 class StepData(TypedDict):
@@ -82,14 +84,29 @@ class JobData(TypedDict):
     steps: List[StepData]
 
 
+# UPDATE existing CIStatusData (replace current definition):
 class CIStatusData(TypedDict):
-    """TypedDict for CI status data structure."""
+    """TypedDict for CI status data structure.
 
-    run: Dict[str, Any]
-    jobs: List[JobData]
+    Represents a GitHub workflow run with its associated jobs.
+    """
+
+    run: Dict[str, Any]  # {id, status, conclusion, workflow_name, event, ...}
+    jobs: List[JobData]  # CHANGED from List[Dict[str, Any]] to List[JobData]
 ```
 
 Add `Optional` to imports if not already present.
+
+### EXPORTS
+Update `__all__` to include new TypedDicts:
+```python
+__all__ = [
+    "StepData",
+    "JobData",
+    "CIStatusData",
+    "CIResultsManager",
+]
+```
 
 ---
 

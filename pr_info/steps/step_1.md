@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add the foundational configuration: CI-related constants, LLM prompts for analysis and fixing (with placeholders for runtime substitution), and update .gitignore for the temporary problem description file.
+Add the foundational configuration: CI-related constants, LLM prompts for analysis and fixing (with placeholders for runtime substitution), a helper function for prompt placeholder substitution (Decision 22), and update .gitignore for the temporary problem description file.
 
 ## LLM Prompt for This Step
 
@@ -148,11 +148,119 @@ This ensures the temporary analysis file is never accidentally committed.
 
 ---
 
+## Part 4: Add Prompt Substitution Helper (Decision 22)
+
+### WHERE
+`src/mcp_coder/prompt_manager.py`
+
+### WHAT
+Add a helper function to get prompts with placeholder substitution:
+
+```python
+def get_prompt_with_substitutions(
+    source: str,
+    header: str,
+    substitutions: Dict[str, str],
+) -> str:
+    """Get prompt from markdown source and substitute [placeholder] values.
+
+    This is a convenience wrapper around get_prompt() that handles
+    placeholder substitution for prompts that use [placeholder] syntax.
+
+    Args:
+        source: File path, directory path, wildcard pattern, or string content
+        header: Header name to search for (any level: #, ##, ###, ####, #####)
+        substitutions: Dictionary mapping placeholder names (without brackets)
+            to their replacement values.
+            Example: {"job_name": "test", "step_name": "Run tests"}
+            This would replace [job_name] with "test" and [step_name] with "Run tests"
+
+    Returns:
+        str: The prompt content with all [placeholder] values replaced
+
+    Raises:
+        ValueError: If header not found or no code block after header
+        FileNotFoundError: If file path doesn't exist
+
+    Example:
+        # Load CI analysis prompt with substitutions
+        prompt = get_prompt_with_substitutions(
+            'prompts/prompts.md',
+            'CI Failure Analysis Prompt',
+            {
+                'job_name': 'test',
+                'step_name': 'Run tests',
+                'log_excerpt': 'Error: assertion failed',
+                'other_failed_jobs': 'build, lint',
+            }
+        )
+    """
+    prompt = get_prompt(source, header)
+    for key, value in substitutions.items():
+        prompt = prompt.replace(f"[{key}]", value)
+    return prompt
+```
+
+### HOW
+1. Add `Dict` to imports from typing if not already present
+2. Add the function after `get_prompt()` function
+3. Add to module's `__all__` if one exists
+
+### TESTS
+Add tests in `tests/test_prompt_manager.py`:
+
+```python
+class TestGetPromptWithSubstitutions:
+    """Tests for get_prompt_with_substitutions function."""
+
+    def test_substitutes_single_placeholder(self):
+        """Should replace a single [placeholder] with value."""
+        content = '''# Test Prompt
+```
+Hello [name], welcome!
+```'''
+        result = get_prompt_with_substitutions(content, 'Test Prompt', {'name': 'World'})
+        assert result == 'Hello World, welcome!'
+
+    def test_substitutes_multiple_placeholders(self):
+        """Should replace multiple [placeholder] values."""
+        content = '''# Test Prompt
+```
+Job: [job_name], Step: [step_name]
+```'''
+        result = get_prompt_with_substitutions(
+            content, 'Test Prompt',
+            {'job_name': 'test', 'step_name': 'Run tests'}
+        )
+        assert result == 'Job: test, Step: Run tests'
+
+    def test_empty_substitutions_returns_unchanged(self):
+        """Empty substitutions dict should return prompt unchanged."""
+        content = '''# Test Prompt
+```
+Hello [name]!
+```'''
+        result = get_prompt_with_substitutions(content, 'Test Prompt', {})
+        assert result == 'Hello [name]!'
+
+    def test_missing_placeholder_unchanged(self):
+        """Placeholders not in dict should remain unchanged."""
+        content = '''# Test Prompt
+```
+Hello [name] and [other]!
+```'''
+        result = get_prompt_with_substitutions(content, 'Test Prompt', {'name': 'World'})
+        assert result == 'Hello World and [other]!'
+```
+
+---
+
 ## Verification
 
 After completing this step:
 1. Constants file should have 6 new CI-related constants (see Decision 9 - no separate fix timeout)
 2. Prompts file should have 2 new prompts (CI Failure Analysis, CI Fix)
 3. .gitignore should include `pr_info/.ci_problem_description.md`
+4. `get_prompt_with_substitutions()` helper function added to prompt_manager.py with tests
 
-No tests required - this is configuration only.
+Run tests: `pytest tests/test_prompt_manager.py -v`

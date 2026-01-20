@@ -13,7 +13,8 @@ See `Decisions.md` for full details on architectural decisions made during plan 
 ### New Components
 
 1. **CIResultsManager Enhancement** (`src/mcp_coder/utils/github_operations/ci_results_manager.py`)
-   - Add explicit `StepData` and `JobData` TypedDicts for full type safety (Decision 15)
+   - Add explicit `StepData` and `JobData` TypedDicts for full type safety (Decision 15, 21)
+   - Update `CIStatusData.jobs` from `List[Dict[str, Any]]` to `List[JobData]`
    - Add step-level data to job info: `steps: [{number, name, conclusion}]`
    - Enables precise identification of failed step and correct log file
 
@@ -34,7 +35,11 @@ See `Decisions.md` for full details on architectural decisions made during plan 
    - `CI_NEW_RUN_MAX_POLL_ATTEMPTS = 6`
    - Note: CI fix reuses `LLM_IMPLEMENTATION_TIMEOUT_SECONDS` (Decision 9) - so 6 new constants total
 
-5. **New Prompts** (`src/mcp_coder/prompts/prompts.md`)
+5. **Prompt Substitution Helper** (`src/mcp_coder/prompt_manager.py`)
+   - Add `get_prompt_with_substitutions()` helper function (Decision 22)
+   - Standardizes `[placeholder]` substitution pattern for CI prompts
+
+6. **New Prompts** (`src/mcp_coder/prompts/prompts.md`)
    - "CI Failure Analysis Prompt" - Analyzes CI failure with log excerpts
    - "CI Fix Prompt" - Implements fixes based on problem description
 
@@ -120,7 +125,7 @@ Max attempts exhausted → exit 1
 7. **Quality checks in prompt**: LLM runs pylint/pytest/mypy as part of fix prompt (consistent with existing pattern)
 8. **Multiple failures**: Detail first failed job only, mention others by name (keeps prompts focused)
 9. **SHA debug logging**: Log local commit SHA and CI run SHA at INFO level for debugging
-10. **Exact filename matching**: Log filename lookup uses exact match only, warns with expected/found filenames on mismatch (Decision 10, 16)
+10. **Exact filename matching**: Log filename format is `{job_name}/{step_number}_{step_name}.txt` (verified against existing tests). Lookup uses exact match only, warns with expected/found filenames on mismatch (Decision 10, 16)
 11. **3-level commit fallback**: CI fix commits use file → LLM → default fallback (Decision 13)
 12. **Distinct log prefixes**: Exit 0 scenarios have searchable prefixes (Decision 14)
 13. **Run ID comparison**: After push, compare run IDs to detect if new CI run triggered (Decision 17)

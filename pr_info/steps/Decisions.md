@@ -224,4 +224,51 @@ jobs: [{
 
 ---
 
+## Decision 21: TypedDict Compatibility for JobData
+
+**Question:** The current `CIStatusData.jobs` is `List[Dict[str, Any]]`. Adding `JobData` TypedDict with steps - is this a breaking change?
+
+**Decision:** Update existing TypedDict to use `List[JobData]` for better type safety. This is a breaking change but acceptable since:
+- The module is internal
+- Better type safety outweighs compatibility concerns
+- Mypy will catch any issues in dependent code
+
+**Rationale:** Full type safety with explicit `JobData` and `StepData` TypedDicts is worth the minor breaking change.
+
+---
+
+## Decision 22: Prompt Substitution Helper Function
+
+**Question:** How to substitute `[placeholder]` values in prompts loaded from prompts.md?
+
+**Decision:** Create a new helper function `get_prompt_with_substitutions(source, header, substitutions: dict)` in `prompt_manager.py`.
+
+**Implementation:**
+```python
+def get_prompt_with_substitutions(
+    source: str, 
+    header: str, 
+    substitutions: Dict[str, str]
+) -> str:
+    """Get prompt and substitute [placeholder] values.
+    
+    Args:
+        source: File path or string content
+        header: Header name to search for
+        substitutions: Dict mapping placeholder names to values
+            e.g., {"job_name": "test", "step_name": "Run tests"}
+    
+    Returns:
+        Prompt with all [placeholder] values replaced
+    """
+    prompt = get_prompt(source, header)
+    for key, value in substitutions.items():
+        prompt = prompt.replace(f"[{key}]", value)
+    return prompt
+```
+
+**Rationale:** Standardizes placeholder substitution pattern. Keeps prompts in prompts.md consistent with other prompts.
+
+---
+
 
