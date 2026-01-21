@@ -14,6 +14,7 @@ from .commands.define_labels import execute_define_labels
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
 from .commands.prompt import execute_prompt
+from .commands.set_status import execute_set_status
 from .commands.verify import execute_verify
 
 # Logger will be initialized in main()
