@@ -20,7 +20,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Delete Duplicate Files and Directory
 See [step_1.md](steps/step_1.md) for details.
 
-- [ ] Delete `workflows/config/labels.json`
+- [x] Delete `workflows/config/labels.json`
 - [ ] Delete `workflows/config/__init__.py`
 - [ ] Verify `workflows/config/` directory is removed
 - [ ] Verify `tests/workflows/config/` still exists
