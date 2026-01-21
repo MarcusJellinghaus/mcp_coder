@@ -395,6 +395,31 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="Preview changes without applying them",
     )
 
+    # Set-status command - Update GitHub issue workflow label
+    # NOTE: Generate epilog dynamically from labels.json config (Decision #3)
+    set_status_parser = subparsers.add_parser(
+        "set-status",
+        help="Update GitHub issue workflow status label",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=_build_set_status_epilog(),  # Dynamic generation from config
+    )
+    set_status_parser.add_argument(
+        "status_label",
+        help="Status label to set (e.g., status-05:plan-ready)",
+    )
+    set_status_parser.add_argument(
+        "--issue",
+        type=int,
+        default=None,
+        help="Issue number (default: auto-detect from branch name)",
+    )
+    set_status_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+
     return parser
 
 

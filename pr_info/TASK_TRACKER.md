@@ -51,7 +51,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Add import for `execute_set_status` in `src/mcp_coder/cli/main.py`
 - [x] Implement `_build_set_status_epilog()` helper function
-- [ ] Add `set-status` subparser with arguments in `create_parser()`
+- [x] Add `set-status` subparser with arguments in `create_parser()`
 - [ ] Add command routing in `main()` function
 - [ ] Run pylint and fix any issues
 - [ ] Run pytest and verify all tests pass
