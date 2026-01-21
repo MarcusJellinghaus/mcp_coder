@@ -1,5 +1,7 @@
 ---
 allowed-tools: Bash(gh issue create:*)
+workflow-stage: issue-discussion
+suggested-next: discuss -> issue_update -> issue_approve
 ---
 
 # Create GitHub Issue

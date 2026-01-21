@@ -1,3 +1,10 @@
+---
+workflow-stage: plan-review
+suggested-next:
+  - commit_push -> plan_approve
+  - commit_push -> /clear -> plan_review
+---
+
 # Update Plan Files
 
 Can you update the plan by updating the different files in folder `pr_info/steps`

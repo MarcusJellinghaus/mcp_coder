@@ -1,5 +1,7 @@
 ---
 allowed-tools: Bash(gh issue edit:*), Bash(gh issue view:*), Read, Glob, Grep
+workflow-stage: issue-discussion
+suggested-next: issue_approve
 ---
 
 # Update GitHub Issue

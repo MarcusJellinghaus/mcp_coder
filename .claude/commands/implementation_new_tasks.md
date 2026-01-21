@@ -1,3 +1,8 @@
+---
+workflow-stage: code-review
+suggested-next: commit_push -> implementation_needs_rework
+---
+
 # Create Further Implementation Tasks
 
 ## Request to append new implementation tasks to Python Project Implementation Plan

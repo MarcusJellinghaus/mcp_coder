@@ -1,5 +1,7 @@
 ---
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git push:*), Bash(./tools/format_all.sh:*), Read, Glob, Grep
+workflow-stage: utility
+suggested-next: (context-dependent)
 ---
 
 # Commit and Push Changes

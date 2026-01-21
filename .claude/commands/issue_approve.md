@@ -1,5 +1,7 @@
 ---
 allowed-tools: Bash(gh issue comment:*), Read
+workflow-stage: issue-discussion
+suggested-next: (bot runs create_plan) -> /clear -> plan_review
 ---
 
 # Approve Issue

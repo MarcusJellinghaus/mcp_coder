@@ -140,6 +140,8 @@ flowchart TD
 | **Code Review** | `/implementation_review`, `/discuss`, `/implementation_new_tasks`, `/commit_push`, `/implementation_approve`, `/implementation_needs_rework` |
 | **Utility** | `/rebase` |
 
+**Quick Reference:** See [Claude Code Cheat Sheet](claude_cheat_sheet.md) for a compact command overview.
+
 ---
 
 ## Detailed Workflows

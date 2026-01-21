@@ -1,5 +1,9 @@
 ---
 allowed-tools: Bash(git fetch:*), Bash(git status:*), Bash(git diff:*), Read, Glob, Grep
+workflow-stage: code-review
+suggested-next:
+  - discuss -> commit_push -> implementation_approve
+  - discuss -> implementation_new_tasks -> commit_push -> implementation_needs_rework
 ---
 
 # Implementation Review (Code Review)
