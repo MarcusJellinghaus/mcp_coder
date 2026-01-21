@@ -77,17 +77,17 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 5: Code Review Refactoring
 **Reference:** [step_5.md](steps/step_5.md)
 
-- [ ] Remove commented-out imports and move imports to top of `test_set_status.py`
-- [ ] Simplify `full_labels_config` fixture to load from `labels_config_path`
-- [ ] Move `_build_set_status_epilog()` from `main.py` to `set_status.py`
-- [ ] Remove unused imports from `main.py`
-- [ ] Update `main.py` to import `build_set_status_epilog` from `set_status`
-- [ ] Update `/implementation_needs_rework.md` description with workflow context
-- [ ] Rename `implementation_tasks.md` to `implementation_new_tasks.md`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix any type issues
-- [ ] Prepare git commit message for Step 5
+- [x] Remove commented-out imports and move imports to top of `test_set_status.py`
+- [x] Simplify `full_labels_config` fixture to load from `labels_config_path`
+- [x] Move `_build_set_status_epilog()` from `main.py` to `set_status.py`
+- [x] Remove unused imports from `main.py`
+- [x] Update `main.py` to import `build_set_status_epilog` from `set_status`
+- [x] Update `/implementation_needs_rework.md` description with workflow context
+- [x] Rename `implementation_tasks.md` to `implementation_new_tasks.md`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix any type issues
+- [x] Prepare git commit message for Step 5
 
 ---
 

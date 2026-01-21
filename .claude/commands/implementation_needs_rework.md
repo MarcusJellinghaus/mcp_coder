@@ -4,7 +4,15 @@ allowed-tools: Bash(mcp-coder set-status:*)
 
 # Implementation Needs Rework
 
-After code review identifies issues requiring additional implementation work, transition the issue back to plan-ready state.
+Set status to plan-ready after creating new steps (and pushing them) from code review findings.
+
+**Typical workflow:**
+1. `/implementation_review` - identifies issues
+2. `/discuss` - discuss and decide on changes  
+3. `/implementation_new_tasks` - create additional implementation steps
+4. `/commit_push` - commit the updated plan
+5. **This command** - transition to plan-ready
+6. `mcp-coder implement` - process the new steps
 
 **Instructions:**
 1. Run the set-status command to update the issue label:
@@ -14,4 +22,4 @@ mcp-coder set-status status-05:plan-ready
 
 2. Confirm the status change was successful.
 
-**Effect:** Changes issue status from `status-07:code-review` back to `status-05:plan-ready` for rework.
+**Effect:** Changes issue status from `status-07:code-review` to `status-05:plan-ready` for rework.

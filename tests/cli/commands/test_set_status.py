@@ -13,13 +13,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Import will be added once module exists
-# from mcp_coder.cli.commands.set_status import (
-#     compute_new_labels,
-#     execute_set_status,
-#     get_status_labels_from_config,
-#     validate_status_label,
-# )
+from mcp_coder.cli.commands.set_status import (
+    compute_new_labels,
+    execute_set_status,
+    get_status_labels_from_config,
+    validate_status_label,
+)
 
 # Note: labels_config_path fixture is defined in tests/conftest.py
 
@@ -40,87 +39,18 @@ VALID_STATUS_LABELS = [
 
 
 @pytest.fixture
-def full_labels_config() -> Dict[str, Any]:
-    """Fixture providing complete mock labels configuration for set_status tests.
+def full_labels_config(labels_config_path: Path) -> Dict[str, Any]:
+    """Load labels configuration from actual config file.
+
+    Args:
+        labels_config_path: Path to labels.json from conftest fixture
 
     Returns:
         Dict with 'workflow_labels' matching the structure from config/labels.json
     """
-    return {
-        "workflow_labels": [
-            {
-                "name": "status-01:created",
-                "category": "initial",
-                "internal_id": "created",
-                "color": "10b981",
-                "description": "Fresh issue",
-            },
-            {
-                "name": "status-02:awaiting-planning",
-                "category": "bot_pickup",
-                "internal_id": "awaiting_planning",
-                "color": "6ee7b7",
-                "description": "Ready for planning",
-            },
-            {
-                "name": "status-03:planning",
-                "category": "bot_busy",
-                "internal_id": "planning",
-                "color": "a7f3d0",
-                "description": "Planning in progress",
-            },
-            {
-                "name": "status-04:plan-review",
-                "category": "human_review",
-                "internal_id": "plan_review",
-                "color": "3b82f6",
-                "description": "Plan ready for review",
-            },
-            {
-                "name": "status-05:plan-ready",
-                "category": "bot_pickup",
-                "internal_id": "plan_ready",
-                "color": "93c5fd",
-                "description": "Plan approved",
-            },
-            {
-                "name": "status-06:implementing",
-                "category": "bot_busy",
-                "internal_id": "implementing",
-                "color": "bfdbfe",
-                "description": "Code being written",
-            },
-            {
-                "name": "status-07:code-review",
-                "category": "human_review",
-                "internal_id": "code_review",
-                "color": "f59e0b",
-                "description": "Needs code review",
-            },
-            {
-                "name": "status-08:ready-pr",
-                "category": "bot_pickup",
-                "internal_id": "ready_pr",
-                "color": "fbbf24",
-                "description": "Ready for PR",
-            },
-            {
-                "name": "status-09:pr-creating",
-                "category": "bot_busy",
-                "internal_id": "pr_creating",
-                "color": "fed7aa",
-                "description": "Creating PR",
-            },
-            {
-                "name": "status-10:pr-created",
-                "category": "final",
-                "internal_id": "pr_created",
-                "color": "8b5cf6",
-                "description": "PR created",
-            },
-        ],
-        "ignore_labels": ["Overview"],
-    }
+    from mcp_coder.utils.github_operations.label_config import load_labels_config
+
+    return load_labels_config(labels_config_path)
 
 
 @pytest.fixture
@@ -170,8 +100,6 @@ class TestSetStatusHelpers:
 
     def test_get_status_labels_from_config(self, labels_config_path: Path) -> None:
         """Test loading status labels from config."""
-        from mcp_coder.cli.commands.set_status import get_status_labels_from_config
-
         # Load actual labels from config
         labels = get_status_labels_from_config(labels_config_path)
 
@@ -189,8 +117,6 @@ class TestSetStatusHelpers:
         self, full_labels_config: Dict[str, Any]
     ) -> None:
         """Test validation accepts valid status labels."""
-        from mcp_coder.cli.commands.set_status import validate_status_label
-
         all_status_labels = {
             label["name"] for label in full_labels_config["workflow_labels"]
         }
@@ -205,8 +131,6 @@ class TestSetStatusHelpers:
         self, full_labels_config: Dict[str, Any]
     ) -> None:
         """Test validation rejects invalid labels."""
-        from mcp_coder.cli.commands.set_status import validate_status_label
-
         all_status_labels = {
             label["name"] for label in full_labels_config["workflow_labels"]
         }
@@ -233,8 +157,6 @@ class TestComputeNewLabels:
         self, full_labels_config: Dict[str, Any]
     ) -> None:
         """Test that existing status-* labels are replaced."""
-        from mcp_coder.cli.commands.set_status import compute_new_labels
-
         current_labels = {"status-03:planning", "bug", "enhancement"}
         new_status = "status-05:plan-ready"
         all_status_names = {
@@ -254,8 +176,6 @@ class TestComputeNewLabels:
         self, full_labels_config: Dict[str, Any]
     ) -> None:
         """Test that non-status labels are preserved."""
-        from mcp_coder.cli.commands.set_status import compute_new_labels
-
         current_labels = {
             "status-06:implementing",
             "bug",
@@ -282,8 +202,6 @@ class TestComputeNewLabels:
         self, full_labels_config: Dict[str, Any]
     ) -> None:
         """Test adding status when none exists."""
-        from mcp_coder.cli.commands.set_status import compute_new_labels
-
         current_labels = {"bug", "enhancement"}
         new_status = "status-01:created"
         all_status_names = {
@@ -321,8 +239,6 @@ class TestExecuteSetStatus:
         mock_issue_manager: MagicMock,
     ) -> None:
         """Test successful execution with auto-detected issue."""
-        from mcp_coder.cli.commands.set_status import execute_set_status
-
         # Setup mocks
         project_dir = tmp_path / "project"
         project_dir.mkdir()
@@ -361,8 +277,6 @@ class TestExecuteSetStatus:
         mock_issue_manager: MagicMock,
     ) -> None:
         """Test successful execution with --issue flag."""
-        from mcp_coder.cli.commands.set_status import execute_set_status
-
         # Setup mocks
         project_dir = tmp_path / "project"
         project_dir.mkdir()
@@ -397,8 +311,6 @@ class TestExecuteSetStatus:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test invalid label name returns exit code 1."""
-        from mcp_coder.cli.commands.set_status import execute_set_status
-
         # Setup mocks
         project_dir = tmp_path / "project"
         project_dir.mkdir()
@@ -435,8 +347,6 @@ class TestExecuteSetStatus:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test returns 1 when branch doesn't match pattern."""
-        from mcp_coder.cli.commands.set_status import execute_set_status
-
         # Setup mocks
         project_dir = tmp_path / "project"
         project_dir.mkdir()
@@ -473,8 +383,6 @@ class TestExecuteSetStatus:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test returns 1 on GitHub API error."""
-        from mcp_coder.cli.commands.set_status import execute_set_status
-
         # Setup mocks
         project_dir = tmp_path / "project"
         project_dir.mkdir()

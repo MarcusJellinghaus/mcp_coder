@@ -24,6 +24,32 @@ from ...workflows.utils import resolve_project_dir
 logger = logging.getLogger(__name__)
 
 
+def build_set_status_epilog() -> str:
+    """Build epilog text with available labels from config.
+
+    Returns:
+        Formatted string with available status labels and examples,
+        or fallback message if config cannot be loaded.
+    """
+    try:
+        # Use package bundled config (always available)
+        config_path = get_labels_config_path(None)
+        labels_config = load_labels_config(config_path)
+
+        lines = ["Available status labels:"]
+        for label in labels_config["workflow_labels"]:
+            lines.append(f"  {label['name']:30} {label['description']}")
+        lines.append("")
+        lines.append("Examples:")
+        lines.append("  mcp-coder set-status status-05:plan-ready")
+        lines.append("  mcp-coder set-status status-08:ready-pr --issue 123")
+        return "\n".join(lines)
+    except Exception as e:
+        # Log at debug level to aid troubleshooting (Decision #9)
+        logger.debug(f"Failed to build set-status epilog: {e}")
+        return "Run in a project directory to see available status labels."
+
+
 def get_status_labels_from_config(config_path: Path) -> set[str]:
     """Load status labels from config and return set of label names.
 
