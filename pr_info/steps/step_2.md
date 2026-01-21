@@ -27,7 +27,7 @@ tests/workflows/conftest.py    <- MODIFY labels_config_path fixture
 
 Simplify `labels_config_path()` fixture in both files.
 
-### Current Signature (both files)
+### Current Signature - tests/conftest.py
 ```python
 @pytest.fixture
 def labels_config_path() -> Path:
@@ -35,7 +35,25 @@ def labels_config_path() -> Path:
     from mcp_coder.utils.github_operations.label_config import get_labels_config_path
     
     conftest_path = Path(__file__).resolve()
-    project_root = conftest_path.parent.parent  # or .parent for workflows
+    project_root = conftest_path.parent.parent  # tests/ -> project root
+    
+    # Check if running in development mode (workflows/config exists)
+    local_config = project_root / "workflows" / "config" / "labels.json"
+    if local_config.exists():
+        return local_config
+    
+    return get_labels_config_path()
+```
+
+### Current Signature - tests/workflows/conftest.py
+```python
+@pytest.fixture
+def labels_config_path() -> Path:
+    """Get the path to the labels configuration file."""
+    from mcp_coder.utils.github_operations.label_config import get_labels_config_path
+    
+    conftest_path = Path(__file__).resolve()
+    project_root = conftest_path.parent.parent.parent  # tests/workflows/ -> project root
     
     # Check if running in development mode (workflows/config exists)
     local_config = project_root / "workflows" / "config" / "labels.json"
