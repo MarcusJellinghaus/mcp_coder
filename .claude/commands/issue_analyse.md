@@ -1,3 +1,8 @@
+---
+workflow-stage: issue-discussion
+suggested-next: discuss -> issue_update -> issue_approve
+---
+
 # Analyse GitHub Issue
 
 First, fetch the issue details:
