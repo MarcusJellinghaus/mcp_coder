@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 See [step_1.md](steps/step_1.md) for details.
 
 - [x] Delete `workflows/config/labels.json`
-- [ ] Delete `workflows/config/__init__.py`
+- [x] Delete `workflows/config/__init__.py`
 - [ ] Verify `workflows/config/` directory is removed
 - [ ] Verify `tests/workflows/config/` still exists
 - [ ] Run pylint checks and fix issues
