@@ -152,6 +152,7 @@ class TestCIResultsManagerFoundation:
                     "conclusion": "failure",
                     "started_at": "2023-01-01T00:01:00Z",
                     "completed_at": "2023-01-01T00:05:00Z",
+                    "steps": [],
                 }
             ],
         }

@@ -43,6 +43,7 @@ class TestGetLatestCIStatus:
         mock_job1.started_at.isoformat.return_value = "2024-01-15T10:31:00Z"
         mock_job1.completed_at = Mock()
         mock_job1.completed_at.isoformat.return_value = "2024-01-15T10:35:00Z"
+        mock_job1.steps = []
 
         mock_job2 = Mock()
         mock_job2.id = 987654322
@@ -53,6 +54,7 @@ class TestGetLatestCIStatus:
         mock_job2.started_at.isoformat.return_value = "2024-01-15T10:31:00Z"
         mock_job2.completed_at = Mock()
         mock_job2.completed_at.isoformat.return_value = "2024-01-15T10:33:00Z"
+        mock_job2.steps = []
 
         # Set head_branch for filtering
         mock_run.head_branch = "feature/xyz"
@@ -101,6 +103,268 @@ class TestGetLatestCIStatus:
         # Verify API was called correctly
         mock_repo.get_workflow_runs.assert_called_once()
         mock_run.jobs.assert_called_once()
+
+
+class TestGetLatestCIStatusSteps:
+    """Tests for step-level data in get_latest_ci_status."""
+
+    def test_jobs_include_steps_data(
+        self, mock_repo: Mock, ci_manager: CIResultsManager
+    ) -> None:
+        """Job info should include steps array with number, name, conclusion."""
+        # Setup mock workflow run
+        mock_run = Mock()
+        mock_run.id = 123456789
+        mock_run.status = "completed"
+        mock_run.conclusion = "success"
+        mock_run.name = "CI"
+        mock_run.event = "push"
+        mock_run.path = ".github/workflows/ci.yml"
+        mock_run.head_sha = "abc123def456"
+        mock_run.head_branch = "main"
+        mock_run.created_at = Mock()
+        mock_run.created_at.isoformat.return_value = "2024-01-15T10:30:00Z"
+        mock_run.html_url = "https://github.com/test/repo/actions/runs/123456789"
+
+        # Setup mock job with steps
+        mock_job = Mock()
+        mock_job.id = 987654321
+        mock_job.name = "test"
+        mock_job.status = "completed"
+        mock_job.conclusion = "success"
+        mock_job.started_at = Mock()
+        mock_job.started_at.isoformat.return_value = "2024-01-15T10:31:00Z"
+        mock_job.completed_at = Mock()
+        mock_job.completed_at.isoformat.return_value = "2024-01-15T10:35:00Z"
+
+        # Setup mock steps
+        mock_step1 = Mock()
+        mock_step1.number = 1
+        mock_step1.name = "Set up job"
+        mock_step1.conclusion = "success"
+
+        mock_step2 = Mock()
+        mock_step2.number = 2
+        mock_step2.name = "Run tests"
+        mock_step2.conclusion = "success"
+
+        mock_step3 = Mock()
+        mock_step3.number = 3
+        mock_step3.name = "Post Set up job"
+        mock_step3.conclusion = "success"
+
+        mock_job.steps = [mock_step1, mock_step2, mock_step3]
+        mock_run.jobs.return_value = [mock_job]
+        mock_repo.get_workflow_runs.return_value = [mock_run]
+
+        # Test the method
+        result = ci_manager.get_latest_ci_status("main")
+
+        # Verify steps data is included in job
+        assert len(result["jobs"]) == 1
+        job_data = result["jobs"][0]
+        assert "steps" in job_data
+        assert len(job_data["steps"]) == 3
+
+        # Verify step data structure
+        step1 = job_data["steps"][0]
+        assert step1["number"] == 1
+        assert step1["name"] == "Set up job"
+        assert step1["conclusion"] == "success"
+
+        step2 = job_data["steps"][1]
+        assert step2["number"] == 2
+        assert step2["name"] == "Run tests"
+        assert step2["conclusion"] == "success"
+
+    def test_steps_contain_required_fields(
+        self, mock_repo: Mock, ci_manager: CIResultsManager
+    ) -> None:
+        """Each step should have number, name, and conclusion fields."""
+        # Setup mock workflow run
+        mock_run = Mock()
+        mock_run.id = 123456789
+        mock_run.status = "completed"
+        mock_run.conclusion = "failure"
+        mock_run.name = "CI"
+        mock_run.event = "push"
+        mock_run.path = ".github/workflows/ci.yml"
+        mock_run.head_sha = "abc123def456"
+        mock_run.head_branch = "feature/test"
+        mock_run.created_at = Mock()
+        mock_run.created_at.isoformat.return_value = "2024-01-15T10:30:00Z"
+        mock_run.html_url = "https://github.com/test/repo/actions/runs/123456789"
+
+        # Setup mock job with steps having different conclusions
+        mock_job = Mock()
+        mock_job.id = 987654321
+        mock_job.name = "build"
+        mock_job.status = "completed"
+        mock_job.conclusion = "failure"
+        mock_job.started_at = Mock()
+        mock_job.started_at.isoformat.return_value = "2024-01-15T10:31:00Z"
+        mock_job.completed_at = Mock()
+        mock_job.completed_at.isoformat.return_value = "2024-01-15T10:35:00Z"
+
+        # Steps with various conclusions
+        mock_step1 = Mock()
+        mock_step1.number = 1
+        mock_step1.name = "Checkout"
+        mock_step1.conclusion = "success"
+
+        mock_step2 = Mock()
+        mock_step2.number = 2
+        mock_step2.name = "Build"
+        mock_step2.conclusion = "failure"
+
+        mock_step3 = Mock()
+        mock_step3.number = 3
+        mock_step3.name = "Deploy"
+        mock_step3.conclusion = "skipped"
+
+        mock_step4 = Mock()
+        mock_step4.number = 4
+        mock_step4.name = "Cleanup"
+        mock_step4.conclusion = None  # Still running or not started
+
+        mock_job.steps = [mock_step1, mock_step2, mock_step3, mock_step4]
+        mock_run.jobs.return_value = [mock_job]
+        mock_repo.get_workflow_runs.return_value = [mock_run]
+
+        # Test the method
+        result = ci_manager.get_latest_ci_status("feature/test")
+
+        # Verify all steps have required fields
+        job_data = result["jobs"][0]
+        for step in job_data["steps"]:
+            assert "number" in step
+            assert "name" in step
+            assert "conclusion" in step
+            assert isinstance(step["number"], int)
+            assert isinstance(step["name"], str)
+
+        # Verify specific conclusions
+        assert job_data["steps"][0]["conclusion"] == "success"
+        assert job_data["steps"][1]["conclusion"] == "failure"
+        assert job_data["steps"][2]["conclusion"] == "skipped"
+        assert job_data["steps"][3]["conclusion"] is None
+
+    def test_empty_steps_when_job_has_no_steps(
+        self, mock_repo: Mock, ci_manager: CIResultsManager
+    ) -> None:
+        """Jobs with no steps should have empty steps array."""
+        # Setup mock workflow run
+        mock_run = Mock()
+        mock_run.id = 123456789
+        mock_run.status = "completed"
+        mock_run.conclusion = "success"
+        mock_run.name = "CI"
+        mock_run.event = "push"
+        mock_run.path = ".github/workflows/ci.yml"
+        mock_run.head_sha = "abc123def456"
+        mock_run.head_branch = "main"
+        mock_run.created_at = Mock()
+        mock_run.created_at.isoformat.return_value = "2024-01-15T10:30:00Z"
+        mock_run.html_url = "https://github.com/test/repo/actions/runs/123456789"
+
+        # Setup mock job with no steps
+        mock_job = Mock()
+        mock_job.id = 987654321
+        mock_job.name = "simple-job"
+        mock_job.status = "completed"
+        mock_job.conclusion = "success"
+        mock_job.started_at = Mock()
+        mock_job.started_at.isoformat.return_value = "2024-01-15T10:31:00Z"
+        mock_job.completed_at = Mock()
+        mock_job.completed_at.isoformat.return_value = "2024-01-15T10:35:00Z"
+        mock_job.steps = []  # No steps
+
+        mock_run.jobs.return_value = [mock_job]
+        mock_repo.get_workflow_runs.return_value = [mock_run]
+
+        # Test the method
+        result = ci_manager.get_latest_ci_status("main")
+
+        # Verify empty steps array
+        assert len(result["jobs"]) == 1
+        job_data = result["jobs"][0]
+        assert "steps" in job_data
+        assert job_data["steps"] == []
+
+    def test_multiple_jobs_with_steps(
+        self, mock_repo: Mock, ci_manager: CIResultsManager
+    ) -> None:
+        """Multiple jobs should each have their own steps array."""
+        # Setup mock workflow run
+        mock_run = Mock()
+        mock_run.id = 123456789
+        mock_run.status = "completed"
+        mock_run.conclusion = "success"
+        mock_run.name = "CI"
+        mock_run.event = "push"
+        mock_run.path = ".github/workflows/ci.yml"
+        mock_run.head_sha = "abc123def456"
+        mock_run.head_branch = "main"
+        mock_run.created_at = Mock()
+        mock_run.created_at.isoformat.return_value = "2024-01-15T10:30:00Z"
+        mock_run.html_url = "https://github.com/test/repo/actions/runs/123456789"
+
+        # Setup first job with steps
+        mock_job1 = Mock()
+        mock_job1.id = 111
+        mock_job1.name = "lint"
+        mock_job1.status = "completed"
+        mock_job1.conclusion = "success"
+        mock_job1.started_at = Mock()
+        mock_job1.started_at.isoformat.return_value = "2024-01-15T10:31:00Z"
+        mock_job1.completed_at = Mock()
+        mock_job1.completed_at.isoformat.return_value = "2024-01-15T10:32:00Z"
+
+        mock_step1_1 = Mock()
+        mock_step1_1.number = 1
+        mock_step1_1.name = "Run linter"
+        mock_step1_1.conclusion = "success"
+        mock_job1.steps = [mock_step1_1]
+
+        # Setup second job with different steps
+        mock_job2 = Mock()
+        mock_job2.id = 222
+        mock_job2.name = "test"
+        mock_job2.status = "completed"
+        mock_job2.conclusion = "success"
+        mock_job2.started_at = Mock()
+        mock_job2.started_at.isoformat.return_value = "2024-01-15T10:31:00Z"
+        mock_job2.completed_at = Mock()
+        mock_job2.completed_at.isoformat.return_value = "2024-01-15T10:35:00Z"
+
+        mock_step2_1 = Mock()
+        mock_step2_1.number = 1
+        mock_step2_1.name = "Setup Python"
+        mock_step2_1.conclusion = "success"
+
+        mock_step2_2 = Mock()
+        mock_step2_2.number = 2
+        mock_step2_2.name = "Run pytest"
+        mock_step2_2.conclusion = "success"
+        mock_job2.steps = [mock_step2_1, mock_step2_2]
+
+        mock_run.jobs.return_value = [mock_job1, mock_job2]
+        mock_repo.get_workflow_runs.return_value = [mock_run]
+
+        # Test the method
+        result = ci_manager.get_latest_ci_status("main")
+
+        # Verify both jobs have their own steps
+        assert len(result["jobs"]) == 2
+
+        lint_job = next(j for j in result["jobs"] if j["name"] == "lint")
+        assert len(lint_job["steps"]) == 1
+        assert lint_job["steps"][0]["name"] == "Run linter"
+
+        test_job = next(j for j in result["jobs"] if j["name"] == "test")
+        assert len(test_job["steps"]) == 2
+        assert test_job["steps"][0]["name"] == "Setup Python"
+        assert test_job["steps"][1]["name"] == "Run pytest"
 
     def test_no_workflow_runs_for_branch(
         self, mock_repo: Mock, ci_manager: CIResultsManager
@@ -169,6 +433,7 @@ class TestGetLatestCIStatus:
             job.completed_at = Mock() if config["status"] == "completed" else None
             if job.completed_at:
                 job.completed_at.isoformat.return_value = "2024-01-15T11:05:00Z"
+            job.steps = []
             jobs.append(job)
 
         # Set head_branch for filtering

@@ -6,6 +6,7 @@ import pytest
 from git import Repo
 
 from mcp_coder.utils.git_operations import commit_all_changes, commit_staged_files
+from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
 
 
 @pytest.mark.git_integration
@@ -60,3 +61,37 @@ class TestCommitOperations:
         assert result["success"] is True
         commits = list(repo.iter_commits())
         assert commits[0].message.strip() == multiline_message
+
+
+@pytest.mark.git_integration
+class TestGetLatestCommitSha:
+    """Tests for get_latest_commit_sha function."""
+
+    def test_returns_sha_in_git_repo(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Should return SHA string in a valid git repo."""
+        repo, project_dir = git_repo_with_commit
+
+        sha = get_latest_commit_sha(project_dir)
+
+        assert sha is not None
+        assert len(sha) == 40  # Full SHA length
+        assert all(c in "0123456789abcdef" for c in sha)
+
+    def test_returns_none_outside_git_repo(self, tmp_path: Path) -> None:
+        """Should return None when not in a git repository."""
+        sha = get_latest_commit_sha(tmp_path)
+
+        assert sha is None
+
+    def test_sha_matches_repo_head(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Should return the same SHA as the repo's HEAD."""
+        repo, project_dir = git_repo_with_commit
+
+        sha = get_latest_commit_sha(project_dir)
+        expected_sha = repo.head.commit.hexsha
+
+        assert sha == expected_sha

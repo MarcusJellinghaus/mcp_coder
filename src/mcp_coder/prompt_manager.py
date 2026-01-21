@@ -185,6 +185,50 @@ def get_prompt(source: str, header: str) -> str:
     return code_block
 
 
+def get_prompt_with_substitutions(
+    source: str,
+    header: str,
+    substitutions: Dict[str, str],
+) -> str:
+    """Get prompt from markdown source and substitute [placeholder] values.
+
+    This is a convenience wrapper around get_prompt() that handles
+    placeholder substitution for prompts that use [placeholder] syntax.
+
+    Args:
+        source: File path, directory path, wildcard pattern, or string content
+        header: Header name to search for (any level: #, ##, ###, ####, #####)
+        substitutions: Dictionary mapping placeholder names (without brackets)
+            to their replacement values.
+            Example: {"job_name": "test", "step_name": "Run tests"}
+            This would replace [job_name] with "test" and [step_name] with "Run tests"
+
+    Returns:
+        str: The prompt content with all [placeholder] values replaced
+
+    Raises:
+        ValueError: If header not found or no code block after header
+        FileNotFoundError: If file path doesn't exist
+
+    Example:
+        # Load CI analysis prompt with substitutions
+        prompt = get_prompt_with_substitutions(
+            'prompts/prompts.md',
+            'CI Failure Analysis Prompt',
+            {
+                'job_name': 'test',
+                'step_name': 'Run tests',
+                'log_excerpt': 'Error: assertion failed',
+                'other_failed_jobs': 'build, lint',
+            }
+        )
+    """
+    prompt = get_prompt(source, header)
+    for key, value in substitutions.items():
+        prompt = prompt.replace(f"[{key}]", value)
+    return prompt
+
+
 def validate_prompt_markdown(source: str) -> Dict[str, Any]:
     """
     Validate prompt markdown structure and return detailed results.

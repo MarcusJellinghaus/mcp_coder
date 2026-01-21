@@ -18,6 +18,7 @@ import pytest
 
 from mcp_coder.prompt_manager import (
     get_prompt,
+    get_prompt_with_substitutions,
     validate_prompt_directory,
     validate_prompt_markdown,
 )
@@ -696,3 +697,49 @@ class TestPackageIntegration:
         # Check for examples
         assert "feat:" in result or "feat(" in result
         assert "fix:" in result or "fix(" in result
+
+
+class TestGetPromptWithSubstitutions:
+    """Tests for get_prompt_with_substitutions function."""
+
+    def test_substitutes_single_placeholder(self) -> None:
+        """Should replace a single [placeholder] with value."""
+        content = """# Test Prompt
+```
+Hello [name], welcome!
+```"""
+        result = get_prompt_with_substitutions(
+            content, "Test Prompt", {"name": "World"}
+        )
+        assert result == "Hello World, welcome!"
+
+    def test_substitutes_multiple_placeholders(self) -> None:
+        """Should replace multiple [placeholder] values."""
+        content = """# Test Prompt
+```
+Job: [job_name], Step: [step_name]
+```"""
+        result = get_prompt_with_substitutions(
+            content, "Test Prompt", {"job_name": "test", "step_name": "Run tests"}
+        )
+        assert result == "Job: test, Step: Run tests"
+
+    def test_empty_substitutions_returns_unchanged(self) -> None:
+        """Empty substitutions dict should return prompt unchanged."""
+        content = """# Test Prompt
+```
+Hello [name]!
+```"""
+        result = get_prompt_with_substitutions(content, "Test Prompt", {})
+        assert result == "Hello [name]!"
+
+    def test_missing_placeholder_unchanged(self) -> None:
+        """Placeholders not in dict should remain unchanged."""
+        content = """# Test Prompt
+```
+Hello [name] and [other]!
+```"""
+        result = get_prompt_with_substitutions(
+            content, "Test Prompt", {"name": "World"}
+        )
+        assert result == "Hello World and [other]!"
