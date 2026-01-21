@@ -34,15 +34,15 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Implement `set_status` Command Module
 **Reference:** [step_2.md](steps/step_2.md)
 
-- [ ] Create `src/mcp_coder/cli/commands/set_status.py`
-- [ ] Implement `get_status_labels_from_config()` function
-- [ ] Implement `validate_status_label()` function
-- [ ] Implement `compute_new_labels()` function
-- [ ] Implement `execute_set_status()` function with error handling
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify all Step 1 tests pass
-- [ ] Run mypy and fix any type issues
-- [ ] Prepare git commit message for Step 2
+- [x] Create `src/mcp_coder/cli/commands/set_status.py`
+- [x] Implement `get_status_labels_from_config()` function
+- [x] Implement `validate_status_label()` function
+- [x] Implement `compute_new_labels()` function
+- [x] Implement `execute_set_status()` function with error handling
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify all Step 1 tests pass
+- [x] Run mypy and fix any type issues
+- [x] Prepare git commit message for Step 2
 
 ---
 
