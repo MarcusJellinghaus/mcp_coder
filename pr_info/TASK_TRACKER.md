@@ -64,13 +64,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 4: Create Slash Command Files
 **Reference:** [step_4.md](steps/step_4.md)
 
-- [ ] Create `.claude/commands/plan_approve.md`
-- [ ] Create `.claude/commands/implementation_approve.md`
-- [ ] Create `.claude/commands/implementation_needs_rework.md`
-- [ ] Run pylint and fix any issues (if applicable)
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix any type issues (if applicable)
-- [ ] Prepare git commit message for Step 4
+- [x] Create `.claude/commands/plan_approve.md`
+- [x] Create `.claude/commands/implementation_approve.md`
+- [x] Create `.claude/commands/implementation_needs_rework.md`
+- [x] Run pylint and fix any issues (if applicable)
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix any type issues (if applicable)
+- [x] Prepare git commit message for Step 4
 
 ---
 
