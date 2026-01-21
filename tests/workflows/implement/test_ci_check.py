@@ -247,8 +247,10 @@ class TestCheckAndFixCI:
     @patch("mcp_coder.workflows.implement.core.commit_changes")
     @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.time.sleep")
+    @patch("mcp_coder.workflows.implement.core.save_conversation")
     def test_ci_fails_fix_succeeds_returns_true(
         self,
+        mock_save_conversation: MagicMock,
         mock_sleep: MagicMock,
         mock_push: MagicMock,
         mock_commit: MagicMock,
@@ -311,8 +313,10 @@ class TestCheckAndFixCI:
     @patch("mcp_coder.workflows.implement.core.commit_changes")
     @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.time.sleep")
+    @patch("mcp_coder.workflows.implement.core.save_conversation")
     def test_max_attempts_exhausted_returns_false(
         self,
+        mock_save_conversation: MagicMock,
         mock_sleep: MagicMock,
         mock_push: MagicMock,
         mock_commit: MagicMock,
@@ -394,8 +398,10 @@ class TestCheckAndFixCI:
     @patch("mcp_coder.workflows.implement.core.commit_changes")
     @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.time.sleep")
+    @patch("mcp_coder.workflows.implement.core.save_conversation")
     def test_git_push_error_returns_false(
         self,
+        mock_save_conversation: MagicMock,
         mock_sleep: MagicMock,
         mock_push: MagicMock,
         mock_commit: MagicMock,
