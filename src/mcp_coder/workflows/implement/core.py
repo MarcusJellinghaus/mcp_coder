@@ -374,7 +374,9 @@ def _poll_for_ci_completion(
         try:
             ci_status = ci_manager.get_latest_ci_status(branch)
         except Exception as e:
-            logger.warning(f"API error getting CI status: {e}")
+            logger.info(
+                f"CI_API_ERROR: Could not retrieve CI status - skipping CI check ({e})"
+            )
             return None, True  # Graceful exit on API errors
 
         run_info = ci_status.get("run", {})
@@ -386,9 +388,7 @@ def _poll_for_ci_completion(
                 )
                 time.sleep(CI_POLL_INTERVAL_SECONDS)
                 continue
-            logger.warning(
-                "No CI run found after polling - continuing without CI check"
-            )
+            logger.info("CI_NOT_CONFIGURED: No workflow runs found - skipping CI check")
             return None, True  # Graceful exit
 
         run_status = run_info.get("status")
@@ -415,6 +415,7 @@ def _poll_for_ci_completion(
         )
         time.sleep(CI_POLL_INTERVAL_SECONDS)
 
+    logger.info("CI_TIMEOUT: No completed run after polling - skipping CI check")
     return None, True  # Graceful exit after max polling
 
 
@@ -507,9 +508,6 @@ def _run_ci_analysis_and_fix(
     fix_succeeded = _run_ci_fix(config, problem_description, fix_attempt)
 
     if not fix_succeeded:
-        # Check if it was a git push failure (fail fast) vs other failure (retry)
-        # We can detect this by checking if push_changes logged an error
-        # For now, continue to next attempt for non-push failures
         return True, None  # Continue to next attempt
 
     return False, None  # Successfully pushed, proceed to wait for new run
@@ -576,8 +574,9 @@ def check_and_fix_ci(
     try:
         ci_manager = CIResultsManager(project_dir)
     except Exception as e:
-        logger.warning(f"Failed to initialize CIResultsManager: {e}")
-        logger.warning("Continuing without CI check (graceful exit)")
+        logger.info(
+            f"CI_API_ERROR: Could not retrieve CI status - skipping CI check ({e})"
+        )
         return True  # Graceful exit on API errors
 
     # Phase 1: Poll for CI completion

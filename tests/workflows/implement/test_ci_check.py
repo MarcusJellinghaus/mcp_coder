@@ -326,22 +326,32 @@ class TestCheckAndFixCI:
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
 
-        # Always return failed CI - simulates 3 fix attempts all failing
-        failed_status = {
-            "run": {"id": 1, "status": "completed", "conclusion": "failure"},
-            "jobs": [
-                {
-                    "name": "test",
-                    "conclusion": "failure",
-                    "steps": [
-                        {"number": 1, "name": "Run tests", "conclusion": "failure"}
-                    ],
-                }
-            ],
-        }
-        # Return failed status repeatedly for all 3 attempts
-        # Each fix cycle: initial check, then detect new run, then check new run result
-        mock_manager.get_latest_ci_status.return_value = failed_status
+        # Helper to create failed CI status with given run ID
+        def make_failed_status(run_id: int) -> dict[str, Any]:
+            return {
+                "run": {"id": run_id, "status": "completed", "conclusion": "failure"},
+                "jobs": [
+                    {
+                        "name": "test",
+                        "conclusion": "failure",
+                        "steps": [
+                            {"number": 1, "name": "Run tests", "conclusion": "failure"}
+                        ],
+                    }
+                ],
+            }
+
+        # Simulate 3 fix attempts all failing with new CI runs each time
+        # Flow: initial poll -> fix 1 -> wait for new run -> poll -> fix 2 -> ...
+        mock_manager.get_latest_ci_status.side_effect = [
+            make_failed_status(1),  # Initial poll
+            make_failed_status(2),  # After fix 1: wait_for_new detects new run
+            make_failed_status(2),  # poll_for_completion
+            make_failed_status(3),  # After fix 2: wait_for_new detects new run
+            make_failed_status(3),  # poll_for_completion
+            make_failed_status(4),  # After fix 3: wait_for_new detects new run
+            make_failed_status(4),  # poll_for_completion (final failure)
+        ]
         mock_manager.get_run_logs.return_value = {"test/1_Run tests.txt": "Error"}
 
         mock_llm.return_value = "Analysis/fix response"
