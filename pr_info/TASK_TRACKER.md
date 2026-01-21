@@ -94,13 +94,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 6: Update DEVELOPMENT_PROCESS.md
 **Reference:** [step_6.md](steps/step_6.md)
 
-- [ ] Add `/plan_approve` to Plan Review workflow section
-- [ ] Add `/implementation_approve` to Code Review workflow section
-- [ ] Update "Major Issues Found" section with full rework workflow
-- [ ] Add Slash Command Quick Reference table
-- [ ] Update all references from `/implementation_tasks` to `/implementation_new_tasks`
-- [ ] Verify all slash command links are valid
-- [ ] Prepare git commit message for Step 6
+- [x] Add `/plan_approve` to Plan Review workflow section
+- [x] Add `/implementation_approve` to Code Review workflow section
+- [x] Update "Major Issues Found" section with full rework workflow
+- [x] Add Slash Command Quick Reference table
+- [x] Update all references from `/implementation_tasks` to `/implementation_new_tasks`
+- [x] Verify all slash command links are valid
+- [x] Prepare git commit message for Step 6
 
 ---
 

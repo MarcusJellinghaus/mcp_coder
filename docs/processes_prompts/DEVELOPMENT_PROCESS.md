@@ -130,6 +130,16 @@ flowchart TD
 
 **📋 Prerequisites:** Set up GitHub Actions for auto-labeling and `/approve` command. See [Label Setup Guide](../getting-started/LABEL_SETUP.md).
 
+### Slash Command Quick Reference
+
+| Workflow Stage | Commands |
+|----------------|----------|
+| **Issue Discussion** | `/issue_analyse`, `/discuss`, `/issue_update`, `/issue_create`, `/issue_approve` |
+| **Plan Review** | `/plan_review`, `/discuss`, `/plan_update`, `/commit_push`, `/plan_approve` |
+| **Implementation** | `/implementation_finalise` |
+| **Code Review** | `/implementation_review`, `/discuss`, `/implementation_new_tasks`, `/commit_push`, `/implementation_approve`, `/implementation_needs_rework` |
+| **Utility** | `/rebase` |
+
 ---
 
 ## Detailed Workflows
@@ -398,7 +408,19 @@ flowchart LR
 
 5. **Iterate until complete** - Review the plan with the LLM several times, until no more changes are required.
 
-6. **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
+6. **Approve the plan:**
+   <details>
+   <summary>📋 Approve Implementation Plan</summary>
+
+   > **Slash Command:** `/plan_approve` ([`.claude/commands/plan_approve.md`](../../.claude/commands/plan_approve.md))
+   >
+   > **Additional capability:** Sets issue status to `status-05:plan-ready` via `mcp-coder set-status`.
+
+   Use this command after plan review is complete to transition the issue to implementation-ready state.
+
+   </details>
+
+   Alternatively, add `/approve` as a comment on the GitHub issue to transition to `status:plan-ready`
 
 **Additional Prompts (for special cases):**
 
@@ -830,18 +852,40 @@ We will use the discussion later to add more tasks to the implementation plan fi
 - Check code quality and tests
 - Run additional validation
 - Address feedback and fix issues
-- **Approve:** Add `/approve` as a comment on the GitHub issue to transition to `status:ready-pr`
+- **Approve:** Use `/implementation_approve` to transition to `status:ready-pr`
+  <details>
+  <summary>📋 Approve Implementation</summary>
+
+  > **Slash Command:** `/implementation_approve` ([`.claude/commands/implementation_approve.md`](../../.claude/commands/implementation_approve.md))
+  >
+  > **Additional capability:** Sets issue status to `status-08:ready-pr` via `mcp-coder set-status`.
+
+  Use this command after code review is complete to transition the issue to PR-ready state.
+
+  </details>
+
+  Alternatively, add `/approve` as a comment on the GitHub issue to transition to `status:ready-pr`
 
 **See detailed prompts below in section 5.2**
 
 **🔄 Alternative Paths:**
 
 - **Minor Fixes Needed:** Review the suggestion and do a few one-shot additional implementations - with adhoc prompting (stay in `status:code-review`)
-- **Major Issues Found:** Ask the LLM to draft additional implementation steps, then change to `status:plan-ready` to implement them
+- **Major Issues Found:** Create additional implementation steps, then transition for rework
+  <details>
+  <summary>📋 Full Rework Workflow</summary>
+
+  1. **Create new tasks:** `/implementation_new_tasks` - draft additional implementation steps
+  2. **Commit changes:** `/commit_push` - commit the updated plan
+  3. **Transition status:** `/implementation_needs_rework` - set status to plan-ready
+  4. **Re-implement:** Run `mcp-coder implement` to process new steps
+
+  </details>
+
   <details>
   <summary>📋 Create further implementation tasks (click to expand and copy)</summary>
 
-  > **Slash Command:** `/implementation_tasks` ([`.claude/commands/implementation_tasks.md`](../../.claude/commands/implementation_tasks.md))
+  > **Slash Command:** `/implementation_new_tasks` ([`.claude/commands/implementation_new_tasks.md`](../../.claude/commands/implementation_new_tasks.md))
   
   ```
   ## Request to append new implementation tasks to Python Project Implementation Plan
