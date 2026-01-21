@@ -5,6 +5,10 @@ import logging
 import sys
 
 from .. import __version__
+from ..utils.github_operations.label_config import (
+    get_labels_config_path,
+    load_labels_config,
+)
 from ..utils.log_utils import setup_logging
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.coordinator import execute_coordinator_run, execute_coordinator_test
@@ -19,6 +23,27 @@ from .commands.verify import execute_verify
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
+
+
+def _build_set_status_epilog() -> str:
+    """Build epilog text with available labels from config."""
+    try:
+        # Use package bundled config (always available)
+        config_path = get_labels_config_path(None)
+        labels_config = load_labels_config(config_path)
+
+        lines = ["Available status labels:"]
+        for label in labels_config["workflow_labels"]:
+            lines.append(f"  {label['name']:30} {label['description']}")
+        lines.append("")
+        lines.append("Examples:")
+        lines.append("  mcp-coder set-status status-05:plan-ready")
+        lines.append("  mcp-coder set-status status-08:ready-pr --issue 123")
+        return "\n".join(lines)
+    except Exception as e:
+        # Log at debug level to aid troubleshooting (Decision #9)
+        logger.debug(f"Failed to build set-status epilog: {e}")
+        return "Run in a project directory to see available status labels."
 
 
 def create_parser() -> argparse.ArgumentParser:
