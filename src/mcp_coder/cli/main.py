@@ -14,6 +14,7 @@ from .commands.define_labels import execute_define_labels
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
 from .commands.prompt import execute_prompt
+from .commands.set_status import build_set_status_epilog, execute_set_status
 from .commands.verify import execute_verify
 
 # Logger will be initialized in main()
@@ -369,6 +370,31 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="Preview changes without applying them",
     )
 
+    # Set-status command - Update GitHub issue workflow label
+    # NOTE: Generate epilog dynamically from labels.json config (Decision #3)
+    set_status_parser = subparsers.add_parser(
+        "set-status",
+        help="Update GitHub issue workflow status label",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=build_set_status_epilog(),  # Dynamic generation from config
+    )
+    set_status_parser.add_argument(
+        "status_label",
+        help="Status label to set (e.g., status-05:plan-ready)",
+    )
+    set_status_parser.add_argument(
+        "--issue",
+        type=int,
+        default=None,
+        help="Issue number (default: auto-detect from branch name)",
+    )
+    set_status_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+
     return parser
 
 
@@ -446,6 +472,8 @@ def main() -> int:
                 return 1
         elif args.command == "define-labels":
             return execute_define_labels(args)
+        elif args.command == "set-status":
+            return execute_set_status(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")
