@@ -122,10 +122,17 @@ def execute_set_status(args):
        current_labels = set(issue_data["labels"])
        new_labels = compute_new_labels(current_labels, args.status_label, set(status_labels.keys()))
     
-    5. # Apply new labels
-       result = manager.set_labels(issue_number, *new_labels)
-       if result["number"] == 0:
-           return 1
+    5. # Apply new labels with error handling (Decision #8)
+       try:
+           result = manager.set_labels(issue_number, *new_labels)
+       except GithubException as e:
+           error_msg = str(e).lower()
+           if "not found" in error_msg or "label" in error_msg:
+               print(f"Error: Label '{args.status_label}' not found on GitHub.")
+               print("Run `mcp-coder define-labels` to create workflow labels.")
+               return 1
+           # Re-raise other GitHub errors
+           raise
        
        logger.info(f"Updated issue #{issue_number} to {args.status_label}")
        return 0

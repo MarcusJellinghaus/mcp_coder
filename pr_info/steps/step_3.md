@@ -26,17 +26,9 @@ from .commands.set_status import execute_set_status
 ```
 
 ### 2. Add Subparser in `create_parser()`
-```python
-# Set-status command - Update GitHub issue workflow label
-# NOTE: Generate epilog dynamically from labels.json config (Decision #3)
-set_status_parser = subparsers.add_parser(
-    "set-status",
-    help="Update GitHub issue workflow status label",
-    formatter_class=argparse.RawDescriptionHelpFormatter,
-    epilog=_build_set_status_epilog(),  # Dynamic generation from config
-)
 
-# Helper function to generate epilog from config:
+```python
+# Helper function to generate epilog from config (define BEFORE parser creation):
 def _build_set_status_epilog() -> str:
     """Build epilog text with available labels from config."""
     try:
@@ -55,8 +47,19 @@ def _build_set_status_epilog() -> str:
         lines.append("  mcp-coder set-status status-05:plan-ready")
         lines.append("  mcp-coder set-status status-08:ready-pr --issue 123")
         return "\n".join(lines)
-    except Exception:
+    except Exception as e:
+        # Log at debug level to aid troubleshooting (Decision #9)
+        logger.debug(f"Failed to build set-status epilog: {e}")
         return "Run in a project directory to see available status labels."
+
+
+# Set-status command - Update GitHub issue workflow label
+# NOTE: Generate epilog dynamically from labels.json config (Decision #3)
+set_status_parser = subparsers.add_parser(
+    "set-status",
+    help="Update GitHub issue workflow status label",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog=_build_set_status_epilog(),  # Dynamic generation from config
 )
 set_status_parser.add_argument(
     "status_label",

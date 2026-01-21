@@ -29,3 +29,15 @@
 ### Decision 7: Test Count
 **Question:** How many unit tests should Step 1 target?
 **Decision:** Aim for 6-8 focused tests, but let TDD drive the actual count as needed.
+
+---
+
+## Discussion Date: 2026-01-21 (Plan Review)
+
+### Decision 8: Explicit Error Handling for Missing Label on GitHub
+**Question:** Should the plan include explicit pseudocode for catching the "label not found" GitHub error?
+**Decision:** Yes - add explicit try/except block with error detection logic to step_2.md pseudocode.
+
+### Decision 9: Debug Logging for Epilog Generation Failures
+**Question:** Should we add debug-level logging when the epilog generation fails silently?
+**Decision:** Yes - add `logger.debug(f"Failed to build epilog: {e}")` before returning fallback message.
