@@ -20,14 +20,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Create Unit Tests for `set_status` Command
 **Reference:** [step_1.md](steps/step_1.md)
 
-- [ ] Create `tests/cli/commands/test_set_status.py` with unit tests
-- [ ] Implement `TestSetStatusHelpers` test class (validation, config loading)
-- [ ] Implement `TestComputeNewLabels` test class (label computation logic)
-- [ ] Implement `TestExecuteSetStatus` test class (CLI execute function)
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify tests are discoverable (expected to fail until Step 2)
-- [ ] Run mypy and fix any type issues
-- [ ] Prepare git commit message for Step 1
+- [x] Create `tests/cli/commands/test_set_status.py` with unit tests
+- [x] Implement `TestSetStatusHelpers` test class (validation, config loading)
+- [x] Implement `TestComputeNewLabels` test class (label computation logic)
+- [x] Implement `TestExecuteSetStatus` test class (CLI execute function)
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify tests are discoverable (expected to fail until Step 2)
+- [x] Run mypy and fix any type issues
+- [x] Prepare git commit message for Step 1
 
 ---
 
