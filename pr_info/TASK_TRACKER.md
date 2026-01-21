@@ -24,7 +24,7 @@ See [step_1.md](steps/step_1.md) for details.
 - [x] Delete `workflows/config/__init__.py`
 - [x] Verify `workflows/config/` directory is removed
 - [x] Verify `tests/workflows/config/` still exists
-- [ ] Run pylint checks and fix issues
+- [x] Run pylint checks and fix issues
 - [ ] Run pytest and fix failures
 - [ ] Run mypy checks and fix issues
 - [ ] Prepare git commit message for Step 1
