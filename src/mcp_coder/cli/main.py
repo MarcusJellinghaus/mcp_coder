@@ -497,6 +497,8 @@ def main() -> int:
                 return 1
         elif args.command == "define-labels":
             return execute_define_labels(args)
+        elif args.command == "set-status":
+            return execute_set_status(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")
