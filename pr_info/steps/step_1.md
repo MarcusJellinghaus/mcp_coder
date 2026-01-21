@@ -130,7 +130,7 @@ MOCK_ARGS = argparse.Namespace(
 ```
 
 ## Expected Test Count
-- ~10-12 unit tests covering:
-  - Label validation (2 tests)
-  - Label computation (3 tests)
-  - Execute function (5+ tests)
+- ~6-8 focused unit tests (per Decision #7, let TDD drive actual count):
+  - Label validation (1-2 tests)
+  - Label computation (2-3 tests)
+  - Execute function (3-4 tests)

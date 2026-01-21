@@ -28,26 +28,35 @@ from .commands.set_status import execute_set_status
 ### 2. Add Subparser in `create_parser()`
 ```python
 # Set-status command - Update GitHub issue workflow label
+# NOTE: Generate epilog dynamically from labels.json config (Decision #3)
 set_status_parser = subparsers.add_parser(
     "set-status",
     help="Update GitHub issue workflow status label",
     formatter_class=argparse.RawDescriptionHelpFormatter,
-    epilog="""Available status labels:
-  status-01:created           Fresh issue, may need refinement
-  status-02:awaiting-planning Issue is refined and ready for implementation planning
-  status-03:planning          Implementation plan being drafted (auto/in-progress)
-  status-04:plan-review       First implementation plan available for review/discussion
-  status-05:plan-ready        Implementation plan approved, ready to code
-  status-06:implementing      Code being written (auto/in-progress)
-  status-07:code-review       Implementation complete, needs code review
-  status-08:ready-pr          Approved for pull request creation
-  status-09:pr-creating       Bot is creating the pull request (auto/in-progress)
-  status-10:pr-created        Pull request created, awaiting approval/merge
+    epilog=_build_set_status_epilog(),  # Dynamic generation from config
+)
 
-Examples:
-  mcp-coder set-status status-05:plan-ready
-  mcp-coder set-status status-08:ready-pr --issue 123
-""",
+# Helper function to generate epilog from config:
+def _build_set_status_epilog() -> str:
+    """Build epilog text with available labels from config."""
+    try:
+        from .commands.set_status import get_status_labels_from_config
+        from ..workflows.utils import resolve_project_dir
+        
+        # Use package bundled config (always available)
+        config_path = get_labels_config_path(None)
+        labels_config = load_labels_config(config_path)
+        
+        lines = ["Available status labels:"]
+        for label in labels_config["workflow_labels"]:
+            lines.append(f"  {label['name']:30} {label['description']}")
+        lines.append("")
+        lines.append("Examples:")
+        lines.append("  mcp-coder set-status status-05:plan-ready")
+        lines.append("  mcp-coder set-status status-08:ready-pr --issue 123")
+        return "\n".join(lines)
+    except Exception:
+        return "Run in a project directory to see available status labels."
 )
 set_status_parser.add_argument(
     "status_label",

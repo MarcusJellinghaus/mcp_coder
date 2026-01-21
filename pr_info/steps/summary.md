@@ -76,8 +76,16 @@ mcp-coder set-status --help
 |------|-------------|------------|
 | 1 | Create test file with unit tests for `set_status.py` | Yes |
 | 2 | Implement `set_status.py` command module | - |
-| 3 | Register command in `main.py` | - |
+| 3 | Register command in `main.py` (with dynamic help text from config) | - |
 | 4 | Create slash command files | No (static markdown) |
+
+## Decisions
+
+See `pr_info/steps/Decisions.md` for discussed and agreed decisions:
+- #1-4: Initial design decisions
+- #5: Use existing IssueManager error for missing token
+- #6: Catch and reformat GitHub errors when label not found on repo
+- #7: Aim for 6-8 focused tests, let TDD drive actual count
 
 ## Success Criteria
 

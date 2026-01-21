@@ -160,6 +160,10 @@ f"Error: Cannot detect issue number from branch '{branch}'.\n"
 f"Branch must follow pattern: {{issue_number}}-title (e.g., '123-feature-name')\n"
 f"Use --issue flag to specify issue number explicitly."
 
-# GitHub API error
+# GitHub API error - label not found (Decision #6)
+f"Error: Label '{label}' not found on GitHub.\n"
+f"Run `mcp-coder define-labels` to create workflow labels."
+
+# Other GitHub API errors
 f"Error: Failed to update labels for issue #{issue_number}: {error}"
 ```
