@@ -74,6 +74,36 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ---
 
+### Step 5: Code Review Refactoring
+**Reference:** [step_5.md](steps/step_5.md)
+
+- [ ] Remove commented-out imports and move imports to top of `test_set_status.py`
+- [ ] Simplify `full_labels_config` fixture to load from `labels_config_path`
+- [ ] Move `_build_set_status_epilog()` from `main.py` to `set_status.py`
+- [ ] Remove unused imports from `main.py`
+- [ ] Update `main.py` to import `build_set_status_epilog` from `set_status`
+- [ ] Update `/implementation_needs_rework.md` description with workflow context
+- [ ] Rename `implementation_tasks.md` to `implementation_new_tasks.md`
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and verify all tests pass
+- [ ] Run mypy and fix any type issues
+- [ ] Prepare git commit message for Step 5
+
+---
+
+### Step 6: Update DEVELOPMENT_PROCESS.md
+**Reference:** [step_6.md](steps/step_6.md)
+
+- [ ] Add `/plan_approve` to Plan Review workflow section
+- [ ] Add `/implementation_approve` to Code Review workflow section
+- [ ] Update "Major Issues Found" section with full rework workflow
+- [ ] Add Slash Command Quick Reference table
+- [ ] Update all references from `/implementation_tasks` to `/implementation_new_tasks`
+- [ ] Verify all slash command links are valid
+- [ ] Prepare git commit message for Step 6
+
+---
+
 ## Pull Request
 
 - [ ] Review all implementation steps are complete

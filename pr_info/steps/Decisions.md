@@ -41,3 +41,35 @@
 ### Decision 9: Debug Logging for Epilog Generation Failures
 **Question:** Should we add debug-level logging when the epilog generation fails silently?
 **Decision:** Yes - add `logger.debug(f"Failed to build epilog: {e}")` before returning fallback message.
+
+---
+
+## Discussion Date: 2026-01-21 (Code Review)
+
+### Decision 10: Commented-out Import Block in Test File
+**Question:** Should we remove the stale commented-out import block in `test_set_status.py`?
+**Decision:** Yes - remove the comments and move imports to the top of the file (standard Python pattern).
+
+### Decision 11: Verbose Test Fixture `full_labels_config`
+**Question:** Should we keep the explicit 80-line fixture or load from `labels_config_path`?
+**Decision:** Replace with loading from `labels_config_path` fixture (less duplication, always in sync with real config).
+
+### Decision 12: Location of `_build_set_status_epilog()` Helper
+**Question:** Should `_build_set_status_epilog()` stay in `main.py` or move to `set_status.py`?
+**Decision:** Move to `set_status.py` for better cohesion (command-specific code stays with command). Also remove unused imports from `main.py`.
+
+### Decision 13: Location of `compute_new_labels()` Function
+**Question:** Should `compute_new_labels()` move to `utils/github_operations/label_config.py`?
+**Decision:** No - keep in `set_status.py` (YAGNI principle - it's simple and only used here).
+
+### Decision 14: `/implementation_needs_rework` Description
+**Question:** Should the slash command have a clearer description explaining the workflow context?
+**Decision:** Yes - update description to: "Set status to plan-ready after creating new steps (and pushing them) from code review findings."
+
+### Decision 15: Rename `/implementation_tasks` to `/implementation_new_tasks`
+**Question:** Should the slash command be renamed to clarify it creates NEW tasks?
+**Decision:** Yes - rename to `/implementation_new_tasks` for clearer intent.
+
+### Decision 16: Update `DEVELOPMENT_PROCESS.md` with Slash Commands
+**Question:** Should the development process documentation include all available slash commands?
+**Decision:** Yes - update to include all slash commands mapped to their workflow stages, especially the new ones (`/plan_approve`, `/implementation_approve`, `/implementation_needs_rework`).

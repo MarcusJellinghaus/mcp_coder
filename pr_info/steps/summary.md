@@ -78,6 +78,8 @@ mcp-coder set-status --help
 | 2 | Implement `set_status.py` command module | - |
 | 3 | Register command in `main.py` (with dynamic help text from config) | - |
 | 4 | Create slash command files | No (static markdown) |
+| 5 | Code review refactoring (Decisions #10-15) | No |
+| 6 | Update DEVELOPMENT_PROCESS.md with slash commands (Decision #16) | No |
 
 ## Decisions
 
@@ -86,6 +88,10 @@ See `pr_info/steps/Decisions.md` for discussed and agreed decisions:
 - #5: Use existing IssueManager error for missing token
 - #6: Catch and reformat GitHub errors when label not found on repo
 - #7: Aim for 6-8 focused tests, let TDD drive actual count
+- #8-9: Plan review decisions (error handling, debug logging)
+- #10-13: Code review refactoring (import organization, fixture simplification, function relocation)
+- #14-15: Slash command updates (description clarity, rename implementation_tasks)
+- #16: Update DEVELOPMENT_PROCESS.md with all slash commands
 
 ## Success Criteria
 
