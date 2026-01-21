@@ -145,7 +145,7 @@ def _get_failed_jobs_summary(
     """Get summary of failed jobs from CI status.
 
     Args:
-        jobs: List of job dicts with 'name', 'conclusion', and 'steps' keys
+        jobs: List of JobData TypedDicts with 'name', 'conclusion', and 'steps' keys
         logs: Dict mapping log filenames to content
 
     Returns:
