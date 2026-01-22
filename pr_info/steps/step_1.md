@@ -15,22 +15,29 @@ The change should include a code comment and a DEBUG log message for discoverabi
 
 - **File**: `src/mcp_coder/utils/log_utils.py`
 - **Function**: `setup_logging()`
-- **Location**: After `root_logger.setLevel(numeric_level)` and before the handler setup
+- **Location**: After the loop that sets all logger levels (around line 145), before handler setup
 
 ## WHAT
 
 No new functions. Add 4 lines of code inside existing `setup_logging()` function:
 
+Suppression code (after line ~145):
 ```python
 # Suppress verbose DEBUG logs from urllib3 connection pool
 # These logs obscure meaningful debug output from project loggers
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
+```
+
+Log message (at end of function, after handler setup):
+```python
 stdlogger.debug("Suppressing DEBUG logs from: urllib3.connectionpool")
 ```
 
 ## HOW
 
-Insert the code block after line ~138 (after `root_logger.setLevel(numeric_level)`) and before the `# Set up logging based on whether log_file is specified` comment.
+Insert the suppression code after line ~145 (after the loop that sets all logger levels) and before the `# Set up logging based on whether log_file is specified` comment.
+
+Add the DEBUG log message at the end of the function, after all handler setup is complete (this ensures the message is visible regardless of logging mode).
 
 **Integration**: Uses existing `logging` import and `stdlogger` module-level logger.
 
