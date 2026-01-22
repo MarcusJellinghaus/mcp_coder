@@ -1,98 +1,42 @@
-# Step 1: Create `readers.py` with Tests (TDD)
+# Step 1: Verify Test Imports and Create `readers.py`
 
 ## LLM Prompt
 ```
 You are implementing Step 1 of Issue #317: Refactor git_operations layered architecture.
 See pr_info/steps/summary.md for full context.
 
-This step creates the new `readers.py` module with all read-only git operations,
-following TDD - tests first, then implementation.
+This step verifies existing tests use package-level imports (safety net),
+then creates the new `readers.py` module.
 ```
 
 ## Overview
-Create the `readers.py` module containing all read-only git operations that are needed by multiple command modules. This breaks the circular dependency by providing a shared query layer.
+First ensure existing tests import from package level (`from mcp_coder.utils.git_operations import ...`) so they act as a safety net during refactoring. Then create `readers.py` with all read-only git operations.
 
 ---
 
-## Part A: Create Test File
+## Part A: Verify Test Imports Use Package Level
 
 ### WHERE
-`tests/utils/git_operations/test_readers.py`
+`tests/utils/git_operations/test_branches.py` and `tests/utils/git_operations/test_repository.py`
 
 ### WHAT
-Test file for all reader functions. Tests import from package level.
+Verify tests import from package level, not directly from submodules.
 
 ### HOW
-Move relevant tests from `test_repository.py` and `test_branches.py` to new file.
-
-### DATA
-Tests use existing fixtures from `conftest.py`:
-- `git_repo: tuple[Repo, Path]`
-- `git_repo_with_commit: tuple[Repo, Path]`
-- `git_repo_with_remote: tuple[Repo, Path, Path]`
-
-### ALGORITHM (test organization)
-```
-1. Copy TestRepositoryOperations class from test_repository.py
-2. Copy TestValidateBranchName class from test_branches.py
-3. Copy TestExtractIssueNumberFromBranch class from test_branches.py
-4. Copy TestRemoteBranchExists class from test_branches.py
-5. Update imports to use package-level imports
-6. Rename classes to reflect reader context
+```bash
+# Check for direct submodule imports in tests
+grep -r "from mcp_coder.utils.git_operations\.\(branches\|repository\)" tests/utils/git_operations/
 ```
 
-### File Content Structure
-```python
-"""Tests for git repository reader operations."""
+If any tests import directly from submodules (e.g., `from ...branches import`), update them to use package-level imports (`from mcp_coder.utils.git_operations import ...`).
 
-from pathlib import Path
-
-import pytest
-from git import Repo
-
-from mcp_coder.utils.git_operations import (
-    branch_exists,
-    extract_issue_number_from_branch,
-    get_current_branch_name,
-    get_default_branch_name,
-    get_full_status,
-    get_parent_branch_name,
-    get_staged_changes,
-    get_unstaged_changes,
-    is_git_repository,
-    is_working_directory_clean,
-    remote_branch_exists,
-    validate_branch_name,
-)
-
-
-@pytest.mark.git_integration
-class TestRepositoryReaders:
-    """Tests for repository status reader functions."""
-    # ... tests from test_repository.py ...
-
-
-class TestBranchValidation:
-    """Tests for branch name validation."""
-    # ... tests from test_branches.py TestValidateBranchName ...
-
-
-class TestBranchNameExtraction:
-    """Tests for extracting issue numbers from branch names."""
-    # ... tests from test_branches.py TestExtractIssueNumberFromBranch ...
-
-
-@pytest.mark.git_integration
-class TestBranchExistence:
-    """Tests for branch existence checks."""
-    # ... tests for branch_exists, remote_branch_exists ...
-
-
-@pytest.mark.git_integration  
-class TestBranchNameReaders:
-    """Tests for branch name reader functions."""
-    # ... tests for get_current_branch_name, get_default_branch_name, get_parent_branch_name ...
+### VERIFICATION
+```bash
+# Run all git_operations tests to establish baseline
+pytest tests/utils/git_operations/ -v
 ```
+
+All tests should pass before proceeding.
 
 ---
 
@@ -264,7 +208,6 @@ mypy src/mcp_coder/utils/git_operations/readers.py
 
 ## Notes
 
-- **Do not modify** `branches.py`, `remotes.py`, `repository.py`, or `__init__.py` in this step
+- Create `readers.py` with exact copies of functions - no logic changes
 - The new `readers.py` temporarily duplicates code from other modules
-- Tests will initially fail until `__init__.py` is updated (Step 2)
-- Function implementations are **exact copies** - no logic changes
+- Existing tests serve as safety net - run them after creating `readers.py` to verify no regressions

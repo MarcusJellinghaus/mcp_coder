@@ -5,17 +5,16 @@
 You are implementing Step 2 of Issue #317: Refactor git_operations layered architecture.
 See pr_info/steps/summary.md for full context.
 
-This step updates branches.py, remotes.py, __init__.py, and deletes repository.py
-to complete the source refactoring.
+This step updates all source modules to use the new readers.py layer.
 ```
 
 ## Overview
-Update all source modules to use the new layered architecture. This is the core refactoring step that:
+Update all source modules to use the new layered architecture:
 1. Updates `branches.py` to import from `readers.py` and removes moved functions
 2. Updates `remotes.py` to import from `readers.py` and adds `rebase_onto_branch`
-3. Updates `__init__.py` to re-export from new locations
-4. Deletes `repository.py` (all functions now in `readers.py`)
-5. Updates test files to match new module structure
+3. Updates `staging.py`, `file_tracking.py`, `diffs.py`, `commits.py` to import from `readers.py`
+4. Updates `__init__.py` to re-export from new locations
+5. Deletes `repository.py` (all functions now in `readers.py`)
 
 ---
 
@@ -172,7 +171,57 @@ def rebase_onto_branch(project_dir: Path, target_branch: str) -> bool:
 
 ---
 
-## Part C: Update __init__.py
+## Part C: Update Other Internal Modules
+
+Update imports in these files to use `readers.py` instead of `repository.py` or `branches.py`:
+
+### staging.py
+```python
+# Change:
+from .repository import get_unstaged_changes, is_git_repository
+# To:
+from .readers import get_unstaged_changes, is_git_repository
+```
+
+### file_tracking.py
+```python
+# Change:
+from .repository import is_git_repository
+# To:
+from .readers import is_git_repository
+```
+
+### diffs.py
+```python
+# Change:
+from .branches import (
+    branch_exists,
+    get_current_branch_name,
+    get_parent_branch_name,
+    remote_branch_exists,
+)
+from .repository import is_git_repository
+# To:
+from .readers import (
+    branch_exists,
+    get_current_branch_name,
+    get_parent_branch_name,
+    is_git_repository,
+    remote_branch_exists,
+)
+```
+
+### commits.py
+```python
+# Change:
+from .repository import get_full_status, get_staged_changes, is_git_repository
+# To:
+from .readers import get_full_status, get_staged_changes, is_git_repository
+```
+
+---
+
+## Part D: Update __init__.py
 
 ### WHERE
 `src/mcp_coder/utils/git_operations/__init__.py`
@@ -273,7 +322,7 @@ __all__ = [
 
 ---
 
-## Part D: Delete repository.py
+## Part E: Delete repository.py
 
 ### WHERE
 `src/mcp_coder/utils/git_operations/repository.py`
@@ -284,91 +333,6 @@ Delete the file entirely - all functions are now in `readers.py`.
 ### HOW
 ```bash
 rm src/mcp_coder/utils/git_operations/repository.py
-```
-
----
-
-## Part E: Update test_branches.py
-
-### WHERE
-`tests/utils/git_operations/test_branches.py`
-
-### WHAT
-Remove tests for functions that moved to `readers.py` and `remotes.py`.
-
-### HOW
-1. Remove `TestValidateBranchName` class (moved to `test_readers.py`)
-2. Remove `TestExtractIssueNumberFromBranch` class (moved to `test_readers.py`)
-3. Remove `TestRemoteBranchExists` class (moved to `test_readers.py`)
-4. Remove `TestRebaseOntoBranch` class (moved to `test_remotes.py`)
-5. Update imports to remove moved functions
-6. Keep only tests for mutation functions: `create_branch`, `checkout_branch`, `delete_branch`
-
-### DATA - Remaining tests in test_branches.py
-```python
-from mcp_coder.utils.git_operations import (
-    branch_exists,
-    checkout_branch,
-    create_branch,
-    get_current_branch_name,
-    get_default_branch_name,
-    get_parent_branch_name,
-)
-
-@pytest.mark.git_integration
-class TestBranchOperations:
-    """Tests for branch mutation operations."""
-    
-    def test_create_and_branch_exists(...): ...
-    def test_checkout_branch_and_get_current(...): ...
-    def test_get_default_branch_name(...): ...
-    def test_get_parent_branch_name(...): ...
-    def test_checkout_branch_from_remote(...): ...
-```
-
----
-
-## Part F: Update test_remotes.py
-
-### WHERE
-`tests/utils/git_operations/test_remotes.py`
-
-### WHAT
-Add tests for `rebase_onto_branch` (moved from `test_branches.py`).
-
-### HOW
-1. Add import for `rebase_onto_branch`
-2. Copy `TestRebaseOntoBranch` class from `test_branches.py`
-
-### DATA - Added tests
-```python
-from mcp_coder.utils.git_operations import (
-    get_github_repository_url,
-    git_push,
-    rebase_onto_branch,  # Added
-)
-
-# ... existing test classes ...
-
-@pytest.mark.git_integration
-class TestRebaseOntoBranch:
-    """Tests for rebase_onto_branch function."""
-    # ... copied from test_branches.py ...
-```
-
----
-
-## Part G: Delete test_repository.py
-
-### WHERE
-`tests/utils/git_operations/test_repository.py`
-
-### WHAT
-Delete the file entirely - all tests are now in `test_readers.py`.
-
-### HOW
-```bash
-rm tests/utils/git_operations/test_repository.py
 ```
 
 ---

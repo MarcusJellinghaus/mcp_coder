@@ -69,6 +69,10 @@ Layer 3 (Infrastructure):
 | `src/mcp_coder/utils/git_operations/readers.py` | **CREATE** |
 | `src/mcp_coder/utils/git_operations/branches.py` | MODIFY |
 | `src/mcp_coder/utils/git_operations/remotes.py` | MODIFY |
+| `src/mcp_coder/utils/git_operations/staging.py` | MODIFY (import path) |
+| `src/mcp_coder/utils/git_operations/file_tracking.py` | MODIFY (import path) |
+| `src/mcp_coder/utils/git_operations/diffs.py` | MODIFY (import path) |
+| `src/mcp_coder/utils/git_operations/commits.py` | MODIFY (import path) |
 | `src/mcp_coder/utils/git_operations/repository.py` | **DELETE** |
 | `src/mcp_coder/utils/git_operations/__init__.py` | MODIFY |
 | `.importlinter` | MODIFY |
@@ -93,9 +97,10 @@ Layer 3 (Infrastructure):
 
 | Step | Description |
 |------|-------------|
-| 1 | Create `readers.py` with tests (TDD) |
-| 2 | Update `branches.py` and `remotes.py` with all source changes |
+| 1 | Verify test imports use package level, then create `readers.py` |
+| 2 | Update all source modules (branches, remotes, staging, file_tracking, diffs, commits) |
 | 3 | Update external imports and add import linter contract |
+| 4 | Reorganize test files |
 
 ## Verification Commands
 
