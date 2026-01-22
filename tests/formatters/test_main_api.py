@@ -4,6 +4,7 @@ Tests the main API functions including format_code() combined functionality,
 re-exports, and line-length conflict warning integration.
 """
 
+import logging
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
@@ -95,18 +96,13 @@ class TestCombinedAPICoreFunctionality:
     def test_format_code_error_handling_one_formatter_fails(
         self, mock_isort: Mock, mock_black: Mock
     ) -> None:
-        """Test when one directory-based formatter fails, other still runs."""
-        # Setup - Black fails on directory processing, isort succeeds
+        """Test when Black fails, isort does NOT run (early exit behavior)."""
+        # Setup - Black fails
         mock_black.return_value = FormatterResult(
             success=False,
             files_changed=[],
             formatter_name="black",
             error_message="Black failed",
-        )
-        mock_isort.return_value = FormatterResult(
-            success=True,
-            files_changed=["src/imports.py"],
-            formatter_name="isort",
         )
 
         # Import here to ensure we test the actual implementation
@@ -118,18 +114,103 @@ class TestCombinedAPICoreFunctionality:
             # Execute
             result = format_code(project_root)
 
-            # Verify both formatters called with directory-based approach despite Black failure
+            # Verify Black was called
             mock_black.assert_called_once_with(project_root, None)
-            mock_isort.assert_called_once_with(project_root, None)
 
-            # Verify combined results include both success and failure from directory processing
+            # Verify isort was NOT called (early exit)
+            mock_isort.assert_not_called()
+
+            # Verify result contains only black
             assert isinstance(result, dict)
             assert "black" in result
-            assert "isort" in result
+            assert "isort" not in result
             assert result["black"].success is False
             assert result["black"].error_message == "Black failed"
-            assert result["isort"].success is True
-            assert result["isort"].files_changed == ["src/imports.py"]
+
+    @patch("mcp_coder.formatters.format_with_black")
+    @patch("mcp_coder.formatters.format_with_isort")
+    def test_format_code_early_exit_on_failure(
+        self, mock_isort: Mock, mock_black: Mock, caplog: Any
+    ) -> None:
+        """Test that format_code() exits early and logs when a formatter fails."""
+        # Setup - Black fails with detailed error message
+        mock_black.return_value = FormatterResult(
+            success=False,
+            files_changed=[],
+            formatter_name="black",
+            error_message="Black formatting error: Command ... returned non-zero exit status 123.\nOutput: error: cannot format file.py",
+        )
+
+        from mcp_coder.formatters import format_code
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+
+            # Capture INFO logs
+            with caplog.at_level(logging.INFO, logger="mcp_coder.formatters"):
+                result = format_code(project_root)
+
+            # Verify Black was called
+            mock_black.assert_called_once()
+
+            # Verify isort was NOT called (early exit)
+            mock_isort.assert_not_called()
+
+            # Verify result contains only black (failed)
+            assert "black" in result
+            assert "isort" not in result
+            assert result["black"].success is False
+
+            # Verify INFO log was emitted with error details
+            assert any(
+                "black formatting failed" in record.message for record in caplog.records
+            )
+            assert any(
+                "cannot format file.py" in record.message for record in caplog.records
+            )
+
+    @patch("mcp_coder.formatters.format_with_black")
+    @patch("mcp_coder.formatters.format_with_isort")
+    def test_format_code_early_exit_on_isort_failure(
+        self, mock_isort: Mock, mock_black: Mock, caplog: Any
+    ) -> None:
+        """Test that format_code() exits early when isort fails (after Black succeeds)."""
+        # Setup - Black succeeds, isort fails
+        mock_black.return_value = FormatterResult(
+            success=True,
+            files_changed=["file.py"],
+            formatter_name="black",
+            error_message=None,
+        )
+        mock_isort.return_value = FormatterResult(
+            success=False,
+            files_changed=[],
+            formatter_name="isort",
+            error_message="isort formatting error: Could not parse",
+        )
+
+        from mcp_coder.formatters import format_code
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir)
+
+            with caplog.at_level(logging.INFO, logger="mcp_coder.formatters"):
+                result = format_code(project_root)
+
+            # Verify both were called (Black succeeded, isort failed)
+            mock_black.assert_called_once()
+            mock_isort.assert_called_once()
+
+            # Verify result contains both
+            assert "black" in result
+            assert "isort" in result
+            assert result["black"].success is True
+            assert result["isort"].success is False
+
+            # Verify INFO log was emitted for isort failure
+            assert any(
+                "isort formatting failed" in record.message for record in caplog.records
+            )
 
 
 @pytest.mark.formatter_integration
