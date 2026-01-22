@@ -115,6 +115,12 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
         logger.error(error_msg)
         return {"success": False, "commit_hash": None, "error": error_msg}
 
+    # Check if there are any changes to commit
+    status = get_full_status(project_dir)
+    if not status["staged"] and not status["modified"] and not status["untracked"]:
+        logger.info("No changes to commit")
+        return {"success": True, "commit_hash": None, "error": None}
+
     try:
         # Stage all unstaged changes first
         logger.debug("Staging all unstaged changes")

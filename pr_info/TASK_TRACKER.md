@@ -22,11 +22,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Implement test `test_commit_all_changes_no_changes_returns_success` in `tests/utils/git_operations/test_commits.py`
 - [x] Add `get_full_status` import to `src/mcp_coder/utils/git_operations/commits.py`
-- [ ] Implement pre-check logic in `commit_all_changes()` function
-- [ ] Run pylint and fix any issues found
-- [ ] Run pytest and fix any issues found
-- [ ] Run mypy and fix any issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Implement pre-check logic in `commit_all_changes()` function
+- [x] Run pylint and fix any issues found
+- [x] Run pytest and fix any issues found
+- [x] Run mypy and fix any issues found
+- [x] Prepare git commit message for Step 1
 
 ---
 
