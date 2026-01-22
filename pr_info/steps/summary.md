@@ -35,9 +35,9 @@ None.
 
 ## Acceptance Criteria
 
-- [x] DEBUG logs from `urllib3.connectionpool` no longer appear in output
-- [x] INFO, WARNING, and ERROR logs from `urllib3.connectionpool` still appear
-- [x] Project's own DEBUG logs (`mcp_coder.*`) work as expected
-- [x] DEBUG log message indicates suppression at startup
-- [x] Code comment explains the suppression
-- [x] Tests pass
+- [ ] DEBUG logs from `urllib3.connectionpool` no longer appear in output
+- [ ] INFO, WARNING, and ERROR logs from `urllib3.connectionpool` still appear
+- [ ] Project's own DEBUG logs (`mcp_coder.*`) work as expected
+- [ ] DEBUG log message indicates suppression at startup
+- [ ] Code comment explains the suppression
+- [ ] Tests pass
