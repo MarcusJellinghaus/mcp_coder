@@ -32,14 +32,14 @@ See [step_1.md](steps/step_1.md) for details.
 ### Step 2: Improve isort formatter error handling and add debug logging
 See [step_2.md](steps/step_2.md) for details.
 
-- [ ] Implement Step 2: Add tests for improved error handling in `test_isort_formatter.py`
-- [ ] Implement Step 2: Add logging import and logger at module level in `isort_formatter.py`
-- [ ] Implement Step 2: Add DEBUG logging for isort command before execution
-- [ ] Implement Step 2: Include stderr output in error_message when isort fails
-- [ ] Run pylint and fix all issues found for Step 2
-- [ ] Run pytest and fix all issues found for Step 2
-- [ ] Run mypy and fix all issues found for Step 2
-- [ ] Prepare git commit message for Step 2
+- [x] Implement Step 2: Add tests for improved error handling in `test_isort_formatter.py`
+- [x] Implement Step 2: Add logging import and logger at module level in `isort_formatter.py`
+- [x] Implement Step 2: Add DEBUG logging for isort command before execution
+- [x] Implement Step 2: Include stderr output in error_message when isort fails
+- [x] Run pylint and fix all issues found for Step 2
+- [x] Run pytest and fix all issues found for Step 2
+- [x] Run mypy and fix all issues found for Step 2
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Add early exit on formatter failure in format_code()
 See [step_3.md](steps/step_3.md) for details.
