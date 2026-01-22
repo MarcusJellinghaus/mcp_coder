@@ -20,14 +20,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Improve Black formatter error handling and add debug logging
 See [step_1.md](steps/step_1.md) for details.
 
-- [ ] Implement Step 1: Add tests for improved error handling in `test_black_formatter.py`
-- [ ] Implement Step 1: Add logging import and logger at module level in `black_formatter.py`
-- [ ] Implement Step 1: Add DEBUG logging for Black command before execution
-- [ ] Implement Step 1: Include stderr output in error_message when Black fails
-- [ ] Run pylint and fix all issues found for Step 1
-- [ ] Run pytest and fix all issues found for Step 1
-- [ ] Run mypy and fix all issues found for Step 1
-- [ ] Prepare git commit message for Step 1
+- [x] Implement Step 1: Add tests for improved error handling in `test_black_formatter.py`
+- [x] Implement Step 1: Add logging import and logger at module level in `black_formatter.py`
+- [x] Implement Step 1: Add DEBUG logging for Black command before execution
+- [x] Implement Step 1: Include stderr output in error_message when Black fails
+- [x] Run pylint and fix all issues found for Step 1
+- [x] Run pytest and fix all issues found for Step 1
+- [x] Run mypy and fix all issues found for Step 1
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Improve isort formatter error handling and add debug logging
 See [step_2.md](steps/step_2.md) for details.
