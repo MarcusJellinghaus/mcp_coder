@@ -26,7 +26,21 @@
       "Bash(./tools/pycycle_check.sh:*)",
       "Bash(python -m pytest:*)",
       "Bash(vulture:*)",
-      "Skill(plan_review)"
+      "Skill(commit_push)",
+      "Skill(discuss)",
+      "Skill(implementation_approve)",
+      "Skill(implementation_finalise)",
+      "Skill(implementation_needs_rework)",
+      "Skill(implementation_new_tasks)",
+      "Skill(implementation_review)",
+      "Skill(issue_analyse)",
+      "Skill(issue_approve)",
+      "Skill(issue_create)",
+      "Skill(issue_update)",
+      "Skill(plan_approve)",
+      "Skill(plan_review)",
+      "Skill(plan_update)",
+      "Skill(rebase)"
     ]
   },
   "enableAllProjectMcpServers": true,
