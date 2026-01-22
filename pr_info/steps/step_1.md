@@ -28,7 +28,7 @@ Suppression code (after line ~145):
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 ```
 
-Log message (at end of function, after handler setup):
+Log message (at end of both branches, after handler setup):
 ```python
 stdlogger.debug("Suppressing DEBUG logs from: urllib3.connectionpool")
 ```
@@ -37,7 +37,7 @@ stdlogger.debug("Suppressing DEBUG logs from: urllib3.connectionpool")
 
 Insert the suppression code after line ~145 (after the loop that sets all logger levels) and before the `# Set up logging based on whether log_file is specified` comment.
 
-Add the DEBUG log message at the end of the function, after all handler setup is complete (this ensures the message is visible regardless of logging mode).
+Add the DEBUG log message at the end of both branches (file logging and console logging), after handler setup is complete. This ensures the message appears regardless of which logging mode is used.
 
 **Integration**: Uses existing `logging` import and `stdlogger` module-level logger.
 
