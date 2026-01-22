@@ -44,6 +44,20 @@ class TestCommitOperations:
         assert result["error"] is None
         assert len(list(repo.iter_commits())) == 1
 
+    def test_commit_all_changes_no_changes_returns_success(
+        self, git_repo: tuple[Repo, Path]
+    ) -> None:
+        """Test commit_all_changes returns success when no changes to commit."""
+        repo, project_dir = git_repo
+
+        # Do NOT create any files (repo is clean)
+        # Call commit_all_changes on a clean repo
+        result = commit_all_changes("Test message", project_dir)
+
+        assert result["success"] is True
+        assert result["commit_hash"] is None
+        assert result["error"] is None
+
     def test_commit_with_multiline_message(self, git_repo: tuple[Repo, Path]) -> None:
         """Test commit handles multiline commit messages."""
         repo, project_dir = git_repo

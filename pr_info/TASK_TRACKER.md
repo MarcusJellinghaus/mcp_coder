@@ -20,7 +20,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Add pre-check for no changes in commit_all_changes()
 **Reference**: [pr_info/steps/step_1.md](steps/step_1.md)
 
-- [ ] Implement test `test_commit_all_changes_no_changes_returns_success` in `tests/utils/git_operations/test_commits.py`
+- [x] Implement test `test_commit_all_changes_no_changes_returns_success` in `tests/utils/git_operations/test_commits.py`
 - [ ] Add `get_full_status` import to `src/mcp_coder/utils/git_operations/commits.py`
 - [ ] Implement pre-check logic in `commit_all_changes()` function
 - [ ] Run pylint and fix any issues found
