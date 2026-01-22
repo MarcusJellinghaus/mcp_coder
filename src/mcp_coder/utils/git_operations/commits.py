@@ -8,7 +8,7 @@ from typing import Optional
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from .core import GIT_SHORT_HASH_LENGTH, CommitResult, _safe_repo_context, logger
-from .repository import get_staged_changes, is_git_repository
+from .repository import get_full_status, get_staged_changes, is_git_repository
 from .staging import stage_all_changes
 
 
@@ -114,6 +114,12 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
         error_msg = f"Directory is not a git repository: {project_dir}"
         logger.error(error_msg)
         return {"success": False, "commit_hash": None, "error": error_msg}
+
+    # Check if there are any changes to commit
+    status = get_full_status(project_dir)
+    if not status["staged"] and not status["modified"] and not status["untracked"]:
+        logger.info("No changes to commit")
+        return {"success": True, "commit_hash": None, "error": None}
 
     try:
         # Stage all unstaged changes first

@@ -160,6 +160,10 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
         logger = logging.getLogger(name)
         logger.setLevel(numeric_level)
 
+    # Suppress verbose DEBUG logs from urllib3 connection pool
+    # These logs obscure meaningful debug output from project loggers
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
+
     # Set up logging based on whether log_file is specified
     if log_file:
         # FILE LOGGING ONLY - no console output
@@ -251,6 +255,8 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
             )
 
         stdlogger.debug("Logging initialized: console=%s", log_level)
+
+    stdlogger.debug("Suppressing DEBUG logs from: urllib3.connectionpool")
 
 
 def _redact_for_logging(

@@ -6,6 +6,7 @@ Based on Step 2 requirements, this module implements isort formatting using:
 - Eliminates custom file discovery, letting isort handle file scanning
 """
 
+import logging
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -14,6 +15,8 @@ from mcp_coder.utils.subprocess_runner import execute_command
 
 from .models import FormatterResult
 from .utils import get_default_target_dirs, read_tool_config
+
+logger = logging.getLogger(__name__)
 
 
 def format_with_isort(
@@ -56,7 +59,18 @@ def format_with_isort(
             error_message=None,
         )
 
-    except (subprocess.CalledProcessError, OSError) as e:
+    except subprocess.CalledProcessError as e:
+        # Include the actual stderr output from isort for better debugging
+        # CalledProcessError stores output in 'output' attr when using 3-arg form
+        stderr_output = getattr(e, "output", "") or getattr(e, "stderr", "") or ""
+        error_details = f"{e}\nOutput: {stderr_output}" if stderr_output else str(e)
+        return FormatterResult(
+            success=False,
+            files_changed=[],
+            formatter_name="isort",
+            error_message=f"isort formatting error: {error_details}",
+        )
+    except OSError as e:
         return FormatterResult(
             success=False,
             files_changed=[],
@@ -99,6 +113,9 @@ def _format_isort_directory(target_path: Path, config: Dict[str, Any]) -> List[s
     command.extend(["--line-length", str(config["line_length"])])
     if config["float_to_top"]:
         command.append("--float-to-top")
+
+    # Log the full command for debugging
+    logger.debug("isort command: %s", command)
 
     # Execute isort formatting on directory
     result = execute_command(command)
