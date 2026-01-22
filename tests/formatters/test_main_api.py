@@ -4,6 +4,7 @@ Tests the main API functions including format_code() combined functionality,
 re-exports, and line-length conflict warning integration.
 """
 
+import logging
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
@@ -132,8 +133,6 @@ class TestCombinedAPICoreFunctionality:
         self, mock_isort: Mock, mock_black: Mock, caplog: Any
     ) -> None:
         """Test that format_code() exits early and logs when a formatter fails."""
-        import logging
-
         # Setup - Black fails with detailed error message
         mock_black.return_value = FormatterResult(
             success=False,
@@ -176,8 +175,6 @@ class TestCombinedAPICoreFunctionality:
         self, mock_isort: Mock, mock_black: Mock, caplog: Any
     ) -> None:
         """Test that format_code() exits early when isort fails (after Black succeeds)."""
-        import logging
-
         # Setup - Black succeeds, isort fails
         mock_black.return_value = FormatterResult(
             success=True,
