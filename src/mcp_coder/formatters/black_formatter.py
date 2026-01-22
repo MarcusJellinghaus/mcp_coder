@@ -6,6 +6,7 @@ Based on Step 1 requirements, this module implements Black formatting using:
 - Eliminates custom file discovery, letting Black handle file scanning
 """
 
+import logging
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -14,6 +15,8 @@ from mcp_coder.utils.subprocess_runner import execute_command
 
 from .models import FormatterResult
 from .utils import get_default_target_dirs, read_tool_config
+
+logger = logging.getLogger(__name__)
 
 
 def format_with_black(
@@ -56,7 +59,18 @@ def format_with_black(
             error_message=None,
         )
 
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+    except subprocess.CalledProcessError as e:
+        # Include the actual stderr output from Black for better debugging
+        # CalledProcessError stores output in 'output' attr when using 3-arg form
+        stderr_output = getattr(e, "output", "") or getattr(e, "stderr", "") or ""
+        error_details = f"{e}\nOutput: {stderr_output}" if stderr_output else str(e)
+        return FormatterResult(
+            success=False,
+            files_changed=[],
+            formatter_name="black",
+            error_message=f"Black formatting error: {error_details}",
+        )
+    except (FileNotFoundError, OSError) as e:
         return FormatterResult(
             success=False,
             files_changed=[],
@@ -98,6 +112,9 @@ def _format_black_directory(target_path: Path, config: Dict[str, Any]) -> List[s
     command.extend(["--line-length", str(config["line-length"])])
     for target_version in config["target-version"]:
         command.extend(["--target-version", target_version])
+
+    # Log command at DEBUG level before execution
+    logger.debug("Black command: %s", command)
 
     # Execute Black formatting on directory
     result = execute_command(command)

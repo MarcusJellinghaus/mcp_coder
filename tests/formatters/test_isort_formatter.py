@@ -4,9 +4,11 @@ Based on Step 2 requirements: Tests updated to expect directory-based formatting
 following the same pattern as the Black formatter refactor.
 """
 
+import logging
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, Generator
+from unittest.mock import Mock
 
 import pytest
 
@@ -420,3 +422,72 @@ Processing file.py
 
         # Verify function returned correct list of changed files
         # (Mock simulates directory-based execution)
+
+
+class TestIsortFormatterErrorHandling:
+    """Tests for improved error handling and debug logging."""
+
+    def test_format_directory_error_includes_stderr(
+        self, temp_project_dir: Path, monkeypatch: Any
+    ) -> None:
+        """Test that stderr output is included in error_message when isort fails."""
+        from mcp_coder.formatters.isort_formatter import format_with_isort
+
+        # Create a directory structure
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        (src_dir / "test.py").write_text("import os")
+
+        # Mock execute_command to simulate isort error with stderr
+        mock_result = Mock()
+        mock_result.return_code = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "ERROR: Could not parse syntax in edge_case.py"
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.isort_formatter.execute_command",
+            lambda cmd: mock_result,
+        )
+
+        result = format_with_isort(temp_project_dir)
+
+        # Verify failure
+        assert result.success is False
+        assert result.formatter_name == "isort"
+
+        # Verify stderr is included in error_message
+        assert result.error_message is not None
+        assert "Could not parse syntax" in result.error_message
+        assert "edge_case.py" in result.error_message
+
+    def test_format_directory_logs_command_at_debug(
+        self, temp_project_dir: Path, monkeypatch: Any, caplog: Any
+    ) -> None:
+        """Test that the full isort command is logged at DEBUG level."""
+        from mcp_coder.formatters.isort_formatter import format_with_isort
+
+        # Create a directory structure
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        (src_dir / "test.py").write_text("import os")
+
+        # Mock execute_command to return success
+        mock_result = Mock()
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.isort_formatter.execute_command",
+            lambda cmd: mock_result,
+        )
+
+        # Capture DEBUG logs
+        with caplog.at_level(
+            logging.DEBUG, logger="mcp_coder.formatters.isort_formatter"
+        ):
+            format_with_isort(temp_project_dir)
+
+        # Verify command was logged
+        assert any("isort command:" in record.message for record in caplog.records)
+        assert any("--profile" in record.message for record in caplog.records)

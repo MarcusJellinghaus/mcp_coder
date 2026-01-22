@@ -1,5 +1,6 @@
 """Formatters package providing code formatting utilities."""
 
+import logging
 import tomllib
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -8,6 +9,8 @@ from .black_formatter import format_with_black
 from .config_reader import check_line_length_conflicts, read_formatter_config
 from .isort_formatter import format_with_isort
 from .models import FormatterResult
+
+logger = logging.getLogger(__name__)
 
 
 def format_code(
@@ -39,8 +42,22 @@ def format_code(
     for formatter_name in formatters:
         if formatter_name == "black":
             results["black"] = format_with_black(project_root, target_dirs)
+            if not results["black"].success:
+                logger.info(
+                    "%s formatting failed: %s",
+                    results["black"].formatter_name,
+                    results["black"].error_message,
+                )
+                break
         elif formatter_name == "isort":
             results["isort"] = format_with_isort(project_root, target_dirs)
+            if not results["isort"].success:
+                logger.info(
+                    "%s formatting failed: %s",
+                    results["isort"].formatter_name,
+                    results["isort"].error_message,
+                )
+                break
 
     return results
 

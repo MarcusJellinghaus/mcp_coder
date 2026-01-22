@@ -4,9 +4,11 @@ Based on Step 1 requirements: Test directory-based Black execution with
 output parsing to determine changed files, eliminating file-by-file processing.
 """
 
+import logging
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, Generator
+from unittest.mock import Mock
 
 import pytest
 
@@ -394,3 +396,74 @@ class TestBlackFormatterUtilities:
         changed_files = _format_black_directory(src_dir, config)
 
         assert str(test_file) in changed_files
+
+
+class TestBlackFormatterErrorHandling:
+    """Tests for improved error handling and debug logging."""
+
+    def test_format_directory_error_includes_stderr(
+        self, temp_project_dir: Path, monkeypatch: Any
+    ) -> None:
+        """Test that stderr output is included in error_message when Black fails."""
+        from mcp_coder.formatters.black_formatter import format_with_black
+
+        # Create a directory structure
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        (src_dir / "test.py").write_text("x = 1")
+
+        # Mock execute_command to simulate Black syntax error with stderr
+        mock_result = Mock()
+        mock_result.return_code = 123
+        mock_result.stdout = ""
+        mock_result.stderr = (
+            "error: cannot format broken.py: Cannot parse: 1:0: invalid syntax"
+        )
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.black_formatter.execute_command",
+            lambda cmd: mock_result,
+        )
+
+        result = format_with_black(temp_project_dir)
+
+        # Verify failure
+        assert result.success is False
+        assert result.formatter_name == "black"
+
+        # Verify stderr is included in error_message
+        assert result.error_message is not None
+        assert "cannot format broken.py" in result.error_message
+        assert "invalid syntax" in result.error_message
+
+    def test_format_directory_logs_command_at_debug(
+        self, temp_project_dir: Path, monkeypatch: Any, caplog: Any
+    ) -> None:
+        """Test that the full Black command is logged at DEBUG level."""
+        from mcp_coder.formatters.black_formatter import format_with_black
+
+        # Create a directory structure
+        src_dir = temp_project_dir / "src"
+        src_dir.mkdir()
+        (src_dir / "test.py").write_text("x = 1")
+
+        # Mock execute_command to return success
+        mock_result = Mock()
+        mock_result.return_code = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+
+        monkeypatch.setattr(
+            "mcp_coder.formatters.black_formatter.execute_command",
+            lambda cmd: mock_result,
+        )
+
+        # Capture DEBUG logs
+        with caplog.at_level(
+            logging.DEBUG, logger="mcp_coder.formatters.black_formatter"
+        ):
+            format_with_black(temp_project_dir)
+
+        # Verify command was logged
+        assert any("Black command:" in record.message for record in caplog.records)
+        assert any("--line-length" in record.message for record in caplog.records)
