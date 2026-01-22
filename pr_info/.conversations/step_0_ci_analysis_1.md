@@ -1,9 +1,0 @@
-# CI Failure Analysis
-
-The integration test `TestCompleteFormattingWorkflow.test_error_resilience_mixed_scenarios` in `tests/formatters/test_integration.py:209` is failing because the test expects both "black" and "isort" keys in the formatter results dictionary, but only "black" is present.
-
-The root cause is a conflict between the test's expectations and the newly implemented "early exit on failure" feature in `src/mcp_coder/formatters/__init__.py`. According to the implementation plan in `pr_info/steps/summary.md`, the `format_code()` function was enhanced to break out of the formatter loop when a formatter fails (step 3: "Add early exit on failure"). When Black encounters the syntax error file (`invalid.py`), it fails and the loop breaks immediately, so isort never runs and the "isort" key is never added to the results dictionary.
-
-The test at line 209 asserts `assert "isort" in results`, but since Black fails on the syntax error and the early exit behavior is now in place, only `{"black": FormatterResult(...)}` is returned. The test was written before the early exit feature was implemented and needs to be updated to reflect the new expected behavior.
-
-To fix this, the test `test_error_resilience_mixed_scenarios` in `tests/formatters/test_integration.py` should be modified to expect that when Black fails, isort will NOT be run (due to early exit). The test should be updated to only assert that "black" is in results when Black is expected to fail first, and should verify that "isort" is absent (confirming the early exit behavior works correctly). Alternatively, if the test is meant to verify resilience in a different way, it may need to be restructured to test a scenario where Black succeeds but isort fails, or to test formatters individually rather than through the combined `format_code()` function.
