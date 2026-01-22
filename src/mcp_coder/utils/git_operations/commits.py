@@ -8,7 +8,7 @@ from typing import Optional
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from .core import GIT_SHORT_HASH_LENGTH, CommitResult, _safe_repo_context, logger
-from .repository import get_staged_changes, is_git_repository
+from .repository import get_full_status, get_staged_changes, is_git_repository
 from .staging import stage_all_changes
 
 

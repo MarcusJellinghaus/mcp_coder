@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Reference**: [pr_info/steps/step_1.md](steps/step_1.md)
 
 - [x] Implement test `test_commit_all_changes_no_changes_returns_success` in `tests/utils/git_operations/test_commits.py`
-- [ ] Add `get_full_status` import to `src/mcp_coder/utils/git_operations/commits.py`
+- [x] Add `get_full_status` import to `src/mcp_coder/utils/git_operations/commits.py`
 - [ ] Implement pre-check logic in `commit_all_changes()` function
 - [ ] Run pylint and fix any issues found
 - [ ] Run pytest and fix any issues found
