@@ -160,9 +160,10 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
         logger = logging.getLogger(name)
         logger.setLevel(numeric_level)
 
-    # Suppress verbose DEBUG logs from urllib3 connection pool
+    # Suppress verbose DEBUG logs from third-party libraries
     # These logs obscure meaningful debug output from project loggers
     logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
+    logging.getLogger("github.Requester").setLevel(logging.INFO)
 
     # Set up logging based on whether log_file is specified
     if log_file:
@@ -256,7 +257,9 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
 
         stdlogger.debug("Logging initialized: console=%s", log_level)
 
-    stdlogger.debug("Suppressing DEBUG logs from: urllib3.connectionpool")
+    stdlogger.debug(
+        "Suppressing DEBUG logs from: urllib3.connectionpool, github.Requester"
+    )
 
 
 def _redact_for_logging(
@@ -380,9 +383,7 @@ def log_function_call(
                 )
 
             func_logger.debug(
-                "Calling %s with parameters: %s",
-                func_name,
-                json.dumps(params_for_log, default=str),
+                "%s(%s)", func_name, json.dumps(params_for_log, default=str)
             )
 
             # Execute function and measure time
@@ -432,10 +433,7 @@ def log_function_call(
                     )
 
                 func_logger.debug(
-                    "%s completed in %sms with result: %s",
-                    func_name,
-                    elapsed_ms,
-                    result_for_log,
+                    "%s -> %s (%sms)", func_name, result_for_log, elapsed_ms
                 )
                 return result
 
@@ -456,11 +454,11 @@ def log_function_call(
                     )
 
                 func_logger.error(
-                    "%s failed after %sms with error: %s: %s",
+                    "%s FAILED: %s: %s (%sms)",
                     func_name,
-                    elapsed_ms,
                     type(e).__name__,
                     str(e),
+                    elapsed_ms,
                     exc_info=True,
                 )
                 raise

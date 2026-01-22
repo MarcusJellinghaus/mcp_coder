@@ -153,9 +153,9 @@ class TestLogFunctionCall:
 
             # Check that mock was called with correct parameters
             # After the lazy formatting change, debug is now called with format string and parameters
-            # First call should be: debug("Calling %s with parameters: %s", func_name, params)
+            # First call should be: debug("%s(%s)", func_name, params)
             first_call = mock_logger.debug.call_args_list[0]
-            assert first_call[0][0] == "Calling %s with parameters: %s"
+            assert first_call[0][0] == "%s(%s)"
             assert first_call[0][1] == "path_func"
             # The second argument should be a JSON string of parameters
             params_json = first_call[0][2]
@@ -169,11 +169,11 @@ class TestLogFunctionCall:
 
             # Second call should be the completion log
             second_call = mock_logger.debug.call_args_list[1]
-            assert second_call[0][0] == "%s completed in %sms with result: %s"
+            assert second_call[0][0] == "%s -> %s (%sms)"
             assert second_call[0][1] == "path_func"
             # Verify result is the string representation of the path
-            # The result is the third parameter (after func_name and elapsed_ms)
-            result_arg = second_call[0][3]
+            # The result is the second parameter (after func_name)
+            result_arg = second_call[0][2]
             # On Windows, the path might be represented differently
             assert str(test_path).replace("/", "\\") in str(result_arg) or str(
                 test_path
@@ -199,11 +199,11 @@ class TestLogFunctionCall:
 
             # Get the call args for the second debug call (completion log)
             second_call = mock_logger.debug.call_args_list[1]
-            # The format is now: debug("%s completed in %sms with result: %s", func_name, elapsed, result)
-            assert second_call[0][0] == "%s completed in %sms with result: %s"
+            # The format is now: debug("%s -> %s (%sms)", func_name, result, elapsed)
+            assert second_call[0][0] == "%s -> %s (%sms)"
             assert second_call[0][1] == "large_result_func"
-            # The result (third argument after format string and func_name) should be the truncated message
-            result_arg = second_call[0][3]
+            # The result (second argument after format string and func_name) should be the truncated message
+            result_arg = second_call[0][2]
             assert "<Large result of type list" in result_arg
 
     def test_log_function_call_with_structured_logging(self) -> None:
