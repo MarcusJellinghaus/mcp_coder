@@ -21,13 +21,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 *Reference: [pr_info/steps/step_1.md](steps/step_1.md)*
 
-- [ ] Implement urllib3.connectionpool logger suppression in `setup_logging()` function
-- [ ] Add code comment explaining the suppression
-- [ ] Add DEBUG log message for discoverability
-- [ ] Run pylint and address any issues found
-- [ ] Run pytest and ensure all tests pass
-- [ ] Run mypy and address any type errors found
-- [ ] Prepare git commit message for Step 1
+- [x] Implement urllib3.connectionpool logger suppression in `setup_logging()` function
+- [x] Add code comment explaining the suppression
+- [x] Add DEBUG log message for discoverability
+- [x] Run pylint and address any issues found
+- [x] Run pytest and ensure all tests pass
+- [x] Run mypy and address any type errors found
+- [x] Prepare git commit message for Step 1
 
 ---
 
