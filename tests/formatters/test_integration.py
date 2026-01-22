@@ -178,7 +178,12 @@ line_length = 88
             assert len(second_results["isort"].files_changed) == 0
 
     def test_error_resilience_mixed_scenarios(self) -> None:
-        """Test directory-based error handling where directory contains mixed valid/invalid files."""
+        """Test directory-based error handling with early exit on failure.
+
+        When a formatter fails (e.g., Black encounters a syntax error),
+        the format_code() function exits early and does not run subsequent
+        formatters. This test verifies that behavior.
+        """
         with tempfile.TemporaryDirectory() as temp_dir:
             project_root = Path(temp_dir)
 
@@ -201,21 +206,17 @@ line_length = 88
 """
             (project_root / "pyproject.toml").write_text(pyproject_content)
 
-            # Run directory-based formatters - they should handle errors gracefully
+            # Run directory-based formatters - Black should fail and trigger early exit
             results = format_code(project_root)
 
-            # Results should be returned even if directory contains files with syntax errors
+            # Black should be in results and should have failed due to syntax error
             assert "black" in results
-            assert "isort" in results
             assert isinstance(results["black"], FormatterResult)
-            assert isinstance(results["isort"], FormatterResult)
+            assert not results["black"].success
 
-            # Check that at least one formatter reports the failure from directory processing
-            black_failed = not results["black"].success
-            isort_failed = not results["isort"].success
-
-            # At least one should have failed due to syntax error in directory
-            assert black_failed or isort_failed
+            # Due to early exit on failure, isort should NOT be in results
+            # (Black fails first, so the loop breaks before isort runs)
+            assert "isort" not in results
 
 
 @pytest.mark.formatter_integration
