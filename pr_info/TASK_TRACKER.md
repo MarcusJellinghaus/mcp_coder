@@ -44,14 +44,14 @@ See [step_2.md](steps/step_2.md) for details.
 ### Step 3: Add early exit on formatter failure in format_code()
 See [step_3.md](steps/step_3.md) for details.
 
-- [ ] Implement Step 3: Add tests for early exit behavior in `test_main_api.py`
-- [ ] Implement Step 3: Add logging import and logger at module level in `formatters/__init__.py`
-- [ ] Implement Step 3: Add early exit logic when formatter fails in format_code() loop
-- [ ] Implement Step 3: Add INFO logging when formatter fails
-- [ ] Run pylint and fix all issues found for Step 3
-- [ ] Run pytest and fix all issues found for Step 3
-- [ ] Run mypy and fix all issues found for Step 3
-- [ ] Prepare git commit message for Step 3
+- [x] Implement Step 3: Add tests for early exit behavior in `test_main_api.py`
+- [x] Implement Step 3: Add logging import and logger at module level in `formatters/__init__.py`
+- [x] Implement Step 3: Add early exit logic when formatter fails in format_code() loop
+- [x] Implement Step 3: Add INFO logging when formatter fails
+- [x] Run pylint and fix all issues found for Step 3
+- [x] Run pytest and fix all issues found for Step 3
+- [x] Run mypy and fix all issues found for Step 3
+- [x] Prepare git commit message for Step 3
 
 ---
 

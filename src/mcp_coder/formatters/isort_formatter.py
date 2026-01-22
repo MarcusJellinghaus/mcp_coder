@@ -19,7 +19,6 @@ from .utils import get_default_target_dirs, read_tool_config
 logger = logging.getLogger(__name__)
 
 
-
 def format_with_isort(
     project_root: Path, target_dirs: Optional[List[str]] = None
 ) -> FormatterResult:
