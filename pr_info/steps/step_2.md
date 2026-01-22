@@ -1,33 +1,27 @@
-# Step 2: Add stderr debug logging to isort formatter
+# Step 2: Improve isort formatter error handling and add debug logging
 
 ## LLM Prompt
 
 ```
-Implement Step 2 of Issue #314: Add stderr debug logging to isort formatter.
+Implement Step 2 of Issue #314: Improve isort formatter error handling.
 
 Reference: pr_info/steps/summary.md for full context.
 
-Task: When isort fails with a non-zero exit code, log the stderr output at DEBUG level
-so developers can see which file caused the error. This mirrors Step 1 for Black.
+Tasks:
+1. Include stderr output in the error_message when isort fails (so users can see which file has errors)
+2. Add DEBUG logging for the full command before execution
+
+This mirrors Step 1 for the isort formatter.
 ```
 
 ## WHERE
 
 | File | Action |
 |------|--------|
-| `tests/formatters/test_isort_formatter.py` | Add test for stderr logging |
-| `src/mcp_coder/formatters/isort_formatter.py` | Add logging import and DEBUG log |
+| `tests/formatters/test_isort_formatter.py` | Add tests for improved error handling |
+| `src/mcp_coder/formatters/isort_formatter.py` | Add logging + include stderr in error_message |
 
 ## WHAT
-
-### Test Function (add to `TestIsortFormatterCore`)
-
-```python
-def test_format_error_logs_stderr_on_failure(
-    self, temp_project_dir: Path, import_error_code: str, monkeypatch: Any, caplog: Any
-) -> None:
-    """Test that stderr is logged at DEBUG level when isort fails."""
-```
 
 ### Production Code Changes
 
@@ -37,9 +31,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# In except block of format_with_isort(), add before return:
-if isinstance(e, subprocess.CalledProcessError) and e.stderr:
-    logger.debug("isort stderr output: %s", e.stderr)
+# In _format_isort_directory(), before execute_command():
+logger.debug("isort command: %s", command)
+
+# In format_with_isort() except block, replace current error handling:
+except subprocess.CalledProcessError as e:
+    # Include the actual stderr output from isort for better debugging
+    # CalledProcessError stores output in 'output' attr when using 3-arg form
+    stderr_output = getattr(e, "output", "") or getattr(e, "stderr", "") or ""
+    error_details = f"{e}\nOutput: {stderr_output}" if stderr_output else str(e)
+    return FormatterResult(
+        success=False,
+        files_changed=[],
+        formatter_name="isort",
+        error_message=f"isort formatting error: {error_details}",
+    )
+except OSError as e:
+    return FormatterResult(
+        success=False,
+        files_changed=[],
+        formatter_name="isort",
+        error_message=f"isort formatting error: {str(e)}",
+    )
 ```
 
 ## HOW
@@ -47,59 +60,102 @@ if isinstance(e, subprocess.CalledProcessError) and e.stderr:
 ### Integration Points
 - Import `logging` module (standard library)
 - Create module-level logger using `__name__`
-- Log in `except` block before returning `FormatterResult`
+- Log full command at DEBUG level before execution
+- Extract stderr from `CalledProcessError` and include in error_message
 
-### Test Integration
-- Use pytest's `caplog` fixture to capture log output
-- Set log level to DEBUG to capture the message
-- Assert the stderr content appears in captured logs
+### Key Insight
+`subprocess.CalledProcessError` with 3-argument form stores the output in `e.output`, not `e.stderr`. The code currently uses:
+```python
+raise subprocess.CalledProcessError(result.return_code, command, result.stderr)
+```
+This means `result.stderr` becomes `e.output`. We handle both attributes for safety.
 
 ## ALGORITHM
 
 ```
 1. Import logging, create logger at module level
-2. In format_with_isort() except block:
-3.   IF exception is CalledProcessError AND has stderr:
-4.     Log stderr at DEBUG level
-5.   Return FormatterResult (unchanged)
+2. In _format_isort_directory():
+   - Log DEBUG with full command before execute_command()
+3. In format_with_isort() except block:
+   - Separate CalledProcessError handling from OSError
+   - Extract stderr from e.output or e.stderr (whichever exists)
+   - Include stderr in the error_message for visibility
 ```
 
 ## DATA
 
 ### Input
-- `subprocess.CalledProcessError` with `stderr` attribute containing error details
+- `subprocess.CalledProcessError` with stderr in `output` attribute
 
 ### Output
-- No change to return value
-- Side effect: DEBUG log message with stderr content
+- `FormatterResult` with `error_message` containing the actual stderr output
+- Side effect: DEBUG log with full command
 
-### Log Format
+### Error Message Format (improved)
 ```
-DEBUG - isort stderr output: ERROR: Could not parse syntax in edge_case.py
+isort formatting error: Command '['isort', ...]' returned non-zero exit status 1.
+Output: ERROR: Could not parse syntax in edge_case.py
 ```
 
 ## TEST IMPLEMENTATION
 
+### Test 1: Error message includes stderr
+
 ```python
-def test_format_error_logs_stderr_on_failure(
-    self, temp_project_dir: Path, import_error_code: str, monkeypatch: Any, caplog: Any
+def test_format_directory_error_includes_stderr(
+    self, temp_project_dir: Path, monkeypatch: Any
 ) -> None:
-    """Test that stderr is logged at DEBUG level when isort fails."""
+    """Test that stderr output is included in error_message when isort fails."""
+    from mcp_coder.formatters.isort_formatter import format_with_isort
+
+    # Create a directory structure
+    src_dir = temp_project_dir / "src"
+    src_dir.mkdir()
+    (src_dir / "test.py").write_text("import os")
+
+    # Mock execute_command to simulate isort error with stderr
+    mock_result = Mock()
+    mock_result.return_code = 1
+    mock_result.stdout = ""
+    mock_result.stderr = "ERROR: Could not parse syntax in edge_case.py"
+
+    monkeypatch.setattr(
+        "mcp_coder.formatters.isort_formatter.execute_command",
+        lambda cmd: mock_result,
+    )
+
+    result = format_with_isort(temp_project_dir)
+
+    # Verify failure
+    assert result.success is False
+    assert result.formatter_name == "isort"
+    
+    # Verify stderr is included in error_message
+    assert "Could not parse syntax" in result.error_message
+    assert "edge_case.py" in result.error_message
+```
+
+### Test 2: Debug logging for command
+
+```python
+def test_format_directory_logs_command_at_debug(
+    self, temp_project_dir: Path, monkeypatch: Any, caplog: Any
+) -> None:
+    """Test that the full isort command is logged at DEBUG level."""
     import logging
     from mcp_coder.formatters.isort_formatter import format_with_isort
-    from mcp_coder.utils.subprocess_runner import CommandResult
 
-    # Create a Python file with problematic import syntax
-    test_file = temp_project_dir / "edge_case.py"
-    test_file.write_text(import_error_code)
+    # Create a directory structure
+    src_dir = temp_project_dir / "src"
+    src_dir.mkdir()
+    (src_dir / "test.py").write_text("import os")
 
-    # Mock execute_command to simulate isort syntax error with stderr
-    mock_result = CommandResult(
-        return_code=123,
-        stdout="",
-        stderr="ERROR: Could not parse syntax in edge_case.py",
-        timed_out=False,
-    )
+    # Mock execute_command to return success
+    mock_result = Mock()
+    mock_result.return_code = 0
+    mock_result.stdout = ""
+    mock_result.stderr = ""
+
     monkeypatch.setattr(
         "mcp_coder.formatters.isort_formatter.execute_command",
         lambda cmd: mock_result,
@@ -107,19 +163,16 @@ def test_format_error_logs_stderr_on_failure(
 
     # Capture DEBUG logs
     with caplog.at_level(logging.DEBUG, logger="mcp_coder.formatters.isort_formatter"):
-        result = format_with_isort(temp_project_dir)
+        format_with_isort(temp_project_dir)
 
-    # Verify failure
-    assert result.success is False
-
-    # Verify stderr was logged at DEBUG level
-    assert any("isort stderr output" in record.message for record in caplog.records)
-    assert any("Could not parse" in record.message for record in caplog.records)
+    # Verify command was logged
+    assert any("isort command:" in record.message for record in caplog.records)
+    assert any("--profile" in record.message for record in caplog.records)
 ```
 
 ## VERIFICATION
 
 After implementation, run:
 ```bash
-python -m pytest tests/formatters/test_isort_formatter.py -v -k "test_format_error_logs_stderr"
+python -m pytest tests/formatters/test_isort_formatter.py -v
 ```

@@ -15,25 +15,10 @@ and break out of the loop early (don't run subsequent formatters).
 
 | File | Action |
 |------|--------|
-| `tests/formatters/test_main_api.py` | Update test + add new test for early exit |
+| `tests/formatters/test_main_api.py` | Update existing test + add new test for early exit |
 | `src/mcp_coder/formatters/__init__.py` | Add logging import and early exit logic |
 
 ## WHAT
-
-### Test Function (add to `TestCombinedAPICoreFunctionality`)
-
-```python
-def test_format_code_early_exit_on_failure(
-    self, mock_isort: Mock, mock_black: Mock, caplog: Any
-) -> None:
-    """Test that format_code() exits early and logs when a formatter fails."""
-```
-
-### Update Existing Test
-
-The existing test `test_format_code_error_handling_one_formatter_fails` needs updating:
-- Currently expects isort to run even when Black fails
-- Should be updated to expect early exit (isort NOT called)
 
 ### Production Code Changes
 
@@ -43,25 +28,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# In format_code() loop, after each formatter result:
-if formatter_name == "black":
-    results["black"] = format_with_black(project_root, target_dirs)
-    if not results["black"].success:
-        logger.info(
-            "%s formatting failed: %s",
-            results["black"].formatter_name,
-            results["black"].error_message,
-        )
-        break
-elif formatter_name == "isort":
-    results["isort"] = format_with_isort(project_root, target_dirs)
-    if not results["isort"].success:
-        logger.info(
-            "%s formatting failed: %s",
-            results["isort"].formatter_name,
-            results["isort"].error_message,
-        )
-        break
+# In format_code() loop, add early exit check after each formatter:
+for formatter_name in formatters:
+    if formatter_name == "black":
+        results["black"] = format_with_black(project_root, target_dirs)
+        if not results["black"].success:
+            logger.info(
+                "%s formatting failed: %s",
+                results["black"].formatter_name,
+                results["black"].error_message,
+            )
+            break
+    elif formatter_name == "isort":
+        results["isort"] = format_with_isort(project_root, target_dirs)
+        if not results["isort"].success:
+            logger.info(
+                "%s formatting failed: %s",
+                results["isort"].formatter_name,
+                results["isort"].error_message,
+            )
+            break
+
+return results
 ```
 
 ## HOW
@@ -70,13 +58,11 @@ elif formatter_name == "isort":
 - Import `logging` module (standard library)
 - Create module-level logger using `__name__`
 - Add early exit check after each formatter execution
-- Log at INFO level when a formatter fails
+- Log at INFO level when a formatter fails (includes stderr from Steps 1-2)
 
-### Test Integration
-- Use pytest's `caplog` fixture to capture log output
-- Mock both formatters
-- Verify isort is NOT called when Black fails
-- Verify INFO log message is emitted
+### Behavior Change
+- **Before**: All formatters run regardless of failures
+- **After**: Stop at first failure, return partial results
 
 ## ALGORITHM
 
@@ -85,7 +71,7 @@ elif formatter_name == "isort":
 2. In format_code() for each formatter:
 3.   Run formatter, store result
 4.   IF result.success is False:
-5.     Log INFO with formatter name and error message
+5.     Log INFO with formatter name and error_message (now includes stderr)
 6.     Break out of loop (don't run remaining formatters)
 7. Return results dict (may contain only failed formatter)
 ```
@@ -93,7 +79,7 @@ elif formatter_name == "isort":
 ## DATA
 
 ### Input
-- `FormatterResult` with `success=False` and `error_message`
+- `FormatterResult` with `success=False` and `error_message` (now includes stderr)
 
 ### Output
 - Dict with only the formatters that ran (failed formatter is last)
@@ -101,12 +87,13 @@ elif formatter_name == "isort":
 
 ### Log Format
 ```
-INFO - black formatting failed: Black formatting error: Command ... returned non-zero exit status 123
+INFO - black formatting failed: Black formatting error: Command '['black', ...]' returned non-zero exit status 123.
+Output: error: cannot format src/broken.py: Cannot parse: 1:0: ...
 ```
 
 ## TEST IMPLEMENTATION
 
-### New Test: Early Exit Behavior
+### Test 1: Early Exit Behavior (New Test)
 
 ```python
 @patch("mcp_coder.formatters.format_with_black")
@@ -117,12 +104,12 @@ def test_format_code_early_exit_on_failure(
     """Test that format_code() exits early and logs when a formatter fails."""
     import logging
 
-    # Setup - Black fails
+    # Setup - Black fails with detailed error message
     mock_black.return_value = FormatterResult(
         success=False,
         files_changed=[],
         formatter_name="black",
-        error_message="Black formatting error: syntax error in file.py",
+        error_message="Black formatting error: Command ... returned non-zero exit status 123.\nOutput: error: cannot format file.py",
     )
 
     from mcp_coder.formatters import format_code
@@ -145,13 +132,14 @@ def test_format_code_early_exit_on_failure(
         assert "isort" not in result
         assert result["black"].success is False
 
-        # Verify INFO log was emitted
+        # Verify INFO log was emitted with error details
         assert any("black formatting failed" in record.message for record in caplog.records)
+        assert any("cannot format file.py" in record.message for record in caplog.records)
 ```
 
-### Update Existing Test
+### Test 2: Update Existing Test
 
-Change `test_format_code_error_handling_one_formatter_fails` to reflect new behavior:
+Change `test_format_code_error_handling_one_formatter_fails` to reflect new early exit behavior:
 
 ```python
 @patch("mcp_coder.formatters.format_with_black")
@@ -160,7 +148,7 @@ def test_format_code_error_handling_one_formatter_fails(
     self, mock_isort: Mock, mock_black: Mock
 ) -> None:
     """Test when Black fails, isort does NOT run (early exit behavior)."""
-    # Setup - Black fails on directory processing
+    # Setup - Black fails
     mock_black.return_value = FormatterResult(
         success=False,
         files_changed=[],
@@ -187,6 +175,53 @@ def test_format_code_error_handling_one_formatter_fails(
         assert "isort" not in result
         assert result["black"].success is False
         assert result["black"].error_message == "Black failed"
+```
+
+### Test 3: isort Failure Also Triggers Early Exit
+
+```python
+@patch("mcp_coder.formatters.format_with_black")
+@patch("mcp_coder.formatters.format_with_isort")
+def test_format_code_early_exit_on_isort_failure(
+    self, mock_isort: Mock, mock_black: Mock, caplog: Any
+) -> None:
+    """Test that format_code() exits early when isort fails (after Black succeeds)."""
+    import logging
+
+    # Setup - Black succeeds, isort fails
+    mock_black.return_value = FormatterResult(
+        success=True,
+        files_changed=["file.py"],
+        formatter_name="black",
+        error_message=None,
+    )
+    mock_isort.return_value = FormatterResult(
+        success=False,
+        files_changed=[],
+        formatter_name="isort",
+        error_message="isort formatting error: Could not parse",
+    )
+
+    from mcp_coder.formatters import format_code
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_root = Path(temp_dir)
+
+        with caplog.at_level(logging.INFO, logger="mcp_coder.formatters"):
+            result = format_code(project_root)
+
+        # Verify both were called (Black succeeded, isort failed)
+        mock_black.assert_called_once()
+        mock_isort.assert_called_once()
+
+        # Verify result contains both
+        assert "black" in result
+        assert "isort" in result
+        assert result["black"].success is True
+        assert result["isort"].success is False
+
+        # Verify INFO log was emitted for isort failure
+        assert any("isort formatting failed" in record.message for record in caplog.records)
 ```
 
 ## VERIFICATION
