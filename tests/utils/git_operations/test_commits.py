@@ -50,8 +50,9 @@ class TestCommitOperations:
         """Test commit_all_changes returns success when no changes to commit."""
         repo, project_dir = git_repo
 
-        # Do NOT create any files (repo is clean)
-        # Call commit_all_changes on a clean repo
+        # Verify precondition: repo is clean
+        assert not repo.is_dirty(untracked_files=True)
+
         result = commit_all_changes("Test message", project_dir)
 
         assert result["success"] is True
