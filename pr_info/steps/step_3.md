@@ -65,8 +65,8 @@ mcp-coder define-labels --help
 
 ## Verification Checklist
 
-- [ ] `pytest tests/` - All tests pass
-- [ ] `tests/workflows/test_label_config.py` - Override mechanism tests pass
-- [ ] `tests/workflows/test_validate_labels.py` - Validation tests pass
-- [ ] `tests/cli/commands/test_define_labels.py` - CLI tests pass
-- [ ] `mcp-coder define-labels --help` - CLI responds
+- [x] `pytest tests/` - All tests pass
+- [x] `tests/workflows/test_label_config.py` - Override mechanism tests pass
+- [x] `tests/workflows/test_validate_labels.py` - Validation tests pass
+- [x] `tests/cli/commands/test_define_labels.py` - CLI tests pass
+- [x] `mcp-coder define-labels --help` - CLI responds

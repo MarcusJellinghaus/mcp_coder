@@ -50,6 +50,6 @@ This change makes mcp_coder "eat its own dog food" by using the bundled config.
 ## Acceptance Criteria
 
 - [x] Only one `labels.json` exists: `src/mcp_coder/config/labels.json`
-- [ ] All tests pass using bundled config
-- [ ] Tests that verify the override mechanism still work
-- [ ] `mcp-coder define-labels` command works correctly
+- [x] All tests pass using bundled config
+- [x] Tests that verify the override mechanism still work
+- [x] `mcp-coder define-labels` command works correctly
