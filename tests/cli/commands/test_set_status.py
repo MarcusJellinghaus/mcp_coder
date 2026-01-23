@@ -375,6 +375,42 @@ class TestExecuteSetStatus:
         captured = capsys.readouterr()
         assert "Error" in captured.err or "issue" in captured.err.lower()
 
+    @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
+    @patch("mcp_coder.cli.commands.set_status.load_labels_config")
+    @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
+    def test_execute_set_status_dirty_directory_fails(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_is_working_directory_clean: MagicMock,
+        tmp_path: Path,
+        full_labels_config: Dict[str, Any],
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that set-status fails when working directory has uncommitted changes."""
+        # Setup mocks
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "config" / "labels.json"
+        mock_load_config.return_value = full_labels_config
+        mock_is_working_directory_clean.return_value = False
+
+        args = argparse.Namespace(
+            status_label="status-05:plan-ready",
+            issue=123,
+            project_dir=str(project_dir),
+            force=False,
+        )
+
+        result = execute_set_status(args)
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "uncommitted changes" in captured.err.lower()
+
     @patch("mcp_coder.cli.commands.set_status.IssueManager")
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
     @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
