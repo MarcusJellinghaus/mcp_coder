@@ -72,7 +72,8 @@ for key in result:
 | Existing string-key redaction continues to work | Existing tests remain passing |
 | Nested dictionary redaction continues to work | Existing test: `test_redact_nested_dict` |
 | Log output shows `{('github', 'token'): '***'}` | Unit test verifies redacted output |
-| Tests added for tuple-key redaction | New test class: `TestRedactForLoggingTupleKeys` |
+| Empty tuple keys handled safely | Unit test: `test_redact_empty_tuple_key_unchanged` |
+| Tests added for tuple-key redaction | New test class: `TestRedactForLoggingTupleKeys` (4 tests) |
 
 ---
 

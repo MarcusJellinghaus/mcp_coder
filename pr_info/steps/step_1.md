@@ -26,7 +26,7 @@ Add tests BEFORE implementing the fix. The tests should initially FAIL.
 
 ### New Test Class: `TestRedactForLoggingTupleKeys`
 
-Add 3 focused test methods:
+Add 4 focused test methods:
 
 ```python
 def test_redact_tuple_key_matches_last_element(self) -> None:
@@ -37,6 +37,9 @@ def test_redact_mixed_string_and_tuple_keys(self) -> None:
 
 def test_redact_tuple_key_no_match(self) -> None:
     """Test that tuple keys not matching sensitive fields are unchanged."""
+
+def test_redact_empty_tuple_key_unchanged(self) -> None:
+    """Test that empty tuple keys are handled safely (no crash, no match)."""
 ```
 
 ---
@@ -88,9 +91,11 @@ Test 3 (no match):
 
 ## VERIFICATION
 
-After adding tests, run:
-```bash
-pytest tests/utils/test_log_utils.py::TestRedactForLoggingTupleKeys -v
+After adding tests, run using MCP tool:
+```python
+mcp__code-checker__run_pytest_check(
+    extra_args=["-n", "auto", "tests/utils/test_log_utils.py::TestRedactForLoggingTupleKeys", "-v"]
+)
 ```
 
 **Expected**: Tests should FAIL (red phase of TDD) because the fix is not yet implemented.
@@ -146,4 +151,16 @@ class TestRedactForLoggingTupleKeys:
 
         assert result[("github", "username")] == "user"
         assert result[("jenkins", "url")] == "http://example.com"
+
+    def test_redact_empty_tuple_key_unchanged(self) -> None:
+        """Test that empty tuple keys are handled safely (no crash, no match)."""
+        data = {
+            (): "empty_tuple_value",
+            ("normal", "key"): "normal_value",
+        }
+        result = _redact_for_logging(data, {"token"})
+
+        # Empty tuple should not crash and value should be unchanged
+        assert result[()] == "empty_tuple_value"
+        assert result[("normal", "key")] == "normal_value"
 ```

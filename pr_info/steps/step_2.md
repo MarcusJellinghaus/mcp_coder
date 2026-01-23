@@ -109,17 +109,23 @@ FOR each key in dictionary:
 
 ## VERIFICATION
 
-After implementing the fix, run:
+After implementing the fix, run using MCP tools:
 
-```bash
+```python
 # Run the new tuple-key tests
-pytest tests/utils/test_log_utils.py::TestRedactForLoggingTupleKeys -v
+mcp__code-checker__run_pytest_check(
+    extra_args=["-n", "auto", "tests/utils/test_log_utils.py::TestRedactForLoggingTupleKeys", "-v"]
+)
 
 # Run all log_utils tests to ensure no regressions
-pytest tests/utils/test_log_utils.py -v
+mcp__code-checker__run_pytest_check(
+    extra_args=["-n", "auto", "tests/utils/test_log_utils.py", "-v"]
+)
 
-# Run the full test suite
-pytest tests/ -v
+# Run all code quality checks
+mcp__code-checker__run_all_checks(
+    extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"]
+)
 ```
 
 **Expected**: All tests should PASS (green phase of TDD).
