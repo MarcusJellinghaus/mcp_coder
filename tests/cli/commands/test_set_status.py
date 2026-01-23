@@ -227,6 +227,7 @@ class TestComputeNewLabels:
 class TestExecuteSetStatus:
     """Test CLI execute function."""
 
+    @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
     @patch("mcp_coder.cli.commands.set_status.IssueManager")
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
     @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
@@ -241,6 +242,7 @@ class TestExecuteSetStatus:
         mock_get_config_path: MagicMock,
         mock_load_config: MagicMock,
         mock_issue_manager_class: MagicMock,
+        mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
@@ -255,11 +257,13 @@ class TestExecuteSetStatus:
         mock_get_config_path.return_value = project_dir / "config" / "labels.json"
         mock_load_config.return_value = full_labels_config
         mock_issue_manager_class.return_value = mock_issue_manager
+        mock_is_working_directory_clean.return_value = True
 
         args = argparse.Namespace(
             status_label="status-05:plan-ready",
             issue=None,
             project_dir=str(project_dir),
+            force=False,
         )
 
         result = execute_set_status(args)
@@ -269,6 +273,7 @@ class TestExecuteSetStatus:
         mock_issue_manager.get_issue.assert_called_once_with(123)
         mock_issue_manager.set_labels.assert_called_once()
 
+    @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
     @patch("mcp_coder.cli.commands.set_status.IssueManager")
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
     @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
@@ -279,6 +284,7 @@ class TestExecuteSetStatus:
         mock_get_config_path: MagicMock,
         mock_load_config: MagicMock,
         mock_issue_manager_class: MagicMock,
+        mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
@@ -291,11 +297,13 @@ class TestExecuteSetStatus:
         mock_get_config_path.return_value = project_dir / "config" / "labels.json"
         mock_load_config.return_value = full_labels_config
         mock_issue_manager_class.return_value = mock_issue_manager
+        mock_is_working_directory_clean.return_value = True
 
         args = argparse.Namespace(
             status_label="status-05:plan-ready",
             issue=123,
             project_dir=str(project_dir),
+            force=False,
         )
 
         result = execute_set_status(args)
@@ -305,6 +313,7 @@ class TestExecuteSetStatus:
         mock_issue_manager.get_issue.assert_called_once_with(123)
         mock_issue_manager.set_labels.assert_called_once()
 
+    @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
     @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
     @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
@@ -313,6 +322,7 @@ class TestExecuteSetStatus:
         mock_resolve_dir: MagicMock,
         mock_get_config_path: MagicMock,
         mock_load_config: MagicMock,
+        mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         capsys: pytest.CaptureFixture[str],
@@ -324,11 +334,13 @@ class TestExecuteSetStatus:
         mock_resolve_dir.return_value = project_dir
         mock_get_config_path.return_value = project_dir / "config" / "labels.json"
         mock_load_config.return_value = full_labels_config
+        mock_is_working_directory_clean.return_value = True
 
         args = argparse.Namespace(
             status_label="invalid-label",
             issue=123,
             project_dir=str(project_dir),
+            force=False,
         )
 
         result = execute_set_status(args)
@@ -337,6 +349,7 @@ class TestExecuteSetStatus:
         captured = capsys.readouterr()
         assert "Error" in captured.err or "invalid" in captured.err.lower()
 
+    @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
     @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
     @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
@@ -349,6 +362,7 @@ class TestExecuteSetStatus:
         mock_resolve_dir: MagicMock,
         mock_get_config_path: MagicMock,
         mock_load_config: MagicMock,
+        mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         capsys: pytest.CaptureFixture[str],
@@ -362,11 +376,13 @@ class TestExecuteSetStatus:
         mock_extract_issue.return_value = None  # No issue number in branch
         mock_get_config_path.return_value = project_dir / "config" / "labels.json"
         mock_load_config.return_value = full_labels_config
+        mock_is_working_directory_clean.return_value = True
 
         args = argparse.Namespace(
             status_label="status-05:plan-ready",
             issue=None,  # No explicit issue
             project_dir=str(project_dir),
+            force=False,
         )
 
         result = execute_set_status(args)
@@ -493,6 +509,7 @@ class TestExecuteSetStatus:
         mock_issue_manager.get_issue.assert_called_once_with(123)
         mock_issue_manager.set_labels.assert_called_once()
 
+    @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
     @patch("mcp_coder.cli.commands.set_status.IssueManager")
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
     @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
@@ -503,6 +520,7 @@ class TestExecuteSetStatus:
         mock_get_config_path: MagicMock,
         mock_load_config: MagicMock,
         mock_issue_manager_class: MagicMock,
+        mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         capsys: pytest.CaptureFixture[str],
@@ -514,6 +532,7 @@ class TestExecuteSetStatus:
         mock_resolve_dir.return_value = project_dir
         mock_get_config_path.return_value = project_dir / "config" / "labels.json"
         mock_load_config.return_value = full_labels_config
+        mock_is_working_directory_clean.return_value = True
 
         # Configure mock to return error (number=0 indicates error)
         mock_issue_manager = MagicMock()
@@ -536,6 +555,7 @@ class TestExecuteSetStatus:
             status_label="status-05:plan-ready",
             issue=123,
             project_dir=str(project_dir),
+            force=False,
         )
 
         result = execute_set_status(args)

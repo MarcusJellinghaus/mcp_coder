@@ -31,10 +31,10 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 **Reference**: [pr_info/steps/step_2.md](steps/step_2.md)
 
 - [x] Add `--force` argument to `set-status` subparser in `src/mcp_coder/cli/main.py`
-- [ ] Add imports (`DEFAULT_IGNORED_BUILD_ARTIFACTS`, `is_working_directory_clean`) to `src/mcp_coder/cli/commands/set_status.py`
-- [ ] Implement working directory check logic in `execute_set_status()` function
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Add imports (`DEFAULT_IGNORED_BUILD_ARTIFACTS`, `is_working_directory_clean`) to `src/mcp_coder/cli/commands/set_status.py`
+- [x] Implement working directory check logic in `execute_set_status()` function
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Update Slash Command Documentation
 **Reference**: [pr_info/steps/step_3.md](steps/step_3.md)

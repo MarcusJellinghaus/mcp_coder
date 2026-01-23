@@ -10,10 +10,12 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
+from ...constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
 from ...utils.git_operations.branches import (
     extract_issue_number_from_branch,
     get_current_branch_name,
 )
+from ...utils.git_operations.repository import is_working_directory_clean
 from ...utils.github_operations.issue_manager import IssueManager
 from ...utils.github_operations.label_config import (
     get_labels_config_path,
@@ -207,6 +209,22 @@ def execute_set_status(args: argparse.Namespace) -> int:
     try:
         # Step 1: Resolve project directory
         project_dir = resolve_project_dir(args.project_dir)
+
+        # Step 1.5: Check working directory is clean (unless --force)
+        if not args.force:
+            try:
+                if not is_working_directory_clean(
+                    project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+                ):
+                    print(
+                        "Error: Working directory has uncommitted changes. "
+                        "Commit/stash first or use --force.",
+                        file=sys.stderr,
+                    )
+                    return 1
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
 
         # Step 2: Load and validate label
         config_path = get_labels_config_path(project_dir)
