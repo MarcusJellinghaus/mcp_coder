@@ -52,7 +52,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 *See: [pr_info/steps/step_3.md](steps/step_3.md)*
 
 - [x] Part A: Update `src/mcp_coder/workflows/create_plan.py` - change repository to readers
-- [ ] Part B: Update `src/mcp_coder/utils/github_operations/ci_results_manager.py` - change branches to readers
+- [x] Part B: Update `src/mcp_coder/utils/github_operations/ci_results_manager.py` - change branches to readers
 - [ ] Part C: Update `src/mcp_coder/utils/github_operations/issue_manager.py` - change branches to readers
 - [ ] Part D: Update `src/mcp_coder/workflows/create_pr/core.py` - change branches to readers
 - [ ] Part E: Update `src/mcp_coder/cli/commands/set_status.py` - change branches to readers
