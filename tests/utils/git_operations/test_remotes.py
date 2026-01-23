@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 from git import Repo
 
-from mcp_coder.utils.git_operations import get_github_repository_url, git_push
+from mcp_coder.utils.git_operations import (
+    get_github_repository_url,
+    git_push,
+    rebase_onto_branch,
+)
 
 
 @pytest.mark.git_integration
@@ -146,3 +150,159 @@ class TestGitPushForceWithLease:
         # Should fail safely
         assert result["success"] is False
         assert result["error"] is not None
+
+
+@pytest.mark.git_integration
+class TestRebaseOntoBranch:
+    """Tests for rebase_onto_branch function."""
+
+    def test_rebase_onto_branch_success(
+        self, git_repo_with_remote: tuple[Repo, Path, Path]
+    ) -> None:
+        """Test successful rebase when behind remote."""
+        repo, project_dir, _bare_remote_dir = git_repo_with_remote
+
+        # Get the current branch name
+        current_branch = repo.active_branch.name
+
+        # Push initial commit to remote
+        repo.git.push("-u", "origin", current_branch)
+
+        # Create a feature branch and switch to it
+        repo.git.checkout("-b", "feature-branch")
+
+        # Add a commit on feature branch
+        feature_file = project_dir / "feature.txt"
+        feature_file.write_text("feature content")
+        repo.index.add(["feature.txt"])
+        repo.index.commit("Add feature")
+
+        # Go back to main branch and add a commit (simulating remote update)
+        repo.git.checkout(current_branch)
+        main_file = project_dir / "main_update.txt"
+        main_file.write_text("main update content")
+        repo.index.add(["main_update.txt"])
+        repo.index.commit("Update main")
+
+        # Push the main branch update to remote
+        repo.git.push("origin", current_branch)
+
+        # Switch back to feature branch
+        repo.git.checkout("feature-branch")
+
+        # Now rebase feature branch onto origin/main
+        result = rebase_onto_branch(project_dir, current_branch)
+
+        # Verify: returns True, local has remote commits
+        assert result is True
+
+        # Verify the main_update.txt file exists (from rebased commits)
+        assert main_file.exists()
+
+    def test_rebase_onto_branch_already_up_to_date(
+        self, git_repo_with_remote: tuple[Repo, Path, Path]
+    ) -> None:
+        """Test rebase when already up-to-date."""
+        repo, project_dir, _ = git_repo_with_remote
+
+        # Get the current branch name
+        current_branch = repo.active_branch.name
+
+        # Push initial commit to remote
+        repo.git.push("-u", "origin", current_branch)
+
+        # Create feature branch from current state (already in sync)
+        repo.git.checkout("-b", "feature-branch")
+
+        # Rebase onto the same branch we're based on - should be up-to-date
+        result = rebase_onto_branch(project_dir, current_branch)
+
+        # Verify: returns True (already up-to-date is success)
+        assert result is True
+
+    def test_rebase_onto_branch_conflict_aborts(
+        self, git_repo_with_remote: tuple[Repo, Path, Path]
+    ) -> None:
+        """Test rebase aborts cleanly on conflict."""
+        repo, project_dir, _ = git_repo_with_remote
+
+        # Get the current branch name
+        current_branch = repo.active_branch.name
+
+        # Push initial commit to remote
+        repo.git.push("-u", "origin", current_branch)
+
+        # Create feature branch
+        repo.git.checkout("-b", "feature-branch")
+
+        # Create conflicting file on feature branch
+        conflict_file = project_dir / "conflict.txt"
+        conflict_file.write_text("feature branch content")
+        repo.index.add(["conflict.txt"])
+        repo.index.commit("Add conflict file on feature")
+
+        # Go back to main and create same file with different content
+        repo.git.checkout(current_branch)
+        conflict_file.write_text("main branch content")
+        repo.index.add(["conflict.txt"])
+        repo.index.commit("Add conflict file on main")
+
+        # Push main to remote
+        repo.git.push("origin", current_branch)
+
+        # Switch back to feature branch
+        repo.git.checkout("feature-branch")
+
+        # Store original HEAD before rebase attempt
+        original_head = repo.head.commit.hexsha
+
+        # Attempt rebase - should fail due to conflict and abort
+        result = rebase_onto_branch(project_dir, current_branch)
+
+        # Verify: returns False
+        assert result is False
+
+        # Verify: no rebase in progress
+        rebase_merge_dir = project_dir / ".git" / "rebase-merge"
+        rebase_apply_dir = project_dir / ".git" / "rebase-apply"
+        assert not rebase_merge_dir.exists()
+        assert not rebase_apply_dir.exists()
+
+        # Verify: original state preserved (HEAD unchanged)
+        assert repo.head.commit.hexsha == original_head
+
+    def test_rebase_onto_branch_not_git_repo(self, tmp_path: Path) -> None:
+        """Test returns False for non-git directory."""
+        # tmp_path is just a regular directory, not a git repo
+        result = rebase_onto_branch(tmp_path, "main")
+
+        # Verify: returns False
+        assert result is False
+
+    def test_rebase_onto_branch_no_remote(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Test returns False when no origin remote."""
+        _, project_dir = git_repo_with_commit
+
+        # git_repo_with_commit has no remote configured
+        result = rebase_onto_branch(project_dir, "main")
+
+        # Verify: returns False (fetch fails)
+        assert result is False
+
+    def test_rebase_onto_branch_invalid_target_branch(
+        self, git_repo_with_remote: tuple[Repo, Path, Path]
+    ) -> None:
+        """Test returns False for non-existent target branch."""
+        repo, project_dir, _ = git_repo_with_remote
+
+        # Get the current branch name and push to remote
+        current_branch = repo.active_branch.name
+        repo.git.push("-u", "origin", current_branch)
+
+        # Try to rebase onto a branch that doesn't exist
+        result = rebase_onto_branch(project_dir, "nonexistent-branch")
+
+        # Verify: returns False
+        assert result is False

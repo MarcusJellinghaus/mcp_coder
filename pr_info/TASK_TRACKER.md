@@ -68,14 +68,14 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 4: Reorganize Test Files
 *See: [pr_info/steps/step_4.md](steps/step_4.md)*
 
-- [ ] Part A: Create `tests/utils/git_operations/test_readers.py` with reader function tests
-- [ ] Part B: Update `tests/utils/git_operations/test_branches.py` - keep only mutation tests
-- [ ] Part C: Update `tests/utils/git_operations/test_remotes.py` - add rebase_onto_branch tests
-- [ ] Part D: Delete `tests/utils/git_operations/test_repository.py`
-- [ ] Run pylint on `tests/utils/git_operations/`
-- [ ] Run pytest on `tests/utils/git_operations/` - verify test count unchanged
-- [ ] Run mypy on `tests/utils/git_operations/`
-- [ ] Prepare git commit message for Step 4
+- [x] Part A: Create `tests/utils/git_operations/test_readers.py` with reader function tests
+- [x] Part B: Update `tests/utils/git_operations/test_branches.py` - keep only mutation tests
+- [x] Part C: Update `tests/utils/git_operations/test_remotes.py` - add rebase_onto_branch tests
+- [x] Part D: Delete `tests/utils/git_operations/test_repository.py`
+- [x] Run pylint on `tests/utils/git_operations/`
+- [x] Run pytest on `tests/utils/git_operations/` - verify test count unchanged
+- [x] Run mypy on `tests/utils/git_operations/`
+- [x] Prepare git commit message for Step 4
 
 ---
 
