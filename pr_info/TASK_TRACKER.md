@@ -19,9 +19,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 1: Add Unit Tests for Tuple-Key Redaction (TDD)
 
-- [ ] Implement step 1 - Add unit tests for tuple-key redaction in `tests/utils/test_log_utils.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and resolve all issues
-- [ ] Prepare git commit message for step 1
+- [x] Implement step 1 - Add unit tests for tuple-key redaction in `tests/utils/test_log_utils.py`
+- [x] Run quality checks (pylint, pytest, mypy) and resolve all issues
+- [x] Prepare git commit message for step 1
 
 ### Step 2: Implement Tuple-Key Redaction Fix
 

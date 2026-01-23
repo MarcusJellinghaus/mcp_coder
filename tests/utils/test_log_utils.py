@@ -366,6 +366,64 @@ class TestRedactForLogging:
         assert result["value"] == 123
 
 
+class TestRedactForLoggingTupleKeys:
+    """Tests for _redact_for_logging with tuple dictionary keys.
+
+    Issue #327: get_config_values() returns dicts with tuple keys like
+    ('github', 'token'). The redaction should check the last element
+    of tuple keys against sensitive_fields.
+    """
+
+    def test_redact_tuple_key_matches_last_element(self) -> None:
+        """Test that tuple keys are redacted when last element matches sensitive field."""
+        data: dict[tuple[str, str] | str, str] = {
+            ("github", "token"): "ghp_secret123",
+            ("user", "name"): "john",
+        }
+        result = _redact_for_logging(data, {"token"})  # type: ignore[arg-type]
+
+        assert result[("github", "token")] == "***"  # type: ignore[index]
+        assert result[("user", "name")] == "john"  # type: ignore[index]
+        # Original unchanged
+        assert data[("github", "token")] == "ghp_secret123"
+
+    def test_redact_mixed_string_and_tuple_keys(self) -> None:
+        """Test redaction works with both string and tuple keys in same dict."""
+        data: dict[tuple[str, str] | str, str] = {
+            "token": "direct_secret",
+            ("github", "token"): "tuple_secret",
+            "username": "user",
+        }
+        result = _redact_for_logging(data, {"token"})  # type: ignore[arg-type]
+
+        assert result["token"] == "***"
+        assert result[("github", "token")] == "***"  # type: ignore[index]
+        assert result["username"] == "user"
+
+    def test_redact_tuple_key_no_match(self) -> None:
+        """Test that tuple keys not matching sensitive fields are unchanged."""
+        data: dict[tuple[str, str], str] = {
+            ("github", "username"): "user",
+            ("jenkins", "url"): "http://example.com",
+        }
+        result = _redact_for_logging(data, {"token", "api_token"})  # type: ignore[arg-type]
+
+        assert result[("github", "username")] == "user"  # type: ignore[index]
+        assert result[("jenkins", "url")] == "http://example.com"  # type: ignore[index]
+
+    def test_redact_empty_tuple_key_unchanged(self) -> None:
+        """Test that empty tuple keys are handled safely (no crash, no match)."""
+        data: dict[tuple[str, ...], str] = {
+            (): "empty_tuple_value",
+            ("normal", "key"): "normal_value",
+        }
+        result = _redact_for_logging(data, {"token"})  # type: ignore[arg-type]
+
+        # Empty tuple should not crash and value should be unchanged
+        assert result[()] == "empty_tuple_value"  # type: ignore[index]
+        assert result[("normal", "key")] == "normal_value"  # type: ignore[index]
+
+
 class TestLogFunctionCallWithSensitiveFields:
     """Tests for log_function_call decorator with sensitive_fields parameter."""
 
