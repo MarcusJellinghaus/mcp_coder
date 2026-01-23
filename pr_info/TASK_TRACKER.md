@@ -33,18 +33,18 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 2: Update Source Modules and Package Exports
 *See: [pr_info/steps/step_2.md](steps/step_2.md)*
 
-- [ ] Part A: Update `branches.py` - remove moved functions, import from readers
-- [ ] Part B: Update `remotes.py` - add rebase_onto_branch, import from readers
-- [ ] Part C: Update `staging.py` - change imports to readers
-- [ ] Part C: Update `file_tracking.py` - change imports to readers
-- [ ] Part C: Update `diffs.py` - change imports to readers
-- [ ] Part C: Update `commits.py` - change imports to readers
-- [ ] Part D: Update `__init__.py` - re-export from new locations
-- [ ] Part E: Delete `src/mcp_coder/utils/git_operations/repository.py`
-- [ ] Run pylint on `src/mcp_coder/utils/git_operations/`
-- [ ] Run pytest on `tests/utils/git_operations/`
-- [ ] Run mypy on `src/mcp_coder/utils/git_operations/`
-- [ ] Prepare git commit message for Step 2
+- [x] Part A: Update `branches.py` - remove moved functions, import from readers
+- [x] Part B: Update `remotes.py` - add rebase_onto_branch, import from readers
+- [x] Part C: Update `staging.py` - change imports to readers
+- [x] Part C: Update `file_tracking.py` - change imports to readers
+- [x] Part C: Update `diffs.py` - change imports to readers
+- [x] Part C: Update `commits.py` - change imports to readers
+- [x] Part D: Update `__init__.py` - re-export from new locations
+- [x] Part E: Delete `src/mcp_coder/utils/git_operations/repository.py`
+- [x] Run pylint on `src/mcp_coder/utils/git_operations/`
+- [x] Run pytest on `tests/utils/git_operations/`
+- [x] Run mypy on `src/mcp_coder/utils/git_operations/`
+- [x] Prepare git commit message for Step 2
 
 ---
 

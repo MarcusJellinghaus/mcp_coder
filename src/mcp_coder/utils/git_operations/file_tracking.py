@@ -6,7 +6,7 @@ from pathlib import Path
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from .core import _normalize_git_path, _safe_repo_context, logger
-from .repository import is_git_repository
+from .readers import is_git_repository
 
 
 def is_file_tracked(file_path: Path, project_dir: Path) -> bool:
