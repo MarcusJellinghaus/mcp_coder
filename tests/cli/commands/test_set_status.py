@@ -8,7 +8,7 @@ Tests cover:
 
 import argparse
 from pathlib import Path
-from typing import Any, Dict, Generator
+from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -93,13 +93,6 @@ def mock_issue_manager() -> MagicMock:
     }
 
     return mock
-
-
-@pytest.fixture
-def mock_is_working_directory_clean() -> Generator[MagicMock, None, None]:
-    """Mock is_working_directory_clean function."""
-    with patch("mcp_coder.cli.commands.set_status.is_working_directory_clean") as mock:
-        yield mock
 
 
 class TestSetStatusHelpers:
