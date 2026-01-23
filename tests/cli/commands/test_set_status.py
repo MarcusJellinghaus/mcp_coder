@@ -8,7 +8,7 @@ Tests cover:
 
 import argparse
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -96,7 +96,7 @@ def mock_issue_manager() -> MagicMock:
 
 
 @pytest.fixture
-def mock_is_working_directory_clean():
+def mock_is_working_directory_clean() -> Generator[MagicMock, None, None]:
     """Mock is_working_directory_clean function."""
     with patch("mcp_coder.cli.commands.set_status.is_working_directory_clean") as mock:
         yield mock
@@ -449,6 +449,47 @@ class TestExecuteSetStatus:
         assert result == 0
         # With force=True, is_working_directory_clean should NOT be called
         mock_is_working_directory_clean.assert_not_called()
+        mock_issue_manager.get_issue.assert_called_once_with(123)
+        mock_issue_manager.set_labels.assert_called_once()
+
+    @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
+    @patch("mcp_coder.cli.commands.set_status.IssueManager")
+    @patch("mcp_coder.cli.commands.set_status.load_labels_config")
+    @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
+    def test_execute_set_status_clean_directory_succeeds(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_issue_manager_class: MagicMock,
+        mock_is_working_directory_clean: MagicMock,
+        tmp_path: Path,
+        full_labels_config: Dict[str, Any],
+        mock_issue_manager: MagicMock,
+    ) -> None:
+        """Test that set-status succeeds when working directory is clean."""
+        # Setup mocks
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "config" / "labels.json"
+        mock_load_config.return_value = full_labels_config
+        mock_issue_manager_class.return_value = mock_issue_manager
+        mock_is_working_directory_clean.return_value = True  # Clean directory
+
+        args = argparse.Namespace(
+            status_label="status-05:plan-ready",
+            issue=123,
+            project_dir=str(project_dir),
+            force=False,  # No force flag
+        )
+
+        result = execute_set_status(args)
+
+        assert result == 0
+        # With clean directory, is_working_directory_clean should be called
+        mock_is_working_directory_clean.assert_called_once()
         mock_issue_manager.get_issue.assert_called_once_with(123)
         mock_issue_manager.set_labels.assert_called_once()
 
