@@ -20,13 +20,13 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Verify Test Imports and Create `readers.py`
 *See: [pr_info/steps/step_1.md](steps/step_1.md)*
 
-- [ ] Part A: Verify test imports use package level (not direct submodule imports)
-- [ ] Part A: Run all git_operations tests to establish baseline
-- [ ] Part B: Create `src/mcp_coder/utils/git_operations/readers.py` with all read-only operations
-- [ ] Run pylint on `src/mcp_coder/utils/git_operations/readers.py`
-- [ ] Run pytest on `tests/utils/git_operations/`
-- [ ] Run mypy on `src/mcp_coder/utils/git_operations/readers.py`
-- [ ] Prepare git commit message for Step 1
+- [x] Part A: Verify test imports use package level (not direct submodule imports)
+- [x] Part A: Run all git_operations tests to establish baseline
+- [x] Part B: Create `src/mcp_coder/utils/git_operations/readers.py` with all read-only operations
+- [x] Run pylint on `src/mcp_coder/utils/git_operations/readers.py`
+- [x] Run pytest on `tests/utils/git_operations/`
+- [x] Run mypy on `src/mcp_coder/utils/git_operations/readers.py`
+- [x] Prepare git commit message for Step 1
 
 ---
 

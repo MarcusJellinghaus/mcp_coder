@@ -5,8 +5,11 @@ from pathlib import Path
 import pytest
 from git import Repo
 
-from mcp_coder.utils.git_operations import commit_all_changes, commit_staged_files
-from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
+from mcp_coder.utils.git_operations import (
+    commit_all_changes,
+    commit_staged_files,
+    get_latest_commit_sha,
+)
 
 
 @pytest.mark.git_integration

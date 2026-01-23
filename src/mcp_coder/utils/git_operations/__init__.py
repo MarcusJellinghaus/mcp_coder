@@ -16,7 +16,7 @@ from .branches import (
 )
 
 # Commit operations
-from .commits import commit_all_changes, commit_staged_files
+from .commits import commit_all_changes, commit_staged_files, get_latest_commit_sha
 
 # Core types and utilities
 from .core import CommitResult, PushResult
@@ -61,6 +61,7 @@ __all__ = [
     # Commit operations
     "commit_all_changes",
     "commit_staged_files",
+    "get_latest_commit_sha",
     # Diff operations
     "get_branch_diff",
     "get_git_diff_for_commit",
