@@ -394,6 +394,11 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         default=None,
         help="Project directory path (default: current directory)",
     )
+    set_status_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Bypass clean working directory check",
+    )
 
     return parser
 

@@ -15,5 +15,6 @@ mcp-coder set-status status-08:ready-pr
 ```
 
 2. Confirm the status change was successful.
+**Note:** If the command fails, report the error to the user. Do not use `--force` unless explicitly asked.
 
 **Effect:** Changes issue status from `status-07:code-review` to `status-08:ready-pr`.
