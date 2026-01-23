@@ -39,11 +39,11 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 3: Update Slash Command Documentation
 **Reference**: [pr_info/steps/step_3.md](steps/step_3.md)
 
-- [ ] Add error handling note to `.claude/commands/plan_approve.md`
-- [ ] Add error handling note to `.claude/commands/implementation_needs_rework.md`
-- [ ] Add error handling note to `.claude/commands/implementation_approve.md`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 3
+- [x] Add error handling note to `.claude/commands/plan_approve.md`
+- [x] Add error handling note to `.claude/commands/implementation_needs_rework.md`
+- [x] Add error handling note to `.claude/commands/implementation_approve.md`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 3
 
 ---
 
