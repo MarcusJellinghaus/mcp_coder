@@ -20,7 +20,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ### Step 1: Add Tests for Clean Working Directory Check (TDD)
 **Reference**: [pr_info/steps/step_1.md](steps/step_1.md)
 
-- [ ] Add `mock_is_working_directory_clean` fixture to `tests/cli/commands/test_set_status.py`
+- [x] Add `mock_is_working_directory_clean` fixture to `tests/cli/commands/test_set_status.py`
 - [ ] Implement `test_execute_set_status_dirty_directory_fails` test
 - [ ] Implement `test_execute_set_status_dirty_directory_with_force_succeeds` test
 - [ ] Implement `test_execute_set_status_clean_directory_succeeds` test
