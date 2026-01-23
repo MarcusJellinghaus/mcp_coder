@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from ...constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
-from ...utils.git_operations.branches import (
+from ...utils.git_operations.readers import (
     extract_issue_number_from_branch,
     get_current_branch_name,
 )
