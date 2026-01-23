@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 - [x] Add `mock_is_working_directory_clean` fixture to `tests/cli/commands/test_set_status.py`
 - [x] Implement `test_execute_set_status_dirty_directory_fails` test
-- [ ] Implement `test_execute_set_status_dirty_directory_with_force_succeeds` test
+- [x] Implement `test_execute_set_status_dirty_directory_with_force_succeeds` test
 - [ ] Implement `test_execute_set_status_clean_directory_succeeds` test
 - [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
 - [ ] Prepare git commit message for Step 1
