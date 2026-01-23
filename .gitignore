@@ -55,3 +55,6 @@ pr_info/.commit_message.txt
 
 # CI check temporary files
 pr_info/.ci_problem_description.md
+
+# Test artifacts (cleanup safety net)
+temp_integration_test.py
