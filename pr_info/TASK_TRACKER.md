@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 *Details: [pr_info/steps/step_1.md](steps/step_1.md)*
 
 - [x] Add `temp_integration_test.py` entry to `.gitignore` under test artifacts section
-- [ ] Run pylint checks and fix any issues
+- [x] Run pylint checks and fix any issues
 - [ ] Run pytest and verify all tests pass
 - [ ] Run mypy checks and fix any type issues
 - [ ] Prepare git commit message for Step 1
