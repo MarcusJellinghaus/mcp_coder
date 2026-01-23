@@ -56,12 +56,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 - [x] Part C: Update `src/mcp_coder/utils/github_operations/issue_manager.py` - change branches to readers
 - [x] Part D: Update `src/mcp_coder/workflows/create_pr/core.py` - change branches to readers
 - [x] Part E: Update `src/mcp_coder/cli/commands/set_status.py` - change branches to readers
-- [ ] Part F: Add import linter contract to `.importlinter` for git_operations internal layering
-- [ ] Run pylint on all modified external files
-- [ ] Run pytest on `tests/`
-- [ ] Run mypy on modified files
-- [ ] Run `lint-imports` to verify layering contract passes
-- [ ] Prepare git commit message for Step 3
+- [x] Part F: Add import linter contract to `.importlinter` for git_operations internal layering
+- [x] Run pylint on all modified external files
+- [x] Run pytest on `tests/`
+- [x] Run mypy on modified files
+- [x] Run `lint-imports` to verify layering contract passes
+- [x] Prepare git commit message for Step 3
 
 ---
 
