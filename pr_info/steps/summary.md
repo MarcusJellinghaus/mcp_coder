@@ -34,9 +34,9 @@ This change follows existing patterns in the codebase:
 ## Implementation Summary
 
 ### Step 1: Add Tests (TDD)
-- Add unit tests for clean directory check behavior
+- Add unit tests for clean directory check behavior (3 tests)
 - Add tests for `--force` flag bypass
-- Add tests for error scenarios
+- *(Ignored files test removed per Decision 1 - other tests provide sufficient coverage)*
 
 ### Step 2: Implement Core Functionality
 - Add `--force` argument to CLI parser

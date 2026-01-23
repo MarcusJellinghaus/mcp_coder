@@ -25,7 +25,7 @@ Add the following note to each file's **Instructions** section:
 
 ## HOW: Placement
 
-Insert the note after the numbered instructions and before the **Effect** section.
+Insert the note directly before the **Effect** section (no blank line, per Decision 4).
 
 ### Example Structure (after change):
 ```markdown
@@ -36,7 +36,6 @@ mcp-coder set-status status-XX:label-name
 ```
 
 2. Confirm the status change was successful.
-
 **Note:** If the command fails, report the error to the user. Do not use `--force` unless explicitly asked.
 
 **Effect:** Changes issue status from ...
@@ -51,27 +50,24 @@ No data structures involved.
 ## Changes Per File
 
 ### .claude/commands/plan_approve.md
-Insert before `**Effect:**` line:
+Insert directly before `**Effect:**` line (no blank line):
 ```markdown
-
 **Note:** If the command fails, report the error to the user. Do not use `--force` unless explicitly asked.
 ```
 
 ### .claude/commands/implementation_needs_rework.md
-Insert before `**Effect:**` line:
+Insert directly before `**Effect:**` line (no blank line):
 ```markdown
-
 **Note:** If the command fails, report the error to the user. Do not use `--force` unless explicitly asked.
 ```
 
 ### .claude/commands/implementation_approve.md
-Insert before `**Effect:**` line:
+Insert directly before `**Effect:**` line (no blank line):
 ```markdown
-
 **Note:** If the command fails, report the error to the user. Do not use `--force` unless explicitly asked.
 ```
 
 ## Notes
-- Keep formatting consistent with existing file style
+- Keep formatting consistent with existing file style (per Decision 4)
 - The note uses backticks around `--force` for code formatting
-- Add blank line before the note for readability
+- No blank line before the note - match existing compact style

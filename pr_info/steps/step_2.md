@@ -97,7 +97,7 @@ from ...utils.git_operations.repository import is_working_directory_clean
 **New code block** (insert in execute_set_status after Step 1):
 ```python
         # Step 1.5: Check working directory is clean (unless --force)
-        if not getattr(args, "force", False):
+        if not args.force:
             try:
                 if not is_working_directory_clean(
                     project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
@@ -114,6 +114,6 @@ from ...utils.git_operations.repository import is_working_directory_clean
 ```
 
 ## Notes
-- Use `getattr(args, "force", False)` for backwards compatibility with any code that creates args without the force attribute
+- Use `args.force` directly - the CLI parser guarantees the attribute exists (per Decision 2)
 - Follow existing error handling pattern in the function
 - Keep the check simple - no need for detailed status output (unlike implement command)

@@ -37,14 +37,9 @@ def test_execute_set_status_clean_directory_succeeds(
     tmp_path: Path,
 ) -> None:
     """Test that set-status succeeds when working directory is clean."""
-
-def test_execute_set_status_ignored_files_allowed(
-    mock_issue_manager: MagicMock,
-    mock_load_labels_config: MagicMock,
-    tmp_path: Path,
-) -> None:
-    """Test that files in DEFAULT_IGNORED_BUILD_ARTIFACTS don't block status update."""
 ```
+
+*Note: Test for ignored files behavior removed per Decision 1 - other tests provide sufficient coverage.*
 
 ## HOW: Integration Points
 
@@ -90,14 +85,6 @@ def mock_is_working_directory_clean():
 2. Create args with status_label, no --force flag
 3. Call execute_set_status(args)
 4. Assert returns exit code 0
-```
-
-### test_execute_set_status_ignored_files_allowed
-```
-1. Mock is_working_directory_clean, capture call args
-2. Create args with status_label
-3. Call execute_set_status(args)
-4. Assert is_working_directory_clean called with ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
 ```
 
 ## DATA: Expected Values
