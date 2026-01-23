@@ -6,7 +6,7 @@
 Implement Step 2 of Issue #91 (see pr_info/steps/summary.md).
 
 In tests/formatters/test_integration.py:
-1. Add required imports (contextlib, Generator from typing)
+1. Add required import (Generator from typing)
 2. Create a pytest fixture `temp_integration_file` with yield pattern
 3. Refactor `test_complete_tool_integration_workflow` to use the fixture
 ```
@@ -24,7 +24,6 @@ In tests/formatters/test_integration.py:
 ### New Imports
 
 ```python
-import contextlib
 from typing import Generator  # Add to existing typing imports
 ```
 
@@ -47,7 +46,7 @@ def test_complete_tool_integration_workflow(self, temp_integration_file: Path) -
 
 - Fixture decorated with `@pytest.fixture` (function-scoped by default)
 - Test method accepts fixture as parameter (pytest dependency injection)
-- Cleanup uses `contextlib.suppress(OSError)` for robustness
+- Cleanup uses `missing_ok=True` for robustness
 
 ## ALGORITHM
 
@@ -58,7 +57,7 @@ def test_complete_tool_integration_workflow(self, temp_integration_file: Path) -
 2. Create test_file path as project_root / "temp_integration_test.py"
 3. yield test_file to the test
 4. After test completes (success or failure):
-5.   Suppress OSError and call test_file.unlink(missing_ok=True)
+5.   Call test_file.unlink(missing_ok=True)
 ```
 
 ### Test Refactoring
@@ -117,8 +116,7 @@ def temp_integration_file() -> Generator[Path, None, None]:
     project_root = Path(__file__).parent.parent.parent
     test_file = project_root / "temp_integration_test.py"
     yield test_file
-    with contextlib.suppress(OSError):
-        test_file.unlink(missing_ok=True)
+    test_file.unlink(missing_ok=True)
 
 # Test method (inside class)
 def test_complete_tool_integration_workflow(self, temp_integration_file: Path) -> None:
