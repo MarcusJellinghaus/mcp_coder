@@ -14,8 +14,8 @@ from ...constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
 from ...utils.git_operations.readers import (
     extract_issue_number_from_branch,
     get_current_branch_name,
+    is_working_directory_clean,
 )
-from ...utils.git_operations.repository import is_working_directory_clean
 from ...utils.github_operations.issue_manager import IssueManager
 from ...utils.github_operations.label_config import (
     get_labels_config_path,
