@@ -11,6 +11,7 @@ from mcp_coder.utils.git_operations import (
     create_branch,
     get_current_branch_name,
 )
+from mcp_coder.utils.git_operations.branches import needs_rebase
 
 
 @pytest.mark.git_integration
