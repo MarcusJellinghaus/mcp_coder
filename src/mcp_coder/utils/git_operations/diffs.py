@@ -8,14 +8,14 @@ from typing import Optional
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
-from .branches import (
+from .core import GIT_SHORT_HASH_LENGTH, PLACEHOLDER_HASH, _safe_repo_context, logger
+from .readers import (
     branch_exists,
     get_current_branch_name,
     get_parent_branch_name,
+    is_git_repository,
     remote_branch_exists,
 )
-from .core import GIT_SHORT_HASH_LENGTH, PLACEHOLDER_HASH, _safe_repo_context, logger
-from .repository import is_git_repository
 
 
 def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:

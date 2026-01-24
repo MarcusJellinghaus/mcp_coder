@@ -88,7 +88,7 @@ class TestModuleIntegration:
         # Check docstrings are preserved
         assert commit_all_changes.__doc__ is not None
         assert (
-            "Stage all unstaged changes and commit them" in commit_all_changes.__doc__
+            "stage all unstaged changes and commit them" in commit_all_changes.__doc__
         )
 
         assert is_git_repository.__doc__ is not None

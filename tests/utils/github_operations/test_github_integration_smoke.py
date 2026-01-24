@@ -255,7 +255,7 @@ class TestCIResultsManagerSmoke:
     ) -> None:
         """Verify basic GitHub Actions API connectivity."""
         # Get default branch dynamically (Decision 21)
-        from mcp_coder.utils.git_operations.branches import get_default_branch_name
+        from mcp_coder.utils.git_operations import get_default_branch_name
 
         project_dir = github_test_setup["project_dir"]
         default_branch = get_default_branch_name(project_dir) or "main"
@@ -273,7 +273,7 @@ class TestCIResultsManagerSmoke:
     ) -> None:
         """Verify complete CI analysis workflow."""
         # Get default branch dynamically (Decision 21)
-        from mcp_coder.utils.git_operations.branches import get_default_branch_name
+        from mcp_coder.utils.git_operations import get_default_branch_name
 
         project_dir = github_test_setup["project_dir"]
         default_branch = get_default_branch_name(project_dir) or "main"

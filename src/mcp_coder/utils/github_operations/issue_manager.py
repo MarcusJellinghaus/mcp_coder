@@ -12,7 +12,7 @@ from typing import List, Optional, TypedDict
 
 from github.GithubException import GithubException
 
-from mcp_coder.utils.git_operations.branches import (
+from mcp_coder.utils.git_operations.readers import (
     extract_issue_number_from_branch,
     get_current_branch_name,
 )

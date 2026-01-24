@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, TypedDict, cast
 
 import requests
 
-from mcp_coder.utils.git_operations.branches import validate_branch_name
+from mcp_coder.utils.git_operations.readers import validate_branch_name
 from mcp_coder.utils.log_utils import log_function_call
 
 from .base_manager import BaseGitHubManager, _handle_github_errors

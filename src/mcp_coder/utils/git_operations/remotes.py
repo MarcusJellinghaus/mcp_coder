@@ -1,15 +1,13 @@
 """Git remote operations for push, fetch, and GitHub URL parsing."""
 
-import logging
 import re
 from pathlib import Path
 from typing import Any, Optional
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
-from .branches import branch_exists
 from .core import _safe_repo_context, logger
-from .repository import is_git_repository
+from .readers import branch_exists, is_git_repository
 
 
 def git_push(project_dir: Path, force_with_lease: bool = False) -> dict[str, Any]:
@@ -248,3 +246,84 @@ def _parse_github_url(git_url: str) -> Optional[str]:
 
     owner, repo_name = match.groups()
     return f"https://github.com/{owner}/{repo_name}"
+
+
+def rebase_onto_branch(project_dir: Path, target_branch: str) -> bool:
+    """Attempt to rebase current branch onto origin/<target_branch>.
+
+    Fetches from origin, then attempts rebase. If conflicts are detected,
+    automatically aborts the rebase. All outcomes are logged internally.
+
+    NOTE: This function was moved from branches.py because it's inherently
+    remote-aware (operates on origin/<branch>) and required fetch_remote.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+        target_branch: Name of the branch to rebase onto (without 'origin/' prefix)
+
+    Returns:
+        True if rebase succeeded or branch is already up-to-date.
+        False if rebase was skipped (conflicts, errors, etc.)
+
+    Note:
+        This function never raises exceptions - all errors are logged and
+        result in False return value. Safe to call without try/except.
+    """
+    logger.debug(f"Attempting rebase onto origin/{target_branch} in {project_dir}")
+
+    # Validate inputs
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    if not target_branch or not target_branch.strip():
+        logger.debug("Target branch name is empty")
+        return False
+
+    try:
+        # Fetch from origin first - fetch_remote is now in the same module
+        if not fetch_remote(project_dir):
+            logger.warning("Skipping rebase: failed to fetch from origin")
+            return False
+
+        with _safe_repo_context(project_dir) as repo:
+            # Attempt rebase onto origin/<target_branch>
+            try:
+                repo.git.rebase(f"origin/{target_branch}")
+                logger.info(f"Successfully rebased onto origin/{target_branch}")
+                return True
+
+            except GitCommandError as e:
+                error_message = str(e).lower()
+
+                # Check if already up-to-date (some git versions report this)
+                if "up to date" in error_message or "up-to-date" in error_message:
+                    logger.info(f"Already up-to-date with origin/{target_branch}")
+                    return True
+
+                # Check if rebase is in progress (conflicts detected)
+                rebase_merge_dir = project_dir / ".git" / "rebase-merge"
+                rebase_apply_dir = project_dir / ".git" / "rebase-apply"
+
+                if rebase_merge_dir.exists() or rebase_apply_dir.exists():
+                    logger.warning(
+                        "Skipping rebase: merge conflicts detected, aborting rebase"
+                    )
+                    # Abort the rebase to restore original state
+                    try:
+                        repo.git.rebase("--abort")
+                        logger.debug("Successfully aborted rebase")
+                    except GitCommandError as abort_error:
+                        logger.warning(f"Failed to abort rebase: {abort_error}")
+                    return False
+
+                # Other git command error (e.g., invalid branch name)
+                logger.warning(f"Skipping rebase: {e}")
+                return False
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.warning(f"Skipping rebase: {e}")
+        return False
+    except Exception as e:
+        logger.warning(f"Unexpected error during rebase: {e}")
+        return False

@@ -22,7 +22,7 @@ from mcp_coder.utils import (
     git_push,
     is_working_directory_clean,
 )
-from mcp_coder.utils.git_operations.branches import extract_issue_number_from_branch
+from mcp_coder.utils.git_operations.readers import extract_issue_number_from_branch
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
