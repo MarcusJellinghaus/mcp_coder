@@ -5,7 +5,9 @@ for reporting the readiness status of branches.
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List, Optional
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -339,3 +341,509 @@ def test_dataclass_immutability() -> None:
     # Should raise exception when trying to modify frozen dataclass
     with pytest.raises(Exception):  # FrozenInstanceError
         report.ci_status = "FAILED"
+
+
+# Tests for collect_branch_status() function
+
+
+def test_collect_branch_status_all_good():
+    """Test collect_branch_status with all systems green."""
+    from src.mcp_coder.utils.branch_status import collect_branch_status
+
+    project_dir = Path("/test/repo")
+
+    with (
+        patch("src.mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "src.mcp_coder.utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch("src.mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
+        patch("src.mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+    ):
+        # Setup mocks for all green status
+        mock_ci.return_value = ("PASSED", None)
+        mock_rebase.return_value = (False, "Up to date with origin/main")
+        mock_tasks.return_value = True
+        mock_label.return_value = "status-04:reviewing"
+
+        result = collect_branch_status(project_dir)
+
+        # Verify result
+        assert result.ci_status == "PASSED"
+        assert result.ci_details is None
+        assert result.rebase_needed is False
+        assert result.rebase_reason == "Up to date with origin/main"
+        assert result.tasks_complete is True
+        assert result.current_github_label == "status-04:reviewing"
+        assert "Ready to merge" in result.recommendations
+
+        # Verify function calls
+        mock_ci.assert_called_once_with(project_dir, "main", False, 200)
+        mock_rebase.assert_called_once_with(project_dir)
+        mock_tasks.assert_called_once_with(project_dir)
+        mock_label.assert_called_once_with(project_dir)
+
+
+def test_collect_branch_status_ci_failed():
+    """Test collect_branch_status with CI failures."""
+    from src.mcp_coder.utils.branch_status import collect_branch_status
+
+    project_dir = Path("/test/repo")
+    ci_error = "FAILED tests/test_example.py::test_function - AssertionError"
+
+    with (
+        patch("src.mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "src.mcp_coder.utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch("src.mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
+        patch("src.mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+    ):
+        # Setup mocks for CI failed
+        mock_ci.return_value = ("FAILED", ci_error)
+        mock_rebase.return_value = (False, "Up to date with origin/main")
+        mock_tasks.return_value = True
+        mock_label.return_value = "status-03:implementing"
+
+        result = collect_branch_status(project_dir)
+
+        # Verify result
+        assert result.ci_status == "FAILED"
+        assert result.ci_details == ci_error
+        assert result.rebase_needed is False
+        assert result.tasks_complete is True
+        assert "Fix CI test failures" in result.recommendations
+
+
+def test_collect_branch_status_rebase_needed():
+    """Test collect_branch_status with rebase required."""
+    from src.mcp_coder.utils.branch_status import collect_branch_status
+
+    project_dir = Path("/test/repo")
+
+    with (
+        patch("src.mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "src.mcp_coder.utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch("src.mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
+        patch("src.mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+    ):
+        # Setup mocks for rebase needed
+        mock_ci.return_value = ("PASSED", None)
+        mock_rebase.return_value = (True, "5 commits behind origin/main")
+        mock_tasks.return_value = True
+        mock_label.return_value = "status-03:implementing"
+
+        result = collect_branch_status(project_dir)
+
+        # Verify result
+        assert result.ci_status == "PASSED"
+        assert result.rebase_needed is True
+        assert result.rebase_reason == "5 commits behind origin/main"
+        assert "Rebase onto origin/main" in result.recommendations
+
+
+def test_collect_branch_status_tasks_incomplete():
+    """Test collect_branch_status with incomplete tasks."""
+    from src.mcp_coder.utils.branch_status import collect_branch_status
+
+    project_dir = Path("/test/repo")
+
+    with (
+        patch("src.mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "src.mcp_coder.utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch("src.mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
+        patch("src.mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+    ):
+        # Setup mocks for incomplete tasks
+        mock_ci.return_value = ("PASSED", None)
+        mock_rebase.return_value = (False, "Up to date with origin/main")
+        mock_tasks.return_value = False
+        mock_label.return_value = "status-03:implementing"
+
+        result = collect_branch_status(project_dir)
+
+        # Verify result
+        assert result.ci_status == "PASSED"
+        assert result.rebase_needed is False
+        assert result.tasks_complete is False
+        assert "Complete remaining tasks" in result.recommendations
+
+
+def test_collect_branch_status_with_truncation():
+    """Test collect_branch_status with CI log truncation enabled."""
+    from src.mcp_coder.utils.branch_status import collect_branch_status
+
+    project_dir = Path("/test/repo")
+    long_ci_error = "\n".join([f"Error line {i}" for i in range(300)])
+
+    with (
+        patch("src.mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "src.mcp_coder.utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch("src.mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
+        patch("src.mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+    ):
+        # Setup mocks
+        mock_ci.return_value = ("FAILED", long_ci_error)
+        mock_rebase.return_value = (False, "Up to date")
+        mock_tasks.return_value = True
+        mock_label.return_value = "status-03:implementing"
+
+        result = collect_branch_status(
+            project_dir, truncate_logs=True, max_log_lines=50
+        )
+
+        # Verify truncation was passed correctly
+        mock_ci.assert_called_once_with(project_dir, "main", True, 50)
+        assert (
+            result.ci_details == long_ci_error
+        )  # Function should return what mock returns
+
+
+def test_collect_branch_status_all_failed():
+    """Test collect_branch_status with all systems failing."""
+    from src.mcp_coder.utils.branch_status import collect_branch_status
+
+    project_dir = Path("/test/repo")
+    ci_error = "Multiple test failures"
+
+    with (
+        patch("src.mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "src.mcp_coder.utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch("src.mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
+        patch("src.mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+    ):
+        # Setup mocks for everything failing
+        mock_ci.return_value = ("FAILED", ci_error)
+        mock_rebase.return_value = (True, "3 commits behind origin/main")
+        mock_tasks.return_value = False
+        mock_label.return_value = "status-02:planning"
+
+        result = collect_branch_status(project_dir)
+
+        # Verify result
+        assert result.ci_status == "FAILED"
+        assert result.ci_details == ci_error
+        assert result.rebase_needed is True
+        assert result.rebase_reason == "3 commits behind origin/main"
+        assert result.tasks_complete is False
+        assert result.current_github_label == "status-02:planning"
+
+        # Should have multiple recommendations in priority order
+        recommendations = result.recommendations
+        assert len(recommendations) >= 3
+        assert "Fix CI test failures" in recommendations[0]  # CI first priority
+        assert any("Complete remaining tasks" in r for r in recommendations)
+        assert any("Rebase onto origin/main" in r for r in recommendations)
+
+
+# Tests for helper functions
+
+
+def test_collect_ci_status_with_truncation():
+    """Test _collect_ci_status with log truncation."""
+    from src.mcp_coder.utils.branch_status import _collect_ci_status
+
+    project_dir = Path("/test/repo")
+    long_logs = "\n".join([f"Log line {i}" for i in range(300)])
+
+    with patch(
+        "src.mcp_coder.utils.github_operations.ci_results_manager.CIResultsManager"
+    ) as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_latest_ci_status.return_value = ("FAILED", long_logs)
+
+        status, details = _collect_ci_status(
+            project_dir, "main", truncate=True, max_lines=100
+        )
+
+        assert status == "FAILED"
+        # Should be truncated by the function
+        assert "[... truncated" in details
+        assert len(details.split("\n")) <= 102  # 100 + truncation marker + buffer
+
+
+def test_collect_ci_status_no_truncation():
+    """Test _collect_ci_status without truncation."""
+    from src.mcp_coder.utils.branch_status import _collect_ci_status
+
+    project_dir = Path("/test/repo")
+    short_logs = "Short error message"
+
+    with patch(
+        "src.mcp_coder.utils.github_operations.ci_results_manager.CIResultsManager"
+    ) as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_latest_ci_status.return_value = ("PASSED", None)
+
+        status, details = _collect_ci_status(
+            project_dir, "main", truncate=False, max_lines=100
+        )
+
+        assert status == "PASSED"
+        assert details is None
+
+
+def test_collect_ci_status_error_handling():
+    """Test _collect_ci_status with API errors."""
+    from src.mcp_coder.utils.branch_status import _collect_ci_status
+
+    project_dir = Path("/test/repo")
+
+    with patch(
+        "src.mcp_coder.utils.github_operations.ci_results_manager.CIResultsManager"
+    ) as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_latest_ci_status.side_effect = Exception("API Error")
+
+        status, details = _collect_ci_status(
+            project_dir, "main", truncate=False, max_lines=100
+        )
+
+        assert status == "NOT_CONFIGURED"
+        assert details is None
+
+
+def test_collect_rebase_status_edge_cases():
+    """Test _collect_rebase_status with various edge cases."""
+    from src.mcp_coder.utils.branch_status import _collect_rebase_status
+
+    project_dir = Path("/test/repo")
+
+    # Test normal case
+    with patch(
+        "src.mcp_coder.utils.git_operations.branches.needs_rebase"
+    ) as mock_needs_rebase:
+        mock_needs_rebase.return_value = (False, "Up to date with origin/main")
+
+        rebase_needed, reason = _collect_rebase_status(project_dir)
+
+        assert rebase_needed is False
+        assert reason == "Up to date with origin/main"
+        mock_needs_rebase.assert_called_once_with(project_dir)
+
+    # Test error case
+    with patch(
+        "src.mcp_coder.utils.git_operations.branches.needs_rebase"
+    ) as mock_needs_rebase:
+        mock_needs_rebase.side_effect = Exception("Git error")
+
+        rebase_needed, reason = _collect_rebase_status(project_dir)
+
+        assert rebase_needed is False
+        assert "error: Git error" in reason
+
+
+def test_collect_task_status():
+    """Test _collect_task_status function."""
+    from src.mcp_coder.utils.branch_status import _collect_task_status
+
+    project_dir = Path("/test/repo")
+
+    # Test tasks complete
+    with patch(
+        "src.mcp_coder.workflow_utils.task_tracker.has_incomplete_work"
+    ) as mock_incomplete:
+        mock_incomplete.return_value = False
+
+        result = _collect_task_status(project_dir)
+
+        assert result is True  # No incomplete work means tasks complete
+        mock_incomplete.assert_called_once_with(project_dir)
+
+    # Test tasks incomplete
+    with patch(
+        "src.mcp_coder.workflow_utils.task_tracker.has_incomplete_work"
+    ) as mock_incomplete:
+        mock_incomplete.return_value = True
+
+        result = _collect_task_status(project_dir)
+
+        assert result is False  # Has incomplete work means tasks not complete
+
+    # Test error case
+    with patch(
+        "src.mcp_coder.workflow_utils.task_tracker.has_incomplete_work"
+    ) as mock_incomplete:
+        mock_incomplete.side_effect = Exception("Task tracker error")
+
+        result = _collect_task_status(project_dir)
+
+        assert result is False  # Default to incomplete on error
+
+
+def test_collect_github_label():
+    """Test _collect_github_label function."""
+    from src.mcp_coder.utils.branch_status import _collect_github_label
+
+    project_dir = Path("/test/repo")
+
+    with (
+        patch(
+            "src.mcp_coder.utils.git_operations.branches.get_current_branch_name"
+        ) as mock_branch,
+        patch(
+            "src.mcp_coder.utils.git_operations.readers.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch(
+            "src.mcp_coder.utils.github_operations.issue_manager.IssueManager"
+        ) as mock_issue_manager,
+    ):
+        # Setup mocks
+        mock_branch.return_value = "feature/123-add-tests"
+        mock_extract.return_value = 123
+        mock_manager_instance = MagicMock()
+        mock_issue_manager.return_value = mock_manager_instance
+        mock_issue = MagicMock()
+        mock_issue.labels = ["status-03:implementing", "priority-high"]
+        mock_manager_instance.get_issue.return_value = mock_issue
+
+        result = _collect_github_label(project_dir)
+
+        assert result == "status-03:implementing"
+        mock_extract.assert_called_once_with("feature/123-add-tests")
+        mock_manager_instance.get_issue.assert_called_once_with(123)
+
+
+def test_collect_github_label_no_status_label():
+    """Test _collect_github_label when no status label found."""
+    from src.mcp_coder.utils.branch_status import _collect_github_label
+
+    project_dir = Path("/test/repo")
+
+    with (
+        patch(
+            "src.mcp_coder.utils.git_operations.branches.get_current_branch_name"
+        ) as mock_branch,
+        patch(
+            "src.mcp_coder.utils.git_operations.readers.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch(
+            "src.mcp_coder.utils.github_operations.issue_manager.IssueManager"
+        ) as mock_issue_manager,
+    ):
+        # Setup mocks with no status labels
+        mock_branch.return_value = "feature/123-add-tests"
+        mock_extract.return_value = 123
+        mock_manager_instance = MagicMock()
+        mock_issue_manager.return_value = mock_manager_instance
+        mock_issue = MagicMock()
+        mock_issue.labels = ["priority-high", "bug"]  # No status- label
+        mock_manager_instance.get_issue.return_value = mock_issue
+
+        result = _collect_github_label(project_dir)
+
+        assert result == "unknown"
+
+
+def test_collect_github_label_error_handling():
+    """Test _collect_github_label with various errors."""
+    from src.mcp_coder.utils.branch_status import _collect_github_label
+
+    project_dir = Path("/test/repo")
+
+    # Test branch name extraction error
+    with patch(
+        "src.mcp_coder.utils.git_operations.branches.get_current_branch_name"
+    ) as mock_branch:
+        mock_branch.side_effect = Exception("Git error")
+
+        result = _collect_github_label(project_dir)
+
+        assert result == "unknown"
+
+    # Test issue number extraction returns None
+    with (
+        patch(
+            "src.mcp_coder.utils.git_operations.branches.get_current_branch_name"
+        ) as mock_branch,
+        patch(
+            "src.mcp_coder.utils.git_operations.readers.extract_issue_number_from_branch"
+        ) as mock_extract,
+    ):
+        mock_branch.return_value = "main"
+        mock_extract.return_value = None
+
+        result = _collect_github_label(project_dir)
+
+        assert result == "unknown"
+
+
+def test_generate_recommendations_logic():
+    """Test _generate_recommendations function logic."""
+    from src.mcp_coder.utils.branch_status import _generate_recommendations
+
+    # Test all good case
+    report_data = {
+        "ci_status": "PASSED",
+        "rebase_needed": False,
+        "tasks_complete": True,
+    }
+    recommendations = _generate_recommendations(report_data)
+    assert "Ready to merge" in recommendations[0]
+
+    # Test CI failed case
+    report_data = {
+        "ci_status": "FAILED",
+        "rebase_needed": False,
+        "tasks_complete": True,
+    }
+    recommendations = _generate_recommendations(report_data)
+    assert "Fix CI test failures" == recommendations[0]
+
+    # Test multiple issues - should prioritize CI first
+    report_data = {
+        "ci_status": "FAILED",
+        "rebase_needed": True,
+        "tasks_complete": False,
+    }
+    recommendations = _generate_recommendations(report_data)
+    assert "Fix CI test failures" == recommendations[0]
+    assert "Complete remaining tasks" == recommendations[1]
+    assert "Rebase onto origin/main" == recommendations[2]
+
+    # Test tasks incomplete only
+    report_data = {
+        "ci_status": "PASSED",
+        "rebase_needed": False,
+        "tasks_complete": False,
+    }
+    recommendations = _generate_recommendations(report_data)
+    assert "Complete remaining tasks" == recommendations[0]
+
+    # Test rebase needed only
+    report_data = {
+        "ci_status": "PASSED",
+        "rebase_needed": True,
+        "tasks_complete": True,
+    }
+    recommendations = _generate_recommendations(report_data)
+    assert "Rebase onto origin/main" == recommendations[0]
+
+    # Test CI pending case
+    report_data = {
+        "ci_status": "PENDING",
+        "rebase_needed": False,
+        "tasks_complete": True,
+    }
+    recommendations = _generate_recommendations(report_data)
+    assert "Wait for CI to complete" == recommendations[0]
+
+    # Test CI not configured case
+    report_data = {
+        "ci_status": "NOT_CONFIGURED",
+        "rebase_needed": False,
+        "tasks_complete": True,
+    }
+    recommendations = _generate_recommendations(report_data)
+    assert "Configure CI pipeline" == recommendations[0]
