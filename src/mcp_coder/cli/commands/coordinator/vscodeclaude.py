@@ -46,7 +46,7 @@ VSCODECLAUDE_PRIORITY: List[str] = [
 ]
 
 # Mapping of status to slash commands
-HUMAN_ACTION_COMMANDS: dict[str, tuple[str, str]] = {
+HUMAN_ACTION_COMMANDS: dict[str, tuple[Optional[str], Optional[str]]] = {
     # status: (initial_command, followup_command)
     "status-01:created": ("/issue_analyse", "/discuss"),
     "status-04:plan-review": ("/plan_review", "/discuss"),
