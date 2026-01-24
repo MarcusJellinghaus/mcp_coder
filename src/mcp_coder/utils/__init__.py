@@ -55,6 +55,16 @@ from .git_operations import (
     stage_all_changes,
     stage_specific_files,
 )
+from .branch_status import (
+    BranchStatusReport,
+    CI_FAILED,
+    CI_NOT_CONFIGURED,
+    CI_PASSED,
+    CI_PENDING,
+    collect_branch_status,
+    create_empty_report,
+    truncate_ci_details,
+)
 from .github_operations import PullRequestManager
 from .jenkins_operations import (
     JenkinsClient,
@@ -105,6 +115,15 @@ __all__ = [
     "CommandResult",
     "execute_command",
     "execute_subprocess",
+    # Branch status operations
+    "BranchStatusReport",
+    "CI_FAILED",
+    "CI_NOT_CONFIGURED",
+    "CI_PASSED",
+    "CI_PENDING",
+    "collect_branch_status",
+    "create_empty_report",
+    "truncate_ci_details",
     # GitHub operations
     "PullRequestManager",
     # Jenkins operations

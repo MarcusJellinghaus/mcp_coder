@@ -1,0 +1,9 @@
+# CI Failure Analysis
+
+The CI pipeline is failing due to git repository detection issues in the test environment. Multiple unit tests in both `tests/cli/commands/test_check_branch_status.py` and `tests/utils/test_branch_status.py` are failing because they cannot properly detect or access git repositories during testing.
+
+The root cause appears to be that the test mocks for git operations are not properly set up, causing functions like `get_current_branch_name()` and `is_git_repository()` to fail with errors like "Error checking if directory is git repository: /test/project" and "Could not determine current branch name". This results in the branch status functions returning "NOT_CONFIGURED" status instead of the expected test values like "PASSED" or "FAILED".
+
+The failing tests include branch status collection functions that expect specific CI statuses but receive "NOT_CONFIGURED" due to the git detection failures. Additionally, there's a text truncation logic issue in `test_truncate_ci_details_custom_max_lines` where the expected truncation marker format doesn't match the actual output format, and several mocking issues where expected function calls are not being made due to early failures in the git detection logic.
+
+To fix these issues, the test mocks need to be properly configured to mock the git repository detection functions at the right level, ensuring that `get_current_branch_name()` and related git operations return expected test values instead of failing. The truncation logic test also needs to be updated to match the actual implementation format. The primary files that need attention are the test files themselves and potentially the git operation modules in `src/mcp_coder/utils/git_operations/` to ensure they can be properly mocked in test environments.

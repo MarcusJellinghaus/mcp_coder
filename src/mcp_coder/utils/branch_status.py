@@ -153,10 +153,10 @@ def truncate_ci_details(details: str, max_lines: int = 200) -> str:
     if len(lines) <= max_lines:
         return details
 
-    # Take first 30 lines and last 170 lines
+    # Take first 30 lines and last (max_lines - 30) lines
     first_lines = lines[:30]
-    last_lines = lines[-170:]
-    truncated_count = len(lines) - 200
+    last_lines = lines[-(max_lines - 30) :]
+    truncated_count = len(lines) - max_lines
 
     return "\n".join(
         first_lines + [f"[... truncated {truncated_count} lines ...]"] + last_lines
@@ -296,15 +296,13 @@ def _collect_task_status(project_dir: Path) -> bool:
     logger = logging.getLogger(__name__)
 
     try:
-        # Change to project directory to use relative path
-        original_cwd = Path.cwd()
-        try:
-            import os
-
-            os.chdir(project_dir)
-            incomplete_work = has_incomplete_work()
-        finally:
-            os.chdir(original_cwd)
+        # Use the project directory's pr_info folder for task tracking
+        pr_info_path = project_dir / "pr_info"
+        if pr_info_path.exists():
+            incomplete_work = has_incomplete_work(str(pr_info_path))
+        else:
+            # If no pr_info directory, assume no tasks are tracked
+            incomplete_work = False
 
         tasks_complete = not incomplete_work
 

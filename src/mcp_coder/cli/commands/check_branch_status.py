@@ -115,7 +115,7 @@ def _run_auto_fixes(
         try:
             # Use existing CI fix logic from implement workflow
             # Get current branch from project directory
-            from ...utils.git_operations import get_current_branch_name
+            from ...utils.git_operations.readers import get_current_branch_name
 
             current_branch = get_current_branch_name(project_dir)
             if not current_branch:
