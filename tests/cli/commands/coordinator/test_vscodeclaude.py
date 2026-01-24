@@ -17,26 +17,26 @@ from mcp_coder.cli.commands.coordinator.vscodeclaude import (
 class TestTypes:
     """Test type definitions and constants."""
 
-    def test_vscodeclaude_priority_order(self):
+    def test_vscodeclaude_priority_order(self) -> None:
         """Priority list has correct order (later stages first)."""
         assert VSCODECLAUDE_PRIORITY[0] == "status-10:pr-created"
         assert VSCODECLAUDE_PRIORITY[-1] == "status-01:created"
 
-    def test_human_action_commands_coverage(self):
+    def test_human_action_commands_coverage(self) -> None:
         """All priority statuses have command mappings."""
         for status in VSCODECLAUDE_PRIORITY:
             assert status in HUMAN_ACTION_COMMANDS
 
-    def test_status_emoji_coverage(self):
+    def test_status_emoji_coverage(self) -> None:
         """All priority statuses have emoji mappings."""
         for status in VSCODECLAUDE_PRIORITY:
             assert status in STATUS_EMOJI
 
-    def test_default_max_sessions(self):
+    def test_default_max_sessions(self) -> None:
         """Default max sessions is 3."""
         assert DEFAULT_MAX_SESSIONS == 3
 
-    def test_vscodeclaude_priority_completeness(self):
+    def test_vscodeclaude_priority_completeness(self) -> None:
         """All expected statuses are in the priority list."""
         expected_statuses = {
             "status-01:created",
@@ -46,7 +46,7 @@ class TestTypes:
         }
         assert set(VSCODECLAUDE_PRIORITY) == expected_statuses
 
-    def test_human_action_commands_structure(self):
+    def test_human_action_commands_structure(self) -> None:
         """Human action commands have correct structure."""
         for status, commands in HUMAN_ACTION_COMMANDS.items():
             assert isinstance(commands, tuple)
@@ -58,7 +58,7 @@ class TestTypes:
                 if cmd is not None:
                     assert cmd.startswith("/"), f"Command {cmd} should start with '/'"
 
-    def test_status_emoji_structure(self):
+    def test_status_emoji_structure(self) -> None:
         """Status emoji mappings have correct structure."""
         for status, emoji in STATUS_EMOJI.items():
             assert isinstance(emoji, str)
@@ -68,7 +68,7 @@ class TestTypes:
 class TestTypeHints:
     """Test TypedDict structure validation."""
 
-    def test_vscodeclaude_session_type_structure(self):
+    def test_vscodeclaude_session_type_structure(self) -> None:
         """VSCodeClaudeSession has all required fields."""
         # This is a compile-time check, but we can verify the annotations exist
         annotations = VSCodeClaudeSession.__annotations__
@@ -83,25 +83,25 @@ class TestTypeHints:
         }
         assert set(annotations.keys()) == expected_fields
 
-    def test_vscodeclaude_session_store_type_structure(self):
+    def test_vscodeclaude_session_store_type_structure(self) -> None:
         """VSCodeClaudeSessionStore has all required fields."""
         annotations = VSCodeClaudeSessionStore.__annotations__
         expected_fields = {"sessions", "last_updated"}
         assert set(annotations.keys()) == expected_fields
 
-    def test_vscodeclaude_config_type_structure(self):
+    def test_vscodeclaude_config_type_structure(self) -> None:
         """VSCodeClaudeConfig has all required fields."""
         annotations = VSCodeClaudeConfig.__annotations__
         expected_fields = {"workspace_base", "max_sessions"}
         assert set(annotations.keys()) == expected_fields
 
-    def test_repo_vscodeclaude_config_type_structure(self):
+    def test_repo_vscodeclaude_config_type_structure(self) -> None:
         """RepoVSCodeClaudeConfig has all expected fields."""
         annotations = RepoVSCodeClaudeConfig.__annotations__
         expected_fields = {"setup_commands_windows", "setup_commands_linux"}
         assert set(annotations.keys()) == expected_fields
 
-    def test_vscodeclaude_session_creation(self):
+    def test_vscodeclaude_session_creation(self) -> None:
         """Can create a valid VSCodeClaudeSession instance."""
         session: VSCodeClaudeSession = {
             "folder": "/path/to/folder",
@@ -122,7 +122,7 @@ class TestTypeHints:
         assert isinstance(session["started_at"], str)
         assert isinstance(session["is_intervention"], bool)
 
-    def test_vscodeclaude_session_store_creation(self):
+    def test_vscodeclaude_session_store_creation(self) -> None:
         """Can create a valid VSCodeClaudeSessionStore instance."""
         store: VSCodeClaudeSessionStore = {
             "sessions": [],
@@ -132,7 +132,7 @@ class TestTypeHints:
         assert isinstance(store["sessions"], list)
         assert isinstance(store["last_updated"], str)
 
-    def test_vscodeclaude_config_creation(self):
+    def test_vscodeclaude_config_creation(self) -> None:
         """Can create a valid VSCodeClaudeConfig instance."""
         config: VSCodeClaudeConfig = {
             "workspace_base": "/path/to/workspace",
@@ -142,7 +142,7 @@ class TestTypeHints:
         assert isinstance(config["workspace_base"], str)
         assert isinstance(config["max_sessions"], int)
 
-    def test_repo_vscodeclaude_config_creation(self):
+    def test_repo_vscodeclaude_config_creation(self) -> None:
         """Can create a valid RepoVSCodeClaudeConfig instance."""
         config: RepoVSCodeClaudeConfig = {
             "setup_commands_windows": ["cmd1", "cmd2"],
@@ -154,7 +154,7 @@ class TestTypeHints:
         assert all(isinstance(cmd, str) for cmd in config["setup_commands_windows"])
         assert all(isinstance(cmd, str) for cmd in config["setup_commands_linux"])
 
-    def test_repo_vscodeclaude_config_partial(self):
+    def test_repo_vscodeclaude_config_partial(self) -> None:
         """Can create a partial RepoVSCodeClaudeConfig instance (total=False)."""
         # Should be able to create with only some fields since total=False
         config: RepoVSCodeClaudeConfig = {"setup_commands_windows": ["cmd1"]}
@@ -166,13 +166,17 @@ class TestTypeHints:
 class TestIntegration:
     """Integration tests for end-to-end workflow."""
 
-    def test_complete_session_workflow(self, tmp_path, monkeypatch):
+    def test_complete_session_workflow(
+        self, tmp_path: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test complete session creation and launch workflow."""
         # This is a placeholder for future integration tests
         # Will test the full flow from config loading to VSCode launch
         pass
 
-    def test_session_cleanup_workflow(self, tmp_path, monkeypatch):
+    def test_session_cleanup_workflow(
+        self, tmp_path: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test session stale detection and cleanup workflow."""
         # This is a placeholder for future integration tests
         # Will test stale session detection and cleanup
