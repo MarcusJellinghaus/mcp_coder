@@ -6,6 +6,7 @@ import sys
 
 from .. import __version__
 from ..utils.log_utils import setup_logging
+from .commands.check_branch_status import execute_check_branch_status
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.coordinator import execute_coordinator_run, execute_coordinator_test
 from .commands.create_plan import execute_create_plan
@@ -520,8 +521,6 @@ def main() -> int:
         elif args.command == "set-status":
             return execute_set_status(args)
         elif args.command == "check-branch-status":
-            from .commands.check_branch_status import execute_check_branch_status
-
             return execute_check_branch_status(args)
 
         # Other commands will be implemented in later steps

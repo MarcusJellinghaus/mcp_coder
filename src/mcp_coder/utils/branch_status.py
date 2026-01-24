@@ -7,13 +7,13 @@ status of branches, including CI status, rebase requirements, and task completio
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-from mcp_coder.utils.git_operations.branches import (
+from mcp_coder.utils.git_operations.branches import needs_rebase
+from mcp_coder.utils.git_operations.readers import (
+    extract_issue_number_from_branch,
     get_current_branch_name,
-    needs_rebase,
 )
-from mcp_coder.utils.git_operations.readers import extract_issue_number_from_branch
 from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
 from mcp_coder.utils.github_operations.issue_manager import IssueManager
 from mcp_coder.workflow_utils.task_tracker import has_incomplete_work
@@ -181,6 +181,10 @@ def collect_branch_status(
     try:
         # Get current branch name
         branch_name = get_current_branch_name(project_dir)
+        if not branch_name:
+            logger.error("Could not determine current branch name")
+            return create_empty_report()
+
         logger.info(f"Collecting status for branch: {branch_name}")
 
         # Collect status from all sources
@@ -273,14 +277,12 @@ def _collect_rebase_status(project_dir: Path) -> Tuple[bool, str]:
     logger = logging.getLogger(__name__)
 
     try:
-        rebase_needed = needs_rebase(project_dir)
+        rebase_needed, reason = needs_rebase(project_dir)
 
         if rebase_needed:
-            reason = "Branch is behind main branch and needs rebase"
-            logger.info("Rebase needed")
+            logger.info(f"Rebase needed: {reason}")
         else:
-            reason = "Branch is up to date with main"
-            logger.info("No rebase needed")
+            logger.info(f"No rebase needed: {reason}")
 
         return rebase_needed, reason
 
@@ -294,7 +296,16 @@ def _collect_task_status(project_dir: Path) -> bool:
     logger = logging.getLogger(__name__)
 
     try:
-        incomplete_work = has_incomplete_work(project_dir)
+        # Change to project directory to use relative path
+        original_cwd = Path.cwd()
+        try:
+            import os
+
+            os.chdir(project_dir)
+            incomplete_work = has_incomplete_work()
+        finally:
+            os.chdir(original_cwd)
+
         tasks_complete = not incomplete_work
 
         if tasks_complete:
@@ -319,6 +330,9 @@ def _collect_github_label(project_dir: Path) -> str:
     try:
         # Get current branch and extract issue number
         branch_name = get_current_branch_name(project_dir)
+        if not branch_name:
+            logger.info("No current branch name found")
+            return DEFAULT_LABEL
         issue_number = extract_issue_number_from_branch(branch_name)
 
         if not issue_number:
@@ -334,11 +348,16 @@ def _collect_github_label(project_dir: Path) -> str:
             return DEFAULT_LABEL
 
         # Extract status label (labels starting with "status-")
-        for label in issue.get("labels", []):
-            label_name = label.get("name", "")
-            if label_name.startswith("status-"):
-                logger.info(f"Found GitHub label: {label_name}")
-                return label_name
+        try:
+            labels = issue.get("labels", [])
+            for label in labels:
+                if hasattr(label, "get"):
+                    label_name = label.get("name", "")
+                    if label_name and label_name.startswith("status-"):
+                        logger.info(f"Found GitHub label: {label_name}")
+                        return label_name
+        except (AttributeError, TypeError) as e:
+            logger.warning(f"Error processing labels: {e}")
 
         logger.info("No status label found")
         return DEFAULT_LABEL
@@ -348,7 +367,7 @@ def _collect_github_label(project_dir: Path) -> str:
         return DEFAULT_LABEL
 
 
-def _generate_recommendations(report_data: dict) -> List[str]:
+def _generate_recommendations(report_data: Dict[str, Any]) -> List[str]:
     """Generate actionable recommendations based on status."""
     recommendations = []
 
@@ -363,24 +382,26 @@ def _generate_recommendations(report_data: dict) -> List[str]:
     tasks_complete = report_data.get("tasks_complete", False)
 
     if ci_status == CI_FAILED:
-        recommendations.append("Fix CI failures before proceeding")
+        recommendations.append("Fix CI test failures")
         if report_data.get("ci_details"):
             recommendations.append("Check CI error details above")
     elif ci_status == CI_PENDING:
         recommendations.append("Wait for CI to complete")
+    elif ci_status == CI_NOT_CONFIGURED:
+        recommendations.append("Configure CI pipeline")
 
     if not tasks_complete:
-        recommendations.append("Complete remaining tasks in task tracker")
+        recommendations.append("Complete remaining tasks")
 
     if rebase_needed and tasks_complete and ci_status != CI_FAILED:
-        recommendations.append("Rebase branch with main when tasks are complete")
+        recommendations.append("Rebase onto origin/main")
 
     if (
         ci_status in [CI_PASSED, CI_NOT_CONFIGURED]
         and tasks_complete
         and not rebase_needed
     ):
-        recommendations.append("Branch is ready for next workflow step")
+        recommendations.append("Ready to merge")
 
     if not recommendations:
         recommendations.append("Continue with current work")

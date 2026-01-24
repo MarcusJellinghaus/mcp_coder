@@ -353,6 +353,9 @@ def test_collect_branch_status_all_good():
     project_dir = Path("/test/repo")
 
     with (
+        patch(
+            "src.mcp_coder.utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
         patch("src.mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
         patch(
             "src.mcp_coder.utils.branch_status._collect_rebase_status"
@@ -361,6 +364,7 @@ def test_collect_branch_status_all_good():
         patch("src.mcp_coder.utils.branch_status._collect_github_label") as mock_label,
     ):
         # Setup mocks for all green status
+        mock_branch.return_value = "main"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (False, "Up to date with origin/main")
         mock_tasks.return_value = True
@@ -378,6 +382,7 @@ def test_collect_branch_status_all_good():
         assert "Ready to merge" in result.recommendations
 
         # Verify function calls
+        mock_branch.assert_called_once_with(project_dir)
         mock_ci.assert_called_once_with(project_dir, "main", False, 200)
         mock_rebase.assert_called_once_with(project_dir)
         mock_tasks.assert_called_once_with(project_dir)
@@ -481,6 +486,9 @@ def test_collect_branch_status_with_truncation():
     long_ci_error = "\n".join([f"Error line {i}" for i in range(300)])
 
     with (
+        patch(
+            "src.mcp_coder.utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
         patch("src.mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
         patch(
             "src.mcp_coder.utils.branch_status._collect_rebase_status"
@@ -489,6 +497,7 @@ def test_collect_branch_status_with_truncation():
         patch("src.mcp_coder.utils.branch_status._collect_github_label") as mock_label,
     ):
         # Setup mocks
+        mock_branch.return_value = "main"
         mock_ci.return_value = ("FAILED", long_ci_error)
         mock_rebase.return_value = (False, "Up to date")
         mock_tasks.return_value = True
@@ -499,6 +508,7 @@ def test_collect_branch_status_with_truncation():
         )
 
         # Verify truncation was passed correctly
+        mock_branch.assert_called_once_with(project_dir)
         mock_ci.assert_called_once_with(project_dir, "main", True, 50)
         assert (
             result.ci_details == long_ci_error
@@ -624,12 +634,12 @@ def test_collect_rebase_status_edge_cases():
     with patch(
         "src.mcp_coder.utils.git_operations.branches.needs_rebase"
     ) as mock_needs_rebase:
-        mock_needs_rebase.return_value = (False, "Up to date with origin/main")
+        mock_needs_rebase.return_value = (False, "up-to-date")
 
         rebase_needed, reason = _collect_rebase_status(project_dir)
 
         assert rebase_needed is False
-        assert reason == "Up to date with origin/main"
+        assert reason == "up-to-date"
         mock_needs_rebase.assert_called_once_with(project_dir)
 
     # Test error case
@@ -641,7 +651,7 @@ def test_collect_rebase_status_edge_cases():
         rebase_needed, reason = _collect_rebase_status(project_dir)
 
         assert rebase_needed is False
-        assert "error: Git error" in reason
+        assert "Error checking rebase status: Git error" in reason
 
 
 def test_collect_task_status():
@@ -704,8 +714,9 @@ def test_collect_github_label():
         mock_extract.return_value = 123
         mock_manager_instance = MagicMock()
         mock_issue_manager.return_value = mock_manager_instance
-        mock_issue = MagicMock()
-        mock_issue.labels = ["status-03:implementing", "priority-high"]
+        mock_issue = {
+            "labels": [{"name": "status-03:implementing"}, {"name": "priority-high"}]
+        }
         mock_manager_instance.get_issue.return_value = mock_issue
 
         result = _collect_github_label(project_dir)
@@ -737,8 +748,9 @@ def test_collect_github_label_no_status_label():
         mock_extract.return_value = 123
         mock_manager_instance = MagicMock()
         mock_issue_manager.return_value = mock_manager_instance
-        mock_issue = MagicMock()
-        mock_issue.labels = ["priority-high", "bug"]  # No status- label
+        mock_issue = {
+            "labels": [{"name": "priority-high"}, {"name": "bug"}]  # No status- label
+        }
         mock_manager_instance.get_issue.return_value = mock_issue
 
         result = _collect_github_label(project_dir)
