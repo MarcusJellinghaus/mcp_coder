@@ -86,7 +86,7 @@ def prepare_and_launch_session(
     1. Create working folder
     2. Setup git repo
     3. Validate .mcp.json
-    4. Run setup commands (if configured)
+    4. Run setup commands (if configured) - validates commands first
     5. Update .gitignore
     6. Create workspace file
     7. Create startup script
@@ -94,6 +94,8 @@ def prepare_and_launch_session(
     9. Create status file
     10. Launch VSCode
     11. Create and save session
+    
+    On failure after folder creation: cleans up working folder.
     """
 
 def process_eligible_issues(
@@ -176,19 +178,23 @@ def launch_vscode(workspace_file: Path) -> int:
 ```
 1. Build folder path: workspace_base/{repo}_{issue_number}
 2. create_working_folder(folder_path)
-3. setup_git_repo(folder_path, repo_url, branch_name)
-4. validate_mcp_json(folder_path)
-5. If setup_commands: run_setup_commands(folder_path, commands)
-   - On failure: log error, don't launch, return None
-6. update_gitignore(folder_path)
-7. workspace_file = create_workspace_file(...)
-8. script_path = create_startup_script(...)
-9. create_vscode_task(folder_path, script_path)
-10. create_status_file(...)
-11. pid = launch_vscode(workspace_file)
-12. session = build_session_dict(folder, issue, pid, ...)
-13. add_session(session)
-14. Return session
+3. try:
+4.   setup_git_repo(folder_path, repo_url, branch_name)
+5.   validate_mcp_json(folder_path)
+6.   If setup_commands: validate_setup_commands(), then run_setup_commands()
+7.   update_gitignore(folder_path)
+8.   workspace_file = create_workspace_file(...)
+9.   script_path = create_startup_script(...)
+10.  create_vscode_task(folder_path, script_path)
+11.  create_status_file(...)
+12.  pid = launch_vscode(workspace_file)
+13.  session = build_session_dict(folder, issue, pid, ...)
+14.  add_session(session)
+15.  Return session
+16. except Exception:
+17.   # Cleanup working folder on failure
+18.   shutil.rmtree(folder_path, ignore_errors=True)
+19.   raise
 ```
 
 ### process_eligible_issues()
@@ -393,7 +399,9 @@ class TestOrchestration:
         assert session["is_intervention"] is False
     
     def test_prepare_and_launch_aborts_on_setup_failure(self, tmp_path, monkeypatch):
-        """Aborts session if setup commands fail."""
+        """Aborts session and cleans up folder if setup commands fail."""
+        folder_path = tmp_path / "test_123"
+        
         monkeypatch.setattr(
             "mcp_coder.cli.commands.coordinator.vscodeclaude.create_working_folder",
             lambda p: True
@@ -406,6 +414,10 @@ class TestOrchestration:
             "mcp_coder.cli.commands.coordinator.vscodeclaude.validate_mcp_json",
             lambda p: None
         )
+        
+        # Create folder to verify cleanup
+        folder_path.mkdir()
+        assert folder_path.exists()
         
         def failing_setup(*args):
             raise subprocess.CalledProcessError(1, "uv sync")
@@ -429,6 +441,9 @@ class TestOrchestration:
                 branch_name="main",
                 is_intervention=False,
             )
+        
+        # Folder should be cleaned up on failure
+        assert not folder_path.exists()
     
     def test_process_eligible_issues_respects_max_sessions(self, monkeypatch):
         """Doesn't start sessions beyond max."""
