@@ -37,7 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 4: Implement CLI Command
 [x] **Step 4.1**: Write tests for CLI command in `tests/cli/commands/test_check_branch_status.py`
-[ ] **Step 4.2**: Implement CLI command in `src/mcp_coder/cli/commands/check_branch_status.py`
+[x] **Step 4.2**: Implement CLI command in `src/mcp_coder/cli/commands/check_branch_status.py`
 [ ] **Step 4.3**: Run quality checks: pylint, pytest, mypy - fix all issues
 [ ] **Step 4.4**: Prepare git commit message for CLI command implementation
 
