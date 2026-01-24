@@ -40,7 +40,10 @@
       "Skill(plan_approve)",
       "Skill(plan_review)",
       "Skill(plan_update)",
-      "Skill(rebase)"
+      "Skill(rebase)",
+      "Bash(lint-imports)",
+      "Bash(python:*)",
+      "Bash(PYTHONPATH=src lint-imports)"
     ]
   },
   "enableAllProjectMcpServers": true,
