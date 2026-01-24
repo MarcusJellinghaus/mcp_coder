@@ -117,12 +117,14 @@ forbidden_modules =
 # Contract: Git Operations Internal Layering
 # -----------------------------------------------------------------------------
 # Enforces the internal layering within git_operations:
+# - Orchestration layer (workflows) can import from any git_operations module
 # - Command modules (branches, remotes, commits, staging, file_tracking, diffs)
 #   can import from readers and core
 # - Readers can only import from core
 # - No imports between modules in the same layer
 #
 # Architecture:
+#   Layer 0: workflows (orchestration)
 #   Layer 1: branches | remotes | commits | staging | file_tracking | diffs
 #   Layer 2: readers
 #   Layer 3: core
@@ -131,6 +133,7 @@ forbidden_modules =
 name = Git Operations Internal Layering
 type = layers
 layers =
+    mcp_coder.utils.git_operations.workflows
     mcp_coder.utils.git_operations.branches | mcp_coder.utils.git_operations.remotes | mcp_coder.utils.git_operations.commits | mcp_coder.utils.git_operations.staging | mcp_coder.utils.git_operations.file_tracking | mcp_coder.utils.git_operations.diffs
     mcp_coder.utils.git_operations.readers
     mcp_coder.utils.git_operations.core

@@ -8,7 +8,7 @@ from .branches import (
 )
 
 # Commit operations
-from .commits import commit_all_changes, commit_staged_files, get_latest_commit_sha
+from .commits import commit_staged_files, get_latest_commit_sha
 
 # Core types and utilities
 from .core import CommitResult, PushResult
@@ -47,6 +47,9 @@ from .remotes import (
 
 # Staging operations
 from .staging import stage_all_changes, stage_specific_files
+
+# Workflow orchestration
+from .workflows import commit_all_changes
 
 __all__ = [
     # Types
