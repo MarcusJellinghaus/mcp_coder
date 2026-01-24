@@ -400,6 +400,46 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         help="Bypass clean working directory check",
     )
 
+    # Check-branch-status command - Step 5
+    check_branch_status_parser = subparsers.add_parser(
+        "check-branch-status",
+        help="Check branch readiness status and optionally apply fixes",
+    )
+    check_branch_status_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    check_branch_status_parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Attempt to automatically fix issues found",
+    )
+    check_branch_status_parser.add_argument(
+        "--llm-truncate",
+        action="store_true",
+        help="Truncate output for LLM consumption",
+    )
+    check_branch_status_parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_cli",
+        help="LLM method to use (default: claude_code_cli)",
+    )
+    check_branch_status_parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
+    check_branch_status_parser.add_argument(
+        "--execution-dir",
+        type=str,
+        default=None,
+        help="Working directory for Claude subprocess (default: current directory)",
+    )
+
     return parser
 
 
@@ -479,6 +519,10 @@ def main() -> int:
             return execute_define_labels(args)
         elif args.command == "set-status":
             return execute_set_status(args)
+        elif args.command == "check-branch-status":
+            from .commands.check_branch_status import execute_check_branch_status
+
+            return execute_check_branch_status(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")

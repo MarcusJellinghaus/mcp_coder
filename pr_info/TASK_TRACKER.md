@@ -43,7 +43,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 5: Add CLI Parser Integration
 [x] **Step 5.1**: Write tests for CLI parser integration in `tests/cli/test_main.py`
-[ ] **Step 5.2**: Modify `src/mcp_coder/cli/main.py` to add command parser and routing
+[x] **Step 5.2**: Modify `src/mcp_coder/cli/main.py` to add command parser and routing
 [ ] **Step 5.3**: Run quality checks: pylint, pytest, mypy - fix all issues
 [ ] **Step 5.4**: Prepare git commit message for CLI parser integration
 
