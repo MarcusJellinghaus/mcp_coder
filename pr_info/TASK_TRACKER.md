@@ -19,7 +19,7 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 1: Implement Rebase Detection Utility
 [x] **Step 1.1**: Write tests for `needs_rebase()` function in `tests/utils/git_operations/test_branches.py`
-[ ] **Step 1.2**: Implement `needs_rebase()` function in `src/mcp_coder/utils/git_operations/branches.py`
+[x] **Step 1.2**: Implement `needs_rebase()` function in `src/mcp_coder/utils/git_operations/branches.py`
 [ ] **Step 1.3**: Run quality checks: pylint, pytest, mypy - fix all issues
 [ ] **Step 1.4**: Prepare git commit message for rebase detection utility
 
