@@ -9,11 +9,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from ...workflow_utils.task_tracker import has_incomplete_work
-from ..git_operations.branches import get_current_branch_name, needs_rebase
-from ..git_operations.readers import extract_issue_number_from_branch
-from ..github_operations.ci_results_manager import CIResultsManager
-from ..github_operations.issue_manager import IssueManager
+from mcp_coder.utils.git_operations.branches import (
+    get_current_branch_name,
+    needs_rebase,
+)
+from mcp_coder.utils.git_operations.readers import extract_issue_number_from_branch
+from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
+from mcp_coder.utils.github_operations.issue_manager import IssueManager
+from mcp_coder.workflow_utils.task_tracker import has_incomplete_work
 
 # Status Constants
 CI_PASSED = "PASSED"
@@ -221,20 +224,41 @@ def _collect_ci_status(
 
     try:
         ci_manager = CIResultsManager(project_dir)
-        status_result = ci_manager.get_latest_ci_status()
+        status_result = ci_manager.get_latest_ci_status(branch)
 
-        if status_result is None:
+        # Check if CI data is empty (no runs found)
+        if not status_result["run"]:
             logger.info("CI not configured")
             return CI_NOT_CONFIGURED, None
 
-        ci_status = status_result["status"]
+        # Extract status from the run data
+        run_data = status_result["run"]
+        ci_status = run_data.get("conclusion") or run_data.get("status")
+
+        # Map GitHub status to our constants
+        if ci_status == "success":
+            ci_status = CI_PASSED
+        elif ci_status == "failure":
+            ci_status = CI_FAILED
+        elif ci_status in ["in_progress", "queued", "pending"]:
+            ci_status = CI_PENDING
+        else:
+            ci_status = CI_NOT_CONFIGURED
 
         if ci_status == CI_FAILED:
-            # Get error details
-            error_logs = ci_manager.get_error_details()
-            if error_logs and truncate:
-                error_logs = truncate_ci_details(error_logs, max_lines)
-            return ci_status, error_logs
+            # Get error details using run logs
+            try:
+                run_id = run_data.get("id")
+                if run_id:
+                    error_logs_dict = ci_manager.get_run_logs(run_id)
+                    # Combine all log contents
+                    error_logs = "\n\n".join(error_logs_dict.values())
+                    if error_logs and truncate:
+                        error_logs = truncate_ci_details(error_logs, max_lines)
+                    return ci_status, error_logs
+            except Exception as log_error:
+                logger.warning(f"Failed to get CI logs: {log_error}")
+            return ci_status, None
 
         logger.info(f"CI status: {ci_status}")
         return ci_status, None
