@@ -9,7 +9,7 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 ## Tasks
 
 ### Step 1: Dependencies & Configuration Types
-[ ] Add psutil dependency to pyproject.toml
+[x] Add psutil dependency to pyproject.toml
 [ ] Create src/mcp_coder/cli/commands/coordinator/vscodeclaude.py with TypedDict definitions
 [ ] Create tests/cli/commands/coordinator/test_vscodeclaude.py with type tests
 [ ] Run pylint on Step 1 code and fix all issues
