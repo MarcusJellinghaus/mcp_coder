@@ -140,6 +140,20 @@ class TestTypes:
     def test_default_max_sessions(self):
         """Default max sessions is 3."""
         assert DEFAULT_MAX_SESSIONS == 3
+
+
+class TestIntegration:
+    """Integration tests for end-to-end workflow."""
+    
+    def test_complete_session_workflow(self, tmp_path, monkeypatch):
+        """Test complete session creation and launch workflow."""
+        # Will test the full flow from config loading to VSCode launch
+        pass
+        
+    def test_session_cleanup_workflow(self, tmp_path, monkeypatch):
+        """Test session stale detection and cleanup workflow."""
+        # Will test stale session detection and cleanup
+        pass
 ```
 
 ## Verification
