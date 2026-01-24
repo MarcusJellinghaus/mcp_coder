@@ -39,7 +39,7 @@ def collect_branch_status(
 def _collect_ci_status(project_dir: Path, branch: str, truncate: bool, max_lines: int) -> Tuple[str, Optional[str]]:
     """Collect CI status and error details."""
 
-def _collect_rebase_status(project_dir: Path) -> Tuple[bool, bool]:
+def _collect_rebase_status(project_dir: Path) -> Tuple[bool, str]:
     """Collect rebase requirements."""
 
 def _collect_task_status(project_dir: Path) -> bool:
@@ -94,7 +94,7 @@ ci_details: Optional[str]  # Raw or truncated logs
 
 # Rebase Collection Result  
 rebase_needed: bool
-conflicts_expected: bool
+rebase_reason: str
 
 # Task Collection Result
 tasks_incomplete: bool
@@ -108,7 +108,7 @@ current_label: str  # e.g., "status-03:implementing"
 # Priority order for recommendations:
 1. Fix CI failures (if CI failed)
 2. Complete incomplete tasks (if tasks not done)
-3. Review conflicts before rebase (if conflicts expected)
+3. Rebase when ready (if rebase needed)
 4. Ready for next workflow step (if all checks pass)
 ```
 
@@ -116,7 +116,7 @@ current_label: str  # e.g., "status-03:implementing"
 ```python
 # Graceful degradation for each collection:
 # CI: Return "NOT_CONFIGURED" if API fails
-# Rebase: Return (False, False) if git operations fail  
+# Rebase: Return (False, "error: <reason>") if git operations fail  
 # Tasks: Return False if task tracker missing
 # GitHub: Return "unknown" if API fails
 ```

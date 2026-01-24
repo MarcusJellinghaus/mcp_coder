@@ -23,7 +23,7 @@ class BranchStatusReport:
     ci_status: str                    # "PASSED", "FAILED", "NOT_CONFIGURED", "PENDING"
     ci_details: Optional[str]         # Error logs or None
     rebase_needed: bool               # True if rebase required
-    rebase_conflicts_expected: bool   # True if conflicts likely  
+    rebase_reason: str                # Reason for rebase status
     tasks_complete: bool              # True if all tracker tasks done
     current_github_label: str         # Current workflow status label
     recommendations: List[str]        # List of suggested actions
@@ -98,9 +98,8 @@ CI Error Details:
 FAILED tests/test_example.py::test_function - AssertionError
 [... error logs ...]
 
-Rebase Status: ⚠️ CONFLICTS_EXPECTED  
+Rebase Status: ⚠️ BEHIND  
 - 3 commits behind origin/main
-- Merge conflicts likely in src/main.py
 
 Task Tracker: ✅ COMPLETE
 - All 5 tasks completed
@@ -109,13 +108,13 @@ GitHub Status: status-03:implementing
 
 Recommendations:
 - Fix CI test failures before proceeding
-- Review conflicts before attempting rebase
+- Rebase onto origin/main when ready
 """
 
-# LLM format (truncated to 200 lines):
+# LLM format (truncated CI logs only):
 """
-Branch Status: CI=FAILED, Rebase=CONFLICTS_EXPECTED, Tasks=COMPLETE
-CI Errors: [first 30 lines + last 170 lines]
+Branch Status: CI=FAILED, Rebase=BEHIND, Tasks=COMPLETE
+CI Errors: [truncated to ~200 lines]
 """
 ```
 

@@ -53,7 +53,8 @@ mcp-coder check-branch-status --fix --llm-truncate
 ## Output Format
 
 LLM-optimized output with:
-- Truncated CI error logs (~200 lines)
+- Truncated CI error logs only (~200 lines)
+- Complete status information for all other components
 - Clear status indicators  
 - Actionable recommendations
 - Progress on fixes applied

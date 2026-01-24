@@ -96,22 +96,21 @@ args.execution_dir: Optional[str] # --execution-dir flag
 # Fix priority and safety:
 1. CI Failures: Auto-fix (reuse existing check_and_fix_ci)
 2. Task Completion: Informational only (no auto-fix)
-3. Clean Rebase: Prompt user for confirmation
-4. Conflicted Rebase: Warn user, suggest manual resolution
-5. GitHub Labels: Suggest appropriate transitions
+3. Rebase Operations: Informational only (no auto-fix)
+4. GitHub Labels: Informational only (no auto-fix)
 ```
 
 ### User Interaction Patterns
 ```python
-# Safe operations (no prompt needed):
+# Safe operations (auto-fix enabled):
 - Fix CI failures
 - Format code
 - Run quality checks
 
-# Risky operations (prompt required):
-- Rebase with potential conflicts
-- Update GitHub labels
-- Force push operations
+# Informational only (no auto-fix):
+- Rebase operations (user must handle manually)
+- GitHub label updates (user must handle manually)
+- Task completion (user must handle manually)
 ```
 
 ### Exit Code Strategy

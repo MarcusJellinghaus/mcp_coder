@@ -7,7 +7,7 @@ Implement a comprehensive branch readiness system with CLI command to check CI s
 
 ### New Components
 - **CLI Command**: `mcp-coder check-branch-status` with dual mode operation
-- **Git Utility**: `needs_rebase()` function for rebase detection  
+- **Git Utility**: `needs_rebase()` function for rebase detection (no conflict prediction)
 - **Slash Command**: `.claude/commands/check_branch_status.md` wrapper
 
 ### Design Principles
@@ -53,9 +53,9 @@ src/mcp_coder/workflows/implement/core.py           # CI fix logic reference
 @dataclass
 class BranchStatusReport:
     ci_status: str                    # "PASSED", "FAILED", "NOT_CONFIGURED"
-    ci_details: Optional[str]         # Error logs (truncated if requested)
+    ci_details: Optional[str]         # Error logs (CI logs truncated if requested)
     rebase_needed: bool               # True if rebase required
-    rebase_conflicts_expected: bool   # True if conflicts likely
+    rebase_reason: str                # Reason for rebase status
     tasks_complete: bool              # True if all tasks done
     current_github_label: str         # Current status label
     recommendations: List[str]        # Suggested actions
@@ -63,10 +63,10 @@ class BranchStatusReport:
 
 ### Rebase Detection
 ```python
-def needs_rebase(project_dir: Path) -> Tuple[bool, bool, str]:
+def needs_rebase(project_dir: Path) -> Tuple[bool, str]:
     """
     Returns:
-        (needs_rebase, conflicts_expected, reason)
+        (needs_rebase, reason)
     """
 ```
 
