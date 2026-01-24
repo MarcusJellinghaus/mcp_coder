@@ -46,7 +46,10 @@ def _collect_task_status(project_dir: Path) -> bool:
     """Collect task tracker completion status."""
 
 def _collect_github_label(project_dir: Path) -> str:
-    """Collect current GitHub workflow status label."""
+    """Collect current GitHub workflow status label.
+    
+    Uses: IssueManager.get_issue() + extract_issue_number_from_branch()
+    """
 
 def _generate_recommendations(report_data: dict) -> List[str]:
     """Generate actionable recommendations based on status."""
@@ -67,20 +70,21 @@ def test_generate_recommendations_logic()
 
 ### Integration Points
 ```python
-# Import existing utilities
+# Import existing utilities (✅ Validated)
 from ..github_operations.ci_results_manager import CIResultsManager
-from ..github_operations.labels_manager import LabelsManager
+from ..github_operations.issue_manager import IssueManager  # For GitHub label detection
 from ..git_operations.branches import needs_rebase, get_current_branch_name
+from ..git_operations.readers import extract_issue_number_from_branch
 from ...workflow_utils.task_tracker import has_incomplete_work
 ```
 
 ### Algorithm (collect_branch_status)
 ```
 1. Get current branch name and validate git repo
-2. Collect CI status using CIResultsManager
+2. Collect CI status using CIResultsManager.get_latest_ci_status()
 3. Collect rebase status using needs_rebase()
 4. Collect task tracker status using has_incomplete_work()
-5. Collect GitHub label using LabelsManager
+5. Collect GitHub label using IssueManager.get_issue() + branch extraction
 6. Generate recommendations based on collected data
 ```
 
