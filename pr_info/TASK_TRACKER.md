@@ -18,7 +18,7 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [ ] Prepare git commit message for Step 1
 
 ### Step 2: Template Strings
-[ ] Create src/mcp_coder/cli/commands/coordinator/vscodeclaude_templates.py
+[x] Create src/mcp_coder/cli/commands/coordinator/vscodeclaude_templates.py
 [ ] Add template tests to test_vscodeclaude.py
 [ ] Run pylint on Step 2 code and fix all issues
 [ ] Run pytest on Step 2 tests and ensure all pass
