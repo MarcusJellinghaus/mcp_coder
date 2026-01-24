@@ -97,3 +97,37 @@ def _normalize_git_path(path: Path, base_dir: Path) -> str:
     """
     relative_path = path.relative_to(base_dir)
     return str(relative_path).replace("\\", "/")
+
+
+def stage_all_changes_core(project_dir: Path) -> bool:
+    """Core staging operation that directly stages all changes using git add --all.
+
+    This is a low-level core git operation that doesn't depend on other layers.
+    Higher-level modules should validate git repository status before calling this.
+
+    Args:
+        project_dir: Path to the project directory containing the git repository
+
+    Returns:
+        True if staging succeeded, False otherwise
+
+    Note:
+        - Uses git add --all to stage everything including deletions
+        - Assumes project_dir is a valid git repository (caller should validate)
+        - No validation of unstaged changes (uses git add --all unconditionally)
+    """
+    logger.debug("Staging all changes using git add --all in %s", project_dir)
+
+    try:
+        # Use git add --all to stage everything including deletions
+        with _safe_repo_context(project_dir) as repo:
+            repo.git.add("--all")
+            logger.debug("Successfully staged all changes")
+            return True
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.error("Git error staging all changes: %s", e)
+        return False
+    except Exception as e:
+        logger.error("Unexpected error staging all changes: %s", e)
+        return False

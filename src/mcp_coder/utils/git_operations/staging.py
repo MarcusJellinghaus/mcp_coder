@@ -92,47 +92,37 @@ def stage_all_changes(project_dir: Path) -> bool:
         - Uses git add --all to handle deletions properly
         - Returns False if staging operation fails
     """
+    from .core import stage_all_changes_core
+    
     logger.debug("Staging all changes in %s", project_dir)
 
     if not is_git_repository(project_dir):
         logger.debug("Not a git repository: %s", project_dir)
         return False
 
-    try:
-        # Get all unstaged changes
-        unstaged_changes = get_unstaged_changes(project_dir)
+    # Get all unstaged changes for logging purposes
+    unstaged_changes = get_unstaged_changes(project_dir)
+    all_unstaged_files = (
+        unstaged_changes["modified"] + unstaged_changes["untracked"]
+    )
 
-        # Combine modified and untracked files
-        all_unstaged_files = (
-            unstaged_changes["modified"] + unstaged_changes["untracked"]
+    # If no unstaged changes, this is a successful no-op
+    if not all_unstaged_files:
+        logger.debug("No unstaged changes to stage - success")
+        return True
+
+    logger.debug(
+        "Staging %d unstaged files using git add --all: %s",
+        len(all_unstaged_files),
+        all_unstaged_files,
+    )
+
+    # Use core function for the actual staging
+    success = stage_all_changes_core(project_dir)
+    
+    if success:
+        logger.debug(
+            "Successfully staged all %d unstaged changes", len(all_unstaged_files)
         )
-
-        # If no unstaged changes, this is a successful no-op
-        if not all_unstaged_files:
-            logger.debug("No unstaged changes to stage - success")
-            return True
-
-        # Use git add --all to stage everything including deletions
-        # This is more robust than trying to handle individual files
-        with _safe_repo_context(project_dir) as repo:
-            logger.debug(
-                "Staging %d unstaged files using git add --all: %s",
-                len(all_unstaged_files),
-                all_unstaged_files,
-            )
-
-            # Use git add --all to stage all changes (additions, modifications, deletions)
-            repo.git.add("--all")
-
-            logger.debug(
-                "Successfully staged all %d unstaged changes", len(all_unstaged_files)
-            )
-
-            return True
-
-    except (InvalidGitRepositoryError, GitCommandError) as e:
-        logger.error("Git error staging all changes: %s", e)
-        return False
-    except Exception as e:
-        logger.error("Unexpected error staging all changes: %s", e)
-        return False
+    
+    return success

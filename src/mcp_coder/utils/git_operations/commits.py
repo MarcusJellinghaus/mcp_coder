@@ -7,9 +7,8 @@ from typing import Optional
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
-from .core import GIT_SHORT_HASH_LENGTH, CommitResult, _safe_repo_context, logger
+from .core import GIT_SHORT_HASH_LENGTH, CommitResult, _safe_repo_context, logger, stage_all_changes_core
 from .readers import get_full_status, get_staged_changes, is_git_repository
-from .staging import stage_all_changes
 
 
 def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
@@ -124,7 +123,7 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
     try:
         # Stage all unstaged changes first
         logger.debug("Staging all unstaged changes")
-        staging_result = stage_all_changes(project_dir)
+        staging_result = stage_all_changes_core(project_dir)
 
         if not staging_result:
             error_msg = "Failed to stage changes"
