@@ -33,6 +33,9 @@ tests/cli/commands/coordinator/
 3. **Reuse existing infrastructure** - `IssueManager`, `IssueBranchManager`, `load_labels_config`, `get_config_values`
 4. **Late binding pattern** - Use `_get_coordinator()` for testability (matches existing code)
 5. **Platform handling** - `pathlib` for paths, conditional templates for Windows/Linux
+6. **Validation and cleanup** - Validate setup commands exist, cleanup on session failure
+7. **Progress feedback** - Use `logger.info()` for long-running operations
+8. **Testing strategy** - Unit tests + key integration tests for end-to-end workflows
 
 ### Data Flow
 
@@ -90,8 +93,8 @@ VSCODECLAUDE_PRIORITY = [
 - Full CLI: `--repo`, `--max-sessions`, `--cleanup`, `--intervene`, `status` subcommand
 - Session JSON tracking with PID via `psutil`
 - Working folders: `{repo}_{issue_number}` with sanitized names
-- Git clone/checkout/pull using system credentials
-- Platform-specific setup commands
+- Git clone/checkout/pull using system credentials with progress logging
+- Platform-specific setup commands with validation (commands must exist in PATH)
 - `.mcp.json` validation (required)
 - VSCode workspace file with window title
 - VSCode `tasks.json` with `runOn: folderOpen`
@@ -102,6 +105,7 @@ VSCODECLAUDE_PRIORITY = [
 - Filter: assigned to user, human_action labels, ignore_labels excluded
 - Stale detection and cleanup (requires `--cleanup` flag)
 - Intervention mode for bot_busy stages
+- Session recovery: cleanup working folder on session creation failure
 
 ## Config Schema Addition
 

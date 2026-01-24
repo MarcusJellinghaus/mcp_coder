@@ -66,6 +66,7 @@ def setup_git_repo(
     1. If folder empty: git clone
     2. If folder has .git: checkout branch, pull
     3. Uses system git credentials
+    4. Logs progress using logger.info()
     
     Raises:
         subprocess.CalledProcessError: If git command fails
@@ -81,6 +82,16 @@ def validate_mcp_json(folder_path: Path) -> None:
         FileNotFoundError: If .mcp.json missing
     """
 
+def validate_setup_commands(commands: List[str]) -> None:
+    """Validate that setup commands exist in PATH.
+    
+    Args:
+        commands: List of shell commands to validate
+        
+    Raises:
+        FileNotFoundError: If any command not found in PATH
+    """
+
 def run_setup_commands(
     folder_path: Path,
     commands: List[str],
@@ -93,6 +104,8 @@ def run_setup_commands(
         
     Raises:
         subprocess.CalledProcessError: If any command fails
+        
+    Logs progress for each command using logger.info().
     """
 
 def update_gitignore(folder_path: Path) -> None:
