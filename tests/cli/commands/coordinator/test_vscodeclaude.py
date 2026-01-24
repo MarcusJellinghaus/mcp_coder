@@ -163,6 +163,69 @@ class TestTypeHints:
         assert "setup_commands_linux" not in config
 
 
+class TestTemplates:
+    """Test template strings."""
+
+    def test_startup_script_windows_has_placeholders(self) -> None:
+        """Windows script has required placeholders."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+            STARTUP_SCRIPT_WINDOWS,
+        )
+
+        assert "{emoji}" in STARTUP_SCRIPT_WINDOWS
+        assert "{issue_number}" in STARTUP_SCRIPT_WINDOWS
+        assert "{automated_section}" in STARTUP_SCRIPT_WINDOWS
+
+    def test_startup_script_linux_has_placeholders(self) -> None:
+        """Linux script has required placeholders."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+            STARTUP_SCRIPT_LINUX,
+        )
+
+        assert "{emoji}" in STARTUP_SCRIPT_LINUX
+        assert "{issue_number}" in STARTUP_SCRIPT_LINUX
+
+    def test_workspace_file_is_valid_json_template(self) -> None:
+        """Workspace template produces valid JSON when formatted."""
+        import json
+
+        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+            WORKSPACE_FILE_TEMPLATE,
+        )
+
+        formatted = WORKSPACE_FILE_TEMPLATE.format(
+            folder_path="./test",
+            issue_number=123,
+            stage_short="review",
+            title_short="Test title",
+            repo_name="test-repo",
+        )
+        parsed = json.loads(formatted)
+        assert "folders" in parsed
+        assert "settings" in parsed
+
+    def test_tasks_json_is_valid_json_template(self) -> None:
+        """Tasks template produces valid JSON when formatted."""
+        import json
+
+        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+            TASKS_JSON_TEMPLATE,
+        )
+
+        formatted = TASKS_JSON_TEMPLATE.format(script_path="test.bat")
+        parsed = json.loads(formatted)
+        assert parsed["tasks"][0]["runOptions"]["runOn"] == "folderOpen"
+
+    def test_gitignore_entry_has_session_files(self) -> None:
+        """Gitignore entry includes all generated files."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+            GITIGNORE_ENTRY,
+        )
+
+        assert ".vscodeclaude_status.md" in GITIGNORE_ENTRY
+        assert ".vscodeclaude_analysis.json" in GITIGNORE_ENTRY
+
+
 class TestIntegration:
     """Integration tests for end-to-end workflow."""
 
