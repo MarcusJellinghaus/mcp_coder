@@ -4,9 +4,9 @@ workflow-stage: code-review
 suggested-next: (bot runs implement) -> /clear -> implementation_review
 ---
 
-# Implementation Needs Rework
+# Return to plan-ready after major review issues
 
-Transition issue back to `plan-ready` for re-implementation after code review found major issues.
+Transitions the issue back to `plan-ready` status for re-implementation when code review identifies major issues that cannot be fixed with minor changes.
 
 ## When to Use
 
