@@ -5,7 +5,9 @@ suggested-next: commit_push -> implementation_needs_rework
 
 # Create Further Implementation Tasks
 
-## Request to append new implementation tasks to Python Project Implementation Plan
+Append new implementation tasks to the project plan after code review identified areas needing additional work.
+
+## Instructions
 
 Please expand the **implementation plan** stored under `pr_info/steps`
 Update the `pr_info/steps/Decisions.md` with the decisions we took.

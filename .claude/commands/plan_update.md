@@ -7,7 +7,11 @@ suggested-next:
 
 # Update Plan Files
 
-Can you update the plan by updating the different files in folder `pr_info/steps`
+Update the implementation plan files in `pr_info/steps` based on our discussion.
+
+## Instructions
+
+Update the plan by modifying the different files in folder `pr_info/steps`
 Please do targeted changes.
 
 Please log the decisions from our discussion in `pr_info/steps/Decisions.md`.
