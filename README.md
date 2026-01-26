@@ -2,17 +2,16 @@
 
 **What is MCP Coder?**
 
-MCP coder enhances source code with a structured development process that turns GitHub issues into working code automatically. AI supported discussions allow to specify and review the relevant items of the specification, implementation plan and resulting code. Code quality is also ensured by rigorous usage of classical code quality assurance. 
+MCP coder enhances source code with a structured development process that turns GitHub issues into working code automatically. AI supported discussions allow to specify and review the relevant items of the specification, implementation plan and resulting code. Code quality is also ensured by rigorous usage of classical code quality assurance.
 
 **The Complete Development Workflow:**
+
 - **Interactive Planning**: Human-guided requirement analysis and architectural decisions using AI-powered discussions
 - **Automated Implementation**: Full feature development with integrated testing, code quality checks, and git operations  
 - **Quality Assurance**: Built-in pylint, pytest, and mypy validation ensures production-ready code
 - **Intelligent Orchestration**: Process automation across multiple repositories with Jenkins integration
 
 MCP Coder combines the efficiency of AI automation with the reliability of human oversight, creating a development experience that's both faster and more robust than traditional approaches.
-
-> ⚠️ **Currently in active development** - Core features are being implemented
 
 ## 🎯 Vision & Architecture
 
@@ -98,23 +97,25 @@ flowchart TD
 - **👤 Human Input & LLM Discussions**: Issue analysis, implementation planning and code review based on LLM-based analysis and interactive discussion using Claude Desktop or Claude Code
 - **📂  Foundation: GitHub**: Centralized source code storage and issue management with status labels
 
-
 ## ✨ Current Features
 
 ### 🤖 Development Automation
+
 - **Integrated LLMs**: Claude Code CLI support (additional LLM providers planned)
 - **Automated Implementation**: Complete feature development via `mcp-coder implement`
 
 ### 🔄 Interactive Planning & Quality Assurance
+
 - **AI-Driven Feature Planning**: Automated analysis and planning from GitHub issues
 - **Test-Driven Development**: Automated TDD with test-first development workflows
 - **Comprehensive Quality Gates**: Integration with pylint, pytest, and mypy via MCP servers
 - **Human-AI Collaboration**: Structured discussion prompts for requirement refinement
 
 ### 🚀 Automated Workflows & GitHub Status Tracking
+
 - **GitHub Integration**: Automated issue labeling, status progression, and PR management
 - **Git Operations**: Automated branch creation, staging, committing, pushing, and rebasing
-- **Workflow Orchestration**: Automated coordination using `mcp-coordinate`, using issue status tracking and calling Jenkins
+- **Workflow Orchestration**: Automated coordination using `mcp-coder coordinate`, using issue status tracking and calling Jenkins
 - **Mass Execution**: Jenkins integration enables orchestrated automated software development across issues and repositories
 - **Separation of Concerns**: Distinct automation layer separate from human discussions
 - **Status Tracking**: Developement status progression through GitHub issue labels
@@ -122,9 +123,11 @@ flowchart TD
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - **Claude Code CLI**: Install from [Anthropic's documentation](https://docs.anthropic.com/en/docs/claude-code)
 - **Python 3.11+**
 - **Git** (for repository operations)
+- **Code base hosted on GitHub**
 
 ### Installation
 
@@ -137,13 +140,16 @@ pip install -e ".[dev]"
 ## 📚 Documentation
 
 ### Command Reference
+
 - **[CLI Reference](docs/cli-reference.md)** - Complete command documentation and usage examples
 
 ### Setup Guides  
+
 - **[Repository Setup](docs/repository-setup.md)** - GitHub Actions, labels, and repository configuration
 - **[Configuration Guide](docs/configuration/config.md)** - User config files, environment variables, and platform setup
 
 ### Development
+
 - **[Development Process](docs/processes-prompts/development-process.md)** - Detailed methodology and workflow documentation
 
 ## 🔗 Related Projects
