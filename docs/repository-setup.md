@@ -1,26 +1,35 @@
 # Repository Setup Guide
 
-Complete guide for setting up GitHub Actions, workflow labels, and repository configuration for MCP Coder development workflows.
+Complete guide for setting up repositories to use MCP Coder development workflows.
 
 ## Overview
 
-This guide covers:
-- **GitHub Actions** - Automated issue labeling and status progression
-- **Workflow Labels** - Status tracking system for issues
-- **Repository Configuration** - Git settings and integrations
-- **MCP Configuration** - Model Context Protocol setup
+This guide covers the **mandatory** and **optional** components for integrating MCP Coder workflows into your repository.
+
+**Mandatory** - Required for MCP Coder workflows to function:
+- GitHub token configuration
+- Workflow status labels
+- GitHub Actions for automation
+- Claude Code configuration
+
+**Optional** - Enhance your development workflow:
+- Architecture enforcement tools
+- Code quality CI checks
+- Development convenience scripts
+
+---
+
+# Mandatory Setup
 
 ## Quick Setup Checklist
 
 - [ ] Configure GitHub token in user config
 - [ ] Set up workflow labels with `mcp-coder define-labels`
 - [ ] Install GitHub Actions workflows
-- [ ] Configure MCP servers (optional)
+- [ ] Configure Claude Code files (`.claude/`, `.mcp.json`)
 - [ ] Test workflow with a sample issue
 
 ## GitHub Token Configuration
-
-### Prerequisites
 
 The workflow automation requires a GitHub token configured in your user config file.
 
@@ -202,7 +211,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
-                  body: `✅ Status promoted: \\`${currentStatus}\\` → \\`${nextStatus}\\``
+                  body: `✅ Status promoted: \`${currentStatus}\` → \`${nextStatus}\``
                 });
                 return;
               }
@@ -212,7 +221,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issue.number,
-              body: `⚠️ Cannot promote. Issue needs status: \\`status-01:created\\`, \\`status-04:plan-review\\`, or \\`status-07:code-review\\``
+              body: `⚠️ Cannot promote. Issue needs status: \`status-01:created\`, \`status-04:plan-review\`, or \`status-07:code-review\``
             });
 ```
 
@@ -220,79 +229,76 @@ jobs:
 
 ### Installing Actions
 
-**1. Create directories:**
 ```bash
+# 1. Create directories
 mkdir -p .github/workflows
-```
 
-**2. Add workflow files:**
-Copy the YAML content above into the respective files.
+# 2. Add workflow files (copy YAML content above)
 
-**3. Commit and push:**
-```bash
+# 3. Commit and push
 git add .github/workflows/
 git commit -m "Add GitHub Actions for issue workflow automation"
 git push
 ```
 
-**4. Verify in GitHub:**
-- Go to repository → Actions tab
-- Confirm workflows appear in the list
+**Verify in GitHub:** Go to repository → Actions tab → Confirm workflows appear.
 
-## Repository Configuration
+## Claude Code Configuration
 
-### Git Configuration
+MCP Coder currently uses Claude Code as the LLM backend. This section covers the required configuration files.
 
-**Recommended git settings for MCP Coder workflows:**
+> **Note:** Future versions may support additional LLM providers.
 
-```bash
-# Configure git for better commit messages
-git config commit.template .gitmessage
+### Required Files
 
-# Configure merge behavior
-git config merge.ours.driver true
+| File | Purpose |
+|------|---------|
+| `.claude/CLAUDE.md` | Project-specific instructions for Claude |
+| `.claude/commands/` | Slash commands for workflow stages |
+| `.mcp.json` | MCP server configuration |
 
-# Configure branch tracking
-git config push.default simple
-```
+### `.claude/CLAUDE.md` - Project Instructions
 
-### Branch Protection (Optional)
-
-**Protect main branch:**
-1. Go to repository → Settings → Branches
-2. Add rule for `main` branch:
-   - Require pull request reviews
-   - Require status checks to pass
-   - Require up-to-date branches
-   - Include administrators
-
-### Issue Templates (Optional)
-
-Create `.github/ISSUE_TEMPLATE/feature_request.md`:
+This file contains mandatory instructions that Claude follows when working on your project. Create `.claude/CLAUDE.md` with project-specific rules:
 
 ```markdown
----
-name: Feature Request
-about: Request a new feature
-title: '[FEATURE] '
-labels: 'status-01:created'
-assignees: ''
----
+# Project Instructions
 
-## Description
-Brief description of the feature request.
+## Code Quality Requirements
 
-## Requirements
-- [ ] Requirement 1
-- [ ] Requirement 2
+After making code changes, run all quality checks:
+- Pylint for code quality
+- Pytest for tests  
+- Mypy for type checking
 
-## Implementation Ideas
-Any initial thoughts on implementation approach.
+## Project-Specific Rules
+
+- [Add your project conventions here]
+- [Coding standards, naming conventions, etc.]
 ```
 
-## MCP Configuration
+**See mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example.**
 
-### What is MCP?
+### `.claude/commands/` - Slash Commands
+
+Slash commands provide structured workflows for common tasks. Copy the commands from mcp-coder or create your own:
+
+```bash
+mkdir -p .claude/commands
+```
+
+**Available commands** (see [Claude Code Cheat Sheet](processes-prompts/claude_cheat_sheet.md) for details):
+
+| Command | Purpose |
+|---------|---------|
+| `/issue_analyse` | Analyze GitHub issue requirements |
+| `/plan_review` | Review implementation plan |
+| `/plan_approve` | Approve plan for implementation |
+| `/implementation_review` | Code review |
+| `/commit_push` | Format, commit, and push changes |
+| `/rebase` | Rebase branch onto main |
+
+### `.mcp.json` - MCP Server Configuration
 
 **Model Context Protocol (MCP)** enables Claude Code to use specialized servers for enhanced functionality:
 
@@ -300,7 +306,7 @@ Any initial thoughts on implementation approach.
 - **filesystem**: Enhanced file operations
 - **Custom servers**: Project-specific tools
 
-### Platform-Specific Configuration
+#### Platform-Specific Configuration
 
 MCP Coder supports platform-specific MCP configuration files:
 
@@ -309,35 +315,46 @@ MCP Coder supports platform-specific MCP configuration files:
 | **Linux** | `.mcp.linux.json` |
 | **Windows** | `.mcp.windows.json` |
 | **macOS** | `.mcp.macos.json` |
+| **Generic** | `.mcp.json` |
 
 **File location:** Project root directory
 
-### Basic MCP Configuration
+#### Basic MCP Configuration
 
-**Example `.mcp.linux.json`:**
+Create `.mcp.json` (or platform-specific variant) in your project root:
 
 ```json
 {
   "mcpServers": {
     "code-checker": {
-      "command": "python",
-      "args": ["-m", "mcp_code_checker"],
+      "type": "stdio",
+      "command": "mcp-code-checker",
+      "args": [
+        "--project-dir", "${MCP_CODER_PROJECT_DIR}",
+        "--python-executable", "${MCP_CODER_VENV_DIR}/bin/python",
+        "--venv-path", "${MCP_CODER_VENV_DIR}",
+        "--test-folder", "tests",
+        "--log-level", "INFO"
+      ],
       "env": {
-        "PYTHONPATH": "/path/to/project"
+        "PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"
       }
     },
     "filesystem": {
-      "command": "python", 
-      "args": ["-m", "mcp_server_filesystem"],
-      "env": {}
+      "type": "stdio",
+      "command": "mcp-server-filesystem",
+      "args": [
+        "--project-dir", "${MCP_CODER_PROJECT_DIR}",
+        "--log-level", "INFO"
+      ]
     }
   }
 }
 ```
 
-### Using MCP Configuration
+#### Using MCP Configuration
 
-**With commands:**
+**With mcp-coder commands:**
 ```bash
 # Use specific MCP config
 mcp-coder prompt "Analyze code" --mcp-config .mcp.linux.json
@@ -350,32 +367,223 @@ mcp-coder create-plan 123 --mcp-config .mcp.linux.json
 - Consistent environment across team
 - Platform-specific optimizations
 
-### Gitignore MCP Files
+#### Gitignore MCP Files
 
-**Add to `.gitignore`:**
+Add to `.gitignore` if configs contain sensitive paths:
 ```gitignore
 # MCP configuration files (may contain sensitive paths)
 .mcp.*.json
 ```
 
-## Complete Workflow Status Labels
+---
 
-| Label | Color | Description |
-|-------|-------|-------------|
-| `status-01:created` | `#d4c5f9` | Issue created, awaiting triage |
-| `status-02:awaiting-planning` | `#c5def5` | Ready for planning phase |
-| `status-03:planning-in-progress` | `#b8e6b8` | Currently being planned |
-| `status-04:plan-review` | `#ffe066` | Plan ready for review |
-| `status-05:plan-ready` | `#66b3ff` | Plan approved, ready for implementation |
-| `status-06:implementation-in-progress` | `#ffb366` | Currently being implemented |
-| `status-07:code-review` | `#ff9999` | Code ready for review |
-| `status-08:ready-pr` | `#c266ff` | Ready for pull request |
-| `status-09:pr-in-progress` | `#66ffcc` | PR being created |
-| `status-10:pr-created` | `#ff66b3` | PR created, awaiting merge |
+# Optional Setup
 
-## Testing Your Setup
+These components enhance your development workflow but are not required for MCP Coder to function.
 
-### Verification Steps
+## Architecture Enforcement
+
+Enforce module boundaries and prevent architectural drift. These tools are checked by CI but have no explicit mcp-coder integration.
+
+### Import Linter
+
+Enforces architectural contracts for imports between modules.
+
+**Configuration:** Create `.importlinter` in project root:
+
+```ini
+[importlinter]
+root_packages = your_package
+root_package_paths = src
+
+[importlinter:contract:layers]
+name = Layered Architecture
+type = layers
+layers =
+    your_package.cli
+    your_package.services
+    your_package.utils
+```
+
+**Run locally:**
+```bash
+# Linux/macOS
+./tools/lint_imports.sh
+
+# Windows
+tools\lint_imports.bat
+```
+
+**Or directly:**
+```bash
+lint-imports
+```
+
+### Tach
+
+Enforces architectural boundaries with layer definitions.
+
+**Configuration:** Create `tach.toml` in project root:
+
+```toml
+source_roots = ["src"]
+exact = false
+forbid_circular_dependencies = true
+
+[[modules]]
+path = "your_package.cli"
+layer = "presentation"
+depends_on = [
+    { path = "your_package.services" }
+]
+
+[[modules]]
+path = "your_package.services"
+layer = "domain"
+depends_on = []
+```
+
+**Run locally:**
+```bash
+# Linux/macOS
+./tools/tach_check.sh
+
+# Windows
+tools\tach_check.bat
+```
+
+**Or directly:**
+```bash
+tach check
+```
+
+## Code Quality CI
+
+Add comprehensive CI checks to your GitHub Actions workflow.
+
+### CI Workflow Example
+
+Create `.github/workflows/ci.yml`:
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - {name: "black", cmd: "black --check src tests"}
+          - {name: "isort", cmd: "isort --check --profile=black src tests"}
+          - {name: "pylint", cmd: "pylint -E ./src ./tests"}
+          - {name: "pytest", cmd: "pytest"}
+          - {name: "mypy", cmd: "mypy --strict src tests"}
+    name: ${{ matrix.check.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: ${{ matrix.check.cmd }}
+
+  # Architecture checks (PR only)
+  architecture:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - {name: "import-linter", cmd: "lint-imports"}
+          - {name: "tach", cmd: "tach check"}
+          - {name: "pycycle", cmd: "pycycle --here"}
+          - {name: "vulture", cmd: "vulture src tests --min-confidence 60"}
+    name: ${{ matrix.check.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: ${{ matrix.check.cmd }}
+```
+
+## Development Tools
+
+Convenience scripts for local development. Create a `tools/` directory with these scripts:
+
+### Formatting Tools
+
+| Script | Purpose | Category |
+|--------|---------|----------|
+| `format_all.sh/bat` | Run black + isort on src/tests | **Mandatory** before commits |
+| `black.bat` | Run black formatter only | Optional |
+| `iSort.bat` | Run isort only | Optional |
+
+**format_all.sh:**
+```bash
+#!/bin/bash
+set -e
+echo "Running isort..."
+isort --profile=black --float-to-top src tests
+echo "Running black..."
+black src tests
+echo "Formatting complete!"
+```
+
+### Quality Check Tools
+
+| Script | Purpose | Category |
+|--------|---------|----------|
+| `lint_imports.sh/bat` | Run import-linter | Optional (CI runs it) |
+| `tach_check.sh/bat` | Run tach architecture check | Optional (CI runs it) |
+| `pycycle_check.sh/bat` | Check circular dependencies | Optional (CI runs it) |
+| `vulture_check.sh/bat` | Check dead code | Optional (CI runs it) |
+| `pylint_check_for_errors.bat` | Run pylint errors only | Optional (CI runs it) |
+| `mypy.bat` | Run type checking | Optional (CI runs it) |
+
+### Utility Tools
+
+| Script | Purpose | Category |
+|--------|---------|----------|
+| `reinstall.bat` | Quick `pip install -e .` | Optional convenience |
+| `checks2clipboard.bat` | Copy quality check output to clipboard | Optional, useful for LLM assistance |
+
+### Performance Analysis Tools
+
+| Script | Purpose | Category |
+|--------|---------|----------|
+| `get_pytest_performance_stats.bat` | Collect test runtime statistics | Optional |
+| `test_profiler.bat` | Profile slow tests | Optional |
+| `test_profiler_generate_only.bat` | Generate profiler reports | Optional |
+| `pydeps_graph.sh/bat` | Generate dependency visualization | Optional |
+| `tach_docs.sh/bat/py` | Generate architecture documentation | Optional |
+
+### Legacy Tools (Keep for Reference)
+
+These tools are no longer actively used but kept for reference:
+
+| Script | Status |
+|--------|--------|
+| `commit_summary.bat` | Legacy |
+| `pr_summary.bat` | Legacy |
+| `pr_review.bat` | Legacy |
+| `pr_review_highlevel.bat` | Legacy |
+
+---
+
+# Testing Your Setup
+
+## Verification Steps
 
 **1. Test label creation:**
 ```bash
@@ -389,13 +597,12 @@ mcp-coder define-labels --dry-run
 - Comment `/approve` on the issue
 - Verify it promotes to `status-02:awaiting-planning`
 
-**3. Test MCP integration (if configured):**
+**3. Test MCP integration:**
 ```bash
-# This should work if MCP is properly configured
-mcp-coder prompt "List files in src/" --mcp-config .mcp.linux.json
+mcp-coder prompt "List files in src/" --mcp-config .mcp.json
 ```
 
-### Troubleshooting
+## Troubleshooting
 
 **Labels not appearing:**
 - Check GitHub token permissions
@@ -412,17 +619,16 @@ mcp-coder prompt "List files in src/" --mcp-config .mcp.linux.json
 - Check file paths in configuration
 - Test servers independently
 
-## Next Steps
+**Claude Code not following instructions:**
+- Verify `.claude/CLAUDE.md` exists and is readable
+- Check for syntax errors in the file
+- Ensure instructions are clear and unambiguous
 
-After setup is complete:
+---
 
-1. **Read the development process:** [Development Process](docs/processes_prompts/development-process.md)
-2. **Learn the CLI commands:** [CLI Reference](docs/cli-reference.md) 
-3. **Configure your environment:** [Configuration Guide](docs/configuration/config.md)
-4. **Create your first automated workflow:** Start with a simple issue and test the full cycle
+# Related Documentation
 
-## Related Documentation
-
-- **[Label Setup Guide](docs/getting-started/label-setup.md)** - Detailed label management
-- **[Configuration Guide](docs/configuration/config.md)** - User and system configuration
-- **[Development Process](docs/processes_prompts/development-process.md)** - Complete workflow methodology
+- **[CLI Reference](cli-reference.md)** - Complete command documentation
+- **[Configuration Guide](configuration/config.md)** - User and system configuration
+- **[Development Process](processes-prompts/development-process.md)** - Complete workflow methodology
+- **[Claude Code Cheat Sheet](processes-prompts/claude_cheat_sheet.md)** - Slash command reference
