@@ -266,5 +266,5 @@ After setup, verify everything works:
 
 ## See Also
 
-- [Development Process](../processes_prompts/development-process.md) - Complete workflow documentation
+- [Development Process](../processes-prompts/development-process.md) - Complete workflow documentation
 - [Configuration Guide](../configuration/config.md) - General configuration options

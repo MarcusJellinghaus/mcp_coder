@@ -760,7 +760,7 @@ docker run -v ~/.config/mcp_coder:/root/.config/mcp_coder my-container
 ### Setup and Usage
 - **[Repository Setup](../repository-setup.md)** - GitHub Actions, labels, and repository configuration
 - **[CLI Reference](../cli-reference.md)** - Complete command documentation
-- **[Development Process](../processes_prompts/development-process.md)** - Detailed workflow methodology
+- **[Development Process](../processes-prompts/development-process.md)** - Detailed workflow methodology
 
 ### Technical Documentation
 - **[Architecture Overview](../architecture/architecture.md)** - System architecture and design

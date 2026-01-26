@@ -156,11 +156,13 @@ This file configures Claude Code permissions and MCP server settings for your lo
 - **Allow formatting tools**: `Bash(./tools/format_all.sh:*)` for code formatting
 - **Restrict dangerous commands**: Do NOT allow unrestricted `Bash(*)` - this could modify files outside the project or execute arbitrary commands
 
-**Gitignore:** Add to `.gitignore`:
+**Gitignore:** For your own projects, add to `.gitignore`:
 
 ```gitignore
 .claude/settings.local.json
 ```
+
+> **Note:** In the mcp-coder repository itself, this file is tracked as a reference template for users.
 
 ### `.claude/commands/` - Slash Commands
 

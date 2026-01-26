@@ -445,4 +445,4 @@ mcp-coder coordinator run --all
 
 - **[Repository Setup](repository-setup.md)** - GitHub Actions, labels, and repository configuration
 - **[Configuration Guide](configuration/config.md)** - User config files and environment setup
-- **[Development Process](processes_prompts/development-process.md)** - Workflow methodology and best practices
+- **[Development Process](processes-prompts/development-process.md)** - Workflow methodology and best practices
