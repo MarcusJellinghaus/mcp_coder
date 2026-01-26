@@ -5,6 +5,10 @@ suggested-next: discuss -> issue_update -> issue_approve
 
 # Analyse GitHub Issue
 
+Fetch a GitHub issue and analyze its requirements, feasibility, and potential implementation approaches.
+
+## Instructions
+
 First, fetch the issue details:
 ```bash
 gh issue view $ARGUMENTS

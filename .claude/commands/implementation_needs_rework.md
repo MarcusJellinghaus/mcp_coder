@@ -4,25 +4,31 @@ workflow-stage: code-review
 suggested-next: (bot runs implement) -> /clear -> implementation_review
 ---
 
-# Implementation Needs Rework
+# Return to plan-ready after major review issues
 
-Set status to plan-ready after creating new steps (and pushing them) from code review findings.
+Transitions the issue back to `plan-ready` status for re-implementation when code review identifies major issues that cannot be fixed with minor changes.
 
-**Typical workflow:**
-1. `/implementation_review` - identifies issues
-2. `/discuss` - discuss and decide on changes  
-3. `/implementation_new_tasks` - create additional implementation steps
-4. `/commit_push` - commit the updated plan
-5. **This command** - transition to plan-ready
-6. `mcp-coder implement` - process the new steps
+## When to Use
 
-**Instructions:**
-1. Run the set-status command to update the issue label:
+| Situation | Action |
+|-----------|--------|
+| Minor fixes | Fix directly, re-run `/implementation_review` |
+| **Major issues** | **This command** (after `/implementation_new_tasks` + `/commit_push`) |
+| Approved | `/implementation_approve` |
+
+## Prerequisites
+
+- New implementation steps created (`/implementation_new_tasks`)
+- Changes committed and pushed (`/commit_push`)
+
+## Instructions
+
 ```bash
 mcp-coder set-status status-05:plan-ready
 ```
 
-2. Confirm the status change was successful.
-**Note:** If the command fails, report the error to the user. Do not use `--force` unless explicitly asked.
+Confirm the status change was successful. If it fails, report the error. Do not use `--force` unless explicitly asked.
 
-**Effect:** Changes issue status from `status-07:code-review` to `status-05:plan-ready` for rework.
+## Next Steps
+
+Run `mcp-coder implement` to process the new steps, then `/implementation_review`.
