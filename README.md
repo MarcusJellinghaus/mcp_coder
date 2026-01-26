@@ -1,147 +1,133 @@
 # MCP Coder
 
-An AI-powered software development automation toolkit using Claude Code CLI and MCP servers for intelligent code analysis, testing, and implementation workflows.
+**What is MCP Coder?**
 
-> ⚠️ **Currently in active development** - Core features are being implemented
+MCP coder enhances source code with a structured development process that turns GitHub issues into working code automatically. AI supported discussions allow to specify and review the relevant items of the specification, implementation plan and resulting code. Code quality is also ensured by rigorous usage of classical code quality assurance.
 
-## 🎯 Vision
+**The Complete Development Workflow:**
 
-Automated software feature development with stringent quality controls using AI-powered code analysis and proven testing methodologies.
+- **Interactive Planning**: Human-guided requirement analysis and architectural decisions using AI-powered discussions
+- **Automated Implementation**: Full feature development with integrated testing, code quality checks, and git operations  
+- **Quality Assurance**: Built-in pylint, pytest, and mypy validation ensures production-ready code
+- **Intelligent Orchestration**: Process automation across multiple repositories with Jenkins integration
+
+MCP Coder combines the efficiency of AI automation with the reliability of human oversight, creating a development experience that's both faster and more robust than traditional approaches.
+
+## 🎯 Vision & Architecture
+
+MCP Coder implements a structured 3-layer development approach that separates human decision-making from AI implementation:
+
+### Three-Layer Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       🤖 Process Automation                            │
+│   mcp-coder coordinate command • Jenkins scheduling                     │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                              │        orchestrates
+                              │             │
+                              ▼             ▼
+┌─────────────────────────────────────────┐     ┌─────────────────────────────────────────┐
+│  👤 Human Input & LLM Facilitated       │     │          🤖 LLM Work                   │
+│           Discussions                   │     │        (MCP-supported)                  │
+├─────────────────────────────────────────┤     ├─────────────────────────────────────────┤
+│ • Issue analysis                        │     │ • Implementation planning               │
+│ • Implementation planning               │     │ • Implementation (code writing &        │
+│ • Code reviews                          │     │   automated testing)                    │
+│                                         │     │ • Complex project support (multiple     │
+│                                         │     │   steps & sessions)                     │
+│                                         │     │ • Pull request generation               │
+│                                         │     │                                         │
+│ Using Claude Desktop and/or             │     │                calls                    │
+│ Claude Code interactively               │     │                ▼                       │
+│                                         │     │         ┌─────────────────┐             │
+│                                         │     │         │  MCP Servers    │             │
+│                                         │     │         │ • code-checker  │             │
+│                                         │     │         │ • filesystem    │             │
+│                                         │     │         └─────────────────┘             │
+└─────────────────────────────────────────┘     └─────────────────────────────────────────┘
+              │                                       │               
+              └───────────────────────────┬───────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     📂 GitHub Foundation                               │
+│         Source code repositories • Issue tracking with status labels   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Alternative View: Mermaid Diagram
+
+```mermaid
+flowchart TD
+    PA["🤖 Process Automation<br/>mcp-coder coordinate command<br/>Jenkins scheduling"]
+    
+    HI["👤 Human Input & LLM Facilitated<br/>Discussions<br/><br/>• Issue analysis<br/>• Implementation planning<br/>• Code reviews<br/><br/>Using Claude Desktop and/or<br/>Claude Code interactively"]
+    
+    LW["🤖 LLM Work<br/>(MCP-supported)<br/><br/>• Implementation planning<br/>• Implementation (code writing &<br/>  automated testing)<br/> (multiple steps & sessions)<br/>• Pull request generation"]
+    
+    MCP["MCP Servers<br/>• code-checker<br/>• filesystem"]
+    
+    GH["📂 GitHub Foundation<br/>Source code repositories<br/>Issue tracking with status labels"]
+    
+    PA -.->|orchestrates| LW
+    PA --> HI
+    PA --> LW
+    LW -->|calls| MCP
+    HI --> GH
+    LW --> GH
+    
+    classDef automation fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef human fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef llm fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef foundation fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef mcp fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    
+    class PA automation
+    class HI human
+    class LW llm
+    class GH foundation
+    class MCP mcp
+```
+
+**Key Separation of Concerns:**
+
+- **🤖 Automated LLM Work**: Automated implementation calling specialized MCP servers for reliable code operations
+- **🤖 Process Automation**: `mcp-coder coordinate` command orchestrates LLM work, with Jenkins scheduling for mass execution
+- **👤 Human Input & LLM Discussions**: Issue analysis, implementation planning and code review based on LLM-based analysis and interactive discussion using Claude Desktop or Claude Code
+- **📂  Foundation: GitHub**: Centralized source code storage and issue management with status labels
 
 ## ✨ Current Features
 
-- **Extensible LLM Interface**: Multi-provider LLM integration with `ask_llm()` function
-- **Claude Code Integration**: Both CLI and Python SDK support via `ask_claude_code()`
-- **Dual Implementation Methods**: Choose between CLI (`method="cli"`) or API (`method="api"`)
-- **Intelligent Queries**: Ask Claude about code analysis and implementation strategies
-- **Git Operations**: Automated git workflows with staging, committing, and status checking
-- **Automated Testing**: Integration with pytest, pylint, and mypy via MCP servers
+### 🤖 Development Automation
 
-## 🔮 Planned Features
+- **Integrated LLMs**: Claude Code CLI support (additional LLM providers planned)
+- **Automated Implementation**: Complete feature development via `mcp-coder implement`
 
-- **Feature Planning**: AI-driven analysis and planning from GitHub issues
-- **Implementation Workflows**: Automated TDD with test-first development
-- **Pull Request Management**: Automated branch creation, PR summaries, and reviews
-- **AI-Generated Commit Messages**: Smart commit message generation based on changes
+### 🔄 Interactive Planning & Quality Assurance
 
-## 🏗️ Architecture
+- **AI-Driven Feature Planning**: Automated analysis and planning from GitHub issues
+- **Test-Driven Development**: Automated TDD with test-first development workflows
+- **Comprehensive Quality Gates**: Integration with pylint, pytest, and mypy via MCP servers
+- **Human-AI Collaboration**: Structured discussion prompts for requirement refinement
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   MCP Coder     │    │   Claude Code    │    │  MCP Servers    │
-│   (Python)      │◄──►│     CLI          │◄──►│                 │
-│                 │    │                  │    │ • Code Checker  │
-│ • Workflows     │    │ • AI Planning    │    │ • File System   │
-│ • Automation    │    │ • Code Analysis  │    │ • More...       │
-│                 │    │ • Implementation │    │                 │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+### 🚀 Automated Workflows & GitHub Status Tracking
 
-## ⚙️ Configuration
+- **GitHub Integration**: Automated issue labeling, status progression, and PR management
+- **Git Operations**: Automated branch creation, staging, committing, pushing, and rebasing
+- **Workflow Orchestration**: Automated coordination using `mcp-coder coordinate`, using issue status tracking and calling Jenkins
+- **Mass Execution**: Jenkins integration enables orchestrated automated software development across issues and repositories
+- **Separation of Concerns**: Distinct automation layer separate from human discussions
+- **Status Tracking**: Development status progression through GitHub issue labels
 
-MCP Coder uses TOML configuration files for storing credentials and settings. Configuration is currently used for:
-- Jenkins integration (coordinator commands)
-- Repository definitions for integration testing
-
-### MCP Configuration Files
-
-MCP Coder supports platform-specific MCP (Model Context Protocol) configuration files to define which MCP servers Claude Code can use:
-
-- `.mcp.linux.json` - Linux environments
-- `.mcp.windows.json` - Windows environments
-- `.mcp.macos.json` - macOS environments
-
-These files should be placed in your project root and added to `.gitignore`.
-
-**Using MCP config with commands:**
-
-```bash
-# All commands support --mcp-config flag
-mcp-coder prompt "Analyze code" --mcp-config .mcp.linux.json
-mcp-coder implement --mcp-config .mcp.linux.json
-mcp-coder create-plan 123 --mcp-config .mcp.linux.json
-mcp-coder create-pr --mcp-config .mcp.linux.json
-mcp-coder commit auto --mcp-config .mcp.linux.json
-```
-
-**Note:** Using `--mcp-config` automatically enables strict mode, ensuring Claude only uses servers from your specified configuration.
-
-### Configuration File Location
-
-**Windows:**
-```
-%USERPROFILE%\.mcp_coder\config.toml
-```
-Example: `C:\Users\YourName\.mcp_coder\config.toml`
-
-**Linux/macOS/Containers:**
-```
-~/.config/mcp_coder/config.toml
-```
-Example: `/home/username/.config/mcp_coder/config.toml`
-
-### Auto-Creation
-
-The configuration file is automatically created on first use of commands that require it (like `coordinator test`). You'll see:
-
-```bash
-$ mcp-coder coordinator test mcp_coder --branch-name main
-Created default config file at /home/username/.config/mcp_coder/config.toml
-Please update it with your Jenkins and repository information.
-```
-
-### Configuration Structure
-
-The auto-generated template includes:
-
-```toml
-[jenkins]
-server_url = "https://jenkins.example.com:8080"
-username = "jenkins-user"
-api_token = "jenkins-api-token"
-
-[coordinator.repos.mcp_coder]
-repo_url = "https://github.com/user/mcp_coder.git"
-executor_test_path = "MCP_Coder/mcp-coder-test-job"
-github_credentials_id = "github-general-pat"
-
-[coordinator.repos.mcp_server_filesystem]
-repo_url = "https://github.com/user/mcp_server_filesystem.git"
-executor_test_path = "MCP_Filesystem/test-job"
-github_credentials_id = "github-general-pat"
-```
-
-### Complete Documentation
-
-For detailed configuration documentation including:
-- Environment variable overrides
-- Security best practices
-- Troubleshooting
-- Platform-specific notes
-
-See the [Configuration Guide](docs/configuration/CONFIG.md).
-
-## 🔧 Setup
-
-### Workflow Labels
-
-To set up GitHub workflow labels for issue tracking:
-
-```bash
-mcp-coder define-labels --dry-run  # Preview changes
-mcp-coder define-labels            # Apply labels
-```
-
-See [Label Setup Guide](docs/getting-started/LABEL_SETUP.md) for complete setup instructions including:
-- Label configuration customization
-- GitHub Actions for auto-labeling new issues
-- The `/approve` command for status promotion
-
-## 🚀 Quick Start
+## 🚀 Getting Started
 
 ### Prerequisites
+
 - **Claude Code CLI**: Install from [Anthropic's documentation](https://docs.anthropic.com/en/docs/claude-code)
 - **Python 3.11+**
+- **Git** (for repository operations)
+- **Code base hosted on GitHub**
 
 ### Installation
 
@@ -151,391 +137,16 @@ cd mcp_coder
 pip install -e ".[dev]"
 ```
 
-### Usage
-
-```python
-# New extensible interface (recommended)
-from mcp_coder import ask_llm
-
-# Ask Claude using CLI method (default)
-response = ask_llm("How should I structure this new feature?", provider="claude", method="cli")
-print(response)
-
-# Ask Claude using Python SDK method
-response = ask_llm("Explain this code pattern", provider="claude", method="api")
-print(response)
-
-# Claude-specific interface
-from mcp_coder.claude_code_interface import ask_claude_code
-
-# Use CLI method
-response = ask_claude_code("Review my code", method="cli")
-print(response)
-
-# Use API method
-response = ask_claude_code("Optimize this function", method="api")
-print(response)
-
-# Legacy interface (still supported)
-from mcp_coder import ask_claude
-response = ask_claude("How should I structure this new feature?")
-print(response)
-```
-
-### Session Storage and Continuation
-
-```bash
-# Start a conversation and store the response
-mcp-coder prompt "Start project planning" --store-response
-
-# Continue from a specific session file
-mcp-coder prompt "What's next?" --continue-from response_2025-09-19T14-30-22.json
-
-# Continue from the most recent session (automatic discovery)
-mcp-coder prompt "What's next?" --continue
-```
-
-### CLI Commands
-
-#### Label Management
-
-- `mcp-coder define-labels` - Sync workflow status labels to GitHub repository
-  - `--project-dir PATH` - Project directory (default: current)
-  - `--dry-run` - Preview changes without applying
-
-#### Create Pull Request
-
-Automate PR creation with AI-generated summaries after feature implementation.
-
-```bash
-# Create PR (uses current directory)
-mcp-coder create-pr
-
-# Specify project directory
-mcp-coder create-pr --project-dir /path/to/project
-
-# Use API method instead of CLI
-mcp-coder create-pr --llm-method claude_code_api
-
-# Get help
-mcp-coder create-pr --help
-```
-
-**Prerequisites:**
-- Clean working directory (no uncommitted changes)
-- All tasks complete in `pr_info/TASK_TRACKER.md`
-- On feature branch (not main)
-- GitHub credentials configured
-
-### Coordinator Commands
-
-Trigger Jenkins-based integration tests for repositories in containerized environments.
-
-#### coordinator test
-
-Trigger integration test for a specific repository and branch:
-
-```bash
-mcp-coder coordinator test <repo_name> --branch-name <branch>
-```
-
-**Parameters:**
-- `<repo_name>` - Repository identifier from config (e.g., `mcp_coder`)
-- `--branch-name` - Git branch to test (required)
-- `--log-level` - Logging verbosity (optional, default: INFO)
-- `--force-refresh` - Bypass GitHub API cache and fetch fresh data (optional)
-
-**Caching:**
-The coordinator includes GitHub API caching to reduce API calls and improve performance. Cache is automatically managed but can be bypassed using `--force-refresh` when fresh data is needed.
-
-**Examples:**
-
-```bash
-# Basic usage with cache
-mcp-coder coordinator test mcp_coder --branch-name feature-x
-
-# Force fresh data (bypass cache)
-mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
-
-# Test with debug logging
-mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
-
-# Combine force refresh with debug logging
-mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh --log-level DEBUG
-```
-
-**CLI Flag Usage Scenarios:**
-
-- **Use cache (default)**: Regular development workflow when data freshness is not critical
-- **Use `--force-refresh`**: When you need the latest GitHub data, such as:
-  - After creating new issues or updating labels
-  - When troubleshooting cache-related problems
-  - For critical builds requiring absolute latest state
-- **Use `--log-level DEBUG`**: For troubleshooting cache behavior or API interactions
-- **Combine flags**: Use both `--force-refresh --log-level DEBUG` for detailed cache bypass logging
-
-**Troubleshooting Cache Issues:**
-
-If you encounter cache-related problems, try these solutions:
-
-1. **Stale Data Issues**: If you see outdated issue information
-   ```bash
-   # Force refresh to get latest data
-   mcp-coder coordinator test repo_name --branch-name feature --force-refresh
-   ```
-
-2. **Cache File Corruption**: If you see unexpected errors or crashes
-   ```bash
-   # Remove cache files and restart
-   # Linux/macOS:
-   rm -f ~/.cache/mcp_coder/github_cache_*.json
-   
-   # Windows:
-   del "%LOCALAPPDATA%\mcp_coder\github_cache_*.json"
-   ```
-
-3. **API Rate Limiting**: If you hit GitHub rate limits
-   ```bash
-   # Use cache to reduce API calls (default behavior)
-   mcp-coder coordinator test repo_name --branch-name feature
-   
-   # Check current rate limit status
-   mcp-coder coordinator test repo_name --branch-name feature --log-level DEBUG
-   ```
-
-4. **Permission Issues**: If cache directory cannot be created
-   ```bash
-   # Ensure cache directory exists and is writable
-   # Linux/macOS:
-   mkdir -p ~/.cache/mcp_coder
-   chmod 755 ~/.cache/mcp_coder
-   
-   # Windows:
-   mkdir "%LOCALAPPDATA%\mcp_coder" 2>nul
-   ```
-
-5. **Multiple Repository Conflicts**: If cache shows wrong repository data
-   ```bash
-   # Clear specific repository cache
-   # Cache files are named with repository identifiers
-   # Use --force-refresh for immediate clean state
-   mcp-coder coordinator test repo_name --branch-name feature --force-refresh --log-level DEBUG
-   ```
-
-**Cache Configuration:**
-
-Adjust cache behavior in your configuration file:
-
-```toml
-[coordinator]
-# Cache refresh interval (default: 1440 minutes = 24 hours)
-cache_refresh_minutes = 1440
-
-# For active development (refresh every hour)
-cache_refresh_minutes = 60
-
-# For stable repositories (refresh every 48 hours)
-cache_refresh_minutes = 2880
-```
-
-**Cache Locations:**
-- **Linux/macOS**: `~/.cache/mcp_coder/github_cache_<repo_identifier>.json`
-- **Windows**: `%LOCALAPPDATA%\mcp_coder\github_cache_<repo_identifier>.json`
-
-**Output:**
-```
-Job triggered: MCP_Coder/mcp-coder-test-job - test - queue: 12345
-https://jenkins.example.com/job/MCP_Coder/mcp-coder-test-job/42/
-```
-
-**Configuration:**
-See [Configuration Guide](docs/configuration/CONFIG.md) for complete configuration documentation.
-
-**First Run:**
-On first use, a configuration template is auto-created at:
-
-**Windows:**
-```
-Created default config file at C:\Users\YourName\.mcp_coder\config.toml
-Please update it with your Jenkins and repository information.
-```
-
-**Linux:**
-```
-Created default config file at /home/username/.config/mcp_coder/config.toml
-Please update it with your Jenkins and repository information.
-```
-
-### Git Operations
-
-```python
-from mcp_coder import (
-    is_git_repository,
-    get_full_status,
-    commit_all_changes,
-    commit_staged_files,
-    git_push
-)
-from pathlib import Path
-
-# Check if directory is a git repository
-repo_path = Path(".")
-if is_git_repository(repo_path):
-    print("This is a git repository")
-    
-    # Get repository status
-    status = get_full_status(repo_path)
-    print(f"Staged: {status['staged']}")
-    print(f"Modified: {status['modified']}")
-    print(f"Untracked: {status['untracked']}")
-    
-    # Commit all changes
-    result = commit_all_changes("Add new feature", repo_path)
-    if result.success:
-        print(f"Successfully committed: {result.commit_hash}")
-    else:
-        print(f"Commit failed: {result.error}")
-        
-    # Or commit only staged files
-    staged_result = commit_staged_files("Fix bug in parser", repo_path)
-    if staged_result.success:
-        print(f"Staged files committed: {staged_result.commit_hash}")
-        
-    # Complete commit + push workflow
-    commit_result = commit_all_changes("Add new feature", repo_path)
-    if commit_result.success:
-        push_result = git_push(repo_path)
-        if push_result["success"]:
-            print("Successfully committed and pushed changes")
-        else:
-            print(f"Push failed: {push_result['error']}")
-    else:
-        print(f"Commit failed: {commit_result.error}")
-```
-
-## 📋 API Reference
-
-### High-Level Interface
-
-#### `ask_llm(question, provider="claude", method="cli", timeout=60)`
-
-Main entry point for LLM interactions with extensible provider support.
-
-**Parameters:**
-- `question` (str): The question to ask the LLM
-- `provider` (str): LLM provider to use (currently supports "claude")
-- `method` (str): Implementation method ("cli" or "api")
-- `timeout` (int): Request timeout in seconds (default: 60)
-
-**Returns:** LLM response as string
-
-### Claude-Specific Interface
-
-#### `ask_claude_code(question, method="cli", timeout=60)`
-
-Claude Code interface with routing between CLI and API methods.
-
-**Parameters:**
-- `question` (str): The question to ask Claude
-- `method` (str): Implementation method ("cli" or "api")
-- `timeout` (int): Request timeout in seconds (default: 60)
-
-**Returns:** Claude's response as string
-
-### Implementation Methods
-
-- **CLI Method** (`method="cli"`): Uses Claude Code CLI executable
-  - Requires Claude Code CLI installation
-  - Uses existing CLI subscription authentication
-  - Subprocess-based execution
-
-- **API Method** (`method="api"`): Uses Claude Code Python SDK
-  - Leverages existing CLI authentication automatically
-  - Direct Python API integration
-  - Enhanced error handling and response parsing
-
-### Legacy Interface
-
-#### `ask_claude(question, timeout=60)`
-
-Backward-compatible interface using CLI method.
-
-**Parameters:**
-- `question` (str): The question to ask Claude
-- `timeout` (int): Request timeout in seconds (default: 60)
-
-**Returns:** Claude's response as string
-
-### Git Operations
-
-#### `is_git_repository(repo_path)`
-
-Check if a directory is a git repository.
-
-**Parameters:**
-- `repo_path` (Path): Path to the directory to check
-
-**Returns:** Boolean indicating if directory is a git repository
-
-#### `get_full_status(repo_path)`
-
-Get comprehensive git repository status including staged, modified, and untracked files.
-
-**Parameters:**
-- `repo_path` (Path): Path to the git repository
-
-**Returns:** Dictionary with 'staged', 'modified', and 'untracked' file lists
-
-#### `commit_all_changes(message, repo_path)`
-
-Stage all changes and create a commit.
-
-**Parameters:**
-- `message` (str): Commit message
-- `repo_path` (Path): Path to the git repository
-
-**Returns:** CommitResult object with success status, commit hash, and error details
-
-#### `commit_staged_files(message, repo_path)`
-
-Commit only the currently staged files.
-
-**Parameters:**
-- `message` (str): Commit message
-- `repo_path` (Path): Path to the git repository
-
-**Returns:** CommitResult object with success status, commit hash, and error details
-
-#### Additional Git Functions
-
-For more advanced git operations, import from `mcp_coder.utils`:
-
-- `get_staged_changes()`: Get list of staged files
-- `get_unstaged_changes()`: Get modified and untracked files
-- `stage_specific_files()`: Stage selected files
-- `stage_all_changes()`: Stage all unstaged changes
-- `git_move()`: Move/rename files with git tracking
-- `is_file_tracked()`: Check if file is tracked by git
-
-## 🛠️ Development
-
-```bash
-# Install development dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run code quality checks
-pylint src/
-mypy src/
-```
-
 ## 📚 Documentation
 
-- [Development Process](docs/processes_prompts/DEVELOPMENT_PROCESS.md) - Detailed methodology
-- [Project Vision](project_idea.md) - Comprehensive project overview
-- [Label Setup Guide](docs/getting-started/LABEL_SETUP.md) - GitHub workflow labels and setup
+**[Full Documentation Index](docs/README.md)** - Complete list of all documentation
+
+### Quick Links
+
+- **[CLI Reference](docs/cli-reference.md)** - Complete command documentation and usage examples
+- **[Repository Setup](docs/repository-setup.md)** - GitHub Actions, labels, and repository configuration
+- **[Configuration Guide](docs/configuration/config.md)** - User config files, environment variables, and platform setup
+- **[Development Process](docs/processes-prompts/development-process.md)** - Detailed methodology and workflow documentation
 
 ## 🔗 Related Projects
 

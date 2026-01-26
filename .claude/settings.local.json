@@ -43,7 +43,11 @@
       "Skill(rebase)",
       "Bash(lint-imports)",
       "Bash(python:*)",
-      "Bash(PYTHONPATH=src lint-imports)"
+      "Bash(PYTHONPATH=src lint-imports)",
+      "Bash(find:*)",
+      "Bash(git mv:*)",
+      "Bash(git status:*)",
+      "WebFetch(domain:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1,4 +1,15 @@
-# MCP Coder Configuration Guide
+# Configuration Guide
+
+Complete configuration documentation for MCP Coder, covering user configuration files, environment variables, platform-specific setup, and troubleshooting.
+
+## Quick Reference
+
+| Topic | Location |
+|-------|----------|
+| **User Config** | `~/.config/mcp_coder/config.toml` (Linux/macOS)<br>`%USERPROFILE%\.mcp_coder\config.toml` (Windows) |
+| **Environment Variables** | `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN` |
+| **Repository Setup** | [Repository Setup Guide](../repository-setup.md) |
+| **CLI Commands** | [CLI Reference](../cli-reference.md) |
 
 ## Configuration File Locations
 
@@ -746,6 +757,11 @@ docker run -v ~/.config/mcp_coder:/root/.config/mcp_coder my-container
 
 ## Related Documentation
 
-- [README.md](../../README.md) - Installation and quick start
-- [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - System architecture
-- [Label Setup Guide](../getting-started/LABEL_SETUP.md) - GitHub workflow labels and setup
+### Setup and Usage
+- **[Repository Setup](../repository-setup.md)** - GitHub Actions, labels, and repository configuration
+- **[CLI Reference](../cli-reference.md)** - Complete command documentation
+- **[Development Process](../processes-prompts/development-process.md)** - Detailed workflow methodology
+
+### Technical Documentation
+- **[Architecture Overview](../architecture/architecture.md)** - System architecture and design
+- **[Main README](../../README.md)** - Project overview and quick start
