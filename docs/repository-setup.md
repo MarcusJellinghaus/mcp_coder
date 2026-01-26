@@ -248,6 +248,8 @@ git push
 MCP Coder currently uses Claude Code as the LLM backend. This section covers the required configuration files.
 
 > **Note:** Future versions may support additional LLM providers.
+> 
+> **See [Claude Code Configuration Guide](configuration/claude-code.md)** for detailed setup including installation, CLI commands, and troubleshooting.
 
 ### Required Files
 
@@ -259,33 +261,15 @@ MCP Coder currently uses Claude Code as the LLM backend. This section covers the
 
 ### `.claude/CLAUDE.md` - Project Instructions
 
-This file contains mandatory instructions that Claude follows when working on your project. Create `.claude/CLAUDE.md` with project-specific rules:
+This file contains mandatory instructions that Claude follows when working on your project. Create `.claude/CLAUDE.md` with project-specific rules.
 
-```markdown
-# Project Instructions
-
-## Code Quality Requirements
-
-After making code changes, run all quality checks:
-- Pylint for code quality
-- Pytest for tests  
-- Mypy for type checking
-
-## Project-Specific Rules
-
-- [Add your project conventions here]
-- [Coding standards, naming conventions, etc.]
-```
-
-**See mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example.**
+**See:**
+- [Claude Code Configuration Guide](configuration/claude-code.md#claudeclaudemd---project-instructions) for detailed examples
+- mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example
 
 ### `.claude/commands/` - Slash Commands
 
-Slash commands provide structured workflows for common tasks. Copy the commands from mcp-coder or create your own:
-
-```bash
-mkdir -p .claude/commands
-```
+Slash commands provide structured workflows for common tasks. Copy the commands from mcp-coder or create your own.
 
 **Available commands** (see [Claude Code Cheat Sheet](processes-prompts/claude_cheat_sheet.md) for details):
 
@@ -628,7 +612,8 @@ mcp-coder prompt "List files in src/" --mcp-config .mcp.json
 
 # Related Documentation
 
-- **[CLI Reference](cli-reference.md)** - Complete command documentation
+- **[Claude Code Configuration](configuration/claude-code.md)** - Detailed Claude Code setup, CLI commands, troubleshooting
+- **[CLI Reference](cli-reference.md)** - Complete mcp-coder command documentation
 - **[Configuration Guide](configuration/config.md)** - User and system configuration
 - **[Development Process](processes-prompts/development-process.md)** - Complete workflow methodology
 - **[Claude Code Cheat Sheet](processes-prompts/claude_cheat_sheet.md)** - Slash command reference
