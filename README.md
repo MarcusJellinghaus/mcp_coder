@@ -118,7 +118,7 @@ flowchart TD
 - **Workflow Orchestration**: Automated coordination using `mcp-coder coordinate`, using issue status tracking and calling Jenkins
 - **Mass Execution**: Jenkins integration enables orchestrated automated software development across issues and repositories
 - **Separation of Concerns**: Distinct automation layer separate from human discussions
-- **Status Tracking**: Developement status progression through GitHub issue labels
+- **Status Tracking**: Development status progression through GitHub issue labels
 
 ## 🚀 Getting Started
 
@@ -139,17 +139,13 @@ pip install -e ".[dev]"
 
 ## 📚 Documentation
 
-### Command Reference
+**[Full Documentation Index](docs/README.md)** - Complete list of all documentation
+
+### Quick Links
 
 - **[CLI Reference](docs/cli-reference.md)** - Complete command documentation and usage examples
-
-### Setup Guides  
-
 - **[Repository Setup](docs/repository-setup.md)** - GitHub Actions, labels, and repository configuration
 - **[Configuration Guide](docs/configuration/config.md)** - User config files, environment variables, and platform setup
-
-### Development
-
 - **[Development Process](docs/processes-prompts/development-process.md)** - Detailed methodology and workflow documentation
 
 ## 🔗 Related Projects
