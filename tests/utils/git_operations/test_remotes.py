@@ -132,11 +132,14 @@ class TestGitPushForceWithLease:
             config.set_value("user", "email", "other@example.com")
 
         # Make and push a commit from the other clone (simulating another developer)
+        # Use the actual active branch name from the cloned repo, as it may differ
+        # from "main" depending on Git version and default branch configuration
+        other_branch = other_repo.active_branch.name
         other_readme = other_clone_dir / "README.md"
         other_readme.write_text("# Test Project\n\nOther developer changes")
         other_repo.index.add(["README.md"])
         other_repo.index.commit("Other developer commit")
-        other_repo.git.push("origin", "main")
+        other_repo.git.push("origin", other_branch)
 
         # Now in our original repo, make a local commit without fetching
         readme = project_dir / "README.md"
