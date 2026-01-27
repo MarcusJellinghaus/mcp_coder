@@ -147,11 +147,6 @@ disable_error_code = ["unreachable"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["mcp_coder.cli.commands.coordinator.vscodeclaude"]
-# Disable unreachable warnings for vscodeclaude module - false positive with platform checks
-disable_error_code = ["unreachable"]
-
-[[tool.mypy.overrides]]
 module = ["mcp.server.fastmcp"]
 ignore_missing_imports = true
 
