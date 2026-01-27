@@ -1549,9 +1549,6 @@ def get_issue_current_status(
     """
     try:
         issue = issue_manager.get_issue(issue_number)
-        if issue is None:
-            return None  # type: ignore[unreachable]
-
         for label in issue["labels"]:
             if label.startswith("status-"):
                 return label
