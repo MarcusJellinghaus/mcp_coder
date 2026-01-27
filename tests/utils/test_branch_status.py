@@ -385,7 +385,7 @@ def test_collect_branch_status_all_good() -> None:
         mock_ci.assert_called_once_with(project_dir, "main", False, 200)
         mock_rebase.assert_called_once_with(project_dir)
         mock_tasks.assert_called_once_with(project_dir)
-        mock_label.assert_called_once_with(project_dir)
+        mock_label.assert_called_once_with(project_dir, "main")
 
 
 def test_collect_branch_status_ci_failed() -> None:
@@ -541,12 +541,15 @@ def test_collect_branch_status_all_failed() -> None:
         assert result.tasks_complete is False
         assert result.current_github_label == "status-02:planning"
 
-        # Should have multiple recommendations in priority order
+        # Should have recommendations in priority order
+        # Note: Rebase recommendation is NOT added when CI is FAILED and tasks are incomplete
+        # (per _generate_recommendations logic: rebase only when tasks_complete AND ci_status != FAILED)
         recommendations = result.recommendations
-        assert len(recommendations) >= 3
+        assert len(recommendations) >= 2
         assert "Fix CI test failures" in recommendations[0]  # CI first priority
         assert any("Complete remaining tasks" in r for r in recommendations)
-        assert any("Rebase onto origin/main" in r for r in recommendations)
+        # Rebase recommendation should NOT be present with CI failed and tasks incomplete
+        assert not any("Rebase onto origin/main" in r for r in recommendations)
 
 
 # Tests for helper functions
