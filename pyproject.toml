@@ -105,8 +105,9 @@ markers = [
 # Default pytest options:
 # --strict-markers: Fail if unknown markers are used (prevents typos)
 # --tb=short: Show concise error tracebacks (not full stack traces)
-# -v: Verbose output showing individual test names
-addopts = ["--strict-markers", "--tb=short", "-n", "auto"]
+# -n auto: Run tests in parallel using all available CPUs
+# -p no:tach: Disable tach plugin (noisy output about unaffected tests)
+addopts = ["--strict-markers", "--tb=short", "-n", "auto", "-p", "no:tach"]
 
 [tool.black]
 line-length = 88
