@@ -221,9 +221,9 @@ def main():
     print("\nCreating summary report...")
     create_summary_report(durations_data, slow_tests)
     
-    print(f"\n✓ Reports generated: {len(slow_tests)}")
-    print(f"✓ Summary saved to: {SUMMARY_FILE}")
-    print(f"✓ Output directory: {PROF_OUTPUT_DIR}")
+    print(f"\n[OK] Reports generated: {len(slow_tests)}")
+    print(f"[OK] Summary saved to: {SUMMARY_FILE}")
+    print(f"[OK] Output directory: {PROF_OUTPUT_DIR}")
     
     return 0
 

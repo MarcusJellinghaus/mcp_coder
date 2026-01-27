@@ -99,7 +99,7 @@ def pytest_runtest_protocol(item, nextitem):
     # Print progress
     slow_marker = " SLOW" if duration >= DURATION_THRESHOLD_SECONDS else ""
     progress = f"[{_profiler.test_count}/{_profiler.total_tests}]"
-    print(f"Profiling {progress}: {nodeid} ... {duration:.2f}s ✓{slow_marker}")
+    print(f"Profiling {progress}: {nodeid} ... {duration:.2f}s [OK]{slow_marker}")
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -125,5 +125,5 @@ def pytest_sessionfinish(session, exitstatus):
     with open(durations_path, 'w') as f:
         json.dump(durations_data, f, indent=2)
     
-    print(f"\n✓ Saved {len(_profiler.durations)} test durations to {durations_path}")
-    print(f"✓ Found {durations_data['slow_tests_count']} slow tests (>{DURATION_THRESHOLD_SECONDS}s)")
+    print(f"\n[OK] Saved {len(_profiler.durations)} test durations to {durations_path}")
+    print(f"[OK] Found {durations_data['slow_tests_count']} slow tests (>{DURATION_THRESHOLD_SECONDS}s)")
