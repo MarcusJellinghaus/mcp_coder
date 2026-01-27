@@ -1017,3 +1017,509 @@ def create_status_file(
     # Write status file
     status_file = folder_path / ".vscodeclaude_status.md"
     status_file.write_text(content, encoding="utf-8")
+
+
+# =============================================================================
+# Launch Functions
+# =============================================================================
+
+
+def launch_vscode(workspace_file: Path) -> int:
+    """Launch VSCode with workspace file.
+
+    Args:
+        workspace_file: Path to .code-workspace file
+
+    Returns:
+        VSCode process PID
+
+    Uses subprocess.Popen for non-blocking launch.
+    """
+    process = subprocess.Popen(
+        ["code", str(workspace_file)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return process.pid
+
+
+# Stage display name mapping
+STAGE_DISPLAY_NAMES: dict[str, str] = {
+    "status-01:created": "ISSUE ANALYSIS",
+    "status-04:plan-review": "PLAN REVIEW",
+    "status-07:code-review": "CODE REVIEW",
+    "status-10:pr-created": "PR CREATED",
+}
+
+
+def get_stage_display_name(status: str) -> str:
+    """Get human-readable stage name for display.
+
+    Args:
+        status: Status label (e.g., "status-07:code-review")
+
+    Returns:
+        Display name (e.g., "CODE REVIEW")
+    """
+    return STAGE_DISPLAY_NAMES.get(status, status.upper())
+
+
+def truncate_title(title: str, max_length: int = 50) -> str:
+    """Truncate title for display, adding ellipsis if needed.
+
+    Args:
+        title: Original title
+        max_length: Maximum length
+
+    Returns:
+        Truncated title with "..." if needed
+    """
+    if len(title) <= max_length:
+        return title
+    # Subtract 3 for the ellipsis
+    return title[: max_length - 3] + "..."
+
+
+# =============================================================================
+# Session Orchestration Functions
+# =============================================================================
+
+
+def _get_repo_short_name(repo_config: dict[str, str]) -> str:
+    """Extract short repo name from repo_url.
+
+    Args:
+        repo_config: Repository config dict with repo_url
+
+    Returns:
+        Short repo name (e.g., "mcp-coder" from the URL)
+    """
+    repo_url = repo_config.get("repo_url", "")
+    # Extract from URLs like https://github.com/owner/repo.git
+    if "/" in repo_url:
+        name = repo_url.rstrip("/").rstrip(".git").split("/")[-1]
+        return name
+    return "repo"
+
+
+def _get_repo_full_name(repo_config: dict[str, str]) -> str:
+    """Extract full repo name (owner/repo) from repo_url.
+
+    Args:
+        repo_config: Repository config dict with repo_url
+
+    Returns:
+        Full repo name (e.g., "owner/repo")
+    """
+    repo_url = repo_config.get("repo_url", "")
+    # Extract from URLs like https://github.com/owner/repo.git
+    if "/" in repo_url:
+        parts = repo_url.rstrip("/").rstrip(".git").split("/")
+        if len(parts) >= 2:
+            return f"{parts[-2]}/{parts[-1]}"
+    return "unknown/repo"
+
+
+def _get_issue_status(issue: IssueData) -> str:
+    """Get the status label from an issue.
+
+    Args:
+        issue: Issue data dict
+
+    Returns:
+        Status label string or empty string if none found
+    """
+    for label in issue["labels"]:
+        if label.startswith("status-"):
+            return label
+    return ""
+
+
+def _build_session(
+    folder: str,
+    repo: str,
+    issue_number: int,
+    status: str,
+    vscode_pid: int,
+    is_intervention: bool,
+) -> VSCodeClaudeSession:
+    """Build a session dictionary.
+
+    Args:
+        folder: Full path to working folder
+        repo: "owner/repo" format
+        issue_number: GitHub issue number
+        status: Status label
+        vscode_pid: VSCode process ID
+        is_intervention: If True, intervention mode
+
+    Returns:
+        VSCodeClaudeSession dict
+    """
+    return {
+        "folder": folder,
+        "repo": repo,
+        "issue_number": issue_number,
+        "status": status,
+        "vscode_pid": vscode_pid,
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "is_intervention": is_intervention,
+    }
+
+
+def prepare_and_launch_session(
+    issue: IssueData,
+    repo_config: dict[str, str],
+    vscodeclaude_config: VSCodeClaudeConfig,
+    repo_vscodeclaude_config: RepoVSCodeClaudeConfig,
+    branch_name: Optional[str],
+    is_intervention: bool = False,
+) -> VSCodeClaudeSession:
+    """Full session preparation and launch.
+
+    Args:
+        issue: GitHub issue data
+        repo_config: Repository config (repo_url, etc.)
+        vscodeclaude_config: VSCodeClaude config (workspace_base, etc.)
+        repo_vscodeclaude_config: Per-repo setup commands
+        branch_name: Branch to checkout (None = main)
+        is_intervention: If True, intervention mode
+
+    Returns:
+        Created session data
+
+    Raises:
+        FileNotFoundError: If .mcp.json missing
+        subprocess.CalledProcessError: If git or setup fails
+
+    Steps:
+    1. Create working folder
+    2. Setup git repo
+    3. Validate .mcp.json
+    4. Run setup commands (if configured) - validates commands first
+    5. Update .gitignore
+    6. Create workspace file
+    7. Create startup script
+    8. Create VSCode task
+    9. Create status file
+    10. Launch VSCode
+    11. Create and save session
+
+    On failure after folder creation: cleans up working folder.
+    """
+    workspace_base = vscodeclaude_config["workspace_base"]
+    repo_url = repo_config.get("repo_url", "")
+    repo_short_name = _get_repo_short_name(repo_config)
+    repo_full_name = _get_repo_full_name(repo_config)
+    issue_number = issue["number"]
+    issue_title = issue["title"]
+    issue_url = issue.get("url", "")
+    status = _get_issue_status(issue)
+
+    # Build folder path
+    folder_path = get_working_folder_path(workspace_base, repo_short_name, issue_number)
+    folder_str = str(folder_path)
+
+    # Create working folder
+    create_working_folder(folder_path)
+
+    try:
+        # Setup git repo
+        setup_git_repo(folder_path, repo_url, branch_name)
+
+        # Validate .mcp.json
+        validate_mcp_json(folder_path)
+
+        # Run setup commands if configured
+        is_windows = platform.system() == "Windows"
+        if is_windows:
+            setup_commands = repo_vscodeclaude_config.get("setup_commands_windows", [])
+        else:
+            setup_commands = repo_vscodeclaude_config.get("setup_commands_linux", [])
+
+        if setup_commands:
+            validate_setup_commands(setup_commands)
+            run_setup_commands(folder_path, setup_commands)
+
+        # Update .gitignore
+        update_gitignore(folder_path)
+
+        # Create workspace file
+        folder_name = folder_path.name
+        workspace_file = create_workspace_file(
+            workspace_base=workspace_base,
+            folder_name=folder_name,
+            issue_number=issue_number,
+            issue_title=issue_title,
+            status=status,
+            repo_name=repo_short_name,
+        )
+
+        # Create startup script
+        script_path = create_startup_script(
+            folder_path=folder_path,
+            issue_number=issue_number,
+            issue_title=issue_title,
+            status=status,
+            repo_name=repo_short_name,
+            is_intervention=is_intervention,
+        )
+
+        # Create VSCode task
+        create_vscode_task(folder_path, script_path)
+
+        # Create status file
+        create_status_file(
+            folder_path=folder_path,
+            issue_number=issue_number,
+            issue_title=issue_title,
+            status=status,
+            repo_full_name=repo_full_name,
+            branch_name=branch_name or "main",
+            issue_url=issue_url,
+            is_intervention=is_intervention,
+        )
+
+        # Launch VSCode
+        pid = launch_vscode(workspace_file)
+
+        # Build and save session
+        session = _build_session(
+            folder=folder_str,
+            repo=repo_full_name,
+            issue_number=issue_number,
+            status=status,
+            vscode_pid=pid,
+            is_intervention=is_intervention,
+        )
+        add_session(session)
+
+        logger.info(
+            "Started session for issue #%d in %s",
+            issue_number,
+            folder_str,
+        )
+
+        return session
+
+    except Exception:
+        # Cleanup working folder on failure
+        if folder_path.exists():
+            shutil.rmtree(folder_path, ignore_errors=True)
+        raise
+
+
+def process_eligible_issues(
+    repo_name: str,
+    repo_config: dict[str, str],
+    vscodeclaude_config: VSCodeClaudeConfig,
+    max_sessions: int,
+    repo_filter: Optional[str] = None,
+) -> List[VSCodeClaudeSession]:
+    """Process eligible issues for a repository.
+
+    Args:
+        repo_name: Repository config name
+        repo_config: Repository config
+        vscodeclaude_config: VSCodeClaude config
+        max_sessions: Maximum concurrent sessions
+        repo_filter: Optional repo filter (skip if doesn't match)
+
+    Returns:
+        List of sessions that were started
+
+    Handles:
+    - Checking current session count
+    - Getting eligible issues
+    - Skipping issues with existing sessions
+    - Starting new sessions up to max
+    """
+    coordinator = _get_coordinator()
+
+    # Apply repo filter if provided
+    if repo_filter and repo_name != repo_filter:
+        return []
+
+    # Check current session count
+    current_count = get_active_session_count()
+    if current_count >= max_sessions:
+        logger.info(
+            "Already at max sessions (%d/%d), skipping",
+            current_count,
+            max_sessions,
+        )
+        return []
+
+    # Get GitHub username
+    github_username = get_github_username()
+
+    # Get repo full name for session lookup
+    repo_full_name = _get_repo_full_name(repo_config)
+
+    # Create managers using the classes from coordinator
+    issue_manager: IssueManager = coordinator.IssueManager(repo_full_name)
+    branch_manager: IssueBranchManager = coordinator.IssueBranchManager(repo_full_name)
+
+    # Get eligible issues
+    eligible_issues = get_eligible_vscodeclaude_issues(issue_manager, github_username)
+
+    # Separate pr-created issues (handle separately)
+    pr_created_issues: List[IssueData] = []
+    actionable_issues: List[IssueData] = []
+
+    for issue in eligible_issues:
+        status = _get_issue_status(issue)
+        if status == "status-10:pr-created":
+            pr_created_issues.append(issue)
+        else:
+            actionable_issues.append(issue)
+
+    # Filter out issues that already have sessions
+    issues_to_start: List[IssueData] = []
+    for issue in actionable_issues:
+        existing = get_session_for_issue(repo_full_name, issue["number"])
+        if existing is None:
+            issues_to_start.append(issue)
+
+    # Load repo-specific config
+    repo_vscodeclaude_config = load_repo_vscodeclaude_config(repo_name)
+
+    # Start new sessions up to max
+    started_sessions: List[VSCodeClaudeSession] = []
+    available_slots = max_sessions - current_count
+
+    for issue in issues_to_start[:available_slots]:
+        try:
+            # Get linked branch
+            branch_name = get_linked_branch_for_issue(branch_manager, issue["number"])
+
+            # Prepare and launch session
+            session = prepare_and_launch_session(
+                issue=issue,
+                repo_config=repo_config,
+                vscodeclaude_config=vscodeclaude_config,
+                repo_vscodeclaude_config=repo_vscodeclaude_config,
+                branch_name=branch_name,
+                is_intervention=False,
+            )
+            started_sessions.append(session)
+            current_count += 1
+
+        except Exception as e:
+            logger.error(
+                "Failed to start session for issue #%d: %s",
+                issue["number"],
+                str(e),
+            )
+
+    # Handle pr-created issues (just display info)
+    if pr_created_issues:
+        handle_pr_created_issues(pr_created_issues, issue_manager)
+
+    return started_sessions
+
+
+def restart_closed_sessions() -> List[VSCodeClaudeSession]:
+    """Restart sessions where VSCode was closed.
+
+    Finds sessions where:
+    - VSCode PID no longer running
+    - Issue status unchanged (not stale)
+    - Folder still exists
+
+    Returns:
+        List of restarted sessions
+    """
+    store = load_sessions()
+    restarted: List[VSCodeClaudeSession] = []
+
+    for session in store["sessions"]:
+        # Check if VSCode is still running
+        if check_vscode_running(session.get("vscode_pid")):
+            continue
+
+        # Check if folder exists
+        folder_path = Path(session["folder"])
+        if not folder_path.exists():
+            # Remove orphaned session
+            remove_session(session["folder"])
+            logger.info(
+                "Removed orphaned session for issue #%d (folder missing)",
+                session["issue_number"],
+            )
+            continue
+
+        # Find the workspace file
+        workspace_base = folder_path.parent
+        folder_name = folder_path.name
+        workspace_file = workspace_base / f"{folder_name}.code-workspace"
+
+        if not workspace_file.exists():
+            logger.warning(
+                "Workspace file missing for session #%d: %s",
+                session["issue_number"],
+                workspace_file,
+            )
+            continue
+
+        # Relaunch VSCode
+        try:
+            new_pid = launch_vscode(workspace_file)
+            update_session_pid(session["folder"], new_pid)
+            logger.info(
+                "Restarted VSCode for issue #%d (PID: %d)",
+                session["issue_number"],
+                new_pid,
+            )
+
+            # Update session with new PID for return value
+            updated_session: VSCodeClaudeSession = {
+                "folder": session["folder"],
+                "repo": session["repo"],
+                "issue_number": session["issue_number"],
+                "status": session["status"],
+                "vscode_pid": new_pid,
+                "started_at": session["started_at"],
+                "is_intervention": session["is_intervention"],
+            }
+            restarted.append(updated_session)
+
+        except Exception as e:
+            logger.error(
+                "Failed to restart session for issue #%d: %s",
+                session["issue_number"],
+                str(e),
+            )
+
+    return restarted
+
+
+def handle_pr_created_issues(
+    issues: List[IssueData],
+    issue_manager: IssueManager,  # noqa: ARG001 - kept for API compatibility
+) -> None:
+    """Display PR URLs for status-10:pr-created issues.
+
+    Args:
+        issues: Issues with status-10:pr-created
+        issue_manager: IssueManager (kept for API compatibility)
+
+    Prints issue URLs to stdout (no session created).
+    The issue URL typically links to the PR for pr-created issues.
+    """
+    if not issues:
+        return
+
+    print("\n" + "=" * 60)
+    print("PR-CREATED ISSUES (no session needed)")
+    print("=" * 60)
+
+    for issue in issues:
+        issue_number = issue["number"]
+        title = truncate_title(issue["title"], 40)
+        issue_url = issue.get("url", "N/A")
+
+        print(f"  #{issue_number}: {title}")
+        print(f"    Issue: {issue_url}")
+
+    print("=" * 60 + "\n")
