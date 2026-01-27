@@ -341,8 +341,9 @@ def test_dataclass_immutability() -> None:
     )
 
     # Should raise FrozenInstanceError when trying to modify frozen dataclass
+    # via normal attribute assignment
     with pytest.raises(FrozenInstanceError):
-        object.__setattr__(report, "ci_status", "FAILED")
+        report.ci_status = "FAILED"  # type: ignore[misc]
 
 
 # Tests for collect_branch_status() function
@@ -395,12 +396,14 @@ def test_collect_branch_status_ci_failed() -> None:
     ci_error = "FAILED tests/test_example.py::test_function - AssertionError"
 
     with (
+        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
         patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
         patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
         patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
         patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
     ):
         # Setup mocks for CI failed
+        mock_branch.return_value = "feature/test-branch"
         mock_ci.return_value = ("FAILED", ci_error)
         mock_rebase.return_value = (False, "Up to date with origin/main")
         mock_tasks.return_value = True
@@ -423,12 +426,14 @@ def test_collect_branch_status_rebase_needed() -> None:
     project_dir = Path("/test/repo")
 
     with (
+        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
         patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
         patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
         patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
         patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
     ):
         # Setup mocks for rebase needed
+        mock_branch.return_value = "feature/test-branch"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (True, "5 commits behind origin/main")
         mock_tasks.return_value = True
@@ -450,12 +455,14 @@ def test_collect_branch_status_tasks_incomplete() -> None:
     project_dir = Path("/test/repo")
 
     with (
+        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
         patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
         patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
         patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
         patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
     ):
         # Setup mocks for incomplete tasks
+        mock_branch.return_value = "feature/test-branch"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (False, "Up to date with origin/main")
         mock_tasks.return_value = False
@@ -511,12 +518,14 @@ def test_collect_branch_status_all_failed() -> None:
     ci_error = "Multiple test failures"
 
     with (
+        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
         patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
         patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
         patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
         patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
     ):
         # Setup mocks for everything failing
+        mock_branch.return_value = "feature/test-branch"
         mock_ci.return_value = ("FAILED", ci_error)
         mock_rebase.return_value = (True, "3 commits behind origin/main")
         mock_tasks.return_value = False
@@ -779,7 +788,7 @@ def test_generate_recommendations_logic() -> None:
     """Test _generate_recommendations function logic."""
     from mcp_coder.utils.branch_status import _generate_recommendations
 
-    # Test all good case
+    # Test all good case (CI passed, tasks complete, no rebase needed)
     report_data = {
         "ci_status": "PASSED",
         "rebase_needed": False,
@@ -798,6 +807,7 @@ def test_generate_recommendations_logic() -> None:
     assert "Fix CI test failures" == recommendations[0]
 
     # Test multiple issues - should prioritize CI first
+    # Note: rebase recommendation only added when tasks_complete AND ci_status != FAILED
     report_data = {
         "ci_status": "FAILED",
         "rebase_needed": True,
@@ -806,7 +816,8 @@ def test_generate_recommendations_logic() -> None:
     recommendations = _generate_recommendations(report_data)
     assert "Fix CI test failures" == recommendations[0]
     assert "Complete remaining tasks" == recommendations[1]
-    assert "Rebase onto origin/main" == recommendations[2]
+    # Rebase is NOT added here because CI is FAILED and tasks are incomplete
+    assert len(recommendations) == 2
 
     # Test tasks incomplete only
     report_data = {
@@ -817,7 +828,7 @@ def test_generate_recommendations_logic() -> None:
     recommendations = _generate_recommendations(report_data)
     assert "Complete remaining tasks" == recommendations[0]
 
-    # Test rebase needed only
+    # Test rebase needed only (tasks complete, CI passed)
     report_data = {
         "ci_status": "PASSED",
         "rebase_needed": True,
@@ -835,7 +846,8 @@ def test_generate_recommendations_logic() -> None:
     recommendations = _generate_recommendations(report_data)
     assert "Wait for CI to complete" == recommendations[0]
 
-    # Test CI not configured case
+    # Test CI not configured case (with tasks complete)
+    # NOT_CONFIGURED is in [CI_PASSED, CI_NOT_CONFIGURED] so "Ready to merge" is added
     report_data = {
         "ci_status": "NOT_CONFIGURED",
         "rebase_needed": False,
@@ -843,3 +855,5 @@ def test_generate_recommendations_logic() -> None:
     }
     recommendations = _generate_recommendations(report_data)
     assert "Configure CI pipeline" == recommendations[0]
+    # Also should have "Ready to merge" since NOT_CONFIGURED counts as passable
+    assert "Ready to merge" in recommendations

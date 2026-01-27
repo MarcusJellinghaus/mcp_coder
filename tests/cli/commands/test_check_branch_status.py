@@ -150,8 +150,10 @@ class TestExecuteCheckBranchStatus:
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     @patch("mcp_coder.cli.commands.check_branch_status._run_auto_fixes")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
     def test_execute_check_branch_status_with_fixes_success(
         self,
+        mock_resolve_exec: Mock,
         mock_run_fixes: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
@@ -161,7 +163,9 @@ class TestExecuteCheckBranchStatus:
         """Test branch status check with --fix flag when fixes succeed."""
         # Setup mocks
         project_dir = Path("/test/project")
+        exec_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = exec_dir
         mock_collect.return_value = failed_ci_report
         mock_run_fixes.return_value = True  # Fixes succeeded
 
@@ -180,14 +184,16 @@ class TestExecuteCheckBranchStatus:
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_collect.assert_called_once_with(project_dir, False)
         mock_run_fixes.assert_called_once_with(
-            project_dir, failed_ci_report, "claude", "api", None, None
+            project_dir, failed_ci_report, "claude", "api", None, exec_dir
         )
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     @patch("mcp_coder.cli.commands.check_branch_status._run_auto_fixes")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
     def test_execute_check_branch_status_with_fixes_failure(
         self,
+        mock_resolve_exec: Mock,
         mock_run_fixes: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
@@ -197,7 +203,9 @@ class TestExecuteCheckBranchStatus:
         """Test branch status check with --fix flag when fixes fail."""
         # Setup mocks
         project_dir = Path("/test/project")
+        exec_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = exec_dir
         mock_collect.return_value = failed_ci_report
         mock_run_fixes.return_value = False  # Fixes failed
 
@@ -301,14 +309,10 @@ class TestExecuteCheckBranchStatus:
 class TestRunAutoFixes:
     """Tests for _run_auto_fixes function."""
 
-    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.utils.git_operations.readers.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_mcp_config_path")
     def test_run_auto_fixes_ci_only_success(
         self,
-        mock_resolve_mcp: Mock,
-        mock_resolve_exec: Mock,
         mock_check_ci: Mock,
         mock_get_branch: Mock,
         failed_ci_report: BranchStatusReport,
@@ -318,28 +322,23 @@ class TestRunAutoFixes:
 
         # Setup mocks
         project_dir = Path("/test/project")
-        mock_resolve_mcp.return_value = None
-        mock_resolve_exec.return_value = Path.cwd()
+        exec_dir = Path.cwd()
         mock_get_branch.return_value = "feature/test-branch"
         mock_check_ci.return_value = True  # Success
 
         result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", "api", None, None
+            project_dir, failed_ci_report, "claude", "api", None, exec_dir
         )
 
         assert result is True
         mock_check_ci.assert_called_once_with(
-            project_dir, "feature/test-branch", "claude", "api", None, str(Path.cwd())
+            project_dir, "feature/test-branch", "claude", "api", None, exec_dir
         )
 
-    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.utils.git_operations.readers.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_mcp_config_path")
     def test_run_auto_fixes_ci_failure(
         self,
-        mock_resolve_mcp: Mock,
-        mock_resolve_exec: Mock,
         mock_check_ci: Mock,
         mock_get_branch: Mock,
         failed_ci_report: BranchStatusReport,
@@ -349,13 +348,12 @@ class TestRunAutoFixes:
 
         # Setup mocks
         project_dir = Path("/test/project")
-        mock_resolve_mcp.return_value = None
-        mock_resolve_exec.return_value = Path.cwd()
+        exec_dir = Path.cwd()
         mock_get_branch.return_value = "feature/test-branch"
         mock_check_ci.return_value = False  # Failure
 
         result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", "api", None, None
+            project_dir, failed_ci_report, "claude", "api", None, exec_dir
         )
 
         assert result is False
@@ -375,14 +373,10 @@ class TestRunAutoFixes:
 
         assert result is True  # Success when no fixes needed
 
-    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.utils.git_operations.readers.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_mcp_config_path")
     def test_run_auto_fixes_exception_handling(
         self,
-        mock_resolve_mcp: Mock,
-        mock_resolve_exec: Mock,
         mock_check_ci: Mock,
         mock_get_branch: Mock,
         failed_ci_report: BranchStatusReport,
@@ -392,13 +386,12 @@ class TestRunAutoFixes:
 
         # Setup mocks
         project_dir = Path("/test/project")
-        mock_resolve_mcp.return_value = None
-        mock_resolve_exec.return_value = Path.cwd()
+        exec_dir = Path.cwd()
         mock_get_branch.return_value = "feature/test-branch"
         mock_check_ci.side_effect = Exception("Unexpected CI error")
 
         result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", "api", None, None
+            project_dir, failed_ci_report, "claude", "api", None, exec_dir
         )
 
         assert result is False
