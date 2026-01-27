@@ -16,23 +16,3 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 ---
 
 ## Tasks
-
-### Step 1: Add Unit Tests for Tuple-Key Redaction (TDD)
-
-- [x] Implement step 1 - Add unit tests for tuple-key redaction in `tests/utils/test_log_utils.py`
-- [x] Run quality checks (pylint, pytest, mypy) and resolve all issues
-- [x] Prepare git commit message for step 1
-
-### Step 2: Implement Tuple-Key Redaction Fix
-
-- [x] Implement step 2 - Update `_redact_for_logging()` in `src/mcp_coder/utils/log_utils.py` to handle tuple keys
-- [x] Run quality checks (pylint, pytest, mypy) and resolve all issues
-- [x] Prepare git commit message for step 2
-
----
-
-## Pull Request
-
-- [ ] Review all implementation steps are complete
-- [ ] Run final quality checks across entire codebase
-- [ ] Prepare PR summary with changes overview
