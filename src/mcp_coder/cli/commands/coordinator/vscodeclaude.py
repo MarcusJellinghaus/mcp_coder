@@ -1357,8 +1357,12 @@ def process_eligible_issues(
     repo_full_name = _get_repo_full_name(repo_config)
 
     # Create managers using the classes from coordinator
-    issue_manager: IssueManager = coordinator.IssueManager(repo_full_name)
-    branch_manager: IssueBranchManager = coordinator.IssueBranchManager(repo_full_name)
+    # Build repo_url from repo_full_name for proper instantiation
+    repo_url = f"https://github.com/{repo_full_name}"
+    issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
+    branch_manager: IssueBranchManager = coordinator.IssueBranchManager(
+        repo_url=repo_url
+    )
 
     # Get eligible issues
     eligible_issues = get_eligible_vscodeclaude_issues(issue_manager, github_username)
@@ -1546,7 +1550,7 @@ def get_issue_current_status(
     try:
         issue = issue_manager.get_issue(issue_number)
         if issue is None:
-            return None
+            return None  # type: ignore[unreachable]
 
         for label in issue["labels"]:
             if label.startswith("status-"):
@@ -1573,7 +1577,9 @@ def is_session_stale(session: VSCodeClaudeSession) -> bool:
     session_status = session["status"]
 
     # Create issue manager for the repo
-    issue_manager: IssueManager = coordinator.IssueManager(repo_full_name)
+    # Build repo_url from repo_full_name for proper instantiation
+    repo_url = f"https://github.com/{repo_full_name}"
+    issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
 
     # Get current status
     current_status = get_issue_current_status(issue_manager, issue_number)
