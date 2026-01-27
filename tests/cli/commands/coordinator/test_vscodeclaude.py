@@ -1,6 +1,7 @@
 """Test type definitions and constants for VSCode Claude session management."""
 
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -2250,3 +2251,638 @@ class TestCommandHandlers:
         assert result == 1  # Exit to let user configure
         captured = capsys.readouterr()
         assert "config" in captured.out.lower()
+
+
+# =============================================================================
+# Status Display Tests (Step 8)
+# =============================================================================
+
+
+class TestStatusDisplay:
+    """Test status table and display functions."""
+
+    def test_get_issue_current_status_returns_status(self) -> None:
+        """Returns status label when found."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            get_issue_current_status,
+        )
+
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = {
+            "labels": ["status-07:code-review", "other-label"],
+        }
+
+        result = get_issue_current_status(mock_manager, 123)
+
+        assert result == "status-07:code-review"
+        mock_manager.get_issue.assert_called_once_with(123)
+
+    def test_get_issue_current_status_returns_none_no_status(self) -> None:
+        """Returns None when no status label found."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            get_issue_current_status,
+        )
+
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = {"labels": ["other-label"]}
+
+        result = get_issue_current_status(mock_manager, 123)
+
+        assert result is None
+
+    def test_get_issue_current_status_returns_none_on_error(self) -> None:
+        """Returns None on API error."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            get_issue_current_status,
+        )
+
+        mock_manager = Mock()
+        mock_manager.get_issue.side_effect = Exception("API error")
+
+        result = get_issue_current_status(mock_manager, 123)
+
+        assert result is None
+
+    def test_get_issue_current_status_returns_none_issue_not_found(self) -> None:
+        """Returns None when issue not found."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            get_issue_current_status,
+        )
+
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = None
+
+        result = get_issue_current_status(mock_manager, 123)
+
+        assert result is None
+
+    def test_is_session_stale_same_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns False when status unchanged."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import is_session_stale
+
+        mock_issue = {"labels": ["status-07:code-review"]}
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = mock_issue
+
+        mock_coordinator = Mock()
+        mock_coordinator.IssueManager.return_value = mock_manager
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        assert is_session_stale(session) is False
+
+    def test_is_session_stale_status_changed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns True when status changed."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import is_session_stale
+
+        mock_issue = {"labels": ["status-08:ready-pr"]}  # Changed
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = mock_issue
+
+        mock_coordinator = Mock()
+        mock_coordinator.IssueManager.return_value = mock_manager
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",  # Original
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        assert is_session_stale(session) is True
+
+    def test_is_session_stale_returns_true_on_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns True (conservative) when status cannot be retrieved."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import is_session_stale
+
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = None  # Issue not found
+
+        mock_coordinator = Mock()
+        mock_coordinator.IssueManager.return_value = mock_manager
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        assert is_session_stale(session) is True
+
+    def test_check_folder_dirty_clean(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns False for clean git repo."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import check_folder_dirty
+
+        def mock_run(cmd: list[str], **kwargs: Any) -> Mock:
+            result = Mock()
+            result.stdout = ""  # Empty = clean
+            result.returncode = 0
+            return result
+
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert check_folder_dirty(tmp_path) is False
+
+    def test_check_folder_dirty_with_changes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns True when uncommitted changes exist."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import check_folder_dirty
+
+        def mock_run(cmd: list[str], **kwargs: Any) -> Mock:
+            result = Mock()
+            result.stdout = "M  file.py\n"  # Modified file
+            result.returncode = 0
+            return result
+
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert check_folder_dirty(tmp_path) is True
+
+    def test_check_folder_dirty_returns_true_on_error(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns True (conservative) when git command fails."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import check_folder_dirty
+
+        def mock_run(cmd: list[str], **kwargs: Any) -> Mock:
+            raise subprocess.CalledProcessError(1, cmd)
+
+        monkeypatch.setattr("subprocess.run", mock_run)
+
+        assert check_folder_dirty(tmp_path) is True
+
+    def test_get_next_action_active(self) -> None:
+        """Returns (active) when VSCode running."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import get_next_action
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": 1234,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        action = get_next_action(
+            session, is_stale=False, is_dirty=False, is_vscode_running=True
+        )
+        assert action == "(active)"
+
+    def test_get_next_action_restart(self) -> None:
+        """Returns Restart when closed but not stale."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import get_next_action
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        action = get_next_action(
+            session, is_stale=False, is_dirty=False, is_vscode_running=False
+        )
+        assert "Restart" in action
+
+    def test_get_next_action_delete(self) -> None:
+        """Returns Delete when stale and clean."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import get_next_action
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        action = get_next_action(
+            session, is_stale=True, is_dirty=False, is_vscode_running=False
+        )
+        assert "Delete" in action
+
+    def test_get_next_action_manual(self) -> None:
+        """Returns Manual cleanup when stale and dirty."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import get_next_action
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        action = get_next_action(
+            session, is_stale=True, is_dirty=True, is_vscode_running=False
+        )
+        assert "Manual" in action
+
+    def test_display_status_table_empty(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Handles empty sessions and issues."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import display_status_table
+
+        display_status_table(sessions=[], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "No sessions" in captured.out or "Folder" in captured.out
+
+    def test_display_status_table_with_session(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Displays session information."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import display_status_table
+
+        # Mock check_vscode_running
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock check_folder_dirty
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_folder_dirty",
+            lambda path: False,
+        )
+
+        # Mock is_session_stale
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.is_session_stale",
+            lambda s: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(tmp_path / "test_folder"),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#123" in captured.out
+        assert "owner/repo".split("/")[-1] in captured.out  # "repo"
+
+    def test_display_status_table_with_eligible_issue(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Displays eligible issues not yet in sessions."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import display_status_table
+
+        issue: IssueData = {
+            "number": 456,
+            "title": "New issue",
+            "body": "",
+            "state": "open",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/owner/repo/issues/456",
+            "locked": False,
+        }
+
+        eligible_issues: list[tuple[str, IssueData]] = [("myrepo", issue)]
+
+        display_status_table(
+            sessions=[], eligible_issues=eligible_issues, repo_filter=None
+        )
+
+        captured = capsys.readouterr()
+        assert "#456" in captured.out
+        assert "Create and start" in captured.out
+
+
+# =============================================================================
+# Cleanup Tests (Step 8)
+# =============================================================================
+
+
+class TestCleanup:
+    """Test cleanup functions."""
+
+    def test_get_stale_sessions_returns_stale(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns stale sessions with dirty status."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import get_stale_sessions
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        # Mock VSCode not running
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock session is stale
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.is_session_stale",
+            lambda s: True,
+        )
+
+        # Mock folder not dirty
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_folder_dirty",
+            lambda path: False,
+        )
+
+        stale_folder = tmp_path / "stale_folder"
+        stale_folder.mkdir()
+
+        session = {
+            "folder": str(stale_folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"}
+        sessions_file.write_text(json.dumps(store))
+
+        result = get_stale_sessions()
+
+        assert len(result) == 1
+        assert result[0][0]["folder"] == str(stale_folder)
+        assert result[0][1] is False  # Not dirty
+
+    def test_get_stale_sessions_skips_running(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Skips sessions with running VSCode."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import get_stale_sessions
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        # Mock VSCode running
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_vscode_running",
+            lambda pid: True,
+        )
+
+        session = {
+            "folder": str(tmp_path / "folder"),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": 1234,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"}
+        sessions_file.write_text(json.dumps(store))
+
+        result = get_stale_sessions()
+
+        assert len(result) == 0
+
+    def test_cleanup_stale_sessions_dry_run(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Dry run reports but doesn't delete."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            cleanup_stale_sessions,
+        )
+
+        stale_session = {
+            "folder": str(tmp_path / "stale_folder"),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        # Create the folder
+        (tmp_path / "stale_folder").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_stale_sessions",
+            lambda: [(stale_session, False)],  # Not dirty
+        )
+
+        result = cleanup_stale_sessions(dry_run=True)
+
+        # Folder should still exist
+        assert (tmp_path / "stale_folder").exists()
+        # Dry run doesn't add to deleted list
+        assert len(result.get("deleted", [])) == 0
+
+    def test_cleanup_stale_sessions_skips_dirty(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Skips dirty folders with warning."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            cleanup_stale_sessions,
+        )
+
+        dirty_session = {
+            "folder": str(tmp_path / "dirty_folder"),
+            "repo": "owner/repo",
+            "issue_number": 456,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        (tmp_path / "dirty_folder").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_stale_sessions",
+            lambda: [(dirty_session, True)],  # Dirty
+        )
+
+        result = cleanup_stale_sessions(dry_run=False)
+
+        # Folder should still exist (dirty)
+        assert (tmp_path / "dirty_folder").exists()
+        assert str(tmp_path / "dirty_folder") in result.get("skipped", [])
+
+    def test_cleanup_stale_sessions_deletes_clean(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Deletes clean stale folders."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            cleanup_stale_sessions,
+        )
+
+        clean_session = {
+            "folder": str(tmp_path / "clean_folder"),
+            "repo": "owner/repo",
+            "issue_number": 789,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        (tmp_path / "clean_folder").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_stale_sessions",
+            lambda: [(clean_session, False)],  # Clean
+        )
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.delete_session_folder",
+            lambda s: True,
+        )
+
+        result = cleanup_stale_sessions(dry_run=False)
+
+        assert str(tmp_path / "clean_folder") in result.get("deleted", [])
+
+    def test_delete_session_folder_removes_folder(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Deletes folder and removes session."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            delete_session_folder,
+        )
+
+        folder = tmp_path / "to_delete"
+        folder.mkdir()
+        (folder / "file.txt").write_text("test")
+
+        # Create workspace file
+        workspace_file = tmp_path / "to_delete.code-workspace"
+        workspace_file.write_text("{}")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.remove_session",
+            lambda f: True,
+        )
+
+        result = delete_session_folder(session)
+
+        assert result is True
+        assert not folder.exists()
+        assert not workspace_file.exists()
+
+    def test_delete_session_folder_handles_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Handles already-deleted folder gracefully."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            delete_session_folder,
+        )
+
+        # Folder doesn't exist
+        session: VSCodeClaudeSession = {
+            "folder": str(tmp_path / "nonexistent"),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.remove_session",
+            lambda f: True,
+        )
+
+        result = delete_session_folder(session)
+
+        assert result is True  # Still succeeds - removes session from store
+
+    def test_cleanup_stale_sessions_empty(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Reports when no stale sessions."""
+        from mcp_coder.cli.commands.coordinator.vscodeclaude import (
+            cleanup_stale_sessions,
+        )
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_stale_sessions",
+            lambda: [],
+        )
+
+        result = cleanup_stale_sessions(dry_run=True)
+
+        assert result == {"deleted": [], "skipped": []}
+        captured = capsys.readouterr()
+        assert "No stale sessions" in captured.out
