@@ -1,0 +1,165 @@
+=== PYTEST PERFORMANCE REPORT === 
+=== PYTEST PERFORMANCE REPORT === 
+Timestamp: 2026-01-27 07:13:18 
+Git Branch: fix/performance_issue 
+Command: .\tools\get_pytest_performance_stats.bat 
+ 
+======================================== 
+Pytest Performance Statistics (Durations Only) 
+======================================== 
+ 
+EXECUTION MODE: Single-threaded (-n0) for marker tests 
+PURPOSE: Accurate timing per test without parallel overhead 
+ 
+[1/6] UNIT TESTS (no integration markers) 
+---------------------------------------- 
+[36m[Tach][0m 1680 tests in 107 files unaffected by changes ([33m~16m 10s could be saved[0m). Skip with: [1mpytest --tach[0m
+[36m[Tach][0m [2mTo disable: pytest -p no:tach (https://docs.gauge.sh/usage/commands#using-the-pytest-plugin-directly)[0m
+============================ slowest 20 durations =============================
+1.50s call     tests/utils/test_user_config_integration.py::TestRealConfigFileWorkflow::test_malformed_config_file_handling
+1.00s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_removes_different_workflow_label
+0.90s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_no_branch_provided
+0.86s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_label_not_in_config
+0.84s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_github_api_error
+0.84s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_success_happy_path
+0.83s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_missing_source_label
+0.81s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_already_correct_state
+0.79s call     tests/utils/test_user_config_integration.py::TestRealConfigFileWorkflow::test_file_permission_scenarios
+0.78s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_branch_not_linked
+0.64s call     tests/utils/github_operations/test_ci_results_manager_status.py::TestGetLatestCIStatusSteps::test_github_api_error_handling
+0.49s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_validated_issue_number_invalid
+0.48s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_with_validated_issue_number
+0.48s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_race_condition_scenario
+0.48s call     tests/utils/github_operations/test_issue_manager_label_update.py::TestIssueManagerLabelUpdate::test_update_workflow_label_invalid_branch_name
+0.45s call     tests/utils/github_operations/test_ci_results_manager_artifacts.py::TestGetArtifacts::test_github_api_error_handling
+0.36s call     tests/utils/github_operations/test_issue_branch_manager.py::TestDeleteLinkedBranch::test_graphql_mutation_error
+0.34s call     tests/utils/github_operations/test_issue_branch_manager.py::TestCreateLinkedBranch::test_permission_error
+0.33s call     tests/utils/jenkins_operations/test_client.py::TestJenkinsClientGetJobStatus::test_get_job_status_error
+0.33s call     tests/utils/jenkins_operations/test_client.py::TestJenkinsClientStartJob::test_start_job_jenkins_error
+1397 passed, 283 deselected in 23.04s
+ 
+ 
+[2/6] CLAUDE CLI INTEGRATION tests 
+---------------------------------------- 
+[36m[Tach][0m 1680 tests in 107 files unaffected by changes ([33m~15m 51s could be saved[0m). Skip with: [1mpytest --tach[0m
+[36m[Tach][0m [2mTo disable: pytest -p no:tach (https://docs.gauge.sh/usage/commands#using-the-pytest-plugin-directly)[0m
+============================ slowest 20 durations =============================
+11.90s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity
+10.21s call     tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_basic_cli_api_integration
+5.62s call     tests/llm/providers/claude/test_claude_integration.py::TestEnvironmentVariablePropagation::test_env_vars_propagation
+1.58s call     tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_commit_auto_passes_execution_dir_to_llm_subprocess
+0.02s call     tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_create_plan_workflow_passes_execution_dir_to_llm
+0.01s call     tests/llm/providers/claude/test_llm_sessions.py::TestErrorHandling::test_missing_fields_in_serialized_data
+0.01s setup    tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_prompt_command_passes_execution_dir_to_subprocess
+0.01s setup    tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_execution_dir_separate_from_project_dir_in_subprocess
+0.01s call     tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_prompt_command_passes_execution_dir_to_subprocess
+0.01s setup    tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_llm_interface_passes_execution_dir_to_provider
+0.01s call     tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_llm_interface_passes_execution_dir_to_provider
+0.01s call     tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_execution_dir_separate_from_project_dir_in_subprocess
+0.01s setup    tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_implement_workflow_passes_execution_dir_to_task_processing
+0.01s setup    tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_prompt_command_none_execution_dir_uses_none_as_cwd
+0.01s call     tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_prompt_command_none_execution_dir_uses_none_as_cwd
+0.01s setup    tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_create_plan_workflow_passes_execution_dir_to_llm
+0.01s setup    tests/integration/test_execution_dir_integration.py::TestSubprocessCwdParameter::test_commit_auto_passes_execution_dir_to_llm_subprocess
+(3 durations < 0.005s hidden.  Use -vv to show these durations.)
+23 passed, 1657 deselected in 31.87s
+ 
+ 
+[3/6] CLAUDE API INTEGRATION tests 
+---------------------------------------- 
+[36m[Tach][0m 1680 tests in 107 files unaffected by changes ([33m~15m 57s could be saved[0m). Skip with: [1mpytest --tach[0m
+[36m[Tach][0m [2mTo disable: pytest -p no:tach (https://docs.gauge.sh/usage/commands#using-the-pytest-plugin-directly)[0m
+============================ slowest 20 durations =============================
+0.03s call     tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_success_after_retries
+0.03s call     tests/llm/providers/claude/test_claude_code_api_error_handling.py::TestRetryWithBackoff::test_all_attempts_fail
+(18 durations < 0.005s hidden.  Use -vv to show these durations.)
+23 passed, 1657 deselected in 2.48s
+ 
+ 
+[4/6] GIT INTEGRATION tests 
+---------------------------------------- 
+[36m[Tach][0m 1680 tests in 107 files unaffected by changes ([33m~15m 57s could be saved[0m). Skip with: [1mpytest --tach[0m
+[36m[Tach][0m [2mTo disable: pytest -p no:tach (https://docs.gauge.sh/usage/commands#using-the-pytest-plugin-directly)[0m
+============================ slowest 20 durations =============================
+9.92s call     tests/utils/git_operations/test_diffs.py::TestDiffOperations::test_get_branch_diff_falls_back_to_remote
+8.04s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_git_operations_integration
+7.88s call     tests/utils/git_operations/test_diffs.py::TestDiffOperations::test_get_branch_diff_with_base_branch
+7.85s call     tests/utils/git_operations/test_diffs.py::TestDiffOperations::test_get_branch_diff
+7.29s call     tests/utils/git_operations/test_file_tracking.py::TestFileTrackingOperations::test_is_file_tracked
+7.23s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_with_complete_project_structure
+5.12s call     tests/utils/git_operations/test_commits.py::TestCommitOperations::test_commit_with_multiline_message
+5.01s call     tests/utils/git_operations/test_commits.py::TestCommitOperations::test_commit_all_changes
+4.06s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_workflow_prerequisite_validation
+3.89s call     tests/utils/git_operations/test_readers.py::TestRepositoryReaders::test_is_working_directory_clean
+3.38s call     tests/workflows/test_create_pr_integration.py::TestCreatePRWorkflowIntegration::test_pr_summary_generation_with_diff
+2.64s call     tests/utils/git_operations/test_remotes.py::TestRebaseOntoBranch::test_rebase_onto_branch_conflict_aborts
+2.60s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[1000]
+2.59s call     tests/utils/git_operations/test_remotes.py::TestRebaseOntoBranch::test_rebase_onto_branch_success
+2.51s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[5000]
+2.46s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_binary_and_text_mix
+2.42s call     tests/utils/git_operations/test_commits.py::TestCommitOperations::test_commit_all_changes_no_changes_returns_success
+2.41s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_performance_with_unicode[10000]
+2.28s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_10k_special_characters
+2.26s call     tests/utils/test_git_encoding_stress.py::TestGitEncodingStress::test_git_diff_with_mixed_line_endings
+182 passed, 1 skipped, 1497 deselected in 288.24s (0:04:48)
+ 
+ 
+[5/6] FORMATTER INTEGRATION tests 
+---------------------------------------- 
+[36m[Tach][0m 1680 tests in 107 files unaffected by changes ([33m~5m 29s could be saved[0m). Skip with: [1mpytest --tach[0m
+[36m[Tach][0m [2mTo disable: pytest -p no:tach (https://docs.gauge.sh/usage/commands#using-the-pytest-plugin-directly)[0m
+============================ slowest 20 durations =============================
+3.73s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function
+1.91s call     tests/formatters/test_integration.py::TestAnalysisBasedScenarios::test_configuration_conflicts_from_analysis
+1.69s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_type_errors
+1.67s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_clean_code
+1.24s call     tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_idempotent_behavior_no_changes_on_second_run
+1.05s call     tests/formatters/test_integration.py::TestAnalysisBasedScenarios::test_step0_code_samples_from_analysis
+0.72s call     tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_error_resilience_mixed_scenarios
+0.65s call     tests/formatters/test_integration.py::TestCompleteFormattingWorkflow::test_complete_formatting_workflow_with_exit_codes
+0.64s call     tests/formatters/test_integration.py::TestQualityGatesValidation::test_individual_formatter_error_handling
+0.64s call     tests/formatters/test_integration.py::TestQualityGatesValidation::test_complete_tool_integration_workflow
+0.62s call     tests/formatters/test_integration.py::TestQualityGatesValidation::test_formatter_target_directory_handling
+0.61s call     tests/formatters/test_main_api.py::TestAPIExportsAndImports::test_re_exports_work_from_init
+0.56s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_empty_directory
+0.07s call     tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_with_invalid_directory
+0.01s call     tests/formatters/test_utils.py::TestConfigReading::test_read_tool_config_with_existing_config
+0.01s call     tests/formatters/test_utils.py::TestConfigReading::test_read_tool_config_with_partial_config
+(4 durations < 0.005s hidden.  Use -vv to show these durations.)
+39 passed, 1641 deselected in 18.23s
+ 
+ 
+[6/6] GITHUB INTEGRATION tests 
+---------------------------------------- 
+[36m[Tach][0m 1680 tests in 107 files unaffected by changes ([33m~5m 25s could be saved[0m). Skip with: [1mpytest --tach[0m
+[36m[Tach][0m [2mTo disable: pytest -p no:tach (https://docs.gauge.sh/usage/commands#using-the-pytest-plugin-directly)[0m
+============================ slowest 20 durations =============================
+38.50s call     tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+24.02s call     tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_complete_branch_linking_workflow
+16.00s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+14.31s call     tests/utils/github_operations/test_github_integration_smoke.py::TestPullRequestManagerSmoke::test_pr_crud_lifecycle
+13.75s call     tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+6.97s call     tests/utils/github_operations/test_github_utils.py::TestLabelsManagerIntegration::test_labels_manager_lifecycle
+6.73s call     tests/utils/github_operations/test_github_integration_smoke.py::TestLabelsManagerSmoke::test_basic_api_connectivity
+4.29s setup    tests/utils/github_operations/test_github_integration_smoke.py::TestPullRequestManagerSmoke::test_basic_api_connectivity
+4.27s call     tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_error_handling_without_creating_issues
+4.23s call     tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_error_handling_without_creating_issues
+4.18s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_pr_manager_lifecycle
+4.15s setup    tests/utils/github_operations/test_github_integration_smoke.py::TestPullRequestManagerSmoke::test_pr_crud_lifecycle
+4.10s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_manager_properties
+4.03s setup    tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters
+3.72s setup    tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_complete_branch_linking_workflow
+3.71s setup    tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow
+3.52s setup    tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_error_handling_without_creating_issues
+3.50s setup    tests/utils/github_operations/test_issue_branch_manager_integration.py::TestIssueBranchManagerIntegration::test_error_handling_without_creating_issues
+3.46s setup    tests/utils/github_operations/test_github_integration_smoke.py::TestCIResultsManagerSmoke::test_ci_analysis_workflow
+3.40s setup    tests/utils/github_operations/test_github_integration_smoke.py::TestLabelsManagerSmoke::test_basic_api_connectivity
+15 passed, 1665 deselected in 192.11s (0:03:12)
+ 
+ 
+======================================== 
+[FINAL] ALL TESTS (complete suite) 
+======================================== 
+EXECUTION MODE: Parallel (-n auto) for full suite 
+PURPOSE: Fast execution, showing 50 slowest tests 
+ 
