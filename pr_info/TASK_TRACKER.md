@@ -22,8 +22,8 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Add template tests to test_vscodeclaude.py
 [x] Run pylint on Step 2 code and fix all issues
 [x] Run pytest on Step 2 tests and ensure all pass
-[ ] Run mypy on Step 2 code and fix all type issues
-[ ] Prepare git commit message for Step 2
+[x] Run mypy on Step 2 code and fix all type issues
+[x] Prepare git commit message for Step 2
 
 ### Step 3: Session Management
 [ ] Add session management functions to vscodeclaude.py
