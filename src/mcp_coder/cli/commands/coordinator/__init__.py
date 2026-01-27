@@ -33,6 +33,8 @@ from .command_templates import (
 from .commands import (
     execute_coordinator_run,
     execute_coordinator_test,
+    execute_coordinator_vscodeclaude,
+    execute_coordinator_vscodeclaude_status,
     format_job_output,
 )
 
@@ -55,6 +57,8 @@ __all__ = [
     # Public CLI interface
     "execute_coordinator_test",
     "execute_coordinator_run",
+    "execute_coordinator_vscodeclaude",
+    "execute_coordinator_vscodeclaude_status",
     "format_job_output",
     # Public business logic
     "CacheData",

@@ -2073,3 +2073,180 @@ class TestOrchestration:
 
         captured = capsys.readouterr()
         assert captured.out == ""
+
+
+# =============================================================================
+# CLI Integration Tests (Step 7)
+# =============================================================================
+
+
+class TestCLI:
+    """Test CLI argument parsing and routing."""
+
+    def test_vscodeclaude_parser_exists(self) -> None:
+        """vscodeclaude subcommand is registered."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+
+        # Parse valid command
+        args = parser.parse_args(["coordinator", "vscodeclaude"])
+        assert args.coordinator_subcommand == "vscodeclaude"
+
+    def test_vscodeclaude_repo_argument(self) -> None:
+        """--repo argument is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+
+        args = parser.parse_args(["coordinator", "vscodeclaude", "--repo", "test"])
+        assert args.repo == "test"
+
+    def test_vscodeclaude_max_sessions_argument(self) -> None:
+        """--max-sessions argument is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+
+        args = parser.parse_args(["coordinator", "vscodeclaude", "--max-sessions", "5"])
+        assert args.max_sessions == 5
+
+    def test_vscodeclaude_cleanup_flag(self) -> None:
+        """--cleanup flag is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+
+        args = parser.parse_args(["coordinator", "vscodeclaude", "--cleanup"])
+        assert args.cleanup is True
+
+    def test_vscodeclaude_intervene_with_issue(self) -> None:
+        """--intervene with --issue is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+
+        args = parser.parse_args(
+            ["coordinator", "vscodeclaude", "--intervene", "--issue", "123"]
+        )
+        assert args.intervene is True
+        assert args.issue == 123
+
+    def test_vscodeclaude_status_subcommand(self) -> None:
+        """status subcommand is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+
+        args = parser.parse_args(["coordinator", "vscodeclaude", "status"])
+        assert args.vscodeclaude_subcommand == "status"
+
+    def test_vscodeclaude_status_with_repo(self) -> None:
+        """status --repo argument is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+
+        args = parser.parse_args(
+            ["coordinator", "vscodeclaude", "status", "--repo", "myrepo"]
+        )
+        assert args.vscodeclaude_subcommand == "status"
+        assert args.repo == "myrepo"
+
+
+class TestCommandHandlers:
+    """Test command handler functions."""
+
+    def test_execute_vscodeclaude_status_success(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Status command prints table."""
+        from mcp_coder.cli.commands.coordinator.commands import (
+            execute_coordinator_vscodeclaude_status,
+        )
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.commands.load_sessions",
+            lambda: {"sessions": [], "last_updated": "2024-01-01T00:00:00Z"},
+        )
+
+        import argparse
+
+        args = argparse.Namespace(repo=None)
+
+        result = execute_coordinator_vscodeclaude_status(args)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "VSCODECLAUDE SESSIONS" in captured.out
+
+    def test_execute_vscodeclaude_intervene_requires_issue(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Intervention mode requires --issue."""
+        from mcp_coder.cli.commands.coordinator.commands import (
+            execute_coordinator_vscodeclaude,
+        )
+
+        # Mock _get_coordinator to return a mock that doesn't create config
+        mock_coordinator = type(
+            "MockCoordinator", (), {"create_default_config": lambda: False}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.commands._get_coordinator",
+            lambda: mock_coordinator,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config",
+            lambda: {"workspace_base": "/tmp", "max_sessions": 3},
+        )
+
+        import argparse
+
+        args = argparse.Namespace(
+            repo=None,
+            max_sessions=None,
+            cleanup=False,
+            intervene=True,
+            issue=None,  # Missing issue
+        )
+
+        result = execute_coordinator_vscodeclaude(args)
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "--issue" in captured.err
+
+    def test_execute_vscodeclaude_creates_config(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Creates config file on first run."""
+        from pathlib import Path
+
+        from mcp_coder.cli.commands.coordinator.commands import (
+            execute_coordinator_vscodeclaude,
+        )
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"create_default_config": lambda: True}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.commands._get_coordinator",
+            lambda: mock_coordinator,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.commands.get_config_file_path",
+            lambda: Path("/fake/config.toml"),
+        )
+
+        import argparse
+
+        args = argparse.Namespace(
+            repo=None, max_sessions=None, cleanup=False, intervene=False, issue=None
+        )
+
+        result = execute_coordinator_vscodeclaude(args)
+
+        assert result == 1  # Exit to let user configure
+        captured = capsys.readouterr()
+        assert "config" in captured.out.lower()
