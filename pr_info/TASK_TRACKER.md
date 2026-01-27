@@ -58,14 +58,14 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Prepare git commit message for Step 6
 
 ### Step 7: CLI Integration
-[ ] Add vscodeclaude parser to src/mcp_coder/cli/main.py
-[ ] Add command handlers to src/mcp_coder/cli/commands/coordinator/commands.py
-[ ] Update src/mcp_coder/cli/commands/coordinator/__init__.py exports
-[ ] Add CLI tests to test_vscodeclaude.py
-[ ] Run pylint on Step 7 code and fix all issues
-[ ] Run pytest on Step 7 tests and ensure all pass
-[ ] Run mypy on Step 7 code and fix all type issues
-[ ] Prepare git commit message for Step 7
+[x] Add vscodeclaude parser to src/mcp_coder/cli/main.py
+[x] Add command handlers to src/mcp_coder/cli/commands/coordinator/commands.py
+[x] Update src/mcp_coder/cli/commands/coordinator/__init__.py exports
+[x] Add CLI tests to test_vscodeclaude.py
+[x] Run pylint on Step 7 code and fix all issues
+[x] Run pytest on Step 7 tests and ensure all pass
+[x] Run mypy on Step 7 code and fix all type issues
+[x] Prepare git commit message for Step 7
 
 ### Step 8: Status Display & Cleanup
 [ ] Add status and cleanup functions to vscodeclaude.py
