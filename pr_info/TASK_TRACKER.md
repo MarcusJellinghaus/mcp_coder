@@ -50,12 +50,12 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Prepare git commit message for Step 5
 
 ### Step 6: VSCode Launch & Session Orchestration
-[ ] Add launch and orchestration functions to vscodeclaude.py
-[ ] Add launch tests to test_vscodeclaude.py
-[ ] Run pylint on Step 6 code and fix all issues
-[ ] Run pytest on Step 6 tests and ensure all pass
-[ ] Run mypy on Step 6 code and fix all type issues
-[ ] Prepare git commit message for Step 6
+[x] Add launch and orchestration functions to vscodeclaude.py
+[x] Add launch tests to test_vscodeclaude.py
+[x] Run pylint on Step 6 code and fix all issues
+[x] Run pytest on Step 6 tests and ensure all pass
+[x] Run mypy on Step 6 code and fix all type issues
+[x] Prepare git commit message for Step 6
 
 ### Step 7: CLI Integration
 [ ] Add vscodeclaude parser to src/mcp_coder/cli/main.py
