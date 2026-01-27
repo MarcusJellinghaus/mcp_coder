@@ -87,6 +87,7 @@ VSCODECLAUDE_PRIORITY = [
 | 6 | VSCode Launch | `vscodeclaude.py` (launch, banner) |
 | 7 | CLI Integration | `main.py`, `commands.py`, `__init__.py` |
 | 8 | Status & Cleanup | `vscodeclaude.py` (status display, cleanup logic) |
+| 9 | Code Review Fixes | Bug fixes and cleanup from code review |
 
 ## Key Requirements Preserved
 

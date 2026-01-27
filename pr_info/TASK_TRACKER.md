@@ -75,9 +75,18 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Run mypy on Step 8 code and fix all type issues
 [x] Prepare git commit message for Step 8
 
+### Step 9: Code Review Fixes
+[ ] Fix IssueManager/IssueBranchManager instantiation (use repo_url keyword argument)
+[ ] Remove duplicated _cleanup_stale_sessions() from commands.py
+[ ] Replace module-wide mypy override with specific type ignore comments
+[ ] Run pylint on Step 9 code and fix all issues
+[ ] Run pytest on Step 9 tests and ensure all pass
+[ ] Run mypy on Step 9 code and fix all type issues
+[ ] Prepare git commit message for Step 9
+
 ## Pull Request
 [x] Review all implementation steps for completeness
-[x] Run full test suite and ensure all tests pass
-[x] Run full linting suite and ensure no issues
-[x] Prepare comprehensive PR summary
+[ ] Run full test suite and ensure all tests pass
+[ ] Run full linting suite and ensure no issues
+[ ] Prepare comprehensive PR summary
 [ ] Create pull request
