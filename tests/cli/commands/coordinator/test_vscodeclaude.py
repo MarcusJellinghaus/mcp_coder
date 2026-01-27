@@ -214,12 +214,12 @@ class TestTemplates:
         )
 
         assert "{emoji}" in STARTUP_SCRIPT_WINDOWS
-        assert "{issue_number}" in STARTUP_SCRIPT_WINDOWS
+        assert "{issue_number:" in STARTUP_SCRIPT_WINDOWS
         assert "{automated_section}" in STARTUP_SCRIPT_WINDOWS
-        assert "{stage_name}" in STARTUP_SCRIPT_WINDOWS
-        assert "{title}" in STARTUP_SCRIPT_WINDOWS
+        assert "{stage_name:" in STARTUP_SCRIPT_WINDOWS
+        assert "{title:" in STARTUP_SCRIPT_WINDOWS
         assert "{repo}" in STARTUP_SCRIPT_WINDOWS
-        assert "{status}" in STARTUP_SCRIPT_WINDOWS
+        assert "{status:" in STARTUP_SCRIPT_WINDOWS
         assert "{interactive_section}" in STARTUP_SCRIPT_WINDOWS
 
     def test_startup_script_linux_has_placeholders(self) -> None:
@@ -229,11 +229,11 @@ class TestTemplates:
         )
 
         assert "{emoji}" in STARTUP_SCRIPT_LINUX
-        assert "{issue_number}" in STARTUP_SCRIPT_LINUX
-        assert "{stage_name}" in STARTUP_SCRIPT_LINUX
-        assert "{title}" in STARTUP_SCRIPT_LINUX
+        assert "{issue_number:" in STARTUP_SCRIPT_LINUX
+        assert "{stage_name:" in STARTUP_SCRIPT_LINUX
+        assert "{title:" in STARTUP_SCRIPT_LINUX
         assert "{repo}" in STARTUP_SCRIPT_LINUX
-        assert "{status}" in STARTUP_SCRIPT_LINUX
+        assert "{status:" in STARTUP_SCRIPT_LINUX
         assert "{automated_section}" in STARTUP_SCRIPT_LINUX
         assert "{interactive_section}" in STARTUP_SCRIPT_LINUX
 
@@ -394,11 +394,11 @@ class TestTemplates:
         )
 
         assert "{emoji}" in BANNER_TEMPLATE
-        assert "{stage_name}" in BANNER_TEMPLATE
-        assert "{issue_number}" in BANNER_TEMPLATE
-        assert "{title}" in BANNER_TEMPLATE
+        assert "{stage_name:" in BANNER_TEMPLATE
+        assert "{issue_number:" in BANNER_TEMPLATE
+        assert "{title:" in BANNER_TEMPLATE
         assert "{repo}" in BANNER_TEMPLATE
-        assert "{status}" in BANNER_TEMPLATE
+        assert "{status:" in BANNER_TEMPLATE
 
     def test_banner_template_formatting(self) -> None:
         """Banner template formats correctly with padding."""
@@ -417,7 +417,7 @@ class TestTemplates:
 
         # Check that the banner contains the formatted content
         assert "🔄 Code Review" in formatted
-        assert "#123" in formatted
+        assert "#   123" in formatted  # issue_number:6 right-aligns to 6 chars
         assert "Fix authentication bug in login handler" in formatted
         assert "owner/repo" in formatted
         assert "status-07:code-review" in formatted
@@ -785,7 +785,7 @@ class TestConfiguration:
         }
 
         def mock_get_config_values(
-            keys: list[tuple[str, str, str | None]],
+            self: Any, keys: list[tuple[str, str, str | None]]
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
@@ -811,7 +811,7 @@ class TestConfiguration:
         }
 
         def mock_get_config_values(
-            keys: list[tuple[str, str, str | None]],
+            self: Any, keys: list[tuple[str, str, str | None]]
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
@@ -836,7 +836,7 @@ class TestConfiguration:
         }
 
         def mock_get_config_values(
-            keys: list[tuple[str, str, str | None]],
+            self: Any, keys: list[tuple[str, str, str | None]]
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
@@ -861,7 +861,7 @@ class TestConfiguration:
         }
 
         def mock_get_config_values(
-            keys: list[tuple[str, str, str | None]],
+            self: Any, keys: list[tuple[str, str, str | None]]
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
@@ -889,7 +889,7 @@ class TestConfiguration:
         }
 
         def mock_get_config_values(
-            keys: list[tuple[str, str, str | None]],
+            self: Any, keys: list[tuple[str, str, str | None]]
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
@@ -927,7 +927,7 @@ class TestIssueSelection:
             "ignore_labels": ["Overview"],
         }
 
-        def mock_load_labels_config(path: Path) -> dict[str, Any]:
+        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
             return mock_labels_config
 
         mock_coordinator = type(
@@ -1000,7 +1000,7 @@ class TestIssueSelection:
             "ignore_labels": [],
         }
 
-        def mock_load_labels_config(path: Path) -> dict[str, Any]:
+        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
             return mock_labels_config
 
         mock_coordinator = type(
@@ -1074,7 +1074,7 @@ class TestIssueSelection:
             "ignore_labels": [],
         }
 
-        def mock_load_labels_config(path: Path) -> dict[str, Any]:
+        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
             return mock_labels_config
 
         mock_coordinator = type(
@@ -1136,7 +1136,7 @@ class TestIssueSelection:
             "ignore_labels": ["Overview"],
         }
 
-        def mock_load_labels_config(path: Path) -> dict[str, Any]:
+        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
             return mock_labels_config
 
         mock_coordinator = type(
@@ -2191,7 +2191,7 @@ class TestCommandHandlers:
 
         # Mock _get_coordinator to return a mock that doesn't create config
         mock_coordinator = type(
-            "MockCoordinator", (), {"create_default_config": lambda: False}
+            "MockCoordinator", (), {"create_default_config": lambda self: False}
         )()
         monkeypatch.setattr(
             "mcp_coder.cli.commands.coordinator.commands._get_coordinator",
@@ -2229,7 +2229,7 @@ class TestCommandHandlers:
         )
 
         mock_coordinator = type(
-            "MockCoordinator", (), {"create_default_config": lambda: True}
+            "MockCoordinator", (), {"create_default_config": lambda self: True}
         )()
         monkeypatch.setattr(
             "mcp_coder.cli.commands.coordinator.commands._get_coordinator",

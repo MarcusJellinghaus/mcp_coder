@@ -104,38 +104,38 @@ claude
 """
 
 # VSCode workspace file template
-WORKSPACE_FILE_TEMPLATE = """{
+WORKSPACE_FILE_TEMPLATE = """{{
     "folders": [
-        {
+        {{
             "path": "{folder_path}"
-        }
+        }}
     ],
-    "settings": {
+    "settings": {{
         "window.title": "[#{issue_number} {stage_short}] {title_short} - {repo_name}"
-    }
-}
+    }}
+}}
 """
 
 # VSCode tasks.json template
-TASKS_JSON_TEMPLATE = """{
+TASKS_JSON_TEMPLATE = """{{
     "version": "2.0.0",
     "tasks": [
-        {
+        {{
             "label": "VSCodeClaude Startup",
             "type": "shell",
             "command": "{script_path}",
-            "presentation": {
+            "presentation": {{
                 "reveal": "always",
                 "panel": "new",
                 "focus": true
-            },
-            "runOptions": {
+            }},
+            "runOptions": {{
                 "runOn": "folderOpen"
-            },
+            }},
             "problemMatcher": []
-        }
+        }}
     ]
-}
+}}
 """
 
 # Status markdown file template
