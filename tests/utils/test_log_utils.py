@@ -380,10 +380,10 @@ class TestRedactForLoggingTupleKeys:
             ("github", "token"): "ghp_secret123",
             ("user", "name"): "john",
         }
-        result = _redact_for_logging(data, {"token"})  # type: ignore[arg-type]
+        result = _redact_for_logging(data, {"token"})
 
-        assert result[("github", "token")] == "***"  # type: ignore[index]
-        assert result[("user", "name")] == "john"  # type: ignore[index]
+        assert result[("github", "token")] == "***"
+        assert result[("user", "name")] == "john"
         # Original unchanged
         assert data[("github", "token")] == "ghp_secret123"
 
@@ -394,10 +394,10 @@ class TestRedactForLoggingTupleKeys:
             ("github", "token"): "tuple_secret",
             "username": "user",
         }
-        result = _redact_for_logging(data, {"token"})  # type: ignore[arg-type]
+        result = _redact_for_logging(data, {"token"})
 
         assert result["token"] == "***"
-        assert result[("github", "token")] == "***"  # type: ignore[index]
+        assert result[("github", "token")] == "***"
         assert result["username"] == "user"
 
     def test_redact_tuple_key_no_match(self) -> None:
@@ -406,10 +406,10 @@ class TestRedactForLoggingTupleKeys:
             ("github", "username"): "user",
             ("jenkins", "url"): "http://example.com",
         }
-        result = _redact_for_logging(data, {"token", "api_token"})  # type: ignore[arg-type]
+        result = _redact_for_logging(data, {"token", "api_token"})
 
-        assert result[("github", "username")] == "user"  # type: ignore[index]
-        assert result[("jenkins", "url")] == "http://example.com"  # type: ignore[index]
+        assert result[("github", "username")] == "user"
+        assert result[("jenkins", "url")] == "http://example.com"
 
     def test_redact_empty_tuple_key_unchanged(self) -> None:
         """Test that empty tuple keys are handled safely (no crash, no match)."""
@@ -417,11 +417,11 @@ class TestRedactForLoggingTupleKeys:
             (): "empty_tuple_value",
             ("normal", "key"): "normal_value",
         }
-        result = _redact_for_logging(data, {"token"})  # type: ignore[arg-type]
+        result = _redact_for_logging(data, {"token"})
 
         # Empty tuple should not crash and value should be unchanged
-        assert result[()] == "empty_tuple_value"  # type: ignore[index]
-        assert result[("normal", "key")] == "normal_value"  # type: ignore[index]
+        assert result[()] == "empty_tuple_value"
+        assert result[("normal", "key")] == "normal_value"
 
 
 class TestLogFunctionCallWithSensitiveFields:
