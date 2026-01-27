@@ -50,6 +50,30 @@ from .core import (
     validate_repo_config,
 )
 
+# Import from vscodeclaude module (types and key functions)
+from .vscodeclaude import (
+    DEFAULT_MAX_SESSIONS,
+    RepoVSCodeClaudeConfig,
+    VSCodeClaudeConfig,
+    VSCodeClaudeSession,
+    VSCodeClaudeSessionStore,
+    add_session,
+    check_vscode_running,
+    get_active_session_count,
+    get_eligible_vscodeclaude_issues,
+    get_github_username,
+    get_linked_branch_for_issue,
+    get_sessions_file_path,
+    load_repo_vscodeclaude_config,
+    load_sessions,
+    load_vscodeclaude_config,
+    prepare_and_launch_session,
+    process_eligible_issues,
+    remove_session,
+    restart_closed_sessions,
+    save_sessions,
+)
+
 # Import from workflow_constants module
 from .workflow_constants import WORKFLOW_MAPPING
 
@@ -91,4 +115,25 @@ __all__ = [
     "JenkinsClient",
     "IssueManager",
     "IssueBranchManager",
+    # VSCodeClaude types and functions
+    "DEFAULT_MAX_SESSIONS",
+    "VSCodeClaudeConfig",
+    "VSCodeClaudeSession",
+    "VSCodeClaudeSessionStore",
+    "RepoVSCodeClaudeConfig",
+    "get_active_session_count",
+    "get_eligible_vscodeclaude_issues",
+    "get_github_username",
+    "get_linked_branch_for_issue",
+    "get_sessions_file_path",
+    "load_repo_vscodeclaude_config",
+    "load_sessions",
+    "load_vscodeclaude_config",
+    "prepare_and_launch_session",
+    "process_eligible_issues",
+    "restart_closed_sessions",
+    "check_vscode_running",
+    "add_session",
+    "remove_session",
+    "save_sessions",
 ]
