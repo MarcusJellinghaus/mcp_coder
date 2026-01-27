@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
 
 ### Step 2: Implement Tuple-Key Redaction Fix
 
-- [ ] Implement step 2 - Update `_redact_for_logging()` in `src/mcp_coder/utils/log_utils.py` to handle tuple keys
-- [ ] Run quality checks (pylint, pytest, mypy) and resolve all issues
-- [ ] Prepare git commit message for step 2
+- [x] Implement step 2 - Update `_redact_for_logging()` in `src/mcp_coder/utils/log_utils.py` to handle tuple keys
+- [x] Run quality checks (pylint, pytest, mypy) and resolve all issues
+- [x] Prepare git commit message for step 2
 
 ---
 
