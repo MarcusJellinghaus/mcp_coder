@@ -86,7 +86,7 @@ class TestGitPushForceWithLease:
         repo, project_dir, _bare_remote = git_repo_with_remote
 
         # Push initial state to remote
-        repo.git.push("--set-upstream", "origin", "master")
+        repo.git.push("--set-upstream", "origin", "main")
 
         # Create local commit
         readme = project_dir / "README.md"
@@ -120,7 +120,7 @@ class TestGitPushForceWithLease:
         repo, project_dir, bare_remote = git_repo_with_remote
 
         # Push initial state to remote
-        repo.git.push("--set-upstream", "origin", "master")
+        repo.git.push("--set-upstream", "origin", "main")
 
         # Clone the repo to another location to simulate another developer
         other_clone_dir = tmp_path / "other_clone"
