@@ -40,3 +40,27 @@ This document logs the decisions made during the plan review discussion.
 
 ## Implementation Approach
 **Decision**: All decisions above will be incorporated into the implementation steps.
+
+---
+
+## Code Review Decisions (Step 9)
+
+### IssueManager Instantiation Fix
+**Decision**: Fix the incorrect IssueManager/IssueBranchManager instantiation (Option A - implement fix)
+**Rationale**: Critical bug - passing `repo_full_name` ("owner/repo") as positional argument is interpreted as `project_dir` (Path), not `repo_url`. Must use keyword argument with full GitHub URL.
+
+### Duplicated Cleanup Logic
+**Decision**: Remove duplicate `_cleanup_stale_sessions()` in commands.py and use the vscodeclaude.py version (Option A)
+**Rationale**: The vscodeclaude.py implementation is more complete (checks dirty status, has dry_run support). Consolidating reduces maintenance burden.
+
+### Mypy Module Override
+**Decision**: Replace module-wide mypy override with specific `# type: ignore[unreachable]` comments (Option C)
+**Rationale**: More precise suppression - only ignores the specific platform-check lines that cause false positives, rather than suppressing all unreachable warnings in the entire module.
+
+### Magic Numbers in Display
+**Decision**: Leave column width numbers as local variables (Option B)
+**Rationale**: They are local to one function and easy to understand. Extracting to constants would add complexity without significant benefit.
+
+### Logger f-strings
+**Decision**: Leave f-strings in logger calls as-is (Option B)
+**Rationale**: f-strings work fine and the performance difference is negligible for this use case. Minor style preference not worth changing.
