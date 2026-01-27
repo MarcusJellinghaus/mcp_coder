@@ -7,7 +7,7 @@ patterns and complete integration scenarios.
 
 import tempfile
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Generator
 
 import pytest
 
@@ -331,43 +331,45 @@ requires = ["setuptools"]
                 assert results["isort"].success is not False  # Could be True or None
 
 
+@pytest.fixture
+def temp_integration_file() -> Generator[Path, None, None]:
+    """Fixture for temp file in project root with pytest-managed cleanup."""
+    project_root = Path(__file__).parent.parent.parent
+    test_file = project_root / "temp_integration_test.py"
+    yield test_file
+    test_file.unlink(missing_ok=True)
+
+
 @pytest.mark.formatter_integration
 class TestQualityGatesValidation:
     """Test quality gates and tool integration validation."""
 
-    def test_complete_tool_integration_workflow(self) -> None:
+    def test_complete_tool_integration_workflow(
+        self, temp_integration_file: Path
+    ) -> None:
         """Test that entire formatter system integrates properly with the project."""
         # This test verifies the formatters work within the actual project structure
         project_root = Path(__file__).parent.parent.parent  # Go to project root
+        test_file = temp_integration_file
 
-        # Create a temporary test file in the actual project
-        test_file = project_root / "temp_integration_test.py"
-        try:
-            # Write unformatted code
-            test_file.write_text(UNFORMATTED_CODE)
+        # Write unformatted code
+        test_file.write_text(UNFORMATTED_CODE)
 
-            # Run formatters on the actual project
-            results = format_code(
-                project_root, target_dirs=["temp_integration_test.py"]
-            )
+        # Run formatters on the actual project
+        results = format_code(project_root, target_dirs=["temp_integration_test.py"])
 
-            # Should get results for both formatters
-            assert isinstance(results, dict)
-            assert "black" in results
-            assert "isort" in results
+        # Should get results for both formatters
+        assert isinstance(results, dict)
+        assert "black" in results
+        assert "isort" in results
 
-            # Results should be FormatterResult objects
-            assert isinstance(results["black"], FormatterResult)
-            assert isinstance(results["isort"], FormatterResult)
+        # Results should be FormatterResult objects
+        assert isinstance(results["black"], FormatterResult)
+        assert isinstance(results["isort"], FormatterResult)
 
-            # Should complete without crashing
-            assert results["black"] is not None
-            assert results["isort"] is not None
-
-        finally:
-            # Clean up test file
-            if test_file.exists():
-                test_file.unlink()
+        # Should complete without crashing
+        assert results["black"] is not None
+        assert results["isort"] is not None
 
     def test_individual_formatter_error_handling(self) -> None:
         """Test individual formatters handle various error conditions gracefully."""
