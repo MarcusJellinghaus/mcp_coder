@@ -263,9 +263,9 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
 
 
 def _redact_for_logging(
-    data: dict[Any, Any],
+    data: dict[str | tuple[str, ...], Any],
     sensitive_fields: set[str],
-) -> dict[Any, Any]:
+) -> dict[str | tuple[str, ...], Any]:
     """Create a copy of data with sensitive fields redacted for logging.
 
     Args:
@@ -372,8 +372,13 @@ def log_function_call(
                         serializable_params[k] = str(v)
 
             # Apply redaction for sensitive fields
+            # Cast needed because serializable_params is dict[str, Any] but
+            # _redact_for_logging accepts dict[str | tuple[str, ...], Any]
             params_for_log = (
-                _redact_for_logging(serializable_params, sensitive_set)
+                _redact_for_logging(
+                    cast(dict[str | tuple[str, ...], Any], serializable_params),
+                    sensitive_set,
+                )
                 if sensitive_set
                 else serializable_params
             )

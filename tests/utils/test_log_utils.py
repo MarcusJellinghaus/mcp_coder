@@ -5,6 +5,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -316,7 +317,10 @@ class TestRedactForLogging:
 
     def test_redact_flat_dict(self) -> None:
         """Test redaction of flat dictionary."""
-        data = {"token": "secret123", "username": "user"}
+        data: dict[str | tuple[str, ...], Any] = {
+            "token": "secret123",
+            "username": "user",
+        }
         result = _redact_for_logging(data, {"token"})
 
         assert result["token"] == "***"
@@ -326,7 +330,9 @@ class TestRedactForLogging:
 
     def test_redact_nested_dict(self) -> None:
         """Test redaction of nested dictionary."""
-        data = {"outer": {"token": "secret", "safe": "visible"}}
+        data: dict[str | tuple[str, ...], Any] = {
+            "outer": {"token": "secret", "safe": "visible"}
+        }
         result = _redact_for_logging(data, {"token"})
 
         assert result["outer"]["token"] == "***"
@@ -336,7 +342,7 @@ class TestRedactForLogging:
 
     def test_redact_deeply_nested_dict(self) -> None:
         """Test redaction of deeply nested dictionary."""
-        data = {
+        data: dict[str | tuple[str, ...], Any] = {
             "github": {"token": "ghp_xxx"},
             "jenkins": {"api_token": "jenkins_xxx", "url": "http://example.com"},
         }
@@ -351,7 +357,7 @@ class TestRedactForLogging:
 
     def test_redact_empty_sensitive_fields(self) -> None:
         """Test with empty sensitive_fields set."""
-        data = {"token": "secret", "name": "test"}
+        data: dict[str | tuple[str, ...], Any] = {"token": "secret", "name": "test"}
         result = _redact_for_logging(data, set())
 
         assert result["token"] == "secret"
@@ -359,7 +365,7 @@ class TestRedactForLogging:
 
     def test_redact_non_matching_fields(self) -> None:
         """Test when no fields match sensitive_fields."""
-        data = {"name": "test", "value": 123}
+        data: dict[str | tuple[str, ...], Any] = {"name": "test", "value": 123}
         result = _redact_for_logging(data, {"token", "password"})
 
         assert result["name"] == "test"
@@ -376,7 +382,7 @@ class TestRedactForLoggingTupleKeys:
 
     def test_redact_tuple_key_matches_last_element(self) -> None:
         """Test that tuple keys are redacted when last element matches sensitive field."""
-        data: dict[tuple[str, str] | str, str] = {
+        data: dict[str | tuple[str, ...], Any] = {
             ("github", "token"): "ghp_secret123",
             ("user", "name"): "john",
         }
@@ -389,7 +395,7 @@ class TestRedactForLoggingTupleKeys:
 
     def test_redact_mixed_string_and_tuple_keys(self) -> None:
         """Test redaction works with both string and tuple keys in same dict."""
-        data: dict[tuple[str, str] | str, str] = {
+        data: dict[str | tuple[str, ...], Any] = {
             "token": "direct_secret",
             ("github", "token"): "tuple_secret",
             "username": "user",
@@ -402,7 +408,7 @@ class TestRedactForLoggingTupleKeys:
 
     def test_redact_tuple_key_no_match(self) -> None:
         """Test that tuple keys not matching sensitive fields are unchanged."""
-        data: dict[tuple[str, str], str] = {
+        data: dict[str | tuple[str, ...], Any] = {
             ("github", "username"): "user",
             ("jenkins", "url"): "http://example.com",
         }
@@ -413,7 +419,7 @@ class TestRedactForLoggingTupleKeys:
 
     def test_redact_empty_tuple_key_unchanged(self) -> None:
         """Test that empty tuple keys are handled safely (no crash, no match)."""
-        data: dict[tuple[str, ...], str] = {
+        data: dict[str | tuple[str, ...], Any] = {
             (): "empty_tuple_value",
             ("normal", "key"): "normal_value",
         }
