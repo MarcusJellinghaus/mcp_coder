@@ -193,7 +193,7 @@ def collect_branch_status(
         )
         rebase_needed, rebase_reason = _collect_rebase_status(project_dir)
         tasks_complete = _collect_task_status(project_dir)
-        current_label = _collect_github_label(project_dir)
+        current_label = _collect_github_label(project_dir, branch_name)
 
         # Prepare data for recommendation generation
         report_data = {
@@ -318,18 +318,23 @@ def _collect_task_status(project_dir: Path) -> bool:
         return False
 
 
-def _collect_github_label(project_dir: Path) -> str:
+def _collect_github_label(project_dir: Path, branch_name: Optional[str] = None) -> str:
     """Collect current GitHub workflow status label.
 
     Uses: IssueManager.get_issue() + extract_issue_number_from_branch()
+
+    Args:
+        project_dir: Path to the git repository
+        branch_name: Optional branch name. If not provided, will be fetched from git.
     """
     logger = logging.getLogger(__name__)
 
-    # Get current branch and extract issue number
-    branch_name = get_current_branch_name(project_dir)
-    if not branch_name:
-        logger.info("No current branch name found")
-        return DEFAULT_LABEL
+    # Use provided branch name or get it from git
+    if branch_name is None:
+        branch_name = get_current_branch_name(project_dir)
+        if not branch_name:
+            logger.info("No current branch name found")
+            return DEFAULT_LABEL
     issue_number = extract_issue_number_from_branch(branch_name)
 
     if not issue_number:

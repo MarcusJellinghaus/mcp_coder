@@ -309,7 +309,7 @@ class TestExecuteCheckBranchStatus:
 class TestRunAutoFixes:
     """Tests for _run_auto_fixes function."""
 
-    @patch("mcp_coder.utils.git_operations.readers.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
     def test_run_auto_fixes_ci_only_success(
         self,
@@ -335,7 +335,7 @@ class TestRunAutoFixes:
             project_dir, "feature/test-branch", "claude", "api", None, exec_dir
         )
 
-    @patch("mcp_coder.utils.git_operations.readers.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
     def test_run_auto_fixes_ci_failure(
         self,
@@ -373,7 +373,7 @@ class TestRunAutoFixes:
 
         assert result is True  # Success when no fixes needed
 
-    @patch("mcp_coder.utils.git_operations.readers.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
     def test_run_auto_fixes_exception_handling(
         self,

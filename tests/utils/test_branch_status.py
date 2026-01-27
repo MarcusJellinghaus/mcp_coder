@@ -698,7 +698,36 @@ def test_collect_task_status() -> None:
 
 
 def test_collect_github_label() -> None:
-    """Test _collect_github_label function."""
+    """Test _collect_github_label function with branch_name provided."""
+    from mcp_coder.utils.branch_status import _collect_github_label
+
+    project_dir = Path("/test/repo")
+
+    with (
+        patch(
+            "mcp_coder.utils.branch_status.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch("mcp_coder.utils.branch_status.IssueManager") as mock_issue_manager,
+    ):
+        # Setup mocks
+        mock_extract.return_value = 123
+        mock_manager_instance = MagicMock()
+        mock_issue_manager.return_value = mock_manager_instance
+        mock_issue = {
+            "labels": [{"name": "status-03:implementing"}, {"name": "priority-high"}]
+        }
+        mock_manager_instance.get_issue.return_value = mock_issue
+
+        # Pass branch_name directly instead of relying on get_current_branch_name
+        result = _collect_github_label(project_dir, "feature/123-add-tests")
+
+        assert result == "status-03:implementing"
+        mock_extract.assert_called_once_with("feature/123-add-tests")
+        mock_manager_instance.get_issue.assert_called_once_with(123)
+
+
+def test_collect_github_label_without_branch_name() -> None:
+    """Test _collect_github_label function without branch_name (falls back to git)."""
     from mcp_coder.utils.branch_status import _collect_github_label
 
     project_dir = Path("/test/repo")
@@ -711,20 +740,20 @@ def test_collect_github_label() -> None:
         patch("mcp_coder.utils.branch_status.IssueManager") as mock_issue_manager,
     ):
         # Setup mocks
-        mock_branch.return_value = "feature/123-add-tests"
-        mock_extract.return_value = 123
+        mock_branch.return_value = "feature/456-other-tests"
+        mock_extract.return_value = 456
         mock_manager_instance = MagicMock()
         mock_issue_manager.return_value = mock_manager_instance
-        mock_issue = {
-            "labels": [{"name": "status-03:implementing"}, {"name": "priority-high"}]
-        }
+        mock_issue = {"labels": [{"name": "status-04:reviewing"}, {"name": "bug"}]}
         mock_manager_instance.get_issue.return_value = mock_issue
 
+        # Call without branch_name to test fallback behavior
         result = _collect_github_label(project_dir)
 
-        assert result == "status-03:implementing"
-        mock_extract.assert_called_once_with("feature/123-add-tests")
-        mock_manager_instance.get_issue.assert_called_once_with(123)
+        assert result == "status-04:reviewing"
+        mock_branch.assert_called_once_with(project_dir)
+        mock_extract.assert_called_once_with("feature/456-other-tests")
+        mock_manager_instance.get_issue.assert_called_once_with(456)
 
 
 def test_collect_github_label_no_status_label() -> None:
@@ -734,14 +763,12 @@ def test_collect_github_label_no_status_label() -> None:
     project_dir = Path("/test/repo")
 
     with (
-        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
         patch(
             "mcp_coder.utils.branch_status.extract_issue_number_from_branch"
         ) as mock_extract,
         patch("mcp_coder.utils.branch_status.IssueManager") as mock_issue_manager,
     ):
         # Setup mocks with no status labels
-        mock_branch.return_value = "feature/123-add-tests"
         mock_extract.return_value = 123
         mock_manager_instance = MagicMock()
         mock_issue_manager.return_value = mock_manager_instance
@@ -750,7 +777,8 @@ def test_collect_github_label_no_status_label() -> None:
         }
         mock_manager_instance.get_issue.return_value = mock_issue
 
-        result = _collect_github_label(project_dir)
+        # Pass branch_name directly
+        result = _collect_github_label(project_dir, "feature/123-add-tests")
 
         assert result == "unknown"
 
@@ -761,25 +789,22 @@ def test_collect_github_label_error_handling() -> None:
 
     project_dir = Path("/test/repo")
 
-    # Test branch name extraction error
+    # Test branch name None when not provided (falls back to git which returns None)
     with patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch:
-        mock_branch.side_effect = Exception("Git error")
+        mock_branch.return_value = None
 
         result = _collect_github_label(project_dir)
 
         assert result == "unknown"
 
     # Test issue number extraction returns None
-    with (
-        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
-        patch(
-            "mcp_coder.utils.branch_status.extract_issue_number_from_branch"
-        ) as mock_extract,
-    ):
-        mock_branch.return_value = "main"
+    with patch(
+        "mcp_coder.utils.branch_status.extract_issue_number_from_branch"
+    ) as mock_extract:
         mock_extract.return_value = None
 
-        result = _collect_github_label(project_dir)
+        # Pass branch_name directly
+        result = _collect_github_label(project_dir, "main")
 
         assert result == "unknown"
 

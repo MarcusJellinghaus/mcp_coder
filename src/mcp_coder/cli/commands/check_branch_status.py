@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from ...utils.branch_status import BranchStatusReport, collect_branch_status
+from ...utils.git_operations.readers import get_current_branch_name
 from ...workflows.implement.core import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
@@ -115,8 +116,6 @@ def _run_auto_fixes(
         try:
             # Use existing CI fix logic from implement workflow
             # Get current branch from project directory
-            from ...utils.git_operations.readers import get_current_branch_name
-
             current_branch = get_current_branch_name(project_dir)
             if not current_branch:
                 logger.error("Could not determine current branch name")
