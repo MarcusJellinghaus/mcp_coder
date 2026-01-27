@@ -332,12 +332,12 @@ requires = ["setuptools"]
 
 
 @pytest.fixture
-def temp_integration_file() -> Generator[Path, None, None]:
+def test_file() -> Generator[Path, None, None]:
     """Fixture for temp file in project root with pytest-managed cleanup."""
     project_root = Path(__file__).parent.parent.parent
-    test_file = project_root / "temp_integration_test.py"
-    yield test_file
-    test_file.unlink(missing_ok=True)
+    file_path = project_root / "temp_integration_test.py"
+    yield file_path
+    file_path.unlink(missing_ok=True)
 
 
 @pytest.mark.formatter_integration
