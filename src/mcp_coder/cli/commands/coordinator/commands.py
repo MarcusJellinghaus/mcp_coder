@@ -25,6 +25,7 @@ from .vscodeclaude import (
     DEFAULT_MAX_SESSIONS,
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
+    cleanup_stale_sessions,
     get_active_session_count,
     get_eligible_vscodeclaude_issues,
     get_github_username,
@@ -392,10 +393,10 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
 
         # Step 2: Handle cleanup if requested
         if args.cleanup:
-            _cleanup_stale_sessions(dry_run=False)
+            cleanup_stale_sessions(dry_run=False)
         else:
             # List stale sessions without deleting
-            _cleanup_stale_sessions(dry_run=True)
+            cleanup_stale_sessions(dry_run=True)
 
         # Step 3: Get repo list
         config_data = load_config()
@@ -559,43 +560,3 @@ def _handle_intervention_mode(
 
     print(f"Started intervention session: #{session['issue_number']}")
     return 0
-
-
-def _cleanup_stale_sessions(dry_run: bool = True) -> None:
-    """Clean up stale sessions (folders without running VSCode).
-
-    Args:
-        dry_run: If True, only list stale sessions without deleting
-    """
-    import shutil
-    from pathlib import Path
-
-    from .vscodeclaude import check_vscode_running, remove_session
-
-    store = load_sessions()
-    stale_sessions = []
-
-    for session in store["sessions"]:
-        if not check_vscode_running(session.get("vscode_pid")):
-            folder_path = Path(session["folder"])
-            if folder_path.exists():
-                stale_sessions.append(session)
-
-    if not stale_sessions:
-        return
-
-    print("\nStale sessions found:")
-    for session in stale_sessions:
-        print(f"  #{session['issue_number']}: {session['folder']}")
-
-    if dry_run:
-        print("\nUse --cleanup to delete these folders")
-    else:
-        for session in stale_sessions:
-            folder_path = Path(session["folder"])
-            try:
-                shutil.rmtree(folder_path)
-                remove_session(session["folder"])
-                print(f"  Deleted: {session['folder']}")
-            except Exception as e:
-                logger.warning(f"Failed to delete {session['folder']}: {e}")
