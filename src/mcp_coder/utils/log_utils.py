@@ -41,6 +41,10 @@ from pythonjsonlogger.json import JsonFormatter
 # Type variable for function return types
 T = TypeVar("T")
 
+# Type alias for dictionaries that can have string or tuple keys
+# Used by _redact_for_logging to handle get_config_values() return format
+RedactableDict = dict[str | tuple[str, ...], Any]
+
 # Redaction placeholder for sensitive values
 REDACTED_VALUE = "***"
 
@@ -263,9 +267,9 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
 
 
 def _redact_for_logging(
-    data: dict[str | tuple[str, ...], Any],
+    data: RedactableDict,
     sensitive_fields: set[str],
-) -> dict[str | tuple[str, ...], Any]:
+) -> RedactableDict:
     """Create a copy of data with sensitive fields redacted for logging.
 
     Args:
@@ -373,10 +377,10 @@ def log_function_call(
 
             # Apply redaction for sensitive fields
             # Cast needed because serializable_params is dict[str, Any] but
-            # _redact_for_logging accepts dict[str | tuple[str, ...], Any]
+            # _redact_for_logging accepts RedactableDict
             params_for_log = (
                 _redact_for_logging(
-                    cast(dict[str | tuple[str, ...], Any], serializable_params),
+                    cast(RedactableDict, serializable_params),
                     sensitive_set,
                 )
                 if sensitive_set
