@@ -344,13 +344,10 @@ def temp_integration_file() -> Generator[Path, None, None]:
 class TestQualityGatesValidation:
     """Test quality gates and tool integration validation."""
 
-    def test_complete_tool_integration_workflow(
-        self, temp_integration_file: Path
-    ) -> None:
+    def test_complete_tool_integration_workflow(self, test_file: Path) -> None:
         """Test that entire formatter system integrates properly with the project."""
         # This test verifies the formatters work within the actual project structure
-        project_root = Path(__file__).parent.parent.parent  # Go to project root
-        test_file = temp_integration_file
+        project_root = test_file.parent
 
         # Write unformatted code
         test_file.write_text(UNFORMATTED_CODE)
