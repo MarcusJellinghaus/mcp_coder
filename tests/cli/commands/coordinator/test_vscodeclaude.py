@@ -2,6 +2,8 @@
 
 import json
 from pathlib import Path
+from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
@@ -17,10 +19,16 @@ from mcp_coder.cli.commands.coordinator.vscodeclaude import (
     add_session,
     check_vscode_running,
     get_active_session_count,
+    get_eligible_vscodeclaude_issues,
+    get_human_action_labels,
+    get_linked_branch_for_issue,
     get_session_for_issue,
     get_sessions_file_path,
+    load_repo_vscodeclaude_config,
     load_sessions,
+    load_vscodeclaude_config,
     remove_session,
+    sanitize_folder_name,
     save_sessions,
     update_session_pid,
 )
@@ -740,3 +748,409 @@ class TestSessionManagement:
         assert sessions_file.exists()
         loaded = json.loads(sessions_file.read_text())
         assert "sessions" in loaded
+
+
+class TestConfiguration:
+    """Test configuration loading."""
+
+    def test_load_vscodeclaude_config_success(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Loads config with valid workspace_base."""
+        # Create a mock coordinator module
+        mock_config = {
+            ("coordinator.vscodeclaude", "workspace_base"): str(tmp_path),
+            ("coordinator.vscodeclaude", "max_sessions"): "5",
+        }
+
+        def mock_get_config_values(
+            keys: list[tuple[str, str, str | None]],
+        ) -> dict[tuple[str, str], str | None]:
+            return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        config = load_vscodeclaude_config()
+        assert config["workspace_base"] == str(tmp_path)
+        assert config["max_sessions"] == 5
+
+    def test_load_vscodeclaude_config_missing_workspace_base(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Raises ValueError when workspace_base missing."""
+        mock_config: dict[tuple[str, str], str | None] = {
+            ("coordinator.vscodeclaude", "workspace_base"): None,
+            ("coordinator.vscodeclaude", "max_sessions"): None,
+        }
+
+        def mock_get_config_values(
+            keys: list[tuple[str, str, str | None]],
+        ) -> dict[tuple[str, str], str | None]:
+            return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        with pytest.raises(ValueError, match="workspace_base"):
+            load_vscodeclaude_config()
+
+    def test_load_vscodeclaude_config_default_max_sessions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Uses default when max_sessions not set."""
+        mock_config: dict[tuple[str, str], str | None] = {
+            ("coordinator.vscodeclaude", "workspace_base"): str(tmp_path),
+            ("coordinator.vscodeclaude", "max_sessions"): None,
+        }
+
+        def mock_get_config_values(
+            keys: list[tuple[str, str, str | None]],
+        ) -> dict[tuple[str, str], str | None]:
+            return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        config = load_vscodeclaude_config()
+        assert config["max_sessions"] == DEFAULT_MAX_SESSIONS
+
+    def test_load_vscodeclaude_config_workspace_not_exists(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Raises ValueError when workspace_base path doesn't exist."""
+        mock_config: dict[tuple[str, str], str | None] = {
+            ("coordinator.vscodeclaude", "workspace_base"): "/nonexistent/path",
+            ("coordinator.vscodeclaude", "max_sessions"): None,
+        }
+
+        def mock_get_config_values(
+            keys: list[tuple[str, str, str | None]],
+        ) -> dict[tuple[str, str], str | None]:
+            return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        with pytest.raises(ValueError, match="does not exist"):
+            load_vscodeclaude_config()
+
+    def test_load_repo_vscodeclaude_config(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Loads repo-specific setup commands."""
+        mock_config: dict[tuple[str, str], str | None] = {
+            (
+                "coordinator.repos.mcp_coder",
+                "setup_commands_windows",
+            ): '["uv venv", "uv sync"]',
+            ("coordinator.repos.mcp_coder", "setup_commands_linux"): '["make setup"]',
+        }
+
+        def mock_get_config_values(
+            keys: list[tuple[str, str, str | None]],
+        ) -> dict[tuple[str, str], str | None]:
+            return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        config = load_repo_vscodeclaude_config("mcp_coder")
+        assert config["setup_commands_windows"] == ["uv venv", "uv sync"]
+        assert config["setup_commands_linux"] == ["make setup"]
+
+    def test_sanitize_folder_name(self) -> None:
+        """Removes invalid characters from folder names."""
+        assert sanitize_folder_name("mcp-coder") == "mcp-coder"
+        assert sanitize_folder_name("my repo!@#$") == "my-repo"
+        assert sanitize_folder_name("test_project") == "test_project"
+        assert sanitize_folder_name("a/b\\c:d") == "a-b-c-d"
+
+
+class TestIssueSelection:
+    """Test issue filtering for vscodeclaude."""
+
+    def test_get_human_action_labels(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Extracts human_action labels from config."""
+        mock_labels_config = {
+            "workflow_labels": [
+                {"name": "status-01:created", "category": "human_action"},
+                {"name": "status-02:awaiting-planning", "category": "bot_pickup"},
+                {"name": "status-04:plan-review", "category": "human_action"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        def mock_load_labels_config(path: Path) -> dict[str, Any]:
+            return mock_labels_config
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        labels = get_human_action_labels()
+        assert "status-01:created" in labels
+        assert "status-04:plan-review" in labels
+        assert "status-02:awaiting-planning" not in labels
+
+    def test_get_eligible_issues_filters_by_assignment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Only returns issues assigned to user."""
+        mock_issues = [
+            {
+                "number": 1,
+                "title": "Issue 1",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": ["testuser"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/1",
+                "locked": False,
+            },
+            {
+                "number": 2,
+                "title": "Issue 2",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": ["otheruser"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/2",
+                "locked": False,
+            },
+            {
+                "number": 3,
+                "title": "Issue 3",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": [],  # Unassigned
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/3",
+                "locked": False,
+            },
+        ]
+
+        mock_issue_manager = Mock()
+        mock_issue_manager.list_issues.return_value = mock_issues
+
+        # Mock labels config
+        mock_labels_config = {
+            "workflow_labels": [
+                {"name": "status-07:code-review", "category": "human_action"},
+            ],
+            "ignore_labels": [],
+        }
+
+        def mock_load_labels_config(path: Path) -> dict[str, Any]:
+            return mock_labels_config
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        eligible = get_eligible_vscodeclaude_issues(mock_issue_manager, "testuser")
+
+        assert len(eligible) == 1
+        assert eligible[0]["number"] == 1
+
+    def test_get_eligible_issues_priority_order(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Issues sorted by priority (later stages first)."""
+        mock_issues = [
+            {
+                "number": 1,
+                "title": "Issue 1",
+                "body": "",
+                "state": "open",
+                "labels": ["status-01:created"],
+                "assignees": ["user"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/1",
+                "locked": False,
+            },
+            {
+                "number": 2,
+                "title": "Issue 2",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": ["user"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/2",
+                "locked": False,
+            },
+            {
+                "number": 3,
+                "title": "Issue 3",
+                "body": "",
+                "state": "open",
+                "labels": ["status-04:plan-review"],
+                "assignees": ["user"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/3",
+                "locked": False,
+            },
+        ]
+
+        mock_issue_manager = Mock()
+        mock_issue_manager.list_issues.return_value = mock_issues
+
+        mock_labels_config = {
+            "workflow_labels": [
+                {"name": "status-01:created", "category": "human_action"},
+                {"name": "status-04:plan-review", "category": "human_action"},
+                {"name": "status-07:code-review", "category": "human_action"},
+            ],
+            "ignore_labels": [],
+        }
+
+        def mock_load_labels_config(path: Path) -> dict[str, Any]:
+            return mock_labels_config
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        eligible = get_eligible_vscodeclaude_issues(mock_issue_manager, "user")
+
+        # Should be: code-review, plan-review, created (index 0, 1, 3 in priority)
+        assert len(eligible) == 3
+        assert eligible[0]["number"] == 2  # code-review
+        assert eligible[1]["number"] == 3  # plan-review
+        assert eligible[2]["number"] == 1  # created
+
+    def test_get_eligible_issues_excludes_ignore_labels(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Skips issues with ignore_labels."""
+        mock_issues = [
+            {
+                "number": 1,
+                "title": "Issue 1",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review", "Overview"],
+                "assignees": ["user"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/1",
+                "locked": False,
+            },
+            {
+                "number": 2,
+                "title": "Issue 2",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": ["user"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/2",
+                "locked": False,
+            },
+        ]
+
+        mock_issue_manager = Mock()
+        mock_issue_manager.list_issues.return_value = mock_issues
+
+        mock_labels_config = {
+            "workflow_labels": [
+                {"name": "status-07:code-review", "category": "human_action"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        def mock_load_labels_config(path: Path) -> dict[str, Any]:
+            return mock_labels_config
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        eligible = get_eligible_vscodeclaude_issues(mock_issue_manager, "user")
+
+        assert len(eligible) == 1
+        assert eligible[0]["number"] == 2
+
+    def test_get_linked_branch_single(self) -> None:
+        """Returns branch when exactly one linked."""
+        mock_branch_manager = Mock()
+        mock_branch_manager.get_linked_branches.return_value = ["feature-123"]
+
+        branch = get_linked_branch_for_issue(mock_branch_manager, 123)
+        assert branch == "feature-123"
+
+    def test_get_linked_branch_none(self) -> None:
+        """Returns None when no branches linked."""
+        mock_branch_manager = Mock()
+        mock_branch_manager.get_linked_branches.return_value = []
+
+        branch = get_linked_branch_for_issue(mock_branch_manager, 123)
+        assert branch is None
+
+    def test_get_linked_branch_multiple_raises(self) -> None:
+        """Raises ValueError when multiple branches linked."""
+        mock_branch_manager = Mock()
+        mock_branch_manager.get_linked_branches.return_value = ["branch-a", "branch-b"]
+
+        with pytest.raises(ValueError, match="multiple branches"):
+            get_linked_branch_for_issue(mock_branch_manager, 123)
