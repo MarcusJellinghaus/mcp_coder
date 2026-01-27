@@ -332,39 +332,32 @@ def needs_rebase(
                 logger.debug("Target branch not found: %s", origin_target)
                 return False, f"error: {error_msg}"
 
-            # Use git merge-base to check if current HEAD is ancestor of origin/target
+            # Count commits that origin/target has but HEAD doesn't
             try:
-                # This will exit with code 0 if HEAD is ancestor of origin/target (up-to-date)
-                repo.git.merge_base("--is-ancestor", "HEAD", origin_target)
-                logger.debug("Current branch is up-to-date with %s", origin_target)
-                return False, "up-to-date"
-            except GitCommandError:
-                # Not an ancestor, need to check how far behind
-                try:
-                    # Count commits between HEAD and origin/target
-                    commit_range = f"HEAD..{origin_target}"
-                    commit_count_output = repo.git.rev_list("--count", commit_range)
-                    commit_count = int(commit_count_output.strip())
+                commit_range = f"HEAD..{origin_target}"
+                commit_count_output = repo.git.rev_list("--count", commit_range)
+                commit_count = int(commit_count_output.strip())
 
-                    if commit_count == 0:
-                        # Shouldn't happen since merge-base failed, but handle gracefully
-                        return False, "up-to-date"
-                    elif commit_count == 1:
-                        reason = "1 commit behind"
-                    else:
-                        reason = f"{commit_count} commits behind"
+                if commit_count == 0:
+                    # No commits in origin/target that aren't in HEAD
+                    logger.debug("Current branch is up-to-date with %s", origin_target)
+                    return False, "up-to-date"
+                elif commit_count == 1:
+                    reason = "1 commit behind"
+                else:
+                    reason = f"{commit_count} commits behind"
 
-                    logger.debug(
-                        "Current branch is %s %s",
-                        commit_count,
-                        "commit" if commit_count == 1 else "commits",
-                    )
-                    return True, reason
+                logger.debug(
+                    "Current branch is %s %s",
+                    commit_count,
+                    "commit" if commit_count == 1 else "commits",
+                )
+                return True, reason
 
-                except (GitCommandError, ValueError) as e:
-                    error_msg = f"failed to count commits: {e}"
-                    logger.warning("Failed to count commits for rebase check: %s", e)
-                    return False, f"error: {error_msg}"
+            except (GitCommandError, ValueError) as e:
+                error_msg = f"failed to count commits: {e}"
+                logger.warning("Failed to count commits for rebase check: %s", e)
+                return False, f"error: {error_msg}"
 
     except (InvalidGitRepositoryError, GitCommandError) as e:
         error_msg = f"git error: {e}"

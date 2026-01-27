@@ -65,7 +65,7 @@ class TestGitPushForceWithLease:
         repo, project_dir, _bare_remote = git_repo_with_remote
 
         # Push the main branch to remote first
-        repo.git.push("--set-upstream", "origin", "master")
+        repo.git.push("--set-upstream", "origin", "main")
 
         # Create a new commit
         readme = project_dir / "README.md"
@@ -95,7 +95,7 @@ class TestGitPushForceWithLease:
         repo.index.commit("Local commit")
 
         # Push local commit
-        repo.git.push("origin", "master")
+        repo.git.push("origin", "main")
 
         # Simulate rebase by amending the commit (creates diverged history)
         # First, reset to before our commit
@@ -136,7 +136,7 @@ class TestGitPushForceWithLease:
         other_readme.write_text("# Test Project\n\nOther developer changes")
         other_repo.index.add(["README.md"])
         other_repo.index.commit("Other developer commit")
-        other_repo.git.push("origin", "master")
+        other_repo.git.push("origin", "main")
 
         # Now in our original repo, make a local commit without fetching
         readme = project_dir / "README.md"
