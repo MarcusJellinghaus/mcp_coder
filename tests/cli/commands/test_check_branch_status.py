@@ -301,6 +301,7 @@ class TestExecuteCheckBranchStatus:
 class TestRunAutoFixes:
     """Tests for _run_auto_fixes function."""
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_mcp_config_path")
@@ -309,6 +310,7 @@ class TestRunAutoFixes:
         mock_resolve_mcp: Mock,
         mock_resolve_exec: Mock,
         mock_check_ci: Mock,
+        mock_get_branch: Mock,
         failed_ci_report: BranchStatusReport,
     ) -> None:
         """Test auto-fixes that only handles CI failures."""
@@ -318,7 +320,8 @@ class TestRunAutoFixes:
         project_dir = Path("/test/project")
         mock_resolve_mcp.return_value = None
         mock_resolve_exec.return_value = Path.cwd()
-        mock_check_ci.return_value = 0  # Success
+        mock_get_branch.return_value = "feature/test-branch"
+        mock_check_ci.return_value = True  # Success
 
         result = _run_auto_fixes(
             project_dir, failed_ci_report, "claude", "api", None, None
@@ -326,9 +329,10 @@ class TestRunAutoFixes:
 
         assert result is True
         mock_check_ci.assert_called_once_with(
-            project_dir, "claude", "api", None, str(Path.cwd())
+            project_dir, "feature/test-branch", "claude", "api", None, str(Path.cwd())
         )
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_mcp_config_path")
@@ -337,6 +341,7 @@ class TestRunAutoFixes:
         mock_resolve_mcp: Mock,
         mock_resolve_exec: Mock,
         mock_check_ci: Mock,
+        mock_get_branch: Mock,
         failed_ci_report: BranchStatusReport,
     ) -> None:
         """Test auto-fixes when CI fix fails."""
@@ -346,7 +351,8 @@ class TestRunAutoFixes:
         project_dir = Path("/test/project")
         mock_resolve_mcp.return_value = None
         mock_resolve_exec.return_value = Path.cwd()
-        mock_check_ci.return_value = 1  # Failure
+        mock_get_branch.return_value = "feature/test-branch"
+        mock_check_ci.return_value = False  # Failure
 
         result = _run_auto_fixes(
             project_dir, failed_ci_report, "claude", "api", None, None
@@ -369,6 +375,7 @@ class TestRunAutoFixes:
 
         assert result is True  # Success when no fixes needed
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_mcp_config_path")
@@ -377,6 +384,7 @@ class TestRunAutoFixes:
         mock_resolve_mcp: Mock,
         mock_resolve_exec: Mock,
         mock_check_ci: Mock,
+        mock_get_branch: Mock,
         failed_ci_report: BranchStatusReport,
     ) -> None:
         """Test auto-fixes with exception during CI fix."""
@@ -386,6 +394,7 @@ class TestRunAutoFixes:
         project_dir = Path("/test/project")
         mock_resolve_mcp.return_value = None
         mock_resolve_exec.return_value = Path.cwd()
+        mock_get_branch.return_value = "feature/test-branch"
         mock_check_ci.side_effect = Exception("Unexpected CI error")
 
         result = _run_auto_fixes(
