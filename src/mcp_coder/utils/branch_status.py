@@ -325,44 +325,36 @@ def _collect_github_label(project_dir: Path) -> str:
     """
     logger = logging.getLogger(__name__)
 
-    try:
-        # Get current branch and extract issue number
-        branch_name = get_current_branch_name(project_dir)
-        if not branch_name:
-            logger.info("No current branch name found")
-            return DEFAULT_LABEL
-        issue_number = extract_issue_number_from_branch(branch_name)
+    # Get current branch and extract issue number
+    branch_name = get_current_branch_name(project_dir)
+    if not branch_name:
+        logger.info("No current branch name found")
+        return DEFAULT_LABEL
+    issue_number = extract_issue_number_from_branch(branch_name)
 
-        if not issue_number:
-            logger.info("No issue number found in branch name")
-            return DEFAULT_LABEL
-
-        # Get issue details from GitHub
-        issue_manager = IssueManager(project_dir)
-        issue = issue_manager.get_issue(issue_number)
-
-        if not issue:
-            logger.warning(f"Issue #{issue_number} not found")
-            return DEFAULT_LABEL
-
-        # Extract status label (labels starting with "status-")
-        try:
-            labels = issue.get("labels", [])
-            for label in labels:
-                if hasattr(label, "get"):
-                    label_name = label.get("name", "")
-                    if label_name and label_name.startswith("status-"):
-                        logger.info(f"Found GitHub label: {label_name}")
-                        return label_name
-        except (AttributeError, TypeError) as e:
-            logger.warning(f"Error processing labels: {e}")
-
-        logger.info("No status label found")
+    if not issue_number:
+        logger.info("No issue number found in branch name")
         return DEFAULT_LABEL
 
+    # Get issue details from GitHub
+    try:
+        issue_manager = IssueManager(project_dir)
+        issue = issue_manager.get_issue(issue_number)
     except Exception as e:
         logger.warning(f"Failed to collect GitHub label: {e}")
         return DEFAULT_LABEL
+
+    # Extract status label (labels starting with "status-")
+    labels = issue.get("labels", [])
+    for label in labels:
+        if hasattr(label, "get"):
+            label_name: str = label.get("name", "")
+            if label_name and label_name.startswith("status-"):
+                logger.info(f"Found GitHub label: {label_name}")
+                return label_name
+
+    logger.info("No status label found")
+    return DEFAULT_LABEL
 
 
 def _generate_recommendations(report_data: Dict[str, Any]) -> List[str]:

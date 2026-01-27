@@ -1,0 +1,9 @@
+# CI Failure Analysis
+
+The CI pipeline is failing across three jobs: unit-tests, mypy, and integration-tests. The failures stem from type checking and code quality issues introduced during the branch status check feature implementation.
+
+The mypy job reports 23 type errors concentrated in two files: `src/mcp_coder/utils/branch_status.py` and `tests/utils/test_branch_status.py`. The source file has two critical issues: an unreachable statement at line 345 and a function returning `Any` instead of the declared `str` type at line 356. The test file has multiple problems including 18 test functions missing return type annotations (lines 349, 388, 417, 444, 471, and others), an attempt to modify a read-only property on the frozen `BranchStatusReport` dataclass at line 343, and unsafe operations on potentially `None` values at lines 564-565 where the code uses `in` and `.split()` on `str | None` types without proper null checks.
+
+The unit-tests and integration-tests jobs are likely failing because these mypy errors indicate actual runtime issues. The frozen dataclass mutation attempt will raise `FrozenInstanceError` at runtime, and the `None` handling issues could cause `AttributeError` exceptions. Additionally, some test functions have incorrect mock setups that return tuples when the actual `_collect_ci_status` function returns different data structures based on the CI status result parsing logic.
+
+To fix these issues, the following changes are needed: (1) In `branch_status.py`, remove or fix the unreachable code at line 345 and ensure the return type at line 356 matches the declared signature; (2) In `test_branch_status.py`, add `-> None` return type annotations to all test functions starting at line 349, fix the frozen dataclass mutation test to use `pytest.raises` correctly without attempting the assignment, and add proper null checks before using `in` operator and `.split()` method on the `details` variable around lines 564-565.
