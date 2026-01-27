@@ -34,12 +34,12 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Prepare git commit message for Step 3
 
 ### Step 4: Issue Selection & Configuration
-[ ] Add configuration and issue filtering functions to vscodeclaude.py
-[ ] Add configuration and filtering tests to test_vscodeclaude.py
-[ ] Run pylint on Step 4 code and fix all issues
-[ ] Run pytest on Step 4 tests and ensure all pass
-[ ] Run mypy on Step 4 code and fix all type issues
-[ ] Prepare git commit message for Step 4
+[x] Add configuration and issue filtering functions to vscodeclaude.py
+[x] Add configuration and filtering tests to test_vscodeclaude.py
+[x] Run pylint on Step 4 code and fix all issues
+[x] Run pytest on Step 4 tests and ensure all pass
+[x] Run mypy on Step 4 code and fix all type issues
+[x] Prepare git commit message for Step 4
 
 ### Step 5: Workspace Setup
 [ ] Add workspace setup functions to vscodeclaude.py
