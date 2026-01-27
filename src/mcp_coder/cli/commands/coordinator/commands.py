@@ -23,6 +23,7 @@ from .command_templates import TEST_COMMAND_TEMPLATES
 from .core import _get_coordinator, validate_repo_config
 from .vscodeclaude import (
     DEFAULT_MAX_SESSIONS,
+    VSCodeClaudeConfig,
     VSCodeClaudeSession,
     get_active_session_count,
     get_eligible_vscodeclaude_issues,
@@ -497,7 +498,7 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
 
 def _handle_intervention_mode(
     args: argparse.Namespace,
-    vscodeclaude_config: dict[str, object],
+    vscodeclaude_config: VSCodeClaudeConfig,
 ) -> int:
     """Handle intervention mode for vscodeclaude.
 
@@ -550,7 +551,7 @@ def _handle_intervention_mode(
     session = prepare_and_launch_session(
         issue=issue,
         repo_config=validated_config,
-        vscodeclaude_config=vscodeclaude_config,  # type: ignore[arg-type]
+        vscodeclaude_config=vscodeclaude_config,
         repo_vscodeclaude_config=repo_vscodeclaude_config,
         branch_name=branch_name,
         is_intervention=True,
