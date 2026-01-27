@@ -29,7 +29,7 @@ except ImportError:
 
 
 @pytest.fixture
-def sample_report():
+def sample_report() -> BranchStatusReport:
     """Create a sample BranchStatusReport for testing."""
     return BranchStatusReport(
         ci_status="PASSED",
@@ -43,7 +43,7 @@ def sample_report():
 
 
 @pytest.fixture
-def failed_ci_report():
+def failed_ci_report() -> BranchStatusReport:
     """Create a BranchStatusReport with failed CI for testing."""
     return BranchStatusReport(
         ci_status="FAILED",
@@ -60,7 +60,7 @@ def failed_ci_report():
 
 
 @pytest.fixture
-def rebase_needed_report():
+def rebase_needed_report() -> BranchStatusReport:
     """Create a BranchStatusReport that needs rebase for testing."""
     return BranchStatusReport(
         ci_status="PASSED",
