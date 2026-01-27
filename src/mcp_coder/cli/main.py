@@ -8,7 +8,12 @@ from .. import __version__
 from ..utils.log_utils import setup_logging
 from .commands.check_file_sizes import execute_check_file_sizes
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
-from .commands.coordinator import execute_coordinator_run, execute_coordinator_test
+from .commands.coordinator import (
+    execute_coordinator_run,
+    execute_coordinator_test,
+    execute_coordinator_vscodeclaude,
+    execute_coordinator_vscodeclaude_status,
+)
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
@@ -378,6 +383,59 @@ def create_parser() -> argparse.ArgumentParser:
         help="Force full cache refresh, bypass all caching",
     )
 
+    # coordinator vscodeclaude command
+    vscodeclaude_parser = coordinator_subparsers.add_parser(
+        "vscodeclaude",
+        help="Manage VSCode/Claude sessions for interactive workflow stages",
+    )
+    vscodeclaude_subparsers = vscodeclaude_parser.add_subparsers(
+        dest="vscodeclaude_subcommand",
+        help="VSCodeClaude commands",
+        metavar="SUBCOMMAND",
+    )
+
+    # Default (no subcommand) - main vscodeclaude behavior
+    vscodeclaude_parser.add_argument(
+        "--repo",
+        type=str,
+        metavar="NAME",
+        help="Filter to specific repository only",
+    )
+    vscodeclaude_parser.add_argument(
+        "--max-sessions",
+        type=int,
+        metavar="N",
+        help="Override max concurrent sessions (default: from config or 3)",
+    )
+    vscodeclaude_parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="Delete stale clean folders (without this flag, only lists them)",
+    )
+    vscodeclaude_parser.add_argument(
+        "--intervene",
+        action="store_true",
+        help="Force open a bot_busy issue for debugging",
+    )
+    vscodeclaude_parser.add_argument(
+        "--issue",
+        type=int,
+        metavar="NUMBER",
+        help="Issue number for intervention mode (requires --intervene)",
+    )
+
+    # vscodeclaude status subcommand
+    status_parser = vscodeclaude_subparsers.add_parser(
+        "status",
+        help="Show current VSCodeClaude sessions",
+    )
+    status_parser.add_argument(
+        "--repo",
+        type=str,
+        metavar="NAME",
+        help="Filter to specific repository only",
+    )
+
     # Define-labels command - Sync workflow status labels to GitHub
     define_labels_parser = subparsers.add_parser(
         "define-labels",
@@ -593,6 +651,15 @@ def main() -> int:
                     return execute_coordinator_test(args)
                 elif args.coordinator_subcommand == "run":
                     return execute_coordinator_run(args)
+                elif args.coordinator_subcommand == "vscodeclaude":
+                    # Check for status subcommand first
+                    if (
+                        hasattr(args, "vscodeclaude_subcommand")
+                        and args.vscodeclaude_subcommand == "status"
+                    ):
+                        return execute_coordinator_vscodeclaude_status(args)
+                    else:
+                        return execute_coordinator_vscodeclaude(args)
                 else:
                     logger.error(
                         f"Unknown coordinator subcommand: {args.coordinator_subcommand}"
