@@ -1,5 +1,6 @@
 """File size checking functionality."""
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -48,7 +49,21 @@ def load_allowlist(allowlist_path: Path) -> set[str]:
     Returns:
         Set of normalized path strings.
     """
-    raise NotImplementedError("To be implemented in Task 2.4")
+    if not allowlist_path.exists():
+        return set()
+
+    result: set[str] = set()
+    with allowlist_path.open(encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            # Skip empty lines and comments
+            if not stripped or stripped.startswith("#"):
+                continue
+            # Normalize path separators to OS-native format
+            normalized = stripped.replace("/", os.sep).replace("\\", os.sep)
+            result.add(normalized)
+
+    return result
 
 
 def get_file_metrics(files: list[Path], project_dir: Path) -> list[FileMetrics]:
