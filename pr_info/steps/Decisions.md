@@ -64,3 +64,35 @@ This document logs the decisions made during the plan review discussion.
 ### Logger f-strings
 **Decision**: Leave f-strings in logger calls as-is (Option B)
 **Rationale**: f-strings work fine and the performance difference is negligible for this use case. Minor style preference not worth changing.
+
+---
+
+## Code Review Decisions (Step 10)
+
+### Race Condition in Session Files
+**Decision**: Add documentation warning (Option B)
+**Rationale**: This is a manual command run once at a time. Adding file locking (requires new dependency) is overkill for the expected usage pattern.
+
+### Invalid repo_url Reconstruction
+**Decision**: Fail fast with ValueError (Option A)
+**Rationale**: When `_get_repo_full_name()` returns "unknown/repo", raise an error immediately so the user knows their config is wrong, rather than letting GitHub API calls fail with confusing errors.
+
+### Missing Stale Check in restart_closed_sessions
+**Decision**: Add `is_session_stale()` check (Option A)
+**Rationale**: Don't restart sessions where the issue status has changed. This avoids restarting sessions that would immediately be flagged for cleanup.
+
+### Double import json in Test File
+**Decision**: Remove redundant import (Option A)
+**Rationale**: The import at line 306 inside a test method is redundant since json is already imported at the top of the file.
+
+### Unused issue_manager Parameter
+**Decision**: Remove the parameter (Option A)
+**Rationale**: `handle_pr_created_issues` has an unused `issue_manager` parameter marked as "kept for API compatibility", but this is a new function with no existing callers.
+
+### Mixed Type Hint Styles
+**Decision**: Standardize to modern syntax (Option A)
+**Rationale**: Convert all type hints to Python 3.9+ syntax (`list`, `dict`, `set` instead of `List`, `Dict`, `Set`) since the project requires Python 3.11+.
+
+### Empty Placeholder Tests
+**Decision**: Remove the TestIntegration class (Option A)
+**Rationale**: Empty placeholder tests with just `pass` can cause confusion about actual test coverage. Remove them rather than keeping as reminders.
