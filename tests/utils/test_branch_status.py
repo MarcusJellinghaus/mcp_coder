@@ -183,8 +183,8 @@ def test_format_for_llm_truncation() -> None:
     """Test format_for_llm truncates CI details when they exceed max_lines."""
     from mcp_coder.utils.branch_status import BranchStatusReport
 
-    # Create CI details with 250 lines (exceeds default 200)
-    ci_lines = [f"Error line {i+1}" for i in range(250)]
+    # Create CI details with 400 lines (exceeds default 300)
+    ci_lines = [f"Error line {i+1}" for i in range(400)]
     long_ci_details = "\n".join(ci_lines)
 
     report = BranchStatusReport(
@@ -197,15 +197,15 @@ def test_format_for_llm_truncation() -> None:
         recommendations=["Fix errors"],
     )
 
-    formatted = report.format_for_llm(max_lines=200)
+    formatted = report.format_for_llm(max_lines=300)
 
     # Should contain truncation message
     assert "[... truncated" in formatted
-    # Should have first 30 and last 170 lines logic applied
+    # Should have first 50 and last 250 lines logic applied
     assert "Error line 1" in formatted  # First line
-    assert "Error line 30" in formatted  # 30th line
-    assert "Error line 81" in formatted  # First line of last 170
-    assert "Error line 250" in formatted  # Last line
+    assert "Error line 50" in formatted  # 50th line (last of head)
+    assert "Error line 151" in formatted  # First line of last 250
+    assert "Error line 400" in formatted  # Last line
 
 
 def test_format_for_llm_no_truncation() -> None:
@@ -262,22 +262,22 @@ def test_truncate_ci_details_with_truncation() -> None:
     """Test truncate_ci_details with long content requiring truncation."""
     from mcp_coder.utils.branch_status import truncate_ci_details
 
-    # Create content with 250 lines
-    lines = [f"Line {i+1}" for i in range(250)]
+    # Create content with 400 lines
+    lines = [f"Line {i+1}" for i in range(400)]
     long_content = "\n".join(lines)
 
-    result = truncate_ci_details(long_content, max_lines=200)
+    result = truncate_ci_details(long_content, max_lines=300)
 
     # Should contain truncation marker
-    assert "[... truncated 50 lines ...]" in result
-    # Should have first 30 lines
+    assert "[... truncated 100 lines ...]" in result
+    # Should have first 50 lines (head_lines default)
     assert "Line 1" in result
-    assert "Line 30" in result
-    # Should have last 170 lines (starting from line 81)
-    assert "Line 81" in result
-    assert "Line 250" in result
+    assert "Line 50" in result
+    # Should have last 250 lines (starting from line 151)
+    assert "Line 151" in result
+    assert "Line 400" in result
     # Should not have middle lines
-    assert "Line 50" not in result
+    assert "Line 100" not in result
 
 
 def test_truncate_ci_details_empty() -> None:
@@ -382,7 +382,7 @@ def test_collect_branch_status_all_good() -> None:
 
         # Verify function calls
         mock_branch.assert_called_once_with(project_dir)
-        mock_ci.assert_called_once_with(project_dir, "main", False, 200)
+        mock_ci.assert_called_once_with(project_dir, "main", False, 300)
         mock_rebase.assert_called_once_with(project_dir)
         mock_tasks.assert_called_once_with(project_dir)
         mock_label.assert_called_once_with(project_dir, "main")
@@ -560,16 +560,26 @@ def test_collect_ci_status_with_truncation() -> None:
     from mcp_coder.utils.branch_status import _collect_ci_status
 
     project_dir = Path("/test/repo")
-    long_logs = "\n".join([f"Log line {i}" for i in range(300)])
+    long_logs = "\n".join([f"Log line {i}" for i in range(400)])
 
     with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
-        # Return dict structure matching actual API
+        # Return dict structure matching actual API with jobs data
         mock_instance.get_latest_ci_status.return_value = {
-            "run": {"id": 123, "conclusion": "failure", "status": "completed"}
+            "run": {"id": 123, "conclusion": "failure", "status": "completed"},
+            "jobs": [
+                {
+                    "name": "test-job",
+                    "conclusion": "failure",
+                    "steps": [{"name": "Run tests", "conclusion": "failure"}],
+                }
+            ],
         }
-        mock_instance.get_run_logs.return_value = {"job1": long_logs}
+        # Log file naming matches job name pattern
+        mock_instance.get_run_logs.return_value = {
+            "test-job/7_Run tests.txt": long_logs
+        }
 
         status, details = _collect_ci_status(
             project_dir, "main", truncate=True, max_lines=100
@@ -578,8 +588,11 @@ def test_collect_ci_status_with_truncation() -> None:
         assert status == "FAILED"
         # Should be truncated by the function
         assert details is not None
+        # Should have structured output with summary
+        assert "CI Failure Summary" in details
+        assert "test-job" in details
+        # Should be truncated
         assert "[... truncated" in details
-        assert len(details.split("\n")) <= 102  # 100 + truncation marker + buffer
 
 
 def test_collect_ci_status_no_truncation() -> None:
@@ -881,3 +894,299 @@ def test_generate_recommendations_logic() -> None:
     assert "Configure CI pipeline" == recommendations[0]
     # Also should have "Ready to merge" since NOT_CONFIGURED counts as passable
     assert "Ready to merge" in recommendations
+
+
+# Tests for new CI log filtering helper functions
+
+
+def test_get_failed_jobs_info_single_failure() -> None:
+    """Test _get_failed_jobs_info with a single failed job."""
+    from mcp_coder.utils.branch_status import _get_failed_jobs_info
+
+    jobs_data = [
+        {
+            "name": "test-job",
+            "conclusion": "failure",
+            "steps": [
+                {"name": "Setup", "conclusion": "success"},
+                {"name": "Run tests", "conclusion": "failure"},
+            ],
+        },
+        {
+            "name": "lint-job",
+            "conclusion": "success",
+            "steps": [{"name": "Run lint", "conclusion": "success"}],
+        },
+    ]
+
+    result = _get_failed_jobs_info(jobs_data)
+
+    assert len(result) == 1
+    assert result[0]["name"] == "test-job"
+    assert result[0]["failed_step"] == "Run tests"
+
+
+def test_get_failed_jobs_info_multiple_failures() -> None:
+    """Test _get_failed_jobs_info with multiple failed jobs."""
+    from mcp_coder.utils.branch_status import _get_failed_jobs_info
+
+    jobs_data = [
+        {
+            "name": "test-job",
+            "conclusion": "failure",
+            "steps": [{"name": "Run tests", "conclusion": "failure"}],
+        },
+        {
+            "name": "lint-job",
+            "conclusion": "failure",
+            "steps": [{"name": "Run lint", "conclusion": "failure"}],
+        },
+        {
+            "name": "build-job",
+            "conclusion": "success",
+            "steps": [{"name": "Build", "conclusion": "success"}],
+        },
+    ]
+
+    result = _get_failed_jobs_info(jobs_data)
+
+    assert len(result) == 2
+    assert result[0]["name"] == "test-job"
+    assert result[0]["failed_step"] == "Run tests"
+    assert result[1]["name"] == "lint-job"
+    assert result[1]["failed_step"] == "Run lint"
+
+
+def test_get_failed_jobs_info_no_failures() -> None:
+    """Test _get_failed_jobs_info with no failed jobs."""
+    from mcp_coder.utils.branch_status import _get_failed_jobs_info
+
+    jobs_data = [
+        {
+            "name": "test-job",
+            "conclusion": "success",
+            "steps": [{"name": "Run tests", "conclusion": "success"}],
+        },
+    ]
+
+    result = _get_failed_jobs_info(jobs_data)
+
+    assert len(result) == 0
+
+
+def test_get_failed_jobs_info_empty_jobs() -> None:
+    """Test _get_failed_jobs_info with empty jobs list."""
+    from mcp_coder.utils.branch_status import _get_failed_jobs_info
+
+    result = _get_failed_jobs_info([])
+
+    assert len(result) == 0
+
+
+def test_get_filtered_job_logs_exact_match() -> None:
+    """Test _get_filtered_job_logs finds exact step match."""
+    from mcp_coder.utils.branch_status import _get_filtered_job_logs
+
+    job_info = {"name": "test-job", "failed_step": "Run tests"}
+    log_content = "Test failure details\nLine 2\nLine 3"
+
+    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_run_logs.return_value = {
+            "test-job/1_Setup.txt": "Setup logs",
+            "test-job/2_Run tests.txt": log_content,
+            "other-job/1_Build.txt": "Build logs",
+        }
+
+        result = _get_filtered_job_logs(mock_instance, 123, job_info, False, 300)
+
+        assert result == log_content
+        assert "Setup logs" not in result
+        assert "Build logs" not in result
+
+
+def test_get_filtered_job_logs_with_truncation() -> None:
+    """Test _get_filtered_job_logs truncates long logs."""
+    from mcp_coder.utils.branch_status import _get_filtered_job_logs
+
+    job_info = {"name": "test-job", "failed_step": "Run tests"}
+    # Create long log content
+    long_content = "\n".join([f"Log line {i}" for i in range(400)])
+
+    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_run_logs.return_value = {
+            "test-job/2_Run tests.txt": long_content,
+        }
+
+        result = _get_filtered_job_logs(mock_instance, 123, job_info, True, 100)
+
+        assert result is not None
+        assert "[... truncated" in result
+
+
+def test_get_filtered_job_logs_fallback_to_job_logs() -> None:
+    """Test _get_filtered_job_logs falls back to all job logs if step not found."""
+    from mcp_coder.utils.branch_status import _get_filtered_job_logs
+
+    job_info = {"name": "test-job", "failed_step": "Unknown step"}
+
+    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_run_logs.return_value = {
+            "test-job/1_Setup.txt": "Setup logs",
+            "test-job/2_Build.txt": "Build logs",
+            "other-job/1_Test.txt": "Other logs",
+        }
+
+        result = _get_filtered_job_logs(mock_instance, 123, job_info, False, 300)
+
+        assert result is not None
+        # Should include logs from test-job but not other-job
+        assert "Setup logs" in result
+        assert "Build logs" in result
+        assert "Other logs" not in result
+
+
+def test_get_filtered_job_logs_no_logs() -> None:
+    """Test _get_filtered_job_logs with no logs available."""
+    from mcp_coder.utils.branch_status import _get_filtered_job_logs
+
+    job_info = {"name": "test-job", "failed_step": "Run tests"}
+
+    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_run_logs.return_value = {}
+
+        result = _get_filtered_job_logs(mock_instance, 123, job_info, False, 300)
+
+        assert result is None
+
+
+def test_build_ci_error_details_single_failure() -> None:
+    """Test _build_ci_error_details with single failed job."""
+    from mcp_coder.utils.branch_status import _build_ci_error_details
+
+    status_result = {
+        "run": {"id": 123},
+        "jobs": [
+            {
+                "name": "test-job",
+                "conclusion": "failure",
+                "steps": [{"name": "Run tests", "conclusion": "failure"}],
+            }
+        ],
+    }
+
+    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_run_logs.return_value = {
+            "test-job/2_Run tests.txt": "Error details here"
+        }
+
+        result = _build_ci_error_details(mock_instance, status_result, False, 300)
+
+        assert result is not None
+        assert "CI Failure Summary" in result
+        assert "Failed jobs (1): test-job" in result
+        assert "## Job: test-job" in result
+        assert "Failed step: Run tests" in result
+        assert "Error details here" in result
+
+
+def test_build_ci_error_details_multiple_failures() -> None:
+    """Test _build_ci_error_details with multiple failed jobs shows only first."""
+    from mcp_coder.utils.branch_status import _build_ci_error_details
+
+    status_result = {
+        "run": {"id": 123},
+        "jobs": [
+            {
+                "name": "test-job",
+                "conclusion": "failure",
+                "steps": [{"name": "Run tests", "conclusion": "failure"}],
+            },
+            {
+                "name": "lint-job",
+                "conclusion": "failure",
+                "steps": [{"name": "Run lint", "conclusion": "failure"}],
+            },
+            {
+                "name": "build-job",
+                "conclusion": "failure",
+                "steps": [{"name": "Build", "conclusion": "failure"}],
+            },
+        ],
+    }
+
+    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_run_logs.return_value = {
+            "test-job/2_Run tests.txt": "First job error"
+        }
+
+        result = _build_ci_error_details(mock_instance, status_result, False, 300)
+
+        assert result is not None
+        # Summary should list all failed jobs
+        assert "Failed jobs (3): test-job, lint-job, build-job" in result
+        # Should have details for first job
+        assert "## Job: test-job" in result
+        assert "First job error" in result
+        # Should list other jobs without details
+        assert "Other failed jobs (details not shown to save space)" in result
+        assert 'lint-job: step "Run lint" failed' in result
+        assert 'build-job: step "Build" failed' in result
+
+
+def test_build_ci_error_details_no_failed_jobs() -> None:
+    """Test _build_ci_error_details with no failed jobs returns None."""
+    from mcp_coder.utils.branch_status import _build_ci_error_details
+
+    status_result = {
+        "run": {"id": 123},
+        "jobs": [
+            {
+                "name": "test-job",
+                "conclusion": "success",
+                "steps": [{"name": "Run tests", "conclusion": "success"}],
+            }
+        ],
+    }
+
+    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+
+        result = _build_ci_error_details(mock_instance, status_result, False, 300)
+
+        assert result is None
+
+
+def test_truncate_ci_details_custom_head_lines() -> None:
+    """Test truncate_ci_details with custom head_lines parameter."""
+    from mcp_coder.utils.branch_status import truncate_ci_details
+
+    # Create content with 200 lines
+    lines = [f"Line {i+1}" for i in range(200)]
+    content = "\n".join(lines)
+
+    # Use max_lines=100, head_lines=20 (so tail_lines=80)
+    result = truncate_ci_details(content, max_lines=100, head_lines=20)
+
+    # Should contain truncation marker
+    assert "[... truncated 100 lines ...]" in result
+    # Should have first 20 lines
+    assert "Line 1" in result
+    assert "Line 20" in result
+    # Should have last 80 lines (starting from line 121)
+    assert "Line 121" in result
+    assert "Line 200" in result
+    # Should not have middle lines
+    assert "Line 50" not in result
