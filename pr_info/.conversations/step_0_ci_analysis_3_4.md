@@ -1,7 +1,0 @@
-# CI Failure Analysis
-
-Two integration tests in `tests/utils/git_operations/test_remotes.py` are failing: `test_git_push_force_with_lease_after_rebase` (line 89) and `test_git_push_force_with_lease_fails_on_unexpected_remote` (line 123). Both tests fail at the same point - they attempt to push to "master" branch (`repo.git.push("--set-upstream", "origin", "master")`) but the error indicates "src refspec master does not match any", meaning the "master" branch doesn't exist.
-
-The root cause is a mismatch between the branch name used in the tests and the branch name created by the fixture. The `git_repo_with_remote` fixture in `tests/utils/git_operations/conftest.py` explicitly renames the default branch to "main" (line 63: `repo.git.branch("-M", "main")`), but these two failing tests reference "master" instead of "main". This inconsistency causes the push commands to fail because there is no "master" branch - only "main" exists.
-
-The fix requires updating the two failing test methods in `tests/utils/git_operations/test_remotes.py` to use "main" instead of "master" in their push commands. Specifically, line 95 should change from `repo.git.push("--set-upstream", "origin", "master")` to `repo.git.push("--set-upstream", "origin", "main")`, and line 129 should make the same change. Other tests in the same file (such as `test_git_push_default_no_force` and the `TestRebaseOntoBranch` tests) correctly use "main" and pass without issues, confirming this is the correct approach.
