@@ -42,7 +42,7 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 **File:** [pr_info/steps/step_3.md](steps/step_3.md)
 
 - [x] Write CLI command handler tests
-- [ ] Create src/mcp_coder/cli/commands/check_file_sizes.py
+- [x] Create src/mcp_coder/cli/commands/check_file_sizes.py
 - [ ] Update src/mcp_coder/cli/main.py with check command group
 - [ ] Write CLI integration tests
 - [ ] Manual test: mcp-coder check file-size --help
