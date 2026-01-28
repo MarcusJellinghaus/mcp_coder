@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.checks.file_sizes import count_lines
+from mcp_coder.checks.file_sizes import count_lines, load_allowlist
 
 
 class TestCountLines:
@@ -66,3 +66,88 @@ class TestCountLines:
         result = count_lines(test_file)
 
         assert result == 4
+
+
+class TestLoadAllowlist:
+    """Tests for load_allowlist() function."""
+
+    def test_load_allowlist_with_comments(self, tmp_path: Path) -> None:
+        """Test that # comments are ignored."""
+        allowlist_file = tmp_path / "allowlist.txt"
+        allowlist_file.write_text(
+            "# This is a comment\n"
+            "src/module/file1.py\n"
+            "# Another comment\n"
+            "src/module/file2.py\n",
+            encoding="utf-8",
+        )
+
+        result = load_allowlist(allowlist_file)
+
+        assert "src/module/file1.py" in result or "src\\module\\file1.py" in result
+        assert "src/module/file2.py" in result or "src\\module\\file2.py" in result
+        assert len(result) == 2
+        # Comments should not be in the result
+        for entry in result:
+            assert not entry.startswith("#")
+
+    def test_load_allowlist_blank_lines(self, tmp_path: Path) -> None:
+        """Test that blank lines are ignored."""
+        allowlist_file = tmp_path / "allowlist.txt"
+        allowlist_file.write_text(
+            "src/file1.py\n" "\n" "   \n" "src/file2.py\n" "\n",
+            encoding="utf-8",
+        )
+
+        result = load_allowlist(allowlist_file)
+
+        assert len(result) == 2
+        # Empty strings should not be in the result
+        assert "" not in result
+        assert "   " not in result
+
+    def test_load_allowlist_path_normalization(self, tmp_path: Path) -> None:
+        """Test path separator normalization to OS-native format."""
+        import os
+
+        allowlist_file = tmp_path / "allowlist.txt"
+        # Write paths with forward slashes (cross-platform format)
+        allowlist_file.write_text(
+            "src/module/file1.py\n" "tests/unit/test_file.py\n",
+            encoding="utf-8",
+        )
+
+        result = load_allowlist(allowlist_file)
+
+        # Paths should be normalized to OS-native format
+        if os.sep == "\\":
+            # Windows
+            assert "src\\module\\file1.py" in result
+            assert "tests\\unit\\test_file.py" in result
+        else:
+            # Unix
+            assert "src/module/file1.py" in result
+            assert "tests/unit/test_file.py" in result
+
+    def test_load_allowlist_missing_file(self, tmp_path: Path) -> None:
+        """Test missing file returns empty set."""
+        allowlist_file = tmp_path / "nonexistent.txt"
+
+        result = load_allowlist(allowlist_file)
+
+        assert result == set()
+
+    def test_load_allowlist_strips_whitespace(self, tmp_path: Path) -> None:
+        """Test that leading and trailing whitespace is stripped."""
+        allowlist_file = tmp_path / "allowlist.txt"
+        allowlist_file.write_text(
+            "  src/file1.py  \n" "\tsrc/file2.py\t\n",
+            encoding="utf-8",
+        )
+
+        result = load_allowlist(allowlist_file)
+
+        # Check that paths are present without leading/trailing whitespace
+        assert len(result) == 2
+        for entry in result:
+            assert entry == entry.strip()
