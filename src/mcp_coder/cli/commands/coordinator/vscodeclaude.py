@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from importlib import resources
 from pathlib import Path
 from types import ModuleType
-from typing import Any, List, Optional, TypedDict, cast
+from typing import Any, TypedDict, cast
 
 from ....utils.github_operations.issue_branch_manager import IssueBranchManager
 from ....utils.github_operations.issue_manager import IssueData, IssueManager
@@ -33,7 +33,7 @@ class VSCodeClaudeSession(TypedDict):
     repo: str  # "owner/repo" format
     issue_number: int
     status: str  # e.g., "status-07:code-review"
-    vscode_pid: Optional[int]
+    vscode_pid: int | None
     started_at: str  # ISO 8601
     is_intervention: bool
 
@@ -41,7 +41,7 @@ class VSCodeClaudeSession(TypedDict):
 class VSCodeClaudeSessionStore(TypedDict):
     """Session storage file structure."""
 
-    sessions: List[VSCodeClaudeSession]
+    sessions: list[VSCodeClaudeSession]
     last_updated: str  # ISO 8601
 
 
@@ -55,12 +55,12 @@ class VSCodeClaudeConfig(TypedDict):
 class RepoVSCodeClaudeConfig(TypedDict, total=False):
     """Per-repo vscodeclaude config (extends existing repo config)."""
 
-    setup_commands_windows: List[str]
-    setup_commands_linux: List[str]
+    setup_commands_windows: list[str]
+    setup_commands_linux: list[str]
 
 
 # Priority order for human_action statuses (later stages first)
-VSCODECLAUDE_PRIORITY: List[str] = [
+VSCODECLAUDE_PRIORITY: list[str] = [
     "status-10:pr-created",
     "status-07:code-review",
     "status-04:plan-review",
@@ -68,7 +68,7 @@ VSCODECLAUDE_PRIORITY: List[str] = [
 ]
 
 # Mapping of status to slash commands
-HUMAN_ACTION_COMMANDS: dict[str, tuple[Optional[str], Optional[str]]] = {
+HUMAN_ACTION_COMMANDS: dict[str, tuple[str | None, str | None]] = {
     # status: (initial_command, followup_command)
     "status-01:created": ("/issue_analyse", "/discuss"),
     "status-04:plan-review": ("/plan_review", "/discuss"),
@@ -141,7 +141,7 @@ def save_sessions(store: VSCodeClaudeSessionStore) -> None:
     sessions_file.write_text(json.dumps(store, indent=2), encoding="utf-8")
 
 
-def check_vscode_running(pid: Optional[int]) -> bool:
+def check_vscode_running(pid: int | None) -> bool:
     """Check if VSCode process is still running.
 
     Args:
@@ -174,7 +174,7 @@ def check_vscode_running(pid: Optional[int]) -> bool:
 def get_session_for_issue(
     repo_full_name: str,
     issue_number: int,
-) -> Optional[VSCodeClaudeSession]:
+) -> VSCodeClaudeSession | None:
     """Find existing session for an issue.
 
     Args:
@@ -474,7 +474,7 @@ def _is_issue_eligible(
 def get_eligible_vscodeclaude_issues(
     issue_manager: IssueManager,
     github_username: str,
-) -> List[IssueData]:
+) -> list[IssueData]:
     """Get issues eligible for vscodeclaude sessions.
 
     Filters for:
@@ -530,7 +530,7 @@ def get_eligible_vscodeclaude_issues(
 def get_linked_branch_for_issue(
     branch_manager: IssueBranchManager,
     issue_number: int,
-) -> Optional[str]:
+) -> str | None:
     """Get linked branch for issue, fail if multiple.
 
     Args:
@@ -599,7 +599,7 @@ def create_working_folder(folder_path: Path) -> bool:
 def setup_git_repo(
     folder_path: Path,
     repo_url: str,
-    branch_name: Optional[str],
+    branch_name: str | None,
 ) -> None:
     """Clone repo or checkout branch and pull.
 
@@ -674,7 +674,7 @@ def validate_mcp_json(folder_path: Path) -> None:
         )
 
 
-def validate_setup_commands(commands: List[str]) -> None:
+def validate_setup_commands(commands: list[str]) -> None:
     """Validate that setup commands exist in PATH.
 
     Args:
@@ -699,7 +699,7 @@ def validate_setup_commands(commands: List[str]) -> None:
 
 def run_setup_commands(
     folder_path: Path,
-    commands: List[str],
+    commands: list[str],
 ) -> None:
     """Run platform-specific setup commands.
 
@@ -1110,6 +1110,9 @@ def _get_repo_full_name(repo_config: dict[str, str]) -> str:
 
     Returns:
         Full repo name (e.g., "owner/repo")
+
+    Raises:
+        ValueError: If repo URL cannot be parsed
     """
     repo_url = repo_config.get("repo_url", "")
     # Extract from URLs like https://github.com/owner/repo.git
@@ -1117,7 +1120,7 @@ def _get_repo_full_name(repo_config: dict[str, str]) -> str:
         parts = repo_url.rstrip("/").rstrip(".git").split("/")
         if len(parts) >= 2:
             return f"{parts[-2]}/{parts[-1]}"
-    return "unknown/repo"
+    raise ValueError(f"Cannot parse repo URL: {repo_url}")
 
 
 def _get_issue_status(issue: IssueData) -> str:
@@ -1172,7 +1175,7 @@ def prepare_and_launch_session(
     repo_config: dict[str, str],
     vscodeclaude_config: VSCodeClaudeConfig,
     repo_vscodeclaude_config: RepoVSCodeClaudeConfig,
-    branch_name: Optional[str],
+    branch_name: str | None,
     is_intervention: bool = False,
 ) -> VSCodeClaudeSession:
     """Full session preparation and launch.
@@ -1314,8 +1317,8 @@ def process_eligible_issues(
     repo_config: dict[str, str],
     vscodeclaude_config: VSCodeClaudeConfig,
     max_sessions: int,
-    repo_filter: Optional[str] = None,
-) -> List[VSCodeClaudeSession]:
+    repo_filter: str | None = None,
+) -> list[VSCodeClaudeSession]:
     """Process eligible issues for a repository.
 
     Args:
@@ -1368,8 +1371,8 @@ def process_eligible_issues(
     eligible_issues = get_eligible_vscodeclaude_issues(issue_manager, github_username)
 
     # Separate pr-created issues (handle separately)
-    pr_created_issues: List[IssueData] = []
-    actionable_issues: List[IssueData] = []
+    pr_created_issues: list[IssueData] = []
+    actionable_issues: list[IssueData] = []
 
     for issue in eligible_issues:
         status = _get_issue_status(issue)
@@ -1379,7 +1382,7 @@ def process_eligible_issues(
             actionable_issues.append(issue)
 
     # Filter out issues that already have sessions
-    issues_to_start: List[IssueData] = []
+    issues_to_start: list[IssueData] = []
     for issue in actionable_issues:
         existing = get_session_for_issue(repo_full_name, issue["number"])
         if existing is None:
@@ -1389,7 +1392,7 @@ def process_eligible_issues(
     repo_vscodeclaude_config = load_repo_vscodeclaude_config(repo_name)
 
     # Start new sessions up to max
-    started_sessions: List[VSCodeClaudeSession] = []
+    started_sessions: list[VSCodeClaudeSession] = []
     available_slots = max_sessions - current_count
 
     for issue in issues_to_start[:available_slots]:
@@ -1418,12 +1421,12 @@ def process_eligible_issues(
 
     # Handle pr-created issues (just display info)
     if pr_created_issues:
-        handle_pr_created_issues(pr_created_issues, issue_manager)
+        handle_pr_created_issues(pr_created_issues)
 
     return started_sessions
 
 
-def restart_closed_sessions() -> List[VSCodeClaudeSession]:
+def restart_closed_sessions() -> list[VSCodeClaudeSession]:
     """Restart sessions where VSCode was closed.
 
     Finds sessions where:
@@ -1435,7 +1438,7 @@ def restart_closed_sessions() -> List[VSCodeClaudeSession]:
         List of restarted sessions
     """
     store = load_sessions()
-    restarted: List[VSCodeClaudeSession] = []
+    restarted: list[VSCodeClaudeSession] = []
 
     for session in store["sessions"]:
         # Check if VSCode is still running
@@ -1449,6 +1452,14 @@ def restart_closed_sessions() -> List[VSCodeClaudeSession]:
             remove_session(session["folder"])
             logger.info(
                 "Removed orphaned session for issue #%d (folder missing)",
+                session["issue_number"],
+            )
+            continue
+
+        # Check if session is stale (issue status changed)
+        if is_session_stale(session):
+            logger.info(
+                "Skipping stale session for issue #%d (status changed)",
                 session["issue_number"],
             )
             continue
@@ -1498,15 +1509,11 @@ def restart_closed_sessions() -> List[VSCodeClaudeSession]:
     return restarted
 
 
-def handle_pr_created_issues(
-    issues: List[IssueData],
-    issue_manager: IssueManager,  # noqa: ARG001 - kept for API compatibility
-) -> None:
+def handle_pr_created_issues(issues: list[IssueData]) -> None:
     """Display PR URLs for status-10:pr-created issues.
 
     Args:
         issues: Issues with status-10:pr-created
-        issue_manager: IssueManager (kept for API compatibility)
 
     Prints issue URLs to stdout (no session created).
     The issue URL typically links to the PR for pr-created issues.
@@ -1537,7 +1544,7 @@ def handle_pr_created_issues(
 def get_issue_current_status(
     issue_manager: IssueManager,
     issue_number: int,
-) -> Optional[str]:
+) -> str | None:
     """Get current status label for an issue.
 
     Args:
@@ -1649,9 +1656,9 @@ def get_next_action(
 
 
 def display_status_table(
-    sessions: List[VSCodeClaudeSession],
-    eligible_issues: List[tuple[str, IssueData]],
-    repo_filter: Optional[str] = None,
+    sessions: list[VSCodeClaudeSession],
+    eligible_issues: list[tuple[str, IssueData]],
+    repo_filter: str | None = None,
 ) -> None:
     """Print status table to stdout.
 
@@ -1782,14 +1789,14 @@ def display_status_table(
 # =============================================================================
 
 
-def get_stale_sessions() -> List[tuple[VSCodeClaudeSession, bool]]:
+def get_stale_sessions() -> list[tuple[VSCodeClaudeSession, bool]]:
     """Get stale sessions with dirty status.
 
     Returns:
         List of (session, is_dirty) tuples for stale sessions
     """
     store = load_sessions()
-    stale_sessions: List[tuple[VSCodeClaudeSession, bool]] = []
+    stale_sessions: list[tuple[VSCodeClaudeSession, bool]] = []
 
     for session in store["sessions"]:
         # Skip sessions with running VSCode
@@ -1842,7 +1849,7 @@ def delete_session_folder(session: VSCodeClaudeSession) -> bool:
         return False
 
 
-def cleanup_stale_sessions(dry_run: bool = True) -> dict[str, List[str]]:
+def cleanup_stale_sessions(dry_run: bool = True) -> dict[str, list[str]]:
     """Clean up stale session folders.
 
     Args:
@@ -1855,7 +1862,7 @@ def cleanup_stale_sessions(dry_run: bool = True) -> dict[str, List[str]]:
     - Stale + clean: delete folder and session
     - Stale + dirty: skip with warning
     """
-    result: dict[str, List[str]] = {"deleted": [], "skipped": []}
+    result: dict[str, list[str]] = {"deleted": [], "skipped": []}
 
     stale_sessions = get_stale_sessions()
 
