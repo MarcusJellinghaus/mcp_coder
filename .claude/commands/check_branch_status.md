@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(mcp-coder check-branch-status:*)
+allowed-tools: Bash(mcp-coder check branch-status:*)
 workflow-stage: quality-check
 suggested-next: commit_push, rebase
 ---
@@ -13,7 +13,7 @@ Check comprehensive branch readiness including CI status, rebase requirements, t
 Call the underlying CLI command with LLM-optimized output:
 
 ```bash
-mcp-coder check-branch-status --fix --llm-truncate
+mcp-coder check branch-status --fix --llm-truncate
 ```
 
 ## What This Command Does

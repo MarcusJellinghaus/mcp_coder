@@ -547,22 +547,24 @@ class TestCoordinatorRunCommand:
 
 
 class TestCheckBranchStatusCommand:
-    """Tests for check-branch-status CLI integration."""
+    """Tests for check branch-status CLI integration."""
 
     def test_check_branch_status_parser_creation(self) -> None:
-        """Test that check-branch-status parser is created correctly."""
+        """Test that check branch-status parser is created correctly."""
         parser = create_parser()
 
         # Test basic parsing with minimal args
-        args = parser.parse_args(["check-branch-status"])
-        assert args.command == "check-branch-status"
+        args = parser.parse_args(["check", "branch-status"])
+        assert args.command == "check"
+        assert args.check_subcommand == "branch-status"
 
     def test_check_branch_status_default_args(self) -> None:
-        """Test check-branch-status command with default arguments."""
+        """Test check branch-status command with default arguments."""
         parser = create_parser()
-        args = parser.parse_args(["check-branch-status"])
+        args = parser.parse_args(["check", "branch-status"])
 
-        assert args.command == "check-branch-status"
+        assert args.command == "check"
+        assert args.check_subcommand == "branch-status"
         assert args.project_dir is None
         assert args.fix is False
         assert args.llm_truncate is False
@@ -571,75 +573,81 @@ class TestCheckBranchStatusCommand:
         assert args.execution_dir is None
 
     def test_check_branch_status_with_fix_flag(self) -> None:
-        """Test check-branch-status command with --fix flag."""
+        """Test check branch-status command with --fix flag."""
         parser = create_parser()
-        args = parser.parse_args(["check-branch-status", "--fix"])
+        args = parser.parse_args(["check", "branch-status", "--fix"])
 
-        assert args.command == "check-branch-status"
+        assert args.command == "check"
+        assert args.check_subcommand == "branch-status"
         assert args.fix is True
         assert args.llm_truncate is False
 
     def test_check_branch_status_with_llm_truncate(self) -> None:
-        """Test check-branch-status command with --llm-truncate flag."""
+        """Test check branch-status command with --llm-truncate flag."""
         parser = create_parser()
-        args = parser.parse_args(["check-branch-status", "--llm-truncate"])
+        args = parser.parse_args(["check", "branch-status", "--llm-truncate"])
 
-        assert args.command == "check-branch-status"
+        assert args.command == "check"
+        assert args.check_subcommand == "branch-status"
         assert args.llm_truncate is True
         assert args.fix is False
 
     def test_check_branch_status_with_project_dir(self) -> None:
-        """Test check-branch-status command with custom project directory."""
+        """Test check branch-status command with custom project directory."""
         parser = create_parser()
         args = parser.parse_args(
-            ["check-branch-status", "--project-dir", "/path/to/project"]
+            ["check", "branch-status", "--project-dir", "/path/to/project"]
         )
 
-        assert args.command == "check-branch-status"
+        assert args.command == "check"
+        assert args.check_subcommand == "branch-status"
         assert args.project_dir == "/path/to/project"
 
     def test_check_branch_status_with_llm_method(self) -> None:
-        """Test check-branch-status command with different LLM methods."""
+        """Test check branch-status command with different LLM methods."""
         parser = create_parser()
 
         # Test claude_code_api
         args = parser.parse_args(
-            ["check-branch-status", "--llm-method", "claude_code_api"]
+            ["check", "branch-status", "--llm-method", "claude_code_api"]
         )
         assert args.llm_method == "claude_code_api"
 
         # Test claude_code_cli (default)
         args = parser.parse_args(
-            ["check-branch-status", "--llm-method", "claude_code_cli"]
+            ["check", "branch-status", "--llm-method", "claude_code_cli"]
         )
         assert args.llm_method == "claude_code_cli"
 
     def test_check_branch_status_with_mcp_config(self) -> None:
-        """Test check-branch-status command with MCP config path."""
+        """Test check branch-status command with MCP config path."""
         parser = create_parser()
         args = parser.parse_args(
-            ["check-branch-status", "--mcp-config", ".mcp.linux.json"]
+            ["check", "branch-status", "--mcp-config", ".mcp.linux.json"]
         )
 
-        assert args.command == "check-branch-status"
+        assert args.command == "check"
+        assert args.check_subcommand == "branch-status"
         assert args.mcp_config == ".mcp.linux.json"
 
     def test_check_branch_status_with_execution_dir(self) -> None:
-        """Test check-branch-status command with execution directory."""
+        """Test check branch-status command with execution directory."""
         parser = create_parser()
         args = parser.parse_args(
-            ["check-branch-status", "--execution-dir", "/workspace"]
+            ["check", "branch-status", "--execution-dir", "/workspace"]
         )
 
-        assert args.command == "check-branch-status"
+        assert args.command == "check"
+        assert args.check_subcommand == "branch-status"
         assert args.execution_dir == "/workspace"
 
     def test_check_branch_status_with_all_flags(self) -> None:
-        """Test check-branch-status command with all flags combined."""
+        """Test check branch-status command with all flags combined."""
         parser = create_parser()
         args = parser.parse_args(
             [
-                "check-branch-status",
+                "check",
+                "branch-status",
                 "--project-dir",
                 "/path/to/project",
                 "--fix",
@@ -653,7 +661,8 @@ class TestCheckBranchStatusCommand:
             ]
         )
 
-        assert args.command == "check-branch-status"
+        assert args.command == "check"
+        assert args.check_subcommand == "branch-status"
         assert args.project_dir == "/path/to/project"
         assert args.fix is True
         assert args.llm_truncate is True
@@ -663,12 +672,12 @@ class TestCheckBranchStatusCommand:
 
     @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
     def test_check_branch_status_routing(self, mock_execute: Mock) -> None:
-        """Test that check-branch-status command routes to correct handler."""
+        """Test that check branch-status command routes to correct handler."""
         # Setup
         mock_execute.return_value = 0
 
         # Execute
-        with patch("sys.argv", ["mcp-coder", "check-branch-status"]):
+        with patch("sys.argv", ["mcp-coder", "check", "branch-status"]):
             result = main()
 
         # Verify
@@ -677,7 +686,8 @@ class TestCheckBranchStatusCommand:
 
         # Check args passed to handler
         call_args = mock_execute.call_args[0][0]
-        assert call_args.command == "check-branch-status"
+        assert call_args.command == "check"
+        assert call_args.check_subcommand == "branch-status"
         assert call_args.fix is False
         assert call_args.llm_truncate is False
 
@@ -692,7 +702,8 @@ class TestCheckBranchStatusCommand:
             "sys.argv",
             [
                 "mcp-coder",
-                "check-branch-status",
+                "check",
+                "branch-status",
                 "--fix",
                 "--llm-truncate",
                 "--project-dir",
@@ -707,7 +718,8 @@ class TestCheckBranchStatusCommand:
 
         # Check args passed to handler
         call_args = mock_execute.call_args[0][0]
-        assert call_args.command == "check-branch-status"
+        assert call_args.command == "check"
+        assert call_args.check_subcommand == "branch-status"
         assert call_args.fix is True
         assert call_args.llm_truncate is True
         assert call_args.project_dir == "/test/path"
@@ -718,4 +730,23 @@ class TestCheckBranchStatusCommand:
 
         # Should raise SystemExit when invalid LLM method is provided
         with pytest.raises(SystemExit):
-            parser.parse_args(["check-branch-status", "--llm-method", "invalid_method"])
+            parser.parse_args(
+                ["check", "branch-status", "--llm-method", "invalid_method"]
+            )
+
+    @patch("mcp_coder.cli.main.logger")
+    @patch("builtins.print")
+    def test_check_no_subcommand_shows_error(
+        self, mock_print: Mock, mock_logger: Mock
+    ) -> None:
+        """Test that check without subcommand shows error."""
+        # Execute
+        with patch("sys.argv", ["mcp-coder", "check"]):
+            result = main()
+
+        # Verify
+        assert result == 1
+        mock_logger.error.assert_called_with("Check subcommand required")
+        mock_print.assert_called_with(
+            "Error: Please specify a check subcommand (e.g., 'branch-status')"
+        )

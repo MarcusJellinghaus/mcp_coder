@@ -387,11 +387,11 @@ class TestCheckBranchStatusCommandIntegration:
     """Test check_branch_status command CLI integration."""
 
     @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
-    @patch("sys.argv", ["mcp-coder", "check-branch-status"])
+    @patch("sys.argv", ["mcp-coder", "check", "branch-status"])
     def test_check_branch_status_command_calls_function(
         self, mock_execute: Mock
     ) -> None:
-        """Test that the check-branch-status CLI command calls the execution function."""
+        """Test that the check branch-status CLI command calls the execution function."""
         from mcp_coder.cli.main import main
 
         mock_execute.return_value = 0  # Success
@@ -409,11 +409,11 @@ class TestCheckBranchStatusCommandIntegration:
         assert hasattr(call_args, "llm_truncate")
 
     @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
-    @patch("sys.argv", ["mcp-coder", "check-branch-status", "--fix"])
+    @patch("sys.argv", ["mcp-coder", "check", "branch-status", "--fix"])
     def test_check_branch_status_command_with_fix_flag(
         self, mock_execute: Mock
     ) -> None:
-        """Test check-branch-status command with --fix flag."""
+        """Test check branch-status command with --fix flag."""
         from mcp_coder.cli.main import main
 
         mock_execute.return_value = 0  # Success
@@ -428,11 +428,11 @@ class TestCheckBranchStatusCommandIntegration:
         assert call_args.fix is True
 
     @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
-    @patch("sys.argv", ["mcp-coder", "check-branch-status", "--llm-truncate"])
+    @patch("sys.argv", ["mcp-coder", "check", "branch-status", "--llm-truncate"])
     def test_check_branch_status_command_with_llm_truncate_flag(
         self, mock_execute: Mock
     ) -> None:
-        """Test check-branch-status command with --llm-truncate flag."""
+        """Test check branch-status command with --llm-truncate flag."""
         from mcp_coder.cli.main import main
 
         mock_execute.return_value = 0  # Success
@@ -447,11 +447,11 @@ class TestCheckBranchStatusCommandIntegration:
         assert call_args.llm_truncate is True
 
     @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
-    @patch("sys.argv", ["mcp-coder", "check-branch-status"])
+    @patch("sys.argv", ["mcp-coder", "check", "branch-status"])
     def test_check_branch_status_command_propagates_return_code(
         self, mock_execute: Mock
     ) -> None:
-        """Test that check-branch-status command propagates the return code."""
+        """Test that check branch-status command propagates the return code."""
         from mcp_coder.cli.main import main
 
         mock_execute.return_value = 1  # Error
@@ -462,16 +462,16 @@ class TestCheckBranchStatusCommandIntegration:
         mock_execute.assert_called_once()
 
     def test_check_branch_status_command_is_implemented(self) -> None:
-        """Test that check-branch-status command is implemented in main CLI.
+        """Test that check branch-status command is implemented in main CLI.
 
-        This test verifies that the check-branch-status command has been successfully
+        This test verifies that the check branch-status command has been successfully
         added to the CLI.
         """
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()
 
-        # Check if check-branch-status subcommand exists in parser
+        # Check if check command exists in parser
         subparsers_actions = [
             action
             for action in parser._actions
@@ -481,16 +481,30 @@ class TestCheckBranchStatusCommandIntegration:
         assert subparsers_actions, "No subparsers found in CLI parser"
 
         subparser = subparsers_actions[0]
-        # Check if 'check-branch-status' is in the choices
+        # Check if 'check' is in the choices
         assert (
-            "check-branch-status" in subparser.choices
-        ), "check-branch-status command should be implemented in main.py"
+            "check" in subparser.choices
+        ), "check command should be implemented in main.py"
 
-        # Verify the check-branch-status parser has the expected arguments
-        check_parser = subparser.choices["check-branch-status"]
+        # Verify the check parser has branch-status subcommand
+        check_parser = subparser.choices["check"]
+
+        # Get the branch-status subparser
+        check_subparsers = [
+            action
+            for action in check_parser._actions
+            if isinstance(action, argparse._SubParsersAction)
+        ]
+        assert check_subparsers, "No subparsers found in check parser"
+
+        branch_status_subparser = check_subparsers[0]
+        assert (
+            "branch-status" in branch_status_subparser.choices
+        ), "branch-status subcommand should be implemented under check"
 
         # Parse test arguments to verify structure
-        test_args = check_parser.parse_args(["--fix", "--llm-truncate"])
+        branch_status_parser = branch_status_subparser.choices["branch-status"]
+        test_args = branch_status_parser.parse_args(["--fix", "--llm-truncate"])
         assert hasattr(test_args, "project_dir")
         assert hasattr(test_args, "fix")
         assert hasattr(test_args, "llm_truncate")
