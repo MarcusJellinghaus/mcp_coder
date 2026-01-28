@@ -7,7 +7,7 @@ status of branches, including CI status, rebase requirements, and task completio
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from mcp_coder.utils.git_operations.branches import needs_rebase
 from mcp_coder.utils.git_operations.readers import (
@@ -168,6 +168,79 @@ def truncate_ci_details(
     )
 
 
+def get_failed_jobs_summary(
+    jobs: Sequence[Mapping[str, Any]], logs: Mapping[str, str]
+) -> Dict[str, Any]:
+    """Get summary of failed jobs from CI status.
+
+    This is the shared function used by both check-branch-status and implement
+    commands to extract failed job information and log excerpts.
+
+    Args:
+        jobs: List of job dicts with 'name', 'conclusion', and 'steps' keys
+        logs: Dict mapping log filenames to content
+
+    Returns:
+        Dict with keys: job_name, step_name, step_number, log_excerpt, other_failed_jobs
+    """
+    logger = logging.getLogger(__name__)
+
+    # Filter jobs where conclusion == "failure"
+    failed_jobs = [job for job in jobs if job.get("conclusion") == "failure"]
+
+    # Return empty result if no failed jobs
+    if not failed_jobs:
+        return {
+            "job_name": "",
+            "step_name": "",
+            "step_number": 0,
+            "log_excerpt": "",
+            "other_failed_jobs": [],
+        }
+
+    # Get first failed job
+    first_failed = failed_jobs[0]
+    job_name = first_failed.get("name", "")
+
+    # Find first step with conclusion == "failure"
+    step_name = ""
+    step_number = 0
+    steps = first_failed.get("steps", [])
+    for step in steps:
+        if step.get("conclusion") == "failure":
+            step_name = step.get("name", "")
+            step_number = step.get("number", 0)
+            break
+
+    # Construct log filename: {job_name}/{step_number}_{step_name}.txt
+    log_filename = f"{job_name}/{step_number}_{step_name}.txt"
+
+    # Look up log content
+    log_content = logs.get(log_filename, "")
+
+    # Log warning if no match found
+    if not log_content and step_name:
+        available_files = list(logs.keys())
+        logger.warning(
+            f"No log file found for failed step. Expected: '{log_filename}', "
+            f"Available: {available_files}"
+        )
+
+    # Extract log excerpt using shared truncation (50 head + 250 tail = 300 lines)
+    log_excerpt = truncate_ci_details(log_content)
+
+    # Other failed jobs
+    other_failed_jobs = [job.get("name", "") for job in failed_jobs[1:]]
+
+    return {
+        "job_name": job_name,
+        "step_name": step_name,
+        "step_number": step_number,
+        "log_excerpt": log_excerpt,
+        "other_failed_jobs": other_failed_jobs,
+    }
+
+
 def collect_branch_status(
     project_dir: Path, truncate_logs: bool = False, max_log_lines: int = 300
 ) -> BranchStatusReport:
@@ -287,11 +360,13 @@ def _build_ci_error_details(
 ) -> Optional[str]:
     """Build structured CI error details with summary and filtered logs.
 
+    Uses get_failed_jobs_summary() for consistent log extraction with implement command.
+
     Args:
         ci_manager: CIResultsManager instance
         status_result: Result from get_latest_ci_status
-        truncate: Whether to truncate logs
-        max_lines: Maximum lines for log output
+        truncate: Whether to truncate logs (Note: get_failed_jobs_summary always truncates)
+        max_lines: Maximum lines for log output (currently uses default 300)
 
     Returns:
         Structured error details string or None if no logs available
@@ -299,11 +374,20 @@ def _build_ci_error_details(
     logger = logging.getLogger(__name__)
     run_data = status_result["run"]
     jobs_data = status_result.get("jobs", [])
+    run_id = run_data.get("id")
 
-    # Identify failed jobs and their failed steps
-    failed_jobs = _get_failed_jobs_info(jobs_data)
+    # Get logs for the run
+    logs: Dict[str, str] = {}
+    if run_id:
+        try:
+            logs = ci_manager.get_run_logs(run_id)
+        except Exception as e:
+            logger.warning(f"Failed to get CI logs: {e}")
 
-    if not failed_jobs:
+    # Use shared function to get failed job summary with log excerpt
+    failed_summary = get_failed_jobs_summary(jobs_data, logs)
+
+    if not failed_summary["job_name"]:
         logger.info("No failed jobs found in CI results")
         return None
 
@@ -311,134 +395,40 @@ def _build_ci_error_details(
     output_lines = []
 
     # Section 1: Summary of all failed jobs
-    job_names = [job["name"] for job in failed_jobs]
-    output_lines.append(f"## CI Failure Summary")
-    output_lines.append(f"Failed jobs ({len(failed_jobs)}): {', '.join(job_names)}")
+    all_failed_jobs = [failed_summary["job_name"]] + failed_summary["other_failed_jobs"]
+    output_lines.append("## CI Failure Summary")
+    output_lines.append(
+        f"Failed jobs ({len(all_failed_jobs)}): {', '.join(all_failed_jobs)}"
+    )
     output_lines.append("")
 
-    # Section 2: Detailed logs for first failed job only
-    first_job = failed_jobs[0]
-    run_id = run_data.get("id")
-
-    if run_id:
-        job_logs = _get_filtered_job_logs(
-            ci_manager, run_id, first_job, truncate, max_lines
-        )
-        if job_logs:
-            output_lines.append(f"## Job: {first_job['name']}")
-            output_lines.append(f"Failed step: {first_job['failed_step']}")
-            output_lines.append("")
-            output_lines.append(job_logs)
-        else:
-            output_lines.append(f"## Job: {first_job['name']}")
-            output_lines.append(f"Failed step: {first_job['failed_step']}")
-            output_lines.append("(logs not available)")
+    # Section 2: Detailed logs for first failed job
+    output_lines.append(f"## Job: {failed_summary['job_name']}")
+    output_lines.append(f"Failed step: {failed_summary['step_name']}")
+    output_lines.append("")
+    if failed_summary["log_excerpt"]:
+        output_lines.append(failed_summary["log_excerpt"])
+    else:
+        output_lines.append("(logs not available)")
 
     # Section 3: List other failed jobs (no logs)
-    if len(failed_jobs) > 1:
+    if failed_summary["other_failed_jobs"]:
         output_lines.append("")
         output_lines.append("## Other failed jobs (details not shown to save space)")
-        for job in failed_jobs[1:]:
-            output_lines.append(
-                f"- {job['name']}: step \"{job['failed_step']}\" failed"
-            )
+        # Get step names for other failed jobs
+        for job in jobs_data:
+            if (
+                job.get("conclusion") == "failure"
+                and job.get("name") in failed_summary["other_failed_jobs"]
+            ):
+                step_name = "unknown"
+                for step in job.get("steps", []):
+                    if step.get("conclusion") == "failure":
+                        step_name = step.get("name", "unknown")
+                        break
+                output_lines.append(f"- {job.get('name')}: step \"{step_name}\" failed")
 
     return "\n".join(output_lines)
-
-
-def _get_failed_jobs_info(jobs_data: List[Dict[str, Any]]) -> List[Dict[str, str]]:
-    """Extract failed job names and their failed step names.
-
-    Args:
-        jobs_data: List of job data from get_latest_ci_status
-
-    Returns:
-        List of dicts with 'name' and 'failed_step' for each failed job
-    """
-    failed_jobs = []
-
-    for job in jobs_data:
-        if job.get("conclusion") == "failure":
-            job_name = job.get("name", "unknown")
-            failed_step = "unknown"
-
-            # Find the failed step
-            for step in job.get("steps", []):
-                if step.get("conclusion") == "failure":
-                    failed_step = step.get("name", "unknown")
-                    break
-
-            failed_jobs.append({"name": job_name, "failed_step": failed_step})
-
-    return failed_jobs
-
-
-def _get_filtered_job_logs(
-    ci_manager: CIResultsManager,
-    run_id: int,
-    job_info: Dict[str, str],
-    truncate: bool,
-    max_lines: int,
-) -> Optional[str]:
-    """Get logs for a specific failed job, filtered to relevant content.
-
-    Args:
-        ci_manager: CIResultsManager instance
-        run_id: Workflow run ID
-        job_info: Dict with 'name' and 'failed_step'
-        truncate: Whether to truncate logs
-        max_lines: Maximum lines for output
-
-    Returns:
-        Filtered and optionally truncated log content
-    """
-    logger = logging.getLogger(__name__)
-
-    try:
-        all_logs = ci_manager.get_run_logs(run_id)
-
-        if not all_logs:
-            return None
-
-        job_name = job_info["name"]
-        failed_step = job_info["failed_step"]
-
-        # Log files are typically named like:
-        # "{job_name}/{step_number}_{step_name}.txt"
-        # e.g., "import-linter/7_Run import-linter.txt"
-
-        # Find logs matching this job
-        job_logs = []
-        for log_path, log_content in all_logs.items():
-            # Check if log path starts with job name
-            if log_path.startswith(f"{job_name}/"):
-                # Prioritize logs containing the failed step name
-                if failed_step.lower() in log_path.lower():
-                    # This is the failed step - use it directly
-                    if truncate:
-                        return truncate_ci_details(log_content, max_lines)
-                    return log_content
-                job_logs.append((log_path, log_content))
-
-        # If we didn't find the exact failed step, combine all job logs
-        if job_logs:
-            combined = "\n\n".join(
-                f"--- {path} ---\n{content}" for path, content in job_logs
-            )
-            if truncate:
-                return truncate_ci_details(combined, max_lines)
-            return combined
-
-        # Fallback: return all logs truncated (shouldn't normally happen)
-        logger.warning(f"Could not find logs for job '{job_name}', using all logs")
-        combined = "\n\n".join(all_logs.values())
-        if truncate:
-            return truncate_ci_details(combined, max_lines)
-        return combined
-
-    except Exception as e:
-        logger.warning(f"Error filtering job logs: {e}")
-        return None
 
 
 def _collect_rebase_status(project_dir: Path) -> Tuple[bool, str]:

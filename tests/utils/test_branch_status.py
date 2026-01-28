@@ -576,9 +576,10 @@ def test_collect_ci_status_with_truncation() -> None:
                 }
             ],
         }
-        # Log file naming matches job name pattern
+        # Log file naming matches job name pattern: {job_name}/{step_number}_{step_name}.txt
+        # Step number defaults to 0 when not specified in step data
         mock_instance.get_run_logs.return_value = {
-            "test-job/7_Run tests.txt": long_logs
+            "test-job/0_Run tests.txt": long_logs
         }
 
         status, details = _collect_ci_status(
@@ -896,177 +897,6 @@ def test_generate_recommendations_logic() -> None:
     assert "Ready to merge" in recommendations
 
 
-# Tests for new CI log filtering helper functions
-
-
-def test_get_failed_jobs_info_single_failure() -> None:
-    """Test _get_failed_jobs_info with a single failed job."""
-    from mcp_coder.utils.branch_status import _get_failed_jobs_info
-
-    jobs_data = [
-        {
-            "name": "test-job",
-            "conclusion": "failure",
-            "steps": [
-                {"name": "Setup", "conclusion": "success"},
-                {"name": "Run tests", "conclusion": "failure"},
-            ],
-        },
-        {
-            "name": "lint-job",
-            "conclusion": "success",
-            "steps": [{"name": "Run lint", "conclusion": "success"}],
-        },
-    ]
-
-    result = _get_failed_jobs_info(jobs_data)
-
-    assert len(result) == 1
-    assert result[0]["name"] == "test-job"
-    assert result[0]["failed_step"] == "Run tests"
-
-
-def test_get_failed_jobs_info_multiple_failures() -> None:
-    """Test _get_failed_jobs_info with multiple failed jobs."""
-    from mcp_coder.utils.branch_status import _get_failed_jobs_info
-
-    jobs_data = [
-        {
-            "name": "test-job",
-            "conclusion": "failure",
-            "steps": [{"name": "Run tests", "conclusion": "failure"}],
-        },
-        {
-            "name": "lint-job",
-            "conclusion": "failure",
-            "steps": [{"name": "Run lint", "conclusion": "failure"}],
-        },
-        {
-            "name": "build-job",
-            "conclusion": "success",
-            "steps": [{"name": "Build", "conclusion": "success"}],
-        },
-    ]
-
-    result = _get_failed_jobs_info(jobs_data)
-
-    assert len(result) == 2
-    assert result[0]["name"] == "test-job"
-    assert result[0]["failed_step"] == "Run tests"
-    assert result[1]["name"] == "lint-job"
-    assert result[1]["failed_step"] == "Run lint"
-
-
-def test_get_failed_jobs_info_no_failures() -> None:
-    """Test _get_failed_jobs_info with no failed jobs."""
-    from mcp_coder.utils.branch_status import _get_failed_jobs_info
-
-    jobs_data = [
-        {
-            "name": "test-job",
-            "conclusion": "success",
-            "steps": [{"name": "Run tests", "conclusion": "success"}],
-        },
-    ]
-
-    result = _get_failed_jobs_info(jobs_data)
-
-    assert len(result) == 0
-
-
-def test_get_failed_jobs_info_empty_jobs() -> None:
-    """Test _get_failed_jobs_info with empty jobs list."""
-    from mcp_coder.utils.branch_status import _get_failed_jobs_info
-
-    result = _get_failed_jobs_info([])
-
-    assert len(result) == 0
-
-
-def test_get_filtered_job_logs_exact_match() -> None:
-    """Test _get_filtered_job_logs finds exact step match."""
-    from mcp_coder.utils.branch_status import _get_filtered_job_logs
-
-    job_info = {"name": "test-job", "failed_step": "Run tests"}
-    log_content = "Test failure details\nLine 2\nLine 3"
-
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
-        mock_instance = MagicMock()
-        mock_ci_manager.return_value = mock_instance
-        mock_instance.get_run_logs.return_value = {
-            "test-job/1_Setup.txt": "Setup logs",
-            "test-job/2_Run tests.txt": log_content,
-            "other-job/1_Build.txt": "Build logs",
-        }
-
-        result = _get_filtered_job_logs(mock_instance, 123, job_info, False, 300)
-
-        assert result == log_content
-        assert "Setup logs" not in result
-        assert "Build logs" not in result
-
-
-def test_get_filtered_job_logs_with_truncation() -> None:
-    """Test _get_filtered_job_logs truncates long logs."""
-    from mcp_coder.utils.branch_status import _get_filtered_job_logs
-
-    job_info = {"name": "test-job", "failed_step": "Run tests"}
-    # Create long log content
-    long_content = "\n".join([f"Log line {i}" for i in range(400)])
-
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
-        mock_instance = MagicMock()
-        mock_ci_manager.return_value = mock_instance
-        mock_instance.get_run_logs.return_value = {
-            "test-job/2_Run tests.txt": long_content,
-        }
-
-        result = _get_filtered_job_logs(mock_instance, 123, job_info, True, 100)
-
-        assert result is not None
-        assert "[... truncated" in result
-
-
-def test_get_filtered_job_logs_fallback_to_job_logs() -> None:
-    """Test _get_filtered_job_logs falls back to all job logs if step not found."""
-    from mcp_coder.utils.branch_status import _get_filtered_job_logs
-
-    job_info = {"name": "test-job", "failed_step": "Unknown step"}
-
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
-        mock_instance = MagicMock()
-        mock_ci_manager.return_value = mock_instance
-        mock_instance.get_run_logs.return_value = {
-            "test-job/1_Setup.txt": "Setup logs",
-            "test-job/2_Build.txt": "Build logs",
-            "other-job/1_Test.txt": "Other logs",
-        }
-
-        result = _get_filtered_job_logs(mock_instance, 123, job_info, False, 300)
-
-        assert result is not None
-        # Should include logs from test-job but not other-job
-        assert "Setup logs" in result
-        assert "Build logs" in result
-        assert "Other logs" not in result
-
-
-def test_get_filtered_job_logs_no_logs() -> None:
-    """Test _get_filtered_job_logs with no logs available."""
-    from mcp_coder.utils.branch_status import _get_filtered_job_logs
-
-    job_info = {"name": "test-job", "failed_step": "Run tests"}
-
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
-        mock_instance = MagicMock()
-        mock_ci_manager.return_value = mock_instance
-        mock_instance.get_run_logs.return_value = {}
-
-        result = _get_filtered_job_logs(mock_instance, 123, job_info, False, 300)
-
-        assert result is None
-
-
 def test_build_ci_error_details_single_failure() -> None:
     """Test _build_ci_error_details with single failed job."""
     from mcp_coder.utils.branch_status import _build_ci_error_details
@@ -1082,21 +912,22 @@ def test_build_ci_error_details_single_failure() -> None:
         ],
     }
 
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
-        mock_instance = MagicMock()
-        mock_ci_manager.return_value = mock_instance
-        mock_instance.get_run_logs.return_value = {
-            "test-job/2_Run tests.txt": "Error details here"
-        }
+    # Mock get_run_logs directly on the passed-in ci_manager instance
+    mock_instance = MagicMock()
+    # Log filename format: {job_name}/{step_number}_{step_name}.txt
+    # Step number defaults to 0 when not specified in step data
+    mock_instance.get_run_logs.return_value = {
+        "test-job/0_Run tests.txt": "Error details here"
+    }
 
-        result = _build_ci_error_details(mock_instance, status_result, False, 300)
+    result = _build_ci_error_details(mock_instance, status_result, False, 300)
 
-        assert result is not None
-        assert "CI Failure Summary" in result
-        assert "Failed jobs (1): test-job" in result
-        assert "## Job: test-job" in result
-        assert "Failed step: Run tests" in result
-        assert "Error details here" in result
+    assert result is not None
+    assert "CI Failure Summary" in result
+    assert "Failed jobs (1): test-job" in result
+    assert "## Job: test-job" in result
+    assert "Failed step: Run tests" in result
+    assert "Error details here" in result
 
 
 def test_build_ci_error_details_multiple_failures() -> None:
@@ -1124,25 +955,26 @@ def test_build_ci_error_details_multiple_failures() -> None:
         ],
     }
 
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
-        mock_instance = MagicMock()
-        mock_ci_manager.return_value = mock_instance
-        mock_instance.get_run_logs.return_value = {
-            "test-job/2_Run tests.txt": "First job error"
-        }
+    # Mock get_run_logs directly on the passed-in ci_manager instance
+    mock_instance = MagicMock()
+    # Log filename format: {job_name}/{step_number}_{step_name}.txt
+    # Step number defaults to 0 when not specified in step data
+    mock_instance.get_run_logs.return_value = {
+        "test-job/0_Run tests.txt": "First job error"
+    }
 
-        result = _build_ci_error_details(mock_instance, status_result, False, 300)
+    result = _build_ci_error_details(mock_instance, status_result, False, 300)
 
-        assert result is not None
-        # Summary should list all failed jobs
-        assert "Failed jobs (3): test-job, lint-job, build-job" in result
-        # Should have details for first job
-        assert "## Job: test-job" in result
-        assert "First job error" in result
-        # Should list other jobs without details
-        assert "Other failed jobs (details not shown to save space)" in result
-        assert 'lint-job: step "Run lint" failed' in result
-        assert 'build-job: step "Build" failed' in result
+    assert result is not None
+    # Summary should list all failed jobs
+    assert "Failed jobs (3): test-job, lint-job, build-job" in result
+    # Should have details for first job
+    assert "## Job: test-job" in result
+    assert "First job error" in result
+    # Should list other jobs without details
+    assert "Other failed jobs (details not shown to save space)" in result
+    assert 'lint-job: step "Run lint" failed' in result
+    assert 'build-job: step "Build" failed' in result
 
 
 def test_build_ci_error_details_no_failed_jobs() -> None:
