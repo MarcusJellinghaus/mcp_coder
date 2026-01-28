@@ -350,13 +350,12 @@ def _collect_github_label(project_dir: Path, branch_name: Optional[str] = None) 
         return DEFAULT_LABEL
 
     # Extract status label (labels starting with "status-")
+    # IssueData.labels is List[str], so labels are already strings
     labels = issue.get("labels", [])
     for label in labels:
-        if hasattr(label, "get"):
-            label_name: str = label.get("name", "")
-            if label_name and label_name.startswith("status-"):
-                logger.info(f"Found GitHub label: {label_name}")
-                return label_name
+        if isinstance(label, str) and label.startswith("status-"):
+            logger.info(f"Found GitHub label: {label}")
+            return label
 
     logger.info("No status label found")
     return DEFAULT_LABEL

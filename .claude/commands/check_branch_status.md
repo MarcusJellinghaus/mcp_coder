@@ -27,22 +27,20 @@ mcp-coder check-branch-status --fix --llm-truncate
 
 ## Auto-Fix Capabilities (--fix flag)
 
-**What gets fixed automatically:**
 - CI test failures - uses LLM to analyze errors and apply fixes
 - Code formatting issues - runs formatters as part of CI fix
 - Commits fixes with appropriate messages
 
-**What is informational only (no auto-fix):**
-- Rebase status - reports if behind, but does not rebase (use `/rebase` instead)
-- Task completion - reports incomplete tasks for manual completion
-- GitHub labels - reports current label status
+## Follow-Up Actions
 
-## When Rebase is Needed
+Based on the status report, use these commands for next steps:
 
-If the status report shows "BEHIND" or recommends rebasing:
-
-1. Ensure CI is green first (fix any failures with `--fix`)
-2. Run `/rebase` to perform the rebase with merge conflict resolution
+| Status | Action |
+|--------|--------|
+| Rebase needed | Run `/rebase` to rebase onto main with conflict resolution |
+| Tasks incomplete | Complete remaining tasks manually |
+| CI green + tasks done | Run `/commit_push` to commit and push changes |
+| Ready to merge | Create PR or merge via GitHub |
 
 ## Output Format
 

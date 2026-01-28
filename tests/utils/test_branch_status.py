@@ -716,9 +716,7 @@ def test_collect_github_label() -> None:
         mock_extract.return_value = 123
         mock_manager_instance = MagicMock()
         mock_issue_manager.return_value = mock_manager_instance
-        mock_issue = {
-            "labels": [{"name": "status-03:implementing"}, {"name": "priority-high"}]
-        }
+        mock_issue = {"labels": ["status-03:implementing", "priority-high"]}
         mock_manager_instance.get_issue.return_value = mock_issue
 
         # Pass branch_name directly instead of relying on get_current_branch_name
@@ -747,7 +745,7 @@ def test_collect_github_label_without_branch_name() -> None:
         mock_extract.return_value = 456
         mock_manager_instance = MagicMock()
         mock_issue_manager.return_value = mock_manager_instance
-        mock_issue = {"labels": [{"name": "status-04:reviewing"}, {"name": "bug"}]}
+        mock_issue = {"labels": ["status-04:reviewing", "bug"]}
         mock_manager_instance.get_issue.return_value = mock_issue
 
         # Call without branch_name to test fallback behavior
@@ -775,9 +773,7 @@ def test_collect_github_label_no_status_label() -> None:
         mock_extract.return_value = 123
         mock_manager_instance = MagicMock()
         mock_issue_manager.return_value = mock_manager_instance
-        mock_issue = {
-            "labels": [{"name": "priority-high"}, {"name": "bug"}]  # No status- label
-        }
+        mock_issue = {"labels": ["priority-high", "bug"]}  # No status- label
         mock_manager_instance.get_issue.return_value = mock_issue
 
         # Pass branch_name directly
