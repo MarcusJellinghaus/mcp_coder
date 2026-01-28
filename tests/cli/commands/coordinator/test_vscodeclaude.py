@@ -297,7 +297,6 @@ class TestTemplates:
 
     def test_workspace_file_is_valid_json_template(self) -> None:
         """Workspace template produces valid JSON when formatted."""
-        import json
 
         from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
             WORKSPACE_FILE_TEMPLATE,
@@ -2059,7 +2058,7 @@ class TestOrchestration:
         }
         issues: list[IssueData] = [issue]
 
-        handle_pr_created_issues(issues, mock_issue_manager)
+        handle_pr_created_issues(issues)
 
         captured = capsys.readouterr()
         assert "#123" in captured.out
@@ -2070,7 +2069,7 @@ class TestOrchestration:
     ) -> None:
         """Does nothing for empty list."""
         mock_issue_manager = Mock()
-        handle_pr_created_issues([], mock_issue_manager)
+        handle_pr_created_issues([])
 
         captured = capsys.readouterr()
         assert captured.out == ""
