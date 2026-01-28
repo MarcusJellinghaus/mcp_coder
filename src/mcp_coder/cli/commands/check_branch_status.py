@@ -145,31 +145,3 @@ def _run_auto_fixes(
             "Rebase operations, task completion, and GitHub label updates must be done manually"
         )
         return True  # Success when no fixes needed
-
-
-def _prompt_for_major_operations(report: BranchStatusReport) -> bool:
-    """Prompt user for permission on risky operations.
-
-    Args:
-        report: Branch status report
-
-    Returns:
-        True if user confirms or no major operations needed, False if user declines
-    """
-    # Check if any major operations would be needed
-    needs_major_ops = report.rebase_needed
-
-    if not needs_major_ops:
-        return True  # No prompt needed
-
-    try:
-        print("\nThe following major operations would be performed:")
-        if report.rebase_needed:
-            print("- Rebase current branch onto main")
-
-        response = input("\nProceed with these operations? [y/N]: ").lower().strip()
-        return response in ["y", "yes"]
-
-    except KeyboardInterrupt:
-        print("\nOperation cancelled by user.")
-        return False

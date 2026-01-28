@@ -59,20 +59,6 @@ def failed_ci_report() -> BranchStatusReport:
     )
 
 
-@pytest.fixture
-def rebase_needed_report() -> BranchStatusReport:
-    """Create a BranchStatusReport that needs rebase for testing."""
-    return BranchStatusReport(
-        ci_status="PASSED",
-        ci_details=None,
-        rebase_needed=True,
-        rebase_reason="Branch is behind main branch and needs rebase",
-        tasks_complete=True,
-        current_github_label="status-implementation",
-        recommendations=["Rebase branch with main when tasks are complete"],
-    )
-
-
 @pytest.mark.skipif(
     not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
     reason="check_branch_status module not yet implemented",
@@ -397,71 +383,10 @@ class TestRunAutoFixes:
         assert result is False
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
-class TestPromptForMajorOperations:
-    """Tests for _prompt_for_major_operations function."""
-
-    @patch("builtins.input", return_value="y")
-    def test_prompt_for_major_operations_user_confirms(
-        self, mock_input: Mock, rebase_needed_report: BranchStatusReport
-    ) -> None:
-        """Test prompt when user confirms major operations."""
-        from mcp_coder.cli.commands.check_branch_status import (
-            _prompt_for_major_operations,
-        )
-
-        result = _prompt_for_major_operations(rebase_needed_report)
-
-        assert result is True
-        mock_input.assert_called_once()
-
-    @patch("builtins.input", return_value="n")
-    def test_prompt_for_major_operations_user_declines(
-        self, mock_input: Mock, rebase_needed_report: BranchStatusReport
-    ) -> None:
-        """Test prompt when user declines major operations."""
-        from mcp_coder.cli.commands.check_branch_status import (
-            _prompt_for_major_operations,
-        )
-
-        result = _prompt_for_major_operations(rebase_needed_report)
-
-        assert result is False
-        mock_input.assert_called_once()
-
-    @patch("builtins.input", side_effect=KeyboardInterrupt())
-    def test_prompt_for_major_operations_keyboard_interrupt(
-        self, mock_input: Mock, rebase_needed_report: BranchStatusReport
-    ) -> None:
-        """Test prompt with keyboard interrupt."""
-        from mcp_coder.cli.commands.check_branch_status import (
-            _prompt_for_major_operations,
-        )
-
-        result = _prompt_for_major_operations(rebase_needed_report)
-
-        assert result is False
-
-    def test_prompt_for_major_operations_no_major_ops_needed(
-        self, sample_report: BranchStatusReport
-    ) -> None:
-        """Test prompt when no major operations are needed."""
-        from mcp_coder.cli.commands.check_branch_status import (
-            _prompt_for_major_operations,
-        )
-
-        result = _prompt_for_major_operations(sample_report)
-
-        assert result is True  # No prompt needed, so approve
-
-
 class TestCheckBranchStatusCommandIntegration:
     """Test check_branch_status command CLI integration."""
 
-    @patch("mcp_coder.cli.main.execute_check_branch_status")
+    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
     @patch("sys.argv", ["mcp-coder", "check-branch-status"])
     def test_check_branch_status_command_calls_function(
         self, mock_execute: Mock
@@ -483,7 +408,7 @@ class TestCheckBranchStatusCommandIntegration:
         assert hasattr(call_args, "fix")
         assert hasattr(call_args, "llm_truncate")
 
-    @patch("mcp_coder.cli.main.execute_check_branch_status")
+    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
     @patch("sys.argv", ["mcp-coder", "check-branch-status", "--fix"])
     def test_check_branch_status_command_with_fix_flag(
         self, mock_execute: Mock
@@ -502,7 +427,7 @@ class TestCheckBranchStatusCommandIntegration:
         call_args = mock_execute.call_args[0][0]
         assert call_args.fix is True
 
-    @patch("mcp_coder.cli.main.execute_check_branch_status")
+    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
     @patch("sys.argv", ["mcp-coder", "check-branch-status", "--llm-truncate"])
     def test_check_branch_status_command_with_llm_truncate_flag(
         self, mock_execute: Mock
@@ -521,7 +446,7 @@ class TestCheckBranchStatusCommandIntegration:
         call_args = mock_execute.call_args[0][0]
         assert call_args.llm_truncate is True
 
-    @patch("mcp_coder.cli.main.execute_check_branch_status")
+    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
     @patch("sys.argv", ["mcp-coder", "check-branch-status"])
     def test_check_branch_status_command_propagates_return_code(
         self, mock_execute: Mock

@@ -661,7 +661,7 @@ class TestCheckBranchStatusCommand:
         assert args.mcp_config == ".mcp.test.json"
         assert args.execution_dir == "/tmp/workspace"
 
-    @patch("mcp_coder.cli.main.execute_check_branch_status")
+    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
     def test_check_branch_status_routing(self, mock_execute: Mock) -> None:
         """Test that check-branch-status command routes to correct handler."""
         # Setup
@@ -681,7 +681,7 @@ class TestCheckBranchStatusCommand:
         assert call_args.fix is False
         assert call_args.llm_truncate is False
 
-    @patch("mcp_coder.cli.main.execute_check_branch_status")
+    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
     def test_check_branch_status_routing_with_flags(self, mock_execute: Mock) -> None:
         """Test routing with all command flags."""
         # Setup
