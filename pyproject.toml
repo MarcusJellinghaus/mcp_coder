@@ -28,7 +28,8 @@ dependencies = [
     "mcp-code-checker @ git+https://github.com/MarcusJellinghaus/mcp-code-checker.git",
     "PyGithub>=1.59.0",
     "python-jenkins>=1.8.0",
-    "requests>=2.28.0"
+    "requests>=2.28.0",
+    "mcp-server-filesystem @ git+https://github.com/MarcusJellinghaus/mcp_server_filesystem.git",
 ]
 
 [project.optional-dependencies]
@@ -46,7 +47,7 @@ test = [
 
 # MCP servers - for local development (execution env already has these)
 mcp = [
-    "mcp-server-filesystem @ git+https://github.com/MarcusJellinghaus/mcp_server_filesystem.git",
+    # mcp-server-filesystem moved to main dependencies for check file-size command
 ]
 
 # Full development setup - combines all groups for local development
