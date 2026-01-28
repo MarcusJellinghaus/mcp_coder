@@ -1,11 +1,15 @@
 """Tests for mcp_coder.checks.file_sizes module."""
 
+import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from mcp_coder.checks.file_sizes import (
+    CheckResult,
     FileMetrics,
+    check_file_sizes,
     count_lines,
     get_file_metrics,
     load_allowlist,
@@ -224,3 +228,165 @@ class TestGetFileMetrics:
         assert isinstance(result[0], FileMetrics)
         assert isinstance(result[0].path, Path)
         assert isinstance(result[0].line_count, int)
+
+
+class TestCheckFileSizes:
+    """Tests for check_file_sizes() function."""
+
+    def test_check_file_sizes_all_pass(self, tmp_path: Path) -> None:
+        """Test when all files are under limit."""
+        # Create test files under the limit (10 lines)
+        file1 = tmp_path / "file1.py"
+        file1.write_text("line 1\nline 2\nline 3\n", encoding="utf-8")
+
+        file2 = tmp_path / "file2.py"
+        file2.write_text("line 1\nline 2\n", encoding="utf-8")
+
+        # Mock list_files to return our test files
+        with patch("mcp_coder.checks.file_sizes.list_files") as mock_list_files:
+            mock_list_files.return_value = ["file1.py", "file2.py"]
+
+            result = check_file_sizes(
+                project_dir=tmp_path,
+                max_lines=10,
+                allowlist=set(),
+            )
+
+        assert result.passed is True
+        assert result.violations == []
+        assert result.total_files_checked == 2
+        assert result.allowlisted_count == 0
+        assert result.stale_entries == []
+
+    def test_check_file_sizes_with_violations(self, tmp_path: Path) -> None:
+        """Test detecting files over limit."""
+        # Create a file over the limit (3 lines limit)
+        large_file = tmp_path / "large.py"
+        large_file.write_text(
+            "line 1\nline 2\nline 3\nline 4\nline 5\n", encoding="utf-8"
+        )
+
+        small_file = tmp_path / "small.py"
+        small_file.write_text("line 1\n", encoding="utf-8")
+
+        with patch("mcp_coder.checks.file_sizes.list_files") as mock_list_files:
+            mock_list_files.return_value = ["large.py", "small.py"]
+
+            result = check_file_sizes(
+                project_dir=tmp_path,
+                max_lines=3,
+                allowlist=set(),
+            )
+
+        assert result.passed is False
+        assert len(result.violations) == 1
+        assert result.violations[0].path == Path("large.py")
+        assert result.violations[0].line_count == 5
+        assert result.total_files_checked == 2
+        assert result.allowlisted_count == 0
+
+    def test_check_file_sizes_with_allowlist(self, tmp_path: Path) -> None:
+        """Test that allowlisted files don't cause failure."""
+        # Create files over the limit
+        large_file = tmp_path / "large.py"
+        large_file.write_text(
+            "line 1\nline 2\nline 3\nline 4\nline 5\n", encoding="utf-8"
+        )
+
+        # Normalize path for OS
+        allowlisted_path = "large.py".replace("/", os.sep)
+
+        with patch("mcp_coder.checks.file_sizes.list_files") as mock_list_files:
+            mock_list_files.return_value = ["large.py"]
+
+            result = check_file_sizes(
+                project_dir=tmp_path,
+                max_lines=3,
+                allowlist={allowlisted_path},
+            )
+
+        assert result.passed is True
+        assert result.violations == []
+        assert result.total_files_checked == 1
+        assert result.allowlisted_count == 1
+
+    def test_check_file_sizes_stale_allowlist_missing_file(
+        self, tmp_path: Path
+    ) -> None:
+        """Test detecting allowlist entry for non-existent file."""
+        # Create a small file
+        small_file = tmp_path / "small.py"
+        small_file.write_text("line 1\n", encoding="utf-8")
+
+        # Allowlist contains a file that doesn't exist
+        stale_path = "nonexistent.py".replace("/", os.sep)
+
+        with patch("mcp_coder.checks.file_sizes.list_files") as mock_list_files:
+            mock_list_files.return_value = ["small.py"]
+
+            result = check_file_sizes(
+                project_dir=tmp_path,
+                max_lines=10,
+                allowlist={stale_path},
+            )
+
+        assert result.passed is True
+        assert stale_path in result.stale_entries
+
+    def test_check_file_sizes_stale_allowlist_under_limit(self, tmp_path: Path) -> None:
+        """Test detecting allowlist entry for file now under limit."""
+        # Create a file that's under the limit but in the allowlist
+        under_limit_file = tmp_path / "was_large.py"
+        under_limit_file.write_text("line 1\nline 2\n", encoding="utf-8")
+
+        # This file is allowlisted but no longer over the limit
+        allowlisted_path = "was_large.py".replace("/", os.sep)
+
+        with patch("mcp_coder.checks.file_sizes.list_files") as mock_list_files:
+            mock_list_files.return_value = ["was_large.py"]
+
+            result = check_file_sizes(
+                project_dir=tmp_path,
+                max_lines=10,
+                allowlist={allowlisted_path},
+            )
+
+        assert result.passed is True
+        # The file is under limit, so allowlist entry is stale
+        assert allowlisted_path in result.stale_entries
+
+    def test_check_file_sizes_violations_sorted_descending(
+        self, tmp_path: Path
+    ) -> None:
+        """Test violations are sorted by line count descending."""
+        # Create files of varying sizes, all over the limit (5 lines)
+        file_10_lines = tmp_path / "file_10.py"
+        file_10_lines.write_text(
+            "\n".join([f"line {i}" for i in range(10)]) + "\n", encoding="utf-8"
+        )
+
+        file_20_lines = tmp_path / "file_20.py"
+        file_20_lines.write_text(
+            "\n".join([f"line {i}" for i in range(20)]) + "\n", encoding="utf-8"
+        )
+
+        file_15_lines = tmp_path / "file_15.py"
+        file_15_lines.write_text(
+            "\n".join([f"line {i}" for i in range(15)]) + "\n", encoding="utf-8"
+        )
+
+        with patch("mcp_coder.checks.file_sizes.list_files") as mock_list_files:
+            mock_list_files.return_value = ["file_10.py", "file_20.py", "file_15.py"]
+
+            result = check_file_sizes(
+                project_dir=tmp_path,
+                max_lines=5,
+                allowlist=set(),
+            )
+
+        assert result.passed is False
+        assert len(result.violations) == 3
+        # Should be sorted descending by line count
+        assert result.violations[0].line_count == 20
+        assert result.violations[1].line_count == 15
+        assert result.violations[2].line_count == 10

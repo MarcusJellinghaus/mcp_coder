@@ -28,7 +28,7 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 - [x] Implement load_allowlist() function
 - [x] Write tests for get_file_metrics() function
 - [x] Implement get_file_metrics() function
-- [ ] Write tests for check_file_sizes() function
+- [x] Write tests for check_file_sizes() function
 - [ ] Implement check_file_sizes() function
 - [ ] Write tests for render_output() function
 - [ ] Implement render_output() function
