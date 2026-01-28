@@ -138,7 +138,7 @@ flowchart TD
 | **Plan Review** | `/plan_review`, `/discuss`, `/plan_update`, `/commit_push`, `/plan_approve` |
 | **Implementation** | `/implementation_finalise` |
 | **Code Review** | `/implementation_review`, `/discuss`, `/implementation_new_tasks`, `/commit_push`, `/implementation_approve`, `/implementation_needs_rework` |
-| **Utility** | `/rebase` |
+| **Utility** | `/check_branch_status`, `/commit_push`, `/discuss`, `/rebase` |
 
 **Quick Reference:** See [Claude Code Cheat Sheet](claude_cheat_sheet.md) for a compact command overview.
 

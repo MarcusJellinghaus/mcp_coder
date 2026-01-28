@@ -22,6 +22,7 @@ For a complete overview of the process, see [DEVELOPMENT_PROCESS.md](DEVELOPMENT
 | `/implementation_approve` | Approve code to create PR |
 | `/implementation_needs_rework` | Return to implementation for fixes |
 | `/implementation_new_tasks` | Add new implementation steps |
+| `/check_branch_status` | Check branch readiness and auto-fix CI |
 | `/commit_push` | Format, commit, and push changes |
 | `/discuss` | Step-by-step discussion of open questions |
 | `/rebase` | Rebase branch onto main |
@@ -87,7 +88,8 @@ Then either:
 
 | Command | Use When |
 |---------|----------|
-| `/discuss` | Need step-by-step Q&A on any topic |
+| `/check_branch_status` | Check CI status, rebase needs, and task completion |
 | `/commit_push` | Ready to commit and push changes |
-| `/rebase` | Need to rebase branch onto main |
+| `/discuss` | Need step-by-step Q&A on any topic |
 | `/implementation_finalise` | `mcp-coder implement` failed to complete the plan |
+| `/rebase` | Need to rebase branch onto main |
