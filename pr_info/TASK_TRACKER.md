@@ -32,11 +32,11 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 - [x] Implement check_file_sizes() function
 - [x] Write tests for render_output() function
 - [x] Implement render_output() function
-- [ ] Write tests for render_allowlist() function
-- [ ] Implement render_allowlist() function
-- [ ] Run pylint, mypy on checks package
-- [ ] Prepare git commit message for step 2
-- [ ] All Step 2 tasks completed
+- [x] Write tests for render_allowlist() function
+- [x] Implement render_allowlist() function
+- [x] Run pylint, mypy on checks package
+- [x] Prepare git commit message for step 2
+- [x] All Step 2 tasks completed
 
 ### Step 3: CLI Integration
 **File:** [pr_info/steps/step_3.md](steps/step_3.md)

@@ -13,6 +13,7 @@ from mcp_coder.checks.file_sizes import (
     count_lines,
     get_file_metrics,
     load_allowlist,
+    render_allowlist,
     render_output,
 )
 
@@ -486,3 +487,52 @@ class TestRenderOutput:
 
         assert "passed" in output.lower() or "success" in output.lower()
         assert "15" in output  # total files checked
+
+
+class TestRenderAllowlist:
+    """Tests for render_allowlist() function."""
+
+    def test_render_allowlist_format(self) -> None:
+        """Test allowlist output uses forward slashes."""
+        violations = [
+            FileMetrics(path=Path("src/module/large_file.py"), line_count=600),
+            FileMetrics(path=Path("tests/integration/big_test.py"), line_count=550),
+        ]
+
+        output = render_allowlist(violations)
+
+        # Output should use forward slashes for cross-platform compatibility
+        assert "src/module/large_file.py" in output
+        assert "tests/integration/big_test.py" in output
+        # Should be newline separated
+        lines = output.strip().split("\n")
+        assert len(lines) == 2
+
+    def test_render_allowlist_empty(self) -> None:
+        """Test empty violations produces empty string."""
+        output = render_allowlist([])
+
+        assert output == ""
+
+    def test_render_allowlist_single_file(self) -> None:
+        """Test rendering a single violation."""
+        violations = [
+            FileMetrics(path=Path("src/big_module.py"), line_count=700),
+        ]
+
+        output = render_allowlist(violations)
+
+        assert output == "src/big_module.py"
+
+    def test_render_allowlist_windows_paths_converted(self) -> None:
+        """Test that Windows-style paths are converted to forward slashes."""
+        # Create a FileMetrics with a Windows-style path
+        violations = [
+            FileMetrics(path=Path("src\\nested\\deep\\file.py"), line_count=600),
+        ]
+
+        output = render_allowlist(violations)
+
+        # Should always output forward slashes regardless of OS
+        assert "\\" not in output
+        assert "src/nested/deep/file.py" in output

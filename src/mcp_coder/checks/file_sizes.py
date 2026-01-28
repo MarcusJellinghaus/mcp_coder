@@ -206,4 +206,9 @@ def render_allowlist(violations: list[FileMetrics]) -> str:
     Returns:
         Newline-separated paths for allowlist file.
     """
-    raise NotImplementedError("To be implemented in Task 2.8")
+    if not violations:
+        return ""
+
+    # Convert paths to forward slashes for cross-platform allowlist format
+    paths = [str(v.path).replace("\\", "/") for v in violations]
+    return "\n".join(paths)
