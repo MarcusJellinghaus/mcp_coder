@@ -151,16 +151,16 @@ class CIResultsManager(BaseGitHubManager):
 
         # Get workflow runs for the branch
         try:
-            # Get all workflow runs and filter by branch
-            all_runs = repo.get_workflow_runs()
-            runs_list = [run for run in all_runs if run.head_branch == branch]
+            # Get workflow runs filtered by branch (server-side for performance)
+            # Note: PyGithub accepts string branch names despite type stubs expecting Branch
+            runs = repo.get_workflow_runs(branch=branch)  # type: ignore[arg-type]
 
-            if not runs_list:
+            # Get the first run (latest)
+            try:
+                latest_run = runs[0]
+            except IndexError:
                 logger.info(f"No workflow runs found for branch: {branch}")
                 return CIStatusData(run={}, jobs=[])
-
-            # Get the latest run (first in the list)
-            latest_run = runs_list[0]
 
             # Get all jobs for the latest run
             jobs = list(latest_run.jobs())
