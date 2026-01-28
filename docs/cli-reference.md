@@ -440,7 +440,7 @@ mcp-coder check file-size [OPTIONS]
 - `--generate-allowlist` - Output violating paths for piping to allowlist
 - `--project-dir PATH` - Project directory path (default: current directory)
 
-**Description:** Scan Python files in a project and report any that exceed the maximum line count. Files can be excluded from checking by adding them to an allowlist file.
+**Description:** Scan files in a project and report any that exceed the maximum line count. Binary files are automatically skipped. Files can be excluded from checking by adding them to an allowlist file.
 
 **Exit Codes:**
 - `0` - All files pass (or no violations when using `--generate-allowlist`)
