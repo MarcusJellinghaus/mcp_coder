@@ -164,7 +164,37 @@ def render_output(result: CheckResult, max_lines: int) -> str:
     Returns:
         Formatted string for terminal output.
     """
-    raise NotImplementedError("To be implemented in Task 2.7")
+    lines: list[str] = []
+
+    if result.passed:
+        # Success message
+        lines.append(
+            f"File size check passed: {result.total_files_checked} files checked, "
+            f"{result.allowlisted_count} allowlisted"
+        )
+
+        # Include stale entries info if present
+        if result.stale_entries:
+            lines.append("")
+            lines.append(f"Stale allowlist entries ({len(result.stale_entries)}):")
+            for entry in result.stale_entries:
+                lines.append(f"  - {entry}")
+    else:
+        # Failure message
+        lines.append(
+            f"File size check failed: {len(result.violations)} file(s) exceed "
+            f"{max_lines} lines"
+        )
+        lines.append("")
+        lines.append("Violations:")
+        for violation in result.violations:
+            lines.append(f"  - {violation.path}: {violation.line_count} lines")
+        lines.append("")
+        lines.append(
+            "Consider refactoring these files or adding them to the allowlist."
+        )
+
+    return "\n".join(lines)
 
 
 def render_allowlist(violations: list[FileMetrics]) -> str:

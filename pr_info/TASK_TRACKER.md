@@ -31,7 +31,7 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 - [x] Write tests for check_file_sizes() function
 - [x] Implement check_file_sizes() function
 - [x] Write tests for render_output() function
-- [ ] Implement render_output() function
+- [x] Implement render_output() function
 - [ ] Write tests for render_allowlist() function
 - [ ] Implement render_allowlist() function
 - [ ] Run pylint, mypy on checks package
