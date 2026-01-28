@@ -58,7 +58,7 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 
 ## Pull Request
 
-- [ ] Review all changes and ensure consistency
-- [ ] Manual test: mcp-coder check file-size --help (see [pr_info/steps/step_3.md](steps/step_3.md))
-- [ ] Manual test: mcp-coder check file-size on project (see [pr_info/steps/step_3.md](steps/step_3.md))
+- [x] Review all changes and ensure consistency
+- [x] Manual test: mcp-coder check file-size --help (see [pr_info/steps/step_3.md](steps/step_3.md))
+- [x] Manual test: mcp-coder check file-size on project (see [pr_info/steps/step_3.md](steps/step_3.md))
 - [ ] Submit pull request for review

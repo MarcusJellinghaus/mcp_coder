@@ -476,7 +476,6 @@ mcp-coder check file-size --allowlist-file .my-allowlist
 - **CI/CD Integration:** Add to pre-commit hooks or CI pipelines to enforce file size limits
 - **Codebase Cleanup:** Identify large files that may need refactoring
 - **Gradual Adoption:** Use `--generate-allowlist` to create an allowlist of existing large files, then enforce limits on new files
-
 ---
 
 ## Configuration and Setup
