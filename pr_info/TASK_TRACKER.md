@@ -21,7 +21,7 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 ### Step 2: Core File Size Checking Logic (TDD)
 **File:** [pr_info/steps/step_2.md](steps/step_2.md)
 
-- [ ] Create src/mcp_coder/checks/__init__.py with exports
+- [x] Create src/mcp_coder/checks/__init__.py with exports
 - [ ] Write tests for count_lines() function
 - [ ] Implement count_lines() function
 - [ ] Write tests for load_allowlist() function
