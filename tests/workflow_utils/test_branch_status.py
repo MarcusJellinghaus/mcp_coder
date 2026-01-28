@@ -14,7 +14,7 @@ import pytest
 
 def test_branch_status_report_creation() -> None:
     """Test BranchStatusReport dataclass creation with all fields."""
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
         ci_status="PASSED",
@@ -37,7 +37,7 @@ def test_branch_status_report_creation() -> None:
 
 def test_branch_status_report_failed_ci() -> None:
     """Test BranchStatusReport with failed CI status."""
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     ci_error = "FAILED tests/test_example.py::test_function - AssertionError"
 
@@ -62,7 +62,7 @@ def test_branch_status_report_failed_ci() -> None:
 
 def test_format_for_human_passed_status() -> None:
     """Test format_for_human with all systems green."""
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
         ci_status="PASSED",
@@ -88,7 +88,7 @@ def test_format_for_human_passed_status() -> None:
 
 def test_format_for_human_failed_status() -> None:
     """Test format_for_human with failures and issues."""
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     ci_error = "FAILED tests/test_example.py::test_function - AssertionError\nFAILED tests/test_other.py::test_other - KeyError"
 
@@ -121,7 +121,7 @@ def test_format_for_human_failed_status() -> None:
 
 def test_format_for_human_pending_status() -> None:
     """Test format_for_human with pending CI status."""
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
         ci_status="PENDING",
@@ -141,7 +141,7 @@ def test_format_for_human_pending_status() -> None:
 
 def test_format_for_human_not_configured() -> None:
     """Test format_for_human with CI not configured."""
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
         ci_status="NOT_CONFIGURED",
@@ -160,7 +160,7 @@ def test_format_for_human_not_configured() -> None:
 
 def test_format_for_llm_basic() -> None:
     """Test format_for_llm basic functionality."""
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
         ci_status="PASSED",
@@ -181,7 +181,7 @@ def test_format_for_llm_basic() -> None:
 
 def test_format_for_llm_truncation() -> None:
     """Test format_for_llm truncates CI details when they exceed max_lines."""
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     # Create CI details with 400 lines (exceeds default 300)
     ci_lines = [f"Error line {i+1}" for i in range(400)]
@@ -210,7 +210,7 @@ def test_format_for_llm_truncation() -> None:
 
 def test_format_for_llm_no_truncation() -> None:
     """Test format_for_llm doesn't truncate short CI details."""
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     short_ci_details = "Short error message"
 
@@ -234,7 +234,7 @@ def test_format_for_llm_no_truncation() -> None:
 
 def test_create_empty_report() -> None:
     """Test create_empty_report function."""
-    from mcp_coder.utils.branch_status import create_empty_report
+    from mcp_coder.workflow_utils.branch_status import create_empty_report
 
     report = create_empty_report()
 
@@ -249,7 +249,7 @@ def test_create_empty_report() -> None:
 
 def test_truncate_ci_details_no_truncation() -> None:
     """Test truncate_ci_details with short content."""
-    from mcp_coder.utils.branch_status import truncate_ci_details
+    from mcp_coder.workflow_utils.branch_status import truncate_ci_details
 
     short_content = "Short error\nAnother line\nThird line"
     result = truncate_ci_details(short_content, max_lines=200)
@@ -260,7 +260,7 @@ def test_truncate_ci_details_no_truncation() -> None:
 
 def test_truncate_ci_details_with_truncation() -> None:
     """Test truncate_ci_details with long content requiring truncation."""
-    from mcp_coder.utils.branch_status import truncate_ci_details
+    from mcp_coder.workflow_utils.branch_status import truncate_ci_details
 
     # Create content with 400 lines
     lines = [f"Line {i+1}" for i in range(400)]
@@ -282,14 +282,14 @@ def test_truncate_ci_details_with_truncation() -> None:
 
 def test_truncate_ci_details_empty() -> None:
     """Test truncate_ci_details with empty content."""
-    from mcp_coder.utils.branch_status import truncate_ci_details
+    from mcp_coder.workflow_utils.branch_status import truncate_ci_details
 
     assert truncate_ci_details("") == ""
 
 
 def test_truncate_ci_details_custom_max_lines() -> None:
     """Test truncate_ci_details with custom max_lines parameter."""
-    from mcp_coder.utils.branch_status import truncate_ci_details
+    from mcp_coder.workflow_utils.branch_status import truncate_ci_details
 
     # Create content with 100 lines
     lines = [f"Line {i+1}" for i in range(100)]
@@ -307,7 +307,7 @@ def test_truncate_ci_details_custom_max_lines() -> None:
 
 def test_branch_status_constants() -> None:
     """Test that required constants are defined."""
-    from mcp_coder.utils.branch_status import (
+    from mcp_coder.workflow_utils.branch_status import (
         CI_FAILED,
         CI_NOT_CONFIGURED,
         CI_PASSED,
@@ -328,7 +328,7 @@ def test_dataclass_immutability() -> None:
     """Test that BranchStatusReport is immutable (frozen)."""
     from dataclasses import FrozenInstanceError
 
-    from mcp_coder.utils.branch_status import BranchStatusReport
+    from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
         ci_status="PASSED",
@@ -351,16 +351,24 @@ def test_dataclass_immutability() -> None:
 
 def test_collect_branch_status_all_good() -> None:
     """Test collect_branch_status with all systems green."""
-    from mcp_coder.utils.branch_status import collect_branch_status
+    from mcp_coder.workflow_utils.branch_status import collect_branch_status
 
     project_dir = Path("/test/repo")
 
     with (
-        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
-        patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
-        patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
-        patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
-        patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
+        patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_task_status"
+        ) as mock_tasks,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_github_label"
+        ) as mock_label,
     ):
         # Setup mocks for all green status
         mock_branch.return_value = "main"
@@ -390,17 +398,25 @@ def test_collect_branch_status_all_good() -> None:
 
 def test_collect_branch_status_ci_failed() -> None:
     """Test collect_branch_status with CI failures."""
-    from mcp_coder.utils.branch_status import collect_branch_status
+    from mcp_coder.workflow_utils.branch_status import collect_branch_status
 
     project_dir = Path("/test/repo")
     ci_error = "FAILED tests/test_example.py::test_function - AssertionError"
 
     with (
-        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
-        patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
-        patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
-        patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
-        patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
+        patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_task_status"
+        ) as mock_tasks,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_github_label"
+        ) as mock_label,
     ):
         # Setup mocks for CI failed
         mock_branch.return_value = "feature/test-branch"
@@ -421,16 +437,24 @@ def test_collect_branch_status_ci_failed() -> None:
 
 def test_collect_branch_status_rebase_needed() -> None:
     """Test collect_branch_status with rebase required."""
-    from mcp_coder.utils.branch_status import collect_branch_status
+    from mcp_coder.workflow_utils.branch_status import collect_branch_status
 
     project_dir = Path("/test/repo")
 
     with (
-        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
-        patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
-        patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
-        patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
-        patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
+        patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_task_status"
+        ) as mock_tasks,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_github_label"
+        ) as mock_label,
     ):
         # Setup mocks for rebase needed
         mock_branch.return_value = "feature/test-branch"
@@ -450,16 +474,24 @@ def test_collect_branch_status_rebase_needed() -> None:
 
 def test_collect_branch_status_tasks_incomplete() -> None:
     """Test collect_branch_status with incomplete tasks."""
-    from mcp_coder.utils.branch_status import collect_branch_status
+    from mcp_coder.workflow_utils.branch_status import collect_branch_status
 
     project_dir = Path("/test/repo")
 
     with (
-        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
-        patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
-        patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
-        patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
-        patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
+        patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_task_status"
+        ) as mock_tasks,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_github_label"
+        ) as mock_label,
     ):
         # Setup mocks for incomplete tasks
         mock_branch.return_value = "feature/test-branch"
@@ -479,17 +511,25 @@ def test_collect_branch_status_tasks_incomplete() -> None:
 
 def test_collect_branch_status_with_truncation() -> None:
     """Test collect_branch_status with CI log truncation enabled."""
-    from mcp_coder.utils.branch_status import collect_branch_status
+    from mcp_coder.workflow_utils.branch_status import collect_branch_status
 
     project_dir = Path("/test/repo")
     long_ci_error = "\n".join([f"Error line {i}" for i in range(300)])
 
     with (
-        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
-        patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
-        patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
-        patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
-        patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
+        patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_task_status"
+        ) as mock_tasks,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_github_label"
+        ) as mock_label,
     ):
         # Setup mocks
         mock_branch.return_value = "main"
@@ -512,17 +552,25 @@ def test_collect_branch_status_with_truncation() -> None:
 
 def test_collect_branch_status_all_failed() -> None:
     """Test collect_branch_status with all systems failing."""
-    from mcp_coder.utils.branch_status import collect_branch_status
+    from mcp_coder.workflow_utils.branch_status import collect_branch_status
 
     project_dir = Path("/test/repo")
     ci_error = "Multiple test failures"
 
     with (
-        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
-        patch("mcp_coder.utils.branch_status._collect_ci_status") as mock_ci,
-        patch("mcp_coder.utils.branch_status._collect_rebase_status") as mock_rebase,
-        patch("mcp_coder.utils.branch_status._collect_task_status") as mock_tasks,
-        patch("mcp_coder.utils.branch_status._collect_github_label") as mock_label,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
+        patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_task_status"
+        ) as mock_tasks,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_github_label"
+        ) as mock_label,
     ):
         # Setup mocks for everything failing
         mock_branch.return_value = "feature/test-branch"
@@ -557,12 +605,14 @@ def test_collect_branch_status_all_failed() -> None:
 
 def test_collect_ci_status_with_truncation() -> None:
     """Test _collect_ci_status with log truncation."""
-    from mcp_coder.utils.branch_status import _collect_ci_status
+    from mcp_coder.workflow_utils.branch_status import _collect_ci_status
 
     project_dir = Path("/test/repo")
     long_logs = "\n".join([f"Log line {i}" for i in range(400)])
 
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+    with patch(
+        "mcp_coder.workflow_utils.branch_status.CIResultsManager"
+    ) as mock_ci_manager:
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
         # Return dict structure matching actual API with jobs data
@@ -598,11 +648,13 @@ def test_collect_ci_status_with_truncation() -> None:
 
 def test_collect_ci_status_no_truncation() -> None:
     """Test _collect_ci_status without truncation."""
-    from mcp_coder.utils.branch_status import _collect_ci_status
+    from mcp_coder.workflow_utils.branch_status import _collect_ci_status
 
     project_dir = Path("/test/repo")
 
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+    with patch(
+        "mcp_coder.workflow_utils.branch_status.CIResultsManager"
+    ) as mock_ci_manager:
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
         # Return dict structure matching actual API - success case
@@ -620,11 +672,13 @@ def test_collect_ci_status_no_truncation() -> None:
 
 def test_collect_ci_status_error_handling() -> None:
     """Test _collect_ci_status with API errors."""
-    from mcp_coder.utils.branch_status import _collect_ci_status
+    from mcp_coder.workflow_utils.branch_status import _collect_ci_status
 
     project_dir = Path("/test/repo")
 
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+    with patch(
+        "mcp_coder.workflow_utils.branch_status.CIResultsManager"
+    ) as mock_ci_manager:
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
         mock_instance.get_latest_ci_status.side_effect = Exception("API Error")
@@ -639,12 +693,14 @@ def test_collect_ci_status_error_handling() -> None:
 
 def test_collect_rebase_status_edge_cases() -> None:
     """Test _collect_rebase_status with various edge cases."""
-    from mcp_coder.utils.branch_status import _collect_rebase_status
+    from mcp_coder.workflow_utils.branch_status import _collect_rebase_status
 
     project_dir = Path("/test/repo")
 
     # Test normal case
-    with patch("mcp_coder.utils.branch_status.needs_rebase") as mock_needs_rebase:
+    with patch(
+        "mcp_coder.workflow_utils.branch_status.needs_rebase"
+    ) as mock_needs_rebase:
         mock_needs_rebase.return_value = (False, "up-to-date")
 
         rebase_needed, reason = _collect_rebase_status(project_dir)
@@ -654,7 +710,9 @@ def test_collect_rebase_status_edge_cases() -> None:
         mock_needs_rebase.assert_called_once_with(project_dir)
 
     # Test error case
-    with patch("mcp_coder.utils.branch_status.needs_rebase") as mock_needs_rebase:
+    with patch(
+        "mcp_coder.workflow_utils.branch_status.needs_rebase"
+    ) as mock_needs_rebase:
         mock_needs_rebase.side_effect = Exception("Git error")
 
         rebase_needed, reason = _collect_rebase_status(project_dir)
@@ -665,7 +723,7 @@ def test_collect_rebase_status_edge_cases() -> None:
 
 def test_collect_task_status() -> None:
     """Test _collect_task_status function."""
-    from mcp_coder.utils.branch_status import _collect_task_status
+    from mcp_coder.workflow_utils.branch_status import _collect_task_status
 
     project_dir = Path("/test/repo")
 
@@ -680,7 +738,9 @@ def test_collect_task_status() -> None:
     # Test tasks complete - pr_info exists with no incomplete work
     with (
         patch("pathlib.Path.exists") as mock_exists,
-        patch("mcp_coder.utils.branch_status.has_incomplete_work") as mock_incomplete,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.has_incomplete_work"
+        ) as mock_incomplete,
     ):
         mock_exists.return_value = True
         mock_incomplete.return_value = False
@@ -692,7 +752,9 @@ def test_collect_task_status() -> None:
     # Test tasks incomplete
     with (
         patch("pathlib.Path.exists") as mock_exists,
-        patch("mcp_coder.utils.branch_status.has_incomplete_work") as mock_incomplete,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.has_incomplete_work"
+        ) as mock_incomplete,
     ):
         mock_exists.return_value = True
         mock_incomplete.return_value = True
@@ -704,7 +766,9 @@ def test_collect_task_status() -> None:
     # Test error case
     with (
         patch("pathlib.Path.exists") as mock_exists,
-        patch("mcp_coder.utils.branch_status.has_incomplete_work") as mock_incomplete,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.has_incomplete_work"
+        ) as mock_incomplete,
     ):
         mock_exists.return_value = True
         mock_incomplete.side_effect = Exception("Task tracker error")
@@ -716,15 +780,17 @@ def test_collect_task_status() -> None:
 
 def test_collect_github_label() -> None:
     """Test _collect_github_label function with branch_name provided."""
-    from mcp_coder.utils.branch_status import _collect_github_label
+    from mcp_coder.workflow_utils.branch_status import _collect_github_label
 
     project_dir = Path("/test/repo")
 
     with (
         patch(
-            "mcp_coder.utils.branch_status.extract_issue_number_from_branch"
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
         ) as mock_extract,
-        patch("mcp_coder.utils.branch_status.IssueManager") as mock_issue_manager,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.IssueManager"
+        ) as mock_issue_manager,
     ):
         # Setup mocks
         mock_extract.return_value = 123
@@ -743,16 +809,20 @@ def test_collect_github_label() -> None:
 
 def test_collect_github_label_without_branch_name() -> None:
     """Test _collect_github_label function without branch_name (falls back to git)."""
-    from mcp_coder.utils.branch_status import _collect_github_label
+    from mcp_coder.workflow_utils.branch_status import _collect_github_label
 
     project_dir = Path("/test/repo")
 
     with (
-        patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch,
         patch(
-            "mcp_coder.utils.branch_status.extract_issue_number_from_branch"
+            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
         ) as mock_extract,
-        patch("mcp_coder.utils.branch_status.IssueManager") as mock_issue_manager,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.IssueManager"
+        ) as mock_issue_manager,
     ):
         # Setup mocks
         mock_branch.return_value = "feature/456-other-tests"
@@ -773,15 +843,17 @@ def test_collect_github_label_without_branch_name() -> None:
 
 def test_collect_github_label_no_status_label() -> None:
     """Test _collect_github_label when no status label found."""
-    from mcp_coder.utils.branch_status import _collect_github_label
+    from mcp_coder.workflow_utils.branch_status import _collect_github_label
 
     project_dir = Path("/test/repo")
 
     with (
         patch(
-            "mcp_coder.utils.branch_status.extract_issue_number_from_branch"
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
         ) as mock_extract,
-        patch("mcp_coder.utils.branch_status.IssueManager") as mock_issue_manager,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.IssueManager"
+        ) as mock_issue_manager,
     ):
         # Setup mocks with no status labels
         mock_extract.return_value = 123
@@ -798,12 +870,14 @@ def test_collect_github_label_no_status_label() -> None:
 
 def test_collect_github_label_error_handling() -> None:
     """Test _collect_github_label with various errors."""
-    from mcp_coder.utils.branch_status import _collect_github_label
+    from mcp_coder.workflow_utils.branch_status import _collect_github_label
 
     project_dir = Path("/test/repo")
 
     # Test branch name None when not provided (falls back to git which returns None)
-    with patch("mcp_coder.utils.branch_status.get_current_branch_name") as mock_branch:
+    with patch(
+        "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+    ) as mock_branch:
         mock_branch.return_value = None
 
         result = _collect_github_label(project_dir)
@@ -812,7 +886,7 @@ def test_collect_github_label_error_handling() -> None:
 
     # Test issue number extraction returns None
     with patch(
-        "mcp_coder.utils.branch_status.extract_issue_number_from_branch"
+        "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
     ) as mock_extract:
         mock_extract.return_value = None
 
@@ -824,7 +898,7 @@ def test_collect_github_label_error_handling() -> None:
 
 def test_generate_recommendations_logic() -> None:
     """Test _generate_recommendations function logic."""
-    from mcp_coder.utils.branch_status import _generate_recommendations
+    from mcp_coder.workflow_utils.branch_status import _generate_recommendations
 
     # Test all good case (CI passed, tasks complete, no rebase needed)
     report_data = {
@@ -899,7 +973,7 @@ def test_generate_recommendations_logic() -> None:
 
 def test_build_ci_error_details_single_failure() -> None:
     """Test _build_ci_error_details with single failed job."""
-    from mcp_coder.utils.branch_status import _build_ci_error_details
+    from mcp_coder.workflow_utils.branch_status import _build_ci_error_details
 
     status_result = {
         "run": {"id": 123},
@@ -932,7 +1006,7 @@ def test_build_ci_error_details_single_failure() -> None:
 
 def test_build_ci_error_details_multiple_failures() -> None:
     """Test _build_ci_error_details shows multiple failed jobs that fit in limit."""
-    from mcp_coder.utils.branch_status import _build_ci_error_details
+    from mcp_coder.workflow_utils.branch_status import _build_ci_error_details
 
     status_result = {
         "run": {"id": 123},
@@ -977,7 +1051,7 @@ def test_build_ci_error_details_multiple_failures() -> None:
 
 def test_build_ci_error_details_no_failed_jobs() -> None:
     """Test _build_ci_error_details with no failed jobs returns None."""
-    from mcp_coder.utils.branch_status import _build_ci_error_details
+    from mcp_coder.workflow_utils.branch_status import _build_ci_error_details
 
     status_result = {
         "run": {"id": 123},
@@ -990,7 +1064,9 @@ def test_build_ci_error_details_no_failed_jobs() -> None:
         ],
     }
 
-    with patch("mcp_coder.utils.branch_status.CIResultsManager") as mock_ci_manager:
+    with patch(
+        "mcp_coder.workflow_utils.branch_status.CIResultsManager"
+    ) as mock_ci_manager:
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
 
@@ -1001,7 +1077,7 @@ def test_build_ci_error_details_no_failed_jobs() -> None:
 
 def test_truncate_ci_details_custom_head_lines() -> None:
     """Test truncate_ci_details with custom head_lines parameter."""
-    from mcp_coder.utils.branch_status import truncate_ci_details
+    from mcp_coder.workflow_utils.branch_status import truncate_ci_details
 
     # Create content with 200 lines
     lines = [f"Line {i+1}" for i in range(200)]

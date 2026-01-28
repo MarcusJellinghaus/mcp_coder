@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from mcp_coder.utils.git_operations.branches import needs_rebase
+from mcp_coder.utils.git_operations import needs_rebase
 from mcp_coder.utils.git_operations.readers import (
     extract_issue_number_from_branch,
     get_current_branch_name,

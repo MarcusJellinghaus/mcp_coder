@@ -145,6 +145,12 @@ _.user_id
 _.request_id
 
 # =============================================================================
+# FALSE POSITIVES - Lazy Import Pattern
+# =============================================================================
+# workflow_utils/__init__.py - __getattr__ used for lazy imports to avoid circular imports
+_.__getattr__
+
+# =============================================================================
 # FALSE POSITIVES - Git Operations
 # =============================================================================
 # repository.py - Variable used in git status parsing

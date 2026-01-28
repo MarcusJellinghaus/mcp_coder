@@ -10,8 +10,8 @@ from mcp_coder.utils.git_operations import (
     checkout_branch,
     create_branch,
     get_current_branch_name,
+    needs_rebase,
 )
-from mcp_coder.utils.git_operations.branches import needs_rebase
 
 
 @pytest.mark.git_integration

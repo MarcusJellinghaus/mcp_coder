@@ -11,6 +11,17 @@ Note: commit_operations is imported lazily to avoid circular imports.
 
 from typing import TYPE_CHECKING, Any
 
+from .branch_status import (
+    CI_FAILED,
+    CI_NOT_CONFIGURED,
+    CI_PASSED,
+    CI_PENDING,
+    BranchStatusReport,
+    collect_branch_status,
+    create_empty_report,
+    get_failed_jobs_summary,
+    truncate_ci_details,
+)
 from .task_tracker import (
     TaskInfo,
     TaskTrackerError,
@@ -30,6 +41,16 @@ if TYPE_CHECKING:
     )
 
 __all__ = [
+    # Branch status operations
+    "BranchStatusReport",
+    "CI_FAILED",
+    "CI_NOT_CONFIGURED",
+    "CI_PASSED",
+    "CI_PENDING",
+    "collect_branch_status",
+    "create_empty_report",
+    "get_failed_jobs_summary",
+    "truncate_ci_details",
     # Task tracker operations
     "get_incomplete_tasks",
     "has_incomplete_work",

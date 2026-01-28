@@ -5,7 +5,6 @@ from .branches import (
     checkout_branch,
     create_branch,
     delete_branch,
-    needs_rebase,
 )
 
 # Commit operations
@@ -50,7 +49,7 @@ from .remotes import (
 from .staging import stage_all_changes, stage_specific_files
 
 # Workflow orchestration
-from .workflows import commit_all_changes
+from .workflows import commit_all_changes, needs_rebase
 
 __all__ = [
     # Types

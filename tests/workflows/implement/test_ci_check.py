@@ -4,8 +4,11 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
-from mcp_coder.utils.branch_status import get_failed_jobs_summary, truncate_ci_details
 from mcp_coder.utils.github_operations.ci_results_manager import JobData
+from mcp_coder.workflow_utils.branch_status import (
+    get_failed_jobs_summary,
+    truncate_ci_details,
+)
 
 
 class TestTruncateCiDetails:

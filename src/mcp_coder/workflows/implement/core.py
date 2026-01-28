@@ -15,7 +15,6 @@ from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import ask_llm
 from mcp_coder.prompt_manager import get_prompt, get_prompt_with_substitutions
 from mcp_coder.utils import commit_all_changes, get_full_status
-from mcp_coder.utils.branch_status import get_failed_jobs_summary, truncate_ci_details
 from mcp_coder.utils.git_operations import (
     get_current_branch_name,
     get_default_branch_name,
@@ -28,6 +27,10 @@ from mcp_coder.utils.github_operations.ci_results_manager import (
     JobData,
 )
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
+from mcp_coder.workflow_utils.branch_status import (
+    get_failed_jobs_summary,
+    truncate_ci_details,
+)
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
