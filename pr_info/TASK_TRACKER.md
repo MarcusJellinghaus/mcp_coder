@@ -22,7 +22,7 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 **File:** [pr_info/steps/step_2.md](steps/step_2.md)
 
 - [x] Create src/mcp_coder/checks/__init__.py with exports
-- [ ] Write tests for count_lines() function
+- [x] Write tests for count_lines() function
 - [ ] Implement count_lines() function
 - [ ] Write tests for load_allowlist() function
 - [ ] Implement load_allowlist() function
