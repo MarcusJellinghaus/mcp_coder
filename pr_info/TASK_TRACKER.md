@@ -11,7 +11,7 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 ### Step 1: Dependencies and Filesystem Wrapper
 **File:** [pr_info/steps/step_1.md](steps/step_1.md)
 
-- [ ] Update pyproject.toml - move mcp-server-filesystem to main dependencies
+- [x] Update pyproject.toml - move mcp-server-filesystem to main dependencies
 - [ ] Create src/mcp_coder/mcp_server_filesystem.py wrapper
 - [ ] Create tests/checks/__init__.py package
 - [ ] Verify dependency installation works
