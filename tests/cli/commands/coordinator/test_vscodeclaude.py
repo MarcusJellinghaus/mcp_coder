@@ -319,8 +319,6 @@ class TestTemplates:
 
     def test_tasks_json_is_valid_json_template(self) -> None:
         """Tasks template produces valid JSON when formatted."""
-        import json
-
         from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
             TASKS_JSON_TEMPLATE,
         )
@@ -437,26 +435,6 @@ class TestTemplates:
         assert ".vscodeclaude_start.bat" in GITIGNORE_ENTRY
         assert ".vscodeclaude_start.sh" in GITIGNORE_ENTRY
         assert "# VSCodeClaude session files" in GITIGNORE_ENTRY
-
-
-class TestIntegration:
-    """Integration tests for end-to-end workflow."""
-
-    def test_complete_session_workflow(
-        self, tmp_path: str, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test complete session creation and launch workflow."""
-        # This is a placeholder for future integration tests
-        # Will test the full flow from config loading to VSCode launch
-        pass
-
-    def test_session_cleanup_workflow(
-        self, tmp_path: str, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test session stale detection and cleanup workflow."""
-        # This is a placeholder for future integration tests
-        # Will test stale session detection and cleanup
-        pass
 
 
 class TestSessionManagement:
@@ -766,7 +744,7 @@ class TestSessionManagement:
         save_sessions(store)
 
         assert sessions_file.exists()
-        loaded = json.loads(sessions_file.read_text())
+        loaded = json.loads(sessions_file.read_text(encoding="utf-8"))
         assert "sessions" in loaded
 
 
@@ -1302,7 +1280,7 @@ class TestWorkspaceSetup:
 
         update_gitignore(tmp_path)
 
-        content = gitignore.read_text()
+        content = gitignore.read_text(encoding="utf-8")
         assert ".vscodeclaude_status.md" in content
         assert "*.pyc" in content  # Preserves existing
 
@@ -1312,7 +1290,7 @@ class TestWorkspaceSetup:
 
         gitignore = tmp_path / ".gitignore"
         assert gitignore.exists()
-        assert ".vscodeclaude_status.md" in gitignore.read_text()
+        assert ".vscodeclaude_status.md" in gitignore.read_text(encoding="utf-8")
 
     def test_update_gitignore_idempotent(self, tmp_path: Path) -> None:
         """Doesn't duplicate entry on second call."""
@@ -1320,7 +1298,7 @@ class TestWorkspaceSetup:
         update_gitignore(tmp_path)
 
         gitignore = tmp_path / ".gitignore"
-        content = gitignore.read_text()
+        content = gitignore.read_text(encoding="utf-8")
         assert content.count(".vscodeclaude_status.md") == 1
 
     def test_create_workspace_file(self, tmp_path: Path) -> None:
@@ -1337,7 +1315,7 @@ class TestWorkspaceSetup:
         assert workspace_path.exists()
         assert workspace_path.suffix == ".code-workspace"
 
-        content = json.loads(workspace_path.read_text())
+        content = json.loads(workspace_path.read_text(encoding="utf-8"))
         assert "folders" in content
         assert "settings" in content
         assert "#123" in content["settings"]["window.title"]
@@ -1354,7 +1332,7 @@ class TestWorkspaceSetup:
             repo_name="test",
         )
 
-        content = json.loads(workspace_path.read_text())
+        content = json.loads(workspace_path.read_text(encoding="utf-8"))
         # Title should be truncated with ...
         assert "..." in content["settings"]["window.title"]
 
@@ -1378,7 +1356,7 @@ class TestWorkspaceSetup:
 
         assert script_path.suffix == ".bat"
         assert script_path.exists()
-        content = script_path.read_text()
+        content = script_path.read_text(encoding="utf-8")
         assert "claude" in content
         assert "/implementation_review" in content
 
@@ -1421,7 +1399,7 @@ class TestWorkspaceSetup:
             is_intervention=True,
         )
 
-        content = script_path.read_text()
+        content = script_path.read_text(encoding="utf-8")
         assert "INTERVENTION" in content
         assert "/implementation_review" not in content
 
@@ -1435,7 +1413,7 @@ class TestWorkspaceSetup:
         tasks_file = tmp_path / ".vscode" / "tasks.json"
         assert tasks_file.exists()
 
-        content = json.loads(tasks_file.read_text())
+        content = json.loads(tasks_file.read_text(encoding="utf-8"))
         assert content["tasks"][0]["runOptions"]["runOn"] == "folderOpen"
 
     def test_create_status_file(self, tmp_path: Path) -> None:
@@ -1454,7 +1432,7 @@ class TestWorkspaceSetup:
         status_file = tmp_path / ".vscodeclaude_status.md"
         assert status_file.exists()
 
-        content = status_file.read_text()
+        content = status_file.read_text(encoding="utf-8")
         assert "#123" in content
         assert "Add feature" in content
         assert "code-review" in content
@@ -1473,7 +1451,7 @@ class TestWorkspaceSetup:
         )
 
         status_file = tmp_path / ".vscodeclaude_status.md"
-        content = status_file.read_text()
+        content = status_file.read_text(encoding="utf-8")
         assert "INTERVENTION" in content
 
 
