@@ -12,11 +12,11 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 **File:** [pr_info/steps/step_1.md](steps/step_1.md)
 
 - [x] Update pyproject.toml - move mcp-server-filesystem to main dependencies
-- [ ] Create src/mcp_coder/mcp_server_filesystem.py wrapper
-- [ ] Create tests/checks/__init__.py package
-- [ ] Verify dependency installation works
-- [ ] Prepare git commit message for step 1
-- [ ] All Step 1 tasks completed
+- [x] Create src/mcp_coder/mcp_server_filesystem.py wrapper
+- [x] Create tests/checks/__init__.py package
+- [x] Verify dependency installation works
+- [x] Prepare git commit message for step 1
+- [x] All Step 1 tasks completed
 
 ### Step 2: Core File Size Checking Logic (TDD)
 **File:** [pr_info/steps/step_2.md](steps/step_2.md)
