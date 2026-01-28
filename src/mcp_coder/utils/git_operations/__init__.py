@@ -49,7 +49,7 @@ from .remotes import (
 from .staging import stage_all_changes, stage_specific_files
 
 # Workflow orchestration
-from .workflows import commit_all_changes
+from .workflows import commit_all_changes, needs_rebase
 
 __all__ = [
     # Types
@@ -64,6 +64,7 @@ __all__ = [
     "get_current_branch_name",
     "get_default_branch_name",
     "get_parent_branch_name",
+    "needs_rebase",
     "rebase_onto_branch",
     "remote_branch_exists",
     "validate_branch_name",

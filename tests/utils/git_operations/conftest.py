@@ -61,6 +61,9 @@ def git_repo_with_remote(tmp_path: Path) -> tuple[Repo, Path, Path]:
     repo.index.add(["README.md"])
     repo.index.commit("Initial commit")
 
+    # Rename default branch to 'main' for consistency across different Git configurations
+    repo.git.branch("-M", "main")
+
     # Add bare repo as origin remote
     repo.create_remote("origin", str(bare_remote_dir))
 

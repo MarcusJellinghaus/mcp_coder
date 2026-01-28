@@ -12,10 +12,19 @@ Constraints:
 
 import logging
 from pathlib import Path
+from typing import Optional, Tuple
+
+from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from .commits import commit_staged_files
-from .core import CommitResult
-from .readers import get_full_status, is_git_repository
+from .core import CommitResult, _safe_repo_context
+from .readers import (
+    get_current_branch_name,
+    get_default_branch_name,
+    get_full_status,
+    is_git_repository,
+)
+from .remotes import fetch_remote
 from .staging import stage_all_changes
 
 # Use same logging pattern as other git_operations modules
@@ -98,3 +107,98 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
         error_msg = f"Unexpected error during commit all changes workflow: {e}"
         logger.error(error_msg)
         return {"success": False, "commit_hash": None, "error": error_msg}
+
+
+def needs_rebase(
+    project_dir: Path, target_branch: Optional[str] = None
+) -> Tuple[bool, str]:
+    """Detect if current branch needs rebasing onto target branch.
+
+    Args:
+        project_dir: Path to git repository
+        target_branch: Branch to check against (defaults to auto-detect)
+
+    Returns:
+        (needs_rebase, reason) where:
+        - needs_rebase: True if rebase is needed, False otherwise
+        - reason: Description of status ("up-to-date", "3 commits behind", "error: <reason>")
+    """
+    logger.debug("Checking if rebase needed in %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        error_msg = "not a git repository"
+        logger.debug("Not a git repository: %s", project_dir)
+        return False, f"error: {error_msg}"
+
+    try:
+        # Fetch from remote to ensure we have latest refs
+        if not fetch_remote(project_dir):
+            error_msg = "failed to fetch from remote"
+            logger.warning("Failed to fetch from remote for rebase check")
+            return False, f"error: {error_msg}"
+
+        with _safe_repo_context(project_dir) as repo:
+            # Get current branch
+            current_branch = get_current_branch_name(project_dir)
+            if not current_branch:
+                error_msg = "not on a branch (detached HEAD)"
+                logger.debug("Repository is in detached HEAD state")
+                return False, f"error: {error_msg}"
+
+            # Determine target branch
+            if target_branch is None:
+                target_branch = get_default_branch_name(project_dir)
+                if not target_branch:
+                    error_msg = "cannot determine target branch"
+                    logger.debug("Could not determine default branch")
+                    return False, f"error: {error_msg}"
+
+            # Don't check rebase against self
+            if current_branch == target_branch:
+                logger.debug("Current branch is the target branch")
+                return False, "up-to-date"
+
+            # Check if origin/target_branch exists
+            origin_target = f"origin/{target_branch}"
+            try:
+                repo.git.rev_parse("--verify", origin_target)
+            except GitCommandError:
+                error_msg = f"target branch '{origin_target}' not found"
+                logger.debug("Target branch not found: %s", origin_target)
+                return False, f"error: {error_msg}"
+
+            # Count commits that origin/target has but HEAD doesn't
+            try:
+                commit_range = f"HEAD..{origin_target}"
+                commit_count_output = repo.git.rev_list("--count", commit_range)
+                commit_count = int(commit_count_output.strip())
+
+                if commit_count == 0:
+                    # No commits in origin/target that aren't in HEAD
+                    logger.debug("Current branch is up-to-date with %s", origin_target)
+                    return False, "up-to-date"
+                elif commit_count == 1:
+                    reason = "1 commit behind"
+                else:
+                    reason = f"{commit_count} commits behind"
+
+                logger.debug(
+                    "Current branch is %s %s",
+                    commit_count,
+                    "commit" if commit_count == 1 else "commits",
+                )
+                return True, reason
+
+            except (GitCommandError, ValueError) as e:
+                error_msg = f"failed to count commits: {e}"
+                logger.warning("Failed to count commits for rebase check: %s", e)
+                return False, f"error: {error_msg}"
+
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        error_msg = f"git error: {e}"
+        logger.error("Git error during rebase check: %s", e)
+        return False, f"error: {error_msg}"
+    except Exception as e:
+        error_msg = f"unexpected error: {e}"
+        logger.error("Unexpected error during rebase check: %s", e)
+        return False, f"error: {error_msg}"

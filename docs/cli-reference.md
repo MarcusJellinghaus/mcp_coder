@@ -38,6 +38,13 @@ Orchestration and monitoring of automated development across repositories.
 | [`coordinator test`](#coordinator-test) | Trigger Jenkins integration test for repository |
 | [`coordinator run`](#coordinator-run) | Monitor and dispatch workflows for GitHub issues |
 
+### Quality Checks
+Branch readiness verification and automated fixes.
+
+| Command | Description |
+|---------|-------------|
+| [`check branch-status`](#check-branch-status) | Check branch readiness and optionally apply fixes |
+
 ### Repository & Issue Setup
 Setup and configuration for GitHub workflow automation.
 
@@ -343,6 +350,53 @@ mcp-coder coordinator run --all --force-refresh
 
 ---
 
+### check branch-status
+
+Check branch readiness status and optionally apply fixes.
+
+```bash
+mcp-coder check branch-status [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Project directory path (default: current directory)
+- `--fix` - Attempt to automatically fix issues found
+- `--llm-truncate` - Truncate output for LLM consumption
+- `--llm-method METHOD` - LLM method: `claude_code_cli` (default) or `claude_code_api`
+- `--mcp-config PATH` - Path to MCP configuration file
+- `--execution-dir PATH` - Working directory for Claude subprocess
+
+**Description:** Comprehensive branch readiness check that verifies:
+- **CI Status** - Analyzes latest workflow run and retrieves error logs
+- **Rebase Detection** - Checks if branch needs rebasing onto main
+- **Task Validation** - Verifies all implementation tasks are complete
+- **GitHub Labels** - Reports current workflow status label
+
+When `--fix` is enabled, attempts to automatically fix CI failures using LLM analysis.
+
+**Examples:**
+```bash
+# Basic status check
+mcp-coder check branch-status
+
+# Check and attempt auto-fix
+mcp-coder check branch-status --fix
+
+# LLM-optimized output with auto-fix
+mcp-coder check branch-status --fix --llm-truncate
+
+# Use API method with specific project
+mcp-coder check branch-status --fix --llm-method claude_code_api --project-dir /path/to/project
+```
+
+**Output includes:**
+- CI status with truncated error logs (when `--llm-truncate`)
+- Rebase requirements and recommendations
+- Task completion status
+- Actionable next steps
+
+---
+
 ### define-labels
 
 Sync workflow status labels to GitHub repository.
@@ -390,6 +444,7 @@ Many commands support the `--mcp-config` flag to specify MCP (Model Context Prot
 - `implement`
 - `create-plan`
 - `create-pr`
+- `check branch-status`
 
 **Usage:**
 ```bash

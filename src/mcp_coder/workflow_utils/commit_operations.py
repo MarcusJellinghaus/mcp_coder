@@ -11,7 +11,6 @@ from ..constants import PROMPTS_FILE_PATH
 from ..llm.env import prepare_llm_environment
 from ..llm.interface import ask_llm
 from ..llm.providers.claude.claude_code_api import ClaudeAPIError
-from ..prompt_manager import get_prompt
 from ..utils.git_operations import get_git_diff_for_commit, stage_all_changes
 
 # Constants
@@ -114,6 +113,11 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
     # Step 3: Load commit prompt template
     logger.debug("Loading commit message generation prompt")
     try:
+        # Import here to avoid circular import during module initialization
+        from ..prompt_manager import (  # pylint: disable=import-outside-toplevel
+            get_prompt,
+        )
+
         base_prompt = get_prompt(
             str(PROMPTS_FILE_PATH), "Git Commit Message Generation"
         )

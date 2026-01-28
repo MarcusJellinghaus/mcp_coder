@@ -17,6 +17,20 @@ from .commands.prompt import execute_prompt
 from .commands.set_status import build_set_status_epilog, execute_set_status
 from .commands.verify import execute_verify
 
+
+class WideHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """Custom formatter with wider help position for longer command names."""
+
+    def __init__(
+        self,
+        prog: str,
+        indent_increment: int = 2,
+        max_help_position: int = 32,
+        width: int | None = None,
+    ) -> None:
+        super().__init__(prog, indent_increment, max_help_position, width)
+
+
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
 
@@ -26,15 +40,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mcp-coder",
         description="AI-powered software development automation toolkit",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  mcp-coder help                    Show detailed help information
-  mcp-coder commit auto             Auto-generate and create commit
-  mcp-coder commit clipboard        Commit using message from clipboard
-
-For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
-        """,
+        formatter_class=WideHelpFormatter,
     )
 
     parser.add_argument(
@@ -69,7 +75,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # Prompt command - Execute prompt via Claude API with configurable debug output
     prompt_parser = subparsers.add_parser(
-        "prompt", help="Execute prompt via Claude API with configurable debug output"
+        "prompt",
+        help="Execute prompt via Claude API with configurable debug output",
+        formatter_class=WideHelpFormatter,
     )
     prompt_parser.add_argument("prompt", help="The prompt to send to Claude")
     prompt_parser.add_argument(
@@ -152,7 +160,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # commit auto command - Step 5
     auto_parser = commit_subparsers.add_parser(
-        "auto", help="Auto-generate commit message using LLM"
+        "auto",
+        help="Auto-generate commit message using LLM",
+        formatter_class=WideHelpFormatter,
     )
     auto_parser.add_argument(
         "--preview",
@@ -186,7 +196,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # commit clipboard command - Step 6
     clipboard_parser = commit_subparsers.add_parser(
-        "clipboard", help="Use commit message from clipboard"
+        "clipboard",
+        help="Use commit message from clipboard",
+        formatter_class=WideHelpFormatter,
     )
     clipboard_parser.add_argument(
         "--project-dir",
@@ -197,7 +209,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # Implement command - Step 5
     implement_parser = subparsers.add_parser(
-        "implement", help="Execute implementation workflow from task tracker"
+        "implement",
+        help="Execute implementation workflow from task tracker",
+        formatter_class=WideHelpFormatter,
     )
     implement_parser.add_argument(
         "--project-dir",
@@ -231,7 +245,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # Create plan command - Generate implementation plan from GitHub issue
     create_plan_parser = subparsers.add_parser(
-        "create-plan", help="Generate implementation plan for a GitHub issue"
+        "create-plan",
+        help="Generate implementation plan for a GitHub issue",
+        formatter_class=WideHelpFormatter,
     )
     create_plan_parser.add_argument(
         "issue_number", type=int, help="GitHub issue number to create plan for"
@@ -268,7 +284,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # Create PR command - Step 3
     create_pr_parser = subparsers.add_parser(
-        "create-pr", help="Create pull request with AI-generated summary"
+        "create-pr",
+        help="Create pull request with AI-generated summary",
+        formatter_class=WideHelpFormatter,
     )
     create_pr_parser.add_argument(
         "--project-dir",
@@ -312,7 +330,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # coordinator test command
     test_parser = coordinator_subparsers.add_parser(
-        "test", help="Trigger Jenkins integration test for repository"
+        "test",
+        help="Trigger Jenkins integration test for repository",
+        formatter_class=WideHelpFormatter,
     )
     test_parser.add_argument(
         "repo_name", help="Repository name from config (e.g., mcp_coder)"
@@ -333,7 +353,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # coordinator run command
     run_parser = coordinator_subparsers.add_parser(
-        "run", help="Monitor and dispatch workflows for GitHub issues"
+        "run",
+        help="Monitor and dispatch workflows for GitHub issues",
+        formatter_class=WideHelpFormatter,
     )
 
     # Mutually exclusive group: --all OR --repo (one required)
@@ -356,7 +378,9 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
 
     # Define-labels command - Sync workflow status labels to GitHub
     define_labels_parser = subparsers.add_parser(
-        "define-labels", help="Sync workflow status labels to GitHub repository"
+        "define-labels",
+        help="Sync workflow status labels to GitHub repository",
+        formatter_class=WideHelpFormatter,
     )
     define_labels_parser.add_argument(
         "--project-dir",
@@ -375,7 +399,7 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
     set_status_parser = subparsers.add_parser(
         "set-status",
         help="Update GitHub issue workflow status label",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=WideHelpFormatter,
         epilog=build_set_status_epilog(),  # Dynamic generation from config
     )
     set_status_parser.add_argument(
@@ -398,6 +422,57 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder
         "--force",
         action="store_true",
         help="Bypass clean working directory check",
+    )
+
+    # Check commands - Branch and code status verification
+    check_parser = subparsers.add_parser(
+        "check", help="Check commands for branch and code status verification"
+    )
+    check_subparsers = check_parser.add_subparsers(
+        dest="check_subcommand",
+        help="Available check commands",
+        metavar="SUBCOMMAND",
+    )
+
+    # check branch-status command
+    branch_status_parser = check_subparsers.add_parser(
+        "branch-status",
+        help="Check branch readiness status and optionally apply fixes",
+        formatter_class=WideHelpFormatter,
+    )
+    branch_status_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    branch_status_parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Attempt to automatically fix issues found",
+    )
+    branch_status_parser.add_argument(
+        "--llm-truncate",
+        action="store_true",
+        help="Truncate output for LLM consumption",
+    )
+    branch_status_parser.add_argument(
+        "--llm-method",
+        choices=["claude_code_cli", "claude_code_api"],
+        default="claude_code_cli",
+        help="LLM method to use for --fix (default: claude_code_cli)",
+    )
+    branch_status_parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
+    branch_status_parser.add_argument(
+        "--execution-dir",
+        type=str,
+        default=None,
+        help="Working directory for Claude subprocess (default: current directory)",
     )
 
     return parser
@@ -479,6 +554,24 @@ def main() -> int:
             return execute_define_labels(args)
         elif args.command == "set-status":
             return execute_set_status(args)
+        elif args.command == "check":
+            if hasattr(args, "check_subcommand") and args.check_subcommand:
+                if args.check_subcommand == "branch-status":
+                    from .commands.check_branch_status import (
+                        execute_check_branch_status,
+                    )
+
+                    return execute_check_branch_status(args)
+                else:
+                    logger.error(f"Unknown check subcommand: {args.check_subcommand}")
+                    print(f"Error: Unknown check subcommand '{args.check_subcommand}'")
+                    return 1
+            else:
+                logger.error("Check subcommand required")
+                print(
+                    "Error: Please specify a check subcommand (e.g., 'branch-status')"
+                )
+                return 1
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")

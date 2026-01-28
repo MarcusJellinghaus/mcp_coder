@@ -27,6 +27,10 @@ from mcp_coder.utils.github_operations.ci_results_manager import (
     JobData,
 )
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
+from mcp_coder.workflow_utils.branch_status import (
+    get_failed_jobs_summary,
+    truncate_ci_details,
+)
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -109,102 +113,6 @@ def _short_sha(sha: str) -> str:
     if not sha or sha == "unknown":
         return "unknown"
     return sha[:7]
-
-
-def _extract_log_excerpt(log: str, max_lines: int = 200) -> str:
-    """Extract log excerpt: first 30 + last 170 lines if log exceeds max_lines.
-
-    Args:
-        log: Full log content as string
-        max_lines: Maximum lines before truncation (default 200)
-
-    Returns:
-        Original log if under max_lines, otherwise truncated with marker
-    """
-    if not log:
-        return ""
-
-    lines = log.split("\n")
-
-    if len(lines) <= max_lines:
-        return log
-
-    # Take first 30 lines and last 170 lines
-    first_lines = lines[:30]
-    last_lines = lines[-170:]
-    truncated_count = len(lines) - 200
-
-    return "\n".join(
-        first_lines + [f"[... truncated {truncated_count} lines ...]"] + last_lines
-    )
-
-
-def _get_failed_jobs_summary(
-    jobs: list[JobData], logs: dict[str, str]
-) -> dict[str, Any]:
-    """Get summary of failed jobs from CI status.
-
-    Args:
-        jobs: List of JobData TypedDicts with 'name', 'conclusion', and 'steps' keys
-        logs: Dict mapping log filenames to content
-
-    Returns:
-        Dict with keys: job_name, step_name, step_number, log_excerpt, other_failed_jobs
-    """
-    # Filter jobs where conclusion == "failure"
-    failed_jobs = [job for job in jobs if job.get("conclusion") == "failure"]
-
-    # Return empty result if no failed jobs
-    if not failed_jobs:
-        return {
-            "job_name": "",
-            "step_name": "",
-            "step_number": 0,
-            "log_excerpt": "",
-            "other_failed_jobs": [],
-        }
-
-    # Get first failed job
-    first_failed = failed_jobs[0]
-    job_name = first_failed.get("name", "")
-
-    # Find first step with conclusion == "failure"
-    step_name = ""
-    step_number = 0
-    steps = first_failed.get("steps", [])
-    for step in steps:
-        if step.get("conclusion") == "failure":
-            step_name = step.get("name", "")
-            step_number = step.get("number", 0)
-            break
-
-    # Construct log filename: {job_name}/{step_number}_{step_name}.txt
-    log_filename = f"{job_name}/{step_number}_{step_name}.txt"
-
-    # Look up log content
-    log_content = logs.get(log_filename, "")
-
-    # Log warning if no match found (Decision 16)
-    if not log_content and step_name:
-        available_files = list(logs.keys())
-        logger.warning(
-            f"No log file found for failed step. Expected: '{log_filename}', "
-            f"Available: {available_files}"
-        )
-
-    # Extract log excerpt
-    log_excerpt = _extract_log_excerpt(log_content)
-
-    # Other failed jobs
-    other_failed_jobs = [job.get("name", "") for job in failed_jobs[1:]]
-
-    return {
-        "job_name": job_name,
-        "step_name": step_name,
-        "step_number": step_number,
-        "log_excerpt": log_excerpt,
-        "other_failed_jobs": other_failed_jobs,
-    }
 
 
 def _run_ci_analysis(
@@ -488,7 +396,7 @@ def _run_ci_analysis_and_fix(
         logger.warning(f"Failed to get CI logs: {e}")
         logs = {}
 
-    failed_summary = _get_failed_jobs_summary(jobs, logs)
+    failed_summary = get_failed_jobs_summary(jobs, logs)
 
     if not failed_summary["job_name"]:
         logger.warning("No failed jobs found in CI status")

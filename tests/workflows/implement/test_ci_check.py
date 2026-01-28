@@ -5,55 +5,55 @@ from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 from mcp_coder.utils.github_operations.ci_results_manager import JobData
-from mcp_coder.workflows.implement.core import (
-    _extract_log_excerpt,
-    _get_failed_jobs_summary,
+from mcp_coder.workflow_utils.branch_status import (
+    get_failed_jobs_summary,
+    truncate_ci_details,
 )
 
 
-class TestExtractLogExcerpt:
-    """Tests for _extract_log_excerpt function."""
+class TestTruncateCiDetails:
+    """Tests for truncate_ci_details function (shared truncation logic)."""
 
     def test_short_log_returned_unchanged(self) -> None:
-        """Logs under 200 lines should be returned as-is."""
-        log = "\n".join([f"Line {i}" for i in range(100)])
-
-        result = _extract_log_excerpt(log)
-
-        assert result == log
-
-    def test_exactly_200_lines_returned_unchanged(self) -> None:
-        """Logs of exactly 200 lines should be returned as-is."""
+        """Logs under 300 lines should be returned as-is."""
         log = "\n".join([f"Line {i}" for i in range(200)])
 
-        result = _extract_log_excerpt(log)
+        result = truncate_ci_details(log)
 
         assert result == log
 
-    def test_long_log_truncated_to_first_30_last_170(self) -> None:
-        """Logs over 200 lines should have first 30 + last 170 lines."""
+    def test_exactly_300_lines_returned_unchanged(self) -> None:
+        """Logs of exactly 300 lines should be returned as-is."""
         log = "\n".join([f"Line {i}" for i in range(300)])
 
-        result = _extract_log_excerpt(log)
+        result = truncate_ci_details(log)
 
-        # Should have 200 lines + truncation marker
+        assert result == log
+
+    def test_long_log_truncated_to_first_50_last_250(self) -> None:
+        """Logs over 300 lines should have first 50 + last 250 lines."""
+        log = "\n".join([f"Line {i}" for i in range(400)])
+
+        result = truncate_ci_details(log)
+
+        # Should have 300 lines + truncation marker
         assert "Line 0" in result  # First line preserved
-        assert "Line 29" in result  # Line 30 preserved (0-indexed)
-        assert "Line 299" in result  # Last line preserved
-        assert "Line 130" in result  # From last 170 (300-170=130)
-        assert "Line 30" not in result  # Should be truncated
-        assert "Line 129" not in result  # Should be truncated
+        assert "Line 49" in result  # Line 50 preserved (0-indexed)
+        assert "Line 399" in result  # Last line preserved
+        assert "Line 150" in result  # From last 250 (400-250=150)
+        assert "Line 50" not in result  # Should be truncated
+        assert "Line 149" not in result  # Should be truncated
         assert "..." in result or "[truncated]" in result.lower()
 
     def test_empty_log_returns_empty(self) -> None:
         """Empty log should return empty string."""
-        result = _extract_log_excerpt("")
+        result = truncate_ci_details("")
 
         assert result == ""
 
 
 class TestGetFailedJobsSummary:
-    """Tests for _get_failed_jobs_summary function."""
+    """Tests for get_failed_jobs_summary function (shared CI log extraction)."""
 
     def test_single_failed_job_returns_details_with_step_info(self) -> None:
         """Single failed job should return its name, step info, and log."""
@@ -74,7 +74,7 @@ class TestGetFailedJobsSummary:
         )
         logs = {"test/3_Run tests.txt": "Error: test failed\nAssertionError"}
 
-        result = _get_failed_jobs_summary(jobs, logs)
+        result = get_failed_jobs_summary(jobs, logs)
 
         assert result["job_name"] == "test"
         assert result["step_name"] == "Run tests"
@@ -114,7 +114,7 @@ class TestGetFailedJobsSummary:
             "build/1_Build.txt": "Build error",
         }
 
-        result = _get_failed_jobs_summary(jobs, logs)
+        result = get_failed_jobs_summary(jobs, logs)
 
         assert result["job_name"] == "lint"  # First failed job
         assert "Lint error" in result["log_excerpt"]
@@ -133,7 +133,7 @@ class TestGetFailedJobsSummary:
         )
         logs: dict[str, str] = {}
 
-        result = _get_failed_jobs_summary(jobs, logs)
+        result = get_failed_jobs_summary(jobs, logs)
 
         assert result["job_name"] == ""
         assert result["step_name"] == ""
@@ -156,7 +156,7 @@ class TestGetFailedJobsSummary:
         )
         logs: dict[str, str] = {}  # No logs available
 
-        result = _get_failed_jobs_summary(jobs, logs)
+        result = get_failed_jobs_summary(jobs, logs)
 
         assert result["job_name"] == "test"
         assert result["step_name"] == "Run tests"
@@ -185,7 +185,7 @@ class TestGetFailedJobsSummary:
         # Log filename format: {job_name}/{step_number}_{step_name}.txt
         logs = {"test/2_Run tests.txt": "Test failure output"}
 
-        result = _get_failed_jobs_summary(jobs, logs)
+        result = get_failed_jobs_summary(jobs, logs)
 
         assert "Test failure output" in result["log_excerpt"]
 
