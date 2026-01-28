@@ -32,7 +32,11 @@ def count_lines(file_path: Path) -> int:
     Returns:
         Line count, or -1 if file is binary/non-UTF-8.
     """
-    raise NotImplementedError("To be implemented in Task 2.3")
+    try:
+        with file_path.open(encoding="utf-8") as f:
+            return sum(1 for _ in f)
+    except UnicodeDecodeError:
+        return -1
 
 
 def load_allowlist(allowlist_path: Path) -> set[str]:
