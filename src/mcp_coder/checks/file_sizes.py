@@ -76,7 +76,13 @@ def get_file_metrics(files: list[Path], project_dir: Path) -> list[FileMetrics]:
     Returns:
         List of FileMetrics (excludes binary files).
     """
-    raise NotImplementedError("To be implemented in Task 2.5")
+    result: list[FileMetrics] = []
+    for file_path in files:
+        absolute_path = project_dir / file_path
+        line_count = count_lines(absolute_path)
+        if line_count >= 0:
+            result.append(FileMetrics(path=file_path, line_count=line_count))
+    return result
 
 
 def check_file_sizes(
