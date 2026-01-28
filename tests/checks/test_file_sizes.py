@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.checks.file_sizes import count_lines, load_allowlist
+from mcp_coder.checks.file_sizes import (
+    FileMetrics,
+    count_lines,
+    get_file_metrics,
+    load_allowlist,
+)
 
 
 class TestCountLines:
@@ -151,3 +156,71 @@ class TestLoadAllowlist:
         assert len(result) == 2
         for entry in result:
             assert entry == entry.strip()
+
+
+class TestGetFileMetrics:
+    """Tests for get_file_metrics() function."""
+
+    def test_get_file_metrics_multiple_files(self, tmp_path: Path) -> None:
+        """Test getting metrics for multiple files."""
+        # Create test files with known line counts
+        file1 = tmp_path / "file1.py"
+        file1.write_text("line 1\nline 2\nline 3\n", encoding="utf-8")
+
+        file2 = tmp_path / "file2.py"
+        file2.write_text("line 1\nline 2\n", encoding="utf-8")
+
+        file3 = tmp_path / "file3.py"
+        file3.write_text("single line\n", encoding="utf-8")
+
+        files = [Path("file1.py"), Path("file2.py"), Path("file3.py")]
+
+        result = get_file_metrics(files, tmp_path)
+
+        assert len(result) == 3
+        # Convert to dict for easier assertion
+        metrics_by_name = {m.path.name: m.line_count for m in result}
+        assert metrics_by_name["file1.py"] == 3
+        assert metrics_by_name["file2.py"] == 2
+        assert metrics_by_name["file3.py"] == 1
+
+    def test_get_file_metrics_skips_binary(self, tmp_path: Path) -> None:
+        """Test that binary files are excluded from results."""
+        # Create a text file
+        text_file = tmp_path / "text.py"
+        text_file.write_text("line 1\nline 2\n", encoding="utf-8")
+
+        # Create a binary file
+        binary_file = tmp_path / "binary.bin"
+        binary_file.write_bytes(b"\x80\x81\x82\x83\x84\x85")
+
+        files = [Path("text.py"), Path("binary.bin")]
+
+        result = get_file_metrics(files, tmp_path)
+
+        # Only text file should be in results
+        assert len(result) == 1
+        assert result[0].path.name == "text.py"
+        assert result[0].line_count == 2
+
+    def test_get_file_metrics_empty_list(self, tmp_path: Path) -> None:
+        """Test getting metrics for empty file list."""
+        result = get_file_metrics([], tmp_path)
+
+        assert result == []
+
+    def test_get_file_metrics_returns_file_metrics_objects(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that results are FileMetrics objects with correct types."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("line 1\n", encoding="utf-8")
+
+        files = [Path("test.py")]
+
+        result = get_file_metrics(files, tmp_path)
+
+        assert len(result) == 1
+        assert isinstance(result[0], FileMetrics)
+        assert isinstance(result[0].path, Path)
+        assert isinstance(result[0].line_count, int)
