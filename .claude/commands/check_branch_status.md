@@ -6,14 +6,14 @@ suggested-next: commit_push, rebase
 
 # Check Branch Status
 
-Check comprehensive branch readiness including CI status, rebase requirements, task completion, and GitHub labels with automatic CI fixing.
+Check comprehensive branch readiness including CI status, rebase requirements, task completion, and GitHub labels.
 
 ## Usage
 
 Call the underlying CLI command with LLM-optimized output:
 
 ```bash
-mcp-coder check branch-status --fix --llm-truncate
+mcp-coder check branch-status --llm-truncate
 ```
 
 ## What This Command Does
@@ -22,14 +22,7 @@ mcp-coder check branch-status --fix --llm-truncate
 2. **Rebase Detection**: Checks if branch needs rebasing onto main
 3. **Task Validation**: Verifies all implementation tasks are complete
 4. **GitHub Labels**: Reports current workflow status label
-5. **Auto-Fix**: Attempts to fix CI failures using LLM
-6. **Recommendations**: Provides actionable next steps
-
-## Auto-Fix Capabilities (--fix flag)
-
-- CI test failures - uses LLM to analyze errors and apply fixes
-- Code formatting issues - runs formatters as part of CI fix
-- Commits fixes with appropriate messages
+5. **Recommendations**: Provides actionable next steps
 
 ## Follow-Up Actions
 
@@ -37,6 +30,7 @@ Based on the status report, use these commands for next steps:
 
 | Status | Action |
 |--------|--------|
+| CI failures | Fix the issues shown in the CI error details |
 | Rebase needed | Run `/rebase` to rebase onto main with conflict resolution |
 | Tasks incomplete | Complete remaining tasks manually |
 | CI green + tasks done | Run `/commit_push` to commit and push changes |
@@ -45,16 +39,15 @@ Based on the status report, use these commands for next steps:
 ## Output Format
 
 LLM-optimized output with:
-- Truncated CI error logs only (~200 lines)
+- CI error logs for failed jobs (truncated to ~300 lines total)
 - Complete status information for all other components
 - Clear status indicators
 - Actionable recommendations
-- Progress on fixes applied
 
 ## Integration
 
 This slash command enables interactive workflow management:
 - Check readiness before creating PRs
-- Diagnose and fix CI failures
+- Diagnose CI failures
 - Validate task completion
 - Identify when rebase is needed (then use `/rebase`)

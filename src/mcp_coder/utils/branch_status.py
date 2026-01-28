@@ -133,6 +133,29 @@ def create_empty_report() -> BranchStatusReport:
     )
 
 
+def _strip_timestamps(log_content: str) -> str:
+    """Strip GitHub Actions timestamps from log lines.
+
+    Removes timestamps like '2026-01-28T12:58:02.8274205Z ' from lines.
+    Handles timestamps at line start or after ANSI escape sequences.
+
+    Args:
+        log_content: Raw log content with timestamps
+
+    Returns:
+        Log content with timestamps removed
+    """
+    import re
+
+    # Pattern: YYYY-MM-DDTHH:MM:SS.NNNNNNNZ followed by optional space
+    # Match anywhere in the first part of the line (may follow ANSI codes)
+    timestamp_pattern = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s?"
+
+    lines = log_content.split("\n")
+    cleaned_lines = [re.sub(timestamp_pattern, "", line) for line in lines]
+    return "\n".join(cleaned_lines)
+
+
 def truncate_ci_details(
     details: str, max_lines: int = 300, head_lines: int = 50
 ) -> str:
@@ -358,15 +381,15 @@ def _build_ci_error_details(
     truncate: bool,
     max_lines: int,
 ) -> Optional[str]:
-    """Build structured CI error details with summary and filtered logs.
+    """Build structured CI error details with logs for multiple failed jobs.
 
-    Uses get_failed_jobs_summary() for consistent log extraction with implement command.
+    Shows logs for as many failed jobs as fit within the line limit.
 
     Args:
         ci_manager: CIResultsManager instance
         status_result: Result from get_latest_ci_status
-        truncate: Whether to truncate logs (Note: get_failed_jobs_summary always truncates)
-        max_lines: Maximum lines for log output (currently uses default 300)
+        truncate: Whether to truncate logs
+        max_lines: Maximum total lines for output (default 300)
 
     Returns:
         Structured error details string or None if no logs available
@@ -384,49 +407,104 @@ def _build_ci_error_details(
         except Exception as e:
             logger.warning(f"Failed to get CI logs: {e}")
 
-    # Use shared function to get failed job summary with log excerpt
-    failed_summary = get_failed_jobs_summary(jobs_data, logs)
+    # Get all failed jobs
+    failed_jobs = [job for job in jobs_data if job.get("conclusion") == "failure"]
 
-    if not failed_summary["job_name"]:
+    if not failed_jobs:
         logger.info("No failed jobs found in CI results")
         return None
 
     # Build output sections
-    output_lines = []
+    output_lines: List[str] = []
+    lines_used = 0
+    jobs_shown: List[str] = []
+    jobs_truncated: List[str] = []
 
-    # Section 1: Summary of all failed jobs
-    all_failed_jobs = [failed_summary["job_name"]] + failed_summary["other_failed_jobs"]
-    output_lines.append("## CI Failure Summary")
-    output_lines.append(
-        f"Failed jobs ({len(all_failed_jobs)}): {', '.join(all_failed_jobs)}"
-    )
+    # Section 1: Summary header (will be updated at end)
+    summary_placeholder_idx = len(output_lines)
+    output_lines.append("")  # Placeholder for summary
     output_lines.append("")
+    lines_used += 2
 
-    # Section 2: Detailed logs for first failed job
-    output_lines.append(f"## Job: {failed_summary['job_name']}")
-    output_lines.append(f"Failed step: {failed_summary['step_name']}")
-    output_lines.append("")
-    if failed_summary["log_excerpt"]:
-        output_lines.append(failed_summary["log_excerpt"])
-    else:
-        output_lines.append("(logs not available)")
+    # Section 2: Show logs for each failed job until we hit the limit
+    for job in failed_jobs:
+        job_name = job.get("name", "unknown")
 
-    # Section 3: List other failed jobs (no logs)
-    if failed_summary["other_failed_jobs"]:
+        # Find first failed step
+        step_name = "unknown"
+        step_number = 0
+        for step in job.get("steps", []):
+            if step.get("conclusion") == "failure":
+                step_name = step.get("name", "unknown")
+                step_number = step.get("number", 0)
+                break
+
+        # Get log content for this job and strip timestamps
+        log_filename = f"{job_name}/{step_number}_{step_name}.txt"
+        log_content = logs.get(log_filename, "")
+        if log_content:
+            log_content = _strip_timestamps(log_content)
+
+        # Calculate how many lines this job's section would take
+        job_header_lines = 3  # "## Job:", "Failed step:", blank line
+        log_lines = log_content.split("\n") if log_content else ["(logs not available)"]
+
+        # Calculate remaining budget for this job
+        remaining_budget = (
+            max_lines - lines_used - job_header_lines - 5
+        )  # Reserve 5 for footer
+
+        if remaining_budget <= 10:
+            # Not enough space for meaningful logs, add to truncated list
+            jobs_truncated.append(job_name)
+            continue
+
+        # Truncate log if needed
+        if len(log_lines) > remaining_budget:
+            # Use head + tail truncation
+            head_count = min(50, remaining_budget // 3)
+            tail_count = remaining_budget - head_count - 1  # -1 for truncation message
+            truncated_log = (
+                log_lines[:head_count]
+                + [
+                    f"[... truncated {len(log_lines) - head_count - tail_count} lines ...]"
+                ]
+                + log_lines[-tail_count:]
+            )
+            log_content = "\n".join(truncated_log)
+            log_lines = truncated_log
+
+        # Add job section
+        output_lines.append(f"## Job: {job_name}")
+        output_lines.append(f"Failed step: {step_name}")
         output_lines.append("")
-        output_lines.append("## Other failed jobs (details not shown to save space)")
-        # Get step names for other failed jobs
-        for job in jobs_data:
-            if (
-                job.get("conclusion") == "failure"
-                and job.get("name") in failed_summary["other_failed_jobs"]
-            ):
-                step_name = "unknown"
-                for step in job.get("steps", []):
-                    if step.get("conclusion") == "failure":
-                        step_name = step.get("name", "unknown")
-                        break
-                output_lines.append(f"- {job.get('name')}: step \"{step_name}\" failed")
+        output_lines.append(log_content if log_content else "(logs not available)")
+        output_lines.append("")
+
+        lines_used += job_header_lines + len(log_lines) + 1
+        jobs_shown.append(job_name)
+
+    # Section 3: List jobs that didn't fit
+    if jobs_truncated:
+        output_lines.append("## Other failed jobs (logs truncated to save space)")
+        for job_name in jobs_truncated:
+            # Find step name for this job
+            for job in failed_jobs:
+                if job.get("name") == job_name:
+                    step_name = "unknown"
+                    for step in job.get("steps", []):
+                        if step.get("conclusion") == "failure":
+                            step_name = step.get("name", "unknown")
+                            break
+                    output_lines.append(f'- {job_name}: step "{step_name}" failed')
+                    break
+
+    # Update summary placeholder
+    all_failed = jobs_shown + jobs_truncated
+    output_lines[summary_placeholder_idx] = (
+        f"## CI Failure Summary\n"
+        f"Failed jobs ({len(all_failed)}): {', '.join(all_failed)}"
+    )
 
     return "\n".join(output_lines)
 

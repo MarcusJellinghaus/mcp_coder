@@ -460,7 +460,7 @@ def create_parser() -> argparse.ArgumentParser:
         "--llm-method",
         choices=["claude_code_cli", "claude_code_api"],
         default="claude_code_cli",
-        help="LLM method to use (default: claude_code_cli)",
+        help="LLM method to use for --fix (default: claude_code_cli)",
     )
     branch_status_parser.add_argument(
         "--mcp-config",

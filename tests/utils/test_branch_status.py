@@ -931,7 +931,7 @@ def test_build_ci_error_details_single_failure() -> None:
 
 
 def test_build_ci_error_details_multiple_failures() -> None:
-    """Test _build_ci_error_details with multiple failed jobs shows only first."""
+    """Test _build_ci_error_details shows multiple failed jobs that fit in limit."""
     from mcp_coder.utils.branch_status import _build_ci_error_details
 
     status_result = {
@@ -968,13 +968,11 @@ def test_build_ci_error_details_multiple_failures() -> None:
     assert result is not None
     # Summary should list all failed jobs
     assert "Failed jobs (3): test-job, lint-job, build-job" in result
-    # Should have details for first job
+    # All jobs should be shown (they fit within the 300 line limit)
     assert "## Job: test-job" in result
+    assert "## Job: lint-job" in result
+    assert "## Job: build-job" in result
     assert "First job error" in result
-    # Should list other jobs without details
-    assert "Other failed jobs (details not shown to save space)" in result
-    assert 'lint-job: step "Run lint" failed' in result
-    assert 'build-job: step "Build" failed' in result
 
 
 def test_build_ci_error_details_no_failed_jobs() -> None:
