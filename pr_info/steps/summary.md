@@ -87,7 +87,8 @@ VSCODECLAUDE_PRIORITY = [
 | 6 | VSCode Launch | `vscodeclaude.py` (launch, banner) |
 | 7 | CLI Integration | `main.py`, `commands.py`, `__init__.py` |
 | 8 | Status & Cleanup | `vscodeclaude.py` (status display, cleanup logic) |
-| 9 | Code Review Fixes | Bug fixes and cleanup from code review |
+| 9 | Code Review Fixes | Bug fixes from first code review |
+| 10 | Code Review Fixes (Round 2) | Stale check, type hints, test cleanup |
 
 ## Key Requirements Preserved
 
@@ -107,6 +108,7 @@ VSCODECLAUDE_PRIORITY = [
 - Stale detection and cleanup (requires `--cleanup` flag)
 - Intervention mode for bot_busy stages
 - Session recovery: cleanup working folder on session creation failure
+- **Stale check in restart**: Don't restart sessions where issue status changed
 
 ## Config Schema Addition
 
@@ -120,3 +122,7 @@ max_sessions = 3
 setup_commands_windows = ["uv venv", "uv sync --extra types"]
 setup_commands_linux = ["uv venv", "uv sync --extra types"]
 ```
+
+## Concurrency Note
+
+**Warning**: Do not run multiple `vscodeclaude` commands concurrently. The session file (`vscodeclaude_sessions.json`) does not use file locking, so concurrent writes could result in lost session data.
