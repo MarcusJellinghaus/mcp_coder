@@ -49,10 +49,15 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         report = collect_branch_status(project_dir, args.llm_truncate)
 
         # Display status report
-        if args.llm_truncate:
-            print(report.format_for_llm())
-        else:
-            print(report.format_for_human())
+        # Use errors='replace' to handle emoji encoding issues on Windows
+        output = (
+            report.format_for_llm() if args.llm_truncate else report.format_for_human()
+        )
+        try:
+            print(output)
+        except UnicodeEncodeError:
+            # Fallback for terminals that can't display Unicode
+            print(output.encode("ascii", errors="replace").decode("ascii"))
 
         # Run auto-fixes if requested
         if args.fix:
