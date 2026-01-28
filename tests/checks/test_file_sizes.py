@@ -13,6 +13,7 @@ from mcp_coder.checks.file_sizes import (
     count_lines,
     get_file_metrics,
     load_allowlist,
+    render_output,
 )
 
 
@@ -390,3 +391,98 @@ class TestCheckFileSizes:
         assert result.violations[0].line_count == 20
         assert result.violations[1].line_count == 15
         assert result.violations[2].line_count == 10
+
+
+class TestRenderOutput:
+    """Tests for render_output() function."""
+
+    def test_render_output_success(self) -> None:
+        """Test success message format."""
+        result = CheckResult(
+            passed=True,
+            violations=[],
+            total_files_checked=10,
+            allowlisted_count=2,
+            stale_entries=[],
+        )
+
+        output = render_output(result, max_lines=500)
+
+        assert "passed" in output.lower() or "success" in output.lower()
+        assert "10" in output  # total files checked
+        assert "2" in output  # allowlisted count
+
+    def test_render_output_success_with_stale(self) -> None:
+        """Test success message includes stale allowlist info."""
+        result = CheckResult(
+            passed=True,
+            violations=[],
+            total_files_checked=5,
+            allowlisted_count=1,
+            stale_entries=["old/file.py", "removed/module.py"],
+        )
+
+        output = render_output(result, max_lines=500)
+
+        assert "passed" in output.lower() or "success" in output.lower()
+        # Should mention stale entries
+        assert "stale" in output.lower() or "old/file.py" in output
+        assert "old/file.py" in output or "2" in output  # either path or count
+
+    def test_render_output_failure(self) -> None:
+        """Test failure message format with violations listed."""
+        violations = [
+            FileMetrics(path=Path("src/large_file.py"), line_count=750),
+            FileMetrics(path=Path("src/another_big.py"), line_count=600),
+        ]
+        result = CheckResult(
+            passed=False,
+            violations=violations,
+            total_files_checked=20,
+            allowlisted_count=0,
+            stale_entries=[],
+        )
+
+        output = render_output(result, max_lines=500)
+
+        # Should indicate failure
+        assert "fail" in output.lower() or "violation" in output.lower()
+        # Should list the violations
+        assert "large_file.py" in output
+        assert "another_big.py" in output
+        # Should show line counts
+        assert "750" in output
+        assert "600" in output
+
+    def test_render_output_failure_shows_max_lines(self) -> None:
+        """Test failure message mentions the max lines threshold."""
+        violations = [
+            FileMetrics(path=Path("src/big.py"), line_count=600),
+        ]
+        result = CheckResult(
+            passed=False,
+            violations=violations,
+            total_files_checked=10,
+            allowlisted_count=0,
+            stale_entries=[],
+        )
+
+        output = render_output(result, max_lines=500)
+
+        # Should mention the max lines threshold
+        assert "500" in output
+
+    def test_render_output_success_no_allowlisted(self) -> None:
+        """Test success message when no files are allowlisted."""
+        result = CheckResult(
+            passed=True,
+            violations=[],
+            total_files_checked=15,
+            allowlisted_count=0,
+            stale_entries=[],
+        )
+
+        output = render_output(result, max_lines=500)
+
+        assert "passed" in output.lower() or "success" in output.lower()
+        assert "15" in output  # total files checked
