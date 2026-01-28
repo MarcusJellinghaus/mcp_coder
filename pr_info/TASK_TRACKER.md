@@ -9,19 +9,21 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 ## Tasks
 
 ### Step 1: Dependencies and Filesystem Wrapper
+
 **File:** [pr_info/steps/step_1.md](steps/step_1.md)
 
 - [x] Update pyproject.toml - move mcp-server-filesystem to main dependencies
 - [x] Create src/mcp_coder/mcp_server_filesystem.py wrapper
-- [x] Create tests/checks/__init__.py package
+- [x] Create tests/checks/**init**.py package
 - [x] Verify dependency installation works
 - [x] Prepare git commit message for step 1
 - [x] All Step 1 tasks completed
 
 ### Step 2: Core File Size Checking Logic (TDD)
+
 **File:** [pr_info/steps/step_2.md](steps/step_2.md)
 
-- [x] Create src/mcp_coder/checks/__init__.py with exports
+- [x] Create src/mcp_coder/checks/**init**.py with exports
 - [x] Write tests for count_lines() function
 - [x] Implement count_lines() function
 - [x] Write tests for load_allowlist() function
@@ -39,14 +41,14 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 - [x] All Step 2 tasks completed
 
 ### Step 3: CLI Integration
+
 **File:** [pr_info/steps/step_3.md](steps/step_3.md)
 
 - [x] Write CLI command handler tests
 - [x] Create src/mcp_coder/cli/commands/check_file_sizes.py
 - [x] Update src/mcp_coder/cli/main.py with check command group
 - [ ] Write CLI integration tests
-- [ ] Manual test: mcp-coder check file-size --help
-- [ ] Manual test: mcp-coder check file-size on project
+- [ ] Update docs/cli-reference.md with new command
 - [ ] Run full test suite
 - [ ] Run pylint, mypy on all changes
 - [ ] Prepare git commit message for step 3
@@ -57,5 +59,6 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 ## Pull Request
 
 - [ ] Review all changes and ensure consistency
-- [ ] Update docs/cli-reference.md with new command
+- [ ] Manual test: mcp-coder check file-size --help (see [pr_info/steps/step_3.md](steps/step_3.md))
+- [ ] Manual test: mcp-coder check file-size on project (see [pr_info/steps/step_3.md](steps/step_3.md))
 - [ ] Submit pull request for review
