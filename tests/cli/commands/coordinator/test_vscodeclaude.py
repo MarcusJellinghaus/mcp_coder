@@ -1970,6 +1970,12 @@ class TestOrchestration:
             lambda pid: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.vscodeclaude.is_session_stale",
+            lambda session: False,
+        )
+
         # Create working folder and workspace file
         working_folder = tmp_path / "repo_123"
         working_folder.mkdir()
