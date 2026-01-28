@@ -100,13 +100,20 @@ class BranchStatusReport:
         rebase_status = "BEHIND" if self.rebase_needed else "UP_TO_DATE"
         tasks_status = "COMPLETE" if self.tasks_complete else "INCOMPLETE"
 
+        # Build status summary line
+        status_summary = (
+            f"Branch Status: CI={self.ci_status}, Rebase={rebase_status}, "
+            f"Tasks={tasks_status}"
+        )
+        recommendations_text = ", ".join(self.recommendations)
+
         lines = [
-            f"Branch Status: CI={self.ci_status}, Rebase={rebase_status}, Tasks={tasks_status}",
+            status_summary,
             f"GitHub Label: {self.current_github_label}",
-            f"Recommendations: {', '.join(self.recommendations)}",
+            f"Recommendations: {recommendations_text}",
         ]
 
-        # Add CI details if they exist, with truncation
+        # Add CI details if they exist, with truncation and footer
         if self.ci_details:
             truncated_details = truncate_ci_details(self.ci_details, max_lines)
             lines.extend(
@@ -114,6 +121,9 @@ class BranchStatusReport:
                     "",
                     "CI Errors:",
                     truncated_details,
+                    "",
+                    "---",
+                    f"Summary: {status_summary} | Action: {recommendations_text}",
                 ]
             )
 
