@@ -48,11 +48,11 @@ This tracks **Feature Implementation** for Issue #75: File size checker CLI comm
 - [x] Create src/mcp_coder/cli/commands/check_file_sizes.py
 - [x] Update src/mcp_coder/cli/main.py with check command group
 - [x] Write CLI integration tests
-- [ ] Update docs/cli-reference.md with new command
-- [ ] Run full test suite
-- [ ] Run pylint, mypy on all changes
-- [ ] Prepare git commit message for step 3
-- [ ] All Step 3 tasks completed
+- [x] Update docs/cli-reference.md with new command
+- [x] Run full test suite
+- [x] Run pylint, mypy on all changes
+- [x] Prepare git commit message for step 3
+- [x] All Step 3 tasks completed
 
 ---
 
