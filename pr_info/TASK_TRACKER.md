@@ -1,18 +1,61 @@
-# MCP Coder Task Tracker
+# Task Status Tracker
 
-## Overview
+## Instructions for LLM
 
-This tracks **Feature Implementation** consisting of multiple **Implementation Steps**.
-
-- **Feature**: A complete user-facing capability
-- **Implementation Step**: A self-contained unit of work (tests + implementation)
-
-## Status Legend
-
-- [x] = Implementation step complete
-- [ ] = Implementation step not complete
-- Each task links to a detail file in pr_info/steps/ folder
+This tracks **Feature Implementation** for Issue #75: File size checker CLI command.
 
 ---
 
 ## Tasks
+
+### Step 1: Dependencies and Filesystem Wrapper
+**File:** [pr_info/steps/step_1.md](steps/step_1.md)
+
+- [ ] Update pyproject.toml - move mcp-server-filesystem to main dependencies
+- [ ] Create src/mcp_coder/mcp_server_filesystem.py wrapper
+- [ ] Create tests/checks/__init__.py package
+- [ ] Verify dependency installation works
+- [ ] Prepare git commit message for step 1
+- [ ] All Step 1 tasks completed
+
+### Step 2: Core File Size Checking Logic (TDD)
+**File:** [pr_info/steps/step_2.md](steps/step_2.md)
+
+- [ ] Create src/mcp_coder/checks/__init__.py with exports
+- [ ] Write tests for count_lines() function
+- [ ] Implement count_lines() function
+- [ ] Write tests for load_allowlist() function
+- [ ] Implement load_allowlist() function
+- [ ] Write tests for get_file_metrics() function
+- [ ] Implement get_file_metrics() function
+- [ ] Write tests for check_file_sizes() function
+- [ ] Implement check_file_sizes() function
+- [ ] Write tests for render_output() function
+- [ ] Implement render_output() function
+- [ ] Write tests for render_allowlist() function
+- [ ] Implement render_allowlist() function
+- [ ] Run pylint, mypy on checks package
+- [ ] Prepare git commit message for step 2
+- [ ] All Step 2 tasks completed
+
+### Step 3: CLI Integration
+**File:** [pr_info/steps/step_3.md](steps/step_3.md)
+
+- [ ] Write CLI command handler tests
+- [ ] Create src/mcp_coder/cli/commands/check_file_sizes.py
+- [ ] Update src/mcp_coder/cli/main.py with check command group
+- [ ] Write CLI integration tests
+- [ ] Manual test: mcp-coder check file-size --help
+- [ ] Manual test: mcp-coder check file-size on project
+- [ ] Run full test suite
+- [ ] Run pylint, mypy on all changes
+- [ ] Prepare git commit message for step 3
+- [ ] All Step 3 tasks completed
+
+---
+
+## Pull Request
+
+- [ ] Review all changes and ensure consistency
+- [ ] Update docs/cli-reference.md with new command
+- [ ] Submit pull request for review
