@@ -4,6 +4,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from mcp_coder.mcp_server_filesystem import list_files
+
 
 @dataclass
 class FileMetrics:
@@ -100,7 +102,56 @@ def check_file_sizes(
     Returns:
         CheckResult with violations, counts, and stale entries.
     """
-    raise NotImplementedError("To be implemented in Task 2.6")
+    # Get all project files
+    files = list_files(".", project_dir)
+
+    # Get metrics for all files
+    metrics = get_file_metrics([Path(f) for f in files], project_dir)
+
+    # Track which files exist and their metrics
+    file_paths_set = {
+        str(m.path).replace("/", os.sep).replace("\\", os.sep) for m in metrics
+    }
+    metrics_by_path = {
+        str(m.path).replace("/", os.sep).replace("\\", os.sep): m for m in metrics
+    }
+
+    # Separate violations from passing files
+    violations: list[FileMetrics] = []
+    allowlisted_count = 0
+
+    for metric in metrics:
+        normalized_path = str(metric.path).replace("/", os.sep).replace("\\", os.sep)
+        if metric.line_count > max_lines:
+            if normalized_path in allowlist:
+                allowlisted_count += 1
+            else:
+                violations.append(metric)
+
+    # Detect stale allowlist entries
+    stale_entries: list[str] = []
+    for entry in allowlist:
+        if entry not in file_paths_set:
+            # File doesn't exist
+            stale_entries.append(entry)
+        elif entry in metrics_by_path:
+            # File exists but is under the limit
+            if metrics_by_path[entry].line_count <= max_lines:
+                stale_entries.append(entry)
+
+    # Sort violations by line_count descending
+    violations.sort(key=lambda m: m.line_count, reverse=True)
+
+    # Determine if check passed (no unallowlisted violations)
+    passed = len(violations) == 0
+
+    return CheckResult(
+        passed=passed,
+        violations=violations,
+        total_files_checked=len(metrics),
+        allowlisted_count=allowlisted_count,
+        stale_entries=stale_entries,
+    )
 
 
 def render_output(result: CheckResult, max_lines: int) -> str:
