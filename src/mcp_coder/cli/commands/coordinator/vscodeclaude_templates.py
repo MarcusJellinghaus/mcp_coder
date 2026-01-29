@@ -109,7 +109,8 @@ WORKSPACE_FILE_TEMPLATE = """{{
         }}
     ],
     "settings": {{
-        "window.title": "[#{issue_number} {stage_short}] {title_short} - {repo_name}"
+        "window.title": "[#{issue_number} {stage_short}] {title_short} - {repo_name}",
+        "task.allowAutomaticTasks": "on"
     }}
 }}
 """
