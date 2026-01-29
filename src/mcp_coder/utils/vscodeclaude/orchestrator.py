@@ -489,6 +489,7 @@ def regenerate_session_files(
 
     Regenerates:
     - Startup script (.bat/.sh) with current issue title/URL
+    - VSCode task (.vscode/tasks.json)
     - Status file (.vscodeclaude_status.md)
     - Workspace file (.code-workspace)
     """
@@ -526,6 +527,9 @@ def regenerate_session_files(
         issue_url=issue_url,
         is_intervention=is_intervention,
     )
+
+    # Regenerate VSCode task
+    create_vscode_task(folder_path, script_path)
 
     # Regenerate status file
     create_status_file(
