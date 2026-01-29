@@ -45,6 +45,12 @@ class TestCleanup:
             lambda path: False,
         )
 
+        # Mock _get_configured_repos to return the test repo
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+
         stale_folder = tmp_path / "stale_folder"
         stale_folder.mkdir()
 
@@ -65,6 +71,48 @@ class TestCleanup:
         assert len(result) == 1
         assert result[0][0]["folder"] == str(stale_folder)
         assert result[0][1] is False  # Not dirty
+
+    def test_get_stale_sessions_skips_unconfigured_repos(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Skips sessions for repos not in config."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        # Mock VSCode not running
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.cleanup.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock _get_configured_repos to return a DIFFERENT repo
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/other_repo"},  # Different from session's repo
+        )
+
+        stale_folder = tmp_path / "stale_folder"
+        stale_folder.mkdir()
+
+        session = {
+            "folder": str(stale_folder),
+            "repo": "owner/unconfigured_repo",  # Not in configured repos
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"}
+        sessions_file.write_text(json.dumps(store))
+
+        result = get_stale_sessions()
+
+        # Session should be skipped (not checked for staleness)
+        assert len(result) == 0
 
     def test_get_stale_sessions_skips_running(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
