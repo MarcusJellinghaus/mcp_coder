@@ -417,7 +417,7 @@ def create_startup_script(
     stage_name = _get_stage_name(status)
 
     # Truncate title if too long
-    title_display = issue_title[:56] if len(issue_title) > 56 else issue_title
+    title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
 
     # Build sections based on intervention mode
     if is_intervention:
