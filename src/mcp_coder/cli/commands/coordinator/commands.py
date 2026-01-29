@@ -152,14 +152,12 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         return 0
 
     except ValueError as e:
-        # User-facing errors (config issues)
+        # User-facing errors (config issues) - print only, no logging
         print(f"Error: {e}", file=sys.stderr)
-        logger.error(f"Configuration error: {e}")
         return 1
 
     except Exception as e:
         # Let all other exceptions bubble up with full traceback
-        # (per issue spec: "Let exceptions bubble up naturally for debugging")
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise
 
@@ -337,9 +335,8 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         return 0
 
     except ValueError as e:
-        # User-facing errors (config issues)
+        # User-facing errors (config issues) - print only, no logging
         print(f"Error: {e}", file=sys.stderr)
-        logger.error(f"Configuration error: {e}")
         return 1
 
     except Exception as e:
@@ -442,11 +439,12 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         return 0
 
     except ValueError as e:
+        # User-facing errors (config issues) - print only, no logging
         print(f"Error: {e}", file=sys.stderr)
-        logger.error(f"Configuration error: {e}")
         return 1
 
     except Exception as e:
+        # Let all other exceptions bubble up with full traceback
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise
 

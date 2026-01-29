@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from types import ModuleType
 
+from ..user_config import get_config_file_path
 from .types import (
     DEFAULT_MAX_SESSIONS,
     RepoVSCodeClaudeConfig,
@@ -46,9 +47,10 @@ def load_vscodeclaude_config() -> VSCodeClaudeConfig:
 
     # Validate workspace_base is configured
     if not workspace_base:
+        config_path = get_config_file_path()
         raise ValueError(
-            "workspace_base not configured in config.toml "
-            "[coordinator.vscodeclaude] section"
+            f"workspace_base not configured in [coordinator.vscodeclaude] section. "
+            f"Config file: {config_path}"
         )
 
     # Validate workspace_base path exists

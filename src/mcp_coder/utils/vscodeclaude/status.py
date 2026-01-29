@@ -103,7 +103,6 @@ def check_folder_dirty(folder_path: Path) -> bool:
 
 
 def get_next_action(
-    session: VSCodeClaudeSession,
     is_stale: bool,
     is_dirty: bool,
     is_vscode_running: bool,
@@ -111,7 +110,6 @@ def get_next_action(
     """Determine next action for a session.
 
     Args:
-        session: Session data (unused but kept for API consistency)
         is_stale: Whether issue status changed
         is_dirty: Whether folder has uncommitted changes
         is_vscode_running: Whether VSCode is still running
@@ -119,9 +117,6 @@ def get_next_action(
     Returns:
         Action string like "(active)", "→ Restart", "→ Delete", "⚠️ Manual cleanup"
     """
-    # Suppress unused argument warning
-    _ = session
-
     if is_vscode_running:
         return "(active)"
 
@@ -219,7 +214,7 @@ def display_status_table(
         stale = is_session_stale(session)
 
         vscode_status = "Running" if is_running else "Closed"
-        action = get_next_action(session, stale, is_dirty, is_running)
+        action = get_next_action(stale, is_dirty, is_running)
 
         # Show status change indicator
         if stale:
