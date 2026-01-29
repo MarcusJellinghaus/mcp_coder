@@ -563,6 +563,34 @@ def regenerate_session_files(
     return script_path
 
 
+def _get_configured_repos() -> set[str]:
+    """Get set of repo full names from config.
+
+    Reads config file and extracts repo_url values from
+    [coordinator.repos.*] sections, converting them to "owner/repo" format.
+
+    Returns:
+        Set of repo full names in "owner/repo" format
+    """
+    from ...utils.user_config import load_config
+
+    config_data = load_config()
+    repos_section = config_data.get("coordinator", {}).get("repos", {})
+
+    configured_repos: set[str] = set()
+    for repo_name, repo_config in repos_section.items():
+        repo_url = repo_config.get("repo_url", "")
+        if repo_url:
+            try:
+                repo_full_name = _get_repo_full_name({"repo_url": repo_url})
+                configured_repos.add(repo_full_name)
+            except ValueError:
+                # Skip invalid repo URLs
+                pass
+
+    return configured_repos
+
+
 def restart_closed_sessions() -> list[VSCodeClaudeSession]:
     """Restart sessions where VSCode was closed.
 
@@ -570,6 +598,7 @@ def restart_closed_sessions() -> list[VSCodeClaudeSession]:
     - VSCode PID no longer running
     - Issue status unchanged (not stale)
     - Folder still exists
+    - Repo is still configured in config file
 
     Before restarting, regenerates all session files with fresh issue data.
 
@@ -581,6 +610,10 @@ def restart_closed_sessions() -> list[VSCodeClaudeSession]:
     coordinator = _get_coordinator()
     store = load_sessions()
     restarted: list[VSCodeClaudeSession] = []
+
+    # Load configured repos from config file (fresh read on each start)
+    configured_repos = _get_configured_repos()
+    logger.debug("Configured repos from config: %s", configured_repos)
 
     for session in store["sessions"]:
         # Check if VSCode is still running
@@ -598,6 +631,16 @@ def restart_closed_sessions() -> list[VSCodeClaudeSession]:
             )
             continue
 
+        # Check if repo is still configured (skip sessions for unconfigured repos)
+        repo_full_name = session["repo"]
+        if repo_full_name not in configured_repos:
+            logger.info(
+                "Skipping session for issue #%d: repo %s not in config",
+                session["issue_number"],
+                repo_full_name,
+            )
+            continue
+
         # Check if session is stale (issue status changed)
         if is_session_stale(session):
             logger.info(
@@ -607,7 +650,6 @@ def restart_closed_sessions() -> list[VSCodeClaudeSession]:
             continue
 
         # Fetch fresh issue data from GitHub
-        repo_full_name = session["repo"]
         issue_number = session["issue_number"]
         repo_url = f"https://github.com/{repo_full_name}"
 

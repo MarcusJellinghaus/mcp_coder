@@ -413,6 +413,54 @@ class TestOrchestration:
         loaded = load_sessions()
         assert len(loaded["sessions"]) == 0
 
+    def test_restart_closed_sessions_skips_unconfigured_repos(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Skips sessions for repos not in config file."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        # Mock vscode not running
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock _get_configured_repos to return a different repo (not owner/unconfigured)
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.orchestrator._get_configured_repos",
+            lambda: {"owner/configured_repo"},  # Different from session's repo
+        )
+
+        # Create working folder (so it passes the folder exists check)
+        working_folder = tmp_path / "unconfigured_123"
+        working_folder.mkdir()
+
+        # Create session for an unconfigured repo
+        session = {
+            "folder": str(working_folder),
+            "repo": "owner/unconfigured",  # Not in configured_repos
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": 1234,
+            "started_at": "2024-01-22T10:30:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
+        sessions_file.write_text(json.dumps(store))
+
+        restarted = restart_closed_sessions()
+
+        # No sessions restarted because repo not in config
+        assert restarted == []
+
+        # Session should still exist (not removed, just skipped)
+        loaded = load_sessions()
+        assert len(loaded["sessions"]) == 1
+
     def test_restart_closed_sessions_relaunches(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -427,6 +475,12 @@ class TestOrchestration:
         monkeypatch.setattr(
             "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
             lambda pid: False,
+        )
+
+        # Mock _get_configured_repos to return the test repo
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.orchestrator._get_configured_repos",
+            lambda: {"owner/repo"},
         )
 
         # Mock is_session_stale to avoid GitHub API calls - patch at orchestrator
