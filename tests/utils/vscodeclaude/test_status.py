@@ -187,70 +187,24 @@ class TestStatusDisplay:
 
     def test_get_next_action_active(self) -> None:
         """Returns (active) when VSCode running."""
-        session: VSCodeClaudeSession = {
-            "folder": "/test",
-            "repo": "owner/repo",
-            "issue_number": 123,
-            "status": "status-07:code-review",
-            "vscode_pid": 1234,
-            "started_at": "2024-01-01T00:00:00Z",
-            "is_intervention": False,
-        }
-
-        action = get_next_action(
-            session, is_stale=False, is_dirty=False, is_vscode_running=True
-        )
+        action = get_next_action(is_stale=False, is_dirty=False, is_vscode_running=True)
         assert action == "(active)"
 
     def test_get_next_action_restart(self) -> None:
         """Returns Restart when closed but not stale."""
-        session: VSCodeClaudeSession = {
-            "folder": "/test",
-            "repo": "owner/repo",
-            "issue_number": 123,
-            "status": "status-07:code-review",
-            "vscode_pid": None,
-            "started_at": "2024-01-01T00:00:00Z",
-            "is_intervention": False,
-        }
-
         action = get_next_action(
-            session, is_stale=False, is_dirty=False, is_vscode_running=False
+            is_stale=False, is_dirty=False, is_vscode_running=False
         )
         assert "Restart" in action
 
     def test_get_next_action_delete(self) -> None:
         """Returns Delete when stale and clean."""
-        session: VSCodeClaudeSession = {
-            "folder": "/test",
-            "repo": "owner/repo",
-            "issue_number": 123,
-            "status": "status-07:code-review",
-            "vscode_pid": None,
-            "started_at": "2024-01-01T00:00:00Z",
-            "is_intervention": False,
-        }
-
-        action = get_next_action(
-            session, is_stale=True, is_dirty=False, is_vscode_running=False
-        )
+        action = get_next_action(is_stale=True, is_dirty=False, is_vscode_running=False)
         assert "Delete" in action
 
     def test_get_next_action_manual(self) -> None:
         """Returns Manual cleanup when stale and dirty."""
-        session: VSCodeClaudeSession = {
-            "folder": "/test",
-            "repo": "owner/repo",
-            "issue_number": 123,
-            "status": "status-07:code-review",
-            "vscode_pid": None,
-            "started_at": "2024-01-01T00:00:00Z",
-            "is_intervention": False,
-        }
-
-        action = get_next_action(
-            session, is_stale=True, is_dirty=True, is_vscode_running=False
-        )
+        action = get_next_action(is_stale=True, is_dirty=True, is_vscode_running=False)
         assert "Manual" in action
 
     def test_display_status_table_empty(

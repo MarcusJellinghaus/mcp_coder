@@ -63,7 +63,15 @@ def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
         pass
 
     # Add the error message
-    lines.append(f"TOML parse error: {error}")
+    error_str = str(error)
+    lines.append(f"TOML parse error: {error_str}")
+
+    # Add hint for common Windows path backslash issues
+    if "Invalid" in error_str and ("hex" in error_str or "escape" in error_str):
+        lines.append("")
+        lines.append("Hint: Backslashes in paths need escaping in TOML.")
+        lines.append('  Use forward slashes: "C:/Users/..."')
+        lines.append("  Or single quotes:    'C:\\Users\\...'")
 
     return "\n".join(lines)
 
@@ -83,7 +91,6 @@ def get_config_file_path() -> Path:
         return Path.home() / ".config" / "mcp_coder" / "config.toml"
 
 
-@log_function_call(sensitive_fields=["token", "api_token"])
 def load_config() -> dict[str, Any]:
     """Load user configuration from TOML file.
 
@@ -171,7 +178,6 @@ def _get_nested_value(
     return str(value) if value is not None else None
 
 
-@log_function_call(sensitive_fields=["token", "api_token"])
 def get_config_values(
     keys: list[tuple[str, str, str | None]],
 ) -> dict[tuple[str, str], str | None]:

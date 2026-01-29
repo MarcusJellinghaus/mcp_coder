@@ -10,9 +10,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
+import psutil
+
 from .types import VSCodeClaudeSession, VSCodeClaudeSessionStore
 
 logger = logging.getLogger(__name__)
+
+VSCODE_PROCESS_NAME = "code"
 
 
 def get_sessions_file_path() -> Path:
@@ -82,19 +86,12 @@ def check_vscode_running(pid: int | None) -> bool:
     if pid is None:
         return False
 
+    if not psutil.pid_exists(pid):
+        return False
     try:
-        import psutil
-
-        if not psutil.pid_exists(pid):
-            return False
-        try:
-            process = psutil.Process(pid)
-            name = process.name().lower()
-            return "code" in name
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            return False
-    except ImportError:
-        logger.warning("psutil not available, cannot check process status")
+        process = psutil.Process(pid)
+        return VSCODE_PROCESS_NAME in process.name().lower()
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
         return False
 
 
