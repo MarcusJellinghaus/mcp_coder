@@ -25,7 +25,7 @@ echo.
 
 # Automated analysis section for Windows
 AUTOMATED_SECTION_WINDOWS = r"""echo Running automated analysis...
-claude -p "{initial_command}" --output-format json --mcp-config .mcp.json > .vscodeclaude_analysis.json 2>&1
+claude -p "{initial_command} {issue_number}" --output-format json --mcp-config .mcp.json > .vscodeclaude_analysis.json 2>&1
 
 REM Extract session_id using Python
 for /f "delims=" %%i in ('python -c "import json; d=json.load(open('.vscodeclaude_analysis.json')); print(d.get('session_id',''))"') do set SESSION_ID=%%i
@@ -76,7 +76,7 @@ echo ""
 
 # Automated analysis section for Linux
 AUTOMATED_SECTION_LINUX = r"""echo "Running automated analysis..."
-claude -p "{initial_command}" --output-format json --mcp-config .mcp.json > .vscodeclaude_analysis.json 2>&1
+claude -p "{initial_command} {issue_number}" --output-format json --mcp-config .mcp.json > .vscodeclaude_analysis.json 2>&1
 
 SESSION_ID=$(python3 -c "import json; d=json.load(open('.vscodeclaude_analysis.json')); print(d.get('session_id',''))")
 
