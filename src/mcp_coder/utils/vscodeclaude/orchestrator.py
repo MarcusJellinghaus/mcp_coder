@@ -293,6 +293,7 @@ def prepare_and_launch_session(
             issue_title=issue_title,
             status=status,
             repo_name=repo_short_name,
+            issue_url=issue_url,
             is_intervention=is_intervention,
         )
 
@@ -459,6 +460,105 @@ def process_eligible_issues(
     return started_sessions
 
 
+def _get_repo_short_name_from_full(repo_full_name: str) -> str:
+    """Extract short repo name from full name (owner/repo).
+
+    Args:
+        repo_full_name: Full repo name like "owner/repo"
+
+    Returns:
+        Short repo name (e.g., "repo")
+    """
+    if "/" in repo_full_name:
+        return repo_full_name.split("/")[-1]
+    return repo_full_name
+
+
+def regenerate_session_files(
+    session: VSCodeClaudeSession,
+    issue: IssueData,
+) -> Path:
+    """Regenerate all session files with fresh issue data.
+
+    Args:
+        session: Current session data
+        issue: Fresh issue data from GitHub API
+
+    Returns:
+        Path to the startup script
+
+    Regenerates:
+    - Startup script (.bat/.sh) with current issue title/URL
+    - Status file (.vscodeclaude_status.md)
+    - Workspace file (.code-workspace)
+    """
+    folder_path = Path(session["folder"])
+    repo_full_name = session["repo"]
+    repo_short_name = _get_repo_short_name_from_full(repo_full_name)
+    issue_number = issue["number"]
+    issue_title = issue["title"]
+    issue_url = issue.get("url", "")
+    status = _get_issue_status(issue)
+    is_intervention = session.get("is_intervention", False)
+
+    # Get current branch from git
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=folder_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        branch_name = result.stdout.strip()
+    except subprocess.CalledProcessError:
+        branch_name = "main"
+
+    # Regenerate startup script
+    script_path = create_startup_script(
+        folder_path=folder_path,
+        issue_number=issue_number,
+        issue_title=issue_title,
+        status=status,
+        repo_name=repo_short_name,
+        issue_url=issue_url,
+        is_intervention=is_intervention,
+    )
+
+    # Regenerate status file
+    create_status_file(
+        folder_path=folder_path,
+        issue_number=issue_number,
+        issue_title=issue_title,
+        status=status,
+        repo_full_name=repo_full_name,
+        branch_name=branch_name,
+        issue_url=issue_url,
+        is_intervention=is_intervention,
+    )
+
+    # Regenerate workspace file
+    workspace_base = folder_path.parent
+    folder_name = folder_path.name
+    create_workspace_file(
+        workspace_base=str(workspace_base),
+        folder_name=folder_name,
+        issue_number=issue_number,
+        issue_title=issue_title,
+        status=status,
+        repo_name=repo_short_name,
+    )
+
+    logger.debug(
+        "Regenerated session files for issue #%d",
+        issue_number,
+    )
+
+    return script_path
+
+
 def restart_closed_sessions() -> list[VSCodeClaudeSession]:
     """Restart sessions where VSCode was closed.
 
@@ -467,11 +567,14 @@ def restart_closed_sessions() -> list[VSCodeClaudeSession]:
     - Issue status unchanged (not stale)
     - Folder still exists
 
+    Before restarting, regenerates all session files with fresh issue data.
+
     Returns:
         List of restarted sessions
     """
     from .sessions import remove_session
 
+    coordinator = _get_coordinator()
     store = load_sessions()
     restarted: list[VSCodeClaudeSession] = []
 
@@ -498,6 +601,31 @@ def restart_closed_sessions() -> list[VSCodeClaudeSession]:
                 session["issue_number"],
             )
             continue
+
+        # Fetch fresh issue data from GitHub
+        repo_full_name = session["repo"]
+        issue_number = session["issue_number"]
+        repo_url = f"https://github.com/{repo_full_name}"
+
+        try:
+            issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
+            issue = issue_manager.get_issue(issue_number)
+
+            if issue["number"] == 0:
+                logger.warning(
+                    "Failed to fetch issue #%d, skipping file regeneration",
+                    issue_number,
+                )
+            else:
+                # Regenerate all session files with fresh data
+                regenerate_session_files(session, issue)
+
+        except Exception as e:
+            logger.warning(
+                "Failed to regenerate files for issue #%d: %s",
+                issue_number,
+                str(e),
+            )
 
         # Find the workspace file
         workspace_base = folder_path.parent
@@ -530,7 +658,7 @@ def restart_closed_sessions() -> list[VSCodeClaudeSession]:
                 "status": session["status"],
                 "vscode_pid": new_pid,
                 "started_at": session["started_at"],
-                "is_intervention": session["is_intervention"],
+                "is_intervention": session.get("is_intervention", False),
             }
             restarted.append(updated_session)
 
