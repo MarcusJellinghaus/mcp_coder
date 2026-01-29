@@ -17,12 +17,12 @@ class TestTemplates:
         )
 
         assert "{emoji}" in STARTUP_SCRIPT_WINDOWS
-        assert "{issue_number:" in STARTUP_SCRIPT_WINDOWS
+        assert "{issue_number}" in STARTUP_SCRIPT_WINDOWS
         assert "{automated_section}" in STARTUP_SCRIPT_WINDOWS
-        assert "{stage_name:" in STARTUP_SCRIPT_WINDOWS
-        assert "{title:" in STARTUP_SCRIPT_WINDOWS
-        assert "{repo:" in STARTUP_SCRIPT_WINDOWS
-        assert "{status:" in STARTUP_SCRIPT_WINDOWS
+        assert "{title}" in STARTUP_SCRIPT_WINDOWS
+        assert "{repo}" in STARTUP_SCRIPT_WINDOWS
+        assert "{status}" in STARTUP_SCRIPT_WINDOWS
+        assert "{issue_url}" in STARTUP_SCRIPT_WINDOWS
         assert "{interactive_section}" in STARTUP_SCRIPT_WINDOWS
 
     def test_startup_script_linux_has_placeholders(self) -> None:
@@ -32,11 +32,11 @@ class TestTemplates:
         )
 
         assert "{emoji}" in STARTUP_SCRIPT_LINUX
-        assert "{issue_number:" in STARTUP_SCRIPT_LINUX
-        assert "{stage_name:" in STARTUP_SCRIPT_LINUX
-        assert "{title:" in STARTUP_SCRIPT_LINUX
-        assert "{repo:" in STARTUP_SCRIPT_LINUX
-        assert "{status:" in STARTUP_SCRIPT_LINUX
+        assert "{issue_number}" in STARTUP_SCRIPT_LINUX
+        assert "{title}" in STARTUP_SCRIPT_LINUX
+        assert "{repo}" in STARTUP_SCRIPT_LINUX
+        assert "{status}" in STARTUP_SCRIPT_LINUX
+        assert "{issue_url}" in STARTUP_SCRIPT_LINUX
         assert "{automated_section}" in STARTUP_SCRIPT_LINUX
         assert "{interactive_section}" in STARTUP_SCRIPT_LINUX
 
@@ -193,35 +193,35 @@ class TestTemplates:
         )
 
         assert "{emoji}" in BANNER_TEMPLATE
-        assert "{stage_name:" in BANNER_TEMPLATE
-        assert "{issue_number:" in BANNER_TEMPLATE
-        assert "{title:" in BANNER_TEMPLATE
-        assert "{repo:" in BANNER_TEMPLATE
-        assert "{status:" in BANNER_TEMPLATE
+        assert "{issue_number}" in BANNER_TEMPLATE
+        assert "{title}" in BANNER_TEMPLATE
+        assert "{repo}" in BANNER_TEMPLATE
+        assert "{status}" in BANNER_TEMPLATE
+        assert "{issue_url}" in BANNER_TEMPLATE
 
     def test_banner_template_formatting(self) -> None:
-        """Banner template formats correctly with padding."""
+        """Banner template formats correctly."""
         from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
             BANNER_TEMPLATE,
         )
 
         formatted = BANNER_TEMPLATE.format(
-            emoji="U+1F504",
-            stage_name="Code Review",
+            emoji="\U0001f504",
             issue_number=123,
             title="Fix authentication bug in login handler",
             repo="owner/repo",
             status="status-07:code-review",
+            issue_url="https://github.com/owner/repo/issues/123",
         )
 
         # Check that the banner contains the formatted content
-        assert "Code Review" in formatted
-        assert "#   123" in formatted  # issue_number:6 right-aligns to 6 chars
+        assert "Issue #123" in formatted
         assert "Fix authentication bug in login handler" in formatted
         assert "owner/repo" in formatted
         assert "status-07:code-review" in formatted
-        # Check for box drawing characters
-        assert "+" in formatted or "=" in formatted
+        assert "https://github.com/owner/repo/issues/123" in formatted
+        # Check for separator characters
+        assert "=" in formatted
 
     def test_gitignore_entry_has_session_files(self) -> None:
         """Gitignore entry includes all generated files."""
