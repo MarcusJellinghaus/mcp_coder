@@ -77,6 +77,31 @@ def setup_git_repo(
     is_empty = not any(folder_path.iterdir()) if folder_path.exists() else True
     has_git = (folder_path / ".git").exists()
 
+    # Validate existing git repo is functional
+    git_is_valid = False
+    if has_git:
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--is-inside-work-tree"],
+                cwd=folder_path,
+                capture_output=True,
+                text=True,
+            )
+            git_is_valid = result.returncode == 0
+        except Exception:
+            git_is_valid = False
+
+        if not git_is_valid:
+            # Corrupted git repo - delete and re-clone
+            logger.warning(
+                "Corrupted git repository at %s, deleting and re-cloning",
+                folder_path,
+            )
+            shutil.rmtree(folder_path)
+            folder_path.mkdir(parents=True, exist_ok=True)
+            is_empty = True
+            has_git = False
+
     if is_empty:
         # Clone into folder
         logger.info("Cloning %s into %s", repo_url, folder_path)
