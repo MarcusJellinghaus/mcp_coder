@@ -22,25 +22,52 @@ def _get_coordinator() -> ModuleType:
 def get_issue_current_status(
     issue_manager: IssueManager,
     issue_number: int,
-) -> str | None:
-    """Get current status label for an issue.
+) -> tuple[str | None, bool]:
+    """Get current status label and open/closed state for an issue.
 
     Args:
         issue_manager: IssueManager for GitHub API
         issue_number: GitHub issue number
 
     Returns:
-        Current status label or None if no status found
+        Tuple of (status_label, is_open) where:
+        - status_label: Current status label or None if no status found
+        - is_open: True if issue is open, False if closed
     """
     try:
         issue = issue_manager.get_issue(issue_number)
+        is_open = issue["state"] == "open"
         for label in issue["labels"]:
             if label.startswith("status-"):
-                return label
-        return None
+                return label, is_open
+        return None, is_open
     except Exception as e:
         logger.warning("Failed to get issue #%d status: %s", issue_number, e)
-        return None
+        return None, False  # Assume closed on error (conservative)
+
+
+def is_issue_closed(session: VSCodeClaudeSession) -> bool:
+    """Check if session's issue is closed.
+
+    Args:
+        session: Session to check
+
+    Returns:
+        True if issue is closed
+    """
+    coordinator = _get_coordinator()
+
+    repo_full_name = session["repo"]
+    issue_number = session["issue_number"]
+
+    # Create issue manager for the repo
+    repo_url = f"https://github.com/{repo_full_name}"
+    issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
+
+    # Get current status and open/closed state
+    _, is_open = get_issue_current_status(issue_manager, issue_number)
+
+    return not is_open
 
 
 def is_session_stale(session: VSCodeClaudeSession) -> bool:
@@ -51,6 +78,10 @@ def is_session_stale(session: VSCodeClaudeSession) -> bool:
 
     Returns:
         True if issue status differs from session status
+
+    Note:
+        Closed issues should be filtered out before calling this function.
+        Open issues without status labels log a warning but are NOT marked stale.
     """
     coordinator = _get_coordinator()
 
@@ -59,16 +90,27 @@ def is_session_stale(session: VSCodeClaudeSession) -> bool:
     session_status = session["status"]
 
     # Create issue manager for the repo
-    # Build repo_url from repo_full_name for proper instantiation
     repo_url = f"https://github.com/{repo_full_name}"
     issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
 
-    # Get current status
-    current_status = get_issue_current_status(issue_manager, issue_number)
+    # Get current status and open/closed state
+    current_status, is_open = get_issue_current_status(issue_manager, issue_number)
 
-    # If no status found, consider it stale (conservative approach)
-    if current_status is None:
+    # Closed issues should be filtered out before this function is called
+    if not is_open:
+        logger.warning(
+            "is_session_stale called on closed issue #%d - filter these out first",
+            issue_number,
+        )
         return True
+
+    # If no status found on open issue, log warning but don't mark as stale
+    if current_status is None:
+        logger.warning(
+            "Issue #%d is open but has no status label",
+            issue_number,
+        )
+        return False
 
     return current_status != session_status
 
@@ -188,6 +230,13 @@ def display_status_table(
 
     # Print session rows
     for session in sessions:
+        # Skip sessions for closed issues - they're no longer relevant
+        if is_issue_closed(session):
+            logger.debug(
+                "Skipping session for closed issue #%d", session["issue_number"]
+            )
+            continue
+
         repo_full = session["repo"]
         repo_short = repo_full.split("/")[-1] if "/" in repo_full else repo_full
 

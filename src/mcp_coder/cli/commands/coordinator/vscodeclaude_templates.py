@@ -7,7 +7,7 @@ setlocal EnableDelayedExpansion
 
 echo.
 echo ╔══════════════════════════════════════════════════════════════╗
-echo ║  {emoji} {stage_name:45}  #{issue_number:6}  ║
+echo ║  {emoji} {stage_name:46}  #{issue_number:6}  ║
 echo ║  {title:58}  ║
 echo ║  {repo:20} ^| {status:35}  ║
 echo ╚══════════════════════════════════════════════════════════════╝
@@ -59,7 +59,7 @@ set -e
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  {emoji} {stage_name:45}  #{issue_number:6}  ║"
+echo "║  {emoji} {stage_name:46}  #{issue_number:6}  ║"
 echo "║  {title:58}  ║"
 echo "║  {repo:20} | {status:35}  ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
@@ -161,7 +161,7 @@ INTERVENTION_ROW = """| **Mode** | ⚠️ INTERVENTION |
 # Terminal banner template (for non-script contexts)
 BANNER_TEMPLATE = """
 ╔══════════════════════════════════════════════════════════════╗
-║  {emoji} {stage_name:45}  #{issue_number:6}  ║
+║  {emoji} {stage_name:46}  #{issue_number:6}  ║
 ║  {title:58}  ║
 ║  {repo:20} | {status:35}  ║
 ╚══════════════════════════════════════════════════════════════╝

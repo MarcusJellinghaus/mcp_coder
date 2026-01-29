@@ -21,7 +21,7 @@ class TestTemplates:
         assert "{automated_section}" in STARTUP_SCRIPT_WINDOWS
         assert "{stage_name:" in STARTUP_SCRIPT_WINDOWS
         assert "{title:" in STARTUP_SCRIPT_WINDOWS
-        assert "{repo}" in STARTUP_SCRIPT_WINDOWS
+        assert "{repo:" in STARTUP_SCRIPT_WINDOWS
         assert "{status:" in STARTUP_SCRIPT_WINDOWS
         assert "{interactive_section}" in STARTUP_SCRIPT_WINDOWS
 
@@ -35,7 +35,7 @@ class TestTemplates:
         assert "{issue_number:" in STARTUP_SCRIPT_LINUX
         assert "{stage_name:" in STARTUP_SCRIPT_LINUX
         assert "{title:" in STARTUP_SCRIPT_LINUX
-        assert "{repo}" in STARTUP_SCRIPT_LINUX
+        assert "{repo:" in STARTUP_SCRIPT_LINUX
         assert "{status:" in STARTUP_SCRIPT_LINUX
         assert "{automated_section}" in STARTUP_SCRIPT_LINUX
         assert "{interactive_section}" in STARTUP_SCRIPT_LINUX
@@ -196,7 +196,7 @@ class TestTemplates:
         assert "{stage_name:" in BANNER_TEMPLATE
         assert "{issue_number:" in BANNER_TEMPLATE
         assert "{title:" in BANNER_TEMPLATE
-        assert "{repo}" in BANNER_TEMPLATE
+        assert "{repo:" in BANNER_TEMPLATE
         assert "{status:" in BANNER_TEMPLATE
 
     def test_banner_template_formatting(self) -> None:

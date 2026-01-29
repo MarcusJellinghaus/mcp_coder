@@ -42,6 +42,7 @@ from ....utils.vscodeclaude import (  # Types; Constants; Session management; Co
     get_stale_sessions,
     get_working_folder_path,
     handle_pr_created_issues,
+    is_issue_closed,
     is_session_stale,
     launch_vscode,
     load_repo_vscodeclaude_config,
@@ -115,6 +116,7 @@ __all__ = [
     "handle_pr_created_issues",
     # Status
     "get_issue_current_status",
+    "is_issue_closed",
     "is_session_stale",
     "check_folder_dirty",
     "get_next_action",
