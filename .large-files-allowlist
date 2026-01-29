@@ -1,5 +1,5 @@
 # Large files allowlist - files exceeding 750 lines
-# These files are grandfathered in; reduce over time per #263
+# These files are grandfathered in; reduce over time per #353
 
 tests/workflows/test_validate_labels.py
 tests/utils/github_operations/test_issue_manager.py

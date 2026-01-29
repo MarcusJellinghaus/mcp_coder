@@ -78,7 +78,7 @@ Run all checks after each move:
 ./tools/lint_imports.sh
 ./tools/tach_check.sh
 
-# Functionality
+# Functionality (Claude Code MCP tools)
 mcp__code-checker__run_pytest_check
 mcp__code-checker__run_pylint_check
 mcp__code-checker__run_mypy_check
