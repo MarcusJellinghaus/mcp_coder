@@ -243,8 +243,23 @@ class BaseGitHubManager:
             return self._repository
 
         except GithubException as e:
-            logger.error("Failed to access repository: %s", e)
+            if e.status == 404:
+                logger.error(
+                    "Repository not found: '%s'. Check that the repo exists "
+                    "and you have access to it.",
+                    repo_full_name,
+                )
+            else:
+                logger.error(
+                    "Failed to access repository '%s': %s",
+                    repo_full_name,
+                    e,
+                )
             return None
         except Exception as e:
-            logger.error("Unexpected error accessing repository: %s", e)
+            logger.error(
+                "Unexpected error accessing repository '%s': %s",
+                repo_full_name,
+                e,
+            )
             return None
