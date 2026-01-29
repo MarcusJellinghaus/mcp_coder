@@ -91,6 +91,10 @@ from mcp_coder.utils.git_operations import get_default_branch_name
 
 **The facade pattern:** Keep `__init__.py` as a convenient facade for *external* consumers (workflows, CLI), but *internal* submodules must import siblings directly.
 
+## Refactoring
+
+When restructuring code or splitting large files, see the [Safe Refactoring Guide](../../processes-prompts/refactoring-guide.md) for best practices on moving code without breaking imports.
+
 ## When to Add New Rules
 
 **Add a third-party isolation rule when:**

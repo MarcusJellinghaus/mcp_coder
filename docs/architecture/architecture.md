@@ -366,6 +366,11 @@ mcp-coder implement --project-dir /path/to/project
 - **Documentation**: See `docs/architecture/dependencies/README.md` for detailed tool comparison, current contracts, and guidelines for adding new rules
 - **Visualization**: `docs/architecture/dependencies/dependency_graph.html` for interactive dependency graph
 
+### Refactoring Guidelines
+- **Documentation**: See [Safe Refactoring Guide](../processes-prompts/refactoring-guide.md) for moving code safely
+- **Principle**: Move functions/classes without modifying logic; only adjust imports
+- **Scope**: Keep PR diffs under 25,000 tokens; one module per PR when possible
+
 ### Dead Code Detection
 - **Tool**: Vulture for identifying unused code
 - **Configuration**: `vulture_whitelist.py` at project root for false positives and API completeness items
