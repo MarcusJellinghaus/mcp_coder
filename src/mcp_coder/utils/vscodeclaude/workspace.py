@@ -1,0 +1,481 @@
+"""Workspace setup for vscodeclaude feature.
+
+Handles git operations, folder creation, and file generation.
+"""
+
+import logging
+import platform
+import shutil
+import stat
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+
+from .config import sanitize_folder_name
+from .types import HUMAN_ACTION_COMMANDS, STATUS_EMOJI
+
+logger = logging.getLogger(__name__)
+
+
+def get_working_folder_path(
+    workspace_base: str,
+    repo_name: str,
+    issue_number: int,
+) -> Path:
+    """Get full path for working folder.
+
+    Args:
+        workspace_base: Base directory from config
+        repo_name: Repository short name (sanitized)
+        issue_number: GitHub issue number
+
+    Returns:
+        Path like: workspace_base/mcp-coder_123
+    """
+    sanitized_repo = sanitize_folder_name(repo_name)
+    folder_name = f"{sanitized_repo}_{issue_number}"
+    return Path(workspace_base) / folder_name
+
+
+def create_working_folder(folder_path: Path) -> bool:
+    """Create working folder if it doesn't exist.
+
+    Args:
+        folder_path: Full path to create
+
+    Returns:
+        True if created, False if already existed
+    """
+    if folder_path.exists():
+        return False
+    folder_path.mkdir(parents=True, exist_ok=True)
+    return True
+
+
+def setup_git_repo(
+    folder_path: Path,
+    repo_url: str,
+    branch_name: str | None,
+) -> None:
+    """Clone repo or checkout branch and pull.
+
+    Args:
+        folder_path: Working folder path
+        repo_url: Git clone URL
+        branch_name: Branch to checkout (None = use main)
+
+    Steps:
+    1. If folder empty: git clone
+    2. If folder has .git: checkout branch, pull
+    3. Uses system git credentials
+    4. Logs progress using logger.info()
+
+    Raises:
+        subprocess.CalledProcessError: If git command fails
+    """
+    # Check if folder is empty or doesn't have .git
+    is_empty = not any(folder_path.iterdir()) if folder_path.exists() else True
+    has_git = (folder_path / ".git").exists()
+
+    if is_empty:
+        # Clone into folder
+        logger.info("Cloning %s into %s", repo_url, folder_path)
+        subprocess.run(
+            ["git", "clone", repo_url, str(folder_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    elif not has_git:
+        # Folder has content but no .git - error
+        raise ValueError(
+            f"Folder {folder_path} exists with content but is not a git repository"
+        )
+
+    # Checkout and pull
+    branch = branch_name or "main"
+    logger.info("Checking out branch %s", branch)
+    subprocess.run(
+        ["git", "checkout", branch],
+        cwd=folder_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    logger.info("Pulling latest changes")
+    subprocess.run(
+        ["git", "pull"],
+        cwd=folder_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def validate_mcp_json(folder_path: Path) -> None:
+    """Validate .mcp.json exists in repo.
+
+    Args:
+        folder_path: Working folder path
+
+    Raises:
+        FileNotFoundError: If .mcp.json missing
+    """
+    mcp_json_path = folder_path / ".mcp.json"
+    if not mcp_json_path.exists():
+        raise FileNotFoundError(
+            f".mcp.json not found in {folder_path}. "
+            "This file is required for Claude Code integration."
+        )
+
+
+def validate_setup_commands(commands: list[str]) -> None:
+    """Validate that setup commands exist in PATH.
+
+    Args:
+        commands: List of shell commands to validate
+
+    Raises:
+        FileNotFoundError: If any command not found in PATH
+    """
+    for command in commands:
+        # Extract the executable (first word) from the command
+        executable = command.split()[0] if command.strip() else ""
+        if not executable:
+            continue
+
+        # Check if executable exists in PATH
+        if shutil.which(executable) is None:
+            raise FileNotFoundError(
+                f"Command '{executable}' not found in PATH. "
+                f"Full command: '{command}'"
+            )
+
+
+def run_setup_commands(
+    folder_path: Path,
+    commands: list[str],
+) -> None:
+    """Run platform-specific setup commands.
+
+    Args:
+        folder_path: Working directory for commands
+        commands: List of shell commands to run
+
+    Raises:
+        subprocess.CalledProcessError: If any command fails
+
+    Logs progress for each command using logger.info().
+    """
+    for command in commands:
+        logger.info("Running: %s", command)
+        subprocess.run(
+            command,
+            cwd=folder_path,
+            check=True,
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+
+
+def update_gitignore(folder_path: Path) -> None:
+    """Append vscodeclaude entries to .gitignore.
+
+    Args:
+        folder_path: Working folder path
+
+    Idempotent: won't duplicate entries.
+    """
+    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        GITIGNORE_ENTRY,
+    )
+
+    gitignore_path = folder_path / ".gitignore"
+
+    # Read existing content
+    existing_content = ""
+    if gitignore_path.exists():
+        existing_content = gitignore_path.read_text(encoding="utf-8")
+
+    # Check if already present
+    if ".vscodeclaude_status.md" in existing_content:
+        return
+
+    # Append entry
+    with gitignore_path.open("a", encoding="utf-8") as f:
+        f.write(GITIGNORE_ENTRY)
+
+
+def _get_stage_short(status: str) -> str:
+    """Extract short stage name from status label.
+
+    Args:
+        status: Full status label like "status-07:code-review"
+
+    Returns:
+        Short name like "review" for window titles
+    """
+    # Extract the part after the colon and simplify
+    if ":" in status:
+        stage = status.split(":")[1]
+        # Map to short names
+        stage_map = {
+            "created": "new",
+            "plan-review": "plan",
+            "code-review": "review",
+            "pr-created": "pr",
+        }
+        return stage_map.get(stage, stage[:6])
+    return status[:6]
+
+
+def _get_stage_name(status: str) -> str:
+    """Get display name for status.
+
+    Args:
+        status: Full status label
+
+    Returns:
+        Human-readable stage name
+    """
+    stage_names = {
+        "status-01:created": "Issue Created",
+        "status-04:plan-review": "Plan Review",
+        "status-07:code-review": "Code Review",
+        "status-10:pr-created": "PR Created",
+    }
+    return stage_names.get(status, status)
+
+
+def create_workspace_file(
+    workspace_base: str,
+    folder_name: str,
+    issue_number: int,
+    issue_title: str,
+    status: str,
+    repo_name: str,
+) -> Path:
+    """Create .code-workspace file in workspace_base.
+
+    Args:
+        workspace_base: Base directory for workspace files
+        folder_name: Working folder name (e.g., "mcp-coder_123")
+        issue_number: GitHub issue number
+        issue_title: Issue title for window title
+        status: Status label for window title
+        repo_name: Repo short name for window title
+
+    Returns:
+        Path to created workspace file
+    """
+    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        WORKSPACE_FILE_TEMPLATE,
+    )
+
+    # Truncate title if too long
+    title_short = issue_title[:30] + "..." if len(issue_title) > 30 else issue_title
+    stage_short = _get_stage_short(status)
+
+    # Format the workspace file
+    content = WORKSPACE_FILE_TEMPLATE.format(
+        folder_path=f"./{folder_name}",
+        issue_number=issue_number,
+        stage_short=stage_short,
+        title_short=title_short,
+        repo_name=repo_name,
+    )
+
+    # Write to workspace_base
+    workspace_file = Path(workspace_base) / f"{folder_name}.code-workspace"
+    workspace_file.write_text(content, encoding="utf-8")
+
+    return workspace_file
+
+
+def create_startup_script(
+    folder_path: Path,
+    issue_number: int,
+    issue_title: str,
+    status: str,
+    repo_name: str,
+    is_intervention: bool,
+) -> Path:
+    """Create platform-specific startup script.
+
+    Args:
+        folder_path: Working folder path
+        issue_number: GitHub issue number
+        issue_title: Issue title for banner
+        status: Status label
+        repo_name: Repo short name
+        is_intervention: If True, use intervention mode (no automation)
+
+    Returns:
+        Path to created script (.bat or .sh)
+    """
+    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        AUTOMATED_SECTION_LINUX,
+        AUTOMATED_SECTION_WINDOWS,
+        INTERACTIVE_SECTION_LINUX,
+        INTERACTIVE_SECTION_WINDOWS,
+        INTERVENTION_SECTION_LINUX,
+        INTERVENTION_SECTION_WINDOWS,
+        STARTUP_SCRIPT_LINUX,
+        STARTUP_SCRIPT_WINDOWS,
+    )
+
+    is_windows = platform.system() == "Windows"
+
+    # Get commands for this status
+    initial_cmd, followup_cmd = HUMAN_ACTION_COMMANDS.get(status, (None, None))
+
+    # Get emoji and stage name
+    emoji = STATUS_EMOJI.get(status, "📋")
+    stage_name = _get_stage_name(status)
+
+    # Truncate title if too long
+    title_display = issue_title[:56] if len(issue_title) > 56 else issue_title
+
+    # Build sections based on intervention mode
+    if is_intervention:
+        if is_windows:
+            automated_section = ""
+            interactive_section = INTERVENTION_SECTION_WINDOWS
+        else:
+            automated_section = ""
+            interactive_section = INTERVENTION_SECTION_LINUX
+    else:
+        if is_windows:
+            automated_section = (
+                AUTOMATED_SECTION_WINDOWS.format(initial_command=initial_cmd)
+                if initial_cmd
+                else ""
+            )
+            interactive_section = (
+                INTERACTIVE_SECTION_WINDOWS.format(followup_command=followup_cmd or "")
+                if initial_cmd
+                else INTERVENTION_SECTION_WINDOWS
+            )
+        else:
+            automated_section = (
+                AUTOMATED_SECTION_LINUX.format(initial_command=initial_cmd)
+                if initial_cmd
+                else ""
+            )
+            interactive_section = (
+                INTERACTIVE_SECTION_LINUX.format(followup_command=followup_cmd or "")
+                if initial_cmd
+                else INTERVENTION_SECTION_LINUX
+            )
+
+    # Format main script
+    if is_windows:
+        script_content = STARTUP_SCRIPT_WINDOWS.format(
+            emoji=emoji,
+            stage_name=stage_name,
+            issue_number=issue_number,
+            title=title_display,
+            repo=repo_name,
+            status=status,
+            automated_section=automated_section,
+            interactive_section=interactive_section,
+        )
+        script_path = folder_path / ".vscodeclaude_start.bat"
+    else:
+        script_content = STARTUP_SCRIPT_LINUX.format(
+            emoji=emoji,
+            stage_name=stage_name,
+            issue_number=issue_number,
+            title=title_display,
+            repo=repo_name,
+            status=status,
+            automated_section=automated_section,
+            interactive_section=interactive_section,
+        )
+        script_path = folder_path / ".vscodeclaude_start.sh"
+
+    # Write script
+    script_path.write_text(script_content, encoding="utf-8")
+
+    # Make executable on Linux
+    if not is_windows:
+        current_mode = script_path.stat().st_mode
+        script_path.chmod(current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    return script_path
+
+
+def create_vscode_task(folder_path: Path, script_path: Path) -> None:
+    """Create .vscode/tasks.json with runOn: folderOpen.
+
+    Args:
+        folder_path: Working folder path
+        script_path: Path to startup script
+    """
+    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        TASKS_JSON_TEMPLATE,
+    )
+
+    # Create .vscode directory
+    vscode_dir = folder_path / ".vscode"
+    vscode_dir.mkdir(parents=True, exist_ok=True)
+
+    # Format tasks.json
+    content = TASKS_JSON_TEMPLATE.format(script_path=script_path.name)
+
+    # Write tasks.json
+    tasks_file = vscode_dir / "tasks.json"
+    tasks_file.write_text(content, encoding="utf-8")
+
+
+def create_status_file(
+    folder_path: Path,
+    issue_number: int,
+    issue_title: str,
+    status: str,
+    repo_full_name: str,
+    branch_name: str,
+    issue_url: str,
+    is_intervention: bool,
+) -> None:
+    """Create .vscodeclaude_status.md in project root.
+
+    Args:
+        folder_path: Working folder path
+        issue_number: GitHub issue number
+        issue_title: Issue title
+        status: Status label
+        repo_full_name: Full repo name (owner/repo)
+        branch_name: Git branch name
+        issue_url: GitHub issue URL
+        is_intervention: If True, add intervention warning
+    """
+    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        INTERVENTION_ROW,
+        STATUS_FILE_TEMPLATE,
+    )
+
+    # Get emoji for status
+    status_emoji = STATUS_EMOJI.get(status, "📋")
+
+    # Build intervention row if needed
+    intervention_row = INTERVENTION_ROW if is_intervention else ""
+
+    # Format status file
+    content = STATUS_FILE_TEMPLATE.format(
+        issue_number=issue_number,
+        title=issue_title,
+        status_emoji=status_emoji,
+        status_name=status,
+        repo=repo_full_name,
+        branch=branch_name,
+        started_at=datetime.now(timezone.utc).isoformat(),
+        intervention_row=intervention_row,
+        issue_url=issue_url,
+    )
+
+    # Write status file
+    status_file = folder_path / ".vscodeclaude_status.md"
+    status_file.write_text(content, encoding="utf-8")

@@ -1,14 +1,66 @@
-"""VSCode Claude session management - CLI layer re-exports.
+"""VSCodeClaude session management utilities.
 
-This module re-exports from utils.vscodeclaude for backwards compatibility.
-The actual implementation has been moved to utils/vscodeclaude/ for proper
-separation of concerns.
-
-See pr_info/steps/architecture_vscodeclaude.md for the architecture details.
+This module provides utilities for managing VSCode/Claude Code sessions
+for interactive workflow stages.
 """
 
-# Re-export everything from utils.vscodeclaude for backwards compatibility
-from ....utils.vscodeclaude import (  # Types; Constants; Session management; Configuration; Issue filtering; Workspace setup; Orchestration; Status; Cleanup
+# Cleanup
+from .cleanup import (
+    cleanup_stale_sessions,
+    delete_session_folder,
+    get_stale_sessions,
+)
+
+# Configuration
+from .config import (
+    get_github_username,
+    load_repo_vscodeclaude_config,
+    load_vscodeclaude_config,
+    sanitize_folder_name,
+)
+
+# Issue filtering
+from .issues import (
+    get_eligible_vscodeclaude_issues,
+    get_human_action_labels,
+    get_linked_branch_for_issue,
+)
+
+# Orchestration
+from .orchestrator import (
+    get_stage_display_name,
+    handle_pr_created_issues,
+    launch_vscode,
+    prepare_and_launch_session,
+    process_eligible_issues,
+    restart_closed_sessions,
+    truncate_title,
+)
+
+# Session management
+from .sessions import (
+    add_session,
+    check_vscode_running,
+    get_active_session_count,
+    get_session_for_issue,
+    get_sessions_file_path,
+    load_sessions,
+    remove_session,
+    save_sessions,
+    update_session_pid,
+)
+
+# Status
+from .status import (
+    check_folder_dirty,
+    display_status_table,
+    get_issue_current_status,
+    get_next_action,
+    is_session_stale,
+)
+
+# Types and constants
+from .types import (
     DEFAULT_MAX_SESSIONS,
     HUMAN_ACTION_COMMANDS,
     STAGE_DISPLAY_NAMES,
@@ -18,46 +70,19 @@ from ....utils.vscodeclaude import (  # Types; Constants; Session management; Co
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
     VSCodeClaudeSessionStore,
-    add_session,
-    check_folder_dirty,
-    check_vscode_running,
-    cleanup_stale_sessions,
+)
+
+# Workspace setup
+from .workspace import (
     create_startup_script,
     create_status_file,
     create_vscode_task,
     create_working_folder,
     create_workspace_file,
-    delete_session_folder,
-    display_status_table,
-    get_active_session_count,
-    get_eligible_vscodeclaude_issues,
-    get_github_username,
-    get_human_action_labels,
-    get_issue_current_status,
-    get_linked_branch_for_issue,
-    get_next_action,
-    get_session_for_issue,
-    get_sessions_file_path,
-    get_stage_display_name,
-    get_stale_sessions,
     get_working_folder_path,
-    handle_pr_created_issues,
-    is_session_stale,
-    launch_vscode,
-    load_repo_vscodeclaude_config,
-    load_sessions,
-    load_vscodeclaude_config,
-    prepare_and_launch_session,
-    process_eligible_issues,
-    remove_session,
-    restart_closed_sessions,
     run_setup_commands,
-    sanitize_folder_name,
-    save_sessions,
     setup_git_repo,
-    truncate_title,
     update_gitignore,
-    update_session_pid,
     validate_mcp_json,
     validate_setup_commands,
 )
