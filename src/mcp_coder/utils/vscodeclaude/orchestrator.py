@@ -64,12 +64,24 @@ def launch_vscode(workspace_file: Path) -> int:
         VSCode process PID
 
     Uses subprocess.Popen for non-blocking launch.
+    On Windows, uses shell=True to find code.cmd in PATH.
     """
-    process = subprocess.Popen(
-        ["code", str(workspace_file)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    is_windows = platform.system() == "Windows"
+
+    if is_windows:
+        # On Windows, 'code' is a .cmd file which requires shell=True
+        process = subprocess.Popen(
+            f'code "{workspace_file}"',
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    else:
+        process = subprocess.Popen(
+            ["code", str(workspace_file)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
     return process.pid
 
 
