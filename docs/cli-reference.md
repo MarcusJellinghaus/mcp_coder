@@ -39,11 +39,12 @@ Orchestration and monitoring of automated development across repositories.
 | [`coordinator run`](#coordinator-run) | Monitor and dispatch workflows for GitHub issues |
 
 ### Quality Checks
-Branch readiness verification and automated fixes.
+Branch readiness verification and code quality tools.
 
 | Command | Description |
 |---------|-------------|
 | [`check branch-status`](#check-branch-status) | Check branch readiness and optionally apply fixes |
+| [`check file-size`](#check-file-size) | Check file sizes against maximum line count |
 
 ### Repository & Issue Setup
 Setup and configuration for GitHub workflow automation.
@@ -423,6 +424,58 @@ mcp-coder define-labels
 mcp-coder define-labels --project-dir /path/to/project
 ```
 
+---
+
+### check file-size
+
+Check file sizes against maximum line count.
+
+```bash
+mcp-coder check file-size [OPTIONS]
+```
+
+**Options:**
+- `--max-lines NUMBER` - Maximum lines per file (default: 600)
+- `--allowlist-file PATH` - Path to allowlist file (default: .large-files-allowlist)
+- `--generate-allowlist` - Output violating paths for piping to allowlist
+- `--project-dir PATH` - Project directory path (default: current directory)
+
+**Description:** Scan files in a project and report any that exceed the maximum line count. Binary files are automatically skipped. Files can be excluded from checking by adding them to an allowlist file.
+
+**Exit Codes:**
+- `0` - All files pass (or no violations when using `--generate-allowlist`)
+- `1` - One or more files exceed the line limit
+
+**Allowlist Format:**
+The allowlist file contains one path per line (relative to project directory):
+```
+# Comments start with #
+src/legacy/large_module.py
+tests/fixtures/big_test_data.py
+```
+
+**Examples:**
+```bash
+# Check all Python files with default 600 line limit
+mcp-coder check file-size
+
+# Use custom line limit
+mcp-coder check file-size --max-lines 400
+
+# Check specific project directory
+mcp-coder check file-size --project-dir /path/to/project
+
+# Generate allowlist from current violations
+mcp-coder check file-size --generate-allowlist > .large-files-allowlist
+
+# Use custom allowlist file
+mcp-coder check file-size --allowlist-file .my-allowlist
+```
+
+**Use Cases:**
+- **CI/CD Integration:** Add to pre-commit hooks or CI pipelines to enforce file size limits
+- **Codebase Cleanup:** Identify large files that may need refactoring
+- **Gradual Adoption:** Use `--generate-allowlist` to create an allowlist of existing large files, then enforce limits on new files
 ---
 
 ## Configuration and Setup

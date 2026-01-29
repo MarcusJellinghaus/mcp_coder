@@ -6,6 +6,7 @@ import sys
 
 from .. import __version__
 from ..utils.log_utils import setup_logging
+from .commands.check_file_sizes import execute_check_file_sizes
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.coordinator import execute_coordinator_run, execute_coordinator_test
 from .commands.create_plan import execute_create_plan
@@ -475,6 +476,36 @@ def create_parser() -> argparse.ArgumentParser:
         help="Working directory for Claude subprocess (default: current directory)",
     )
 
+    # check file-size command
+    file_size_parser = check_subparsers.add_parser(
+        "file-size",
+        help="Check file sizes against maximum line count",
+        formatter_class=WideHelpFormatter,
+    )
+    file_size_parser.add_argument(
+        "--max-lines",
+        type=int,
+        default=600,
+        help="Maximum lines per file (default: 600)",
+    )
+    file_size_parser.add_argument(
+        "--allowlist-file",
+        type=str,
+        default=".large-files-allowlist",
+        help="Path to allowlist file (default: .large-files-allowlist)",
+    )
+    file_size_parser.add_argument(
+        "--generate-allowlist",
+        action="store_true",
+        help="Output violating paths for piping to allowlist",
+    )
+    file_size_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+
     return parser
 
 
@@ -562,6 +593,8 @@ def main() -> int:
                     )
 
                     return execute_check_branch_status(args)
+                elif args.check_subcommand == "file-size":
+                    return execute_check_file_sizes(args)
                 else:
                     logger.error(f"Unknown check subcommand: {args.check_subcommand}")
                     print(f"Error: Unknown check subcommand '{args.check_subcommand}'")
@@ -569,7 +602,7 @@ def main() -> int:
             else:
                 logger.error("Check subcommand required")
                 print(
-                    "Error: Please specify a check subcommand (e.g., 'branch-status')"
+                    "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
                 )
                 return 1
 

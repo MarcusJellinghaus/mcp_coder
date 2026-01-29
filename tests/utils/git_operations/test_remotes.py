@@ -155,7 +155,7 @@ class TestGitPushForceWithLease:
 
         # Verify our local tracking ref hasn't been updated
         # (it should still point to the original commit, not the other developer's)
-        local_tracking_sha = repo.git.rev_parse("origin/main")
+        _local_tracking_sha = repo.git.rev_parse("origin/main")
 
         # Try force_with_lease push
         result = git_push(project_dir, force_with_lease=True)

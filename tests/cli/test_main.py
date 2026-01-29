@@ -748,5 +748,5 @@ class TestCheckBranchStatusCommand:
         assert result == 1
         mock_logger.error.assert_called_with("Check subcommand required")
         mock_print.assert_called_with(
-            "Error: Please specify a check subcommand (e.g., 'branch-status')"
+            "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
         )
