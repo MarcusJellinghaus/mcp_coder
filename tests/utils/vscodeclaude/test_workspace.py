@@ -416,3 +416,44 @@ class TestGitOperations:
 
         with pytest.raises(ValueError, match="not a git repository"):
             setup_git_repo(folder, "https://github.com/owner/repo.git", "main")
+
+    def test_setup_git_repo_corrupted_git_reclones(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Deletes and reclones when .git exists but is corrupted."""
+
+        commands: list[Any] = []
+        rmtree_called: list[Path] = []
+
+        def mock_run(cmd: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+            commands.append(cmd)
+            # Simulate corrupted git repo - rev-parse fails
+            if "rev-parse" in str(cmd):
+                return subprocess.CompletedProcess(
+                    cmd, 128, "", "fatal: not a git repo"
+                )
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+
+        def mock_rmtree(path: Path, **kwargs: Any) -> None:
+            rmtree_called.append(path)
+
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.workspace.shutil.rmtree", mock_rmtree
+        )
+
+        # Create folder with corrupted .git
+        folder = tmp_path / "corrupted_repo"
+        folder.mkdir()
+        (folder / ".git").mkdir()
+
+        setup_git_repo(folder, "https://github.com/owner/repo.git", "main")
+
+        # Should have called rmtree to delete corrupted folder
+        assert len(rmtree_called) == 1
+        assert rmtree_called[0] == folder
+
+        # Should have cloned after deleting
+        assert any("clone" in str(c) for c in commands)
