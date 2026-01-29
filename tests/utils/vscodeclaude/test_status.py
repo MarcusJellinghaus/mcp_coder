@@ -13,6 +13,7 @@ from mcp_coder.utils.vscodeclaude.status import (
     display_status_table,
     get_issue_current_status,
     get_next_action,
+    is_issue_closed,
     is_session_stale,
 )
 from mcp_coder.utils.vscodeclaude.types import VSCodeClaudeSession
@@ -22,49 +23,70 @@ class TestStatusDisplay:
     """Test status table and display functions."""
 
     def test_get_issue_current_status_returns_status(self) -> None:
-        """Returns status label when found."""
+        """Returns status label and open state when found."""
         mock_manager = Mock()
         mock_manager.get_issue.return_value = {
+            "state": "open",
             "labels": ["status-07:code-review", "other-label"],
         }
 
-        result = get_issue_current_status(mock_manager, 123)
+        status, is_open = get_issue_current_status(mock_manager, 123)
 
-        assert result == "status-07:code-review"
+        assert status == "status-07:code-review"
+        assert is_open is True
         mock_manager.get_issue.assert_called_once_with(123)
 
-    def test_get_issue_current_status_returns_none_no_status(self) -> None:
-        """Returns None when no status label found."""
+    def test_get_issue_current_status_returns_closed_state(self) -> None:
+        """Returns correct closed state."""
         mock_manager = Mock()
-        mock_manager.get_issue.return_value = {"labels": ["other-label"]}
+        mock_manager.get_issue.return_value = {
+            "state": "closed",
+            "labels": ["status-07:code-review"],
+        }
 
-        result = get_issue_current_status(mock_manager, 123)
+        status, is_open = get_issue_current_status(mock_manager, 123)
 
-        assert result is None
+        assert status == "status-07:code-review"
+        assert is_open is False
+
+    def test_get_issue_current_status_returns_none_no_status(self) -> None:
+        """Returns None status when no status label found."""
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = {
+            "state": "open",
+            "labels": ["other-label"],
+        }
+
+        status, is_open = get_issue_current_status(mock_manager, 123)
+
+        assert status is None
+        assert is_open is True
 
     def test_get_issue_current_status_returns_none_on_error(self) -> None:
-        """Returns None on API error."""
+        """Returns None and False on API error."""
         mock_manager = Mock()
         mock_manager.get_issue.side_effect = Exception("API error")
 
-        result = get_issue_current_status(mock_manager, 123)
+        status, is_open = get_issue_current_status(mock_manager, 123)
 
-        assert result is None
+        assert status is None
+        assert is_open is False
 
     def test_get_issue_current_status_returns_none_issue_not_found(self) -> None:
-        """Returns None when issue not found."""
+        """Returns None and False when issue not found."""
         mock_manager = Mock()
         mock_manager.get_issue.return_value = None
 
-        result = get_issue_current_status(mock_manager, 123)
+        status, is_open = get_issue_current_status(mock_manager, 123)
 
-        assert result is None
+        assert status is None
+        assert is_open is False
 
     def test_is_session_stale_same_status(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns False when status unchanged."""
-        mock_issue = {"labels": ["status-07:code-review"]}
+        mock_issue = {"state": "open", "labels": ["status-07:code-review"]}
         mock_manager = Mock()
         mock_manager.get_issue.return_value = mock_issue
 
@@ -92,7 +114,7 @@ class TestStatusDisplay:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns True when status changed."""
-        mock_issue = {"labels": ["status-08:ready-pr"]}  # Changed
+        mock_issue = {"state": "open", "labels": ["status-08:ready-pr"]}  # Changed
         mock_manager = Mock()
         mock_manager.get_issue.return_value = mock_issue
 
@@ -115,6 +137,35 @@ class TestStatusDisplay:
         }
 
         assert is_session_stale(session) is True
+
+    def test_is_session_stale_no_status_label(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns False when open issue has no status label (logs warning)."""
+        mock_issue = {"state": "open", "labels": ["other-label"]}  # No status
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = mock_issue
+
+        mock_coordinator = Mock()
+        mock_coordinator.IssueManager.return_value = mock_manager
+
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        # Open issue without status label - should NOT be stale
+        assert is_session_stale(session) is False
 
     def test_is_session_stale_returns_true_on_error(
         self, monkeypatch: pytest.MonkeyPatch
@@ -142,6 +193,62 @@ class TestStatusDisplay:
         }
 
         assert is_session_stale(session) is True
+
+    def test_is_issue_closed_returns_true_when_closed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns True when issue is closed."""
+        mock_issue = {"state": "closed", "labels": ["status-07:code-review"]}
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = mock_issue
+
+        mock_coordinator = Mock()
+        mock_coordinator.IssueManager.return_value = mock_manager
+
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        assert is_issue_closed(session) is True
+
+    def test_is_issue_closed_returns_false_when_open(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns False when issue is open."""
+        mock_issue = {"state": "open", "labels": ["status-07:code-review"]}
+        mock_manager = Mock()
+        mock_manager.get_issue.return_value = mock_issue
+
+        mock_coordinator = Mock()
+        mock_coordinator.IssueManager.return_value = mock_manager
+
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": "/test",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        assert is_issue_closed(session) is False
 
     def test_check_folder_dirty_clean(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -223,6 +330,12 @@ class TestStatusDisplay:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Displays session information."""
+
+        # Mock is_issue_closed to return False (issue is open)
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.status.is_issue_closed",
+            lambda s: False,
+        )
 
         # Mock check_vscode_running
         monkeypatch.setattr(

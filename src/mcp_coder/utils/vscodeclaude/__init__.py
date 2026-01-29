@@ -56,6 +56,7 @@ from .status import (
     display_status_table,
     get_issue_current_status,
     get_next_action,
+    is_issue_closed,
     is_session_stale,
 )
 
@@ -140,6 +141,7 @@ __all__ = [
     "handle_pr_created_issues",
     # Status
     "get_issue_current_status",
+    "is_issue_closed",
     "is_session_stale",
     "check_folder_dirty",
     "get_next_action",
