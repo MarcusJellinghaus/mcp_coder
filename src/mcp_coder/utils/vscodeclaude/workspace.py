@@ -8,13 +8,53 @@ import platform
 import shutil
 import stat
 import subprocess
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from .config import sanitize_folder_name
 from .types import HUMAN_ACTION_COMMANDS, STATUS_EMOJI
 
 logger = logging.getLogger(__name__)
+
+
+def _remove_readonly(
+    func: Callable[[str], None],
+    path: str,
+    excinfo: tuple[type[BaseException], BaseException, Any],
+) -> None:
+    """Error handler for shutil.rmtree on Windows.
+
+    Handles read-only files by clearing the read-only flag and retrying.
+    This is needed because git pack files are often marked read-only on Windows.
+
+    Args:
+        func: The function that raised the error (e.g., os.unlink)
+        path: The path being processed
+        excinfo: Exception info tuple (type, value, traceback)
+
+    Raises:
+        PermissionError: If file cannot be deleted even after clearing read-only flag,
+            with a helpful message about closing applications that may have the file open.
+    """
+    import os
+
+    # Check if it's a permission error
+    if excinfo[0] is PermissionError:
+        try:
+            # Clear the read-only flag and retry
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        except PermissionError as e:
+            # File is likely locked by another process
+            raise PermissionError(
+                f"Cannot delete '{path}': file may be locked by another process. "
+                "Please close VS Code, any git GUIs, or other applications that may "
+                "have this repository open, then try again."
+            ) from e
+    else:
+        raise excinfo[1]
 
 
 def get_working_folder_path(
@@ -97,7 +137,7 @@ def setup_git_repo(
                 "Corrupted git repository at %s, deleting and re-cloning",
                 folder_path,
             )
-            shutil.rmtree(folder_path)
+            shutil.rmtree(folder_path, onerror=_remove_readonly)
             folder_path.mkdir(parents=True, exist_ok=True)
             is_empty = True
             has_git = False
