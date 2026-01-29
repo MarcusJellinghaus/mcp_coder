@@ -217,6 +217,7 @@ class TestWorkspaceSetup:
             issue_title="Test issue",
             status="status-07:code-review",
             repo_name="test-repo",
+            issue_url="https://github.com/owner/test-repo/issues/123",
             is_intervention=False,
         )
 
@@ -241,6 +242,7 @@ class TestWorkspaceSetup:
             issue_title="Test issue",
             status="status-07:code-review",
             repo_name="test-repo",
+            issue_url="https://github.com/owner/test-repo/issues/123",
             is_intervention=False,
         )
 
@@ -262,6 +264,7 @@ class TestWorkspaceSetup:
             issue_title="Test issue",
             status="status-06:implementing",  # bot_busy status
             repo_name="test-repo",
+            issue_url="https://github.com/owner/test-repo/issues/123",
             is_intervention=True,
         )
 

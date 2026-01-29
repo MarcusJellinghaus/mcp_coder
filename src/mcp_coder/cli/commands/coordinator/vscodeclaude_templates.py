@@ -6,19 +6,18 @@ chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
 echo.
-echo ╔══════════════════════════════════════════════════════════════╗
-echo ║  {emoji} {stage_name:46}  #{issue_number:6}  ║
-echo ║  {title:58}  ║
-echo ║  {repo:20} ^| {status:35}  ║
-echo ╚══════════════════════════════════════════════════════════════╝
+echo ==========================================================================
+echo {emoji} Issue #{issue_number} - {title}
+echo Repo:   {repo}
+echo Status: {status}
+echo URL:    {issue_url}
+echo ==========================================================================
 echo.
 
 {automated_section}
 
 echo.
-echo ╔══════════════════════════════════════════════════════════════╗
-echo ║  Ready for interactive discussion                            ║
-echo ╚══════════════════════════════════════════════════════════════╝
+echo === Ready for interactive discussion ===
 echo.
 
 {interactive_section}
@@ -58,19 +57,18 @@ STARTUP_SCRIPT_LINUX = r"""#!/bin/bash
 set -e
 
 echo ""
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  {emoji} {stage_name:46}  #{issue_number:6}  ║"
-echo "║  {title:58}  ║"
-echo "║  {repo:20} | {status:35}  ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
+echo "=========================================================================="
+echo "{emoji} Issue #{issue_number} - {title}"
+echo "Repo:   {repo}"
+echo "Status: {status}"
+echo "URL:    {issue_url}"
+echo "=========================================================================="
 echo ""
 
 {automated_section}
 
 echo ""
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  Ready for interactive discussion                            ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
+echo "=== Ready for interactive discussion ==="
 echo ""
 
 {interactive_section}
@@ -160,11 +158,12 @@ INTERVENTION_ROW = """| **Mode** | ⚠️ INTERVENTION |
 
 # Terminal banner template (for non-script contexts)
 BANNER_TEMPLATE = """
-╔══════════════════════════════════════════════════════════════╗
-║  {emoji} {stage_name:46}  #{issue_number:6}  ║
-║  {title:58}  ║
-║  {repo:20} | {status:35}  ║
-╚══════════════════════════════════════════════════════════════╝
+==========================================================================
+{emoji} Issue #{issue_number} - {title}
+Repo:   {repo}
+Status: {status}
+URL:    {issue_url}
+==========================================================================
 """
 
 # Gitignore entry

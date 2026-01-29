@@ -312,24 +312,6 @@ def _get_stage_short(status: str) -> str:
     return status[:6]
 
 
-def _get_stage_name(status: str) -> str:
-    """Get display name for status.
-
-    Args:
-        status: Full status label
-
-    Returns:
-        Human-readable stage name
-    """
-    stage_names = {
-        "status-01:created": "Issue Created",
-        "status-04:plan-review": "Plan Review",
-        "status-07:code-review": "Code Review",
-        "status-10:pr-created": "PR Created",
-    }
-    return stage_names.get(status, status)
-
-
 def create_workspace_file(
     workspace_base: str,
     folder_name: str,
@@ -381,6 +363,7 @@ def create_startup_script(
     issue_title: str,
     status: str,
     repo_name: str,
+    issue_url: str,
     is_intervention: bool,
 ) -> Path:
     """Create platform-specific startup script.
@@ -391,6 +374,7 @@ def create_startup_script(
         issue_title: Issue title for banner
         status: Status label
         repo_name: Repo short name
+        issue_url: GitHub issue URL
         is_intervention: If True, use intervention mode (no automation)
 
     Returns:
@@ -412,9 +396,8 @@ def create_startup_script(
     # Get commands for this status
     initial_cmd, followup_cmd = HUMAN_ACTION_COMMANDS.get(status, (None, None))
 
-    # Get emoji and stage name
+    # Get emoji for status
     emoji = STATUS_EMOJI.get(status, "📋")
-    stage_name = _get_stage_name(status)
 
     # Truncate title if too long
     title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
@@ -455,11 +438,11 @@ def create_startup_script(
     if is_windows:
         script_content = STARTUP_SCRIPT_WINDOWS.format(
             emoji=emoji,
-            stage_name=stage_name,
             issue_number=issue_number,
             title=title_display,
             repo=repo_name,
             status=status,
+            issue_url=issue_url,
             automated_section=automated_section,
             interactive_section=interactive_section,
         )
@@ -467,11 +450,11 @@ def create_startup_script(
     else:
         script_content = STARTUP_SCRIPT_LINUX.format(
             emoji=emoji,
-            stage_name=stage_name,
             issue_number=issue_number,
             title=title_display,
             repo=repo_name,
             status=status,
+            issue_url=issue_url,
             automated_section=automated_section,
             interactive_section=interactive_section,
         )
