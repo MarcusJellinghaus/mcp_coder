@@ -445,7 +445,7 @@ class TestSessionManagement:
     ) -> None:
         """Sessions file is in .mcp_coder on Windows."""
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.platform.system",
+            "mcp_coder.utils.vscodeclaude.sessions.platform.system",
             lambda: "Windows",
         )
         path = get_sessions_file_path()
@@ -457,7 +457,7 @@ class TestSessionManagement:
     ) -> None:
         """Sessions file is in .config/mcp_coder on Linux."""
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.platform.system",
+            "mcp_coder.utils.vscodeclaude.sessions.platform.system",
             lambda: "Linux",
         )
         path = get_sessions_file_path()
@@ -471,7 +471,7 @@ class TestSessionManagement:
     ) -> None:
         """Returns empty store when file doesn't exist."""
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: tmp_path / "nonexistent.json",
         )
         store = load_sessions()
@@ -483,7 +483,7 @@ class TestSessionManagement:
         """Sessions survive save/load cycle."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -524,7 +524,7 @@ class TestSessionManagement:
         # Setup session store with test data
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -550,7 +550,7 @@ class TestSessionManagement:
         """Returns None when no matching session."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
         store = {"sessions": [], "last_updated": "2024-01-22T10:30:00Z"}
@@ -563,7 +563,7 @@ class TestSessionManagement:
         """Adds session to store."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -589,7 +589,7 @@ class TestSessionManagement:
         """Removes session by folder path."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -617,7 +617,7 @@ class TestSessionManagement:
         """Remove returns False when session not found."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
         store = {"sessions": [], "last_updated": "2024-01-22T10:30:00Z"}
@@ -632,7 +632,7 @@ class TestSessionManagement:
         """Counts only sessions with running PIDs."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -641,7 +641,7 @@ class TestSessionManagement:
             return pid == 1111
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_vscode_running",
+            "mcp_coder.utils.vscodeclaude.sessions.check_vscode_running",
             mock_check,
         )
 
@@ -677,7 +677,7 @@ class TestSessionManagement:
         """Updates VSCode PID for existing session."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -704,7 +704,7 @@ class TestSessionManagement:
         """Returns empty store when JSON is invalid."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
         sessions_file.write_text("not valid json")
@@ -718,7 +718,7 @@ class TestSessionManagement:
         """Returns store with default fields when JSON is partial."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
         sessions_file.write_text(json.dumps({}))
@@ -733,7 +733,7 @@ class TestSessionManagement:
         """Save creates parent directories if they don't exist."""
         sessions_file = tmp_path / "nested" / "dirs" / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -770,7 +770,7 @@ class TestConfiguration:
             "MockCoordinator", (), {"get_config_values": mock_get_config_values}
         )()
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -796,7 +796,7 @@ class TestConfiguration:
             "MockCoordinator", (), {"get_config_values": mock_get_config_values}
         )()
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -821,7 +821,7 @@ class TestConfiguration:
             "MockCoordinator", (), {"get_config_values": mock_get_config_values}
         )()
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -846,7 +846,7 @@ class TestConfiguration:
             "MockCoordinator", (), {"get_config_values": mock_get_config_values}
         )()
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -874,7 +874,7 @@ class TestConfiguration:
             "MockCoordinator", (), {"get_config_values": mock_get_config_values}
         )()
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -911,7 +911,7 @@ class TestIssueSelection:
             "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
         )()
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -984,7 +984,7 @@ class TestIssueSelection:
             "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
         )()
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -1058,7 +1058,7 @@ class TestIssueSelection:
             "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
         )()
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -1120,7 +1120,7 @@ class TestIssueSelection:
             "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
         )()
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -1219,7 +1219,7 @@ class TestWorkspaceSetup:
             return None
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.shutil.which", mock_which
+            "mcp_coder.utils.vscodeclaude.workspace.shutil.which", mock_which
         )
 
         validate_setup_commands(["python --version", "git status"])
@@ -1229,7 +1229,7 @@ class TestWorkspaceSetup:
     ) -> None:
         """Raises when command not found in PATH."""
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.shutil.which",
+            "mcp_coder.utils.vscodeclaude.workspace.shutil.which",
             lambda cmd: None,
         )
 
@@ -1249,7 +1249,7 @@ class TestWorkspaceSetup:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.subprocess.run", mock_run
+            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         run_setup_commands(tmp_path, ["echo hello", "echo world"])
@@ -1267,7 +1267,7 @@ class TestWorkspaceSetup:
             raise subprocess.CalledProcessError(1, cmd)
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.subprocess.run", mock_run
+            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         with pytest.raises(subprocess.CalledProcessError):
@@ -1341,7 +1341,7 @@ class TestWorkspaceSetup:
     ) -> None:
         """Creates .bat script on Windows."""
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.platform.system",
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -1365,7 +1365,7 @@ class TestWorkspaceSetup:
     ) -> None:
         """Creates .sh script on Linux."""
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.platform.system",
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
             lambda: "Linux",
         )
 
@@ -1386,7 +1386,7 @@ class TestWorkspaceSetup:
     ) -> None:
         """Intervention mode uses plain claude command."""
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.platform.system",
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -1471,7 +1471,7 @@ class TestGitOperations:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.subprocess.run", mock_run
+            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         folder = tmp_path / "new_repo"
@@ -1495,7 +1495,7 @@ class TestGitOperations:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.subprocess.run", mock_run
+            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         # Create folder with .git
@@ -1523,7 +1523,7 @@ class TestGitOperations:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.subprocess.run", mock_run
+            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         folder = tmp_path / "repo"
@@ -1545,7 +1545,7 @@ class TestGitOperations:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.subprocess.run", mock_run
+            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         folder = tmp_path / "has_content"
@@ -1567,7 +1567,7 @@ class TestLaunch:
         mock_process.pid = 12345
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.subprocess.Popen",
+            "mcp_coder.utils.vscodeclaude.orchestrator.subprocess.Popen",
             lambda *args, **kwargs: mock_process,
         )
 
@@ -1588,7 +1588,7 @@ class TestLaunch:
             return Mock(pid=1)
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.subprocess.Popen",
+            "mcp_coder.utils.vscodeclaude.orchestrator.subprocess.Popen",
             mock_popen,
         )
 
@@ -1647,43 +1647,43 @@ class TestOrchestration:
         """Creates session with all components."""
         # Mock all dependencies
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.create_working_folder",
+            "mcp_coder.utils.vscodeclaude.orchestrator.create_working_folder",
             lambda p: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.setup_git_repo",
+            "mcp_coder.utils.vscodeclaude.orchestrator.setup_git_repo",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.validate_mcp_json",
+            "mcp_coder.utils.vscodeclaude.orchestrator.validate_mcp_json",
             lambda p: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.update_gitignore",
+            "mcp_coder.utils.vscodeclaude.orchestrator.update_gitignore",
             lambda p: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.create_workspace_file",
+            "mcp_coder.utils.vscodeclaude.orchestrator.create_workspace_file",
             lambda *args, **kwargs: tmp_path / "test.code-workspace",
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.create_startup_script",
+            "mcp_coder.utils.vscodeclaude.orchestrator.create_startup_script",
             lambda *args, **kwargs: tmp_path / ".vscodeclaude_start.bat",
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.create_vscode_task",
+            "mcp_coder.utils.vscodeclaude.orchestrator.create_vscode_task",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.create_status_file",
+            "mcp_coder.utils.vscodeclaude.orchestrator.create_status_file",
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.launch_vscode",
+            "mcp_coder.utils.vscodeclaude.orchestrator.launch_vscode",
             lambda p: 9999,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.add_session",
+            "mcp_coder.utils.vscodeclaude.sessions.add_session",
             lambda s: None,
         )
 
@@ -1739,7 +1739,7 @@ class TestOrchestration:
             return True
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.create_working_folder",
+            "mcp_coder.utils.vscodeclaude.orchestrator.create_working_folder",
             mock_create_folder,
         )
 
@@ -1747,7 +1747,7 @@ class TestOrchestration:
             raise subprocess.CalledProcessError(1, "git clone")
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.setup_git_repo",
+            "mcp_coder.utils.vscodeclaude.orchestrator.setup_git_repo",
             failing_git,
         )
 
@@ -1796,19 +1796,19 @@ class TestOrchestration:
             return True
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.create_working_folder",
+            "mcp_coder.utils.vscodeclaude.orchestrator.create_working_folder",
             mock_create_folder,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.setup_git_repo",
+            "mcp_coder.utils.vscodeclaude.orchestrator.setup_git_repo",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.validate_mcp_json",
+            "mcp_coder.utils.vscodeclaude.orchestrator.validate_mcp_json",
             lambda p: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.validate_setup_commands",
+            "mcp_coder.utils.vscodeclaude.orchestrator.validate_setup_commands",
             lambda c: None,
         )
 
@@ -1816,7 +1816,7 @@ class TestOrchestration:
             raise subprocess.CalledProcessError(1, "uv sync")
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.run_setup_commands",
+            "mcp_coder.utils.vscodeclaude.orchestrator.run_setup_commands",
             failing_setup,
         )
 
@@ -1844,7 +1844,7 @@ class TestOrchestration:
 
         # Mock platform to Windows to trigger setup commands
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.platform.system",
+            "mcp_coder.utils.vscodeclaude.orchestrator.platform.system",
             lambda: "Windows",
         )
 
@@ -1866,7 +1866,7 @@ class TestOrchestration:
     ) -> None:
         """Doesn't start sessions beyond max."""
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_active_session_count",
+            "mcp_coder.utils.vscodeclaude.sessions.get_active_session_count",
             lambda: 2,
         )
 
@@ -1900,7 +1900,7 @@ class TestOrchestration:
         """Removes sessions with missing folders."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -1938,19 +1938,19 @@ class TestOrchestration:
         """Relaunches VSCode for valid sessions."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
-        # Mock vscode not running
+        # Mock vscode not running - patch at orchestrator since that's where it's imported
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_vscode_running",
+            "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
             lambda pid: False,
         )
 
-        # Mock is_session_stale to avoid GitHub API calls
+        # Mock is_session_stale to avoid GitHub API calls - patch at orchestrator
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.is_session_stale",
+            "mcp_coder.utils.vscodeclaude.orchestrator.is_session_stale",
             lambda session: False,
         )
 
@@ -1963,7 +1963,7 @@ class TestOrchestration:
         # Mock launch_vscode
         new_pid = 9999
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.launch_vscode",
+            "mcp_coder.utils.vscodeclaude.orchestrator.launch_vscode",
             lambda w: new_pid,
         )
 
@@ -1994,7 +1994,7 @@ class TestOrchestration:
         """Skips sessions with running VSCode."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -2313,7 +2313,7 @@ class TestStatusDisplay:
         mock_coordinator.IssueManager.return_value = mock_manager
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -2343,7 +2343,7 @@ class TestStatusDisplay:
         mock_coordinator.IssueManager.return_value = mock_manager
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -2372,7 +2372,7 @@ class TestStatusDisplay:
         mock_coordinator.IssueManager.return_value = mock_manager
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude._get_coordinator",
+            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -2537,13 +2537,13 @@ class TestStatusDisplay:
 
         # Mock check_folder_dirty
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_folder_dirty",
+            "mcp_coder.utils.vscodeclaude.status.check_folder_dirty",
             lambda path: False,
         )
 
         # Mock is_session_stale
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.is_session_stale",
+            "mcp_coder.utils.vscodeclaude.status.is_session_stale",
             lambda s: False,
         )
 
@@ -2611,26 +2611,27 @@ class TestCleanup:
         from mcp_coder.cli.commands.coordinator.vscodeclaude import get_stale_sessions
 
         sessions_file = tmp_path / "sessions.json"
+        # Patch at sessions module since load_sessions calls get_sessions_file_path there
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
-        # Mock VSCode not running
+        # Mock VSCode not running - patch at cleanup where it's imported
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_vscode_running",
+            "mcp_coder.utils.vscodeclaude.cleanup.check_vscode_running",
             lambda pid: False,
         )
 
-        # Mock session is stale
+        # Mock session is stale - patch at cleanup where it's imported
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.is_session_stale",
+            "mcp_coder.utils.vscodeclaude.cleanup.is_session_stale",
             lambda s: True,
         )
 
-        # Mock folder not dirty
+        # Mock folder not dirty - patch at cleanup where it's imported
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_folder_dirty",
+            "mcp_coder.utils.vscodeclaude.cleanup.check_folder_dirty",
             lambda path: False,
         )
 
@@ -2662,14 +2663,15 @@ class TestCleanup:
         from mcp_coder.cli.commands.coordinator.vscodeclaude import get_stale_sessions
 
         sessions_file = tmp_path / "sessions.json"
+        # Patch at sessions module since load_sessions calls get_sessions_file_path there
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_sessions_file_path",
+            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
-        # Mock VSCode running
+        # Mock VSCode running - patch at cleanup where it's imported
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.check_vscode_running",
+            "mcp_coder.utils.vscodeclaude.cleanup.check_vscode_running",
             lambda pid: True,
         )
 
@@ -2711,7 +2713,7 @@ class TestCleanup:
         (tmp_path / "stale_folder").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_stale_sessions",
+            "mcp_coder.utils.vscodeclaude.cleanup.get_stale_sessions",
             lambda: [(stale_session, False)],  # Not dirty
         )
 
@@ -2743,7 +2745,7 @@ class TestCleanup:
         (tmp_path / "dirty_folder").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_stale_sessions",
+            "mcp_coder.utils.vscodeclaude.cleanup.get_stale_sessions",
             lambda: [(dirty_session, True)],  # Dirty
         )
 
@@ -2774,11 +2776,11 @@ class TestCleanup:
         (tmp_path / "clean_folder").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_stale_sessions",
+            "mcp_coder.utils.vscodeclaude.cleanup.get_stale_sessions",
             lambda: [(clean_session, False)],  # Clean
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.delete_session_folder",
+            "mcp_coder.utils.vscodeclaude.cleanup.delete_session_folder",
             lambda s: True,
         )
 
@@ -2813,7 +2815,7 @@ class TestCleanup:
         }
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.remove_session",
+            "mcp_coder.utils.vscodeclaude.cleanup.remove_session",
             lambda f: True,
         )
 
@@ -2860,7 +2862,7 @@ class TestCleanup:
         )
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.vscodeclaude.get_stale_sessions",
+            "mcp_coder.utils.vscodeclaude.cleanup.get_stale_sessions",
             lambda: [],
         )
 
