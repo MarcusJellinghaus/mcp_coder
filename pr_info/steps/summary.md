@@ -6,15 +6,35 @@ Add `mcp-coder coordinator vscodeclaude` command to manage multiple VSCode/Claud
 
 ## Architecture / Design Changes
 
-### New Files (Minimal Addition)
+### New Files (Modular Structure)
 
 ```
+src/mcp_coder/utils/vscodeclaude/
+├── __init__.py           # Public API exports
+├── types.py              # TypedDicts, constants
+├── sessions.py           # JSON session management
+├── config.py             # Config loading from TOML
+├── issues.py             # GitHub issue filtering
+├── workspace.py          # Git, folders, file creation
+├── orchestrator.py       # Session preparation & launch
+├── status.py             # Status display & staleness
+└── cleanup.py            # Stale session cleanup
+
 src/mcp_coder/cli/commands/coordinator/
-├── vscodeclaude.py              # All business logic (single file)
 └── vscodeclaude_templates.py    # Template strings only
 
+tests/utils/vscodeclaude/
+├── test_types.py         # Type and constant tests
+├── test_sessions.py      # Session management tests
+├── test_config.py        # Configuration tests
+├── test_issues.py        # Issue selection tests
+├── test_workspace.py     # Workspace setup tests
+├── test_orchestrator.py  # Orchestration tests
+├── test_status.py        # Status display tests
+└── test_cleanup.py       # Cleanup tests
+
 tests/cli/commands/coordinator/
-└── test_vscodeclaude.py         # All tests (single file)
+└── test_vscodeclaude_cli.py     # CLI layer tests (templates, handlers)
 ```
 
 ### Modified Files
@@ -28,7 +48,7 @@ tests/cli/commands/coordinator/
 
 ### Design Decisions
 
-1. **Single module approach** - All logic in `vscodeclaude.py` (~600-800 lines) follows existing `core.py` pattern
+1. **Modular approach** - Business logic split into `utils/vscodeclaude/` package with focused modules (<400 lines each)
 2. **Templates separated** - Large string constants in dedicated file for readability
 3. **Reuse existing infrastructure** - `IssueManager`, `IssueBranchManager`, `load_labels_config`, `get_config_values`
 4. **Late binding pattern** - Use `_get_coordinator()` for testability (matches existing code)
@@ -79,16 +99,17 @@ VSCODECLAUDE_PRIORITY = [
 
 | Step | Focus | Files |
 |------|-------|-------|
-| 1 | Dependencies & Config | `pyproject.toml`, types in `vscodeclaude.py` |
+| 1 | Dependencies & Config | `pyproject.toml`, types |
 | 2 | Templates | `vscodeclaude_templates.py` |
-| 3 | Session Management | `vscodeclaude.py` (load/save/check sessions) |
-| 4 | Issue Selection | `vscodeclaude.py` (filtering, priority, GitHub username) |
-| 5 | Workspace Setup | `vscodeclaude.py` (git, folders, files) |
-| 6 | VSCode Launch | `vscodeclaude.py` (launch, banner) |
+| 3 | Session Management | `utils/vscodeclaude/sessions.py` |
+| 4 | Issue Selection | `utils/vscodeclaude/issues.py`, `config.py` |
+| 5 | Workspace Setup | `utils/vscodeclaude/workspace.py` |
+| 6 | VSCode Launch | `utils/vscodeclaude/orchestrator.py` |
 | 7 | CLI Integration | `main.py`, `commands.py`, `__init__.py` |
-| 8 | Status & Cleanup | `vscodeclaude.py` (status display, cleanup logic) |
+| 8 | Status & Cleanup | `utils/vscodeclaude/status.py`, `cleanup.py` |
 | 9 | Code Review Fixes | Bug fixes from first code review |
 | 10 | Code Review Fixes (Round 2) | Stale check, type hints, test cleanup |
+| 11 | Test Refactoring | Split tests to match `utils/vscodeclaude/` structure |
 
 ## Key Requirements Preserved
 

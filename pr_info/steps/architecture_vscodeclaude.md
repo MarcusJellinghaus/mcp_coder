@@ -97,24 +97,27 @@ The CLI handlers in `commands.py` remain thin:
 - `execute_coordinator_vscodeclaude_status()` - Call status display functions
 - `_handle_intervention_mode()` - Handle --intervene flag
 
-## Test Refactoring (TODO)
+## Test Structure
 
-**Note:** The test file `tests/cli/commands/coordinator/test_vscodeclaude.py` (2871 lines) 
-still needs refactoring to match the new structure:
+The tests have been refactored to match the new module structure:
 
 ```
 tests/utils/vscodeclaude/
-├── test_types.py
-├── test_sessions.py
-├── test_config.py
-├── test_issues.py
-├── test_workspace.py
-├── test_orchestrator.py
-├── test_status.py
-└── test_cleanup.py
+├── __init__.py           # Empty init file
+├── test_types.py         # TestTypes, TestTypeHints (~169 lines)
+├── test_sessions.py      # TestSessionManagement (~333 lines)
+├── test_config.py        # TestConfiguration (~155 lines)
+├── test_issues.py        # TestIssueSelection (~277 lines)
+├── test_workspace.py     # TestWorkspaceSetup, TestGitOperations (~418 lines)
+├── test_orchestrator.py  # TestLaunch, TestOrchestration (~526 lines)
+├── test_status.py        # TestStatusDisplay (~335 lines)
+└── test_cleanup.py       # TestCleanup (~257 lines)
+
+tests/cli/commands/coordinator/
+└── test_vscodeclaude_cli.py  # TestTemplates, TestCLI, TestCommandHandlers (~400 lines)
 ```
 
-This is tracked for a future PR to keep changes manageable.
+All test files are under 750 lines to comply with the file size limit.
 
 ## Import Pattern
 
