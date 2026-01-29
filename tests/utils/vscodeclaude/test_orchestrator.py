@@ -52,10 +52,12 @@ class TestLaunch:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Calls 'code' with workspace path."""
-        called_args: list[Any] = []
+        captured_args: list[Any] = []
+        captured_kwargs: dict[str, Any] = {}
 
         def mock_popen(args: Any, **kwargs: Any) -> Mock:
-            called_args.extend(args)
+            captured_args.append(args)
+            captured_kwargs.update(kwargs)
             return Mock(pid=1)
 
         monkeypatch.setattr(
@@ -68,8 +70,16 @@ class TestLaunch:
 
         launch_vscode(workspace)
 
-        assert "code" in called_args
-        assert str(workspace) in called_args
+        # The command can be a list or a string (shell=True on Windows)
+        cmd = captured_args[0]
+        if isinstance(cmd, str):
+            # Windows: shell command string like 'code "path"'
+            assert "code" in cmd
+            assert str(workspace) in cmd
+        else:
+            # Linux: list like ['code', 'path']
+            assert "code" in cmd
+            assert str(workspace) in cmd
 
     def test_get_stage_display_name_known_statuses(self) -> None:
         """Returns human-readable stage names."""
