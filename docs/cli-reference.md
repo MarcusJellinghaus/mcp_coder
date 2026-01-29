@@ -37,6 +37,7 @@ Orchestration and monitoring of automated development across repositories.
 |---------|-------------|
 | [`coordinator test`](#coordinator-test) | Trigger Jenkins integration test for repository |
 | [`coordinator run`](#coordinator-run) | Monitor and dispatch workflows for GitHub issues |
+| [`coordinator vscodeclaude`](#coordinator-vscodeclaude) | Launch VS Code sessions for issues needing human review |
 
 ### Quality Checks
 Branch readiness verification and code quality tools.
@@ -348,6 +349,40 @@ mcp-coder coordinator run --repo mcp_coder
 # Force cache refresh
 mcp-coder coordinator run --all --force-refresh
 ```
+
+---
+
+### coordinator vscodeclaude
+
+Launch VS Code sessions for GitHub issues needing human review.
+
+```bash
+mcp-coder coordinator vscodeclaude [OPTIONS]
+```
+
+**Options:**
+- `--repo NAME` - Process only the specified repository
+
+**Description:** Automatically launch VS Code sessions for issues requiring human action (code review, plan review, issue analysis). Each session includes automated Claude Code integration.
+
+**Prerequisites:**
+1. **Trust workspace folder (one-time):** Open VS Code, go to File → Open Folder, select your workspace base folder (e.g., `C:\Users\YourName\Documents\VSCC`), and click "Yes, I trust the authors"
+2. **Configuration:** Ensure `[vscodeclaude]` section exists in `~/.config/mcp_coder/config.toml`
+3. **Repository setup:** Each repository needs a `.mcp.json` file
+
+**Examples:**
+```bash
+# Process all configured repositories
+mcp-coder coordinator vscodeclaude
+
+# Process specific repository only
+mcp-coder coordinator vscodeclaude --repo mcp_coder
+
+# With debug logging
+mcp-coder --log-level debug coordinator vscodeclaude
+```
+
+**See Also:** [Coordinator VSCodeClaude Guide](coordinator-vscodeclaude.md) for detailed setup and troubleshooting.
 
 ---
 
