@@ -390,6 +390,11 @@ def process_eligible_issues(
     # Create managers using the classes from coordinator
     # Build repo_url from repo_full_name for proper instantiation
     repo_url = f"https://github.com/{repo_full_name}"
+    logger.debug(
+        "process_eligible_issues: processing repo %s (url: %s)",
+        repo_full_name,
+        repo_url,
+    )
     issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
     branch_manager: IssueBranchManager = coordinator.IssueBranchManager(
         repo_url=repo_url

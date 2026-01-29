@@ -62,6 +62,12 @@ def is_issue_closed(session: VSCodeClaudeSession) -> bool:
 
     # Create issue manager for the repo
     repo_url = f"https://github.com/{repo_full_name}"
+    logger.debug(
+        "is_issue_closed: checking #%d in repo %s (url: %s)",
+        issue_number,
+        repo_full_name,
+        repo_url,
+    )
     issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
 
     # Get current status and open/closed state
@@ -91,6 +97,12 @@ def is_session_stale(session: VSCodeClaudeSession) -> bool:
 
     # Create issue manager for the repo
     repo_url = f"https://github.com/{repo_full_name}"
+    logger.debug(
+        "is_session_stale: checking #%d in repo %s (url: %s)",
+        issue_number,
+        repo_full_name,
+        repo_url,
+    )
     issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
 
     # Get current status and open/closed state
