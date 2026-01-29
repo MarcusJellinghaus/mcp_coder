@@ -154,7 +154,7 @@ class TestOrchestration:
             lambda p: 9999,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.add_session",
+            "mcp_coder.utils.vscodeclaude.orchestrator.add_session",
             lambda s: None,
         )
 
