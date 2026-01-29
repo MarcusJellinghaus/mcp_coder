@@ -413,7 +413,10 @@ def create_startup_script(
     else:
         if is_windows:
             automated_section = (
-                AUTOMATED_SECTION_WINDOWS.format(initial_command=initial_cmd)
+                AUTOMATED_SECTION_WINDOWS.format(
+                    initial_command=initial_cmd,
+                    issue_number=issue_number,
+                )
                 if initial_cmd
                 else ""
             )
@@ -424,7 +427,10 @@ def create_startup_script(
             )
         else:
             automated_section = (
-                AUTOMATED_SECTION_LINUX.format(initial_command=initial_cmd)
+                AUTOMATED_SECTION_LINUX.format(
+                    initial_command=initial_cmd,
+                    issue_number=issue_number,
+                )
                 if initial_cmd
                 else ""
             )
