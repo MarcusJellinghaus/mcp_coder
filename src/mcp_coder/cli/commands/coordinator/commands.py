@@ -386,7 +386,11 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # Step 1: Restart closed sessions
         restarted = restart_closed_sessions()
         for session in restarted:
-            print(f"Restarted: #{session['issue_number']} ({session['status']})")
+            repo_short = session["repo"].split("/")[-1]
+            print(
+                f"Restarted: {repo_short} #{session['issue_number']} "
+                f"({session['status']}) PID:{session['vscode_pid']}"
+            )
 
         # Step 2: Handle cleanup if requested
         if args.cleanup:
