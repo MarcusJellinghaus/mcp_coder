@@ -243,16 +243,17 @@ class BaseGitHubManager:
             return self._repository
 
         except GithubException as e:
+            repo_url = f"https://github.com/{repo_full_name}"
             if e.status == 404:
                 logger.error(
-                    "Repository not found: '%s'. Check that the repo exists "
-                    "and you have access to it.",
-                    repo_full_name,
+                    "Repository not found: %s - Check that the repo exists, "
+                    "you have access, and the URL in ~/.mcp_coder/config.toml is correct.",
+                    repo_url,
                 )
             else:
                 logger.error(
-                    "Failed to access repository '%s': %s",
-                    repo_full_name,
+                    "Failed to access repository %s: %s",
+                    repo_url,
                     e,
                 )
             return None
