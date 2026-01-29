@@ -4,6 +4,7 @@ import logging
 import shutil
 from pathlib import Path
 
+from .orchestrator import _get_configured_repos
 from .sessions import check_vscode_running, load_sessions, remove_session
 from .status import check_folder_dirty, is_session_stale
 from .types import VSCodeClaudeSession
@@ -14,15 +15,30 @@ logger = logging.getLogger(__name__)
 def get_stale_sessions() -> list[tuple[VSCodeClaudeSession, bool]]:
     """Get stale sessions with dirty status.
 
+    Only checks sessions for repos that are still configured.
+
     Returns:
         List of (session, is_dirty) tuples for stale sessions
     """
     store = load_sessions()
     stale_sessions: list[tuple[VSCodeClaudeSession, bool]] = []
 
+    # Load configured repos (skip sessions for repos no longer in config)
+    configured_repos = _get_configured_repos()
+
     for session in store["sessions"]:
         # Skip sessions with running VSCode
         if check_vscode_running(session.get("vscode_pid")):
+            continue
+
+        # Skip sessions for unconfigured repos
+        repo_full_name = session["repo"]
+        if repo_full_name not in configured_repos:
+            logger.debug(
+                "Skipping stale check for issue #%d: repo %s not in config",
+                session["issue_number"],
+                repo_full_name,
+            )
             continue
 
         # Check if session is stale
