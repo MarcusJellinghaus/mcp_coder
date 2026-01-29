@@ -431,7 +431,10 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         if total_started:
             print(f"\nStarted {len(total_started)} new session(s):")
             for session in total_started:
-                print(f"  #{session['issue_number']}: {session['status']}")
+                repo_short = session["repo"].split("/")[-1]
+                print(
+                    f"  {repo_short} - #{session['issue_number']}: {session['status']}"
+                )
         else:
             current = get_active_session_count()
             print(f"\nNo new sessions started (active: {current}/{max_sessions})")
