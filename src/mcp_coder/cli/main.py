@@ -478,7 +478,9 @@ def create_parser() -> argparse.ArgumentParser:
 
     # check file-size command
     file_size_parser = check_subparsers.add_parser(
-        "file-size", help="Check file sizes against maximum line count"
+        "file-size",
+        help="Check file sizes against maximum line count",
+        formatter_class=WideHelpFormatter,
     )
     file_size_parser.add_argument(
         "--max-lines",
