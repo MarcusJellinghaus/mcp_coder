@@ -40,21 +40,37 @@ def _remove_readonly(
     """
     import os
 
-    # Check if it's a permission error
-    if excinfo[0] is PermissionError:
+    exc_type, exc_value, _ = excinfo
+    logger.debug(
+        "rmtree error on '%s': %s(%s)",
+        path,
+        exc_type.__name__,
+        exc_value,
+    )
+
+    # Check if it's a permission/access error (use issubclass for robustness)
+    # OSError covers PermissionError and other OS-level errors on Windows
+    if issubclass(exc_type, OSError):
         try:
             # Clear the read-only flag and retry
+            logger.debug("Clearing read-only flag on '%s'", path)
             os.chmod(path, stat.S_IWRITE)
             func(path)
-        except PermissionError as e:
+            logger.debug(
+                "Successfully deleted '%s' after clearing read-only flag", path
+            )
+        except OSError as e:
             # File is likely locked by another process
+            logger.debug(
+                "Still cannot delete '%s' after clearing read-only: %s", path, e
+            )
             raise PermissionError(
                 f"Cannot delete '{path}': file may be locked by another process. "
                 "Please close VS Code, any git GUIs, or other applications that may "
                 "have this repository open, then try again."
             ) from e
     else:
-        raise excinfo[1]
+        raise exc_value
 
 
 def get_working_folder_path(
