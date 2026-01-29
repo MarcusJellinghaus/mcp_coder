@@ -165,6 +165,15 @@ git commit
 - Focus on clear, descriptive commit messages
 - No required Claude Code attribution or links
 
+## 📏 File Size Check
+
+Check for large files (>750 lines) that may impact LLM context:
+```bash
+mcp-coder check file-size --max-lines 750
+```
+
+For guidance on splitting large files, see [Safe Refactoring Guide](../docs/processes-prompts/refactoring-guide.md).
+
 ---
 
 ## 📂 Execution Directory Flag

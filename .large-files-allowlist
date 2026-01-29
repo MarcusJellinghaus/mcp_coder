@@ -1,0 +1,25 @@
+# Large files allowlist - files exceeding 750 lines
+# These files are grandfathered in; reduce over time per #353
+
+tests/workflows/test_validate_labels.py
+tests/utils/github_operations/test_issue_manager.py
+src/mcp_coder/utils/github_operations/issue_manager.py
+tests/workflow_utils/test_task_tracker.py
+tests/utils/github_operations/test_issue_cache.py
+tests/workflows/implement/test_core.py
+tests/utils/github_operations/test_issue_branch_manager.py
+docs/processes-prompts/development-process.md
+src/mcp_coder/workflows/implement/core.py
+tests/workflow_utils/test_branch_status.py
+tests/cli/commands/coordinator/test_core.py
+tests/utils/github_operations/test_base_manager.py
+tests/utils/github_operations/test_issue_manager_label_update.py
+tests/llm/test_interface.py
+tests/workflows/implement/test_task_processing.py
+tests/workflows/test_issue_stats.py
+tests/workflow_utils/test_commit_operations.py
+tests/cli/commands/test_commit.py
+tests/utils/github_operations/test_github_utils.py
+src/mcp_coder/prompt_manager.py
+docs/configuration/config.md
+tests/cli/test_main.py
