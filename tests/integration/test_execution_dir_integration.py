@@ -442,12 +442,14 @@ class TestSubprocessCwdParameter:
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     def test_commit_auto_passes_execution_dir_to_llm_subprocess(
         self,
         mock_commit_files: MagicMock,
         mock_validate_git: MagicMock,
+        mock_stage_changes: MagicMock,
         mock_get_diff: MagicMock,
         mock_execute_subprocess: MagicMock,
         require_claude_cli: None,
@@ -461,6 +463,7 @@ class TestSubprocessCwdParameter:
         execution_dir.mkdir()
 
         mock_validate_git.return_value = (True, None)
+        mock_stage_changes.return_value = True
         mock_get_diff.return_value = "diff output"
 
         # Create proper subprocess result mock with all required attributes
