@@ -1,12 +1,15 @@
 """Test issue selection and filtering for VSCode Claude."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
 
+from mcp_coder.utils.github_operations.issue_manager import IssueData
 from mcp_coder.utils.vscodeclaude.issues import (
+    _filter_eligible_vscodeclaude_issues,
+    get_cached_eligible_vscodeclaude_issues,
     get_eligible_vscodeclaude_issues,
     get_human_action_labels,
     get_linked_branch_for_issue,
@@ -275,3 +278,290 @@ class TestIssueSelection:
 
         with pytest.raises(ValueError, match="multiple branches"):
             get_linked_branch_for_issue(mock_branch_manager, 123)
+
+
+class TestFilterEligibleVscodeclaudeIssues:
+    """Test _filter_eligible_vscodeclaude_issues helper function."""
+
+    def test_filter_eligible_issues_filters_correctly(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Filters pre-fetched issues by eligibility criteria."""
+        # Pre-fetched issues list (simulating cache data)
+        all_issues = [
+            {
+                "number": 1,
+                "title": "Eligible issue",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": ["testuser"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/1",
+                "locked": False,
+            },
+            {
+                "number": 2,
+                "title": "Wrong assignee",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": ["otheruser"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/2",
+                "locked": False,
+            },
+            {
+                "number": 3,
+                "title": "Closed issue",
+                "body": "",
+                "state": "closed",
+                "labels": ["status-07:code-review"],
+                "assignees": ["testuser"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/3",
+                "locked": False,
+            },
+            {
+                "number": 4,
+                "title": "Has ignore label",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review", "Overview"],
+                "assignees": ["testuser"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/4",
+                "locked": False,
+            },
+        ]
+
+        # Mock labels config
+        mock_labels_config = {
+            "workflow_labels": [
+                {"name": "status-07:code-review", "category": "human_action"},
+            ],
+            "ignore_labels": ["Overview"],
+        }
+
+        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
+            return mock_labels_config
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        # Filter issues - cast for mypy
+        eligible = _filter_eligible_vscodeclaude_issues(
+            cast(list[IssueData], all_issues), "testuser"
+        )
+
+        # Should only have issue #1 (others filtered out)
+        assert len(eligible) == 1
+        assert eligible[0]["number"] == 1
+
+    def test_filter_eligible_issues_sorts_by_priority(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Issues are sorted by VSCODECLAUDE_PRIORITY."""
+        all_issues = [
+            {
+                "number": 1,
+                "title": "Created",
+                "body": "",
+                "state": "open",
+                "labels": ["status-01:created"],
+                "assignees": ["user"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/1",
+                "locked": False,
+            },
+            {
+                "number": 2,
+                "title": "Code review",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": ["user"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/2",
+                "locked": False,
+            },
+        ]
+
+        mock_labels_config = {
+            "workflow_labels": [
+                {"name": "status-01:created", "category": "human_action"},
+                {"name": "status-07:code-review", "category": "human_action"},
+            ],
+            "ignore_labels": [],
+        }
+
+        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
+            return mock_labels_config
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        eligible = _filter_eligible_vscodeclaude_issues(
+            cast(list[IssueData], all_issues), "user"
+        )
+
+        # Code review comes before created in priority
+        assert len(eligible) == 2
+        assert eligible[0]["number"] == 2  # code-review first
+        assert eligible[1]["number"] == 1  # created second
+
+
+class TestGetCachedEligibleVscodeclaudeIssues:
+    """Test get_cached_eligible_vscodeclaude_issues wrapper function."""
+
+    def test_get_cached_eligible_issues_uses_cache(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Calls get_all_cached_issues and filters results."""
+        cached_issues = [
+            {
+                "number": 1,
+                "title": "Cached issue",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": ["testuser"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/1",
+                "locked": False,
+            },
+        ]
+
+        # Mock cache function
+        mock_get_all_cached = Mock(return_value=cached_issues)
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.issues.get_all_cached_issues",
+            mock_get_all_cached,
+        )
+
+        # Mock labels config
+        mock_labels_config = {
+            "workflow_labels": [
+                {"name": "status-07:code-review", "category": "human_action"},
+            ],
+            "ignore_labels": [],
+        }
+
+        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
+            return mock_labels_config
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        mock_issue_manager = Mock()
+
+        # Call function
+        eligible = get_cached_eligible_vscodeclaude_issues(
+            repo_full_name="owner/repo",
+            issue_manager=mock_issue_manager,
+            github_username="testuser",
+            force_refresh=False,
+            cache_refresh_minutes=1440,
+        )
+
+        # Verify cache was called
+        mock_get_all_cached.assert_called_once_with(
+            repo_full_name="owner/repo",
+            issue_manager=mock_issue_manager,
+            force_refresh=False,
+            cache_refresh_minutes=1440,
+        )
+
+        # Verify filtering worked
+        assert len(eligible) == 1
+        assert eligible[0]["number"] == 1
+
+    def test_get_cached_eligible_issues_fallback_on_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Falls back to direct API fetch on cache errors."""
+        # Mock cache to raise error
+        mock_get_all_cached = Mock(side_effect=ValueError("Cache error"))
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.issues.get_all_cached_issues",
+            mock_get_all_cached,
+        )
+
+        # Mock direct API fetch
+        api_issues = [
+            {
+                "number": 99,
+                "title": "API issue",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": ["testuser"],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "https://github.com/owner/repo/issues/99",
+                "locked": False,
+            },
+        ]
+        mock_issue_manager = Mock()
+        mock_issue_manager.list_issues.return_value = api_issues
+
+        # Mock labels config
+        mock_labels_config = {
+            "workflow_labels": [
+                {"name": "status-07:code-review", "category": "human_action"},
+            ],
+            "ignore_labels": [],
+        }
+
+        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
+            return mock_labels_config
+
+        mock_coordinator = type(
+            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
+        )()
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
+            lambda: mock_coordinator,
+        )
+
+        # Call function
+        eligible = get_cached_eligible_vscodeclaude_issues(
+            repo_full_name="owner/repo",
+            issue_manager=mock_issue_manager,
+            github_username="testuser",
+        )
+
+        # Should fall back to API fetch
+        mock_issue_manager.list_issues.assert_called_once()
+        assert len(eligible) == 1
+        assert eligible[0]["number"] == 99

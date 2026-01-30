@@ -108,16 +108,16 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Prepare git commit message for Step 11
 
 ### Step 12: Cache Integration (Performance Optimization)
-[ ] Add `_filter_eligible_vscodeclaude_issues()` helper to issues.py
-[ ] Add `get_cached_eligible_vscodeclaude_issues()` wrapper to issues.py
-[ ] Update process_eligible_issues() to use cache
-[ ] Update execute_coordinator_vscodeclaude() to fetch cache once per repo
-[ ] Update __init__.py exports
-[ ] Add tests for cache integration
-[ ] Run pylint on Step 12 code and fix all issues
-[ ] Run pytest on Step 12 tests and ensure all pass
-[ ] Run mypy on Step 12 code and fix all type issues
-[ ] Prepare git commit message for Step 12
+[x] Add `_filter_eligible_vscodeclaude_issues()` helper to issues.py
+[x] Add `get_cached_eligible_vscodeclaude_issues()` wrapper to issues.py
+[x] Update process_eligible_issues() to use cache
+[x] Update execute_coordinator_vscodeclaude() to fetch cache once per repo
+[x] Update __init__.py exports
+[x] Add tests for cache integration
+[x] Run pylint on Step 12 code and fix all issues
+[x] Run pytest on Step 12 tests and ensure all pass
+[x] Run mypy on Step 12 code and fix all type issues
+[x] Prepare git commit message for Step 12
 
 ### Step 13: Pass Cached Issues to Staleness Checks
 [ ] Refactor get_issue_current_status() to accept cached_issues parameter
