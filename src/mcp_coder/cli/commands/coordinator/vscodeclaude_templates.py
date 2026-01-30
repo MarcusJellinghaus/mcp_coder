@@ -1,57 +1,5 @@
 """Template strings for VSCode Claude session files."""
 
-# Startup script for Windows (.bat)
-STARTUP_SCRIPT_WINDOWS = r"""@echo off
-chcp 65001 >nul
-setlocal EnableDelayedExpansion
-
-echo.
-echo ==========================================================================
-echo {emoji} Issue #{issue_number} - {title}
-echo Repo:   {repo}
-echo Status: {status}
-echo URL:    {issue_url}
-echo ==========================================================================
-echo.
-
-{automated_section}
-
-echo.
-echo === Ready for interactive discussion ===
-echo.
-
-{interactive_section}
-"""
-
-# Automated analysis section for Windows
-AUTOMATED_SECTION_WINDOWS = r"""echo Running automated analysis...
-claude -p "{initial_command} {issue_number}" --output-format json --mcp-config .mcp.json > .vscodeclaude_analysis.json 2>&1
-
-REM Extract session_id using Python
-for /f "delims=" %%i in ('python -c "import json; d=json.load(open('.vscodeclaude_analysis.json')); print(d.get('session_id',''))"') do set SESSION_ID=%%i
-
-if "%SESSION_ID%"=="" (
-    echo ERROR: Could not extract session ID from analysis output.
-    echo Please run Claude manually.
-    pause
-    exit /b 1
-)
-
-echo Session ID: %SESSION_ID%
-"""
-
-# Interactive section for Windows
-INTERACTIVE_SECTION_WINDOWS = r"""claude --resume %SESSION_ID% {followup_command}
-"""
-
-# Intervention mode for Windows (no automated step)
-INTERVENTION_SECTION_WINDOWS = r"""echo.
-echo ⚠️  INTERVENTION MODE - Automation may be running elsewhere
-echo    Investigate manually. No automated analysis will run.
-echo.
-claude
-"""
-
 # Venv setup section for Windows (V2)
 VENV_SECTION_WINDOWS = r"""echo Checking Python environment...
 if not exist .venv\Scripts\activate.bat (
