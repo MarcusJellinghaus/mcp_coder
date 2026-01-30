@@ -82,6 +82,8 @@ def check_vscode_running(pid: int | None) -> bool:
         True if process exists and is running
 
     Uses psutil for cross-platform compatibility.
+    Note: On Windows, the PID from launch may be a launcher that exits.
+          Use is_vscode_open_for_folder() for more reliable folder-based check.
     """
     if pid is None:
         return False
@@ -93,6 +95,39 @@ def check_vscode_running(pid: int | None) -> bool:
         return VSCODE_PROCESS_NAME in process.name().lower()
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return False
+
+
+def is_vscode_open_for_folder(folder_path: str) -> tuple[bool, int | None]:
+    """Check if any VSCode process has the folder open.
+
+    More reliable than PID-based check on Windows where the launcher
+    process exits immediately after spawning VSCode.
+
+    Args:
+        folder_path: Full path to the workspace folder
+
+    Returns:
+        Tuple of (is_open, pid) where:
+        - is_open: True if VSCode has this folder open
+        - pid: The VSCode process PID if found, None otherwise
+    """
+    folder_str = str(folder_path).lower()
+
+    for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            proc_name = proc.info.get("name", "") or ""
+            if VSCODE_PROCESS_NAME not in proc_name.lower():
+                continue
+
+            cmdline = proc.info.get("cmdline") or []
+            # Check if folder path appears in command line arguments
+            for arg in cmdline:
+                if folder_str in str(arg).lower():
+                    return True, proc.info.get("pid")
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+
+    return False, None
 
 
 def get_session_for_issue(
