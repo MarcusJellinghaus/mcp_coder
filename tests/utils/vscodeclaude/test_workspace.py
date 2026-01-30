@@ -227,27 +227,25 @@ class TestWorkspaceSetup:
         assert "claude" in content
         assert "/implementation_review" in content
 
-    def test_create_startup_script_linux(
+    def test_create_startup_script_linux_raises_not_implemented(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Creates .sh script on Linux."""
+        """Linux raises NotImplementedError until Step 17."""
         monkeypatch.setattr(
             "mcp_coder.utils.vscodeclaude.workspace.platform.system",
             lambda: "Linux",
         )
 
-        script_path = create_startup_script(
-            folder_path=tmp_path,
-            issue_number=123,
-            issue_title="Test issue",
-            status="status-07:code-review",
-            repo_name="test-repo",
-            issue_url="https://github.com/owner/test-repo/issues/123",
-            is_intervention=False,
-        )
-
-        assert script_path.suffix == ".sh"
-        assert script_path.exists()
+        with pytest.raises(NotImplementedError, match="Linux V2 templates"):
+            create_startup_script(
+                folder_path=tmp_path,
+                issue_number=123,
+                issue_title="Test issue",
+                status="status-07:code-review",
+                repo_name="test-repo",
+                issue_url="https://github.com/owner/test-repo/issues/123",
+                is_intervention=False,
+            )
 
     def test_create_startup_script_intervention(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -460,3 +458,169 @@ class TestGitOperations:
 
         # Should have cloned after deleting
         assert any("clone" in str(c) for c in commands)
+
+
+class TestCreateStartupScriptV2:
+    """Test V2 startup script generation with venv and mcp-coder."""
+
+    def test_creates_script_with_venv_section(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Generated script includes venv setup."""
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "uv venv" in content
+        assert "activate.bat" in content
+
+    def test_creates_script_with_mcp_coder_prompt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Generated script uses mcp-coder prompt."""
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "mcp-coder prompt" in content
+        assert "--output-format session-id" in content
+        assert "--session-id %SESSION_ID%" in content
+
+    def test_creates_script_with_claude_resume(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Generated script ends with claude --resume."""
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "claude --resume %SESSION_ID%" in content
+
+    def test_uses_custom_timeout(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Timeout parameter is used in script."""
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-01:created",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+            timeout=600,  # 10 minutes
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "--timeout 600" in content
+
+    def test_intervention_mode_no_automation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Intervention mode skips automation."""
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-06:implementing",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=True,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "INTERVENTION MODE" in content
+        assert "mcp-coder prompt" not in content
+        assert "uv venv" in content  # Venv still activated
+
+    def test_uses_correct_initial_command_for_status(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Uses correct initial command based on status."""
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        # Test status-01:created -> /issue_analyse
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-01:created",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "/issue_analyse 123" in content
+
+    def test_includes_discussion_section(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Generated script includes discussion section."""
+        monkeypatch.setattr(
+            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "/discuss" in content
+        assert "Step 2: Automated Discussion" in content

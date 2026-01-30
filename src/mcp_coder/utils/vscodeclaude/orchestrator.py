@@ -41,6 +41,7 @@ from .sessions import (
 )
 from .status import is_session_stale
 from .types import (
+    DEFAULT_PROMPT_TIMEOUT,
     RepoVSCodeClaudeConfig,
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
@@ -225,6 +226,7 @@ def prepare_and_launch_session(
             repo_name=repo_short_name,
             issue_url=issue_url,
             is_intervention=is_intervention,
+            timeout=DEFAULT_PROMPT_TIMEOUT,
         )
 
         # Create VSCode task
@@ -442,6 +444,7 @@ def regenerate_session_files(
         repo_name=repo_short_name,
         issue_url=issue_url,
         is_intervention=is_intervention,
+        timeout=DEFAULT_PROMPT_TIMEOUT,
     )
 
     # Regenerate VSCode task

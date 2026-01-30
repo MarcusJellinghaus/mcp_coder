@@ -69,6 +69,7 @@ from .status import (
 # Types and constants
 from .types import (
     DEFAULT_MAX_SESSIONS,
+    DEFAULT_PROMPT_TIMEOUT,
     HUMAN_ACTION_COMMANDS,
     STAGE_DISPLAY_NAMES,
     STATUS_EMOJI,
@@ -106,6 +107,7 @@ __all__ = [
     "STATUS_EMOJI",
     "STAGE_DISPLAY_NAMES",
     "DEFAULT_MAX_SESSIONS",
+    "DEFAULT_PROMPT_TIMEOUT",
     # Session management
     "get_sessions_file_path",
     "load_sessions",

@@ -71,3 +71,6 @@ STAGE_DISPLAY_NAMES: dict[str, str] = {
 
 # Default max sessions
 DEFAULT_MAX_SESSIONS: int = 3
+
+# Default timeout for mcp-coder prompt calls in startup scripts (seconds)
+DEFAULT_PROMPT_TIMEOUT: int = 300  # 5 minutes
