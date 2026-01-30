@@ -10,7 +10,7 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 
 ### Step 1: Core Parsing Function `_parse_base_branch()`
 
-- [ ] Write unit tests for `_parse_base_branch()` in `tests/utils/github_operations/test_issue_manager.py`
+- [x] Write unit tests for `_parse_base_branch()` in `tests/utils/github_operations/test_issue_manager.py`
 - [ ] Implement `_parse_base_branch()` function in `src/mcp_coder/utils/github_operations/issue_manager.py`
 - [ ] Run pylint and fix any issues found
 - [ ] Run pytest and fix any failing tests
