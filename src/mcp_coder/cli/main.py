@@ -587,7 +587,7 @@ def main() -> int:
     setup_logging(args.log_level)
 
     try:
-        logger.info(
+        logger.debug(
             f"Starting mcp-coder CLI: command={args.command}, log_level={args.log_level}"
         )
 

@@ -381,7 +381,7 @@ def get_all_cached_issues(
             age_minutes=0,
             reason=f"duplicate_protection_{age_seconds}s",
         )
-        logger.info(f"Skipping {repo_name} - checked {age_seconds}s ago")
+        logger.debug(f"Skipping {repo_name} - checked {age_seconds}s ago")
         return list(cache_data["issues"].values())
 
     # Step 3: Fetch and merge issues
