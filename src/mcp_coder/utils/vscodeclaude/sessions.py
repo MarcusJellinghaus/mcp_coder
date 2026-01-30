@@ -115,6 +115,7 @@ def _get_vscode_processes(refresh: bool = False) -> list[dict[str, Any]]:
     if _vscode_process_cache is not None and not refresh:
         return _vscode_process_cache.get("processes", [])
 
+    logger.debug("Scanning VSCode processes (this may be slow on Windows)...")
     processes: list[dict[str, Any]] = []
     for proc in psutil.process_iter(["pid", "name", "cmdline"]):
         try:
@@ -136,6 +137,10 @@ def _get_vscode_processes(refresh: bool = False) -> list[dict[str, Any]]:
 
     _vscode_process_cache = {"processes": processes}
     logger.debug("Cached %d VSCode processes", len(processes))
+    # Log first cmdline for debugging (truncated)
+    if processes:
+        sample = processes[0].get("cmdline_lower", "")[:200]
+        logger.debug("Sample VSCode cmdline: %s...", sample)
     return processes
 
 
@@ -173,8 +178,18 @@ def is_vscode_open_for_folder(folder_path: str) -> tuple[bool, int | None]:
         cmdline_lower = proc_info.get("cmdline_lower", "")
         # Check if folder path or folder name appears in command line
         if folder_str in cmdline_lower or folder_name in cmdline_lower:
+            logger.debug(
+                "Found VSCode with folder %s (pid=%s)",
+                folder_name,
+                proc_info.get("pid"),
+            )
             return True, proc_info.get("pid")
 
+    logger.debug(
+        "No VSCode process found for folder: %s (checked %d processes)",
+        folder_name,
+        len(_get_vscode_processes()),
+    )
     return False, None
 
 
