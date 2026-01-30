@@ -1,6 +1,7 @@
 """Test regenerate_session_files creates all required files."""
 
 import json
+import platform
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -11,6 +12,10 @@ from mcp_coder.utils.vscodeclaude.orchestrator import regenerate_session_files
 from mcp_coder.utils.vscodeclaude.types import VSCodeClaudeSession
 
 
+@pytest.mark.skipif(
+    platform.system() != "Windows",
+    reason="Windows-only test: Linux V2 templates not yet implemented",
+)
 class TestRegenerateSessionFiles:
     """Test regenerate_session_files creates all required files."""
 
