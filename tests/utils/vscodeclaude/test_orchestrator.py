@@ -544,7 +544,7 @@ class TestOrchestration:
         # Mock is_session_stale to avoid GitHub API calls - patch at orchestrator
         monkeypatch.setattr(
             "mcp_coder.utils.vscodeclaude.orchestrator.is_session_stale",
-            lambda session: False,
+            lambda session, cached_issues=None: False,
         )
 
         # Create working folder and workspace file

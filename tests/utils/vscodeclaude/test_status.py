@@ -334,7 +334,7 @@ class TestStatusDisplay:
         # Mock is_issue_closed to return False (issue is open)
         monkeypatch.setattr(
             "mcp_coder.utils.vscodeclaude.status.is_issue_closed",
-            lambda s: False,
+            lambda s, cached_issues=None: False,
         )
 
         # Mock check_vscode_running
@@ -352,7 +352,7 @@ class TestStatusDisplay:
         # Mock is_session_stale
         monkeypatch.setattr(
             "mcp_coder.utils.vscodeclaude.status.is_session_stale",
-            lambda s: False,
+            lambda s, cached_issues=None: False,
         )
 
         session: VSCodeClaudeSession = {
