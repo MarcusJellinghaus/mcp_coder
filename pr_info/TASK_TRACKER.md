@@ -120,17 +120,17 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Prepare git commit message for Step 12
 
 ### Step 13: Pass Cached Issues to Staleness Checks
-[ ] Refactor get_issue_current_status() to accept cached_issues parameter
-[ ] Refactor is_session_stale() to accept cached_issues parameter
-[ ] Refactor is_issue_closed() to accept cached_issues parameter
-[ ] Refactor restart_closed_sessions() to accept cached_issues_by_repo parameter
-[ ] Update display_status_table() to pass cached issues
-[ ] Update callers in commands.py to pass cache
-[ ] Add tests for cache-aware functions
-[ ] Run pylint on Step 13 code and fix all issues
-[ ] Run pytest on Step 13 tests and ensure all pass
-[ ] Run mypy on Step 13 code and fix all type issues
-[ ] Prepare git commit message for Step 13
+[x] Refactor get_issue_current_status() to accept cached_issues parameter
+[x] Refactor is_session_stale() to accept cached_issues parameter
+[x] Refactor is_issue_closed() to accept cached_issues parameter
+[x] Refactor restart_closed_sessions() to accept cached_issues_by_repo parameter
+[x] Update display_status_table() to pass cached issues
+[x] Update callers in commands.py to pass cache
+[x] Add tests for cache-aware functions
+[x] Run pylint on Step 13 code and fix all issues
+[x] Run pytest on Step 13 tests and ensure all pass
+[x] Run mypy on Step 13 code and fix all type issues
+[x] Prepare git commit message for Step 13
 
 ## Pull Request
 [x] Review all implementation steps for completeness
