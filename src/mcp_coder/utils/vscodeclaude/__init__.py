@@ -43,6 +43,7 @@ from .orchestrator import (
 from .sessions import (
     add_session,
     check_vscode_running,
+    clear_vscode_process_cache,
     get_active_session_count,
     get_session_for_issue,
     get_sessions_file_path,
@@ -108,6 +109,7 @@ __all__ = [
     "load_sessions",
     "save_sessions",
     "check_vscode_running",
+    "clear_vscode_process_cache",
     "is_vscode_open_for_folder",
     "get_session_for_issue",
     "add_session",

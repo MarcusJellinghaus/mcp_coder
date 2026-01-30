@@ -30,6 +30,7 @@ from .issues import (
 from .sessions import (
     add_session,
     check_vscode_running,
+    clear_vscode_process_cache,
     get_active_session_count,
     get_session_for_issue,
     is_vscode_open_for_folder,
@@ -530,6 +531,9 @@ def restart_closed_sessions(
     coordinator = _get_coordinator()
     store = load_sessions()
     restarted: list[VSCodeClaudeSession] = []
+
+    # Refresh VSCode process cache once for all sessions (avoids slow repeated iteration)
+    clear_vscode_process_cache()
 
     # Load configured repos from config file (fresh read on each start)
     configured_repos = _get_configured_repos()
