@@ -31,6 +31,7 @@ dependencies = [
     "requests>=2.28.0",
     "mcp-server-filesystem @ git+https://github.com/MarcusJellinghaus/mcp_server_filesystem.git",
     "psutil>=5.9.0",
+    "tabulate>=0.9.0",
 ]
 
 [project.optional-dependencies]
@@ -38,6 +39,7 @@ dependencies = [
 types = [
     "types-pyperclip",
     "types-requests>=2.28.0",
+    "types-tabulate>=0.9.0",
 ]
 
 # Test utilities - for local development (execution env already has pytest/mypy)
