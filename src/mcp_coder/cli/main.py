@@ -387,6 +387,7 @@ def create_parser() -> argparse.ArgumentParser:
     vscodeclaude_parser = coordinator_subparsers.add_parser(
         "vscodeclaude",
         help="Manage VSCode/Claude sessions for interactive workflow stages",
+        epilog="Documentation: docs/coordinator-vscodeclaude.md",
     )
     vscodeclaude_subparsers = vscodeclaude_parser.add_subparsers(
         dest="vscodeclaude_subcommand",
