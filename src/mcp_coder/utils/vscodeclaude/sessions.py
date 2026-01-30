@@ -97,11 +97,65 @@ def check_vscode_running(pid: int | None) -> bool:
         return False
 
 
+# Cache for VSCode processes to avoid repeated slow process iteration
+_vscode_process_cache: dict[str, list[dict[str, Any]]] | None = None
+
+
+def _get_vscode_processes(refresh: bool = False) -> list[dict[str, Any]]:
+    """Get list of VSCode processes with their command lines.
+
+    Caches results to avoid repeated slow process iteration.
+    Call with refresh=True at the start of operations to refresh the cache.
+
+    Returns:
+        List of dicts with 'pid' and 'cmdline_lower' keys
+    """
+    global _vscode_process_cache
+
+    if _vscode_process_cache is not None and not refresh:
+        return _vscode_process_cache.get("processes", [])
+
+    processes: list[dict[str, Any]] = []
+    for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            proc_name = proc.info.get("name", "") or ""
+            if VSCODE_PROCESS_NAME not in proc_name.lower():
+                continue
+
+            cmdline = proc.info.get("cmdline") or []
+            # Store lowercase cmdline for fast matching
+            cmdline_lower = " ".join(str(arg).lower() for arg in cmdline)
+            processes.append(
+                {
+                    "pid": proc.info.get("pid"),
+                    "cmdline_lower": cmdline_lower,
+                }
+            )
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+
+    _vscode_process_cache = {"processes": processes}
+    logger.debug("Cached %d VSCode processes", len(processes))
+    return processes
+
+
+def clear_vscode_process_cache() -> None:
+    """Clear the VSCode process cache.
+
+    Call this at the start of operations to ensure fresh data.
+    """
+    global _vscode_process_cache
+    _vscode_process_cache = None
+
+
 def is_vscode_open_for_folder(folder_path: str) -> tuple[bool, int | None]:
     """Check if any VSCode process has the folder open.
 
     More reliable than PID-based check on Windows where the launcher
     process exits immediately after spawning VSCode.
+
+    Uses cached process list for performance - call clear_vscode_process_cache()
+    at the start of batch operations to refresh.
 
     Args:
         folder_path: Full path to the workspace folder
@@ -112,20 +166,14 @@ def is_vscode_open_for_folder(folder_path: str) -> tuple[bool, int | None]:
         - pid: The VSCode process PID if found, None otherwise
     """
     folder_str = str(folder_path).lower()
+    # Also check for workspace file pattern
+    folder_name = Path(folder_path).name.lower()
 
-    for proc in psutil.process_iter(["pid", "name", "cmdline"]):
-        try:
-            proc_name = proc.info.get("name", "") or ""
-            if VSCODE_PROCESS_NAME not in proc_name.lower():
-                continue
-
-            cmdline = proc.info.get("cmdline") or []
-            # Check if folder path appears in command line arguments
-            for arg in cmdline:
-                if folder_str in str(arg).lower():
-                    return True, proc.info.get("pid")
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            continue
+    for proc_info in _get_vscode_processes():
+        cmdline_lower = proc_info.get("cmdline_lower", "")
+        # Check if folder path or folder name appears in command line
+        if folder_str in cmdline_lower or folder_name in cmdline_lower:
+            return True, proc_info.get("pid")
 
     return False, None
 
