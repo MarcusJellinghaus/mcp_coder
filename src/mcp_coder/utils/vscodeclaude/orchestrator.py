@@ -12,9 +12,13 @@ from pathlib import Path
 from types import ModuleType
 
 from ..github_operations.issue_branch_manager import IssueBranchManager
+from ..github_operations.issue_cache import get_all_cached_issues
 from ..github_operations.issue_manager import IssueData, IssueManager
 from .config import get_github_username, load_repo_vscodeclaude_config
-from .issues import get_eligible_vscodeclaude_issues, get_linked_branch_for_issue
+from .issues import (
+    _filter_eligible_vscodeclaude_issues,
+    get_linked_branch_for_issue,
+)
 from .sessions import (
     add_session,
     check_vscode_running,
@@ -410,8 +414,18 @@ def process_eligible_issues(
         repo_url=repo_url
     )
 
-    # Get eligible issues
-    eligible_issues = get_eligible_vscodeclaude_issues(issue_manager, github_username)
+    # Get all cached issues and filter for vscodeclaude eligibility
+    from ...cli.commands.coordinator.core import get_cache_refresh_minutes
+
+    all_cached_issues = get_all_cached_issues(
+        repo_full_name=repo_full_name,
+        issue_manager=issue_manager,
+        force_refresh=False,
+        cache_refresh_minutes=get_cache_refresh_minutes(),
+    )
+    eligible_issues = _filter_eligible_vscodeclaude_issues(
+        all_cached_issues, github_username
+    )
 
     # Separate pr-created issues (handle separately)
     pr_created_issues: list[IssueData] = []
@@ -512,8 +526,6 @@ def regenerate_session_files(
     is_intervention = session.get("is_intervention", False)
 
     # Get current branch from git
-    import subprocess
-
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],

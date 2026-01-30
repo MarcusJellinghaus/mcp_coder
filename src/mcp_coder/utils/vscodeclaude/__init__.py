@@ -21,6 +21,8 @@ from .config import (
 
 # Issue filtering
 from .issues import (
+    _filter_eligible_vscodeclaude_issues,
+    get_cached_eligible_vscodeclaude_issues,
     get_eligible_vscodeclaude_issues,
     get_human_action_labels,
     get_linked_branch_for_issue,
@@ -118,6 +120,8 @@ __all__ = [
     # Issue filtering
     "get_human_action_labels",
     "get_eligible_vscodeclaude_issues",
+    "get_cached_eligible_vscodeclaude_issues",
+    "_filter_eligible_vscodeclaude_issues",
     "get_linked_branch_for_issue",
     # Workspace setup
     "get_working_folder_path",
