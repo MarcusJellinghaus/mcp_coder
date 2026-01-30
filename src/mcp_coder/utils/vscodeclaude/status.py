@@ -20,20 +20,35 @@ def _get_coordinator() -> ModuleType:
 
 
 def get_issue_current_status(
-    issue_manager: IssueManager,
     issue_number: int,
+    cached_issues: dict[int, IssueData] | None = None,
+    issue_manager: IssueManager | None = None,
 ) -> tuple[str | None, bool]:
     """Get current status label and open/closed state for an issue.
 
     Args:
-        issue_manager: IssueManager for GitHub API
         issue_number: GitHub issue number
+        cached_issues: Pre-fetched issues dict (preferred, avoids API call)
+        issue_manager: IssueManager for fallback API call (required if cached_issues missing)
 
     Returns:
         Tuple of (status_label, is_open) where:
         - status_label: Current status label or None if no status found
         - is_open: True if issue is open, False if closed
     """
+    # Try cache first
+    if cached_issues is not None and issue_number in cached_issues:
+        issue = cached_issues[issue_number]
+        is_open = issue["state"] == "open"
+        for label in issue["labels"]:
+            if label.startswith("status-"):
+                return label, is_open
+        return None, is_open
+
+    # Fallback to API call
+    if issue_manager is None:
+        raise ValueError("Either cached_issues or issue_manager must be provided")
+
     try:
         issue = issue_manager.get_issue(issue_number)
         is_open = issue["state"] == "open"
@@ -46,41 +61,49 @@ def get_issue_current_status(
         return None, False  # Assume closed on error (conservative)
 
 
-def is_issue_closed(session: VSCodeClaudeSession) -> bool:
+def is_issue_closed(
+    session: VSCodeClaudeSession,
+    cached_issues: dict[int, IssueData] | None = None,
+) -> bool:
     """Check if session's issue is closed.
 
     Args:
         session: Session to check
+        cached_issues: Pre-fetched issues dict (avoids API call if provided)
 
     Returns:
         True if issue is closed
     """
-    coordinator = _get_coordinator()
-
     repo_full_name = session["repo"]
     issue_number = session["issue_number"]
 
-    # Create issue manager for the repo
-    repo_url = f"https://github.com/{repo_full_name}"
     logger.debug(
-        "is_issue_closed: checking #%d in repo %s (url: %s)",
+        "is_issue_closed: checking #%d in repo %s",
         issue_number,
         repo_full_name,
-        repo_url,
     )
-    issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
 
-    # Get current status and open/closed state
-    _, is_open = get_issue_current_status(issue_manager, issue_number)
+    # Use cache if available, otherwise create manager for fallback
+    if cached_issues is not None:
+        _, is_open = get_issue_current_status(issue_number, cached_issues=cached_issues)
+    else:
+        coordinator = _get_coordinator()
+        repo_url = f"https://github.com/{repo_full_name}"
+        issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
+        _, is_open = get_issue_current_status(issue_number, issue_manager=issue_manager)
 
     return not is_open
 
 
-def is_session_stale(session: VSCodeClaudeSession) -> bool:
+def is_session_stale(
+    session: VSCodeClaudeSession,
+    cached_issues: dict[int, IssueData] | None = None,
+) -> bool:
     """Check if session's issue status has changed.
 
     Args:
         session: Session to check
+        cached_issues: Pre-fetched issues dict (avoids API call if provided)
 
     Returns:
         True if issue status differs from session status
@@ -89,24 +112,28 @@ def is_session_stale(session: VSCodeClaudeSession) -> bool:
         Closed issues should be filtered out before calling this function.
         Open issues without status labels log a warning but are NOT marked stale.
     """
-    coordinator = _get_coordinator()
-
     repo_full_name = session["repo"]
     issue_number = session["issue_number"]
     session_status = session["status"]
 
-    # Create issue manager for the repo
-    repo_url = f"https://github.com/{repo_full_name}"
     logger.debug(
-        "is_session_stale: checking #%d in repo %s (url: %s)",
+        "is_session_stale: checking #%d in repo %s",
         issue_number,
         repo_full_name,
-        repo_url,
     )
-    issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
 
-    # Get current status and open/closed state
-    current_status, is_open = get_issue_current_status(issue_manager, issue_number)
+    # Use cache if available, otherwise create manager for fallback
+    if cached_issues is not None:
+        current_status, is_open = get_issue_current_status(
+            issue_number, cached_issues=cached_issues
+        )
+    else:
+        coordinator = _get_coordinator()
+        repo_url = f"https://github.com/{repo_full_name}"
+        issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
+        current_status, is_open = get_issue_current_status(
+            issue_number, issue_manager=issue_manager
+        )
 
     # Closed issues should be filtered out before this function is called
     if not is_open:
@@ -201,6 +228,7 @@ def display_status_table(
     sessions: list[VSCodeClaudeSession],
     eligible_issues: list[tuple[str, IssueData]],
     repo_filter: str | None = None,
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> None:
     """Print status table to stdout.
 
@@ -208,6 +236,8 @@ def display_status_table(
         sessions: Current sessions from JSON
         eligible_issues: Eligible issues not yet in sessions (repo_name, issue)
         repo_filter: Optional repo name filter
+        cached_issues_by_repo: Dict mapping repo_full_name to issues dict.
+                               If provided, avoids API calls for staleness checks.
 
     Columns:
     - Folder
@@ -242,14 +272,20 @@ def display_status_table(
 
     # Print session rows
     for session in sessions:
+        repo_full = session["repo"]
+
+        # Get cached issues for this repo (if available)
+        repo_cached_issues: dict[int, IssueData] | None = None
+        if cached_issues_by_repo:
+            repo_cached_issues = cached_issues_by_repo.get(repo_full)
+
         # Skip sessions for closed issues - they're no longer relevant
-        if is_issue_closed(session):
+        if is_issue_closed(session, cached_issues=repo_cached_issues):
             logger.debug(
                 "Skipping session for closed issue #%d", session["issue_number"]
             )
             continue
 
-        repo_full = session["repo"]
         repo_short = repo_full.split("/")[-1] if "/" in repo_full else repo_full
 
         # Apply repo filter
@@ -272,7 +308,7 @@ def display_status_table(
         is_running = check_vscode_running(session.get("vscode_pid"))
         folder_path = Path(session["folder"])
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
-        stale = is_session_stale(session)
+        stale = is_session_stale(session, cached_issues=repo_cached_issues)
 
         vscode_status = "Running" if is_running else "Closed"
         action = get_next_action(stale, is_dirty, is_running)

@@ -14,9 +14,12 @@ import sys
 
 # Lazy imports from coordinator package to enable test patching
 # Tests can patch at 'mcp_coder.cli.commands.coordinator.<name>'
-from typing import List, Optional
+from types import ModuleType
+from typing import Any, List, Optional
 
 from ....utils.github_operations.github_utils import RepoIdentifier
+from ....utils.github_operations.issue_cache import get_all_cached_issues
+from ....utils.github_operations.issue_manager import IssueData, IssueManager
 from ....utils.jenkins_operations.models import JobStatus
 from ....utils.user_config import get_config_file_path, load_config
 from .command_templates import TEST_COMMAND_TEMPLATES
@@ -345,6 +348,78 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         raise
 
 
+def _get_repo_full_name_from_url(repo_url: str) -> str:
+    """Extract full repo name (owner/repo) from repo URL.
+
+    Args:
+        repo_url: Repository URL like https://github.com/owner/repo.git
+
+    Returns:
+        Full repo name like "owner/repo"
+    """
+    try:
+        repo_identifier = RepoIdentifier.from_repo_url(repo_url)
+        return repo_identifier.full_name
+    except ValueError:
+        # Fallback: extract from URL directly
+        url_clean = repo_url.rstrip("/")
+        if url_clean.endswith(".git"):
+            url_clean = url_clean[:-4]
+        parts = url_clean.split("/")
+        if len(parts) >= 2:
+            return f"{parts[-2]}/{parts[-1]}"
+        return ""
+
+
+def _build_cached_issues_by_repo(
+    repo_names: list[str],
+    coordinator: ModuleType,
+) -> dict[str, dict[int, IssueData]]:
+    """Build cached issues dict for all configured repos.
+
+    Args:
+        repo_names: List of repository config names
+        coordinator: Coordinator module for config access
+
+    Returns:
+        Dict mapping repo_full_name to {issue_number: IssueData}
+    """
+    from .core import get_cache_refresh_minutes
+
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] = {}
+
+    for repo_name in repo_names:
+        try:
+            repo_config: dict[str, Any] = coordinator.load_repo_config(repo_name)
+            repo_url = repo_config.get("repo_url", "")
+            if not repo_url:
+                continue
+
+            repo_full_name = _get_repo_full_name_from_url(repo_url)
+            if not repo_full_name:
+                continue
+
+            # Create issue manager and fetch cached issues
+            issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
+            all_issues = get_all_cached_issues(
+                repo_full_name=repo_full_name,
+                issue_manager=issue_manager,
+                force_refresh=False,
+                cache_refresh_minutes=get_cache_refresh_minutes(),
+            )
+
+            # Build issues_by_number dict
+            issues_by_number: dict[int, IssueData] = {
+                issue["number"]: issue for issue in all_issues
+            }
+            cached_issues_by_repo[repo_full_name] = issues_by_number
+
+        except Exception as e:
+            logger.warning(f"Failed to build cache for {repo_name}: {e}")
+
+    return cached_issues_by_repo
+
+
 def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
     """Execute coordinator vscodeclaude command.
 
@@ -383,8 +458,16 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # Determine max sessions
         max_sessions = args.max_sessions or vscodeclaude_config["max_sessions"]
 
-        # Step 1: Restart closed sessions
-        restarted = restart_closed_sessions()
+        # Get repo list for cache building
+        config_data = load_config()
+        repos_section = config_data.get("coordinator", {}).get("repos", {})
+        repo_names = list(repos_section.keys())
+
+        # Build cached issues for all repos (used for staleness checks)
+        cached_issues_by_repo = _build_cached_issues_by_repo(repo_names, coordinator)
+
+        # Step 1: Restart closed sessions (pass cache for staleness checks)
+        restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
         for session in restarted:
             repo_short = session["repo"].split("/")[-1]
             print(
@@ -399,11 +482,7 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
             # List stale sessions without deleting
             cleanup_stale_sessions(dry_run=True)
 
-        # Step 3: Get repo list
-        config_data = load_config()
-        repos_section = config_data.get("coordinator", {}).get("repos", {})
-        repo_names = list(repos_section.keys())
-
+        # Step 3: Check repo list (already loaded above)
         if not repo_names:
             print("No repositories configured in config file", file=sys.stderr)
             return 1

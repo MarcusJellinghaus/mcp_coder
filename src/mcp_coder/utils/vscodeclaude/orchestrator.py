@@ -612,8 +612,15 @@ def _get_configured_repos() -> set[str]:
     return configured_repos
 
 
-def restart_closed_sessions() -> list[VSCodeClaudeSession]:
+def restart_closed_sessions(
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
+) -> list[VSCodeClaudeSession]:
     """Restart sessions where VSCode was closed.
+
+    Args:
+        cached_issues_by_repo: Dict mapping repo_full_name to issues dict.
+                               If provided, avoids API calls for staleness checks
+                               and file regeneration.
 
     Finds sessions where:
     - VSCode PID no longer running
@@ -662,21 +669,31 @@ def restart_closed_sessions() -> list[VSCodeClaudeSession]:
             )
             continue
 
+        # Get cached issues for this repo (if available)
+        repo_cached_issues: dict[int, IssueData] | None = None
+        if cached_issues_by_repo is not None:
+            repo_cached_issues = cached_issues_by_repo.get(repo_full_name)
+
         # Check if session is stale (issue status changed)
-        if is_session_stale(session):
+        if is_session_stale(session, cached_issues=repo_cached_issues):
             logger.info(
                 "Skipping stale session for issue #%d (status changed)",
                 session["issue_number"],
             )
             continue
 
-        # Fetch fresh issue data from GitHub
+        # Get issue data from cache or fetch from API
         issue_number = session["issue_number"]
         repo_url = f"https://github.com/{repo_full_name}"
 
         try:
-            issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
-            issue = issue_manager.get_issue(issue_number)
+            if repo_cached_issues and issue_number in repo_cached_issues:
+                issue = repo_cached_issues[issue_number]
+            else:
+                issue_manager: IssueManager = coordinator.IssueManager(
+                    repo_url=repo_url
+                )
+                issue = issue_manager.get_issue(issue_number)
 
             if issue["number"] == 0:
                 logger.warning(
