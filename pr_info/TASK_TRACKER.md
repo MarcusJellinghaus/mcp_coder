@@ -142,17 +142,17 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Prepare git commit message for Step 14
 
 ### Step 15: Update VSCodeClaude Templates V2 (Windows)
-[ ] Add VENV_SECTION_WINDOWS template
-[ ] Add AUTOMATED_SECTION_WINDOWS_V2 template (mcp-coder prompt)
-[ ] Add DISCUSSION_SECTION_WINDOWS template
-[ ] Add INTERACTIVE_SECTION_WINDOWS_V2 template
-[ ] Add STARTUP_SCRIPT_WINDOWS_V2 template
-[ ] Add INTERVENTION_SCRIPT_WINDOWS_V2 template
-[ ] Add tests for V2 templates in test_vscodeclaude_cli.py
-[ ] Run pylint on Step 15 code and fix all issues
-[ ] Run pytest on Step 15 tests and ensure all pass
-[ ] Run mypy on Step 15 code and fix all type issues
-[ ] Prepare git commit message for Step 15
+[x] Add VENV_SECTION_WINDOWS template
+[x] Add AUTOMATED_SECTION_WINDOWS_V2 template (mcp-coder prompt)
+[x] Add DISCUSSION_SECTION_WINDOWS template
+[x] Add INTERACTIVE_SECTION_WINDOWS_V2 template
+[x] Add STARTUP_SCRIPT_WINDOWS_V2 template
+[x] Add INTERVENTION_SCRIPT_WINDOWS_V2 template
+[x] Add tests for V2 templates in test_vscodeclaude_cli.py
+[x] Run pylint on Step 15 code and fix all issues
+[x] Run pytest on Step 15 tests and ensure all pass
+[x] Run mypy on Step 15 code and fix all type issues
+[x] Prepare git commit message for Step 15
 
 ### Step 16: Update Workspace Setup for V2 Templates
 [ ] Add DEFAULT_PROMPT_TIMEOUT constant to types.py
