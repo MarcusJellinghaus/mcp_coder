@@ -7,6 +7,7 @@ from types import ModuleType
 from typing import Any
 
 from ..github_operations.issue_branch_manager import IssueBranchManager
+from ..github_operations.issue_cache import get_all_cached_issues
 from ..github_operations.issue_manager import IssueData, IssueManager
 from .types import VSCODECLAUDE_PRIORITY
 
@@ -79,20 +80,23 @@ def _is_issue_eligible(
     return github_username in issue["assignees"]
 
 
-def get_eligible_vscodeclaude_issues(
-    issue_manager: IssueManager,
+def _filter_eligible_vscodeclaude_issues(
+    all_issues: list[IssueData],
     github_username: str,
 ) -> list[IssueData]:
-    """Get issues eligible for vscodeclaude sessions.
+    """Filter issues for vscodeclaude eligibility from a pre-fetched list.
+
+    This is a pure filtering function that works on already-fetched issues,
+    enabling cache reuse across multiple operations.
 
     Filters for:
-    - Open issues only
+    - Open issues only (state == "open")
     - Exactly one human_action label
     - Assigned to github_username
     - No ignore_labels
 
     Args:
-        issue_manager: IssueManager for GitHub API
+        all_issues: Pre-fetched list of issues to filter
         github_username: Username to filter assignments
 
     Returns:
@@ -110,12 +114,12 @@ def get_eligible_vscodeclaude_issues(
     # Extract ignore_labels set
     ignore_labels_set: set[str] = set(labels_config.get("ignore_labels", []))
 
-    # Get all open issues and filter
-    all_issues = issue_manager.list_issues(state="open", include_pull_requests=False)
+    # Filter issues - only open issues are eligible
     eligible_issues = [
         issue
         for issue in all_issues
-        if _is_issue_eligible(
+        if issue["state"] == "open"
+        and _is_issue_eligible(
             issue, human_action_labels, ignore_labels_set, github_username
         )
     ]
@@ -133,6 +137,78 @@ def get_eligible_vscodeclaude_issues(
     eligible_issues.sort(key=get_priority)
 
     return eligible_issues
+
+
+def get_eligible_vscodeclaude_issues(
+    issue_manager: IssueManager,
+    github_username: str,
+) -> list[IssueData]:
+    """Get issues eligible for vscodeclaude sessions.
+
+    This is a convenience function that fetches all open issues from the API
+    and filters them. For better performance with multiple operations,
+    consider using _filter_eligible_vscodeclaude_issues() with cached issues.
+
+    Filters for:
+    - Open issues only
+    - Exactly one human_action label
+    - Assigned to github_username
+    - No ignore_labels
+
+    Args:
+        issue_manager: IssueManager for GitHub API
+        github_username: Username to filter assignments
+
+    Returns:
+        List of eligible issues sorted by priority (later stages first)
+    """
+    # Get all open issues from API
+    all_issues = issue_manager.list_issues(state="open", include_pull_requests=False)
+
+    # Use shared filtering logic
+    return _filter_eligible_vscodeclaude_issues(all_issues, github_username)
+
+
+def get_cached_eligible_vscodeclaude_issues(
+    repo_full_name: str,
+    issue_manager: IssueManager,
+    github_username: str,
+    force_refresh: bool = False,
+    cache_refresh_minutes: int = 1440,
+) -> list[IssueData]:
+    """Get eligible vscodeclaude issues using cache.
+
+    Thin wrapper that:
+    1. Calls get_all_cached_issues() for cache operations
+    2. Filters results using _filter_eligible_vscodeclaude_issues()
+    3. Falls back to get_eligible_vscodeclaude_issues() on cache errors
+
+    Args:
+        repo_full_name: Repository in "owner/repo" format
+        issue_manager: IssueManager for GitHub API
+        github_username: Username to filter assignments
+        force_refresh: Bypass cache entirely (default: False)
+        cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
+
+    Returns:
+        List of eligible issues sorted by priority (later stages first)
+    """
+    try:
+        # Get all issues from cache
+        all_issues = get_all_cached_issues(
+            repo_full_name=repo_full_name,
+            issue_manager=issue_manager,
+            force_refresh=force_refresh,
+            cache_refresh_minutes=cache_refresh_minutes,
+        )
+
+        # Filter for vscodeclaude eligibility
+        return _filter_eligible_vscodeclaude_issues(all_issues, github_username)
+
+    except (ValueError, KeyError, TypeError) as e:
+        # Fall back to direct API fetch on cache errors
+        logger.warning(f"Cache error for {repo_full_name}: {e}, falling back to API")
+        return get_eligible_vscodeclaude_issues(issue_manager, github_username)
 
 
 def get_linked_branch_for_issue(
