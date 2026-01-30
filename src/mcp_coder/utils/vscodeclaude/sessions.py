@@ -14,9 +14,18 @@ import psutil
 
 from .types import VSCodeClaudeSession, VSCodeClaudeSessionStore
 
+# Optional Windows-only import for window title detection
+try:
+    import win32gui
+
+    HAS_WIN32GUI = True
+except ImportError:
+    HAS_WIN32GUI = False
+
 logger = logging.getLogger(__name__)
 
 VSCODE_PROCESS_NAME = "code"
+VSCODE_WINDOW_TITLE_MARKER = "Visual Studio Code"
 
 
 def get_sessions_file_path() -> Path:
@@ -151,6 +160,91 @@ def clear_vscode_process_cache() -> None:
     """
     global _vscode_process_cache
     _vscode_process_cache = None
+
+
+# Cache for VSCode window titles (Windows only)
+_vscode_window_cache: list[str] | None = None
+
+
+def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
+    """Get list of VSCode window titles (Windows only).
+
+    Uses win32gui to enumerate windows. Much faster and more reliable
+    than process cmdline inspection.
+
+    Args:
+        refresh: Force refresh of cached titles
+
+    Returns:
+        List of VSCode window titles, or empty list on non-Windows
+    """
+    global _vscode_window_cache
+
+    if not HAS_WIN32GUI:
+        return []
+
+    if _vscode_window_cache is not None and not refresh:
+        return _vscode_window_cache
+
+    logger.debug("Scanning VSCode window titles...")
+    titles: list[str] = []
+
+    def enum_callback(hwnd: int, _: Any) -> bool:
+        """Callback for EnumWindows."""
+        try:
+            if win32gui.IsWindowVisible(hwnd):
+                title = win32gui.GetWindowText(hwnd)
+                if title and VSCODE_WINDOW_TITLE_MARKER in title:
+                    titles.append(title)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass  # Ignore errors for individual windows
+        return True
+
+    try:
+        win32gui.EnumWindows(enum_callback, None)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.warning("Failed to enumerate windows: %s", e)
+        return []
+
+    _vscode_window_cache = titles
+    logger.debug("Found %d VSCode windows: %s", len(titles), titles)
+    return titles
+
+
+def clear_vscode_window_cache() -> None:
+    """Clear the VSCode window title cache."""
+    global _vscode_window_cache
+    _vscode_window_cache = None
+
+
+def is_vscode_window_open_for_folder(folder_path: str) -> bool:
+    """Check if VSCode has a window open for the folder (Windows only).
+
+    VSCode window titles follow the pattern:
+    - "folder_name - Visual Studio Code"
+    - "filename - folder_name - Visual Studio Code"
+
+    Args:
+        folder_path: Full path to the workspace folder
+
+    Returns:
+        True if a VSCode window with this folder name is found
+    """
+    if not HAS_WIN32GUI:
+        return False
+
+    folder_name = Path(folder_path).name.lower()
+    titles = _get_vscode_window_titles()
+
+    for title in titles:
+        # Window title contains folder name before " - Visual Studio Code"
+        title_lower = title.lower()
+        if folder_name in title_lower:
+            logger.debug("Found VSCode window for folder %s: %s", folder_name, title)
+            return True
+
+    logger.debug("No VSCode window found for folder: %s", folder_name)
+    return False
 
 
 def is_vscode_open_for_folder(folder_path: str) -> tuple[bool, int | None]:

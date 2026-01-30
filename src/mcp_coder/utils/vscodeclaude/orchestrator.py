@@ -31,9 +31,11 @@ from .sessions import (
     add_session,
     check_vscode_running,
     clear_vscode_process_cache,
+    clear_vscode_window_cache,
     get_active_session_count,
     get_session_for_issue,
     is_vscode_open_for_folder,
+    is_vscode_window_open_for_folder,
     load_sessions,
     update_session_pid,
 )
@@ -532,7 +534,8 @@ def restart_closed_sessions(
     store = load_sessions()
     restarted: list[VSCodeClaudeSession] = []
 
-    # Refresh VSCode process cache once for all sessions (avoids slow repeated iteration)
+    # Refresh caches once for all sessions (window cache is fast, process cache is slow)
+    clear_vscode_window_cache()
     clear_vscode_process_cache()
 
     # Load configured repos from config file (fresh read on each start)
@@ -540,14 +543,21 @@ def restart_closed_sessions(
     logger.debug("Configured repos from config: %s", configured_repos)
 
     for session in store["sessions"]:
-        # Check if VSCode is still running (PID check first, then folder-based)
-        # On Windows, the launcher PID exits quickly, so PID check often fails
-        # even when VSCode is still open. Fall back to folder-based check.
         folder_path = Path(session["folder"])
+
+        # Check 1: PID-based check (quick but unreliable on Windows)
         if check_vscode_running(session.get("vscode_pid")):
             continue
 
-        # More reliable check: look for VSCode process with this folder open
+        # Check 2: Window title check (Windows only, fast and reliable)
+        if is_vscode_window_open_for_folder(session["folder"]):
+            logger.debug(
+                "VSCode window open for issue #%d (detected via window title)",
+                session["issue_number"],
+            )
+            continue
+
+        # Check 3: Process cmdline check (slow fallback, rarely matches)
         is_open, found_pid = is_vscode_open_for_folder(session["folder"])
         if is_open:
             # VSCode is open but PID changed - update stored PID
