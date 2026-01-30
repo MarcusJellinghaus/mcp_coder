@@ -292,6 +292,9 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
         if cache_data["issues"]:
             fresh_dict = {str(issue["number"]): issue for issue in fresh_issues}
             _log_stale_cache_entries(cache_data["issues"], fresh_dict)
+
+        # Clear cache on full refresh to remove closed issues
+        cache_data["issues"] = {}
     else:
         # last_checked is guaranteed to be non-None here
         assert last_checked is not None
