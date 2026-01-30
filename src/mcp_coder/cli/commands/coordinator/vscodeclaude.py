@@ -22,6 +22,7 @@ from ....utils.vscodeclaude import (  # Types; Constants; Session management; Co
     check_folder_dirty,
     check_vscode_running,
     cleanup_stale_sessions,
+    clear_vscode_process_cache,
     create_startup_script,
     create_status_file,
     create_vscode_task,
