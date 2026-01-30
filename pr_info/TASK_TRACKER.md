@@ -96,6 +96,42 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Run mypy on Step 10 code and fix all type issues
 [x] Prepare git commit message for Step 10
 
+### Step 11: Test Refactoring
+[x] Create tests/utils/vscodeclaude/ directory structure
+[x] Split test_vscodeclaude.py into module-specific test files
+[x] Update imports to new utils module paths
+[x] Fix monkeypatch path in test_process_eligible_issues_respects_max_sessions
+[x] Delete original monolithic test file
+[x] Run pylint on Step 11 code and fix all issues
+[x] Run pytest on Step 11 tests and ensure all pass
+[x] Run mypy on Step 11 code and fix all type issues
+[x] Prepare git commit message for Step 11
+
+### Step 12: Cache Integration (Performance Optimization)
+[ ] Add `_filter_eligible_vscodeclaude_issues()` helper to issues.py
+[ ] Add `get_cached_eligible_vscodeclaude_issues()` wrapper to issues.py
+[ ] Update process_eligible_issues() to use cache
+[ ] Update execute_coordinator_vscodeclaude() to fetch cache once per repo
+[ ] Update __init__.py exports
+[ ] Add tests for cache integration
+[ ] Run pylint on Step 12 code and fix all issues
+[ ] Run pytest on Step 12 tests and ensure all pass
+[ ] Run mypy on Step 12 code and fix all type issues
+[ ] Prepare git commit message for Step 12
+
+### Step 13: Pass Cached Issues to Staleness Checks
+[ ] Refactor get_issue_current_status() to accept cached_issues parameter
+[ ] Refactor is_session_stale() to accept cached_issues parameter
+[ ] Refactor is_issue_closed() to accept cached_issues parameter
+[ ] Refactor restart_closed_sessions() to accept cached_issues_by_repo parameter
+[ ] Update display_status_table() to pass cached issues
+[ ] Update callers in commands.py to pass cache
+[ ] Add tests for cache-aware functions
+[ ] Run pylint on Step 13 code and fix all issues
+[ ] Run pytest on Step 13 tests and ensure all pass
+[ ] Run mypy on Step 13 code and fix all type issues
+[ ] Prepare git commit message for Step 13
+
 ## Pull Request
 [x] Review all implementation steps for completeness
 [ ] Run full test suite and ensure all tests pass

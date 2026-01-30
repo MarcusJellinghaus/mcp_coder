@@ -96,3 +96,19 @@ This document logs the decisions made during the plan review discussion.
 ### Empty Placeholder Tests
 **Decision**: Remove the TestIntegration class (Option A)
 **Rationale**: Empty placeholder tests with just `pass` can cause confusion about actual test coverage. Remove them rather than keeping as reminders.
+
+---
+
+## Performance Optimization Decisions (Step 12)
+
+### Issue Cache Strategy
+**Decision**: Use the existing `get_all_cached_issues()` function from `issue_cache.py` (Option A - shared cache)
+**Rationale**: The cache already exists and works well for `coordinator run`. Both commands should use the SAME cache file and the SAME cache functions, just with different filtering logic applied afterward. No new cache infrastructure needed.
+
+### Issue Data Flow
+**Decision**: Pass cached issues dict through to functions instead of re-fetching (Option A - look up from cache)
+**Rationale**: Once `get_all_cached_issues()` is called, that data should be passed to all functions that need issue data. Functions like `is_session_stale()` and `restart_closed_sessions()` should look up issues from the passed cache dict instead of making individual `get_issue()` API calls.
+
+### Filter Function Location
+**Decision**: Add `_filter_eligible_vscodeclaude_issues()` helper in `issues.py` (analogous to `_filter_eligible_issues()` in `core.py`)
+**Rationale**: Keeps filtering logic separate from cache logic. The cache returns ALL issues, filtering is applied by the caller.

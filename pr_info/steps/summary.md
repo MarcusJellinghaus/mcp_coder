@@ -110,6 +110,37 @@ VSCODECLAUDE_PRIORITY = [
 | 9 | Code Review Fixes | Bug fixes from first code review |
 | 10 | Code Review Fixes (Round 2) | Stale check, type hints, test cleanup |
 | 11 | Test Refactoring | Split tests to match `utils/vscodeclaude/` structure |
+| 12 | Cache Integration | Use existing `get_all_cached_issues()` in vscodeclaude |
+| 13 | Pass Cached Issues | Eliminate duplicate API calls via cache lookup |
+
+## Performance Optimization (Steps 12-13)
+
+The vscodeclaude command was experiencing 90+ second delays due to:
+1. Direct `list_issues()` calls fetching ALL issues (7-45s per repo)
+2. Duplicate `get_issue()` calls for staleness checks (~2s per session)
+
+### Solution: Use Existing Issue Cache
+
+The `coordinator run` command already has a working cache (`get_all_cached_issues()` in `issue_cache.py`).
+The vscodeclaude feature now uses the **same cache** with the following flow:
+
+```
+get_all_cached_issues()     # Shared cache, returns ALL issues
+        ↓
+_filter_eligible_issues()   # coordinator run: bot_pickup labels
+_filter_eligible_vscodeclaude_issues()  # vscodeclaude: human_action labels + assignee
+        ↓
+Pass cached issues dict to staleness checks (no individual get_issue calls)
+```
+
+### Performance Improvement
+
+| Scenario | Before | After |
+|----------|--------|-------|
+| Cache hit | N/A | <1 second |
+| Incremental refresh | N/A | 1-5 seconds |
+| Full refresh (24h+) | 90+ seconds | Same (but rare) |
+| Staleness checks | 2s per session | 0s (cache lookup) |
 
 ## Key Requirements Preserved
 
