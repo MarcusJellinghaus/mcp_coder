@@ -41,13 +41,13 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 
 ### Step 4: Fix Hardcoded "main" in `pr_manager.py`
 
-- [ ] Write unit tests for dynamic default branch resolution in `create_pull_request()`
-- [ ] Change `base_branch` parameter from `str = "main"` to `Optional[str] = None`
-- [ ] Add logic to resolve default branch using `get_default_branch_name()` when `base_branch` is None
-- [ ] Run pylint and fix any issues found
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 4
+- [x] Write unit tests for dynamic default branch resolution in `create_pull_request()`
+- [x] Change `base_branch` parameter from `str = "main"` to `Optional[str] = None`
+- [x] Add logic to resolve default branch using `get_default_branch_name()` when `base_branch` is None
+- [x] Run pylint and fix any issues found
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Update Slash Commands and Documentation
 
