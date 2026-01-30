@@ -14,9 +14,10 @@ import psutil
 
 from .types import VSCodeClaudeSession, VSCodeClaudeSessionStore
 
-# Optional Windows-only import for window title detection
+# Optional Windows-only imports for window title detection
 try:
     import win32gui
+    import win32process
 
     HAS_WIN32GUI = True
 except ImportError:
@@ -166,11 +167,39 @@ def clear_vscode_process_cache() -> None:
 _vscode_window_cache: list[str] | None = None
 
 
+# Cache for VSCode process PIDs to avoid repeated lookups
+_vscode_pids_cache: set[int] | None = None
+
+
+def _get_vscode_pids() -> set[int]:
+    """Get set of VSCode process IDs.
+
+    Returns:
+        Set of PIDs for Code.exe processes
+    """
+    global _vscode_pids_cache
+    if _vscode_pids_cache is not None:
+        return _vscode_pids_cache
+
+    pids: set[int] = set()
+    for proc in psutil.process_iter(["pid", "name"]):
+        try:
+            proc_name = proc.info.get("name", "") or ""
+            if proc_name.lower() == "code.exe":
+                pids.add(proc.info.get("pid"))
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+
+    _vscode_pids_cache = pids
+    return pids
+
+
 def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
     """Get list of VSCode window titles (Windows only).
 
-    Uses win32gui to enumerate windows. Much faster and more reliable
-    than process cmdline inspection.
+    Uses win32gui to enumerate windows owned by Code.exe processes.
+    This catches all VSCode windows including integrated terminals
+    that don't have "Visual Studio Code" in the title.
 
     Args:
         refresh: Force refresh of cached titles
@@ -178,7 +207,7 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
     Returns:
         List of VSCode window titles, or empty list on non-Windows
     """
-    global _vscode_window_cache
+    global _vscode_window_cache, _vscode_pids_cache
 
     if not HAS_WIN32GUI:
         return []
@@ -186,7 +215,13 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
     if _vscode_window_cache is not None and not refresh:
         return _vscode_window_cache
 
-    logger.debug("Scanning VSCode window titles...")
+    # Refresh PID cache when refreshing window cache
+    if refresh:
+        _vscode_pids_cache = None
+
+    vscode_pids = _get_vscode_pids()
+    logger.debug("Found %d VSCode processes: %s", len(vscode_pids), vscode_pids)
+
     titles: list[str] = []
 
     def enum_callback(hwnd: int, _: Any) -> bool:
@@ -194,8 +229,11 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
         try:
             if win32gui.IsWindowVisible(hwnd):
                 title = win32gui.GetWindowText(hwnd)
-                if title and VSCODE_WINDOW_TITLE_MARKER in title:
-                    titles.append(title)
+                if title:
+                    # Check if window belongs to a VSCode process
+                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                    if pid in vscode_pids:
+                        titles.append(title)
         except Exception:  # pylint: disable=broad-exception-caught
             pass  # Ignore errors for individual windows
         return True
@@ -213,37 +251,68 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
 
 def clear_vscode_window_cache() -> None:
     """Clear the VSCode window title cache."""
-    global _vscode_window_cache
+    global _vscode_window_cache, _vscode_pids_cache
     _vscode_window_cache = None
+    _vscode_pids_cache = None
 
 
-def is_vscode_window_open_for_folder(folder_path: str) -> bool:
+def is_vscode_window_open_for_folder(
+    folder_path: str,
+    issue_number: int | None = None,
+    repo: str | None = None,
+) -> bool:
     """Check if VSCode has a window open for the folder (Windows only).
 
-    VSCode window titles follow the pattern:
-    - "folder_name - Visual Studio Code"
-    - "filename - folder_name - Visual Studio Code"
+    Matching strategies (tried in order):
+    1. If issue_number and repo provided: Match '#N' + repo_name in title
+       (e.g., '[#323 review]... - mcp_coder' matches issue 323 in mcp_coder)
+    2. Fallback: Match folder_name in title
+       (e.g., 'file.py - mcp_coder - Visual Studio Code' matches folder mcp_coder)
 
     Args:
         folder_path: Full path to the workspace folder
+        issue_number: Optional issue number (enables issue-based matching)
+        repo: Optional repo full name 'owner/repo' (enables issue-based matching)
 
     Returns:
-        True if a VSCode window with this folder name is found
+        True if a VSCode window matching the session is found
     """
     if not HAS_WIN32GUI:
         return False
 
-    folder_name = Path(folder_path).name.lower()
     titles = _get_vscode_window_titles()
+    folder_name = Path(folder_path).name.lower()
 
+    # Strategy 1: Issue number + repo name matching (most reliable for Claude sessions)
+    if issue_number is not None and repo:
+        repo_name = repo.split("/")[-1].lower() if "/" in repo else repo.lower()
+        issue_pattern = f"#{issue_number}"
+
+        for title in titles:
+            title_lower = title.lower()
+            # Both issue number AND repo name must be present
+            if issue_pattern in title and repo_name in title_lower:
+                logger.debug(
+                    "Found VSCode window for issue #%d (%s): %s",
+                    issue_number,
+                    repo_name,
+                    title,
+                )
+                return True
+
+    # Strategy 2: Folder name fallback (for regular editor windows)
     for title in titles:
-        # Window title contains folder name before " - Visual Studio Code"
         title_lower = title.lower()
         if folder_name in title_lower:
             logger.debug("Found VSCode window for folder %s: %s", folder_name, title)
             return True
 
-    logger.debug("No VSCode window found for folder: %s", folder_name)
+    logger.debug(
+        "No VSCode window found for folder: %s (issue=#%s, repo=%s)",
+        folder_name,
+        issue_number,
+        repo,
+    )
     return False
 
 

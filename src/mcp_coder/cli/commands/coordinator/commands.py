@@ -549,7 +549,15 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
 
     from tabulate import tabulate
 
-    from .vscodeclaude import check_vscode_running
+    from .vscodeclaude import (
+        check_folder_dirty,
+        check_vscode_running,
+        clear_vscode_window_cache,
+        is_vscode_window_open_for_folder,
+    )
+
+    # Refresh window cache once for all sessions
+    clear_vscode_window_cache()
 
     # Load sessions
     store = load_sessions()
@@ -568,18 +576,46 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     for session in sessions:
         issue_num = f"#{session['issue_number']}"
         repo_short = session["repo"].split("/")[-1]
-        status = session["status"]
-        pid = session.get("vscode_pid", "N/A")
-        running = "Y" if check_vscode_running(session.get("vscode_pid")) else "N"
-        folder_name = Path(session["folder"]).name
-        intervention = "[I]" if session.get("is_intervention") else ""
+        # Shorten status (remove "status-" prefix)
+        status_raw = session["status"]
+        status = status_raw.replace("status-", "") if status_raw else ""
+
+        # Check if VSCode is running: window title check (reliable) or PID check (fallback)
+        is_running = is_vscode_window_open_for_folder(
+            session["folder"],
+            issue_number=session["issue_number"],
+            repo=session["repo"],
+        ) or check_vscode_running(session.get("vscode_pid"))
+        vscode_status = "Running" if is_running else "Closed"
+
+        # Check for uncommitted changes
+        folder_path = Path(session["folder"])
+        if folder_path.exists():
+            is_dirty = check_folder_dirty(folder_path)
+            changes = "Dirty" if is_dirty else "Clean"
+        else:
+            changes = "-"
+
+        # Determine next action
+        if is_running:
+            next_action = "(active)"
+        elif not folder_path.exists():
+            next_action = "-> Remove"
+        elif is_dirty:
+            next_action = "!! Manual"
+        else:
+            next_action = "-> Restart"
+
+        # Add intervention marker
+        if session.get("is_intervention"):
+            issue_num = f"{issue_num} [I]"
 
         table_data.append(
-            [issue_num, repo_short, status, running, pid, folder_name, intervention]
+            [issue_num, repo_short, status, vscode_status, changes, next_action]
         )
 
     # Print table
-    headers = ["Issue", "Repo", "Status", "VS", "PID", "Folder", ""]
+    headers = ["Issue", "Repo", "Status", "VSCode", "Changes", "Next Action"]
     print(tabulate(table_data, headers=headers, tablefmt="simple"))
 
     return 0
