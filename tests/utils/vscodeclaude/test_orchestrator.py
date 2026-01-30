@@ -10,6 +10,8 @@ import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
 from mcp_coder.utils.vscodeclaude.orchestrator import (
+    _get_repo_full_name,
+    _get_repo_short_name,
     get_stage_display_name,
     handle_pr_created_issues,
     launch_vscode,
@@ -27,6 +29,62 @@ from mcp_coder.utils.vscodeclaude.types import (
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
 )
+
+
+class TestRepoNameParsing:
+    """Test repo URL parsing functions.
+
+    These tests ensure repo names are correctly extracted from URLs,
+    especially for edge cases where rstrip() could corrupt the name.
+    """
+
+    def test_get_repo_full_name_standard_url(self) -> None:
+        """Extracts owner/repo from standard GitHub URL."""
+        config = {"repo_url": "https://github.com/owner/repo.git"}
+        assert _get_repo_full_name(config) == "owner/repo"
+
+    def test_get_repo_full_name_without_git_suffix(self) -> None:
+        """Works without .git suffix."""
+        config = {"repo_url": "https://github.com/owner/repo"}
+        assert _get_repo_full_name(config) == "owner/repo"
+
+    def test_get_repo_full_name_with_trailing_slash(self) -> None:
+        """Handles trailing slash."""
+        config = {"repo_url": "https://github.com/owner/repo/"}
+        assert _get_repo_full_name(config) == "owner/repo"
+
+    def test_get_repo_full_name_preserves_config_in_name(self) -> None:
+        """Preserves 'config' in repo name (regression test for rstrip bug).
+
+        rstrip('.git') would corrupt 'mcp-config' to 'mcp-conf' because
+        it strips all chars in the set {'.', 'g', 'i', 't'}, not the suffix.
+        """
+        config = {"repo_url": "https://github.com/owner/mcp-config.git"}
+        result = _get_repo_full_name(config)
+        assert result == "owner/mcp-config"
+        assert "mcp-config" in result  # Not corrupted to mcp-conf
+
+    def test_get_repo_full_name_preserves_git_in_name(self) -> None:
+        """Preserves 'git' in repo name."""
+        config = {"repo_url": "https://github.com/owner/my-git-tool.git"}
+        assert _get_repo_full_name(config) == "owner/my-git-tool"
+
+    def test_get_repo_short_name_standard_url(self) -> None:
+        """Extracts repo from standard GitHub URL."""
+        config = {"repo_url": "https://github.com/owner/repo.git"}
+        assert _get_repo_short_name(config) == "repo"
+
+    def test_get_repo_short_name_preserves_config_in_name(self) -> None:
+        """Preserves 'config' in repo name (regression test for rstrip bug)."""
+        config = {"repo_url": "https://github.com/owner/mcp-config.git"}
+        result = _get_repo_short_name(config)
+        assert result == "mcp-config"
+        assert result != "mcp-conf"  # Would be corrupted by rstrip('.git')
+
+    def test_get_repo_short_name_empty_url(self) -> None:
+        """Returns 'repo' for empty URL."""
+        config = {"repo_url": ""}
+        assert _get_repo_short_name(config) == "repo"
 
 
 class TestLaunch:
