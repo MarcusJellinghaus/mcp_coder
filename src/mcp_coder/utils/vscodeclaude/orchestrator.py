@@ -340,16 +340,12 @@ def process_eligible_issues(
         all_cached_issues, github_username
     )
 
-    # Separate pr-created issues (handle separately)
-    pr_created_issues: list[IssueData] = []
-    actionable_issues: list[IssueData] = []
-
-    for issue in eligible_issues:
-        status = _get_issue_status(issue)
-        if status == "status-10:pr-created":
-            pr_created_issues.append(issue)
-        else:
-            actionable_issues.append(issue)
+    # Filter out pr-created issues (they don't need sessions)
+    actionable_issues: list[IssueData] = [
+        issue
+        for issue in eligible_issues
+        if _get_issue_status(issue) != "status-10:pr-created"
+    ]
 
     # Filter out issues that already have sessions
     issues_to_start: list[IssueData] = []
@@ -388,10 +384,6 @@ def process_eligible_issues(
                 issue["number"],
                 str(e),
             )
-
-    # Handle pr-created issues (just display info)
-    if pr_created_issues:
-        handle_pr_created_issues(pr_created_issues)
 
     return started_sessions
 
