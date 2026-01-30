@@ -125,7 +125,11 @@ def _get_repo_short_name(repo_config: dict[str, str]) -> str:
     repo_url = repo_config.get("repo_url", "")
     # Extract from URLs like https://github.com/owner/repo.git
     if "/" in repo_url:
-        name = repo_url.rstrip("/").rstrip(".git").split("/")[-1]
+        # Use endswith check instead of rstrip to avoid stripping extra characters
+        url_clean = repo_url.rstrip("/")
+        if url_clean.endswith(".git"):
+            url_clean = url_clean[:-4]
+        name = url_clean.split("/")[-1]
         return name
     return "repo"
 
@@ -145,7 +149,12 @@ def _get_repo_full_name(repo_config: dict[str, str]) -> str:
     repo_url = repo_config.get("repo_url", "")
     # Extract from URLs like https://github.com/owner/repo.git
     if "/" in repo_url:
-        parts = repo_url.rstrip("/").rstrip(".git").split("/")
+        # Use removesuffix instead of rstrip to avoid stripping extra characters
+        # rstrip(".git") would strip chars {'.','g','i','t'} which corrupts names like "mcp-config"
+        url_clean = repo_url.rstrip("/")
+        if url_clean.endswith(".git"):
+            url_clean = url_clean[:-4]
+        parts = url_clean.split("/")
         if len(parts) >= 2:
             return f"{parts[-2]}/{parts[-1]}"
     raise ValueError(f"Cannot parse repo URL: {repo_url}")
