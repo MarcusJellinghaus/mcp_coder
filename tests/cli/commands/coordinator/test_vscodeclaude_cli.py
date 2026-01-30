@@ -316,7 +316,7 @@ class TestCommandHandlers:
     def test_execute_vscodeclaude_status_success(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Status command prints table."""
+        """Status command prints message when no sessions."""
         from mcp_coder.cli.commands.coordinator.commands import (
             execute_coordinator_vscodeclaude_status,
         )
@@ -332,7 +332,7 @@ class TestCommandHandlers:
 
         assert result == 0
         captured = capsys.readouterr()
-        assert "VSCODECLAUDE SESSIONS" in captured.out
+        assert "No active sessions" in captured.out
 
     def test_execute_vscodeclaude_intervene_requires_issue(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]

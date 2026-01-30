@@ -12,7 +12,6 @@ import pytest
 
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
-from mcp_coder.utils.subprocess_runner import execute_command
 
 # Mock label configuration
 MOCK_LABELS_CONFIG = {
@@ -95,11 +94,29 @@ def mock_git_operations() -> Mock:
     return mock_git
 
 
+@pytest.fixture
+def mock_git_repo() -> Any:
+    """Mock is_git_repository to avoid subprocess calls.
+
+    This fixture eliminates the need for actual git init in tests,
+    significantly improving test performance.
+    """
+    with patch(
+        "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+        return_value=True,
+    ):
+        yield
+
+
 class TestIssueManagerLabelUpdate:
     """Test suite for IssueManager.update_workflow_label() method."""
 
     def test_update_workflow_label_success_happy_path(
-        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self,
+        mock_github: Mock,
+        mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests successful label transition with all prerequisites met.
 
@@ -107,17 +124,6 @@ class TestIssueManagerLabelUpdate:
         conditions are met, the label successfully transitions from source
         to target state.
         """
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         # Create mock issue data that get_issue will return
         mock_issue_data: IssueData = {
             "number": 123,
@@ -174,24 +180,17 @@ class TestIssueManagerLabelUpdate:
             assert "bug" in labels  # Other labels preserved
 
     def test_update_workflow_label_invalid_branch_name(
-        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self,
+        mock_github: Mock,
+        mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests branch name that doesn't match {number}-{title} pattern.
 
         Verifies that branches without a leading issue number are rejected
         gracefully with appropriate warning messages.
         """
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         with (
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
@@ -218,24 +217,17 @@ class TestIssueManagerLabelUpdate:
             assert "WARNING" in caplog.text or "does not match" in caplog.text.lower()
 
     def test_update_workflow_label_branch_not_linked(
-        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self,
+        mock_github: Mock,
+        mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests branch that exists but isn't linked to the issue.
 
         Verifies that unlinked branches (not in get_linked_branches result)
         are rejected for safety.
         """
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         with (
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
@@ -267,24 +259,17 @@ class TestIssueManagerLabelUpdate:
             assert "WARNING" in caplog.text or "not linked" in caplog.text.lower()
 
     def test_update_workflow_label_already_correct_state(
-        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self,
+        mock_github: Mock,
+        mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests idempotent behavior - issue already has target label.
 
         Verifies that if the issue already has the target label and doesn't
         have the source label, the operation succeeds without making changes.
         """
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         # Configure issue to already have target label (without source label)
         mock_issue_data: IssueData = {
             "number": 123,
@@ -331,24 +316,17 @@ class TestIssueManagerLabelUpdate:
             mock_set_labels.assert_not_called()
 
     def test_update_workflow_label_missing_source_label(
-        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self,
+        mock_github: Mock,
+        mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests transition when issue doesn't have source label.
 
         Verifies that missing source labels are handled gracefully - the
         target label is still added if not present.
         """
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         # Configure issue without source label
         mock_issue_data: IssueData = {
             "number": 123,
@@ -401,24 +379,17 @@ class TestIssueManagerLabelUpdate:
             assert "bug" in labels
 
     def test_update_workflow_label_label_not_in_config(
-        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self,
+        mock_github: Mock,
+        mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests when internal_id doesn't exist in labels.json.
 
         Verifies that invalid internal IDs (not found in config) are
         rejected with appropriate error messages.
         """
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         with (
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
@@ -448,7 +419,11 @@ class TestIssueManagerLabelUpdate:
             assert "ERROR" in caplog.text or "not found" in caplog.text.lower()
 
     def test_update_workflow_label_github_api_error(
-        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self,
+        mock_github: Mock,
+        mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests GitHub API failure during label update.
 
@@ -456,17 +431,6 @@ class TestIssueManagerLabelUpdate:
         are caught and logged without raising exceptions.
         """
         from github.GithubException import GithubException
-
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
 
         # Create mock issue data that get_issue will return
         mock_issue_data: IssueData = {
@@ -519,24 +483,17 @@ class TestIssueManagerLabelUpdate:
             assert "ERROR" in caplog.text or "failed" in caplog.text.lower()
 
     def test_update_workflow_label_no_branch_provided(
-        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self,
+        mock_github: Mock,
+        mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests automatic branch name detection from git.
 
         Verifies that when no branch name is explicitly provided, the
         method automatically detects the current branch from git.
         """
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         # Create mock issue data that get_issue will return
         mock_issue_data: IssueData = {
             "number": 123,
@@ -588,7 +545,11 @@ class TestIssueManagerLabelUpdate:
             mock_set_labels.assert_called_once()
 
     def test_update_workflow_label_removes_different_workflow_label(
-        self, mock_github: Mock, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self,
+        mock_github: Mock,
+        mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests that transitioning removes ALL workflow labels, not just the source.
 
@@ -602,17 +563,6 @@ class TestIssueManagerLabelUpdate:
         import logging
 
         caplog.set_level(logging.INFO)
-
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
 
         # Configure issue with a DIFFERENT workflow label (planning instead of implementing)
         # This simulates the bug scenario where a different workflow label exists
@@ -679,20 +629,9 @@ class TestIssueManagerLabelUpdate:
             assert "Source label 'status-06:implementing' not present" in caplog.text
 
     def test_update_workflow_label_with_validated_issue_number(
-        self, mock_github: Mock, tmp_path: Path
+        self, mock_github: Mock, mock_git_repo: Any, tmp_path: Path
     ) -> None:
         """Tests that validated_issue_number skips branch linkage validation."""
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         # Create mock issue data that get_issue will return
         mock_issue_data: IssueData = {
             "number": 123,
@@ -750,20 +689,9 @@ class TestIssueManagerLabelUpdate:
             assert "bug" in labels  # Other labels preserved
 
     def test_update_workflow_label_validated_issue_number_invalid(
-        self, mock_github: Mock, tmp_path: Path
+        self, mock_github: Mock, mock_git_repo: Any, tmp_path: Path
     ) -> None:
         """Tests that invalid validated_issue_number (non-existent issue) fails gracefully."""
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         # Create empty issue data to simulate issue not found
         empty_issue_data: IssueData = {
             "number": 0,
@@ -801,7 +729,7 @@ class TestIssueManagerLabelUpdate:
             assert result is False
 
     def test_update_workflow_label_race_condition_scenario(
-        self, mock_github: Mock, tmp_path: Path
+        self, mock_github: Mock, mock_git_repo: Any, tmp_path: Path
     ) -> None:
         """Tests the race condition: linkedBranches empty after PR creation.
 
@@ -811,17 +739,6 @@ class TestIssueManagerLabelUpdate:
         3. Caller provides validated_issue_number from earlier validation
         4. Label update succeeds despite empty linkedBranches
         """
-        # Initialize tmp_path as a git repository
-        execute_command(["git", "init"], cwd=str(tmp_path))
-        execute_command(
-            ["git", "config", "user.email", "test@example.com"],
-            cwd=str(tmp_path),
-        )
-        execute_command(
-            ["git", "config", "user.name", "Test User"],
-            cwd=str(tmp_path),
-        )
-
         # Create mock issue data that get_issue will return
         mock_issue_data: IssueData = {
             "number": 123,
