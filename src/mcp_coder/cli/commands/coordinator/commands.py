@@ -545,6 +545,12 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 success)
     """
+    from pathlib import Path
+
+    from tabulate import tabulate
+
+    from .vscodeclaude import check_vscode_running
+
     # Load sessions
     store = load_sessions()
     sessions = store["sessions"]
@@ -553,30 +559,26 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     if args.repo:
         sessions = [s for s in sessions if args.repo in s["repo"]]
 
-    # Display header
-    print("\n" + "=" * 70)
-    print("VSCODECLAUDE SESSIONS")
-    print("=" * 70)
-
     if not sessions:
-        print("  No active sessions")
-    else:
-        # Display each session
-        for session in sessions:
-            issue_num = session["issue_number"]
-            repo = session["repo"]
-            status = session["status"]
-            pid = session.get("vscode_pid", "N/A")
-            intervention = " [INTERVENTION]" if session.get("is_intervention") else ""
+        print("No active sessions")
+        return 0
 
-            from .vscodeclaude import check_vscode_running
+    # Build table data
+    table_data = []
+    for session in sessions:
+        issue_num = f"#{session['issue_number']}"
+        repo_short = session["repo"].split("/")[-1]
+        status = session["status"]
+        pid = session.get("vscode_pid", "N/A")
+        running = "✓" if check_vscode_running(session.get("vscode_pid")) else "✗"
+        folder_name = Path(session["folder"]).name
+        intervention = "[I]" if session.get("is_intervention") else ""
 
-            running = "✓" if check_vscode_running(session.get("vscode_pid")) else "✗"
+        table_data.append([issue_num, repo_short, status, running, pid, folder_name, intervention])
 
-            print(f"  #{issue_num} ({repo}) - {status}{intervention}")
-            print(f"    PID: {pid} [{running}] | Folder: {session['folder']}")
-
-    print("=" * 70 + "\n")
+    # Print table
+    headers = ["Issue", "Repo", "Status", "VS", "PID", "Folder", ""]
+    print(tabulate(table_data, headers=headers, tablefmt="simple"))
 
     return 0
 
