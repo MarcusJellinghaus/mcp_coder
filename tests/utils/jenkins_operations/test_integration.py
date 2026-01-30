@@ -55,7 +55,7 @@ def jenkins_test_setup() -> Generator[dict[str, str], None, None]:
     test_job = os.getenv("JENKINS_TEST_JOB")
 
     # Get any missing values from config file in one batch
-    missing_keys = []
+    missing_keys: list[tuple[str, str, str | None]] = []
     if not server_url:
         missing_keys.append(("jenkins", "server_url", None))
     if not username:
