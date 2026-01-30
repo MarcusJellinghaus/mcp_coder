@@ -155,15 +155,15 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Prepare git commit message for Step 15
 
 ### Step 16: Update Workspace Setup for V2 Templates
-[ ] Add DEFAULT_PROMPT_TIMEOUT constant to types.py
-[ ] Update create_startup_script() to use V2 templates
-[ ] Add timeout parameter to create_startup_script()
-[ ] Update callers in orchestrator.py to pass timeout
-[ ] Add tests for V2 script generation in test_workspace.py
-[ ] Run pylint on Step 16 code and fix all issues
-[ ] Run pytest on Step 16 tests and ensure all pass
-[ ] Run mypy on Step 16 code and fix all type issues
-[ ] Prepare git commit message for Step 16
+[x] Add DEFAULT_PROMPT_TIMEOUT constant to types.py
+[x] Update create_startup_script() to use V2 templates
+[x] Add timeout parameter to create_startup_script()
+[x] Update callers in orchestrator.py to pass timeout
+[x] Add tests for V2 script generation in test_workspace.py
+[x] Run pylint on Step 16 code and fix all issues
+[x] Run pytest on Step 16 tests and ensure all pass
+[x] Run mypy on Step 16 code and fix all type issues
+[x] Prepare git commit message for Step 16
 
 ## Pull Request
 [x] Review all implementation steps for completeness

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import sanitize_folder_name
-from .types import HUMAN_ACTION_COMMANDS, STATUS_EMOJI
+from .types import DEFAULT_PROMPT_TIMEOUT, HUMAN_ACTION_COMMANDS, STATUS_EMOJI
 
 logger = logging.getLogger(__name__)
 
@@ -365,6 +365,7 @@ def create_startup_script(
     repo_name: str,
     issue_url: str,
     is_intervention: bool,
+    timeout: int = DEFAULT_PROMPT_TIMEOUT,
 ) -> Path:
     """Create platform-specific startup script.
 
@@ -376,25 +377,30 @@ def create_startup_script(
         repo_name: Repo short name
         issue_url: GitHub issue URL
         is_intervention: If True, use intervention mode (no automation)
+        timeout: Timeout for mcp-coder prompt calls (default: 300 seconds)
 
     Returns:
         Path to created script (.bat or .sh)
+
+    The V2 templates include:
+    - Venv creation/activation
+    - mcp-coder prompt for automated analysis
+    - mcp-coder prompt for /discuss
+    - claude --resume for interactive session
     """
     from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
-        AUTOMATED_SECTION_LINUX,
-        AUTOMATED_SECTION_WINDOWS,
-        INTERACTIVE_SECTION_LINUX,
-        INTERACTIVE_SECTION_WINDOWS,
-        INTERVENTION_SECTION_LINUX,
-        INTERVENTION_SECTION_WINDOWS,
-        STARTUP_SCRIPT_LINUX,
-        STARTUP_SCRIPT_WINDOWS,
+        AUTOMATED_SECTION_WINDOWS_V2,
+        DISCUSSION_SECTION_WINDOWS,
+        INTERACTIVE_SECTION_WINDOWS_V2,
+        INTERVENTION_SCRIPT_WINDOWS_V2,
+        STARTUP_SCRIPT_WINDOWS_V2,
+        VENV_SECTION_WINDOWS,
     )
 
     is_windows = platform.system() == "Windows"
 
     # Get commands for this status
-    initial_cmd, followup_cmd = HUMAN_ACTION_COMMANDS.get(status, (None, None))
+    initial_cmd, _followup_cmd = HUMAN_ACTION_COMMANDS.get(status, (None, None))
 
     # Get emoji for status
     emoji = STATUS_EMOJI.get(status, "📋")
@@ -402,79 +408,55 @@ def create_startup_script(
     # Truncate title if too long
     title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
 
-    # Build sections based on intervention mode
-    if is_intervention:
-        if is_windows:
-            automated_section = ""
-            interactive_section = INTERVENTION_SECTION_WINDOWS
-        else:
-            automated_section = ""
-            interactive_section = INTERVENTION_SECTION_LINUX
-    else:
-        if is_windows:
-            automated_section = (
-                AUTOMATED_SECTION_WINDOWS.format(
-                    initial_command=initial_cmd,
-                    issue_number=issue_number,
-                )
-                if initial_cmd
-                else ""
-            )
-            interactive_section = (
-                INTERACTIVE_SECTION_WINDOWS.format(followup_command=followup_cmd or "")
-                if initial_cmd
-                else INTERVENTION_SECTION_WINDOWS
-            )
-        else:
-            automated_section = (
-                AUTOMATED_SECTION_LINUX.format(
-                    initial_command=initial_cmd,
-                    issue_number=issue_number,
-                )
-                if initial_cmd
-                else ""
-            )
-            interactive_section = (
-                INTERACTIVE_SECTION_LINUX.format(followup_command=followup_cmd or "")
-                if initial_cmd
-                else INTERVENTION_SECTION_LINUX
-            )
-
-    # Format main script
     if is_windows:
-        script_content = STARTUP_SCRIPT_WINDOWS.format(
-            emoji=emoji,
-            issue_number=issue_number,
-            title=title_display,
-            repo=repo_name,
-            status=status,
-            issue_url=issue_url,
-            automated_section=automated_section,
-            interactive_section=interactive_section,
-        )
+        if is_intervention:
+            # Intervention mode - plain claude, no automation
+            script_content = INTERVENTION_SCRIPT_WINDOWS_V2.format(
+                emoji=emoji,
+                issue_number=issue_number,
+                title=title_display,
+                repo=repo_name,
+                status=status,
+                issue_url=issue_url,
+                venv_section=VENV_SECTION_WINDOWS,
+            )
+        else:
+            # Normal mode - full automation flow
+            automated_section = AUTOMATED_SECTION_WINDOWS_V2.format(
+                initial_command=initial_cmd or "/issue_analyse",
+                issue_number=issue_number,
+                timeout=timeout,
+            )
+
+            discussion_section = DISCUSSION_SECTION_WINDOWS.format(
+                timeout=timeout,
+            )
+
+            script_content = STARTUP_SCRIPT_WINDOWS_V2.format(
+                emoji=emoji,
+                issue_number=issue_number,
+                title=title_display,
+                repo=repo_name,
+                status=status,
+                issue_url=issue_url,
+                venv_section=VENV_SECTION_WINDOWS,
+                automated_section=automated_section,
+                discussion_section=discussion_section,
+                interactive_section=INTERACTIVE_SECTION_WINDOWS_V2,
+            )
+
         script_path = folder_path / ".vscodeclaude_start.bat"
+
+        # Write script
+        script_path.write_text(script_content, encoding="utf-8")
+
+        return script_path
     else:
-        script_content = STARTUP_SCRIPT_LINUX.format(
-            emoji=emoji,
-            issue_number=issue_number,
-            title=title_display,
-            repo=repo_name,
-            status=status,
-            issue_url=issue_url,
-            automated_section=automated_section,
-            interactive_section=interactive_section,
+        # Linux - TODO: Implement in Step 17
+        # For now, raise NotImplementedError
+        raise NotImplementedError(
+            "Linux V2 templates not yet implemented. " "See Step 17 for Linux support."
         )
-        script_path = folder_path / ".vscodeclaude_start.sh"
-
-    # Write script
-    script_path.write_text(script_content, encoding="utf-8")
-
-    # Make executable on Linux
-    if not is_windows:
-        current_mode = script_path.stat().st_mode
-        script_path.chmod(current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-
-    return script_path
 
 
 def create_vscode_task(folder_path: Path, script_path: Path) -> None:

@@ -10,6 +10,7 @@ See pr_info/steps/architecture_vscodeclaude.md for the architecture details.
 # Re-export everything from utils.vscodeclaude for backwards compatibility
 from ....utils.vscodeclaude import (  # Types; Constants; Session management; Configuration; Issue filtering; Workspace setup; Orchestration; Status; Cleanup
     DEFAULT_MAX_SESSIONS,
+    DEFAULT_PROMPT_TIMEOUT,
     HUMAN_ACTION_COMMANDS,
     STAGE_DISPLAY_NAMES,
     STATUS_EMOJI,
@@ -79,6 +80,7 @@ __all__ = [
     "STATUS_EMOJI",
     "STAGE_DISPLAY_NAMES",
     "DEFAULT_MAX_SESSIONS",
+    "DEFAULT_PROMPT_TIMEOUT",
     # Session management
     "get_sessions_file_path",
     "load_sessions",
