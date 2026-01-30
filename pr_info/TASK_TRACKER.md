@@ -133,13 +133,13 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 [x] Prepare git commit message for Step 13
 
 ### Step 14: Add `--output-format session-id` to Prompt Command
-[ ] Add session-id output format to prompt.py execute_prompt()
-[ ] Update help text in main.py for output-format argument
-[ ] Add tests for session-id format in test_prompt.py
-[ ] Run pylint on Step 14 code and fix all issues
-[ ] Run pytest on Step 14 tests and ensure all pass
-[ ] Run mypy on Step 14 code and fix all type issues
-[ ] Prepare git commit message for Step 14
+[x] Add session-id output format to prompt.py execute_prompt()
+[x] Update help text in main.py for output-format argument
+[x] Add tests for session-id format in test_prompt.py
+[x] Run pylint on Step 14 code and fix all issues
+[x] Run pytest on Step 14 tests and ensure all pass
+[x] Run mypy on Step 14 code and fix all type issues
+[x] Prepare git commit message for Step 14
 
 ### Step 15: Update VSCodeClaude Templates V2 (Windows)
 [ ] Add VENV_SECTION_WINDOWS template

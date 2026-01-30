@@ -152,7 +152,32 @@ def execute_prompt(
         mcp_config = resolve_mcp_config_path(mcp_config)
 
         # Route to appropriate method based on output_format and verbosity
-        if output_format == "json":
+        if output_format == "session-id":
+            # Session ID only mode - return only the session_id for shell script capture
+            from ...llm.interface import prompt_llm
+
+            provider, method = parse_llm_method_from_args(llm_method)
+            response_dict = prompt_llm(
+                args.prompt,
+                provider=provider,
+                method=method,
+                timeout=timeout,
+                session_id=resume_session_id,
+                env_vars=env_vars,
+                project_dir=str(project_dir),
+                execution_dir=str(execution_dir),
+                mcp_config=mcp_config,
+            )
+
+            session_id = response_dict.get("session_id", "")
+            if not session_id:
+                print("Error: No session_id in response", file=sys.stderr)
+                return 1
+
+            print(session_id)
+            return 0
+
+        elif output_format == "json":
             # JSON output mode - return full LLMResponseDict
             from ...llm.interface import prompt_llm
 

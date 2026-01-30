@@ -140,10 +140,10 @@ def create_parser() -> argparse.ArgumentParser:
     )
     prompt_parser.add_argument(
         "--output-format",
-        choices=["text", "json"],
+        choices=["text", "json", "session-id"],
         default="text",
         metavar="FORMAT",
-        help="Output format: text (default) or json (includes session_id)",
+        help="Output format: text (default), json (includes session_id), or session-id (only session_id)",
     )
     prompt_parser.add_argument(
         "--mcp-config",
