@@ -54,6 +54,12 @@ mcp-coder coordinator vscodeclaude
 # Process a specific repository only
 mcp-coder coordinator vscodeclaude --repo mcp_coder
 
+# Check session status
+mcp-coder coordinator vscodeclaude status
+
+# Clean up stale sessions
+mcp-coder coordinator vscodeclaude --cleanup
+
 # Enable debug logging
 mcp-coder --log-level debug coordinator vscodeclaude
 ```
@@ -62,8 +68,17 @@ mcp-coder --log-level debug coordinator vscodeclaude
 
 | Option | Description |
 |--------|-------------|
-| `--repo NAME` | Process only the specified repository |
-| `--log-level LEVEL` | Set logging level (DEBUG, INFO, WARNING, ERROR) |
+| `--repo NAME` | Filter to specific repository only |
+| `--max-sessions N` | Override max concurrent sessions (default: from config or 3) |
+| `--cleanup` | Delete stale clean folders (without this, only lists them) |
+| `--intervene` | Force open a bot_busy issue for debugging |
+| `--issue NUMBER` | Issue number for intervention mode (requires `--intervene`) |
+
+### Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `status` | Show current session status table |
 
 ## How It Works
 
@@ -71,9 +86,10 @@ mcp-coder --log-level debug coordinator vscodeclaude
 
 The coordinator looks for issues with these status labels (in priority order):
 
-1. `status-07:code-review` - Code review needed
-2. `status-04:plan-review` - Plan review needed  
-3. `status-01:created` - New issue needs analysis
+1. `status-10:pr-created` - PR created (displayed only, no session needed)
+2. `status-07:code-review` - Code review needed
+3. `status-04:plan-review` - Plan review needed  
+4. `status-01:created` - New issue needs analysis
 
 Issues must also:
 
@@ -87,6 +103,24 @@ Issues must also:
 3. **VS Code Launch**: Opens workspace with auto-run task
 4. **Claude Session**: Starts appropriate Claude Code command based on issue status
 
+### Session States
+
+Sessions can be in different states, shown in the `status` command:
+
+| State | VSCode | Folder | Description | Next Action |
+|-------|--------|--------|-------------|-------------|
+| Active | Running | Exists | Working normally | `(active)` |
+| Closed | Closed | Exists, Clean | VSCode closed, can restart | `-> Restart` |
+| Stale | Closed | Exists, Clean | Issue status changed | `-> Delete (with --cleanup)` |
+| Dirty | Closed | Has changes | Uncommitted work | `!! Manual` - commit or discard changes |
+| Orphaned | Closed | Missing | Folder deleted externally | `-> Remove` |
+
+**Automatic behavior:**
+- **Closed sessions** are automatically restarted when you run the main command
+- **Orphaned sessions** are automatically removed when you run the main command
+- **Stale sessions** require `--cleanup` flag to delete
+- **Dirty sessions** require manual intervention (commit or discard changes)
+
 ### Generated Files
 
 Each session creates:
@@ -98,7 +132,29 @@ Each session creates:
 | `.vscode/tasks.json` | Auto-run task on folder open |
 | `.vscodeclaude_status.md` | Session status (gitignored) |
 
+### Session Storage
+
+Sessions are tracked in:
+- **Windows**: `%USERPROFILE%\.mcp_coder\coordinator_cache\vscodeclaude_sessions.json`
+- **Linux**: `~/.config/mcp_coder/coordinator_cache/vscodeclaude_sessions.json`
+
 ## Troubleshooting
+
+### Sessions showing "-> Remove"
+
+This means the session folder was deleted but the session is still tracked. Run the main command to clean up:
+
+```bash
+mcp-coder coordinator vscodeclaude
+```
+
+### Sessions showing "!! Manual"
+
+The folder has uncommitted changes. Either:
+1. Open the folder and commit/push your changes
+2. Or discard changes: `cd <folder> && git checkout .`
+
+Then run `mcp-coder coordinator vscodeclaude --cleanup` to remove the session.
 
 ### "Access is denied" errors on Windows
 
