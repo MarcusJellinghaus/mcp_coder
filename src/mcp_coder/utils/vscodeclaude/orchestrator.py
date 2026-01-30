@@ -32,6 +32,7 @@ from .sessions import (
     check_vscode_running,
     get_active_session_count,
     get_session_for_issue,
+    is_vscode_open_for_folder,
     load_sessions,
     update_session_pid,
 )
@@ -535,12 +536,22 @@ def restart_closed_sessions(
     logger.debug("Configured repos from config: %s", configured_repos)
 
     for session in store["sessions"]:
-        # Check if VSCode is still running
+        # Check if VSCode is still running (PID check first, then folder-based)
+        # On Windows, the launcher PID exits quickly, so PID check often fails
+        # even when VSCode is still open. Fall back to folder-based check.
+        folder_path = Path(session["folder"])
         if check_vscode_running(session.get("vscode_pid")):
             continue
 
+        # More reliable check: look for VSCode process with this folder open
+        is_open, found_pid = is_vscode_open_for_folder(session["folder"])
+        if is_open:
+            # VSCode is open but PID changed - update stored PID
+            if found_pid:
+                update_session_pid(session["folder"], found_pid)
+            continue
+
         # Check if folder exists
-        folder_path = Path(session["folder"])
         if not folder_path.exists():
             # Remove orphaned session
             remove_session(session["folder"])
