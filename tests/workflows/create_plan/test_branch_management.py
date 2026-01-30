@@ -55,7 +55,9 @@ class TestManageBranch:
 
         assert branch_name == "123-test-feature"
         mock_manager.get_linked_branches.assert_called_once_with(123)
-        mock_manager.create_remote_branch_for_issue.assert_called_once_with(123)
+        mock_manager.create_remote_branch_for_issue.assert_called_once_with(
+            123, base_branch=None
+        )
 
     def test_manage_branch_create_failure(self, tmp_path: Path) -> None:
         """Test manage_branch when branch creation fails."""
@@ -77,7 +79,9 @@ class TestManageBranch:
 
         assert branch_name is None
         mock_manager.get_linked_branches.assert_called_once_with(123)
-        mock_manager.create_remote_branch_for_issue.assert_called_once_with(123)
+        mock_manager.create_remote_branch_for_issue.assert_called_once_with(
+            123, base_branch=None
+        )
 
     def test_manage_branch_checkout_failure(self, tmp_path: Path) -> None:
         """Test manage_branch when checkout fails."""
