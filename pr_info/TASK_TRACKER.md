@@ -19,14 +19,14 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 
 ### Step 2: Extend `IssueData` and Populate in `get_issue()` / `list_issues()`
 
-- [ ] Add `NotRequired` import and extend `IssueData` TypedDict with `base_branch` field
-- [ ] Write unit tests for `base_branch` field in `get_issue()` and `list_issues()`
-- [ ] Modify `get_issue()` to populate `base_branch` from issue body
-- [ ] Modify `list_issues()` to populate `base_branch` for each issue
-- [ ] Run pylint and fix any issues found
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 2
+- [x] Add `NotRequired` import and extend `IssueData` TypedDict with `base_branch` field
+- [x] Write unit tests for `base_branch` field in `get_issue()` and `list_issues()`
+- [x] Modify `get_issue()` to populate `base_branch` from issue body
+- [x] Modify `list_issues()` to populate `base_branch` for each issue
+- [x] Run pylint and fix any issues found
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Pass `base_branch` Through `create_plan.py` Workflow
 
