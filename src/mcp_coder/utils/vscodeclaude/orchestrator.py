@@ -47,6 +47,7 @@ from .types import (
     VSCodeClaudeSession,
 )
 from .workspace import (
+    _remove_readonly,
     create_startup_script,
     create_status_file,
     create_vscode_task,
@@ -269,7 +270,14 @@ def prepare_and_launch_session(
     except Exception:
         # Cleanup working folder on failure
         if folder_path.exists():
-            shutil.rmtree(folder_path, ignore_errors=True)
+            try:
+                shutil.rmtree(folder_path, onerror=_remove_readonly)
+            except Exception as cleanup_error:
+                logger.warning(
+                    "Failed to cleanup folder %s: %s",
+                    folder_path,
+                    cleanup_error,
+                )
         raise
 
 

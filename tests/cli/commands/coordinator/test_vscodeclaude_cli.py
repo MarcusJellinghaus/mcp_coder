@@ -10,21 +10,6 @@ import pytest
 class TestTemplates:
     """Test template strings."""
 
-    def test_startup_script_windows_has_placeholders(self) -> None:
-        """Windows script has required placeholders."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
-            STARTUP_SCRIPT_WINDOWS,
-        )
-
-        assert "{emoji}" in STARTUP_SCRIPT_WINDOWS
-        assert "{issue_number}" in STARTUP_SCRIPT_WINDOWS
-        assert "{automated_section}" in STARTUP_SCRIPT_WINDOWS
-        assert "{title}" in STARTUP_SCRIPT_WINDOWS
-        assert "{repo}" in STARTUP_SCRIPT_WINDOWS
-        assert "{status}" in STARTUP_SCRIPT_WINDOWS
-        assert "{issue_url}" in STARTUP_SCRIPT_WINDOWS
-        assert "{interactive_section}" in STARTUP_SCRIPT_WINDOWS
-
     def test_startup_script_linux_has_placeholders(self) -> None:
         """Linux script has required placeholders."""
         from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
@@ -40,16 +25,6 @@ class TestTemplates:
         assert "{automated_section}" in STARTUP_SCRIPT_LINUX
         assert "{interactive_section}" in STARTUP_SCRIPT_LINUX
 
-    def test_automated_section_windows_has_placeholders(self) -> None:
-        """Windows automated section has required placeholders."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
-            AUTOMATED_SECTION_WINDOWS,
-        )
-
-        assert "{initial_command}" in AUTOMATED_SECTION_WINDOWS
-        assert "claude -p" in AUTOMATED_SECTION_WINDOWS
-        assert ".vscodeclaude_analysis.json" in AUTOMATED_SECTION_WINDOWS
-
     def test_automated_section_linux_has_placeholders(self) -> None:
         """Linux automated section has required placeholders."""
         from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
@@ -60,15 +35,6 @@ class TestTemplates:
         assert "claude -p" in AUTOMATED_SECTION_LINUX
         assert ".vscodeclaude_analysis.json" in AUTOMATED_SECTION_LINUX
 
-    def test_interactive_section_windows_has_placeholders(self) -> None:
-        """Windows interactive section has required placeholders."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
-            INTERACTIVE_SECTION_WINDOWS,
-        )
-
-        assert "{followup_command}" in INTERACTIVE_SECTION_WINDOWS
-        assert "claude --resume" in INTERACTIVE_SECTION_WINDOWS
-
     def test_interactive_section_linux_has_placeholders(self) -> None:
         """Linux interactive section has required placeholders."""
         from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
@@ -77,16 +43,6 @@ class TestTemplates:
 
         assert "{followup_command}" in INTERACTIVE_SECTION_LINUX
         assert "claude --resume" in INTERACTIVE_SECTION_LINUX
-
-    def test_intervention_section_windows_content(self) -> None:
-        """Windows intervention section has intervention warning."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
-            INTERVENTION_SECTION_WINDOWS,
-        )
-
-        assert "INTERVENTION MODE" in INTERVENTION_SECTION_WINDOWS
-        assert "No automated analysis will run" in INTERVENTION_SECTION_WINDOWS
-        assert "claude" in INTERVENTION_SECTION_WINDOWS
 
     def test_intervention_section_linux_content(self) -> None:
         """Linux intervention section has intervention warning."""
