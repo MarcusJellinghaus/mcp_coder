@@ -550,7 +550,11 @@ def restart_closed_sessions(
             continue
 
         # Check 2: Window title check (Windows only, fast and reliable)
-        if is_vscode_window_open_for_folder(session["folder"]):
+        if is_vscode_window_open_for_folder(
+            session["folder"],
+            issue_number=session["issue_number"],
+            repo=session["repo"],
+        ):
             logger.debug(
                 "VSCode window open for issue #%d (detected via window title)",
                 session["issue_number"],
