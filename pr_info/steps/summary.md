@@ -112,6 +112,9 @@ VSCODECLAUDE_PRIORITY = [
 | 11 | Test Refactoring | Split tests to match `utils/vscodeclaude/` structure |
 | 12 | Cache Integration | Use existing `get_all_cached_issues()` in vscodeclaude |
 | 13 | Pass Cached Issues | Eliminate duplicate API calls via cache lookup |
+| 14 | Prompt Session ID Format | Add `--output-format session-id` to prompt command |
+| 15 | VSCodeClaude Templates V2 | Update Windows templates with venv & mcp-coder |
+| 16 | Workspace Setup V2 | Update `create_startup_script()` for new templates |
 
 ## Performance Optimization (Steps 12-13)
 
@@ -152,7 +155,7 @@ Pass cached issues dict to staleness checks (no individual get_issue calls)
 - `.mcp.json` validation (required)
 - VSCode workspace file with window title
 - VSCode `tasks.json` with `runOn: folderOpen`
-- Two-stage startup script (automated analysis → interactive `/discuss`)
+- Three-stage startup script (automated analysis → `/discuss` → interactive session)
 - Status file `.vscodeclaude_status.md` in project root
 - `.gitignore` modification
 - Priority: later stages first (status-10 > status-07 > status-04 > status-01)
@@ -178,3 +181,32 @@ setup_commands_linux = ["uv venv", "uv sync --extra types"]
 ## Concurrency Note
 
 **Warning**: Do not run multiple `vscodeclaude` commands concurrently. The session file (`vscodeclaude_sessions.json`) does not use file locking, so concurrent writes could result in lost session data.
+
+## Startup Script Enhancement (Steps 14-16)
+
+The startup script was enhanced to:
+1. **Activate venv** - Check for `.venv`, create if missing, then activate
+2. **Use `mcp-coder prompt`** - Replaces raw `claude` CLI for better error handling and logging
+3. **Three-step flow**:
+   - Step 1: `mcp-coder prompt "/issue_analyse {issue_number}" --output-format session-id` → capture SESSION_ID
+   - Step 2: `mcp-coder prompt "/discuss" --session-id %SESSION_ID%` → automated discussion
+   - Step 3: `claude --resume %SESSION_ID%` → interactive session for user
+
+### New Prompt Command Option
+
+Added `--output-format session-id` to `mcp-coder prompt` command:
+- Returns only the session_id string (no other output)
+- Enables simple shell script capture without JSON parsing
+- Error exit code 1 if no session_id available
+
+### Script Flow (Windows)
+
+```batch
+@echo off
+REM 1. Display banner
+REM 2. Check/create venv, activate, sync if new
+REM 3. Run: mcp-coder prompt "..." --output-format session-id -> capture SESSION_ID
+REM 4. If failed, show error and exit
+REM 5. Run: mcp-coder prompt "/discuss" --session-id %SESSION_ID%
+REM 6. Run: claude --resume %SESSION_ID%
+```

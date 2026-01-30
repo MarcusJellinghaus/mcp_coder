@@ -112,3 +112,53 @@ This document logs the decisions made during the plan review discussion.
 ### Filter Function Location
 **Decision**: Add `_filter_eligible_vscodeclaude_issues()` helper in `issues.py` (analogous to `_filter_eligible_issues()` in `core.py`)
 **Rationale**: Keeps filtering logic separate from cache logic. The cache returns ALL issues, filtering is applied by the caller.
+
+---
+
+## Startup Script Enhancement Decisions (Steps 14-16)
+
+### Venv Activation in Startup Script
+**Decision**: Activate venv and create if missing (Option B)
+**Rationale**: The startup script runs every time VSCode opens. It should check for `.venv`, create it if missing (`uv venv && uv sync`), then activate and run commands. This ensures the environment is always ready.
+
+### Replace Raw `claude` CLI with `mcp-coder prompt`
+**Decision**: Use `mcp-coder prompt` for automated calls, keep raw `claude` for interactive session (Option A)
+**Rationale**: 
+- First call (issue analysis): Use `mcp-coder prompt` for proper error handling, logging, and session management
+- Second call (/discuss): Use `mcp-coder prompt` for the automated discussion step
+- Third call (interactive): Use raw `claude --resume` for interactive user session
+
+### Session ID Extraction Method
+**Decision**: Add `--output-format session-id` to prompt command (Option A)
+**Rationale**: Much cleaner than parsing JSON in shell scripts. The prompt command already has `--output-format` with `text` and `json` options. Adding `session-id` follows the existing pattern and enables simple shell capture.
+
+### Dependency Sync in Startup Script
+**Decision**: Only run `uv sync` when venv is newly created (Option B)
+**Rationale**: Running `uv sync` every time adds unnecessary delay. Dependencies are installed during session creation. Only sync when creating a new venv to handle edge cases where venv was deleted.
+
+### Error Handling in Startup Script
+**Decision**: Fail with clear error message, no automatic fallback (Option A)
+**Rationale**: If `mcp-coder prompt` fails, there's likely a real issue that needs investigation. Silent fallback could mask problems. Show error, pause for user to read, then exit.
+
+### Full Response Output Logging
+**Decision**: Just capture session_id, no need to save full response separately (Option C)
+**Rationale**: The conversation is preserved in Claude's session anyway. Simplifies the script by removing the need for JSON file storage and parsing.
+
+### Template Structure
+**Decision**: Keep separate sections (AUTOMATED_SECTION, INTERACTIVE_SECTION, etc.) for flexibility (Option A)
+**Rationale**: Maintains modularity and makes it easier to modify individual sections. Add new VENV_SECTION for venv setup logic.
+
+### Timeout for mcp-coder prompt Calls
+**Decision**: Use 300 seconds (5 minutes) timeout (Option B)
+**Rationale**: Matches Jenkins templates. Automated analysis and discussion steps can take significant time when Claude is analyzing code and running tools.
+
+### Platform Support Priority
+**Decision**: Implement Windows first, Linux support in follow-up (Option B)
+**Rationale**: Focus on Windows (current development environment) and test it properly before expanding to Linux.
+
+### Three-Step Startup Flow
+**Decision**: Implement three-step flow for startup script
+**Rationale**: Provides structured automation followed by interactive session:
+1. `mcp-coder prompt "/issue_analyse {issue_number}" --output-format session-id` → capture SESSION_ID
+2. `mcp-coder prompt "/discuss" --session-id %SESSION_ID%` → automated discussion
+3. `claude --resume %SESSION_ID%` → interactive session for user
