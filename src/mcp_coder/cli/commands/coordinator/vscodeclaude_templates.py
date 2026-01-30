@@ -52,6 +52,133 @@ echo.
 claude
 """
 
+# Venv setup section for Windows (V2)
+VENV_SECTION_WINDOWS = r"""echo Checking Python environment...
+if not exist .venv\Scripts\activate.bat (
+    echo Creating virtual environment...
+    uv venv
+    if errorlevel 1 (
+        echo ERROR: Failed to create virtual environment.
+        pause
+        exit /b 1
+    )
+    echo Installing dependencies...
+    uv sync --extra types
+    if errorlevel 1 (
+        echo ERROR: Failed to install dependencies.
+        pause
+        exit /b 1
+    )
+    set VENV_CREATED=1
+) else (
+    set VENV_CREATED=0
+)
+
+echo Activating virtual environment...
+call .venv\Scripts\activate.bat
+if errorlevel 1 (
+    echo ERROR: Failed to activate virtual environment.
+    pause
+    exit /b 1
+)
+"""
+
+# Automated analysis section for Windows (V2 - using mcp-coder prompt)
+AUTOMATED_SECTION_WINDOWS_V2 = r"""echo.
+echo === Step 1: Automated Analysis ===
+echo Running: {initial_command} {issue_number}
+echo.
+
+for /f "delims=" %%i in ('mcp-coder prompt "{initial_command} {issue_number}" --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
+
+if "%SESSION_ID%"=="" (
+    echo.
+    echo ERROR: Failed to get session ID from automated analysis.
+    echo The mcp-coder prompt command may have failed.
+    echo Please check the error messages above and try running Claude manually.
+    echo.
+    pause
+    exit /b 1
+)
+
+echo Session ID: %SESSION_ID%
+"""
+
+# Discussion section for Windows (V2 - using mcp-coder prompt with session resume)
+DISCUSSION_SECTION_WINDOWS = r"""echo.
+echo === Step 2: Automated Discussion ===
+echo Running: /discuss
+echo.
+
+mcp-coder prompt "/discuss" --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
+
+if errorlevel 1 (
+    echo.
+    echo WARNING: Discussion step encountered an error.
+    echo Continuing to interactive session...
+    echo.
+)
+"""
+
+# Interactive section for Windows (V2 - raw claude CLI with resume)
+INTERACTIVE_SECTION_WINDOWS_V2 = r"""echo.
+echo === Step 3: Interactive Session ===
+echo You can now interact with Claude directly.
+echo The conversation context from previous steps is preserved.
+echo.
+
+claude --resume %SESSION_ID%
+"""
+
+# Main startup script for Windows (V2 - with venv and mcp-coder)
+STARTUP_SCRIPT_WINDOWS_V2 = r"""@echo off
+chcp 65001 >nul
+setlocal EnableDelayedExpansion
+
+echo.
+echo ==========================================================================
+echo {emoji} Issue #{issue_number} - {title}
+echo Repo:   {repo}
+echo Status: {status}
+echo URL:    {issue_url}
+echo ==========================================================================
+echo.
+
+{venv_section}
+
+{automated_section}
+
+{discussion_section}
+
+{interactive_section}
+"""
+
+# Intervention mode for Windows (V2 - with venv activation)
+INTERVENTION_SCRIPT_WINDOWS_V2 = r"""@echo off
+chcp 65001 >nul
+setlocal EnableDelayedExpansion
+
+echo.
+echo ==========================================================================
+echo {emoji} Issue #{issue_number} - {title}
+echo Repo:   {repo}
+echo Status: {status}
+echo URL:    {issue_url}
+echo ==========================================================================
+echo.
+
+{venv_section}
+
+echo.
+echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+echo !! INTERVENTION MODE - Automation may be running elsewhere
+echo !! Investigate manually. No automated analysis will run.
+echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+echo.
+
+claude
+"""
+
 # Startup script for Linux (.sh)
 STARTUP_SCRIPT_LINUX = r"""#!/bin/bash
 set -e
