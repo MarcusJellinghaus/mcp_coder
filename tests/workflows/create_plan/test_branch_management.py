@@ -312,3 +312,91 @@ class TestVerifyStepsDirectory:
         result = verify_steps_directory(tmp_path)
         # Should return False because .gitkeep is still a file
         assert result is False
+
+
+class TestManageBranchBaseBranch:
+    """Tests for base_branch parameter in manage_branch()."""
+
+    @patch("mcp_coder.workflows.create_plan.IssueBranchManager")
+    @patch("mcp_coder.workflows.create_plan.checkout_branch")
+    def test_manage_branch_passes_base_branch_to_create(
+        self, mock_checkout: MagicMock, mock_manager_class: MagicMock, tmp_path: Path
+    ) -> None:
+        """base_branch is passed to create_remote_branch_for_issue()."""
+        mock_manager = MagicMock()
+        mock_manager.get_linked_branches.return_value = []  # No existing branches
+        mock_manager.create_remote_branch_for_issue.return_value = {
+            "success": True,
+            "branch_name": "123-test-issue",
+            "error": None,
+            "existing_branches": [],
+        }
+        mock_manager_class.return_value = mock_manager
+        mock_checkout.return_value = True
+
+        result = manage_branch(
+            project_dir=tmp_path,
+            issue_number=123,
+            issue_title="Test Issue",
+            base_branch="feature/v2",
+        )
+
+        # Verify base_branch was passed
+        mock_manager.create_remote_branch_for_issue.assert_called_once_with(
+            123,
+            base_branch="feature/v2",
+        )
+        assert result == "123-test-issue"
+
+    @patch("mcp_coder.workflows.create_plan.IssueBranchManager")
+    @patch("mcp_coder.workflows.create_plan.checkout_branch")
+    def test_manage_branch_without_base_branch_uses_default(
+        self, mock_checkout: MagicMock, mock_manager_class: MagicMock, tmp_path: Path
+    ) -> None:
+        """Without base_branch, None is passed (uses repo default)."""
+        mock_manager = MagicMock()
+        mock_manager.get_linked_branches.return_value = []
+        mock_manager.create_remote_branch_for_issue.return_value = {
+            "success": True,
+            "branch_name": "123-test-issue",
+            "error": None,
+            "existing_branches": [],
+        }
+        mock_manager_class.return_value = mock_manager
+        mock_checkout.return_value = True
+
+        result = manage_branch(
+            project_dir=tmp_path,
+            issue_number=123,
+            issue_title="Test Issue",
+            # No base_branch provided
+        )
+
+        # Verify base_branch=None was passed
+        mock_manager.create_remote_branch_for_issue.assert_called_once_with(
+            123,
+            base_branch=None,
+        )
+        assert result == "123-test-issue"
+
+    @patch("mcp_coder.workflows.create_plan.IssueBranchManager")
+    @patch("mcp_coder.workflows.create_plan.checkout_branch")
+    def test_manage_branch_existing_branch_ignores_base_branch(
+        self, mock_checkout: MagicMock, mock_manager_class: MagicMock, tmp_path: Path
+    ) -> None:
+        """If branch already exists, base_branch is ignored."""
+        mock_manager = MagicMock()
+        mock_manager.get_linked_branches.return_value = ["123-existing-branch"]
+        mock_manager_class.return_value = mock_manager
+        mock_checkout.return_value = True
+
+        result = manage_branch(
+            project_dir=tmp_path,
+            issue_number=123,
+            issue_title="Test Issue",
+            base_branch="feature/v2",  # Should be ignored
+        )
+
+        # Verify create was NOT called (existing branch used)
+        mock_manager.create_remote_branch_for_issue.assert_not_called()
+        assert result == "123-existing-branch"

@@ -30,14 +30,14 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 
 ### Step 3: Pass `base_branch` Through `create_plan.py` Workflow
 
-- [ ] Write unit tests for `base_branch` parameter in `manage_branch()`
-- [ ] Update `manage_branch()` signature to accept `base_branch` parameter
-- [ ] Pass `base_branch` to `create_remote_branch_for_issue()` call
-- [ ] Update `run_create_plan_workflow()` to extract and pass `base_branch`
-- [ ] Run pylint and fix any issues found
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 3
+- [x] Write unit tests for `base_branch` parameter in `manage_branch()`
+- [x] Update `manage_branch()` signature to accept `base_branch` parameter
+- [x] Pass `base_branch` to `create_remote_branch_for_issue()` call
+- [x] Update `run_create_plan_workflow()` to extract and pass `base_branch`
+- [x] Run pylint and fix any issues found
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Fix Hardcoded "main" in `pr_manager.py`
 

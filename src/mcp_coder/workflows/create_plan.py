@@ -105,7 +105,10 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
 
 
 def manage_branch(
-    project_dir: Path, issue_number: int, issue_title: str
+    project_dir: Path,
+    issue_number: int,
+    issue_title: str,
+    base_branch: Optional[str] = None,
 ) -> Optional[str]:
     """Get existing linked branch or create new one.
 
@@ -113,6 +116,7 @@ def manage_branch(
         project_dir: Path to the project directory containing git repository
         issue_number: GitHub issue number to link branch to
         issue_title: GitHub issue title for branch name generation
+        base_branch: Optional base branch to create from (uses repo default if None)
 
     Returns:
         Branch name if successful, None on error
@@ -132,7 +136,10 @@ def manage_branch(
             logger.info("Using existing linked branch: %s", branch_name)
         else:
             # Create new branch on GitHub
-            result = manager.create_remote_branch_for_issue(issue_number)
+            result = manager.create_remote_branch_for_issue(
+                issue_number,
+                base_branch=base_branch,
+            )
             if not result["success"]:
                 logger.error(
                     "Failed to create branch: %s", result.get("error", "Unknown error")
@@ -541,7 +548,15 @@ def run_create_plan_workflow(
 
     # Step 2: Manage branch
     logger.info("Step 2/7: Managing branch...")
-    branch_name = manage_branch(project_dir, issue_number, issue_data["title"])
+    base_branch = issue_data.get("base_branch")
+    if base_branch:
+        logger.info(f"Using base branch from issue: {base_branch}")
+    branch_name = manage_branch(
+        project_dir,
+        issue_number,
+        issue_data["title"],
+        base_branch=base_branch,
+    )
     if branch_name is None:
         logger.error("Branch management failed")
         return 1
