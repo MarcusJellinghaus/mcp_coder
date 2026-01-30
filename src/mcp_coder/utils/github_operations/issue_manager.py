@@ -5,6 +5,7 @@ GitHub issues through the PyGithub library.
 """
 
 import logging
+import re
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -132,6 +133,52 @@ class EventData(TypedDict):
     label: Optional[str]  # Label name (for label events)
     created_at: str  # ISO format timestamp
     actor: Optional[str]  # GitHub username who performed action
+
+
+def _parse_base_branch(body: str) -> Optional[str]:
+    """Parse base branch from issue body.
+
+    Looks for a markdown heading (any level) containing "Base Branch" (case-insensitive)
+    and extracts the content until the next heading.
+
+    Args:
+        body: GitHub issue body text
+
+    Returns:
+        Branch name if found and valid, None if not specified or empty
+
+    Raises:
+        ValueError: If base branch section contains multiple lines (malformed input)
+
+    Example:
+        >>> _parse_base_branch("### Base Branch\\n\\nfeature/v2\\n\\n### Description")
+        'feature/v2'
+        >>> _parse_base_branch("### Description\\n\\nNo base branch")
+        None
+    """
+    if not body:
+        return None
+
+    # Case-insensitive match for any heading level (# to ######) with "Base Branch"
+    # MULTILINE flag for ^ to match line starts, DOTALL for . to match newlines
+    pattern = r"(?im)^#{1,6}\s*base\s*branch\s*\n(.*?)(?=^#{1,6}\s|\Z)"
+    match = re.search(pattern, body, re.MULTILINE | re.DOTALL)
+
+    if not match:
+        return None
+
+    content = match.group(1).strip()
+
+    if not content:
+        return None
+
+    # Check for multi-line content (malformed input)
+    if "\n" in content:
+        raise ValueError(
+            f"Base branch section contains multiple lines (malformed): {content!r}"
+        )
+
+    return content
 
 
 class IssueManager(BaseGitHubManager):
