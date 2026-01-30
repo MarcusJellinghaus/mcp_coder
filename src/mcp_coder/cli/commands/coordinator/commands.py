@@ -570,7 +570,7 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
         repo_short = session["repo"].split("/")[-1]
         status = session["status"]
         pid = session.get("vscode_pid", "N/A")
-        running = "✓" if check_vscode_running(session.get("vscode_pid")) else "✗"
+        running = "Y" if check_vscode_running(session.get("vscode_pid")) else "N"
         folder_name = Path(session["folder"]).name
         intervention = "[I]" if session.get("is_intervention") else ""
 
