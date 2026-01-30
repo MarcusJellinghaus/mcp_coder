@@ -51,15 +51,15 @@ This tracks **Feature Implementation** for Issue #75: Base Branch Support for Is
 
 ### Step 5: Update Slash Commands and Documentation
 
-- [ ] Update `.claude/commands/issue_analyse.md` with base branch display guidance
-- [ ] Update `.claude/commands/issue_create.md` with base branch field documentation
-- [ ] Update `.claude/commands/issue_update.md` with base branch editing guidance
-- [ ] Update `docs/repository-setup.md` with base branch feature documentation
-- [ ] Verify markdown syntax is valid in all modified files
-- [ ] Run pylint and fix any issues found
-- [ ] Run pytest and fix any failing tests
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 5
+- [x] Update `.claude/commands/issue_analyse.md` with base branch display guidance
+- [x] Update `.claude/commands/issue_create.md` with base branch field documentation
+- [x] Update `.claude/commands/issue_update.md` with base branch editing guidance
+- [x] Update `docs/repository-setup.md` with base branch feature documentation
+- [x] Verify markdown syntax is valid in all modified files
+- [x] Run pylint and fix any issues found
+- [x] Run pytest and fix any failing tests
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 5
 
 ---
 

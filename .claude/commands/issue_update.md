@@ -27,6 +27,13 @@ gh issue view <issue_number> --json title,body
 gh issue edit <issue_number> --title "NEW_TITLE" --body "NEW_BODY"
 ```
 
+**Editing Base Branch:**
+- To add a base branch: Insert `### Base Branch` section with the branch name
+- To change a base branch: Update the content under the existing section
+- To remove a base branch: Delete the entire `### Base Branch` section
+
+The base branch must be a single line. Multiple lines will cause an error during branch creation.
+
 **The updated issue should include:**
 - Summary of the requirement
 - Discussed implementation approach (concise)
