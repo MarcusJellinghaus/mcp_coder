@@ -574,7 +574,9 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
         folder_name = Path(session["folder"]).name
         intervention = "[I]" if session.get("is_intervention") else ""
 
-        table_data.append([issue_num, repo_short, status, running, pid, folder_name, intervention])
+        table_data.append(
+            [issue_num, repo_short, status, running, pid, folder_name, intervention]
+        )
 
     # Print table
     headers = ["Issue", "Repo", "Status", "VS", "PID", "Folder", ""]
