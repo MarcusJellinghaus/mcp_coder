@@ -6,7 +6,9 @@ skipped if the module doesn't exist yet.
 """
 
 import argparse
+from collections.abc import Generator
 from pathlib import Path
+from typing import Tuple
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -30,21 +32,21 @@ except ImportError:
 
 
 @pytest.fixture
-def mock_pr_manager():
+def mock_pr_manager() -> Generator[MagicMock, None, None]:
     """Mock PullRequestManager with configurable PR data."""
     with patch("mcp_coder.cli.commands.gh_tool.PullRequestManager") as mock:
         yield mock
 
 
 @pytest.fixture
-def mock_issue_manager():
+def mock_issue_manager() -> Generator[MagicMock, None, None]:
     """Mock IssueManager for issue lookup."""
     with patch("mcp_coder.cli.commands.gh_tool.IssueManager") as mock:
         yield mock
 
 
 @pytest.fixture
-def mock_git_readers():
+def mock_git_readers() -> Generator[Tuple[MagicMock, MagicMock, MagicMock], None, None]:
     """Mock git reader functions."""
     with (
         patch("mcp_coder.cli.commands.gh_tool.get_current_branch_name") as mock_branch,
@@ -57,7 +59,7 @@ def mock_git_readers():
 
 
 @pytest.fixture
-def mock_resolve_project_dir():
+def mock_resolve_project_dir() -> Generator[MagicMock, None, None]:
     """Mock resolve_project_dir utility function."""
     with patch("mcp_coder.cli.commands.gh_tool.resolve_project_dir") as mock:
         yield mock
@@ -79,7 +81,7 @@ class TestGetBaseBranchDetectionPriority:
         self,
         mock_pr_manager: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -109,7 +111,7 @@ class TestGetBaseBranchDetectionPriority:
         self,
         mock_pr_manager: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -142,7 +144,7 @@ class TestGetBaseBranchDetectionPriority:
         self,
         mock_pr_manager: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -176,7 +178,7 @@ class TestGetBaseBranchDetectionPriority:
         self,
         mock_pr_manager: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -211,7 +213,7 @@ class TestGetBaseBranchDetectionPriority:
         self,
         mock_pr_manager: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -256,7 +258,7 @@ class TestGetBaseBranchExitCodes:
     def test_get_base_branch_exit_code_success(
         self,
         mock_pr_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -279,7 +281,7 @@ class TestGetBaseBranchExitCodes:
         self,
         mock_pr_manager: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -317,7 +319,7 @@ class TestGetBaseBranchExitCodes:
     def test_get_base_branch_exit_code_error_api_failure(
         self,
         mock_pr_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -355,7 +357,7 @@ class TestGetBaseBranchOutputFormat:
     def test_get_base_branch_outputs_to_stdout(
         self,
         mock_pr_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -382,7 +384,7 @@ class TestGetBaseBranchOutputFormat:
     def test_get_base_branch_no_extra_text_in_output(
         self,
         mock_pr_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -546,7 +548,7 @@ class TestGetBaseBranchEdgeCases:
     def test_get_base_branch_no_current_branch(
         self,
         mock_pr_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -571,7 +573,7 @@ class TestGetBaseBranchEdgeCases:
         self,
         mock_pr_manager: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -598,7 +600,7 @@ class TestGetBaseBranchEdgeCases:
     def test_get_base_branch_with_project_dir_option(
         self,
         mock_pr_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -622,7 +624,7 @@ class TestGetBaseBranchEdgeCases:
         self,
         mock_pr_manager: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -655,7 +657,7 @@ class TestGetBaseBranchEdgeCases:
         self,
         mock_pr_manager: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_git_readers: tuple,
+        mock_git_readers: Tuple[MagicMock, MagicMock, MagicMock],
         mock_resolve_project_dir: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
