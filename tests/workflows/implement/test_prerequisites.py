@@ -263,6 +263,55 @@ class TestCheckPrerequisitesTaskTracker:
         assert result is False
         assert "folder pr_info not found. Run 'create_plan' first." in caplog.text
 
+    def test_validates_existing_tracker_success(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test validation passes for valid existing tracker."""
+        # Setup: git repo with valid TASK_TRACKER.md
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        pr_info_dir = tmp_path / "pr_info"
+        pr_info_dir.mkdir()
+        task_tracker = pr_info_dir / "TASK_TRACKER.md"
+        # Valid tracker with required sections
+        task_tracker.write_text(
+            "# Task Status Tracker\n\n"
+            "## Tasks\n\n"
+            "- [ ] Test task\n\n"
+            "## Pull Request\n"
+        )
+
+        # Call check_prerequisites()
+        result = check_prerequisites(tmp_path)
+
+        # Assert: returns True, file unchanged
+        assert result is True
+        assert "Task tracker structure validated" in caplog.text
+
+    def test_validates_existing_tracker_failure(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test validation fails for invalid tracker structure."""
+        # Setup: git repo with TASK_TRACKER.md missing ## Tasks header
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        pr_info_dir = tmp_path / "pr_info"
+        pr_info_dir.mkdir()
+        task_tracker = pr_info_dir / "TASK_TRACKER.md"
+        # Invalid tracker - missing ## Tasks section
+        task_tracker.write_text(
+            "# Task Status Tracker\n\n"
+            "Some content without proper sections\n\n"
+            "## Pull Request\n"
+        )
+
+        # Call check_prerequisites()
+        result = check_prerequisites(tmp_path)
+
+        # Assert: returns False, logs error
+        assert result is False
+        assert "Invalid task tracker structure" in caplog.text
+
 
 class TestIntegration:
     """Integration tests combining multiple prerequisite checks."""
