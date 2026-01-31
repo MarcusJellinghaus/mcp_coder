@@ -24,6 +24,7 @@ from mcp_coder.utils.git_operations.remotes import git_push
 from mcp_coder.utils.git_operations.workflows import commit_all_changes
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -180,6 +181,48 @@ def check_pr_info_not_exists(project_dir: Path) -> bool:
         return False
 
     return True
+
+
+def create_pr_info_structure(project_dir: Path) -> bool:
+    """Create pr_info/ directory structure and TASK_TRACKER.md.
+
+    Creates:
+    - pr_info/
+    - pr_info/steps/
+    - pr_info/.conversations/
+    - pr_info/TASK_TRACKER.md (from template)
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        True if successful, False on error
+    """
+    try:
+        # Build base path
+        pr_info_dir = project_dir / "pr_info"
+
+        # Create pr_info/ directory
+        pr_info_dir.mkdir(parents=True, exist_ok=False)
+
+        # Create pr_info/steps/ directory
+        steps_dir = pr_info_dir / "steps"
+        steps_dir.mkdir()
+
+        # Create pr_info/.conversations/ directory
+        conversations_dir = pr_info_dir / ".conversations"
+        conversations_dir.mkdir()
+
+        # Write TASK_TRACKER_TEMPLATE to pr_info/TASK_TRACKER.md
+        task_tracker_path = pr_info_dir / "TASK_TRACKER.md"
+        task_tracker_path.write_text(TASK_TRACKER_TEMPLATE, encoding="utf-8")
+
+        logger.info("Created pr_info/ directory structure successfully")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to create pr_info/ directory structure: {e}")
+        return False
 
 
 def verify_steps_directory(project_dir: Path) -> bool:
