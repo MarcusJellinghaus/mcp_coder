@@ -82,12 +82,16 @@ utils (infrastructure)
 
 ## Key Design Decisions
 
+See [Decisions.md](Decisions.md) for full discussion log.
+
 | Topic | Decision |
 |-------|----------|
+| File moves | Use `mcp__filesystem__move_file` (handles git mv) |
 | Late-binding removal | Replace `_get_coordinator()` with direct imports from `utils` |
 | Template location | Move to `workflows/vscodeclaude/templates.py` |
 | Cache config function | Move to `utils/user_config.py` (infrastructure layer) |
 | CLI re-export wrapper | Delete entirely - consumers import from `workflows.vscodeclaude` |
+| `get_cache_refresh_minutes` re-export | No re-export - consumers import from `utils.user_config` |
 | Test file reorganization | Update patches only; file moves in follow-up PR |
 | Deprecation warnings | None - clean delete |
 

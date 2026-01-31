@@ -65,33 +65,27 @@ from .core import (
 
 ### Deletion Checklist
 
-1. **Delete `utils/vscodeclaude/`:**
-   ```bash
-   rm -rf src/mcp_coder/utils/vscodeclaude/
-   ```
+1. **`utils/vscodeclaude/` already moved** - Directory should be empty after Step 2 moves
 
-2. **Delete coordinator vscodeclaude files:**
-   ```bash
-   rm src/mcp_coder/cli/commands/coordinator/vscodeclaude.py
-   rm src/mcp_coder/cli/commands/coordinator/vscodeclaude_templates.py
-   ```
+2. **Coordinator vscodeclaude files already moved** - `vscodeclaude.py` and `vscodeclaude_templates.py` moved in Step 2
 
 3. **Edit coordinator/__init__.py:**
    - Remove vscodeclaude imports
-   - Remove from `__all__`
-   - Update `get_cache_refresh_minutes` to import from new location (or remove if not needed in coordinator)
+   - Remove vscodeclaude items from `__all__`
+   - Remove `get_cache_refresh_minutes` from `__all__` (no re-export, consumers import from `utils.user_config`)
 
 ---
 
 ## ALGORITHM
 
 ```
-1. Delete utils/vscodeclaude/ directory
-2. Delete coordinator/vscodeclaude.py
-3. Delete coordinator/vscodeclaude_templates.py  
+1. Verify utils/vscodeclaude/ is empty (files moved in Step 2), delete empty directory
+2. Verify coordinator/vscodeclaude.py moved (Step 2)
+3. Verify coordinator/vscodeclaude_templates.py moved (Step 2)
 4. Edit coordinator/__init__.py:
    - Remove vscodeclaude import lines
    - Remove vscodeclaude items from __all__
+   - Remove get_cache_refresh_minutes from __all__
 5. Edit utils/__init__.py (if needed):
    - Remove any vscodeclaude references
 ```

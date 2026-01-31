@@ -128,4 +128,4 @@ All tests should pass with the new patch paths.
 
 ## Note
 
-Test file reorganization (moving test files to match new source locations) will happen in a **follow-up PR** as stated in the issue. This step only updates patch paths within existing test files.
+Test file reorganization (moving test files from `tests/utils/vscodeclaude/` to `tests/workflows/vscodeclaude/`) will happen in a **follow-up PR**. This step only updates patch paths within existing test files.

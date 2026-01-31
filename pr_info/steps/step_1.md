@@ -39,10 +39,8 @@ def get_cache_refresh_minutes() -> int:
     """
 ```
 
-### New Import in coordinator/core.py
-```python
-from ....utils.user_config import get_cache_refresh_minutes
-```
+### Remove from coordinator
+Remove the function entirely from `core.py`. Do NOT add a re-import - consumers will import directly from `utils.user_config`.
 
 ---
 
@@ -50,8 +48,8 @@ from ....utils.user_config import get_cache_refresh_minutes
 
 1. **Copy function** to `utils/user_config.py`
 2. **Remove late-binding** - Replace `_get_coordinator().get_config_values` with direct `get_config_values` call
-3. **Update coordinator/core.py** - Remove function, import from new location
-4. **Update coordinator/__init__.py** - Re-export from `utils.user_config` instead of `core`
+3. **Update coordinator/core.py** - Remove function entirely (no re-import)
+4. **Update coordinator/__init__.py** - Remove `get_cache_refresh_minutes` from exports
 5. **Update test patches** - Point to new location
 
 ---

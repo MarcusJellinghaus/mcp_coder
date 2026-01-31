@@ -103,8 +103,8 @@ from mcp_coder.utils.user_config import get_config_values, get_cache_refresh_min
 ### File Move Process
 ```
 1. Create workflows/vscodeclaude/ directory
-2. Copy all 10 files from utils/vscodeclaude/ (see table above)
-3. Copy vscodeclaude_templates.py → templates.py
+2. Move all 10 files from utils/vscodeclaude/ using mcp__filesystem__move_file (see table above)
+3. Move vscodeclaude_templates.py → templates.py using mcp__filesystem__move_file
 4. In files that use _get_coordinator() (config.py, issues.py, orchestrator.py, status.py):
    - Remove _get_coordinator() function
    - Replace coordinator.X calls with direct imports
