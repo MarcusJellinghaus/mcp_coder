@@ -23,7 +23,7 @@ Each step file contains detailed WHERE/WHAT/HOW specifications.
 - [x] Run tests for affected modules
 
 ### Step 2: Migrate Test Files and Add Import-Linter Contract
-- [ ] Task 2.1: Migrate `test_issue_manager_label_update.py` to use `execute_command()`
+- [x] Task 2.1: Migrate `test_issue_manager_label_update.py` to use `execute_command()`
 - [ ] Task 2.2: Remove unused subprocess import from `test_create_pr_integration.py`
 - [ ] Task 2.2b: Remove unused subprocess import from `test_main.py`
 - [ ] Task 2.3: Delete `test_subprocess_encoding_directly` test
