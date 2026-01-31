@@ -401,41 +401,35 @@ class TestLogProgressSummary:
 class TestGetRebaseTargetBranch:
     """Tests for _get_rebase_target_branch function."""
 
-    @patch("mcp_coder.workflows.implement.core.PullRequestManager")
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core.detect_base_branch")
     def test_returns_pr_base_branch(
-        self, mock_get_branch: MagicMock, mock_pr_manager: MagicMock, tmp_path: Path
+        self, mock_detect_base: MagicMock, tmp_path: Path
     ) -> None:
-        """Test returns base_branch from open PR."""
-        mock_get_branch.return_value = "feature-123"
-        mock_pr_manager.return_value.list_pull_requests.return_value = [
-            {"head_branch": "feature-123", "base_branch": "develop"}
-        ]
+        """Test returns base_branch when detect_base_branch finds a valid branch."""
+        mock_detect_base.return_value = "develop"
 
         result = _get_rebase_target_branch(tmp_path)
         assert result == "develop"
 
-    @patch("mcp_coder.workflows.implement.core.get_default_branch_name")
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    def test_returns_default_branch_as_fallback(
-        self, mock_get_branch: MagicMock, mock_default: MagicMock, tmp_path: Path
+    @patch("mcp_coder.workflows.implement.core.detect_base_branch")
+    def test_returns_none_when_base_branch_unknown(
+        self, mock_detect_base: MagicMock, tmp_path: Path
     ) -> None:
-        """Test falls back to default branch."""
-        mock_get_branch.return_value = "feature-123"
-        mock_default.return_value = "main"
-
-        result = _get_rebase_target_branch(tmp_path)
-        assert result == "main"
-
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    def test_returns_none_when_no_current_branch(
-        self, mock_get_branch: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test returns None in detached HEAD state."""
-        mock_get_branch.return_value = None
+        """Test returns None when detect_base_branch returns 'unknown'."""
+        mock_detect_base.return_value = "unknown"
 
         result = _get_rebase_target_branch(tmp_path)
         assert result is None
+
+    @patch("mcp_coder.workflows.implement.core.detect_base_branch")
+    def test_returns_valid_branch_from_detection(
+        self, mock_detect_base: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test returns the branch name when detect_base_branch returns a valid branch."""
+        mock_detect_base.return_value = "main"
+
+        result = _get_rebase_target_branch(tmp_path)
+        assert result == "main"
 
 
 class TestRebaseIntegration:
