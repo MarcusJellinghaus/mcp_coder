@@ -38,7 +38,7 @@ See [step_2.md](./steps/step_2.md) for details.
 
 - [x] Run mcp__code-checker__run_pytest_check() - verify all tests pass
 - [x] Run mcp__code-checker__run_pylint_check() - verify no linting errors
-- [ ] Run mcp__code-checker__run_mypy_check() - verify type checking passes
+- [x] Run mcp__code-checker__run_mypy_check() - verify type checking passes
 - [ ] Verify acceptance criteria: Directory `tests/workflows/vscodeclaude/` created
 - [ ] Verify acceptance criteria: All 13 test files moved
 - [ ] Verify acceptance criteria: `tests/utils/vscodeclaude/` deleted entirely
