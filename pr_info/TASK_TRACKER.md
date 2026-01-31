@@ -93,18 +93,18 @@ See [step_5.md](./steps/step_5.md) for details.
 - [x] Run `./tools/tach_check.sh` and verify no layer violations
 - [x] Run `mcp__code-checker__run_pylint_check` and fix any errors/fatal issues
 - [x] Run `mcp__code-checker__run_mypy_check` and fix any type errors
-- [ ] Run `mcp__code-checker__run_pytest_check` and ensure all tests pass
-- [ ] Verify no imports from CLI layer in workflows layer
-- [ ] Verify `import mcp_coder.utils.vscodeclaude` fails (deleted)
-- [ ] Verify `from mcp_coder.workflows.vscodeclaude import ...` works
-- [ ] Verify `from mcp_coder.utils.user_config import get_cache_refresh_minutes` works
-- [ ] Prepare git commit message for Step 5
+- [x] Run `mcp__code-checker__run_pytest_check` and ensure all tests pass
+- [x] Verify no imports from CLI layer in workflows layer
+- [x] Verify `import mcp_coder.utils.vscodeclaude` fails (deleted)
+- [x] Verify `from mcp_coder.workflows.vscodeclaude import ...` works
+- [x] Verify `from mcp_coder.utils.user_config import get_cache_refresh_minutes` works
+- [x] Prepare git commit message for Step 5
 
 ---
 
 ## Pull Request
 
-- [ ] Review all implementation steps for completeness
-- [ ] Run full test suite and ensure all tests pass
+- [x] Review all implementation steps for completeness
+- [x] Run full test suite and ensure all tests pass
 - [ ] Prepare comprehensive PR summary
 - [ ] Create pull request
