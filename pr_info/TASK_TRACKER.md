@@ -24,14 +24,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Move Test Files and Delete Old Directory
 See [step_1.md](./steps/step_1.md) for details.
 
-- [ ] Move all 13 test files from `tests/utils/vscodeclaude/` to `tests/workflows/vscodeclaude/`
-- [ ] Verify `tests/utils/vscodeclaude/` is empty
-- [ ] Delete `tests/utils/vscodeclaude/` directory
-- [ ] Confirm `tests/workflows/vscodeclaude/` contains all 13 files
-- [ ] Run pylint check and fix any issues
-- [ ] Run pytest check and fix any issues
-- [ ] Run mypy check and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Move all 13 test files from `tests/utils/vscodeclaude/` to `tests/workflows/vscodeclaude/`
+- [x] Verify `tests/utils/vscodeclaude/` is empty
+- [x] Delete `tests/utils/vscodeclaude/` directory
+- [x] Confirm `tests/workflows/vscodeclaude/` contains all 13 files
+- [x] Run pylint check and fix any issues
+- [x] Run pytest check and fix any issues
+- [x] Run mypy check and fix any issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Verification Checks
 See [step_2.md](./steps/step_2.md) for details.
