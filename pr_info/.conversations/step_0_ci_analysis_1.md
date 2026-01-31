@@ -1,9 +1,0 @@
-# CI Failure Analysis
-
-The CI pipeline failed in the unit-tests job due to 3 test failures related to function signature changes. The tests are failing because mock assertions expect functions to be called without a `base_branch` parameter, but the actual implementation now passes `base_branch=None` explicitly.
-
-The failing tests are in `tests/workflows/create_plan/test_branch_management.py` (two tests: `test_manage_branch_create_new_branch` and `test_manage_branch_create_failure`) and `tests/workflows/create_plan/test_main.py` (one test: `test_main_logging_includes_issue_details`). The tests use `assert_called_once_with()` which performs exact argument matching, and they fail because the production code now includes an additional `base_branch=None` keyword argument that wasn't present when the tests were written.
-
-The root cause is that the `manage_branch()` function in `src/mcp_coder/workflows/create_plan/create_plan.py` and the `create_remote_branch_for_issue()` method were modified to accept a new `base_branch` parameter, but the corresponding test mocks were not updated to expect this new parameter. The fix requires updating the test assertions to include `base_branch=None` in the expected calls, or alternatively using `assert_called_once()` followed by checking specific arguments if only certain parameters need verification.
-
-Files that need changes: `tests/workflows/create_plan/test_branch_management.py` (lines 58 and 80) and `tests/workflows/create_plan/test_main.py` (line 491). Each assertion should be updated from expecting calls like `create_remote_branch_for_issue(123)` to `create_remote_branch_for_issue(123, base_branch=None)`, and from `manage_branch(path, 123, 'Test Issue')` to `manage_branch(path, 123, 'Test Issue', base_branch=None)`.
