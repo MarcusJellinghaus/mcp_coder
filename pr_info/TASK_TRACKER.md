@@ -45,10 +45,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Write tests for `delete_pr_info_directory()` function
 - [x] Update tests for simplified `cleanup_repository()`
 - [x] Add `delete_pr_info_directory()` function
-- [ ] Simplify `cleanup_repository()` to use new function
-- [ ] Remove `delete_steps_directory()`, `delete_conversations_directory()`, `truncate_task_tracker()`
-- [ ] Remove obsolete tests
-- [ ] Run quality checks and fix any issues
+- [x] Simplify `cleanup_repository()` to use new function
+- [x] Remove `delete_steps_directory()`, `delete_conversations_directory()`, `truncate_task_tracker()`
+- [x] Remove obsolete tests
+- [x] Run quality checks and fix any issues
 
 ### Step 4: Update create_plan.py for Directory Lifecycle
 **File:** [step_4.md](./steps/step_4.md)
