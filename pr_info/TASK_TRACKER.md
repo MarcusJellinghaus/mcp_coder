@@ -39,11 +39,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Follows existing code patterns (resolve_project_dir, logging)
 
 ### Step 3: Update Slash Commands for Dynamic Base Branch
-- [ ] `implementation_review.md` uses dynamic base branch for diff - [step_3.md](./steps/step_3.md)
-- [ ] `rebase.md` uses dynamic base branch for rebase
-- [ ] `check_branch_status.md` text updated (no hardcoded "main")
-- [ ] All markdown formatting preserved
-- [ ] Commands remain functional with same allowed-tools
+- [x] `implementation_review.md` uses dynamic base branch for diff - [step_3.md](./steps/step_3.md)
+- [x] `rebase.md` uses dynamic base branch for rebase
+- [x] `check_branch_status.md` text updated (no hardcoded "main")
+- [x] All markdown formatting preserved
+- [x] Commands remain functional with same allowed-tools
 
 ### Step 4: Update Documentation
 - [ ] `docs/cli-reference.md` has new `gh-tool get-base-branch` section - [step_4.md](./steps/step_4.md)
