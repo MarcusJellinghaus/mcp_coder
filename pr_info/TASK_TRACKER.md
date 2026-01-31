@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [x] Write tests for failing when pr_info/ folder missing
 - [x] Write tests for validation of existing tracker
-- [ ] Update `check_prerequisites()` to fail if pr_info/ missing
-- [ ] Update `check_prerequisites()` to validate existing tracker
-- [ ] Run quality checks and fix any issues
+- [x] Update `check_prerequisites()` to fail if pr_info/ missing
+- [x] Update `check_prerequisites()` to validate existing tracker
+- [x] Run quality checks and fix any issues
 
 ### Step 3: Simplify create_pr/core.py Cleanup
 **File:** [step_3.md](./steps/step_3.md)
