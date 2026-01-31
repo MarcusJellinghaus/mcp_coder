@@ -103,24 +103,19 @@ class TestCreatePRWorkflowIntegration:
         # Import cleanup functions
         from mcp_coder.workflows.create_pr.core import (
             cleanup_repository,
-            delete_steps_directory,
-            truncate_task_tracker,
+            delete_pr_info_directory,
         )
 
-        # Test individual cleanup operations
-        assert delete_steps_directory(project_dir)
-        assert not (project_dir / "pr_info" / "steps").exists()
+        # Test delete_pr_info_directory operation
+        assert delete_pr_info_directory(project_dir)
+        assert not (project_dir / "pr_info").exists()
 
         # Recreate for full cleanup test
         self._setup_project_with_steps(project_dir)
 
-        # Test full cleanup
+        # Test full cleanup - should delete entire pr_info directory
         assert cleanup_repository(project_dir)
-        assert not (project_dir / "pr_info" / "steps").exists()
-
-        # Check task tracker truncation
-        tracker_content = (project_dir / "pr_info" / "TASK_TRACKER.md").read_text()
-        assert tracker_content.strip().endswith("## Tasks")
+        assert not (project_dir / "pr_info").exists()
 
     @pytest.mark.git_integration
     def test_pr_summary_generation_with_diff(self, git_repo: tuple[Any, Path]) -> None:
@@ -313,10 +308,10 @@ class TestWorkflowErrorHandling:
         # Should handle missing files without crashing
         assert not check_prerequisites(project_dir)  # Should return False, not crash
 
-        # Cleanup should handle missing directories
-        assert not cleanup_repository(
+        # Cleanup should handle missing directories gracefully (returns True for no-op)
+        assert cleanup_repository(
             project_dir
-        )  # Should return False for missing files
+        )  # Should return True when nothing to clean
 
     @pytest.mark.git_integration
     def test_workflow_handles_permission_errors(
@@ -329,18 +324,16 @@ class TestWorkflowErrorHandling:
         pr_info_dir = project_dir / "pr_info"
         pr_info_dir.mkdir()
 
-        steps_dir = pr_info_dir / "steps"
-        steps_dir.mkdir()
-        (steps_dir / "test.md").write_text("test content")
+        (pr_info_dir / "TASK_TRACKER.md").write_text("# Task Tracker")
 
-        from mcp_coder.workflows.create_pr.core import delete_steps_directory
+        from mcp_coder.workflows.create_pr.core import delete_pr_info_directory
 
         # Mock permission error
         with patch("mcp_coder.workflows.create_pr.core.shutil.rmtree") as mock_rmtree:
             mock_rmtree.side_effect = PermissionError("Access denied")
 
             # Should return False and log error, not crash
-            result = delete_steps_directory(project_dir)
+            result = delete_pr_info_directory(project_dir)
             assert result is False
 
     def test_parse_pr_summary_edge_cases(self) -> None:

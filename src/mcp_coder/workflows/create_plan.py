@@ -24,6 +24,7 @@ from mcp_coder.utils.git_operations.remotes import git_push
 from mcp_coder.utils.git_operations.workflows import commit_all_changes
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -161,34 +162,60 @@ def manage_branch(
         return None
 
 
-def verify_steps_directory(project_dir: Path) -> bool:
-    """Verify pr_info/steps/ directory is empty or doesn't exist.
+def check_pr_info_not_exists(project_dir: Path) -> bool:
+    """Check that pr_info/ directory does not exist.
 
     Args:
         project_dir: Path to the project directory
 
     Returns:
-        True if empty/non-existent, False if contains files
+        True if pr_info/ does not exist, False if it exists
     """
-    steps_dir = project_dir / "pr_info" / "steps"
+    pr_info_dir = project_dir / "pr_info"
 
-    # If directory doesn't exist, that's fine
-    if not steps_dir.exists():
-        logger.debug("Directory pr_info/steps/ does not exist (OK)")
+    return not pr_info_dir.exists()
+
+
+def create_pr_info_structure(project_dir: Path) -> bool:
+    """Create pr_info/ directory structure and TASK_TRACKER.md.
+
+    Creates:
+    - pr_info/
+    - pr_info/steps/
+    - pr_info/.conversations/
+    - pr_info/TASK_TRACKER.md (from template)
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        True if successful, False on error
+    """
+    try:
+        # Build base path
+        pr_info_dir = project_dir / "pr_info"
+
+        # Create pr_info/ directory
+        pr_info_dir.mkdir(parents=True, exist_ok=False)
+
+        # Create pr_info/steps/ directory
+        steps_dir = pr_info_dir / "steps"
+        steps_dir.mkdir()
+
+        # Create pr_info/.conversations/ directory
+        conversations_dir = pr_info_dir / ".conversations"
+        conversations_dir.mkdir()
+
+        # Write TASK_TRACKER_TEMPLATE to pr_info/TASK_TRACKER.md
+        task_tracker_path = pr_info_dir / "TASK_TRACKER.md"
+        task_tracker_path.write_text(TASK_TRACKER_TEMPLATE, encoding="utf-8")
+
+        logger.info("Created pr_info/ directory structure successfully")
         return True
 
-    # Check if directory is empty
-    files = list(steps_dir.iterdir())
-    if len(files) == 0:
-        logger.debug("Directory pr_info/steps/ is empty (OK)")
-        return True
-
-    # Directory contains files - this is an error
-    logger.error("Directory pr_info/steps/ contains files. Please clean manually.")
-    for file in files:
-        logger.error("  - %s", file.name)
-
-    return False
+    except Exception as e:
+        logger.error(f"Failed to create pr_info/ directory structure: {e}")
+        return False
 
 
 def _load_prompt_or_exit(header: str) -> str:
@@ -561,10 +588,16 @@ def run_create_plan_workflow(
         logger.error("Branch management failed")
         return 1
 
-    # Step 3: Verify pr_info/steps/ is empty
-    logger.info("Step 3/7: Verifying pr_info/steps/ is empty...")
-    if not verify_steps_directory(project_dir):
-        logger.error("Steps directory verification failed")
+    # Step 3: Check pr_info/ doesn't exist and create structure
+    logger.info("Step 3/7: Setting up pr_info/ directory structure...")
+    if not check_pr_info_not_exists(project_dir):
+        logger.error(
+            "pr_info/ directory already exists. Please clean up before creating a new plan."
+        )
+        return 1
+
+    if not create_pr_info_structure(project_dir):
+        logger.error("Failed to create pr_info/ directory structure")
         return 1
 
     # Step 4: Run initial analysis

@@ -1,5 +1,6 @@
 """Tests for implement workflow prerequisites checking."""
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -245,6 +246,75 @@ class TestHasImplementationTasks:
         assert result is False
 
 
+class TestCheckPrerequisitesTaskTracker:
+    """Tests for task tracker validation in check_prerequisites."""
+
+    def test_fails_when_pr_info_missing(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test returns False when pr_info/ folder is missing."""
+        # Setup: git repo without pr_info/ dir
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+
+        # Call check_prerequisites()
+        result = check_prerequisites(tmp_path)
+
+        # Assert: returns False, logs "folder pr_info not found. Run 'create_plan' first."
+        assert result is False
+        assert "folder pr_info not found. Run 'create_plan' first." in caplog.text
+
+    def test_validates_existing_tracker_success(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test validation passes for valid existing tracker."""
+        # Setup: git repo with valid TASK_TRACKER.md
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        pr_info_dir = tmp_path / "pr_info"
+        pr_info_dir.mkdir()
+        task_tracker = pr_info_dir / "TASK_TRACKER.md"
+        # Valid tracker with required sections
+        task_tracker.write_text(
+            "# Task Status Tracker\n\n"
+            "## Tasks\n\n"
+            "- [ ] Test task\n\n"
+            "## Pull Request\n"
+        )
+
+        # Call check_prerequisites() with INFO level logging captured
+        with caplog.at_level(logging.INFO):
+            result = check_prerequisites(tmp_path)
+
+        # Assert: returns True, file unchanged
+        assert result is True
+        assert "Task tracker structure validated" in caplog.text
+
+    def test_validates_existing_tracker_failure(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test validation fails for invalid tracker structure."""
+        # Setup: git repo with TASK_TRACKER.md missing ## Tasks header
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        pr_info_dir = tmp_path / "pr_info"
+        pr_info_dir.mkdir()
+        task_tracker = pr_info_dir / "TASK_TRACKER.md"
+        # Invalid tracker - missing ## Tasks section
+        task_tracker.write_text(
+            "# Task Status Tracker\n\n"
+            "Some content without proper sections\n\n"
+            "## Pull Request\n"
+        )
+
+        # Call check_prerequisites()
+        result = check_prerequisites(tmp_path)
+
+        # Assert: returns False, logs error
+        assert result is False
+        assert "Invalid task tracker structure" in caplog.text
+
+
 class TestIntegration:
     """Integration tests combining multiple prerequisite checks."""
 
@@ -264,6 +334,10 @@ class TestIntegration:
             patch(
                 "mcp_coder.workflows.implement.prerequisites.get_default_branch_name",
                 return_value="main",
+            ),
+            patch(
+                "mcp_coder.workflows.implement.prerequisites.validate_task_tracker",
+                return_value=None,
             ),
             patch(
                 "mcp_coder.workflows.implement.prerequisites._read_task_tracker",

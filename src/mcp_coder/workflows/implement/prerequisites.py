@@ -15,9 +15,11 @@ from mcp_coder.utils import (
     is_working_directory_clean,
 )
 from mcp_coder.workflow_utils.task_tracker import (
+    TaskTrackerSectionNotFoundError,
     _find_implementation_section,
     _parse_task_lines,
     _read_task_tracker,
+    validate_task_tracker,
 )
 
 from .constants import PR_INFO_DIR
@@ -117,6 +119,10 @@ def check_main_branch(project_dir: Path) -> bool:
 def check_prerequisites(project_dir: Path) -> bool:
     """Verify dependencies and prerequisites are met.
 
+    Now also handles TASK_TRACKER.md lifecycle:
+    - Fails if pr_info/ folder is missing (must run create_plan first)
+    - Validates structure of existing TASK_TRACKER.md
+
     Args:
         project_dir: Path to the project directory
 
@@ -135,10 +141,24 @@ def check_prerequisites(project_dir: Path) -> bool:
         logger.error(f"Not a git repository: {project_dir}")
         return False
 
-    # Check if task tracker exists
-    task_tracker_path = project_dir / PR_INFO_DIR / "TASK_TRACKER.md"
+    # Check pr_info directory exists (created by create_plan workflow)
+    pr_info_path = project_dir / PR_INFO_DIR
+    if not pr_info_path.exists():
+        logger.error("folder pr_info not found. Run 'create_plan' first.")
+        return False
+
+    # Check TASK_TRACKER.md exists
+    task_tracker_path = pr_info_path / "TASK_TRACKER.md"
     if not task_tracker_path.exists():
         logger.error(f"{task_tracker_path} not found")
+        return False
+
+    # Validate existing structure
+    try:
+        validate_task_tracker(str(pr_info_path))
+        logger.info("Task tracker structure validated")
+    except TaskTrackerSectionNotFoundError as e:
+        logger.error(f"Invalid task tracker structure: {e}")
         return False
 
     logger.info("Prerequisites check passed")

@@ -33,9 +33,8 @@ from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 logger = logging.getLogger(__name__)
 
 
-def delete_steps_directory(project_dir: Path) -> bool:
-    """
-    Delete the pr_info/steps/ directory and all its contents.
+def delete_pr_info_directory(project_dir: Path) -> bool:
+    """Delete the entire pr_info/ directory and all its contents.
 
     Args:
         project_dir: Path to the project root directory
@@ -43,55 +42,24 @@ def delete_steps_directory(project_dir: Path) -> bool:
     Returns:
         True if successful or directory doesn't exist, False on error
     """
-    steps_dir = project_dir / "pr_info" / "steps"
+    pr_info_dir = project_dir / "pr_info"
 
     # If directory doesn't exist, consider it success (no-op)
-    if not steps_dir.exists():
-        logger.info(f"Directory {steps_dir} does not exist - nothing to delete")
+    if not pr_info_dir.exists():
+        logger.info(f"Directory {pr_info_dir} does not exist - nothing to delete")
         return True
 
     try:
         # Remove the entire directory tree
-        shutil.rmtree(steps_dir)
-        logger.info(f"Successfully deleted directory: {steps_dir}")
+        shutil.rmtree(pr_info_dir)
+        logger.info(f"Successfully deleted directory: {pr_info_dir}")
         return True
 
     except PermissionError as e:
-        logger.error(f"Permission error deleting {steps_dir}: {e}")
+        logger.error(f"Permission error deleting {pr_info_dir}: {e}")
         return False
     except Exception as e:
-        logger.error(f"Error deleting {steps_dir}: {e}")
-        return False
-
-
-def delete_conversations_directory(project_dir: Path) -> bool:
-    """
-    Delete the pr_info/.conversations/ directory and all its contents.
-
-    Args:
-        project_dir: Path to the project root directory
-
-    Returns:
-        True if successful or directory doesn't exist, False on error
-    """
-    conversations_dir = project_dir / "pr_info" / ".conversations"
-
-    # If directory doesn't exist, consider it success (no-op)
-    if not conversations_dir.exists():
-        logger.info(f"Directory {conversations_dir} does not exist - nothing to delete")
-        return True
-
-    try:
-        # Remove the entire directory tree
-        shutil.rmtree(conversations_dir)
-        logger.info(f"Successfully deleted directory: {conversations_dir}")
-        return True
-
-    except PermissionError as e:
-        logger.error(f"Permission error deleting {conversations_dir}: {e}")
-        return False
-    except Exception as e:
-        logger.error(f"Error deleting {conversations_dir}: {e}")
+        logger.error(f"Error deleting {pr_info_dir}: {e}")
         return False
 
 
@@ -134,54 +102,6 @@ def clean_profiler_output(project_dir: Path) -> bool:
         return False
     except Exception as e:
         logger.error(f"Error cleaning {prof_dir}: {e}")
-        return False
-
-
-def truncate_task_tracker(project_dir: Path) -> bool:
-    """
-    Truncate TASK_TRACKER.md file, keeping only content before '## Tasks' section.
-
-    This function reads the TASK_TRACKER.md file, finds the '## Tasks' section,
-    and removes all content from that point onward, keeping the section header.
-
-    Args:
-        project_dir: Path to the project root directory
-
-    Returns:
-        True if successful, False on error or if file doesn't exist
-    """
-    tracker_path = project_dir / "pr_info" / "TASK_TRACKER.md"
-
-    # Check if file exists
-    if not tracker_path.exists():
-        logger.error(f"File {tracker_path} does not exist")
-        return False
-
-    try:
-        # Read the current content
-        content = tracker_path.read_text(encoding="utf-8")
-
-        # Find the "## Tasks" section
-        tasks_index = content.find("## Tasks")
-
-        if tasks_index == -1:
-            # No Tasks section found, append it at the end
-            logger.info("No '## Tasks' section found, appending empty section")
-            truncated_content = content.rstrip() + "\n\n## Tasks"
-        else:
-            # Keep everything before "## Tasks" and add the section header back
-            truncated_content = content[:tasks_index] + "## Tasks"
-
-        # Write the truncated content back
-        tracker_path.write_text(truncated_content, encoding="utf-8")
-        logger.info(f"Successfully truncated {tracker_path}")
-        return True
-
-    except PermissionError as e:
-        logger.error(f"Permission error accessing {tracker_path}: {e}")
-        return False
-    except Exception as e:
-        logger.error(f"Error truncating {tracker_path}: {e}")
         return False
 
 
@@ -406,9 +326,7 @@ def generate_pr_summary(
 
 
 def cleanup_repository(project_dir: Path) -> bool:
-    """
-    Clean up repository by deleting steps directory, conversations directory,
-    truncating task tracker, and cleaning profiler output.
+    """Clean up repository by deleting pr_info/ directory and profiler output.
 
     Args:
         project_dir: Path to project directory
@@ -417,31 +335,18 @@ def cleanup_repository(project_dir: Path) -> bool:
         True if all cleanup operations succeed, False otherwise
     """
     logger.info("Cleaning up repository...")
-
     success = True
 
-    # Delete steps directory
-    logger.info("Deleting pr_info/steps/ directory...")
-    if not delete_steps_directory(project_dir):
-        logger.error("Failed to delete steps directory")
+    # Delete entire pr_info/ directory
+    logger.info("Deleting pr_info/ directory...")
+    if not delete_pr_info_directory(project_dir):
+        logger.error("Failed to delete pr_info directory")
         success = False
 
-    # Truncate task tracker
-    logger.info("Truncating TASK_TRACKER.md...")
-    if not truncate_task_tracker(project_dir):
-        logger.error("Failed to truncate task tracker")
-        success = False
-
-    # Clean profiler output
+    # Clean profiler output (outside pr_info/)
     logger.info("Cleaning profiler output files...")
     if not clean_profiler_output(project_dir):
         logger.error("Failed to clean profiler output")
-        success = False
-
-    # Delete conversations directory
-    logger.info("Deleting pr_info/.conversations/ directory...")
-    if not delete_conversations_directory(project_dir):
-        logger.error("Failed to delete conversations directory")
         success = False
 
     if success:
