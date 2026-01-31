@@ -12,7 +12,7 @@ Each step file contains detailed WHERE/WHAT/HOW specifications.
 ## Tasks
 
 ### Step 1: Re-export Exceptions and Migrate Production Code
-- [ ] Task 1.1: Add exception re-exports to `subprocess_runner.py`
+- [x] Task 1.1: Add exception re-exports to `subprocess_runner.py`
 - [ ] Task 1.2: Migrate `commits.py` to use `execute_command()`
 - [ ] Task 1.3: Remove fallback subprocess calls from `claude_executable_finder.py`
 - [ ] Task 1.4: Change exception imports in `task_processing.py`

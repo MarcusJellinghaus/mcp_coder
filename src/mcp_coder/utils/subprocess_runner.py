@@ -17,6 +17,20 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# Re-export for external use (allows catching without direct subprocess import)
+from subprocess import CalledProcessError, SubprocessError, TimeoutExpired
+
+__all__ = [
+    "CommandResult",
+    "CommandOptions",
+    "execute_command",
+    "execute_subprocess",
+    # Re-exported exceptions
+    "CalledProcessError",
+    "SubprocessError",
+    "TimeoutExpired",
+]
+
 logger = logging.getLogger(__name__)
 
 
