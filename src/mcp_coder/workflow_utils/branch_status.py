@@ -60,8 +60,11 @@ class BranchStatusReport:
         tasks_icon = "✅" if self.tasks_complete else "❌"
         tasks_status_text = "COMPLETE" if self.tasks_complete else "INCOMPLETE"
 
-        # Build the report sections
+        # Build the report sections - Branch info first
         lines = [
+            f"Branch: {self.branch_name}",
+            f"Base Branch: {self.base_branch}",
+            "",
             "Branch Status Report",
             "",
             f"CI Status: {ci_icon} {self.ci_status}",
@@ -110,7 +113,9 @@ class BranchStatusReport:
         )
         recommendations_text = ", ".join(self.recommendations)
 
+        # Branch info on first line
         lines = [
+            f"Branch: {self.branch_name} | Base: {self.base_branch}",
             status_summary,
             f"GitHub Label: {self.current_github_label}",
             f"Recommendations: {recommendations_text}",
