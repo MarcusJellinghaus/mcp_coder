@@ -245,6 +245,25 @@ class TestHasImplementationTasks:
         assert result is False
 
 
+class TestCheckPrerequisitesTaskTracker:
+    """Tests for task tracker validation in check_prerequisites."""
+
+    def test_fails_when_pr_info_missing(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test returns False when pr_info/ folder is missing."""
+        # Setup: git repo without pr_info/ dir
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+
+        # Call check_prerequisites()
+        result = check_prerequisites(tmp_path)
+
+        # Assert: returns False, logs "folder pr_info not found. Run 'create_plan' first."
+        assert result is False
+        assert "folder pr_info not found. Run 'create_plan' first." in caplog.text
+
+
 class TestIntegration:
     """Integration tests combining multiple prerequisite checks."""
 

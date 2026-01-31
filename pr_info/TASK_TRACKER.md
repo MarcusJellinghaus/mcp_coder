@@ -33,7 +33,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: Update prerequisites.py for Validation
 **File:** [step_2.md](./steps/step_2.md)
 
-- [ ] Write tests for failing when pr_info/ folder missing
+- [x] Write tests for failing when pr_info/ folder missing
 - [ ] Write tests for validation of existing tracker
 - [ ] Update `check_prerequisites()` to fail if pr_info/ missing
 - [ ] Update `check_prerequisites()` to validate existing tracker
