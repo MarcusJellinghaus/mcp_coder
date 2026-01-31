@@ -342,7 +342,7 @@ def process_eligible_issues(
     )
 
     # Get all cached issues and filter for vscodeclaude eligibility
-    from ...cli.commands.coordinator.core import get_cache_refresh_minutes
+    from ...utils.user_config import get_cache_refresh_minutes
 
     all_cached_issues = get_all_cached_issues(
         repo_full_name=repo_full_name,

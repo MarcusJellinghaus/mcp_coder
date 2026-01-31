@@ -384,7 +384,7 @@ def _build_cached_issues_by_repo(
     Returns:
         Dict mapping repo_full_name to {issue_number: IssueData}
     """
-    from .core import get_cache_refresh_minutes
+    from ....utils.user_config import get_cache_refresh_minutes
 
     cached_issues_by_repo: dict[str, dict[int, IssueData]] = {}
 

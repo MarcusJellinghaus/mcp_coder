@@ -42,7 +42,6 @@ from .commands import (
 from .core import (
     _filter_eligible_issues,
     dispatch_workflow,
-    get_cache_refresh_minutes,
     get_cached_eligible_issues,
     get_eligible_issues,
     get_jenkins_credentials,
@@ -93,7 +92,6 @@ __all__ = [
     "load_repo_config",
     "validate_repo_config",
     "get_jenkins_credentials",
-    "get_cache_refresh_minutes",
     # Constants and templates
     "DEFAULT_TEST_COMMAND",
     "DEFAULT_TEST_COMMAND_WINDOWS",

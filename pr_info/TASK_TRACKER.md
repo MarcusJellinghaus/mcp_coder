@@ -27,13 +27,13 @@ See [step_1.md](./steps/step_1.md) for details.
 - [x] Copy `get_cache_refresh_minutes()` function to `utils/user_config.py`
 - [x] Remove late-binding - use direct `get_config_values` call
 - [x] Remove function from `coordinator/core.py`
-- [ ] Remove `get_cache_refresh_minutes` from `coordinator/__init__.py` exports
-- [ ] Add tests for moved function in `tests/utils/test_user_config.py`
-- [ ] Update test patches in `tests/cli/commands/coordinator/test_core.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any issues
-- [ ] Run mypy and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Remove `get_cache_refresh_minutes` from `coordinator/__init__.py` exports
+- [x] Add tests for moved function in `tests/utils/test_user_config.py`
+- [x] Update test patches in `tests/cli/commands/coordinator/test_core.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any issues
+- [x] Run mypy and fix any issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Create workflows/vscodeclaude/ Package Structure
 See [step_2.md](./steps/step_2.md) for details.

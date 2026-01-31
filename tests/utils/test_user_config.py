@@ -10,6 +10,7 @@ import pytest
 from mcp_coder.utils.user_config import (
     _format_toml_error,
     create_default_config,
+    get_cache_refresh_minutes,
     get_config_file_path,
     get_config_values,
     load_config,
@@ -659,3 +660,100 @@ class TestCreateDefaultConfig:
         # Execute & Verify - Should raise OSError
         with pytest.raises(OSError):
             create_default_config()
+
+
+class TestGetCacheRefreshMinutes:
+    """Tests for get_cache_refresh_minutes function."""
+
+    def test_get_cache_refresh_minutes_default(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns 1440 when config not set."""
+        # Setup - empty config file
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("", encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = get_cache_refresh_minutes()
+
+        # Verify
+        assert result == 1440
+
+    def test_get_cache_refresh_minutes_from_config(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns configured value when set."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[coordinator]\ncache_refresh_minutes = 60\n", encoding="utf-8"
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = get_cache_refresh_minutes()
+
+        # Verify
+        assert result == 60
+
+    def test_get_cache_refresh_minutes_invalid_value(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns 1440 for non-integer values."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[coordinator]\ncache_refresh_minutes = "not_a_number"\n', encoding="utf-8"
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = get_cache_refresh_minutes()
+
+        # Verify
+        assert result == 1440
+
+    def test_get_cache_refresh_minutes_negative_value(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns 1440 for negative values."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[coordinator]\ncache_refresh_minutes = -10\n", encoding="utf-8"
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = get_cache_refresh_minutes()
+
+        # Verify
+        assert result == 1440
+
+    def test_get_cache_refresh_minutes_zero_value(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns 1440 for zero value."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[coordinator]\ncache_refresh_minutes = 0\n", encoding="utf-8"
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = get_cache_refresh_minutes()
+
+        # Verify
+        assert result == 1440
