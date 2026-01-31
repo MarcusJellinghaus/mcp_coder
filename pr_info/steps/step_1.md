@@ -40,7 +40,7 @@ mcp__filesystem__move_file(
 1. For each file in tests/utils/vscodeclaude/:
    - Call mcp__filesystem__move_file(source, destination)
 2. Verify tests/utils/vscodeclaude/ is empty
-3. Delete tests/utils/vscodeclaude/ directory
+3. Delete tests/utils/vscodeclaude/ directory using mcp__filesystem__delete_this_file
 4. Confirm tests/workflows/vscodeclaude/ contains all 13 files
 ```
 
@@ -52,7 +52,10 @@ mcp__filesystem__move_file(
 
 ## Cleanup
 
-Delete empty directory: `tests/utils/vscodeclaude/`
+Delete empty directory using:
+```
+mcp__filesystem__delete_this_file(file_path="tests/utils/vscodeclaude")
+```
 
 ---
 
@@ -78,7 +81,7 @@ Files to move:
 - test_types.py
 - test_workspace.py
 
-After moving all files, delete the tests/utils/vscodeclaude/ directory.
+After moving all files, delete the tests/utils/vscodeclaude/ directory using mcp__filesystem__delete_this_file.
 
 Do not modify any file contents - this is a pure move operation.
 ```
