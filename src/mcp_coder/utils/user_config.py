@@ -4,6 +4,7 @@ This module provides functions to read user configuration from TOML files
 located in user-specific configuration directories.
 """
 
+import logging
 import os
 import platform
 import tomllib
@@ -324,3 +325,36 @@ executor_os = "linux"
     config_path.write_text(template, encoding="utf-8")
 
     return True
+
+
+# Module-level logger for configuration functions
+logger = logging.getLogger(__name__)
+
+
+def get_cache_refresh_minutes() -> int:
+    """Get cache refresh threshold from config with default fallback.
+
+    Returns:
+        Cache refresh threshold in minutes (default: 1440 = 24 hours)
+    """
+    config = get_config_values([("coordinator", "cache_refresh_minutes", None)])
+    value = config[("coordinator", "cache_refresh_minutes")]
+
+    if value is None:
+        return 1440  # Default: 24 hours
+
+    try:
+        result = int(value)
+        if result <= 0:
+            logger.warning(
+                f"Invalid cache_refresh_minutes value '{value}' (must be positive), "
+                "using default 1440"
+            )
+            return 1440
+        return result
+    except (ValueError, TypeError):
+        logger.warning(
+            f"Invalid cache_refresh_minutes value '{value}' (must be integer), "
+            "using default 1440"
+        )
+        return 1440
