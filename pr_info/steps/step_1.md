@@ -107,6 +107,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 """
 ```
 
+**Note:** This exact template was confirmed in [Decisions.md](./Decisions.md) (Decision 5).
+
 ---
 
 ## Part C: Implement Validation Function

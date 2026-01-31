@@ -11,9 +11,11 @@ Follow TDD - write tests first, then implement.
 
 ## Overview
 
-Modify `check_prerequisites()` in the implement workflow to handle task tracker lifecycle:
-- Create from template if missing
-- Validate structure if exists
+Modify `check_prerequisites()` in the implement workflow to validate task tracker:
+- Fail if `pr_info/` folder is missing (must run `create_plan` first)
+- Validate structure of existing `TASK_TRACKER.md`
+
+**Note:** See [Decisions.md](./Decisions.md) (Decision 1) - no directory creation, only validation.
 
 ---
 
@@ -29,13 +31,13 @@ Add tests for template creation and validation behavior.
 
 ```python
 class TestCheckPrerequisitesTaskTracker:
-    """Tests for task tracker handling in check_prerequisites."""
+    """Tests for task tracker validation in check_prerequisites."""
 
-    def test_creates_tracker_from_template_when_missing(self) -> None:
-        """Test TASK_TRACKER.md is created from template when missing."""
-        # Setup: git repo with pr_info/ dir but no TASK_TRACKER.md
+    def test_fails_when_pr_info_missing(self) -> None:
+        """Test returns False when pr_info/ folder is missing."""
+        # Setup: git repo without pr_info/ dir
         # Call check_prerequisites()
-        # Assert: TASK_TRACKER.md exists with template content
+        # Assert: returns False, logs "folder pr_info not found. Run 'create_plan' first."
 
     def test_validates_existing_tracker_success(self) -> None:
         """Test validation passes for valid existing tracker."""
@@ -48,12 +50,6 @@ class TestCheckPrerequisitesTaskTracker:
         # Setup: git repo with TASK_TRACKER.md missing ## Pull Request header
         # Call check_prerequisites()
         # Assert: returns False, logs error
-
-    def test_creates_pr_info_dir_if_missing(self) -> None:
-        """Test pr_info/ directory is created if missing."""
-        # Setup: git repo without pr_info/ dir
-        # Call check_prerequisites()
-        # Assert: pr_info/ created, TASK_TRACKER.md created from template
 ```
 
 ---
@@ -69,7 +65,6 @@ Modify `check_prerequisites()` function.
 ### New Imports
 ```python
 from mcp_coder.workflow_utils.task_tracker import (
-    TASK_TRACKER_TEMPLATE,
     TaskTrackerSectionNotFoundError,
     validate_task_tracker,
     # existing imports...
@@ -79,10 +74,10 @@ from mcp_coder.workflow_utils.task_tracker import (
 ### ALGORITHM
 ```
 1. Check if pr_info/ directory exists
-2. If not exists: create pr_info/ directory
+2. If not exists: log error "folder pr_info not found. Run 'create_plan' first.", return False
 3. Check if TASK_TRACKER.md exists
-4. If not exists: write TASK_TRACKER_TEMPLATE to file, log info
-5. If exists: call validate_task_tracker()
+4. If not exists: log error, return False
+5. Call validate_task_tracker() to validate structure
 6. If validation raises exception: log error, return False
 7. Continue with existing checks (git repo, etc.)
 ```
@@ -122,34 +117,33 @@ if not task_tracker_path.exists():
 
 ### New Behavior
 ```python
-# Ensure pr_info directory exists
+# Check pr_info directory exists (created by create_plan workflow)
 pr_info_path = project_dir / PR_INFO_DIR
 if not pr_info_path.exists():
-    pr_info_path.mkdir(parents=True)
-    logger.info(f"Created {pr_info_path} directory")
+    logger.error("folder pr_info not found. Run 'create_plan' first.")
+    return False
 
-# Handle TASK_TRACKER.md lifecycle
+# Check TASK_TRACKER.md exists
 task_tracker_path = pr_info_path / "TASK_TRACKER.md"
 if not task_tracker_path.exists():
-    # Create from template
-    task_tracker_path.write_text(TASK_TRACKER_TEMPLATE, encoding="utf-8")
-    logger.info(f"Created {task_tracker_path} from template")
-else:
-    # Validate existing structure
-    try:
-        validate_task_tracker(str(pr_info_path))
-        logger.info("Task tracker structure validated")
-    except TaskTrackerSectionNotFoundError as e:
-        logger.error(f"Invalid task tracker structure: {e}")
-        return False
+    logger.error(f"{task_tracker_path} not found")
+    return False
+
+# Validate existing structure
+try:
+    validate_task_tracker(str(pr_info_path))
+    logger.info("Task tracker structure validated")
+except TaskTrackerSectionNotFoundError as e:
+    logger.error(f"Invalid task tracker structure: {e}")
+    return False
 ```
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] `check_prerequisites()` creates `pr_info/` directory if missing
-- [ ] `check_prerequisites()` creates `TASK_TRACKER.md` from template if missing
+- [ ] `check_prerequisites()` fails with clear error if `pr_info/` folder missing
+- [ ] `check_prerequisites()` fails if `TASK_TRACKER.md` missing
 - [ ] `check_prerequisites()` validates existing tracker structure
 - [ ] Returns `False` with clear error if validation fails
 - [ ] All tests pass

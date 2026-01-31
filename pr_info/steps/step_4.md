@@ -39,10 +39,11 @@ class TestPrInfoDirectoryLifecycle:
         # Assert: returns error code, logs clear error message
 
     def test_creates_pr_info_directory_structure(self) -> None:
-        """Test workflow creates pr_info/, steps/, .conversations/ directories."""
+        """Test workflow creates pr_info/, steps/, .conversations/ directories and TASK_TRACKER.md."""
         # Setup: temp dir without pr_info/
-        # Call create_pr_info_structure() or equivalent
+        # Call create_pr_info_structure()
         # Assert: all three directories exist
+        # Assert: TASK_TRACKER.md exists with template content
 
     def test_error_message_is_clear(self) -> None:
         """Test error message tells user to clean up manually."""
@@ -86,15 +87,21 @@ def check_pr_info_not_exists(project_dir: Path) -> bool:
 ### WHERE
 `src/mcp_coder/workflows/create_plan.py`
 
+### New Import
+```python
+from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
+```
+
 ### WHAT
 ```python
 def create_pr_info_structure(project_dir: Path) -> bool:
-    """Create pr_info/ directory structure.
+    """Create pr_info/ directory structure and TASK_TRACKER.md.
     
     Creates:
     - pr_info/
     - pr_info/steps/
     - pr_info/.conversations/
+    - pr_info/TASK_TRACKER.md (from template)
     
     Args:
         project_dir: Path to the project directory
@@ -110,9 +117,12 @@ def create_pr_info_structure(project_dir: Path) -> bool:
 2. Create pr_info/ directory
 3. Create pr_info/steps/ directory
 4. Create pr_info/.conversations/ directory
-5. Log success, return True
-6. On exception: log error, return False
+5. Write TASK_TRACKER_TEMPLATE to pr_info/TASK_TRACKER.md
+6. Log success, return True
+7. On exception: log error, return False
 ```
+
+**Note:** See [Decisions.md](./Decisions.md) (Decisions 3, 4, 5) for .conversations/, template creation, and template content.
 
 ---
 

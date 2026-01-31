@@ -30,12 +30,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [ ] Implement `validate_task_tracker()` function
 - [ ] Run quality checks and fix any issues
 
-### Step 2: Update prerequisites.py for Template Creation and Validation
+### Step 2: Update prerequisites.py for Validation
 **File:** [step_2.md](./steps/step_2.md)
 
-- [ ] Write tests for template creation when file missing
+- [ ] Write tests for failing when pr_info/ folder missing
 - [ ] Write tests for validation of existing tracker
-- [ ] Update `check_prerequisites()` to create template if missing
+- [ ] Update `check_prerequisites()` to fail if pr_info/ missing
 - [ ] Update `check_prerequisites()` to validate existing tracker
 - [ ] Run quality checks and fix any issues
 
@@ -54,9 +54,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 **File:** [step_4.md](./steps/step_4.md)
 
 - [ ] Write tests for pr_info existence check
-- [ ] Write tests for directory structure creation
+- [ ] Write tests for directory structure + TASK_TRACKER.md creation
 - [ ] Add `check_pr_info_not_exists()` function
-- [ ] Add `create_pr_info_structure()` function
+- [ ] Add `create_pr_info_structure()` function (creates dirs + TASK_TRACKER.md)
 - [ ] Update `run_create_plan_workflow()` to use new functions
 - [ ] Remove `verify_steps_directory()` function
 - [ ] Remove obsolete tests

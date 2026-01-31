@@ -3,9 +3,11 @@
 ## Overview
 
 This implementation improves the `pr_info/` folder lifecycle management across three workflows:
-- **Plan Creation**: Fail if `pr_info/` exists, create folder structure
-- **Implement Workflow**: Auto-create task tracker from template, validate structure
+- **Plan Creation**: Fail if `pr_info/` exists, create folder structure + TASK_TRACKER.md from template
+- **Implement Workflow**: Validate `pr_info/` exists and tracker structure (fail if missing)
 - **PR Creation**: Delete entire `pr_info/` folder (simplified cleanup)
+
+**Decisions:** See [Decisions.md](./Decisions.md) for all discussed decisions.
 
 ## Architectural Changes
 
@@ -15,11 +17,12 @@ This implementation improves the `pr_info/` folder lifecycle management across t
 ┌─────────────────┐
 │  Plan Creation  │ → Fail if pr_info/ exists
 │                 │ → Create pr_info/, steps/, .conversations/
+│                 │ → Create TASK_TRACKER.md from template
 └────────┬────────┘
          ▼
 ┌─────────────────┐
-│ check_prereqs   │ → Create TASK_TRACKER.md from template if missing
-│ (implement)     │ → Validate structure if exists
+│ check_prereqs   │ → Fail if pr_info/ folder missing
+│ (implement)     │ → Validate TASK_TRACKER.md structure
 └────────┬────────┘
          ▼
 ┌─────────────────┐
