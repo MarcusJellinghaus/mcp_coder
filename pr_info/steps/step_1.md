@@ -68,6 +68,9 @@ class TestGhToolCommandIntegration:
     
     def test_gh_tool_help_shows_get_base_branch() -> None:
         """Test that gh-tool --help shows get-base-branch subcommand."""
+    
+    def test_gh_tool_get_base_branch_help_shows_exit_codes() -> None:
+        """Test that get-base-branch --help shows exit codes in epilog."""
 ```
 
 ## HOW
@@ -154,4 +157,5 @@ def test_get_base_branch_from_open_pr(
 - [ ] All exit codes tested (0, 1, 2)
 - [ ] Output format tested (stdout only, no extra text)
 - [ ] CLI integration tested (command registered, help works)
+- [ ] Exit codes in --help epilog tested
 - [ ] Edge cases tested (detached HEAD, no issue number in branch)

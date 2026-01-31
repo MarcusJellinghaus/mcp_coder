@@ -49,7 +49,12 @@ gh_tool_subparsers = gh_tool_parser.add_subparsers(...)
 
 get_base_branch_parser = gh_tool_subparsers.add_parser(
     "get-base-branch",
-    help="Detect base branch for current feature branch"
+    help="Detect base branch for current feature branch",
+    formatter_class=WideHelpFormatter,
+    epilog="""Exit codes:
+  0  Success - base branch printed to stdout
+  1  Could not detect base branch
+  2  Error (not a git repo, API failure)"""
 )
 get_base_branch_parser.add_argument("--project-dir", ...)
 
@@ -144,6 +149,7 @@ def execute_get_base_branch(args: argparse.Namespace) -> int:
 - [ ] Command registered under `mcp-coder gh-tool get-base-branch`
 - [ ] Detection priority: PR → Issue → Default
 - [ ] Exit codes: 0 (success), 1 (no detection), 2 (error)
+- [ ] Exit codes documented in `--help` epilog
 - [ ] Output: branch name only to stdout
 - [ ] All tests from Step 1 pass
 - [ ] Follows existing code patterns (resolve_project_dir, logging)
