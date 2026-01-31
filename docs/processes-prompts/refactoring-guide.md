@@ -34,7 +34,18 @@ The only code changes should be:
 - Import statements in files that use the moved code
 - Re-exports in `__init__.py` files (if maintaining API compatibility)
 
-### 3. Small Steps
+### 3. Clean Deletion, No Legacy Artifacts
+
+When moving code to a new location:
+
+- **Delete the old files entirely** - Do not leave empty modules or stubs
+- **No deprecation warnings** - Update all consumers to use the new location directly
+- **No re-exports for backward compatibility** - This creates hidden dependencies and technical debt
+- **Update all imports immediately** - Every file that imported from the old location must be updated
+
+Clean code is preferred over gradual migration. If external packages depend on the old location, coordinate the change or document it as a breaking change.
+
+### 4. Small Steps
 
 LLMs struggle with large moves. Break refactoring into:
 
