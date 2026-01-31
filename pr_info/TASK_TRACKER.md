@@ -19,7 +19,7 @@ This tracks **Feature Implementation** for Issue #358: Refactor vscodeclaude - M
 
 ---
 
-## Implementation Steps
+## Tasks
 
 <!-- Tasks will be populated from pr_info/steps/ by prepare_task_tracker -->
 
