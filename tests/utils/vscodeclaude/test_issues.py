@@ -7,7 +7,7 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from mcp_coder.utils.vscodeclaude.issues import (
+from mcp_coder.workflows.vscodeclaude.issues import (
     _filter_eligible_vscodeclaude_issues,
     get_cached_eligible_vscodeclaude_issues,
     get_eligible_vscodeclaude_issues,
@@ -37,7 +37,7 @@ class TestIssueSelection:
             "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
         )()
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
+            "mcp_coder.workflows.vscodeclaude.issues._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -459,7 +459,7 @@ class TestGetCachedEligibleVscodeclaudeIssues:
         # Mock cache function
         mock_get_all_cached = Mock(return_value=cached_issues)
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues.get_all_cached_issues",
+            "mcp_coder.workflows.vscodeclaude.issues.get_all_cached_issues",
             mock_get_all_cached,
         )
 

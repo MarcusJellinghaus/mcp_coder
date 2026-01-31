@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from mcp_coder.utils.vscodeclaude.orchestrator import launch_vscode
+from mcp_coder.workflows.vscodeclaude.orchestrator import launch_vscode
 
 
 class TestLaunch:
@@ -20,7 +20,7 @@ class TestLaunch:
         mock_process.pid = 12345
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.subprocess.Popen",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.subprocess.Popen",
             lambda *args, **kwargs: mock_process,
         )
 

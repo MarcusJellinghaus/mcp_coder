@@ -8,7 +8,7 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from mcp_coder.utils.vscodeclaude.status import (
+from mcp_coder.workflows.vscodeclaude.status import (
     check_folder_dirty,
     display_status_table,
     get_issue_current_status,
@@ -16,7 +16,7 @@ from mcp_coder.utils.vscodeclaude.status import (
     is_issue_closed,
     is_session_stale,
 )
-from mcp_coder.utils.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 
 
 class TestStatusDisplay:
@@ -94,7 +94,7 @@ class TestStatusDisplay:
         mock_coordinator.IssueManager.return_value = mock_manager
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
+            "mcp_coder.workflows.vscodeclaude.status._get_coordinator",
             lambda: mock_coordinator,
         )
 
@@ -333,25 +333,25 @@ class TestStatusDisplay:
 
         # Mock is_issue_closed to return False (issue is open)
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status.is_issue_closed",
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
             lambda s, cached_issues=None: False,
         )
 
         # Mock check_vscode_running
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
             lambda pid: False,
         )
 
         # Mock check_folder_dirty
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status.check_folder_dirty",
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: False,
         )
 
         # Mock is_session_stale
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status.is_session_stale",
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
             lambda s, cached_issues=None: False,
         )
 

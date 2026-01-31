@@ -12,7 +12,7 @@ class TestTemplates:
 
     def test_startup_script_linux_has_placeholders(self) -> None:
         """Linux script has required placeholders."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             STARTUP_SCRIPT_LINUX,
         )
 
@@ -27,7 +27,7 @@ class TestTemplates:
 
     def test_automated_section_linux_has_placeholders(self) -> None:
         """Linux automated section has required placeholders."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             AUTOMATED_SECTION_LINUX,
         )
 
@@ -37,7 +37,7 @@ class TestTemplates:
 
     def test_interactive_section_linux_has_placeholders(self) -> None:
         """Linux interactive section has required placeholders."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             INTERACTIVE_SECTION_LINUX,
         )
 
@@ -46,7 +46,7 @@ class TestTemplates:
 
     def test_intervention_section_linux_content(self) -> None:
         """Linux intervention section has intervention warning."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             INTERVENTION_SECTION_LINUX,
         )
 
@@ -57,7 +57,7 @@ class TestTemplates:
     def test_workspace_file_is_valid_json_template(self) -> None:
         """Workspace template produces valid JSON when formatted."""
 
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             WORKSPACE_FILE_TEMPLATE,
         )
 
@@ -78,7 +78,7 @@ class TestTemplates:
 
     def test_tasks_json_is_valid_json_template(self) -> None:
         """Tasks template produces valid JSON when formatted."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             TASKS_JSON_TEMPLATE,
         )
 
@@ -94,7 +94,7 @@ class TestTemplates:
 
     def test_status_file_template_has_placeholders(self) -> None:
         """Status file template has required placeholders."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             STATUS_FILE_TEMPLATE,
         )
 
@@ -110,7 +110,7 @@ class TestTemplates:
 
     def test_status_file_template_formatting(self) -> None:
         """Status file template formats correctly."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             STATUS_FILE_TEMPLATE,
         )
 
@@ -136,7 +136,7 @@ class TestTemplates:
 
     def test_intervention_row_content(self) -> None:
         """Intervention row has correct content."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             INTERVENTION_ROW,
         )
 
@@ -144,7 +144,7 @@ class TestTemplates:
 
     def test_banner_template_has_placeholders(self) -> None:
         """Banner template has required placeholders."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             BANNER_TEMPLATE,
         )
 
@@ -157,7 +157,7 @@ class TestTemplates:
 
     def test_banner_template_formatting(self) -> None:
         """Banner template formats correctly."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             BANNER_TEMPLATE,
         )
 
@@ -181,7 +181,7 @@ class TestTemplates:
 
     def test_gitignore_entry_has_session_files(self) -> None:
         """Gitignore entry includes all generated files."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             GITIGNORE_ENTRY,
         )
 
@@ -197,7 +197,7 @@ class TestTemplatesV2:
 
     def test_venv_section_creates_venv_if_missing(self) -> None:
         """VENV_SECTION_WINDOWS creates venv when not present."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             VENV_SECTION_WINDOWS,
         )
 
@@ -207,7 +207,7 @@ class TestTemplatesV2:
 
     def test_venv_section_activates_existing_venv(self) -> None:
         """VENV_SECTION_WINDOWS activates existing venv."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             VENV_SECTION_WINDOWS,
         )
 
@@ -215,7 +215,7 @@ class TestTemplatesV2:
 
     def test_automated_section_v2_uses_mcp_coder_prompt(self) -> None:
         """AUTOMATED_SECTION_WINDOWS_V2 uses mcp-coder prompt."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             AUTOMATED_SECTION_WINDOWS_V2,
         )
 
@@ -225,7 +225,7 @@ class TestTemplatesV2:
 
     def test_automated_section_v2_captures_session_id(self) -> None:
         """AUTOMATED_SECTION_WINDOWS_V2 captures SESSION_ID."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             AUTOMATED_SECTION_WINDOWS_V2,
         )
 
@@ -234,7 +234,7 @@ class TestTemplatesV2:
 
     def test_discussion_section_uses_session_id(self) -> None:
         """DISCUSSION_SECTION_WINDOWS passes session-id."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             DISCUSSION_SECTION_WINDOWS,
         )
 
@@ -243,7 +243,7 @@ class TestTemplatesV2:
 
     def test_interactive_section_v2_uses_claude_resume(self) -> None:
         """INTERACTIVE_SECTION_WINDOWS_V2 uses claude --resume."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             INTERACTIVE_SECTION_WINDOWS_V2,
         )
 
@@ -251,7 +251,7 @@ class TestTemplatesV2:
 
     def test_startup_script_v2_has_all_sections(self) -> None:
         """STARTUP_SCRIPT_WINDOWS_V2 includes all section placeholders."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             STARTUP_SCRIPT_WINDOWS_V2,
         )
 
@@ -262,7 +262,7 @@ class TestTemplatesV2:
 
     def test_intervention_script_v2_has_warning(self) -> None:
         """INTERVENTION_SCRIPT_WINDOWS_V2 shows intervention warning."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             INTERVENTION_SCRIPT_WINDOWS_V2,
         )
 
@@ -272,7 +272,7 @@ class TestTemplatesV2:
 
     def test_templates_v2_include_timeout_placeholder(self) -> None:
         """V2 templates include {timeout} placeholder."""
-        from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+        from mcp_coder.workflows.vscodeclaude.templates import (
             AUTOMATED_SECTION_WINDOWS_V2,
             DISCUSSION_SECTION_WINDOWS,
         )

@@ -78,13 +78,13 @@ See [step_4.md](./steps/step_4.md) for details.
 
 - [x] Search for all patches containing "vscodeclaude" in tests/
 - [x] Search for patches of `get_cache_refresh_minutes` in tests/
-- [ ] Update patches: `utils.vscodeclaude` → `workflows.vscodeclaude`
-- [ ] Update patches: `coordinator.get_cache_refresh_minutes` → `utils.user_config.get_cache_refresh_minutes`
-- [ ] Update patches: `coordinator.vscodeclaude` → `workflows.vscodeclaude`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any issues
-- [ ] Run mypy and fix any issues
-- [ ] Prepare git commit message for Step 4
+- [x] Update patches: `utils.vscodeclaude` → `workflows.vscodeclaude`
+- [x] Update patches: `coordinator.get_cache_refresh_minutes` → `utils.user_config.get_cache_refresh_minutes`
+- [x] Update patches: `coordinator.vscodeclaude` → `workflows.vscodeclaude`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any issues
+- [x] Run mypy and fix any issues
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Final Verification
 See [step_5.md](./steps/step_5.md) for details.

@@ -8,8 +8,8 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from mcp_coder.utils.vscodeclaude.orchestrator import regenerate_session_files
-from mcp_coder.utils.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.orchestrator import regenerate_session_files
+from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 
 
 @pytest.mark.skipif(

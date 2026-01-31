@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.utils.vscodeclaude.sessions import (
+from mcp_coder.workflows.vscodeclaude.sessions import (
     add_session,
     check_vscode_running,
     get_active_session_count,
@@ -16,7 +16,7 @@ from mcp_coder.utils.vscodeclaude.sessions import (
     save_sessions,
     update_session_pid,
 )
-from mcp_coder.utils.vscodeclaude.types import (
+from mcp_coder.workflows.vscodeclaude.types import (
     VSCodeClaudeSession,
     VSCodeClaudeSessionStore,
 )
@@ -30,7 +30,7 @@ class TestSessionManagement:
     ) -> None:
         """Sessions file is in .mcp_coder on Windows."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.platform.system",
+            "mcp_coder.workflows.vscodeclaude.sessions.platform.system",
             lambda: "Windows",
         )
         path = get_sessions_file_path()
@@ -56,7 +56,7 @@ class TestSessionManagement:
     ) -> None:
         """Returns empty store when file doesn't exist."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: tmp_path / "nonexistent.json",
         )
         store = load_sessions()
@@ -226,7 +226,7 @@ class TestSessionManagement:
             return pid == 1111
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
             mock_check,
         )
 

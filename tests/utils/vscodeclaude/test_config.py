@@ -5,12 +5,12 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.utils.vscodeclaude.config import (
+from mcp_coder.workflows.vscodeclaude.config import (
     load_repo_vscodeclaude_config,
     load_vscodeclaude_config,
     sanitize_folder_name,
 )
-from mcp_coder.utils.vscodeclaude.types import DEFAULT_MAX_SESSIONS
+from mcp_coder.workflows.vscodeclaude.types import DEFAULT_MAX_SESSIONS
 
 
 class TestConfiguration:
@@ -35,7 +35,7 @@ class TestConfiguration:
             "MockCoordinator", (), {"get_config_values": mock_get_config_values}
         )()
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
+            "mcp_coder.workflows.vscodeclaude.config._get_coordinator",
             lambda: mock_coordinator,
         )
 
