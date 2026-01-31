@@ -8,11 +8,11 @@ import platform
 import shutil
 import subprocess
 from pathlib import Path
-from types import ModuleType
 
-from ..github_operations.issue_branch_manager import IssueBranchManager
-from ..github_operations.issue_cache import get_all_cached_issues
-from ..github_operations.issue_manager import IssueData, IssueManager
+from ...utils.github_operations.issue_branch_manager import IssueBranchManager
+from ...utils.github_operations.issue_cache import get_all_cached_issues
+from ...utils.github_operations.issue_manager import IssueData, IssueManager
+from ...utils.user_config import get_cache_refresh_minutes, load_config
 from .config import get_github_username, load_repo_vscodeclaude_config
 from .helpers import (
     build_session,
@@ -81,13 +81,6 @@ __all__ = [
     "_build_session",
     "_get_repo_short_name_from_full",
 ]
-
-
-def _get_coordinator() -> ModuleType:
-    """Get coordinator package for late binding of patchable functions."""
-    from mcp_coder.cli.commands import coordinator
-
-    return coordinator
 
 
 def launch_vscode(workspace_file: Path) -> int:
@@ -306,8 +299,6 @@ def process_eligible_issues(
     - Skipping issues with existing sessions
     - Starting new sessions up to max
     """
-    coordinator = _get_coordinator()
-
     # Apply repo filter if provided
     if repo_filter and repo_name != repo_filter:
         return []
@@ -328,7 +319,7 @@ def process_eligible_issues(
     # Get repo full name for session lookup
     repo_full_name = _get_repo_full_name(repo_config)
 
-    # Create managers using the classes from coordinator
+    # Create managers using direct imports
     # Build repo_url from repo_full_name for proper instantiation
     repo_url = f"https://github.com/{repo_full_name}"
     logger.debug(
@@ -336,14 +327,10 @@ def process_eligible_issues(
         repo_full_name,
         repo_url,
     )
-    issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
-    branch_manager: IssueBranchManager = coordinator.IssueBranchManager(
-        repo_url=repo_url
-    )
+    issue_manager = IssueManager(repo_url=repo_url)
+    branch_manager = IssueBranchManager(repo_url=repo_url)
 
     # Get all cached issues and filter for vscodeclaude eligibility
-    from ...cli.commands.coordinator.core import get_cache_refresh_minutes
-
     all_cached_issues = get_all_cached_issues(
         repo_full_name=repo_full_name,
         issue_manager=issue_manager,
@@ -499,8 +486,6 @@ def _get_configured_repos() -> set[str]:
     Returns:
         Set of repo full names in "owner/repo" format
     """
-    from ...utils.user_config import load_config
-
     config_data = load_config()
     repos_section = config_data.get("coordinator", {}).get("repos", {})
 
@@ -541,7 +526,6 @@ def restart_closed_sessions(
     """
     from .sessions import remove_session
 
-    coordinator = _get_coordinator()
     store = load_sessions()
     restarted: list[VSCodeClaudeSession] = []
 
@@ -621,9 +605,7 @@ def restart_closed_sessions(
             if repo_cached_issues and issue_number in repo_cached_issues:
                 issue = repo_cached_issues[issue_number]
             else:
-                issue_manager: IssueManager = coordinator.IssueManager(
-                    repo_url=repo_url
-                )
+                issue_manager = IssueManager(repo_url=repo_url)
                 issue = issue_manager.get_issue(issue_number)
 
             if issue["number"] == 0:

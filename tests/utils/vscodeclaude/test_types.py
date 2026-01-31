@@ -2,7 +2,7 @@
 
 import pytest
 
-from mcp_coder.utils.vscodeclaude.types import (
+from mcp_coder.workflows.vscodeclaude.types import (
     DEFAULT_MAX_SESSIONS,
     HUMAN_ACTION_COMMANDS,
     STAGE_DISPLAY_NAMES,

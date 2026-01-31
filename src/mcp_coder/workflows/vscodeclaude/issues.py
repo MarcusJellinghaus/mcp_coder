@@ -3,22 +3,15 @@
 import logging
 from importlib import resources
 from pathlib import Path
-from types import ModuleType
 from typing import Any
 
-from ..github_operations.issue_branch_manager import IssueBranchManager
-from ..github_operations.issue_cache import get_all_cached_issues
-from ..github_operations.issue_manager import IssueData, IssueManager
+from ...utils.github_operations.issue_branch_manager import IssueBranchManager
+from ...utils.github_operations.issue_cache import get_all_cached_issues
+from ...utils.github_operations.issue_manager import IssueData, IssueManager
+from ...utils.github_operations.label_config import load_labels_config
 from .types import VSCODECLAUDE_PRIORITY
 
 logger = logging.getLogger(__name__)
-
-
-def _get_coordinator() -> ModuleType:
-    """Get coordinator package for late binding of patchable functions."""
-    from mcp_coder.cli.commands import coordinator
-
-    return coordinator
 
 
 def _load_labels_config() -> dict[str, Any]:
@@ -27,10 +20,9 @@ def _load_labels_config() -> dict[str, Any]:
     Returns:
         Labels config dict with workflow_labels and ignore_labels
     """
-    coordinator = _get_coordinator()
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))
-    result: dict[str, Any] = coordinator.load_labels_config(config_path)
+    result: dict[str, Any] = load_labels_config(config_path)
     return result
 
 

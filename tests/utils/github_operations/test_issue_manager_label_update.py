@@ -95,7 +95,7 @@ def mock_git_operations() -> Mock:
 
 
 @pytest.fixture
-def mock_git_repo() -> Any:
+def _mock_git_repo() -> Any:
     """Mock is_git_repository to avoid subprocess calls.
 
     This fixture eliminates the need for actual git init in tests,
@@ -114,7 +114,7 @@ class TestIssueManagerLabelUpdate:
     def test_update_workflow_label_success_happy_path(
         self,
         mock_github: Mock,
-        mock_git_repo: Any,
+        _mock_git_repo: Any,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -182,7 +182,7 @@ class TestIssueManagerLabelUpdate:
     def test_update_workflow_label_invalid_branch_name(
         self,
         mock_github: Mock,
-        mock_git_repo: Any,
+        _mock_git_repo: Any,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -219,7 +219,7 @@ class TestIssueManagerLabelUpdate:
     def test_update_workflow_label_branch_not_linked(
         self,
         mock_github: Mock,
-        mock_git_repo: Any,
+        _mock_git_repo: Any,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -261,7 +261,7 @@ class TestIssueManagerLabelUpdate:
     def test_update_workflow_label_already_correct_state(
         self,
         mock_github: Mock,
-        mock_git_repo: Any,
+        _mock_git_repo: Any,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -318,7 +318,7 @@ class TestIssueManagerLabelUpdate:
     def test_update_workflow_label_missing_source_label(
         self,
         mock_github: Mock,
-        mock_git_repo: Any,
+        _mock_git_repo: Any,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -381,7 +381,7 @@ class TestIssueManagerLabelUpdate:
     def test_update_workflow_label_label_not_in_config(
         self,
         mock_github: Mock,
-        mock_git_repo: Any,
+        _mock_git_repo: Any,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -421,7 +421,7 @@ class TestIssueManagerLabelUpdate:
     def test_update_workflow_label_github_api_error(
         self,
         mock_github: Mock,
-        mock_git_repo: Any,
+        _mock_git_repo: Any,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -485,7 +485,7 @@ class TestIssueManagerLabelUpdate:
     def test_update_workflow_label_no_branch_provided(
         self,
         mock_github: Mock,
-        mock_git_repo: Any,
+        _mock_git_repo: Any,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -547,7 +547,7 @@ class TestIssueManagerLabelUpdate:
     def test_update_workflow_label_removes_different_workflow_label(
         self,
         mock_github: Mock,
-        mock_git_repo: Any,
+        _mock_git_repo: Any,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -629,7 +629,7 @@ class TestIssueManagerLabelUpdate:
             assert "Source label 'status-06:implementing' not present" in caplog.text
 
     def test_update_workflow_label_with_validated_issue_number(
-        self, mock_github: Mock, mock_git_repo: Any, tmp_path: Path
+        self, mock_github: Mock, _mock_git_repo: Any, tmp_path: Path
     ) -> None:
         """Tests that validated_issue_number skips branch linkage validation."""
         # Create mock issue data that get_issue will return
@@ -689,7 +689,7 @@ class TestIssueManagerLabelUpdate:
             assert "bug" in labels  # Other labels preserved
 
     def test_update_workflow_label_validated_issue_number_invalid(
-        self, mock_github: Mock, mock_git_repo: Any, tmp_path: Path
+        self, mock_github: Mock, _mock_git_repo: Any, tmp_path: Path
     ) -> None:
         """Tests that invalid validated_issue_number (non-existent issue) fails gracefully."""
         # Create empty issue data to simulate issue not found
@@ -729,7 +729,7 @@ class TestIssueManagerLabelUpdate:
             assert result is False
 
     def test_update_workflow_label_race_condition_scenario(
-        self, mock_github: Mock, mock_git_repo: Any, tmp_path: Path
+        self, mock_github: Mock, _mock_git_repo: Any, tmp_path: Path
     ) -> None:
         """Tests the race condition: linkedBranches empty after PR creation.
 

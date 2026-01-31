@@ -8,7 +8,7 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from mcp_coder.utils.vscodeclaude.status import (
+from mcp_coder.workflows.vscodeclaude.status import (
     check_folder_dirty,
     display_status_table,
     get_issue_current_status,
@@ -16,7 +16,7 @@ from mcp_coder.utils.vscodeclaude.status import (
     is_issue_closed,
     is_session_stale,
 )
-from mcp_coder.utils.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 
 
 class TestStatusDisplay:
@@ -82,21 +82,24 @@ class TestStatusDisplay:
         assert status is None
         assert is_open is False
 
-    def test_is_session_stale_same_status(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_is_session_stale_same_status(self) -> None:
         """Returns False when status unchanged."""
-        mock_issue = {"state": "open", "labels": ["status-07:code-review"]}
-        mock_manager = Mock()
-        mock_manager.get_issue.return_value = mock_issue
-
-        mock_coordinator = Mock()
-        mock_coordinator.IssueManager.return_value = mock_manager
-
-        monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
-            lambda: mock_coordinator,
-        )
+        # Use cached_issues instead of mocking _get_coordinator
+        cached_issues: dict[int, IssueData] = {
+            123: {
+                "number": 123,
+                "title": "Test",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "...",
+                "locked": False,
+            }
+        }
 
         session: VSCodeClaudeSession = {
             "folder": "/test",
@@ -108,23 +111,26 @@ class TestStatusDisplay:
             "is_intervention": False,
         }
 
-        assert is_session_stale(session) is False
+        assert is_session_stale(session, cached_issues=cached_issues) is False
 
-    def test_is_session_stale_status_changed(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_is_session_stale_status_changed(self) -> None:
         """Returns True when status changed."""
-        mock_issue = {"state": "open", "labels": ["status-08:ready-pr"]}  # Changed
-        mock_manager = Mock()
-        mock_manager.get_issue.return_value = mock_issue
-
-        mock_coordinator = Mock()
-        mock_coordinator.IssueManager.return_value = mock_manager
-
-        monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
-            lambda: mock_coordinator,
-        )
+        # Use cached_issues instead of mocking _get_coordinator
+        cached_issues: dict[int, IssueData] = {
+            123: {
+                "number": 123,
+                "title": "Test",
+                "body": "",
+                "state": "open",
+                "labels": ["status-08:ready-pr"],  # Changed from session
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "...",
+                "locked": False,
+            }
+        }
 
         session: VSCodeClaudeSession = {
             "folder": "/test",
@@ -136,23 +142,26 @@ class TestStatusDisplay:
             "is_intervention": False,
         }
 
-        assert is_session_stale(session) is True
+        assert is_session_stale(session, cached_issues=cached_issues) is True
 
-    def test_is_session_stale_no_status_label(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_is_session_stale_no_status_label(self) -> None:
         """Returns False when open issue has no status label (logs warning)."""
-        mock_issue = {"state": "open", "labels": ["other-label"]}  # No status
-        mock_manager = Mock()
-        mock_manager.get_issue.return_value = mock_issue
-
-        mock_coordinator = Mock()
-        mock_coordinator.IssueManager.return_value = mock_manager
-
-        monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
-            lambda: mock_coordinator,
-        )
+        # Use cached_issues instead of mocking _get_coordinator
+        cached_issues: dict[int, IssueData] = {
+            123: {
+                "number": 123,
+                "title": "Test",
+                "body": "",
+                "state": "open",
+                "labels": ["other-label"],  # No status label
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "...",
+                "locked": False,
+            }
+        }
 
         session: VSCodeClaudeSession = {
             "folder": "/test",
@@ -165,21 +174,19 @@ class TestStatusDisplay:
         }
 
         # Open issue without status label - should NOT be stale
-        assert is_session_stale(session) is False
+        assert is_session_stale(session, cached_issues=cached_issues) is False
 
     def test_is_session_stale_returns_true_on_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns True (conservative) when status cannot be retrieved."""
+        # Mock IssueManager to return None (issue not found)
         mock_manager = Mock()
-        mock_manager.get_issue.return_value = None  # Issue not found
-
-        mock_coordinator = Mock()
-        mock_coordinator.IssueManager.return_value = mock_manager
+        mock_manager.get_issue.return_value = None
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.status.IssueManager",
+            lambda repo_url: mock_manager,
         )
 
         session: VSCodeClaudeSession = {
@@ -192,23 +199,27 @@ class TestStatusDisplay:
             "is_intervention": False,
         }
 
+        # Without cached_issues, falls back to IssueManager which returns None
         assert is_session_stale(session) is True
 
-    def test_is_issue_closed_returns_true_when_closed(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_is_issue_closed_returns_true_when_closed(self) -> None:
         """Returns True when issue is closed."""
-        mock_issue = {"state": "closed", "labels": ["status-07:code-review"]}
-        mock_manager = Mock()
-        mock_manager.get_issue.return_value = mock_issue
-
-        mock_coordinator = Mock()
-        mock_coordinator.IssueManager.return_value = mock_manager
-
-        monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
-            lambda: mock_coordinator,
-        )
+        # Use cached_issues instead of mocking _get_coordinator
+        cached_issues: dict[int, IssueData] = {
+            123: {
+                "number": 123,
+                "title": "Test",
+                "body": "",
+                "state": "closed",
+                "labels": ["status-07:code-review"],
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "...",
+                "locked": False,
+            }
+        }
 
         session: VSCodeClaudeSession = {
             "folder": "/test",
@@ -220,23 +231,26 @@ class TestStatusDisplay:
             "is_intervention": False,
         }
 
-        assert is_issue_closed(session) is True
+        assert is_issue_closed(session, cached_issues=cached_issues) is True
 
-    def test_is_issue_closed_returns_false_when_open(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_is_issue_closed_returns_false_when_open(self) -> None:
         """Returns False when issue is open."""
-        mock_issue = {"state": "open", "labels": ["status-07:code-review"]}
-        mock_manager = Mock()
-        mock_manager.get_issue.return_value = mock_issue
-
-        mock_coordinator = Mock()
-        mock_coordinator.IssueManager.return_value = mock_manager
-
-        monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status._get_coordinator",
-            lambda: mock_coordinator,
-        )
+        # Use cached_issues instead of mocking _get_coordinator
+        cached_issues: dict[int, IssueData] = {
+            123: {
+                "number": 123,
+                "title": "Test",
+                "body": "",
+                "state": "open",
+                "labels": ["status-07:code-review"],
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "...",
+                "locked": False,
+            }
+        }
 
         session: VSCodeClaudeSession = {
             "folder": "/test",
@@ -248,7 +262,7 @@ class TestStatusDisplay:
             "is_intervention": False,
         }
 
-        assert is_issue_closed(session) is False
+        assert is_issue_closed(session, cached_issues=cached_issues) is False
 
     def test_check_folder_dirty_clean(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -333,25 +347,25 @@ class TestStatusDisplay:
 
         # Mock is_issue_closed to return False (issue is open)
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status.is_issue_closed",
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
             lambda s, cached_issues=None: False,
         )
 
         # Mock check_vscode_running
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
             lambda pid: False,
         )
 
         # Mock check_folder_dirty
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status.check_folder_dirty",
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: False,
         )
 
         # Mock is_session_stale
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.status.is_session_stale",
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
             lambda s, cached_issues=None: False,
         )
 

@@ -145,39 +145,6 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
         raise ValueError(error_msg)
 
 
-def get_cache_refresh_minutes() -> int:
-    """Get cache refresh threshold from config with default fallback.
-
-    Returns:
-        Cache refresh threshold in minutes (default: 1440 = 24 hours)
-    """
-    # Use late binding for patchable function access
-    coordinator = _get_coordinator()
-
-    # Batch fetch config value in single disk read
-    config = coordinator.get_config_values(
-        [("coordinator", "cache_refresh_minutes", None)]
-    )
-    value = config[("coordinator", "cache_refresh_minutes")]
-
-    if value is None:
-        return 1440  # Default: 24 hours
-
-    try:
-        result = int(value)
-        if result <= 0:
-            logger.warning(
-                f"Invalid cache_refresh_minutes value '{value}' (must be positive), using default 1440"
-            )
-            return 1440
-        return result
-    except (ValueError, TypeError):
-        logger.warning(
-            f"Invalid cache_refresh_minutes value '{value}' (must be integer), using default 1440"
-        )
-        return 1440
-
-
 def get_jenkins_credentials() -> tuple[str, str, str]:
     """Get Jenkins credentials from environment or config file.
 

@@ -42,37 +42,11 @@ from .commands import (
 from .core import (
     _filter_eligible_issues,
     dispatch_workflow,
-    get_cache_refresh_minutes,
     get_cached_eligible_issues,
     get_eligible_issues,
     get_jenkins_credentials,
     load_repo_config,
     validate_repo_config,
-)
-
-# Import from vscodeclaude module (types and key functions)
-from .vscodeclaude import (
-    DEFAULT_MAX_SESSIONS,
-    RepoVSCodeClaudeConfig,
-    VSCodeClaudeConfig,
-    VSCodeClaudeSession,
-    VSCodeClaudeSessionStore,
-    add_session,
-    check_vscode_running,
-    cleanup_stale_sessions,
-    get_active_session_count,
-    get_eligible_vscodeclaude_issues,
-    get_github_username,
-    get_linked_branch_for_issue,
-    get_sessions_file_path,
-    load_repo_vscodeclaude_config,
-    load_sessions,
-    load_vscodeclaude_config,
-    prepare_and_launch_session,
-    process_eligible_issues,
-    remove_session,
-    restart_closed_sessions,
-    save_sessions,
 )
 
 # Import from workflow_constants module
@@ -93,7 +67,6 @@ __all__ = [
     "load_repo_config",
     "validate_repo_config",
     "get_jenkins_credentials",
-    "get_cache_refresh_minutes",
     # Constants and templates
     "DEFAULT_TEST_COMMAND",
     "DEFAULT_TEST_COMMAND_WINDOWS",
@@ -116,26 +89,4 @@ __all__ = [
     "JenkinsClient",
     "IssueManager",
     "IssueBranchManager",
-    # VSCodeClaude types and functions
-    "DEFAULT_MAX_SESSIONS",
-    "VSCodeClaudeConfig",
-    "VSCodeClaudeSession",
-    "VSCodeClaudeSessionStore",
-    "RepoVSCodeClaudeConfig",
-    "get_active_session_count",
-    "get_eligible_vscodeclaude_issues",
-    "get_github_username",
-    "get_linked_branch_for_issue",
-    "get_sessions_file_path",
-    "load_repo_vscodeclaude_config",
-    "load_sessions",
-    "load_vscodeclaude_config",
-    "prepare_and_launch_session",
-    "process_eligible_issues",
-    "restart_closed_sessions",
-    "check_vscode_running",
-    "cleanup_stale_sessions",
-    "add_session",
-    "remove_session",
-    "save_sessions",
 ]

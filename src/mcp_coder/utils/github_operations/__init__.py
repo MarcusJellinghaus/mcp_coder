@@ -4,7 +4,7 @@ This module provides GitHub API integration functionality for managing
 pull requests, labels, and repository operations.
 """
 
-from .base_manager import BaseGitHubManager
+from .base_manager import BaseGitHubManager, get_authenticated_username
 from .ci_results_manager import CIResultsManager, CIStatusData
 from .github_utils import RepoIdentifier
 from .issue_branch_manager import (
@@ -27,6 +27,7 @@ from .pr_manager import PullRequestManager
 
 __all__ = [
     "BaseGitHubManager",
+    "get_authenticated_username",
     "BranchCreationResult",
     "CIResultsManager",
     "CIStatusData",

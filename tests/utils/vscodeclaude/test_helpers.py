@@ -1,7 +1,7 @@
 """Test helper functions for VSCode Claude orchestration."""
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from mcp_coder.utils.vscodeclaude.helpers import (
+from mcp_coder.workflows.vscodeclaude.helpers import (
     get_issue_status,
     get_repo_full_name,
     get_repo_short_name,
@@ -9,7 +9,7 @@ from mcp_coder.utils.vscodeclaude.helpers import (
     get_stage_display_name,
     truncate_title,
 )
-from mcp_coder.utils.vscodeclaude.types import (
+from mcp_coder.workflows.vscodeclaude.types import (
     STAGE_DISPLAY_NAMES,
     VSCODECLAUDE_PRIORITY,
 )
