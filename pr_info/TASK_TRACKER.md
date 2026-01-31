@@ -30,10 +30,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
   - [x] Update `collect_branch_status()` to share issue data
   - [x] Update existing tests for new fields
 
-- [ ] [Step 3: Update Formatting and Refactor implement/core.py](./steps/step_3.md)
-  - Update `format_for_human()` and `format_for_llm()` methods
-  - Refactor `_get_rebase_target_branch()` to use shared function
-  - Update format tests
+- [x] [Step 3: Update Formatting and Refactor implement/core.py](./steps/step_3.md)
+  - [x] Update `format_for_human()` and `format_for_llm()` methods
+  - [x] Refactor `_get_rebase_target_branch()` to use shared function
+  - [x] Update format tests
 
 ## Pull Request
 

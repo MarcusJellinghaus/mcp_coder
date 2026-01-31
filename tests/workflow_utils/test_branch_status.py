@@ -84,6 +84,14 @@ def test_format_for_human_passed_status() -> None:
 
     formatted = report.format_for_human()
 
+    # NEW assertions - branch info comes first
+    assert "Branch: feature/123-test" in formatted
+    assert "Base Branch: main" in formatted
+    # Verify order: branch info before title
+    branch_pos = formatted.find("Branch:")
+    title_pos = formatted.find("Branch Status Report")
+    assert branch_pos < title_pos
+
     # Check for expected sections
     assert "Branch Status Report" in formatted
     assert "CI Status: ✅ PASSED" in formatted
@@ -189,6 +197,10 @@ def test_format_for_llm_basic() -> None:
     )
 
     formatted = report.format_for_llm()
+
+    # NEW assertion - branch info on first line
+    lines = formatted.split("\n")
+    assert lines[0] == "Branch: feature/123-test | Base: main"
 
     assert "Branch Status: CI=PASSED, Rebase=UP_TO_DATE, Tasks=COMPLETE" in formatted
     assert "GitHub Label: status-03:implementing" in formatted
