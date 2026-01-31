@@ -69,6 +69,7 @@ Test Code ────────────> subprocess_runner.py ──> sub
 |------|-------------|
 | `tests/utils/github_operations/test_issue_manager_label_update.py` | Use `execute_command()` |
 | `tests/workflows/test_create_pr_integration.py` | Remove unused import |
+| `tests/cli/test_main.py` | Remove unused import |
 | `tests/utils/test_git_encoding_stress.py` | Delete redundant test |
 | `tests/llm/providers/claude/test_claude_code_api.py` | Change import |
 | `tests/llm/providers/claude/test_claude_code_api_error_handling.py` | Change import |

@@ -104,6 +104,32 @@ Delete the line `import subprocess`.
 
 ---
 
+## Task 2.2b: Remove Unused Import from `test_main.py`
+
+### WHERE
+`tests/cli/test_main.py`
+
+### WHAT
+Remove the unused `import subprocess` statement.
+
+**Before (line 4):**
+```python
+import argparse
+import subprocess  # ← REMOVE (unused)
+import sys
+```
+
+**After:**
+```python
+import argparse
+import sys
+```
+
+### HOW
+Delete the line `import subprocess`.
+
+---
+
 ## Task 2.3: Delete Redundant Test from `test_git_encoding_stress.py`
 
 ### WHERE
@@ -228,6 +254,7 @@ grep -r "import subprocess" src/ tests/ --include="*.py" | grep -v subprocess_ru
 
 - [ ] `test_issue_manager_label_update.py` uses `execute_command()`
 - [ ] `test_create_pr_integration.py` has no subprocess import
+- [ ] `test_main.py` has no subprocess import
 - [ ] `test_subprocess_encoding_directly` test deleted
 - [ ] `test_claude_code_api.py` imports exceptions from `subprocess_runner`
 - [ ] `test_claude_code_api_error_handling.py` imports exceptions from `subprocess_runner`
