@@ -25,7 +25,7 @@ This tracks **Feature Implementation** for Issue #358: Refactor vscodeclaude - M
 See [step_1.md](./steps/step_1.md) for details.
 
 - [x] Copy `get_cache_refresh_minutes()` function to `utils/user_config.py`
-- [ ] Remove late-binding - use direct `get_config_values` call
+- [x] Remove late-binding - use direct `get_config_values` call
 - [ ] Remove function from `coordinator/core.py`
 - [ ] Remove `get_cache_refresh_minutes` from `coordinator/__init__.py` exports
 - [ ] Add tests for moved function in `tests/utils/test_user_config.py`
