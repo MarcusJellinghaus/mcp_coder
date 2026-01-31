@@ -27,7 +27,7 @@ Each step file contains detailed WHERE/WHAT/HOW specifications.
 - [x] Task 2.2: Remove unused subprocess import from `test_create_pr_integration.py`
 - [x] Task 2.2b: Remove unused subprocess import from `test_main.py`
 - [x] Task 2.3: Delete `test_subprocess_encoding_directly` test
-- [ ] Task 2.4: Change exception imports in `test_claude_code_api.py`
+- [x] Task 2.4: Change exception imports in `test_claude_code_api.py`
 - [ ] Task 2.5: Change exception imports in `test_claude_code_api_error_handling.py`
 - [ ] Task 2.6: Change exception imports in `test_claude_code_cli.py`
 - [ ] Task 2.7: Add subprocess isolation contract to `.importlinter`
