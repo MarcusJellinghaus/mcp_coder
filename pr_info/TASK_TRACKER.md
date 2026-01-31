@@ -24,7 +24,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Add Template and Validation to task_tracker.py
 **File:** [step_1.md](./steps/step_1.md)
 
-- [ ] Write tests for `validate_task_tracker()` function
+- [x] Write tests for `validate_task_tracker()` function
 - [ ] Write tests for `TASK_TRACKER_TEMPLATE` constant
 - [ ] Add `TASK_TRACKER_TEMPLATE` constant to task_tracker.py
 - [ ] Implement `validate_task_tracker()` function
