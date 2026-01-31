@@ -95,6 +95,36 @@ def delete_conversations_directory(project_dir: Path) -> bool:
         return False
 
 
+def delete_pr_info_directory(project_dir: Path) -> bool:
+    """Delete the entire pr_info/ directory and all its contents.
+
+    Args:
+        project_dir: Path to the project root directory
+
+    Returns:
+        True if successful or directory doesn't exist, False on error
+    """
+    pr_info_dir = project_dir / "pr_info"
+
+    # If directory doesn't exist, consider it success (no-op)
+    if not pr_info_dir.exists():
+        logger.info(f"Directory {pr_info_dir} does not exist - nothing to delete")
+        return True
+
+    try:
+        # Remove the entire directory tree
+        shutil.rmtree(pr_info_dir)
+        logger.info(f"Successfully deleted directory: {pr_info_dir}")
+        return True
+
+    except PermissionError as e:
+        logger.error(f"Permission error deleting {pr_info_dir}: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Error deleting {pr_info_dir}: {e}")
+        return False
+
+
 def clean_profiler_output(project_dir: Path) -> bool:
     """
     Clean up profiler output files from docs/tests/performance_data/prof/ directory.
