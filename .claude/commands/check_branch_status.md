@@ -31,7 +31,7 @@ Based on the status report, use these commands for next steps:
 | Status | Action |
 |--------|--------|
 | CI failures | Fix the issues shown in the CI error details |
-| Rebase needed | Run `/rebase` to rebase onto main with conflict resolution |
+| Rebase needed | Run `/rebase` to rebase onto base branch with conflict resolution |
 | Tasks incomplete | Complete remaining tasks manually |
 | CI green + tasks done | Run `/commit_push` to commit and push changes |
 | Ready to merge | Create PR or merge via GitHub |

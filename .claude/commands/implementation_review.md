@@ -22,9 +22,14 @@ Confirm and display the current feature branch name.
 
 ## Code Review Request
 
+**First, determine the base branch:**
+```bash
+BASE_BRANCH=$(mcp-coder gh-tool get-base-branch)
+```
+
 Run this command to get the changes to review:
 ```bash
-git diff --unified=5 --no-prefix main...HEAD -- . ":(exclude)pr_info/.conversations/**"
+git diff --unified=5 --no-prefix ${BASE_BRANCH}...HEAD -- . ":(exclude)pr_info/.conversations/**"
 ```
 
 No need to run all checks; do not use pylint warnings. Feel free to further analyse any mentioned files and/or the file structure.

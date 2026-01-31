@@ -4,9 +4,17 @@ workflow-stage: utility
 suggested-next: (context-dependent)
 ---
 
-# Rebase Branch onto Main
+# Rebase Branch onto Base Branch
 
-Rebase the current feature branch onto `origin/main` and resolve conflicts.
+Rebase the current feature branch onto its base branch and resolve conflicts.
+
+## Determine Base Branch
+
+First, detect the correct base branch:
+```bash
+BASE_BRANCH=$(mcp-coder gh-tool get-base-branch)
+echo "Rebasing onto: $BASE_BRANCH"
+```
 
 ## Pre-flight Checks (Abort if any fail)
 
@@ -18,7 +26,7 @@ Rebase the current feature branch onto `origin/main` and resolve conflicts.
 ## Workflow
 
 1. `git fetch origin`
-2. `git rebase origin/main`
+2. `git rebase origin/${BASE_BRANCH}`
 3. For each conflict:
    - Apply resolution strategy (see below)
    - Verify no conflict markers remain

@@ -12,6 +12,7 @@ from .commands.coordinator import execute_coordinator_run, execute_coordinator_t
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
+from .commands.gh_tool import execute_get_base_branch
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
 from .commands.prompt import execute_prompt
@@ -506,6 +507,31 @@ def create_parser() -> argparse.ArgumentParser:
         help="Project directory path (default: current directory)",
     )
 
+    # gh-tool commands - GitHub tool operations
+    gh_tool_parser = subparsers.add_parser("gh-tool", help="GitHub tool commands")
+    gh_tool_subparsers = gh_tool_parser.add_subparsers(
+        dest="gh_tool_subcommand",
+        help="Available GitHub tool commands",
+        metavar="SUBCOMMAND",
+    )
+
+    # gh-tool get-base-branch command
+    get_base_branch_parser = gh_tool_subparsers.add_parser(
+        "get-base-branch",
+        help="Detect base branch for current feature branch",
+        formatter_class=WideHelpFormatter,
+        epilog="""Exit codes:
+  0  Success - base branch printed to stdout
+  1  Could not detect base branch
+  2  Error (not a git repo, API failure)""",
+    )
+    get_base_branch_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+
     return parser
 
 
@@ -603,6 +629,24 @@ def main() -> int:
                 logger.error("Check subcommand required")
                 print(
                     "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
+                )
+                return 1
+        elif args.command == "gh-tool":
+            if hasattr(args, "gh_tool_subcommand") and args.gh_tool_subcommand:
+                if args.gh_tool_subcommand == "get-base-branch":
+                    return execute_get_base_branch(args)
+                else:
+                    logger.error(
+                        f"Unknown gh-tool subcommand: {args.gh_tool_subcommand}"
+                    )
+                    print(
+                        f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'"
+                    )
+                    return 1
+            else:
+                logger.error("gh-tool subcommand required")
+                print(
+                    "Error: Please specify a gh-tool subcommand (e.g., 'get-base-branch')"
                 )
                 return 1
 

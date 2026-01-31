@@ -25,7 +25,7 @@ For a complete overview of the process, see [DEVELOPMENT_PROCESS.md](DEVELOPMENT
 | `/check_branch_status` | Check branch readiness and auto-fix CI |
 | `/commit_push` | Format, commit, and push changes |
 | `/discuss` | Step-by-step discussion of open questions |
-| `/rebase` | Rebase branch onto main |
+| `/rebase` | Rebase branch onto base branch |
 
 ---
 
@@ -92,4 +92,4 @@ Then either:
 | `/commit_push` | Ready to commit and push changes |
 | `/discuss` | Need step-by-step Q&A on any topic |
 | `/implementation_finalise` | `mcp-coder implement` failed to complete the plan |
-| `/rebase` | Need to rebase branch onto main |
+| `/rebase` | Need to rebase branch onto base branch |
