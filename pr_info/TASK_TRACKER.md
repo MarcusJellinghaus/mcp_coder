@@ -36,7 +36,7 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Verification Checks
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Run mcp__code-checker__run_pytest_check() - verify all tests pass
+- [x] Run mcp__code-checker__run_pytest_check() - verify all tests pass
 - [ ] Run mcp__code-checker__run_pylint_check() - verify no linting errors
 - [ ] Run mcp__code-checker__run_mypy_check() - verify type checking passes
 - [ ] Verify acceptance criteria: Directory `tests/workflows/vscodeclaude/` created
