@@ -22,12 +22,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Tests for `gh-tool get-base-branch` Command
-- [ ] All detection priority scenarios tested (PR → Issue → Default) - [step_1.md](./steps/step_1.md)
-- [ ] All exit codes tested (0, 1, 2)
-- [ ] Output format tested (stdout only, no extra text)
-- [ ] CLI integration tested (command registered, help works)
-- [ ] Exit codes in --help epilog tested
-- [ ] Edge cases tested (detached HEAD, no issue number in branch)
+- [x] All detection priority scenarios tested (PR → Issue → Default) - [step_1.md](./steps/step_1.md)
+- [x] All exit codes tested (0, 1, 2)
+- [x] Output format tested (stdout only, no extra text)
+- [x] CLI integration tested (command registered, help works)
+- [x] Exit codes in --help epilog tested
+- [x] Edge cases tested (detached HEAD, no issue number in branch)
 
 ### Step 2: Implement `gh-tool get-base-branch` Command
 - [ ] Command registered under `mcp-coder gh-tool get-base-branch` - [step_2.md](./steps/step_2.md)
