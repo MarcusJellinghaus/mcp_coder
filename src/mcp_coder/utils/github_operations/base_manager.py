@@ -71,6 +71,32 @@ def _handle_github_errors(
     return decorator
 
 
+def get_authenticated_username() -> str:
+    """Get authenticated GitHub username via PyGithub API.
+
+    Returns:
+        GitHub username string
+
+    Raises:
+        ValueError: If GitHub authentication fails or token not configured
+    """
+    config = user_config.get_config_values([("github", "token", None)])
+    token = config[("github", "token")]
+
+    if not token:
+        raise ValueError(
+            "GitHub token not configured. Set via GITHUB_TOKEN environment "
+            "variable or config file [github] section"
+        )
+
+    try:
+        github_client = Github(auth=Auth.Token(token))
+        user = github_client.get_user()
+        return user.login
+    except Exception as e:
+        raise ValueError(f"Failed to authenticate with GitHub: {e}") from e
+
+
 class BaseGitHubManager:
     """Base class for GitHub managers.
 

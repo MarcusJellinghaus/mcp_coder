@@ -1,7 +1,6 @@
 """Test issue selection and filtering for VSCode Claude."""
 
-from pathlib import Path
-from typing import Any, cast
+from typing import cast
 from unittest.mock import Mock
 
 import pytest
@@ -29,9 +28,6 @@ class TestIssueSelection:
             ],
             "ignore_labels": ["Overview"],
         }
-
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
 
         # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
@@ -100,9 +96,6 @@ class TestIssueSelection:
             ],
             "ignore_labels": [],
         }
-
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
 
         # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
@@ -173,9 +166,6 @@ class TestIssueSelection:
             "ignore_labels": [],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
         # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
@@ -232,9 +222,6 @@ class TestIssueSelection:
             ],
             "ignore_labels": ["Overview"],
         }
-
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
 
         # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
@@ -343,9 +330,6 @@ class TestFilterEligibleVscodeclaudeIssues:
             "ignore_labels": ["Overview"],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
         # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
@@ -402,9 +386,6 @@ class TestFilterEligibleVscodeclaudeIssues:
             "ignore_labels": [],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
         # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
@@ -458,9 +439,6 @@ class TestGetCachedEligibleVscodeclaudeIssues:
             ],
             "ignore_labels": [],
         }
-
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
 
         # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
@@ -528,9 +506,6 @@ class TestGetCachedEligibleVscodeclaudeIssues:
             ],
             "ignore_labels": [],
         }
-
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
 
         # Mock _load_labels_config to return our test config
         monkeypatch.setattr(

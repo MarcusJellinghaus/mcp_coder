@@ -26,7 +26,6 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 VSCODE_PROCESS_NAME = "code"
-VSCODE_WINDOW_TITLE_MARKER = "Visual Studio Code"
 
 
 def get_sessions_file_path() -> Path:

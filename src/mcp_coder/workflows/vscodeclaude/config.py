@@ -5,6 +5,7 @@ import logging
 import re
 from pathlib import Path
 
+from ...utils.github_operations import get_authenticated_username
 from ...utils.user_config import get_config_file_path, get_config_values
 from .types import (
     DEFAULT_MAX_SESSIONS,
@@ -111,33 +112,8 @@ def load_repo_vscodeclaude_config(repo_name: str) -> RepoVSCodeClaudeConfig:
     return result
 
 
-def get_github_username() -> str:
-    """Get authenticated GitHub username via PyGithub API.
-
-    Returns:
-        GitHub username string
-
-    Raises:
-        ValueError: If GitHub authentication fails
-    """
-    # Get GitHub token from config
-    config = get_config_values([("github", "token", None)])
-    token = config[("github", "token")]
-
-    if not token:
-        raise ValueError(
-            "GitHub token not configured. Set via GITHUB_TOKEN environment "
-            "variable or config file [github] section"
-        )
-
-    try:
-        from github import Github
-
-        github_client = Github(token)
-        user = github_client.get_user()
-        return user.login
-    except Exception as e:
-        raise ValueError(f"Failed to authenticate with GitHub: {e}") from e
+# Re-export for backwards compatibility
+get_github_username = get_authenticated_username
 
 
 def sanitize_folder_name(name: str) -> str:

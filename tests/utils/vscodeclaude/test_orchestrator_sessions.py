@@ -399,7 +399,7 @@ class TestOrchestration:
         new_pid = 9999
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
-            lambda w: new_pid,
+            lambda _: new_pid,
         )
 
         session = {
