@@ -334,6 +334,10 @@ class TestIntegration:
                 return_value="main",
             ),
             patch(
+                "mcp_coder.workflows.implement.prerequisites.validate_task_tracker",
+                return_value=None,
+            ),
+            patch(
                 "mcp_coder.workflows.implement.prerequisites._read_task_tracker",
                 return_value="content",
             ),
