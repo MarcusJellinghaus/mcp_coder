@@ -43,12 +43,12 @@ mcp__code-checker__run_mypy_check()
 ## Success Criteria
 
 All acceptance criteria from issue #363 met:
-- [ ] Directory `tests/workflows/vscodeclaude/` created
-- [ ] All 13 test files moved
-- [ ] `tests/utils/vscodeclaude/` deleted entirely
-- [ ] pytest passes
-- [ ] pylint passes
-- [ ] mypy passes
+- [x] Directory `tests/workflows/vscodeclaude/` created
+- [x] All 13 test files moved
+- [x] `tests/utils/vscodeclaude/` deleted entirely
+- [x] pytest passes
+- [x] pylint passes
+- [x] mypy passes
 
 ---
 

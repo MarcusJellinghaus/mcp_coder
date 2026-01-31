@@ -62,12 +62,12 @@ tests/
 
 ## Acceptance Criteria
 
-- [ ] Directory `tests/workflows/vscodeclaude/` created
-- [ ] All 13 test files moved
-- [ ] `tests/utils/vscodeclaude/` deleted entirely
-- [ ] `mcp__code-checker__run_pytest_check` passes
-- [ ] `mcp__code-checker__run_pylint_check` passes
-- [ ] `mcp__code-checker__run_mypy_check` passes
+- [x] Directory `tests/workflows/vscodeclaude/` created
+- [x] All 13 test files moved
+- [x] `tests/utils/vscodeclaude/` deleted entirely
+- [x] `mcp__code-checker__run_pytest_check` passes
+- [x] `mcp__code-checker__run_pylint_check` passes
+- [x] `mcp__code-checker__run_mypy_check` passes
 
 ## Implementation Steps
 
