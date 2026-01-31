@@ -5,24 +5,30 @@
 ```
 Implement Step 1 of Issue #374 (see pr_info/steps/summary.md for context).
 
-Create the shared base branch detection module with TDD approach:
-1. First create the test file with all test cases
-2. Then implement the function to make tests pass
+Extract and refactor the base branch detection module:
+1. Move detection helpers from gh_tool.py to base_branch.py
+2. Create unified detect_base_branch() function
+3. Update gh_tool.py to import from base_branch.py
+4. Move detection tests from test_gh_tool.py to test_base_branch.py
 
 Follow the specifications below exactly.
 ```
 
 ## Overview
 
-Create `src/mcp_coder/workflow_utils/base_branch.py` with a single function that detects the base branch for the current feature branch.
+Extract detection helpers from `src/mcp_coder/cli/commands/gh_tool.py` into `src/mcp_coder/workflow_utils/base_branch.py` and create a unified function that detects the base branch for the current feature branch.
 
 ---
 
 ## WHERE: File Paths
 
 ### New Files
-- `src/mcp_coder/workflow_utils/base_branch.py` - Implementation
-- `tests/workflow_utils/test_base_branch.py` - Tests
+- `src/mcp_coder/workflow_utils/base_branch.py` - Extracted detection logic
+- `tests/workflow_utils/test_base_branch.py` - Moved and new tests
+
+### Modified Files
+- `src/mcp_coder/cli/commands/gh_tool.py` - Import from base_branch.py instead of local helpers
+- `tests/cli/commands/test_gh_tool.py` - Keep only CLI-specific tests
 
 ---
 
@@ -37,7 +43,8 @@ from mcp_coder.utils.github_operations.issue_manager import IssueData
 
 def detect_base_branch(
     project_dir: Path,
-    issue_data: Optional[IssueData] = None
+    current_branch: Optional[str] = None,
+    issue_data: Optional[IssueData] = None,
 ) -> str:
     """Detect the base branch for the current feature branch.
     
@@ -49,6 +56,7 @@ def detect_base_branch(
     
     Args:
         project_dir: Path to git repository
+        current_branch: Optional current branch name (avoids git call if provided)
         issue_data: Optional pre-fetched issue data (avoids duplicate API calls)
     
     Returns:
@@ -87,8 +95,9 @@ logger = logging.getLogger(__name__)
 ## ALGORITHM: Core Logic (Pseudocode)
 
 ```
-function detect_base_branch(project_dir, issue_data):
-    current_branch = get_current_branch_name(project_dir)
+function detect_base_branch(project_dir, current_branch, issue_data):
+    if not current_branch:
+        current_branch = get_current_branch_name(project_dir)
     if not current_branch: return "unknown"
     
     # 1. Try PR lookup
@@ -182,11 +191,12 @@ def test_detect_base_branch_no_issue_number_in_branch() -> None:
 
 ## IMPLEMENTATION CHECKLIST
 
-- [ ] Create test file with all test cases (tests first)
-- [ ] Create `base_branch.py` with imports and function stub
-- [ ] Implement PR detection logic
-- [ ] Implement issue-based detection logic  
-- [ ] Implement default branch fallback
+- [ ] Create `base_branch.py` with extracted helpers from `gh_tool.py`
+- [ ] Add unified `detect_base_branch()` function with `current_branch` and `issue_data` parameters
+- [ ] Update `gh_tool.py` to import from `base_branch.py`
+- [ ] Move detection tests from `test_gh_tool.py` to `test_base_branch.py`
+- [ ] Add new tests for `detect_base_branch()` with optional parameters
+- [ ] Keep only CLI-specific tests in `test_gh_tool.py`
 - [ ] Ensure all exceptions are caught and logged
 - [ ] Run tests to verify all pass
 - [ ] Run mypy type checking
