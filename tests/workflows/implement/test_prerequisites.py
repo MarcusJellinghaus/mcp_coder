@@ -1,5 +1,6 @@
 """Tests for implement workflow prerequisites checking."""
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -281,8 +282,9 @@ class TestCheckPrerequisitesTaskTracker:
             "## Pull Request\n"
         )
 
-        # Call check_prerequisites()
-        result = check_prerequisites(tmp_path)
+        # Call check_prerequisites() with INFO level logging captured
+        with caplog.at_level(logging.INFO):
+            result = check_prerequisites(tmp_path)
 
         # Assert: returns True, file unchanged
         assert result is True

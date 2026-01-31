@@ -338,38 +338,6 @@ class TestCheckPrInfoNotExists:
         # Assert: returns False (existing pr_info/ is an error)
         assert result is False
 
-    def test_logs_error_when_pr_info_exists(self, tmp_path: Path) -> None:
-        """Test error message is logged when pr_info/ exists."""
-        # Setup: create pr_info/ directory
-        pr_info_dir = tmp_path / "pr_info"
-        pr_info_dir.mkdir()
-
-        # Call with logger patched
-        with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
-            result = check_pr_info_not_exists(tmp_path)
-
-            # Assert: error was logged
-            assert mock_logger.error.called
-            error_message = mock_logger.error.call_args[0][0]
-
-            # Assert: error message contains required phrases
-            assert "pr_info/" in error_message or "pr_info" in error_message
-            assert "exists" in error_message.lower()
-
-    def test_error_message_mentions_cleanup(self, tmp_path: Path) -> None:
-        """Test error message tells user to clean up manually."""
-        # Setup: create pr_info/ directory
-        pr_info_dir = tmp_path / "pr_info"
-        pr_info_dir.mkdir()
-
-        # Call with logger patched
-        with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
-            check_pr_info_not_exists(tmp_path)
-
-            # Assert: error message contains cleanup instruction
-            error_message = mock_logger.error.call_args[0][0]
-            assert "clean" in error_message.lower()
-
 
 class TestCreatePrInfoStructure:
     """Tests for create_pr_info_structure function."""

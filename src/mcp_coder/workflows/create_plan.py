@@ -174,10 +174,6 @@ def check_pr_info_not_exists(project_dir: Path) -> bool:
     pr_info_dir = project_dir / "pr_info"
 
     if pr_info_dir.exists():
-        logger.error(
-            "pr_info/ directory already exists. "
-            "Please clean up before creating a new plan."
-        )
         return False
 
     return True
