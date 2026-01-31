@@ -2267,6 +2267,13 @@ class TestParseBaseBranch:
         body = "### Base Branch\n\n   \n\n### Description"
         assert _parse_base_branch(body) is None
 
+    def test_parse_base_branch_at_end_of_body(self) -> None:
+        """Test parsing base branch when section is at end without trailing header."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "### Description\n\nContent\n\n### Base Branch\n\nfeature/final"
+        assert _parse_base_branch(body) == "feature/final"
+
     # Error cases (raises ValueError)
     def test_parse_base_branch_multiline_raises_error(self) -> None:
         """Test raises ValueError for multi-line content."""
