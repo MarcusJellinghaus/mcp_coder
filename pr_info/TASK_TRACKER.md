@@ -2,8 +2,68 @@
 
 ## Instructions for LLM
 
-This tracks **Feature Implementation** for Issue #75: Base Branch Support for Issues.
+This tracks **Feature Implementation** consisting of multiple **Tasks**.
+
+**Summary:** See [summary.md](./steps/summary.md) for implementation overview.
+
+**How to update tasks:**
+1. Change [ ] to [x] when implementation step is fully complete (code + checks pass)
+2. Change [x] to [ ] if task needs to be reopened
+3. Add brief notes in the linked detail files if needed
+4. Keep it simple - just GitHub-style checkboxes
+
+**Task format:**
+- [x] = Task complete (code + all checks pass)
+- [ ] = Task not complete
+- Each task links to a detail file in steps/ folder
 
 ---
 
 ## Tasks
+
+### Step 1: Add Template and Validation to task_tracker.py
+**File:** [step_1.md](./steps/step_1.md)
+
+- [ ] Write tests for `validate_task_tracker()` function
+- [ ] Write tests for `TASK_TRACKER_TEMPLATE` constant
+- [ ] Add `TASK_TRACKER_TEMPLATE` constant to task_tracker.py
+- [ ] Implement `validate_task_tracker()` function
+- [ ] Run quality checks and fix any issues
+
+### Step 2: Update prerequisites.py for Template Creation and Validation
+**File:** [step_2.md](./steps/step_2.md)
+
+- [ ] Write tests for template creation when file missing
+- [ ] Write tests for validation of existing tracker
+- [ ] Update `check_prerequisites()` to create template if missing
+- [ ] Update `check_prerequisites()` to validate existing tracker
+- [ ] Run quality checks and fix any issues
+
+### Step 3: Simplify create_pr/core.py Cleanup
+**File:** [step_3.md](./steps/step_3.md)
+
+- [ ] Write tests for `delete_pr_info_directory()` function
+- [ ] Update tests for simplified `cleanup_repository()`
+- [ ] Add `delete_pr_info_directory()` function
+- [ ] Simplify `cleanup_repository()` to use new function
+- [ ] Remove `delete_steps_directory()`, `delete_conversations_directory()`, `truncate_task_tracker()`
+- [ ] Remove obsolete tests
+- [ ] Run quality checks and fix any issues
+
+### Step 4: Update create_plan.py for Directory Lifecycle
+**File:** [step_4.md](./steps/step_4.md)
+
+- [ ] Write tests for pr_info existence check
+- [ ] Write tests for directory structure creation
+- [ ] Add `check_pr_info_not_exists()` function
+- [ ] Add `create_pr_info_structure()` function
+- [ ] Update `run_create_plan_workflow()` to use new functions
+- [ ] Remove `verify_steps_directory()` function
+- [ ] Remove obsolete tests
+- [ ] Run quality checks and fix any issues
+
+## Pull Request
+
+- [ ] All steps completed
+- [ ] All tests pass
+- [ ] Code review approved
