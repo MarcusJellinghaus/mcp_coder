@@ -21,6 +21,37 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move Test Files and Delete Old Directory
+See [step_1.md](./steps/step_1.md) for details.
+
+- [ ] Move all 13 test files from `tests/utils/vscodeclaude/` to `tests/workflows/vscodeclaude/`
+- [ ] Verify `tests/utils/vscodeclaude/` is empty
+- [ ] Delete `tests/utils/vscodeclaude/` directory
+- [ ] Confirm `tests/workflows/vscodeclaude/` contains all 13 files
+- [ ] Run pylint check and fix any issues
+- [ ] Run pytest check and fix any issues
+- [ ] Run mypy check and fix any issues
+- [ ] Prepare git commit message for Step 1
+
+### Step 2: Verification Checks
+See [step_2.md](./steps/step_2.md) for details.
+
+- [ ] Run mcp__code-checker__run_pytest_check() - verify all tests pass
+- [ ] Run mcp__code-checker__run_pylint_check() - verify no linting errors
+- [ ] Run mcp__code-checker__run_mypy_check() - verify type checking passes
+- [ ] Verify acceptance criteria: Directory `tests/workflows/vscodeclaude/` created
+- [ ] Verify acceptance criteria: All 13 test files moved
+- [ ] Verify acceptance criteria: `tests/utils/vscodeclaude/` deleted entirely
+- [ ] Run pylint check and fix any issues
+- [ ] Run pytest check and fix any issues
+- [ ] Run mypy check and fix any issues
+- [ ] Prepare git commit message for Step 2
+
+---
 
 ## Pull Request
+
+- [ ] Review all implementation steps are complete
+- [ ] Verify all acceptance criteria from issue #363 are met
+- [ ] Prepare PR summary with changes made
+- [ ] Create Pull Request
