@@ -21,9 +21,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Implementation Steps
 
-- [ ] [Step 1: Create Base Branch Detection Module](./steps/step_1.md)
-  - Create `workflow_utils/base_branch.py` with `detect_base_branch()` function
-  - Create unit tests in `tests/workflow_utils/test_base_branch.py`
+- [x] [Step 1: Create Base Branch Detection Module](./steps/step_1.md)
+  - [x] Create `workflow_utils/base_branch.py` with `detect_base_branch()` function
+  - [x] Create unit tests in `tests/workflow_utils/test_base_branch.py`
 
 - [ ] [Step 2: Update BranchStatusReport and collect_branch_status](./steps/step_2.md)
   - Add `branch_name` and `base_branch` fields to dataclass

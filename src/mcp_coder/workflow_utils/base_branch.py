@@ -1,0 +1,183 @@
+"""Base branch detection utilities.
+
+This module provides a unified function for detecting the base branch
+of a feature branch by checking multiple sources in priority order:
+1. Open PR base branch
+2. Linked issue's base branch section
+3. Default branch (main/master)
+"""
+
+import logging
+from pathlib import Path
+from typing import Optional
+
+from mcp_coder.utils.git_operations.readers import (
+    extract_issue_number_from_branch,
+    get_current_branch_name,
+    get_default_branch_name,
+)
+from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
+
+logger = logging.getLogger(__name__)
+
+
+def detect_base_branch(
+    project_dir: Path,
+    current_branch: Optional[str] = None,
+    issue_data: Optional[IssueData] = None,
+) -> str:
+    """Detect the base branch for the current feature branch.
+
+    Detection priority:
+    1. GitHub PR base branch (if open PR exists for current branch)
+    2. Linked issue's `### Base Branch` section (from issue_data or fetched)
+    3. Default branch (main/master)
+    4. "unknown" if all detection fails
+
+    Args:
+        project_dir: Path to git repository
+        current_branch: Optional current branch name (avoids git call if provided)
+        issue_data: Optional pre-fetched issue data (avoids duplicate API calls)
+
+    Returns:
+        Branch name string, or "unknown" if detection fails.
+
+    Note:
+        Makes up to 2 GitHub API calls if issue_data not provided:
+        - PR list lookup
+        - Issue fetch (if no PR found and branch has issue number)
+    """
+    # Get current branch if not provided
+    if current_branch is None:
+        current_branch = get_current_branch_name(project_dir)
+        logger.debug(f"Detected current branch: {current_branch}")
+
+    if current_branch is None:
+        logger.debug("No current branch (detached HEAD), returning unknown")
+        return "unknown"
+
+    # 1. Try PR lookup first (highest priority)
+    base_branch = _detect_from_pr(project_dir, current_branch)
+    if base_branch:
+        return base_branch
+
+    # 2. Try issue base_branch
+    base_branch = _detect_from_issue(project_dir, current_branch, issue_data)
+    if base_branch:
+        return base_branch
+
+    # 3. Fall back to default branch
+    base_branch = _detect_default_branch(project_dir)
+    if base_branch:
+        return base_branch
+
+    # All detection methods failed
+    logger.warning("Could not detect base branch from PR, issue, or default")
+    return "unknown"
+
+
+def _detect_from_pr(project_dir: Path, current_branch: str) -> Optional[str]:
+    """Detect base branch from open PR.
+
+    Args:
+        project_dir: Project directory path
+        current_branch: Current branch name
+
+    Returns:
+        Base branch name if PR found, None otherwise
+    """
+    try:
+        pr_manager = PullRequestManager(project_dir)
+        open_prs = pr_manager.list_pull_requests(state="open")
+
+        for pr in open_prs:
+            if pr.get("head_branch") == current_branch:
+                base_branch = pr.get("base_branch")
+                logger.info(f"Found base branch from PR: {base_branch}")
+                return base_branch
+
+        logger.debug(f"No open PR found for branch '{current_branch}'")
+        return None
+
+    except Exception as e:
+        logger.debug(f"PR detection failed: {e}")
+        return None
+
+
+def _detect_from_issue(
+    project_dir: Path,
+    current_branch: str,
+    issue_data: Optional[IssueData] = None,
+) -> Optional[str]:
+    """Detect base branch from linked issue.
+
+    If issue_data is provided, uses its base_branch directly.
+    Otherwise, extracts issue number from branch name and fetches issue.
+
+    Args:
+        project_dir: Project directory path
+        current_branch: Current branch name
+        issue_data: Optional pre-fetched issue data
+
+    Returns:
+        Base branch name if issue has base_branch, None otherwise
+    """
+    # If issue_data provided, check its base_branch directly
+    if issue_data is not None:
+        base_branch = issue_data.get("base_branch")
+        if base_branch:
+            logger.info(f"Found base branch from provided issue data: {base_branch}")
+            return base_branch
+        logger.debug("Provided issue_data has no base_branch")
+        return None
+
+    # Extract issue number from branch name
+    issue_number = extract_issue_number_from_branch(current_branch)
+    if issue_number is None:
+        logger.debug(f"No issue number in branch name '{current_branch}'")
+        return None
+
+    try:
+        issue_manager = IssueManager(project_dir=project_dir)
+        fetched_issue = issue_manager.get_issue(issue_number)
+
+        # Check if issue was found (number=0 indicates not found)
+        if fetched_issue.get("number", 0) == 0:
+            logger.debug(f"Issue #{issue_number} not found")
+            return None
+
+        base_branch = fetched_issue.get("base_branch")
+        if base_branch:
+            logger.info(f"Found base branch from issue #{issue_number}: {base_branch}")
+            return base_branch
+
+        logger.debug(f"Issue #{issue_number} has no base_branch specified")
+        return None
+
+    except Exception as e:
+        logger.debug(f"Issue detection failed: {e}")
+        return None
+
+
+def _detect_default_branch(project_dir: Path) -> Optional[str]:
+    """Detect default branch (main/master).
+
+    Args:
+        project_dir: Project directory path
+
+    Returns:
+        Default branch name if found, None otherwise
+    """
+    try:
+        default_branch = get_default_branch_name(project_dir)
+        if default_branch:
+            logger.info(f"Using default branch: {default_branch}")
+            return default_branch
+
+        logger.debug("Could not determine default branch")
+        return None
+
+    except Exception as e:
+        logger.debug(f"Default branch detection failed: {e}")
+        return None
