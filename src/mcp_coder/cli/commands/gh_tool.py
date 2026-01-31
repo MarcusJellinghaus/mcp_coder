@@ -76,6 +76,7 @@ def execute_get_base_branch(args: argparse.Namespace) -> int:
         return 2
     except Exception as e:
         logger.error(f"Error detecting base branch: {e}")
+        logger.debug("Exception details:", exc_info=True)
         print(f"Error: {e}", file=sys.stderr)
         return 2
 

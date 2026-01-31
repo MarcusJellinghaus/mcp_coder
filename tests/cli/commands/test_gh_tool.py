@@ -21,10 +21,6 @@ try:
 except ImportError:
     GH_TOOL_MODULE_AVAILABLE = False
 
-    # Create a mock for type checking in tests
-    def execute_get_base_branch(*args, **kwargs):  # type: ignore
-        pass
-
 
 # ============================================================================
 # Fixtures
