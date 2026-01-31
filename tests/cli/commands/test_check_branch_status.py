@@ -32,6 +32,8 @@ except ImportError:
 def sample_report() -> BranchStatusReport:
     """Create a sample BranchStatusReport for testing."""
     return BranchStatusReport(
+        branch_name="feature/test-branch",
+        base_branch="main",
         ci_status="PASSED",
         ci_details=None,
         rebase_needed=False,
@@ -46,6 +48,8 @@ def sample_report() -> BranchStatusReport:
 def failed_ci_report() -> BranchStatusReport:
     """Create a BranchStatusReport with failed CI for testing."""
     return BranchStatusReport(
+        branch_name="feature/test-branch",
+        base_branch="main",
         ci_status="FAILED",
         ci_details="Test failure: AssertionError in test_example",
         rebase_needed=False,
