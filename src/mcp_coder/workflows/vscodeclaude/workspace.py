@@ -269,9 +269,7 @@ def update_gitignore(folder_path: Path) -> None:
 
     Idempotent: won't duplicate entries.
     """
-    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
-        GITIGNORE_ENTRY,
-    )
+    from .templates import GITIGNORE_ENTRY
 
     gitignore_path = folder_path / ".gitignore"
 
@@ -333,9 +331,7 @@ def create_workspace_file(
     Returns:
         Path to created workspace file
     """
-    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
-        WORKSPACE_FILE_TEMPLATE,
-    )
+    from .templates import WORKSPACE_FILE_TEMPLATE
 
     # Truncate title if too long
     title_short = issue_title[:30] + "..." if len(issue_title) > 30 else issue_title
@@ -388,7 +384,7 @@ def create_startup_script(
     - mcp-coder prompt for /discuss
     - claude --resume for interactive session
     """
-    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+    from .templates import (
         AUTOMATED_SECTION_WINDOWS_V2,
         DISCUSSION_SECTION_WINDOWS,
         INTERACTIVE_SECTION_WINDOWS_V2,
@@ -466,9 +462,7 @@ def create_vscode_task(folder_path: Path, script_path: Path) -> None:
         folder_path: Working folder path
         script_path: Path to startup script
     """
-    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
-        TASKS_JSON_TEMPLATE,
-    )
+    from .templates import TASKS_JSON_TEMPLATE
 
     # Create .vscode directory
     vscode_dir = folder_path / ".vscode"
@@ -504,7 +498,7 @@ def create_status_file(
         issue_url: GitHub issue URL
         is_intervention: If True, add intervention warning
     """
-    from mcp_coder.cli.commands.coordinator.vscodeclaude_templates import (
+    from .templates import (
         INTERVENTION_ROW,
         STATUS_FILE_TEMPLATE,
     )

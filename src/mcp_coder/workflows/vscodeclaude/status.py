@@ -3,20 +3,12 @@
 import logging
 import subprocess
 from pathlib import Path
-from types import ModuleType
 
-from ..github_operations.issue_manager import IssueData, IssueManager
+from ...utils.github_operations.issue_manager import IssueData, IssueManager
 from .sessions import check_vscode_running, load_sessions
 from .types import VSCodeClaudeSession
 
 logger = logging.getLogger(__name__)
-
-
-def _get_coordinator() -> ModuleType:
-    """Get coordinator package for late binding of patchable functions."""
-    from mcp_coder.cli.commands import coordinator
-
-    return coordinator
 
 
 def get_issue_current_status(
@@ -87,9 +79,8 @@ def is_issue_closed(
     if cached_issues is not None:
         _, is_open = get_issue_current_status(issue_number, cached_issues=cached_issues)
     else:
-        coordinator = _get_coordinator()
         repo_url = f"https://github.com/{repo_full_name}"
-        issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
+        issue_manager = IssueManager(repo_url=repo_url)
         _, is_open = get_issue_current_status(issue_number, issue_manager=issue_manager)
 
     return not is_open
@@ -128,9 +119,8 @@ def is_session_stale(
             issue_number, cached_issues=cached_issues
         )
     else:
-        coordinator = _get_coordinator()
         repo_url = f"https://github.com/{repo_full_name}"
-        issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
+        issue_manager = IssueManager(repo_url=repo_url)
         current_status, is_open = get_issue_current_status(
             issue_number, issue_manager=issue_manager
         )

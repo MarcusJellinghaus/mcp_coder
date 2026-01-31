@@ -2,7 +2,7 @@
 
 This module contains tests for:
 - Configuration management functions (load_repo_config, validate_repo_config, get_jenkins_credentials)
-- Cache refresh settings (get_cache_refresh_minutes)
+- Cache refresh settings (get_cache_refresh_minutes - moved to utils.user_config)
 - Issue filtering functions (get_eligible_issues)
 - Workflow dispatch function (dispatch_workflow)
 - Cache file operations (_get_cache_file_path, _load_cache_file, _save_cache_file)
@@ -22,7 +22,6 @@ import pytest
 from mcp_coder.cli.commands.coordinator import (
     CacheData,
     dispatch_workflow,
-    get_cache_refresh_minutes,
     get_cached_eligible_issues,
     get_eligible_issues,
     get_jenkins_credentials,
@@ -38,6 +37,7 @@ from mcp_coder.utils.github_operations import (
     _log_stale_cache_entries,
     _save_cache_file,
 )
+from mcp_coder.utils.user_config import get_cache_refresh_minutes
 
 # pylint: enable=no-name-in-module
 
@@ -278,9 +278,13 @@ class TestGetJenkinsCredentials:
 
 
 class TestGetCacheRefreshMinutes:
-    """Tests for get_cache_refresh_minutes function."""
+    """Tests for get_cache_refresh_minutes function.
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
+    Note: This function has been moved to utils.user_config module.
+    These tests patch the new location.
+    """
+
+    @patch("mcp_coder.utils.user_config.get_config_values")
     def test_get_cache_refresh_minutes_default(
         self, mock_get_config: MagicMock
     ) -> None:
@@ -293,7 +297,7 @@ class TestGetCacheRefreshMinutes:
         result = get_cache_refresh_minutes()
         assert result == 1440  # 24 hours
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
+    @patch("mcp_coder.utils.user_config.get_config_values")
     def test_get_cache_refresh_minutes_custom_value(
         self, mock_get_config: MagicMock
     ) -> None:
@@ -306,7 +310,7 @@ class TestGetCacheRefreshMinutes:
         result = get_cache_refresh_minutes()
         assert result == 720  # 12 hours
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
+    @patch("mcp_coder.utils.user_config.get_config_values")
     def test_get_cache_refresh_minutes_invalid_value(
         self, mock_get_config: MagicMock
     ) -> None:
@@ -319,7 +323,7 @@ class TestGetCacheRefreshMinutes:
         result = get_cache_refresh_minutes()
         assert result == 1440  # Falls back to default
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
+    @patch("mcp_coder.utils.user_config.get_config_values")
     def test_get_cache_refresh_minutes_negative_value(
         self, mock_get_config: MagicMock
     ) -> None:

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.utils.vscodeclaude.workspace import (
+from mcp_coder.workflows.vscodeclaude.workspace import (
     create_startup_script,
     create_status_file,
     create_vscode_task,
@@ -87,7 +87,7 @@ class TestWorkspaceSetup:
             return None
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.shutil.which", mock_which
+            "mcp_coder.workflows.vscodeclaude.workspace.shutil.which", mock_which
         )
 
         validate_setup_commands(["python --version", "git status"])
@@ -97,7 +97,7 @@ class TestWorkspaceSetup:
     ) -> None:
         """Raises when command not found in PATH."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.shutil.which",
+            "mcp_coder.workflows.vscodeclaude.workspace.shutil.which",
             lambda cmd: None,
         )
 
@@ -116,7 +116,7 @@ class TestWorkspaceSetup:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         run_setup_commands(tmp_path, ["echo hello", "echo world"])
@@ -133,7 +133,7 @@ class TestWorkspaceSetup:
             raise subprocess.CalledProcessError(1, cmd)
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         with pytest.raises(subprocess.CalledProcessError):
@@ -207,7 +207,7 @@ class TestWorkspaceSetup:
     ) -> None:
         """Creates .bat script on Windows."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -232,7 +232,7 @@ class TestWorkspaceSetup:
     ) -> None:
         """Linux raises NotImplementedError until Step 17."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Linux",
         )
 
@@ -252,7 +252,7 @@ class TestWorkspaceSetup:
     ) -> None:
         """Intervention mode uses plain claude command."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -337,7 +337,7 @@ class TestGitOperations:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         folder = tmp_path / "new_repo"
@@ -360,7 +360,7 @@ class TestGitOperations:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         # Create folder with .git
@@ -387,7 +387,7 @@ class TestGitOperations:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         folder = tmp_path / "repo"
@@ -408,7 +408,7 @@ class TestGitOperations:
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
         )
 
         folder = tmp_path / "has_content"
@@ -439,10 +439,10 @@ class TestGitOperations:
             rmtree_called.append(path)
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.shutil.rmtree", mock_rmtree
+            "mcp_coder.workflows.vscodeclaude.workspace.shutil.rmtree", mock_rmtree
         )
 
         # Create folder with corrupted .git
@@ -468,7 +468,7 @@ class TestCreateStartupScriptV2:
     ) -> None:
         """Generated script includes venv setup."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -491,7 +491,7 @@ class TestCreateStartupScriptV2:
     ) -> None:
         """Generated script uses mcp-coder prompt."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -515,7 +515,7 @@ class TestCreateStartupScriptV2:
     ) -> None:
         """Generated script ends with claude --resume."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -537,7 +537,7 @@ class TestCreateStartupScriptV2:
     ) -> None:
         """Timeout parameter is used in script."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -560,7 +560,7 @@ class TestCreateStartupScriptV2:
     ) -> None:
         """Intervention mode skips automation."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -584,7 +584,7 @@ class TestCreateStartupScriptV2:
     ) -> None:
         """Uses correct initial command based on status."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
@@ -607,7 +607,7 @@ class TestCreateStartupScriptV2:
     ) -> None:
         """Generated script includes discussion section."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.workspace.platform.system",
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 

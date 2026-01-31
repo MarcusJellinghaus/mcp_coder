@@ -1,13 +1,12 @@
 """Test issue selection and filtering for VSCode Claude."""
 
-from pathlib import Path
-from typing import Any, cast
+from typing import cast
 from unittest.mock import Mock
 
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from mcp_coder.utils.vscodeclaude.issues import (
+from mcp_coder.workflows.vscodeclaude.issues import (
     _filter_eligible_vscodeclaude_issues,
     get_cached_eligible_vscodeclaude_issues,
     get_eligible_vscodeclaude_issues,
@@ -30,15 +29,10 @@ class TestIssueSelection:
             "ignore_labels": ["Overview"],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
-        mock_coordinator = type(
-            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
-        )()
+        # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
         )
 
         labels = get_human_action_labels()
@@ -103,15 +97,10 @@ class TestIssueSelection:
             "ignore_labels": [],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
-        mock_coordinator = type(
-            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
-        )()
+        # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
         )
 
         eligible = get_eligible_vscodeclaude_issues(mock_issue_manager, "testuser")
@@ -177,15 +166,10 @@ class TestIssueSelection:
             "ignore_labels": [],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
-        mock_coordinator = type(
-            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
-        )()
+        # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
         )
 
         eligible = get_eligible_vscodeclaude_issues(mock_issue_manager, "user")
@@ -239,15 +223,10 @@ class TestIssueSelection:
             "ignore_labels": ["Overview"],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
-        mock_coordinator = type(
-            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
-        )()
+        # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
         )
 
         eligible = get_eligible_vscodeclaude_issues(mock_issue_manager, "user")
@@ -351,15 +330,10 @@ class TestFilterEligibleVscodeclaudeIssues:
             "ignore_labels": ["Overview"],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
-        mock_coordinator = type(
-            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
-        )()
+        # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
         )
 
         # Filter issues - cast for mypy
@@ -412,15 +386,10 @@ class TestFilterEligibleVscodeclaudeIssues:
             "ignore_labels": [],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
-        mock_coordinator = type(
-            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
-        )()
+        # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
         )
 
         eligible = _filter_eligible_vscodeclaude_issues(
@@ -459,7 +428,7 @@ class TestGetCachedEligibleVscodeclaudeIssues:
         # Mock cache function
         mock_get_all_cached = Mock(return_value=cached_issues)
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues.get_all_cached_issues",
+            "mcp_coder.workflows.vscodeclaude.issues.get_all_cached_issues",
             mock_get_all_cached,
         )
 
@@ -471,15 +440,10 @@ class TestGetCachedEligibleVscodeclaudeIssues:
             "ignore_labels": [],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
-        mock_coordinator = type(
-            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
-        )()
+        # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
         )
 
         mock_issue_manager = Mock()
@@ -512,7 +476,7 @@ class TestGetCachedEligibleVscodeclaudeIssues:
         # Mock cache to raise error
         mock_get_all_cached = Mock(side_effect=ValueError("Cache error"))
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues.get_all_cached_issues",
+            "mcp_coder.workflows.vscodeclaude.issues.get_all_cached_issues",
             mock_get_all_cached,
         )
 
@@ -543,15 +507,10 @@ class TestGetCachedEligibleVscodeclaudeIssues:
             "ignore_labels": [],
         }
 
-        def mock_load_labels_config(self: Any, config_path: Path) -> dict[str, Any]:
-            return mock_labels_config
-
-        mock_coordinator = type(
-            "MockCoordinator", (), {"load_labels_config": mock_load_labels_config}
-        )()
+        # Mock _load_labels_config to return our test config
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.issues._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
         )
 
         # Call function

@@ -8,14 +8,14 @@ from typing import Any
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from mcp_coder.utils.vscodeclaude.orchestrator import (
+from mcp_coder.workflows.vscodeclaude.orchestrator import (
     handle_pr_created_issues,
     prepare_and_launch_session,
     process_eligible_issues,
     restart_closed_sessions,
 )
-from mcp_coder.utils.vscodeclaude.sessions import load_sessions
-from mcp_coder.utils.vscodeclaude.types import (
+from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
+from mcp_coder.workflows.vscodeclaude.types import (
     RepoVSCodeClaudeConfig,
     VSCodeClaudeConfig,
 )
@@ -30,43 +30,43 @@ class TestOrchestration:
         """Creates session with all components."""
         # Mock all dependencies
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.create_working_folder",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_working_folder",
             lambda p: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.setup_git_repo",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.setup_git_repo",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.validate_mcp_json",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.validate_mcp_json",
             lambda p: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.update_gitignore",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.update_gitignore",
             lambda p: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.create_workspace_file",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_workspace_file",
             lambda *args, **kwargs: tmp_path / "test.code-workspace",
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.create_startup_script",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_startup_script",
             lambda *args, **kwargs: tmp_path / ".vscodeclaude_start.bat",
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.create_vscode_task",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_vscode_task",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.create_status_file",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_status_file",
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
             lambda p: 9999,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.add_session",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.add_session",
             lambda s: None,
         )
 
@@ -121,7 +121,7 @@ class TestOrchestration:
             return True
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.create_working_folder",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_working_folder",
             mock_create_folder,
         )
 
@@ -129,7 +129,7 @@ class TestOrchestration:
             raise subprocess.CalledProcessError(1, "git clone")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.setup_git_repo",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.setup_git_repo",
             failing_git,
         )
 
@@ -177,19 +177,19 @@ class TestOrchestration:
             return True
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.create_working_folder",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_working_folder",
             mock_create_folder,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.setup_git_repo",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.setup_git_repo",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.validate_mcp_json",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.validate_mcp_json",
             lambda p: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.validate_setup_commands",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.validate_setup_commands",
             lambda c: None,
         )
 
@@ -197,7 +197,7 @@ class TestOrchestration:
             raise subprocess.CalledProcessError(1, "uv sync")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.run_setup_commands",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.run_setup_commands",
             failing_setup,
         )
 
@@ -225,7 +225,7 @@ class TestOrchestration:
 
         # Mock platform to Windows to trigger setup commands
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.platform.system",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.platform.system",
             lambda: "Windows",
         )
 
@@ -247,7 +247,7 @@ class TestOrchestration:
     ) -> None:
         """Doesn't start sessions beyond max."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.get_active_session_count",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.get_active_session_count",
             lambda: 2,
         )
 
@@ -281,13 +281,13 @@ class TestOrchestration:
         """Removes sessions with missing folders."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
         # Mock vscode not running
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
             lambda pid: False,
         )
 
@@ -319,19 +319,19 @@ class TestOrchestration:
         """Skips sessions for repos not in config file."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
         # Mock vscode not running
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
             lambda pid: False,
         )
 
         # Mock _get_configured_repos to return a different repo (not owner/unconfigured)
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
             lambda: {"owner/configured_repo"},  # Different from session's repo
         )
 
@@ -367,25 +367,25 @@ class TestOrchestration:
         """Relaunches VSCode for valid sessions."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
         # Mock vscode not running - patch at orchestrator since that's where it's imported
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
             lambda pid: False,
         )
 
         # Mock _get_configured_repos to return the test repo
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
         # Mock is_session_stale to avoid GitHub API calls - patch at orchestrator
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.is_session_stale",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_stale",
             lambda session, cached_issues=None: False,
         )
 
@@ -398,8 +398,8 @@ class TestOrchestration:
         # Mock launch_vscode
         new_pid = 9999
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.launch_vscode",
-            lambda w: new_pid,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            lambda _: new_pid,
         )
 
         session = {
@@ -429,13 +429,13 @@ class TestOrchestration:
         """Skips sessions with running VSCode."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
         # Mock vscode running
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
             lambda pid: True,
         )
 

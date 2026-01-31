@@ -1,6 +1,6 @@
 """Test backward compatibility for orchestrator functions."""
 
-from mcp_coder.utils.vscodeclaude.orchestrator import (
+from mcp_coder.workflows.vscodeclaude.orchestrator import (
     _get_repo_full_name,
     _get_repo_short_name,
     get_stage_display_name,
