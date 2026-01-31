@@ -92,7 +92,7 @@ See [step_5.md](./steps/step_5.md) for details.
 - [x] Run `./tools/lint_imports.sh` and verify all contracts pass
 - [x] Run `./tools/tach_check.sh` and verify no layer violations
 - [x] Run `mcp__code-checker__run_pylint_check` and fix any errors/fatal issues
-- [ ] Run `mcp__code-checker__run_mypy_check` and fix any type errors
+- [x] Run `mcp__code-checker__run_mypy_check` and fix any type errors
 - [ ] Run `mcp__code-checker__run_pytest_check` and ensure all tests pass
 - [ ] Verify no imports from CLI layer in workflows layer
 - [ ] Verify `import mcp_coder.utils.vscodeclaude` fails (deleted)
