@@ -38,26 +38,26 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Create workflows/vscodeclaude/ Package Structure
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Create `workflows/vscodeclaude/` directory
-- [ ] Move `utils/vscodeclaude/__init__.py` → `workflows/vscodeclaude/__init__.py`
-- [ ] Move `utils/vscodeclaude/cleanup.py` → `workflows/vscodeclaude/cleanup.py`
-- [ ] Move `utils/vscodeclaude/config.py` → `workflows/vscodeclaude/config.py`
-- [ ] Move `utils/vscodeclaude/helpers.py` → `workflows/vscodeclaude/helpers.py`
-- [ ] Move `utils/vscodeclaude/issues.py` → `workflows/vscodeclaude/issues.py`
-- [ ] Move `utils/vscodeclaude/orchestrator.py` → `workflows/vscodeclaude/orchestrator.py`
-- [ ] Move `utils/vscodeclaude/sessions.py` → `workflows/vscodeclaude/sessions.py`
-- [ ] Move `utils/vscodeclaude/status.py` → `workflows/vscodeclaude/status.py`
-- [ ] Move `utils/vscodeclaude/types.py` → `workflows/vscodeclaude/types.py`
-- [ ] Move `utils/vscodeclaude/workspace.py` → `workflows/vscodeclaude/workspace.py`
-- [ ] Move `coordinator/vscodeclaude_templates.py` → `workflows/vscodeclaude/templates.py`
-- [ ] Remove `_get_coordinator()` pattern from all moved files
-- [ ] Replace late-binding with direct imports from utils
-- [ ] Update internal imports to use correct relative paths
-- [ ] Update `workflows/__init__.py` to export vscodeclaude
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any issues
-- [ ] Run mypy and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Create `workflows/vscodeclaude/` directory
+- [x] Move `utils/vscodeclaude/__init__.py` → `workflows/vscodeclaude/__init__.py`
+- [x] Move `utils/vscodeclaude/cleanup.py` → `workflows/vscodeclaude/cleanup.py`
+- [x] Move `utils/vscodeclaude/config.py` → `workflows/vscodeclaude/config.py`
+- [x] Move `utils/vscodeclaude/helpers.py` → `workflows/vscodeclaude/helpers.py`
+- [x] Move `utils/vscodeclaude/issues.py` → `workflows/vscodeclaude/issues.py`
+- [x] Move `utils/vscodeclaude/orchestrator.py` → `workflows/vscodeclaude/orchestrator.py`
+- [x] Move `utils/vscodeclaude/sessions.py` → `workflows/vscodeclaude/sessions.py`
+- [x] Move `utils/vscodeclaude/status.py` → `workflows/vscodeclaude/status.py`
+- [x] Move `utils/vscodeclaude/types.py` → `workflows/vscodeclaude/types.py`
+- [x] Move `utils/vscodeclaude/workspace.py` → `workflows/vscodeclaude/workspace.py`
+- [x] Move `coordinator/vscodeclaude_templates.py` → `workflows/vscodeclaude/templates.py`
+- [x] Remove `_get_coordinator()` pattern from all moved files
+- [x] Replace late-binding with direct imports from utils
+- [x] Update internal imports to use correct relative paths
+- [x] Update `workflows/__init__.py` to export vscodeclaude
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any issues
+- [x] Run mypy and fix any issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Clean Up CLI Layer and Delete Old Files
 See [step_3.md](./steps/step_3.md) for details.

@@ -4,9 +4,8 @@ import json
 import logging
 import re
 from pathlib import Path
-from types import ModuleType
 
-from ..user_config import get_config_file_path
+from ...utils.user_config import get_config_file_path, get_config_values
 from .types import (
     DEFAULT_MAX_SESSIONS,
     RepoVSCodeClaudeConfig,
@@ -14,13 +13,6 @@ from .types import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _get_coordinator() -> ModuleType:
-    """Get coordinator package for late binding of patchable functions."""
-    from mcp_coder.cli.commands import coordinator
-
-    return coordinator
 
 
 def load_vscodeclaude_config() -> VSCodeClaudeConfig:
@@ -32,10 +24,8 @@ def load_vscodeclaude_config() -> VSCodeClaudeConfig:
     Raises:
         ValueError: If workspace_base not configured or doesn't exist
     """
-    coordinator = _get_coordinator()
-
     # Batch fetch config values
-    config = coordinator.get_config_values(
+    config = get_config_values(
         [
             ("coordinator.vscodeclaude", "workspace_base", None),
             ("coordinator.vscodeclaude", "max_sessions", None),
@@ -84,12 +74,10 @@ def load_repo_vscodeclaude_config(repo_name: str) -> RepoVSCodeClaudeConfig:
     Returns:
         RepoVSCodeClaudeConfig with optional setup_commands_windows/linux
     """
-    coordinator = _get_coordinator()
-
     section = f"coordinator.repos.{repo_name}"
 
     # Batch fetch config values
-    config = coordinator.get_config_values(
+    config = get_config_values(
         [
             (section, "setup_commands_windows", None),
             (section, "setup_commands_linux", None),
@@ -132,10 +120,8 @@ def get_github_username() -> str:
     Raises:
         ValueError: If GitHub authentication fails
     """
-    coordinator = _get_coordinator()
-
     # Get GitHub token from config
-    config = coordinator.get_config_values([("github", "token", None)])
+    config = get_config_values([("github", "token", None)])
     token = config[("github", "token")]
 
     if not token:

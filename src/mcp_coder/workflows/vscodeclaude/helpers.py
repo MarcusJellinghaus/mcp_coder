@@ -9,7 +9,7 @@ Contains utility functions for:
 
 from datetime import datetime, timezone
 
-from ..github_operations.issue_manager import IssueData
+from ...utils.github_operations.issue_manager import IssueData
 from .types import (
     STAGE_DISPLAY_NAMES,
     VSCodeClaudeSession,
