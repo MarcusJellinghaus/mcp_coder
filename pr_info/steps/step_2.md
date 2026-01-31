@@ -89,8 +89,8 @@ function collect_branch_status(project_dir, truncate_logs, max_log_lines):
         try: issue_data = IssueManager(project_dir).get_issue(issue_number)
         except: pass
     
-    # Use shared issue_data
-    base_branch = detect_base_branch(project_dir, issue_data)
+    # Use shared issue_data and branch_name
+    base_branch = detect_base_branch(project_dir, branch_name, issue_data)
     current_label = _collect_github_label(project_dir, branch_name, issue_data)
     
     # ... rest of existing collection logic ...

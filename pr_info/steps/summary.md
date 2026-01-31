@@ -8,7 +8,8 @@ Enhance `mcp-coder check branch-status` to display the current branch name and i
 
 ### New Module
 - **`src/mcp_coder/workflow_utils/base_branch.py`** - Shared utility for base branch detection
-  - Single function `detect_base_branch()` used by both `branch_status.py` and `implement/core.py`
+  - Extracted from `gh_tool.py` to avoid code duplication
+  - Single function `detect_base_branch()` used by `gh_tool.py`, `branch_status.py`, and `implement/core.py`
   - Centralizes detection logic with clear priority: PR → Issue → Default → "unknown"
 
 ### Modified Data Structure
@@ -50,22 +51,28 @@ Branch Status: CI=PASSED, Rebase=UP_TO_DATE, Tasks=COMPLETE
 
 | File | Purpose |
 |------|---------|
-| `src/mcp_coder/workflow_utils/base_branch.py` | Shared base branch detection function |
-| `tests/workflow_utils/test_base_branch.py` | Unit tests for detection logic |
+| `src/mcp_coder/workflow_utils/base_branch.py` | Shared base branch detection function (extracted from gh_tool.py) |
+| `tests/workflow_utils/test_base_branch.py` | Unit tests for detection logic (moved from test_gh_tool.py + new tests) |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
 | `src/mcp_coder/workflow_utils/branch_status.py` | Add fields to dataclass, update formatters, share issue data |
-| `src/mcp_coder/workflows/implement/core.py` | Refactor `_get_rebase_target_branch()` to use shared function |
+| `src/mcp_coder/workflows/implement/core.py` | Refactor `_get_rebase_target_branch()` to use shared function (gains issue-based detection) |
+| `src/mcp_coder/cli/commands/gh_tool.py` | Import detection helpers from base_branch.py |
 | `tests/workflow_utils/test_branch_status.py` | Update tests for new fields |
+| `tests/cli/commands/test_gh_tool.py` | Keep only CLI-specific tests (detection tests moved) |
 
 ## Implementation Steps
 
-1. **Step 1**: Create `base_branch.py` with `detect_base_branch()` function and tests
+1. **Step 1**: Extract detection helpers from `gh_tool.py` into `base_branch.py`, create unified `detect_base_branch()` function, move tests
 2. **Step 2**: Update `BranchStatusReport` dataclass and `collect_branch_status()` 
 3. **Step 3**: Update formatting functions and refactor `implement/core.py`
+
+## Key Decisions
+
+See [Decisions.md](./Decisions.md) for discussion outcomes.
 
 ## Acceptance Criteria
 
