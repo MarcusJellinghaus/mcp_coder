@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from mcp_coder.workflow_utils.task_tracker import (
+    TASK_TRACKER_TEMPLATE,
     TaskInfo,
     TaskTrackerError,
     TaskTrackerFileNotFoundError,
@@ -1648,4 +1649,26 @@ Some instructions here.
             tracker_path.write_text(content, encoding="utf-8")
 
             # Should not raise - empty Tasks section is valid
+            validate_task_tracker(temp_dir)
+
+
+class TestTaskTrackerTemplate:
+    """Tests for TASK_TRACKER_TEMPLATE constant."""
+
+    def test_template_contains_tasks_header(self) -> None:
+        """Test template contains ## Tasks header."""
+        assert "## Tasks" in TASK_TRACKER_TEMPLATE
+
+    def test_template_contains_pull_request_header(self) -> None:
+        """Test template contains ## Pull Request header."""
+        assert "## Pull Request" in TASK_TRACKER_TEMPLATE
+
+    def test_template_is_valid(self) -> None:
+        """Test template passes validation."""
+        with TemporaryDirectory() as temp_dir:
+            # Write template to temp file
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            tracker_path.write_text(TASK_TRACKER_TEMPLATE, encoding="utf-8")
+
+            # Call validate_task_tracker() - should not raise
             validate_task_tracker(temp_dir)
