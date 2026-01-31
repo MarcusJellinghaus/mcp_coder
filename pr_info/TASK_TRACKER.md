@@ -76,7 +76,7 @@ See [step_3.md](./steps/step_3.md) for details.
 ### Step 4: Update Test Patches
 See [step_4.md](./steps/step_4.md) for details.
 
-- [ ] Search for all patches containing "vscodeclaude" in tests/
+- [x] Search for all patches containing "vscodeclaude" in tests/
 - [ ] Search for patches of `get_cache_refresh_minutes` in tests/
 - [ ] Update patches: `utils.vscodeclaude` → `workflows.vscodeclaude`
 - [ ] Update patches: `coordinator.get_cache_refresh_minutes` → `utils.user_config.get_cache_refresh_minutes`
