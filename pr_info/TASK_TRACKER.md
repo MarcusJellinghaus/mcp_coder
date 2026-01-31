@@ -30,13 +30,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Edge cases tested (detached HEAD, no issue number in branch)
 
 ### Step 2: Implement `gh-tool get-base-branch` Command
-- [ ] Command registered under `mcp-coder gh-tool get-base-branch` - [step_2.md](./steps/step_2.md)
-- [ ] Detection priority: PR → Issue → Default
-- [ ] Exit codes: 0 (success), 1 (no detection), 2 (error)
-- [ ] Exit codes documented in `--help` epilog
-- [ ] Output: branch name only to stdout
-- [ ] All tests from Step 1 pass
-- [ ] Follows existing code patterns (resolve_project_dir, logging)
+- [x] Command registered under `mcp-coder gh-tool get-base-branch` - [step_2.md](./steps/step_2.md)
+- [x] Detection priority: PR → Issue → Default
+- [x] Exit codes: 0 (success), 1 (no detection), 2 (error)
+- [x] Exit codes documented in `--help` epilog
+- [x] Output: branch name only to stdout
+- [x] All tests from Step 1 pass
+- [x] Follows existing code patterns (resolve_project_dir, logging)
 
 ### Step 3: Update Slash Commands for Dynamic Base Branch
 - [ ] `implementation_review.md` uses dynamic base branch for diff - [step_3.md](./steps/step_3.md)
