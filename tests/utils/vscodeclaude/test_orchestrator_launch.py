@@ -43,7 +43,7 @@ class TestLaunch:
             return Mock(pid=1)
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.subprocess.Popen",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.subprocess.Popen",
             mock_popen,
         )
 

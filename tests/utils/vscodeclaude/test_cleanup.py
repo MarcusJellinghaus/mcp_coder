@@ -78,19 +78,19 @@ class TestCleanup:
         """Skips sessions for repos not in config."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
         # Mock VSCode not running
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.cleanup.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
             lambda pid: False,
         )
 
         # Mock _get_configured_repos to return a DIFFERENT repo
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.cleanup._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/other_repo"},  # Different from session's repo
         )
 
@@ -121,13 +121,13 @@ class TestCleanup:
         sessions_file = tmp_path / "sessions.json"
         # Patch at sessions module since load_sessions calls get_sessions_file_path there
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
         # Mock VSCode running - patch at cleanup where it's imported
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.cleanup.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
             lambda pid: True,
         )
 
@@ -193,7 +193,7 @@ class TestCleanup:
         (tmp_path / "dirty_folder").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.cleanup.get_stale_sessions",
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
             lambda: [(dirty_session, True)],  # Dirty
         )
 
@@ -220,7 +220,7 @@ class TestCleanup:
         (tmp_path / "clean_folder").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.cleanup.get_stale_sessions",
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
             lambda: [(clean_session, False)],  # Clean
         )
         monkeypatch.setattr(
@@ -281,7 +281,7 @@ class TestCleanup:
         }
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.cleanup.remove_session",
+            "mcp_coder.workflows.vscodeclaude.cleanup.remove_session",
             lambda f: True,
         )
 
@@ -294,7 +294,7 @@ class TestCleanup:
     ) -> None:
         """Reports when no stale sessions."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.cleanup.get_stale_sessions",
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
             lambda: [],
         )
 

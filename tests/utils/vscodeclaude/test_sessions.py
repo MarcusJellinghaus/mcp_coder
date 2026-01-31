@@ -42,7 +42,7 @@ class TestSessionManagement:
     ) -> None:
         """Sessions file is in .config/mcp_coder on Linux."""
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.platform.system",
+            "mcp_coder.workflows.vscodeclaude.sessions.platform.system",
             lambda: "Linux",
         )
         path = get_sessions_file_path()
@@ -68,7 +68,7 @@ class TestSessionManagement:
         """Sessions survive save/load cycle."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -109,7 +109,7 @@ class TestSessionManagement:
         # Setup session store with test data
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -135,7 +135,7 @@ class TestSessionManagement:
         """Returns None when no matching session."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
         store = {"sessions": [], "last_updated": "2024-01-22T10:30:00Z"}
@@ -148,7 +148,7 @@ class TestSessionManagement:
         """Adds session to store."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -174,7 +174,7 @@ class TestSessionManagement:
         """Removes session by folder path."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -202,7 +202,7 @@ class TestSessionManagement:
         """Remove returns False when session not found."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
         store = {"sessions": [], "last_updated": "2024-01-22T10:30:00Z"}
@@ -217,7 +217,7 @@ class TestSessionManagement:
         """Counts only sessions with running PIDs."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -262,7 +262,7 @@ class TestSessionManagement:
         """Updates VSCode PID for existing session."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
@@ -289,7 +289,7 @@ class TestSessionManagement:
         """Returns empty store when JSON is invalid."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
         sessions_file.write_text("not valid json")
@@ -303,7 +303,7 @@ class TestSessionManagement:
         """Returns store with default fields when JSON is partial."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
         sessions_file.write_text(json.dumps({}))
@@ -318,7 +318,7 @@ class TestSessionManagement:
         """Save creates parent directories if they don't exist."""
         sessions_file = tmp_path / "nested" / "dirs" / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 

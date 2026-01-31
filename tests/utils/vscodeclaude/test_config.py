@@ -20,23 +20,20 @@ class TestConfiguration:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Loads config with valid workspace_base."""
-        # Create a mock coordinator module
+        # Mock get_config_values directly
         mock_config = {
             ("coordinator.vscodeclaude", "workspace_base"): str(tmp_path),
             ("coordinator.vscodeclaude", "max_sessions"): "5",
         }
 
         def mock_get_config_values(
-            self: Any, keys: list[tuple[str, str, str | None]]
+            keys: list[tuple[str, str, str | None]],
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
-        mock_coordinator = type(
-            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
-        )()
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.config._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.config.get_config_values",
+            mock_get_config_values,
         )
 
         config = load_vscodeclaude_config()
@@ -53,16 +50,13 @@ class TestConfiguration:
         }
 
         def mock_get_config_values(
-            self: Any, keys: list[tuple[str, str, str | None]]
+            keys: list[tuple[str, str, str | None]],
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
-        mock_coordinator = type(
-            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
-        )()
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.config.get_config_values",
+            mock_get_config_values,
         )
 
         with pytest.raises(ValueError, match="workspace_base"):
@@ -78,16 +72,13 @@ class TestConfiguration:
         }
 
         def mock_get_config_values(
-            self: Any, keys: list[tuple[str, str, str | None]]
+            keys: list[tuple[str, str, str | None]],
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
-        mock_coordinator = type(
-            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
-        )()
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.config.get_config_values",
+            mock_get_config_values,
         )
 
         config = load_vscodeclaude_config()
@@ -103,16 +94,13 @@ class TestConfiguration:
         }
 
         def mock_get_config_values(
-            self: Any, keys: list[tuple[str, str, str | None]]
+            keys: list[tuple[str, str, str | None]],
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
-        mock_coordinator = type(
-            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
-        )()
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.config.get_config_values",
+            mock_get_config_values,
         )
 
         with pytest.raises(ValueError, match="does not exist"):
@@ -131,16 +119,13 @@ class TestConfiguration:
         }
 
         def mock_get_config_values(
-            self: Any, keys: list[tuple[str, str, str | None]]
+            keys: list[tuple[str, str, str | None]],
         ) -> dict[tuple[str, str], str | None]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
-        mock_coordinator = type(
-            "MockCoordinator", (), {"get_config_values": mock_get_config_values}
-        )()
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.config._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.workflows.vscodeclaude.config.get_config_values",
+            mock_get_config_values,
         )
 
         config = load_repo_vscodeclaude_config("mcp_coder")

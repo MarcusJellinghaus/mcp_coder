@@ -121,7 +121,7 @@ class TestOrchestration:
             return True
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.create_working_folder",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_working_folder",
             mock_create_folder,
         )
 
@@ -129,7 +129,7 @@ class TestOrchestration:
             raise subprocess.CalledProcessError(1, "git clone")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.setup_git_repo",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.setup_git_repo",
             failing_git,
         )
 
@@ -177,15 +177,15 @@ class TestOrchestration:
             return True
 
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.create_working_folder",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_working_folder",
             mock_create_folder,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.setup_git_repo",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.setup_git_repo",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.validate_mcp_json",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.validate_mcp_json",
             lambda p: None,
         )
         monkeypatch.setattr(
@@ -319,13 +319,13 @@ class TestOrchestration:
         """Skips sessions for repos not in config file."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
         # Mock vscode not running
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
             lambda pid: False,
         )
 
@@ -367,19 +367,19 @@ class TestOrchestration:
         """Relaunches VSCode for valid sessions."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
         # Mock vscode not running - patch at orchestrator since that's where it's imported
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
             lambda pid: False,
         )
 
         # Mock _get_configured_repos to return the test repo
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -398,7 +398,7 @@ class TestOrchestration:
         # Mock launch_vscode
         new_pid = 9999
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
             lambda w: new_pid,
         )
 
@@ -429,13 +429,13 @@ class TestOrchestration:
         """Skips sessions with running VSCode."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.sessions.get_sessions_file_path",
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
         )
 
         # Mock vscode running
         monkeypatch.setattr(
-            "mcp_coder.utils.vscodeclaude.orchestrator.check_vscode_running",
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
             lambda pid: True,
         )
 
