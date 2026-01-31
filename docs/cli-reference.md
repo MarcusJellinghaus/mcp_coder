@@ -46,6 +46,13 @@ Branch readiness verification and code quality tools.
 | [`check branch-status`](#check-branch-status) | Check branch readiness and optionally apply fixes |
 | [`check file-size`](#check-file-size) | Check file sizes against maximum line count |
 
+### GitHub Tools
+GitHub repository utilities for branch detection and workflow automation.
+
+| Command | Description |
+|---------|-------------|
+| [`gh-tool get-base-branch`](#gh-tool-get-base-branch) | Detect base branch for current feature branch |
+
 ### Repository & Issue Setup
 Setup and configuration for GitHub workflow automation.
 
@@ -369,7 +376,7 @@ mcp-coder check branch-status [OPTIONS]
 
 **Description:** Comprehensive branch readiness check that verifies:
 - **CI Status** - Analyzes latest workflow run and retrieves error logs
-- **Rebase Detection** - Checks if branch needs rebasing onto main
+- **Rebase Detection** - Checks if branch needs rebasing onto base branch
 - **Task Validation** - Verifies all implementation tasks are complete
 - **GitHub Labels** - Reports current workflow status label
 
@@ -476,6 +483,49 @@ mcp-coder check file-size --allowlist-file .my-allowlist
 - **CI/CD Integration:** Add to pre-commit hooks or CI pipelines to enforce file size limits
 - **Codebase Cleanup:** Identify large files that may need refactoring
 - **Gradual Adoption:** Use `--generate-allowlist` to create an allowlist of existing large files, then enforce limits on new files
+
+---
+
+### gh-tool get-base-branch
+
+Detect the base branch for the current feature branch.
+
+```bash
+mcp-coder gh-tool get-base-branch [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Project directory path (default: current directory)
+
+**Description:** Detects the appropriate base branch for git operations (diff, rebase) using a priority-based approach:
+
+1. **GitHub PR base branch** - If an open PR exists for the current branch
+2. **Linked issue's base branch** - Extracts issue number from branch name and checks the `### Base Branch` section in the issue body
+3. **Default branch** - Falls back to the repository's default branch (main/master)
+
+**Exit Codes:**
+- `0` - Success, base branch printed to stdout
+- `1` - Could not detect base branch
+- `2` - Error (not a git repo, API failure, etc.)
+
+**Examples:**
+```bash
+# Detect base branch for current feature branch
+mcp-coder gh-tool get-base-branch
+
+# Use in shell scripts
+BASE_BRANCH=$(mcp-coder gh-tool get-base-branch)
+git diff ${BASE_BRANCH}...HEAD
+
+# Specify project directory
+mcp-coder gh-tool get-base-branch --project-dir /path/to/project
+```
+
+**Use Cases:**
+- Slash commands (`/rebase`, `/implementation_review`) use this to determine correct base branch
+- CI scripts that need to compare against the correct parent branch
+- Workflows involving feature branches based on non-main branches
+
 ---
 
 ## Configuration and Setup

@@ -179,7 +179,7 @@ For the MCP Coder and its processes, a number of slash commands have been define
 | `/plan_approve` | Approve plan for implementation |
 | `/implementation_review` | Code review |
 | `/commit_push` | Format, commit, and push changes |
-| `/rebase` | Rebase branch onto main |
+| `/rebase` | Rebase branch onto base branch |
 
 ## Integration with mcp-coder Commands
 

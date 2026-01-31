@@ -46,12 +46,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commands remain functional with same allowed-tools
 
 ### Step 4: Update Documentation
-- [ ] `docs/cli-reference.md` has new `gh-tool get-base-branch` section - [step_4.md](./steps/step_4.md)
-- [ ] `docs/cli-reference.md` command list updated
-- [ ] `docs/cli-reference.md` "onto main" text fixed
-- [ ] `docs/configuration/claude-code.md` `/rebase` description updated
-- [ ] `docs/processes-prompts/claude_cheat_sheet.md` `/rebase` description updated
-- [ ] All markdown formatting valid
-- [ ] No remaining hardcoded "onto main" references in rebase contexts
+- [x] `docs/cli-reference.md` has new `gh-tool get-base-branch` section - [step_4.md](./steps/step_4.md)
+- [x] `docs/cli-reference.md` command list updated
+- [x] `docs/cli-reference.md` "onto main" text fixed
+- [x] `docs/configuration/claude-code.md` `/rebase` description updated
+- [x] `docs/processes-prompts/claude_cheat_sheet.md` `/rebase` description updated
+- [x] All markdown formatting valid
+- [x] No remaining hardcoded "onto main" references in rebase contexts
 
 ## Pull Request
