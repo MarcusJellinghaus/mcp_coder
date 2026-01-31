@@ -45,31 +45,35 @@ class TestMain:
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_planning_prompts",
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.validate_output_files",
+                            "mcp_coder.workflows.create_plan.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.commit_all_changes",
-                                return_value={
-                                    "success": True,
-                                    "commit_hash": "abc123",
-                                },
+                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.git_push",
-                                    return_value={"success": True},
+                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    return_value={
+                                        "success": True,
+                                        "commit_hash": "abc123",
+                                    },
                                 ):
-                                    result = run_create_plan_workflow(
-                                        123, tmp_path, "claude", "cli"
-                                    )
+                                    with patch(
+                                        "mcp_coder.workflows.create_plan.git_push",
+                                        return_value={"success": True},
+                                    ):
+                                        result = run_create_plan_workflow(
+                                            123, tmp_path, "claude", "cli"
+                                        )
 
         assert result == 0
 
@@ -93,31 +97,40 @@ class TestMain:
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_planning_prompts",
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
                         return_value=True,
-                    ) as mock_prompts:
+                    ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.validate_output_files",
+                            "mcp_coder.workflows.create_plan.run_planning_prompts",
                             return_value=True,
-                        ):
+                        ) as mock_prompts:
                             with patch(
-                                "mcp_coder.workflows.create_plan.commit_all_changes",
-                                return_value={
-                                    "success": True,
-                                    "commit_hash": "abc123",
-                                },
+                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.git_push",
-                                    return_value={"success": True},
+                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    return_value={
+                                        "success": True,
+                                        "commit_hash": "abc123",
+                                    },
                                 ):
-                                    result = run_create_plan_workflow(
-                                        123, tmp_path, "claude", "cli", None, exec_dir
-                                    )
+                                    with patch(
+                                        "mcp_coder.workflows.create_plan.git_push",
+                                        return_value={"success": True},
+                                    ):
+                                        result = run_create_plan_workflow(
+                                            123,
+                                            tmp_path,
+                                            "claude",
+                                            "cli",
+                                            None,
+                                            exec_dir,
+                                        )
 
         assert result == 0
         # Verify execution_dir was passed to run_planning_prompts
@@ -170,10 +183,10 @@ class TestMain:
 
         assert result == 1
 
-    def test_main_steps_directory_not_empty(
+    def test_main_pr_info_exists(
         self, mock_issue_data: IssueData, tmp_path: Path
     ) -> None:
-        """Test main function when steps directory is not empty."""
+        """Test main function when pr_info/ directory already exists."""
         # Create .git directory
         (tmp_path / ".git").mkdir()
 
@@ -186,10 +199,39 @@ class TestMain:
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=False,
                 ):
                     result = run_create_plan_workflow(123, tmp_path, "claude", "cli")
+
+        assert result == 1
+
+    def test_main_create_pr_info_structure_fails(
+        self, mock_issue_data: IssueData, tmp_path: Path
+    ) -> None:
+        """Test main function when create_pr_info_structure fails."""
+        # Create .git directory
+        (tmp_path / ".git").mkdir()
+
+        with patch(
+            "mcp_coder.workflows.create_plan.check_prerequisites",
+            return_value=(True, mock_issue_data),
+        ):
+            with patch(
+                "mcp_coder.workflows.create_plan.manage_branch",
+                return_value="feature-branch",
+            ):
+                with patch(
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    return_value=True,
+                ):
+                    with patch(
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        return_value=False,
+                    ):
+                        result = run_create_plan_workflow(
+                            123, tmp_path, "claude", "cli"
+                        )
 
         assert result == 1
 
@@ -209,16 +251,20 @@ class TestMain:
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_planning_prompts",
-                        return_value=False,
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        return_value=True,
                     ):
-                        result = run_create_plan_workflow(
-                            123, tmp_path, "claude", "cli"
-                        )
+                        with patch(
+                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            return_value=False,
+                        ):
+                            result = run_create_plan_workflow(
+                                123, tmp_path, "claude", "cli"
+                            )
 
         assert result == 1
 
@@ -238,20 +284,24 @@ class TestMain:
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_planning_prompts",
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.validate_output_files",
-                            return_value=False,
+                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            return_value=True,
                         ):
-                            result = run_create_plan_workflow(
-                                123, tmp_path, "claude", "cli"
-                            )
+                            with patch(
+                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                return_value=False,
+                            ):
+                                result = run_create_plan_workflow(
+                                    123, tmp_path, "claude", "cli"
+                                )
 
         assert result == 1
 
@@ -271,31 +321,35 @@ class TestMain:
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_planning_prompts",
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.validate_output_files",
+                            "mcp_coder.workflows.create_plan.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.commit_all_changes"
-                            ) as mock_commit:
-                                mock_commit.return_value = {
-                                    "success": True,
-                                    "commit_hash": "abc123",
-                                }
+                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                return_value=True,
+                            ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.git_push",
-                                    return_value={"success": True},
-                                ):
-                                    result = run_create_plan_workflow(
-                                        123, tmp_path, "claude", "cli"
-                                    )
+                                    "mcp_coder.workflows.create_plan.commit_all_changes"
+                                ) as mock_commit:
+                                    mock_commit.return_value = {
+                                        "success": True,
+                                        "commit_hash": "abc123",
+                                    }
+                                    with patch(
+                                        "mcp_coder.workflows.create_plan.git_push",
+                                        return_value={"success": True},
+                                    ):
+                                        result = run_create_plan_workflow(
+                                            123, tmp_path, "claude", "cli"
+                                        )
 
         # Verify commit message format
         mock_commit.assert_called_once()
@@ -319,31 +373,35 @@ class TestMain:
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_planning_prompts",
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.validate_output_files",
+                            "mcp_coder.workflows.create_plan.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.commit_all_changes",
-                                return_value={
-                                    "success": False,
-                                    "error": "Commit failed",
-                                },
+                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.git_push"
-                                ) as mock_push:
-                                    mock_push.return_value = {"success": True}
-                                    result = run_create_plan_workflow(
-                                        123, tmp_path, "claude", "cli"
-                                    )
+                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    return_value={
+                                        "success": False,
+                                        "error": "Commit failed",
+                                    },
+                                ):
+                                    with patch(
+                                        "mcp_coder.workflows.create_plan.git_push"
+                                    ) as mock_push:
+                                        mock_push.return_value = {"success": True}
+                                        result = run_create_plan_workflow(
+                                            123, tmp_path, "claude", "cli"
+                                        )
 
         # Should still exit with success even if commit failed
         assert result == 0
@@ -366,34 +424,38 @@ class TestMain:
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_planning_prompts",
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.validate_output_files",
+                            "mcp_coder.workflows.create_plan.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.commit_all_changes",
-                                return_value={
-                                    "success": True,
-                                    "commit_hash": "abc123",
-                                },
+                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.git_push",
+                                    "mcp_coder.workflows.create_plan.commit_all_changes",
                                     return_value={
-                                        "success": False,
-                                        "error": "Push failed",
+                                        "success": True,
+                                        "commit_hash": "abc123",
                                     },
                                 ):
-                                    result = run_create_plan_workflow(
-                                        123, tmp_path, "claude", "cli"
-                                    )
+                                    with patch(
+                                        "mcp_coder.workflows.create_plan.git_push",
+                                        return_value={
+                                            "success": False,
+                                            "error": "Push failed",
+                                        },
+                                    ):
+                                        result = run_create_plan_workflow(
+                                            123, tmp_path, "claude", "cli"
+                                        )
 
         # Should still exit with success even if push failed
         assert result == 0
@@ -416,31 +478,35 @@ class TestMain:
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_planning_prompts",
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.validate_output_files",
+                            "mcp_coder.workflows.create_plan.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.commit_all_changes",
-                                return_value={
-                                    "success": True,
-                                    "commit_hash": "xyz789",
-                                },
+                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.git_push",
-                                    return_value={"success": True},
+                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    return_value={
+                                        "success": True,
+                                        "commit_hash": "xyz789",
+                                    },
                                 ):
-                                    result = run_create_plan_workflow(
-                                        456, custom_dir, "claude_code", "api"
-                                    )
+                                    with patch(
+                                        "mcp_coder.workflows.create_plan.git_push",
+                                        return_value={"success": True},
+                                    ):
+                                        result = run_create_plan_workflow(
+                                            456, custom_dir, "claude_code", "api"
+                                        )
 
         assert result == 0
 
@@ -460,31 +526,35 @@ class TestMain:
                 return_value="feature-branch",
             ) as mock_manage:
                 with patch(
-                    "mcp_coder.workflows.create_plan.verify_steps_directory",
+                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_planning_prompts",
+                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
                         return_value=True,
-                    ) as mock_prompts:
+                    ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.validate_output_files",
+                            "mcp_coder.workflows.create_plan.run_planning_prompts",
                             return_value=True,
-                        ):
+                        ) as mock_prompts:
                             with patch(
-                                "mcp_coder.workflows.create_plan.commit_all_changes",
-                                return_value={
-                                    "success": True,
-                                    "commit_hash": "abc123",
-                                },
+                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.git_push",
-                                    return_value={"success": True},
+                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    return_value={
+                                        "success": True,
+                                        "commit_hash": "abc123",
+                                    },
                                 ):
-                                    result = run_create_plan_workflow(
-                                        123, tmp_path, "claude", "cli"
-                                    )
+                                    with patch(
+                                        "mcp_coder.workflows.create_plan.git_push",
+                                        return_value={"success": True},
+                                    ):
+                                        result = run_create_plan_workflow(
+                                            123, tmp_path, "claude", "cli"
+                                        )
 
         # Verify functions were called with correct parameters
         mock_check.assert_called_once_with(tmp_path, 123)

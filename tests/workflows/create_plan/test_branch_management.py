@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.workflows.create_plan import manage_branch, verify_steps_directory
+from mcp_coder.workflows.create_plan import manage_branch
 
 
 class TestManageBranch:
@@ -188,134 +188,6 @@ class TestManageBranch:
                     assert any("Switched to branch" in call for call in log_calls)
 
         assert branch_name == "123-new-branch"
-
-
-class TestVerifyStepsDirectory:
-    """Test verify_steps_directory function."""
-
-    def test_verify_steps_directory_not_exists(self, tmp_path: Path) -> None:
-        """Test verify_steps_directory when directory doesn't exist."""
-        result = verify_steps_directory(tmp_path)
-        assert result is True
-
-    def test_verify_steps_directory_empty(self, tmp_path: Path) -> None:
-        """Test verify_steps_directory when directory is empty."""
-        # Create empty pr_info/steps directory
-        steps_dir = tmp_path / "pr_info" / "steps"
-        steps_dir.mkdir(parents=True)
-
-        result = verify_steps_directory(tmp_path)
-        assert result is True
-
-    def test_verify_steps_directory_has_files(self, tmp_path: Path) -> None:
-        """Test verify_steps_directory when directory contains files."""
-        # Create pr_info/steps directory with files
-        steps_dir = tmp_path / "pr_info" / "steps"
-        steps_dir.mkdir(parents=True)
-        (steps_dir / "step_1.md").write_text("Step 1 content")
-        (steps_dir / "step_2.md").write_text("Step 2 content")
-
-        result = verify_steps_directory(tmp_path)
-        assert result is False
-
-    def test_verify_steps_directory_has_single_file(self, tmp_path: Path) -> None:
-        """Test verify_steps_directory with single file in directory."""
-        # Create pr_info/steps directory with one file
-        steps_dir = tmp_path / "pr_info" / "steps"
-        steps_dir.mkdir(parents=True)
-        (steps_dir / "readme.md").write_text("Readme content")
-
-        result = verify_steps_directory(tmp_path)
-        assert result is False
-
-    def test_verify_steps_directory_has_subdirectory(self, tmp_path: Path) -> None:
-        """Test verify_steps_directory when directory contains subdirectory."""
-        # Create pr_info/steps directory with subdirectory
-        steps_dir = tmp_path / "pr_info" / "steps"
-        steps_dir.mkdir(parents=True)
-        (steps_dir / "subdir").mkdir()
-
-        result = verify_steps_directory(tmp_path)
-        assert result is False
-
-    def test_verify_steps_directory_logs_error_with_file_list(
-        self, tmp_path: Path
-    ) -> None:
-        """Test verify_steps_directory logs error with file list."""
-        # Create pr_info/steps directory with multiple files
-        steps_dir = tmp_path / "pr_info" / "steps"
-        steps_dir.mkdir(parents=True)
-        (steps_dir / "step_1.md").write_text("Step 1")
-        (steps_dir / "step_2.md").write_text("Step 2")
-        (steps_dir / "summary.md").write_text("Summary")
-
-        # Capture logger output
-        with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
-            result = verify_steps_directory(tmp_path)
-
-            # Verify error logging calls
-            assert mock_logger.error.call_count >= 1
-            error_calls = [call[0][0] for call in mock_logger.error.call_args_list]
-            assert any("contains files" in call for call in error_calls)
-            # Verify file names are logged
-            assert any(
-                "step_1.md" in str(call) for call in mock_logger.error.call_args_list
-            )
-            assert any(
-                "step_2.md" in str(call) for call in mock_logger.error.call_args_list
-            )
-            assert any(
-                "summary.md" in str(call) for call in mock_logger.error.call_args_list
-            )
-
-        assert result is False
-
-    def test_verify_steps_directory_logs_debug_when_ok(self, tmp_path: Path) -> None:
-        """Test verify_steps_directory logs debug message when directory is OK."""
-        # Test with non-existent directory
-        with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
-            result = verify_steps_directory(tmp_path)
-
-            # Verify debug logging
-            debug_calls = [call[0][0] for call in mock_logger.debug.call_args_list]
-            assert any("does not exist" in call for call in debug_calls)
-
-        assert result is True
-
-        # Test with empty directory
-        steps_dir = tmp_path / "pr_info" / "steps"
-        steps_dir.mkdir(parents=True)
-
-        with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
-            result = verify_steps_directory(tmp_path)
-
-            # Verify debug logging
-            debug_calls = [call[0][0] for call in mock_logger.debug.call_args_list]
-            assert any("is empty" in call for call in debug_calls)
-
-        assert result is True
-
-    def test_verify_steps_directory_pr_info_exists_but_no_steps(
-        self, tmp_path: Path
-    ) -> None:
-        """Test verify_steps_directory when pr_info exists but steps doesn't."""
-        # Create pr_info directory but not steps
-        pr_info_dir = tmp_path / "pr_info"
-        pr_info_dir.mkdir(parents=True)
-
-        result = verify_steps_directory(tmp_path)
-        assert result is True
-
-    def test_verify_steps_directory_with_hidden_files(self, tmp_path: Path) -> None:
-        """Test verify_steps_directory with hidden files in directory."""
-        # Create pr_info/steps directory with hidden file
-        steps_dir = tmp_path / "pr_info" / "steps"
-        steps_dir.mkdir(parents=True)
-        (steps_dir / ".gitkeep").write_text("")
-
-        result = verify_steps_directory(tmp_path)
-        # Should return False because .gitkeep is still a file
-        assert result is False
 
 
 class TestManageBranchBaseBranch:

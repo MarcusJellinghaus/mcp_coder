@@ -57,10 +57,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Write tests for directory structure + TASK_TRACKER.md creation
 - [x] Add `check_pr_info_not_exists()` function
 - [x] Add `create_pr_info_structure()` function (creates dirs + TASK_TRACKER.md)
-- [ ] Update `run_create_plan_workflow()` to use new functions
-- [ ] Remove `verify_steps_directory()` function
-- [ ] Remove obsolete tests
-- [ ] Run quality checks and fix any issues
+- [x] Update `run_create_plan_workflow()` to use new functions
+- [x] Remove `verify_steps_directory()` function
+- [x] Remove obsolete tests
+- [x] Run quality checks and fix any issues
 
 ## Pull Request
 

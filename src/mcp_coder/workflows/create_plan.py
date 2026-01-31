@@ -225,36 +225,6 @@ def create_pr_info_structure(project_dir: Path) -> bool:
         return False
 
 
-def verify_steps_directory(project_dir: Path) -> bool:
-    """Verify pr_info/steps/ directory is empty or doesn't exist.
-
-    Args:
-        project_dir: Path to the project directory
-
-    Returns:
-        True if empty/non-existent, False if contains files
-    """
-    steps_dir = project_dir / "pr_info" / "steps"
-
-    # If directory doesn't exist, that's fine
-    if not steps_dir.exists():
-        logger.debug("Directory pr_info/steps/ does not exist (OK)")
-        return True
-
-    # Check if directory is empty
-    files = list(steps_dir.iterdir())
-    if len(files) == 0:
-        logger.debug("Directory pr_info/steps/ is empty (OK)")
-        return True
-
-    # Directory contains files - this is an error
-    logger.error("Directory pr_info/steps/ contains files. Please clean manually.")
-    for file in files:
-        logger.error("  - %s", file.name)
-
-    return False
-
-
 def _load_prompt_or_exit(header: str) -> str:
     """Load prompt template or exit with clear error message."""
     try:
@@ -625,10 +595,16 @@ def run_create_plan_workflow(
         logger.error("Branch management failed")
         return 1
 
-    # Step 3: Verify pr_info/steps/ is empty
-    logger.info("Step 3/7: Verifying pr_info/steps/ is empty...")
-    if not verify_steps_directory(project_dir):
-        logger.error("Steps directory verification failed")
+    # Step 3: Check pr_info/ doesn't exist and create structure
+    logger.info("Step 3/7: Setting up pr_info/ directory structure...")
+    if not check_pr_info_not_exists(project_dir):
+        logger.error(
+            "pr_info/ directory already exists. Please clean up before creating a new plan."
+        )
+        return 1
+
+    if not create_pr_info_structure(project_dir):
+        logger.error("Failed to create pr_info/ directory structure")
         return 1
 
     # Step 4: Run initial analysis
