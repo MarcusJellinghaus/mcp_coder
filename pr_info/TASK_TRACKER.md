@@ -89,7 +89,7 @@ See [step_4.md](./steps/step_4.md) for details.
 ### Step 5: Final Verification
 See [step_5.md](./steps/step_5.md) for details.
 
-- [ ] Run `./tools/lint_imports.sh` and verify all contracts pass
+- [x] Run `./tools/lint_imports.sh` and verify all contracts pass
 - [ ] Run `./tools/tach_check.sh` and verify no layer violations
 - [ ] Run `mcp__code-checker__run_pylint_check` and fix any errors/fatal issues
 - [ ] Run `mcp__code-checker__run_mypy_check` and fix any type errors
