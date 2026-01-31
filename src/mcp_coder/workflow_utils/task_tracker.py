@@ -478,6 +478,23 @@ def _save_step_progress(
     }
 
 
+def validate_task_tracker(folder_path: str = "pr_info") -> None:
+    """Validate TASK_TRACKER.md has required structure.
+
+    Args:
+        folder_path: Path to folder containing TASK_TRACKER.md
+
+    Raises:
+        TaskTrackerFileNotFoundError: If file doesn't exist
+        TaskTrackerSectionNotFoundError: If required headers missing
+    """
+    # Read the tracker file (raises TaskTrackerFileNotFoundError if missing)
+    content = _read_task_tracker(folder_path)
+
+    # Validate structure (raises TaskTrackerSectionNotFoundError if invalid)
+    _find_implementation_section(content)
+
+
 def is_task_done(task_name: str, folder_path: str = "pr_info") -> bool:
     """Check if specific task is marked as complete.
 

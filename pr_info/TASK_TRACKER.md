@@ -27,8 +27,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Write tests for `validate_task_tracker()` function
 - [x] Write tests for `TASK_TRACKER_TEMPLATE` constant
 - [x] Add `TASK_TRACKER_TEMPLATE` constant to task_tracker.py
-- [ ] Implement `validate_task_tracker()` function
-- [ ] Run quality checks and fix any issues
+- [x] Implement `validate_task_tracker()` function
+- [x] Run quality checks and fix any issues
 
 ### Step 2: Update prerequisites.py for Validation
 **File:** [step_2.md](./steps/step_2.md)
