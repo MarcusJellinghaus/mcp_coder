@@ -1,6 +1,7 @@
 """Tests for create_PR workflow file operations.
 
-Tests for delete_pr_info_directory, delete_steps_directory, truncate_task_tracker.
+Tests for delete_pr_info_directory, cleanup_repository, delete_steps_directory,
+truncate_task_tracker.
 """
 
 import shutil
@@ -11,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflows.create_pr.core import (
+    cleanup_repository,
     delete_pr_info_directory,
     delete_steps_directory,
     truncate_task_tracker,
@@ -130,6 +132,127 @@ class TestDeletePrInfoDirectory:
 
             # Should log the operation
             mock_logger.info.assert_called()
+
+
+class TestCleanupRepositorySimplified:
+    """Tests for simplified cleanup_repository function.
+
+    The simplified cleanup_repository() should:
+    1. Delete the entire pr_info/ directory using delete_pr_info_directory()
+    2. Clean profiler output using clean_profiler_output()
+    """
+
+    def test_calls_delete_pr_info_directory(self) -> None:
+        """Test cleanup_repository deletes pr_info/ directory."""
+        with TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+
+            # Setup: create pr_info/ with content
+            pr_info_dir = project_dir / "pr_info"
+            pr_info_dir.mkdir()
+
+            # Create steps/ subdirectory
+            steps_dir = pr_info_dir / "steps"
+            steps_dir.mkdir()
+            (steps_dir / "step_1.md").write_text("Step 1")
+
+            # Create .conversations/ subdirectory
+            conversations_dir = pr_info_dir / ".conversations"
+            conversations_dir.mkdir()
+            (conversations_dir / "log.txt").write_text("Log")
+
+            # Create TASK_TRACKER.md
+            (pr_info_dir / "TASK_TRACKER.md").write_text("# Tracker")
+
+            # Verify setup
+            assert pr_info_dir.exists()
+
+            # Call cleanup_repository()
+            result = cleanup_repository(project_dir)
+
+            # Assert: pr_info/ deleted, returns True
+            assert result is True
+            assert not pr_info_dir.exists()
+
+    def test_still_cleans_profiler_output(self) -> None:
+        """Test cleanup_repository still cleans profiler output."""
+        with TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+
+            # Setup: create docs/tests/performance_data/prof/ with files
+            prof_dir = project_dir / "docs" / "tests" / "performance_data" / "prof"
+            prof_dir.mkdir(parents=True)
+            (prof_dir / "test1.prof").write_text("profiler data 1")
+            (prof_dir / "test2.prof").write_text("profiler data 2")
+
+            # Verify setup
+            assert (prof_dir / "test1.prof").exists()
+            assert (prof_dir / "test2.prof").exists()
+
+            # Call cleanup_repository()
+            result = cleanup_repository(project_dir)
+
+            # Assert: prof/ files deleted but directory preserved
+            assert result is True
+            assert prof_dir.exists()  # Directory still exists
+            assert not (prof_dir / "test1.prof").exists()  # Files removed
+            assert not (prof_dir / "test2.prof").exists()
+
+    def test_handles_both_cleanup_tasks(self) -> None:
+        """Test cleanup_repository handles both pr_info/ and profiler cleanup."""
+        with TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+
+            # Setup: create pr_info/ with content
+            pr_info_dir = project_dir / "pr_info"
+            pr_info_dir.mkdir()
+            (pr_info_dir / "TASK_TRACKER.md").write_text("# Tracker")
+
+            # Setup: create profiler output
+            prof_dir = project_dir / "docs" / "tests" / "performance_data" / "prof"
+            prof_dir.mkdir(parents=True)
+            (prof_dir / "test.prof").write_text("profiler data")
+
+            # Call cleanup_repository()
+            result = cleanup_repository(project_dir)
+
+            # Assert: both cleaned
+            assert result is True
+            assert not pr_info_dir.exists()  # pr_info/ deleted
+            assert prof_dir.exists()  # prof/ directory exists
+            assert not (prof_dir / "test.prof").exists()  # prof files deleted
+
+    def test_returns_true_when_nothing_to_clean(self) -> None:
+        """Test cleanup_repository returns True when no directories exist."""
+        with TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+
+            # No pr_info/ or prof/ directories
+            assert not (project_dir / "pr_info").exists()
+
+            # Call cleanup_repository()
+            result = cleanup_repository(project_dir)
+
+            # Assert: success (no-op)
+            assert result is True
+
+    @patch("mcp_coder.workflows.create_pr.core.clean_profiler_output")
+    def test_returns_false_when_clean_profiler_fails(
+        self, mock_clean_profiler: MagicMock
+    ) -> None:
+        """Test cleanup_repository returns False when clean_profiler_output fails."""
+        with TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+
+            # Mock clean_profiler_output to fail
+            mock_clean_profiler.return_value = False
+
+            # Call cleanup_repository()
+            result = cleanup_repository(project_dir)
+
+            # Assert: returns False due to failure
+            assert result is False
+            mock_clean_profiler.assert_called_once_with(project_dir)
 
 
 class TestDeleteStepsDirectory:

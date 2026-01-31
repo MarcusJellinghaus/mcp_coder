@@ -43,7 +43,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 **File:** [step_3.md](./steps/step_3.md)
 
 - [x] Write tests for `delete_pr_info_directory()` function
-- [ ] Update tests for simplified `cleanup_repository()`
+- [x] Update tests for simplified `cleanup_repository()`
 - [ ] Add `delete_pr_info_directory()` function
 - [ ] Simplify `cleanup_repository()` to use new function
 - [ ] Remove `delete_steps_directory()`, `delete_conversations_directory()`, `truncate_task_tracker()`
