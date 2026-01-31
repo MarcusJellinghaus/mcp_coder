@@ -9,7 +9,7 @@ import argparse
 from collections.abc import Generator
 from pathlib import Path
 from typing import Tuple
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
