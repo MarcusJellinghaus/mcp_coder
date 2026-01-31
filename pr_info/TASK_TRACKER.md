@@ -42,7 +42,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: Simplify create_pr/core.py Cleanup
 **File:** [step_3.md](./steps/step_3.md)
 
-- [ ] Write tests for `delete_pr_info_directory()` function
+- [x] Write tests for `delete_pr_info_directory()` function
 - [ ] Update tests for simplified `cleanup_repository()`
 - [ ] Add `delete_pr_info_directory()` function
 - [ ] Simplify `cleanup_repository()` to use new function
