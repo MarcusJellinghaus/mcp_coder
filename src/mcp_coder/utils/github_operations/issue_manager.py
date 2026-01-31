@@ -162,8 +162,8 @@ def _parse_base_branch(body: str) -> Optional[str]:
 
     # Case-insensitive match for any heading level (# to ######) with "Base Branch"
     # MULTILINE flag for ^ to match line starts, DOTALL for . to match newlines
-    pattern = r"(?im)^#{1,6}\s*base\s*branch\s*\n(.*?)(?=^#{1,6}\s|\Z)"
-    match = re.search(pattern, body, re.MULTILINE | re.DOTALL)
+    pattern = r"^#{1,6}\s*base\s*branch\s*\n(.*?)(?=^#{1,6}\s|\Z)"
+    match = re.search(pattern, body, re.MULTILINE | re.DOTALL | re.IGNORECASE)
 
     if not match:
         return None

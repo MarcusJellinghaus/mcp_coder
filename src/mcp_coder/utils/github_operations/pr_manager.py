@@ -165,9 +165,9 @@ class PullRequestManager(BaseGitHubManager):
         """
         # Resolve base_branch if not provided
         if base_branch is None:
-            assert (
-                self.project_dir is not None
-            ), "project_dir required for default branch"
+            if self.project_dir is None:
+                logger.error("project_dir required for default branch resolution")
+                return cast(PullRequestData, {})
             resolved_base = get_default_branch_name(self.project_dir)
             if resolved_base is None:
                 logger.error("Could not determine default branch for repository")
