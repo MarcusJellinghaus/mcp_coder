@@ -40,12 +40,12 @@ See [step_2.md](./steps/step_2.md) for details.
 - [x] Run mcp__code-checker__run_pylint_check() - verify no linting errors
 - [x] Run mcp__code-checker__run_mypy_check() - verify type checking passes
 - [x] Verify acceptance criteria: Directory `tests/workflows/vscodeclaude/` created
-- [ ] Verify acceptance criteria: All 13 test files moved
-- [ ] Verify acceptance criteria: `tests/utils/vscodeclaude/` deleted entirely
-- [ ] Run pylint check and fix any issues
-- [ ] Run pytest check and fix any issues
-- [ ] Run mypy check and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Verify acceptance criteria: All 13 test files moved
+- [x] Verify acceptance criteria: `tests/utils/vscodeclaude/` deleted entirely
+- [x] Run pylint check and fix any issues
+- [x] Run pytest check and fix any issues
+- [x] Run mypy check and fix any issues
+- [x] Prepare git commit message for Step 2
 
 ---
 
