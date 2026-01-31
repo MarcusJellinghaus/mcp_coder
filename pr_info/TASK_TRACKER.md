@@ -18,7 +18,7 @@ Each step file contains detailed WHERE/WHAT/HOW specifications.
 - [x] Task 1.4: Change exception imports in `task_processing.py`
 - [x] Task 1.5: Change exception imports in `claude_code_api.py`
 - [x] Task 1.6: Change exception imports in `claude_code_cli.py`
-- [ ] Task 1.7: Change exception imports in `black_formatter.py`
+- [x] Task 1.7: Change exception imports in `black_formatter.py`
 - [ ] Task 1.8: Change exception imports in `isort_formatter.py`
 - [ ] Run tests for affected modules
 
