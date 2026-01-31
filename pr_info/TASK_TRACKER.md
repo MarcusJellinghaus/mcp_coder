@@ -62,16 +62,16 @@ See [step_2.md](./steps/step_2.md) for details.
 ### Step 3: Clean Up CLI Layer and Delete Old Files
 See [step_3.md](./steps/step_3.md) for details.
 
-- [ ] Verify and delete empty `utils/vscodeclaude/` directory
-- [ ] Delete `coordinator/vscodeclaude.py`
-- [ ] Delete `coordinator/vscodeclaude_templates.py` (if not moved yet)
-- [ ] Remove vscodeclaude imports from `coordinator/__init__.py`
-- [ ] Remove vscodeclaude items from `coordinator/__init__.py` `__all__`
-- [ ] Remove vscodeclaude references from `utils/__init__.py` (if present)
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any issues
-- [ ] Run mypy and fix any issues
-- [ ] Prepare git commit message for Step 3
+- [x] Verify and delete empty `utils/vscodeclaude/` directory
+- [x] Delete `coordinator/vscodeclaude.py`
+- [x] Delete `coordinator/vscodeclaude_templates.py` (if not moved yet)
+- [x] Remove vscodeclaude imports from `coordinator/__init__.py`
+- [x] Remove vscodeclaude items from `coordinator/__init__.py` `__all__`
+- [x] Remove vscodeclaude references from `utils/__init__.py` (if present)
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any issues
+- [x] Run mypy and fix any issues
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Update Test Patches
 See [step_4.md](./steps/step_4.md) for details.

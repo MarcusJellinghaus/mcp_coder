@@ -21,10 +21,14 @@ from ....utils.github_operations.github_utils import RepoIdentifier
 from ....utils.github_operations.issue_cache import get_all_cached_issues
 from ....utils.github_operations.issue_manager import IssueData, IssueManager
 from ....utils.jenkins_operations.models import JobStatus
-from ....utils.user_config import get_config_file_path, load_config
-from .command_templates import TEST_COMMAND_TEMPLATES
-from .core import _get_coordinator, validate_repo_config
-from .vscodeclaude import (
+from ....utils.user_config import (
+    get_cache_refresh_minutes,
+    get_config_file_path,
+    load_config,
+)
+
+# VSCodeClaude imports - now from workflows layer
+from ....workflows.vscodeclaude import (
     DEFAULT_MAX_SESSIONS,
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
@@ -40,6 +44,8 @@ from .vscodeclaude import (
     process_eligible_issues,
     restart_closed_sessions,
 )
+from .command_templates import TEST_COMMAND_TEMPLATES
+from .core import _get_coordinator, validate_repo_config
 from .workflow_constants import WORKFLOW_MAPPING
 
 __all__ = [
@@ -263,7 +269,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     repo_full_name=repo_full_name,
                     issue_manager=issue_manager,
                     force_refresh=args.force_refresh,
-                    cache_refresh_minutes=coordinator.get_cache_refresh_minutes(),
+                    cache_refresh_minutes=get_cache_refresh_minutes(),
                 )
             except Exception as e:
                 logger.warning(
@@ -549,7 +555,7 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
 
     from tabulate import tabulate
 
-    from .vscodeclaude import (
+    from ....workflows.vscodeclaude import (
         check_folder_dirty,
         check_vscode_running,
         clear_vscode_window_cache,
