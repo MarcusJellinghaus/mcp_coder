@@ -11,6 +11,7 @@ Note: commit_operations is imported lazily to avoid circular imports.
 
 from typing import TYPE_CHECKING, Any
 
+from .base_branch import detect_base_branch
 from .branch_status import (
     CI_FAILED,
     CI_NOT_CONFIGURED,
@@ -41,6 +42,8 @@ if TYPE_CHECKING:
     )
 
 __all__ = [
+    # Base branch detection
+    "detect_base_branch",
     # Branch status operations
     "BranchStatusReport",
     "CI_FAILED",
