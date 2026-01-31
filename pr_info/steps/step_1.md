@@ -27,8 +27,8 @@ Extract detection helpers from `src/mcp_coder/cli/commands/gh_tool.py` into `src
 - `tests/workflow_utils/test_base_branch.py` - Moved and new tests
 
 ### Modified Files
-- `src/mcp_coder/cli/commands/gh_tool.py` - Import from base_branch.py instead of local helpers
-- `tests/cli/commands/test_gh_tool.py` - Keep only CLI-specific tests
+- `src/mcp_coder/cli/commands/gh_tool.py` - Simplify to thin wrapper calling `detect_base_branch()`
+- `tests/cli/commands/test_gh_tool.py` - Keep only CLI-specific tests (exit codes, output format)
 
 ---
 
@@ -191,12 +191,12 @@ def test_detect_base_branch_no_issue_number_in_branch() -> None:
 
 ## IMPLEMENTATION CHECKLIST
 
-- [ ] Create `base_branch.py` with extracted helpers from `gh_tool.py`
-- [ ] Add unified `detect_base_branch()` function with `current_branch` and `issue_data` parameters
-- [ ] Update `gh_tool.py` to import from `base_branch.py`
+- [ ] Create `base_branch.py` with private helper functions (`_detect_from_pr`, `_detect_from_issue`, `_detect_default_branch`)
+- [ ] Add unified `detect_base_branch()` function as the only public API
+- [ ] Simplify `gh_tool.py` to thin wrapper: call `detect_base_branch()`, map result to exit codes (0/1/2)
 - [ ] Move detection tests from `test_gh_tool.py` to `test_base_branch.py`
 - [ ] Add new tests for `detect_base_branch()` with optional parameters
-- [ ] Keep only CLI-specific tests in `test_gh_tool.py`
+- [ ] Keep only CLI-specific tests in `test_gh_tool.py` (exit codes, output format)
 - [ ] Ensure all exceptions are caught and logged
 - [ ] Run tests to verify all pass
 - [ ] Run mypy type checking

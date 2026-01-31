@@ -53,15 +53,17 @@ class BranchStatusReport:
 ```python
 def _collect_github_label(
     project_dir: Path,
-    branch_name: Optional[str] = None,
-    issue_data: Optional[IssueData] = None,  # NEW parameter
+    issue_data: Optional[IssueData] = None,
 ) -> str:
     """Collect current GitHub workflow status label.
     
     Args:
         project_dir: Path to the git repository
-        branch_name: Optional branch name. If not provided, will be fetched from git.
-        issue_data: Optional pre-fetched issue data (avoids duplicate API calls)
+        issue_data: Optional pre-fetched issue data (contains labels directly)
+    
+    Note:
+        If issue_data is None, returns DEFAULT_LABEL.
+        The caller is responsible for fetching issue_data.
     """
 ```
 
@@ -108,17 +110,10 @@ function collect_branch_status(project_dir, truncate_logs, max_log_lines):
 ## ALGORITHM: Updated _collect_github_label (Pseudocode)
 
 ```
-function _collect_github_label(project_dir, branch_name, issue_data):
-    if branch_name is None:
-        branch_name = get_current_branch_name(project_dir)
-        if not branch_name: return DEFAULT_LABEL
-    
+function _collect_github_label(project_dir, issue_data):
     # Use provided issue_data if available
     if issue_data is None:
-        issue_number = extract_issue_number_from_branch(branch_name)
-        if not issue_number: return DEFAULT_LABEL
-        try: issue_data = IssueManager(project_dir).get_issue(issue_number)
-        except: return DEFAULT_LABEL
+        return DEFAULT_LABEL
     
     # Extract status label from issue_data
     for label in issue_data.get("labels", []):
@@ -183,10 +178,15 @@ def test_collect_branch_status_includes_branch_info() -> None:
 
 
 def test_collect_github_label_uses_provided_issue_data() -> None:
-    """Test _collect_github_label uses pre-fetched issue_data."""
-    # Pass issue_data with labels
-    # Verify IssueManager.get_issue is NOT called
-    # Verify correct label is returned
+    """Test _collect_github_label extracts label from issue_data."""
+    # Pass issue_data with status labels
+    # Verify correct status label is returned
+
+
+def test_collect_github_label_returns_default_without_issue_data() -> None:
+    """Test _collect_github_label returns DEFAULT_LABEL when issue_data is None."""
+    # Pass issue_data=None
+    # Verify DEFAULT_LABEL is returned
 ```
 
 ---
@@ -198,7 +198,7 @@ def test_collect_github_label_uses_provided_issue_data() -> None:
 - [ ] Add `branch_name` and `base_branch` fields to `BranchStatusReport`
 - [ ] Update `create_empty_report()` with new fields
 - [ ] Add import for `detect_base_branch`
-- [ ] Update `_collect_github_label()` to accept `issue_data` parameter
+- [ ] Simplify `_collect_github_label()` to only accept `issue_data` parameter (remove `branch_name`)
 - [ ] Update `collect_branch_status()` to:
   - Fetch issue data once
   - Call `detect_base_branch()` with issue_data
