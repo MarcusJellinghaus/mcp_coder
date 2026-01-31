@@ -161,6 +161,27 @@ def manage_branch(
         return None
 
 
+def check_pr_info_not_exists(project_dir: Path) -> bool:
+    """Check that pr_info/ directory does not exist.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        True if pr_info/ does not exist, False if it exists
+    """
+    pr_info_dir = project_dir / "pr_info"
+
+    if pr_info_dir.exists():
+        logger.error(
+            "pr_info/ directory already exists. "
+            "Please clean up before creating a new plan."
+        )
+        return False
+
+    return True
+
+
 def verify_steps_directory(project_dir: Path) -> bool:
     """Verify pr_info/steps/ directory is empty or doesn't exist.
 

@@ -53,7 +53,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 4: Update create_plan.py for Directory Lifecycle
 **File:** [step_4.md](./steps/step_4.md)
 
-- [ ] Write tests for pr_info existence check
+- [x] Write tests for pr_info existence check
 - [ ] Write tests for directory structure + TASK_TRACKER.md creation
 - [ ] Add `check_pr_info_not_exists()` function
 - [ ] Add `create_pr_info_structure()` function (creates dirs + TASK_TRACKER.md)
