@@ -25,10 +25,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
   - [x] Create `workflow_utils/base_branch.py` with `detect_base_branch()` function
   - [x] Create unit tests in `tests/workflow_utils/test_base_branch.py`
 
-- [ ] [Step 2: Update BranchStatusReport and collect_branch_status](./steps/step_2.md)
-  - Add `branch_name` and `base_branch` fields to dataclass
-  - Update `collect_branch_status()` to share issue data
-  - Update existing tests for new fields
+- [x] [Step 2: Update BranchStatusReport and collect_branch_status](./steps/step_2.md)
+  - [x] Add `branch_name` and `base_branch` fields to dataclass
+  - [x] Update `collect_branch_status()` to share issue data
+  - [x] Update existing tests for new fields
 
 - [ ] [Step 3: Update Formatting and Refactor implement/core.py](./steps/step_3.md)
   - Update `format_for_human()` and `format_for_llm()` methods

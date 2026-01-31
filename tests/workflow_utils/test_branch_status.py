@@ -17,6 +17,8 @@ def test_branch_status_report_creation() -> None:
     from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
+        branch_name="feature/123-test",
+        base_branch="main",
         ci_status="PASSED",
         ci_details=None,
         rebase_needed=False,
@@ -26,6 +28,8 @@ def test_branch_status_report_creation() -> None:
         recommendations=["Ready to merge"],
     )
 
+    assert report.branch_name == "feature/123-test"
+    assert report.base_branch == "main"
     assert report.ci_status == "PASSED"
     assert report.ci_details is None
     assert report.rebase_needed is False
@@ -42,6 +46,8 @@ def test_branch_status_report_failed_ci() -> None:
     ci_error = "FAILED tests/test_example.py::test_function - AssertionError"
 
     report = BranchStatusReport(
+        branch_name="feature/456-bugfix",
+        base_branch="develop",
         ci_status="FAILED",
         ci_details=ci_error,
         rebase_needed=True,
@@ -65,6 +71,8 @@ def test_format_for_human_passed_status() -> None:
     from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
+        branch_name="feature/123-test",
+        base_branch="main",
         ci_status="PASSED",
         ci_details=None,
         rebase_needed=False,
@@ -93,6 +101,8 @@ def test_format_for_human_failed_status() -> None:
     ci_error = "FAILED tests/test_example.py::test_function - AssertionError\nFAILED tests/test_other.py::test_other - KeyError"
 
     report = BranchStatusReport(
+        branch_name="feature/456-bugfix",
+        base_branch="develop",
         ci_status="FAILED",
         ci_details=ci_error,
         rebase_needed=True,
@@ -124,6 +134,8 @@ def test_format_for_human_pending_status() -> None:
     from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
+        branch_name="feature/789-pending",
+        base_branch="main",
         ci_status="PENDING",
         ci_details="CI pipeline running...",
         rebase_needed=False,
@@ -144,6 +156,8 @@ def test_format_for_human_not_configured() -> None:
     from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
+        branch_name="feature/101-no-ci",
+        base_branch="main",
         ci_status="NOT_CONFIGURED",
         ci_details=None,
         rebase_needed=False,
@@ -163,6 +177,8 @@ def test_format_for_llm_basic() -> None:
     from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
+        branch_name="feature/123-test",
+        base_branch="main",
         ci_status="PASSED",
         ci_details=None,
         rebase_needed=False,
@@ -188,6 +204,8 @@ def test_format_for_llm_truncation() -> None:
     long_ci_details = "\n".join(ci_lines)
 
     report = BranchStatusReport(
+        branch_name="feature/456-errors",
+        base_branch="main",
         ci_status="FAILED",
         ci_details=long_ci_details,
         rebase_needed=True,
@@ -215,6 +233,8 @@ def test_format_for_llm_no_truncation() -> None:
     short_ci_details = "Short error message"
 
     report = BranchStatusReport(
+        branch_name="feature/789-short",
+        base_branch="main",
         ci_status="FAILED",
         ci_details=short_ci_details,
         rebase_needed=False,
@@ -238,6 +258,8 @@ def test_create_empty_report() -> None:
 
     report = create_empty_report()
 
+    assert report.branch_name == "unknown"
+    assert report.base_branch == "unknown"
     assert report.ci_status == "NOT_CONFIGURED"
     assert report.ci_details is None
     assert report.rebase_needed is False
@@ -331,6 +353,8 @@ def test_dataclass_immutability() -> None:
     from mcp_coder.workflow_utils.branch_status import BranchStatusReport
 
     report = BranchStatusReport(
+        branch_name="feature/123-test",
+        base_branch="main",
         ci_status="PASSED",
         ci_details=None,
         rebase_needed=False,
@@ -359,6 +383,10 @@ def test_collect_branch_status_all_good() -> None:
         patch(
             "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
         ) as mock_branch,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch("mcp_coder.workflow_utils.branch_status.detect_base_branch") as mock_base,
         patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
         patch(
             "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
@@ -372,6 +400,8 @@ def test_collect_branch_status_all_good() -> None:
     ):
         # Setup mocks for all green status
         mock_branch.return_value = "main"
+        mock_extract.return_value = None  # No issue number in branch
+        mock_base.return_value = "origin/main"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (False, "Up to date with origin/main")
         mock_tasks.return_value = True
@@ -379,7 +409,9 @@ def test_collect_branch_status_all_good() -> None:
 
         result = collect_branch_status(project_dir)
 
-        # Verify result
+        # Verify result includes new fields
+        assert result.branch_name == "main"
+        assert result.base_branch == "origin/main"
         assert result.ci_status == "PASSED"
         assert result.ci_details is None
         assert result.rebase_needed is False
@@ -393,7 +425,6 @@ def test_collect_branch_status_all_good() -> None:
         mock_ci.assert_called_once_with(project_dir, "main", False, 300)
         mock_rebase.assert_called_once_with(project_dir)
         mock_tasks.assert_called_once_with(project_dir)
-        mock_label.assert_called_once_with(project_dir, "main")
 
 
 def test_collect_branch_status_ci_failed() -> None:
@@ -407,6 +438,10 @@ def test_collect_branch_status_ci_failed() -> None:
         patch(
             "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
         ) as mock_branch,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch("mcp_coder.workflow_utils.branch_status.detect_base_branch") as mock_base,
         patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
         patch(
             "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
@@ -420,6 +455,8 @@ def test_collect_branch_status_ci_failed() -> None:
     ):
         # Setup mocks for CI failed
         mock_branch.return_value = "feature/test-branch"
+        mock_extract.return_value = None
+        mock_base.return_value = "main"
         mock_ci.return_value = ("FAILED", ci_error)
         mock_rebase.return_value = (False, "Up to date with origin/main")
         mock_tasks.return_value = True
@@ -428,6 +465,8 @@ def test_collect_branch_status_ci_failed() -> None:
         result = collect_branch_status(project_dir)
 
         # Verify result
+        assert result.branch_name == "feature/test-branch"
+        assert result.base_branch == "main"
         assert result.ci_status == "FAILED"
         assert result.ci_details == ci_error
         assert result.rebase_needed is False
@@ -445,6 +484,10 @@ def test_collect_branch_status_rebase_needed() -> None:
         patch(
             "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
         ) as mock_branch,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch("mcp_coder.workflow_utils.branch_status.detect_base_branch") as mock_base,
         patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
         patch(
             "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
@@ -458,6 +501,8 @@ def test_collect_branch_status_rebase_needed() -> None:
     ):
         # Setup mocks for rebase needed
         mock_branch.return_value = "feature/test-branch"
+        mock_extract.return_value = None
+        mock_base.return_value = "main"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (True, "5 commits behind origin/main")
         mock_tasks.return_value = True
@@ -466,6 +511,8 @@ def test_collect_branch_status_rebase_needed() -> None:
         result = collect_branch_status(project_dir)
 
         # Verify result
+        assert result.branch_name == "feature/test-branch"
+        assert result.base_branch == "main"
         assert result.ci_status == "PASSED"
         assert result.rebase_needed is True
         assert result.rebase_reason == "5 commits behind origin/main"
@@ -482,6 +529,10 @@ def test_collect_branch_status_tasks_incomplete() -> None:
         patch(
             "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
         ) as mock_branch,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch("mcp_coder.workflow_utils.branch_status.detect_base_branch") as mock_base,
         patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
         patch(
             "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
@@ -495,6 +546,8 @@ def test_collect_branch_status_tasks_incomplete() -> None:
     ):
         # Setup mocks for incomplete tasks
         mock_branch.return_value = "feature/test-branch"
+        mock_extract.return_value = None
+        mock_base.return_value = "main"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (False, "Up to date with origin/main")
         mock_tasks.return_value = False
@@ -503,6 +556,8 @@ def test_collect_branch_status_tasks_incomplete() -> None:
         result = collect_branch_status(project_dir)
 
         # Verify result
+        assert result.branch_name == "feature/test-branch"
+        assert result.base_branch == "main"
         assert result.ci_status == "PASSED"
         assert result.rebase_needed is False
         assert result.tasks_complete is False
@@ -520,6 +575,10 @@ def test_collect_branch_status_with_truncation() -> None:
         patch(
             "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
         ) as mock_branch,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch("mcp_coder.workflow_utils.branch_status.detect_base_branch") as mock_base,
         patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
         patch(
             "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
@@ -533,6 +592,8 @@ def test_collect_branch_status_with_truncation() -> None:
     ):
         # Setup mocks
         mock_branch.return_value = "main"
+        mock_extract.return_value = None
+        mock_base.return_value = "origin/main"
         mock_ci.return_value = ("FAILED", long_ci_error)
         mock_rebase.return_value = (False, "Up to date")
         mock_tasks.return_value = True
@@ -561,6 +622,10 @@ def test_collect_branch_status_all_failed() -> None:
         patch(
             "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
         ) as mock_branch,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch("mcp_coder.workflow_utils.branch_status.detect_base_branch") as mock_base,
         patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
         patch(
             "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
@@ -574,6 +639,8 @@ def test_collect_branch_status_all_failed() -> None:
     ):
         # Setup mocks for everything failing
         mock_branch.return_value = "feature/test-branch"
+        mock_extract.return_value = None
+        mock_base.return_value = "main"
         mock_ci.return_value = ("FAILED", ci_error)
         mock_rebase.return_value = (True, "3 commits behind origin/main")
         mock_tasks.return_value = False
@@ -581,7 +648,9 @@ def test_collect_branch_status_all_failed() -> None:
 
         result = collect_branch_status(project_dir)
 
-        # Verify result
+        # Verify result includes new fields
+        assert result.branch_name == "feature/test-branch"
+        assert result.base_branch == "main"
         assert result.ci_status == "FAILED"
         assert result.ci_details == ci_error
         assert result.rebase_needed is True
@@ -779,121 +848,106 @@ def test_collect_task_status() -> None:
 
 
 def test_collect_github_label() -> None:
-    """Test _collect_github_label function with branch_name provided."""
+    """Test _collect_github_label function with issue_data provided."""
+    from mcp_coder.utils.github_operations.issue_manager import IssueData
     from mcp_coder.workflow_utils.branch_status import _collect_github_label
 
     project_dir = Path("/test/repo")
 
-    with (
-        patch(
-            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
-        ) as mock_extract,
-        patch(
-            "mcp_coder.workflow_utils.branch_status.IssueManager"
-        ) as mock_issue_manager,
-    ):
-        # Setup mocks
-        mock_extract.return_value = 123
-        mock_manager_instance = MagicMock()
-        mock_issue_manager.return_value = mock_manager_instance
-        mock_issue = {"labels": ["status-03:implementing", "priority-high"]}
-        mock_manager_instance.get_issue.return_value = mock_issue
+    # Issue data with status labels - must conform to IssueData TypedDict
+    mock_issue: IssueData = {
+        "number": 123,
+        "title": "Test issue",
+        "body": "Test body",
+        "state": "open",
+        "labels": ["status-03:implementing", "priority-high"],
+        "assignees": [],
+        "user": "testuser",
+        "created_at": None,
+        "updated_at": None,
+        "url": "https://github.com/test/repo/issues/123",
+        "locked": False,
+    }
 
-        # Pass branch_name directly instead of relying on get_current_branch_name
-        result = _collect_github_label(project_dir, "feature/123-add-tests")
+    # Call with issue_data directly
+    result = _collect_github_label(project_dir, mock_issue)
 
-        assert result == "status-03:implementing"
-        mock_extract.assert_called_once_with("feature/123-add-tests")
-        mock_manager_instance.get_issue.assert_called_once_with(123)
+    assert result == "status-03:implementing"
 
 
-def test_collect_github_label_without_branch_name() -> None:
-    """Test _collect_github_label function without branch_name (falls back to git)."""
-    from mcp_coder.workflow_utils.branch_status import _collect_github_label
+def test_collect_github_label_without_issue_data() -> None:
+    """Test _collect_github_label function without issue_data returns default."""
+    from mcp_coder.workflow_utils.branch_status import (
+        DEFAULT_LABEL,
+        _collect_github_label,
+    )
 
     project_dir = Path("/test/repo")
 
-    with (
-        patch(
-            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
-        ) as mock_branch,
-        patch(
-            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
-        ) as mock_extract,
-        patch(
-            "mcp_coder.workflow_utils.branch_status.IssueManager"
-        ) as mock_issue_manager,
-    ):
-        # Setup mocks
-        mock_branch.return_value = "feature/456-other-tests"
-        mock_extract.return_value = 456
-        mock_manager_instance = MagicMock()
-        mock_issue_manager.return_value = mock_manager_instance
-        mock_issue = {"labels": ["status-04:reviewing", "bug"]}
-        mock_manager_instance.get_issue.return_value = mock_issue
+    # Call without issue_data (None)
+    result = _collect_github_label(project_dir, None)
 
-        # Call without branch_name to test fallback behavior
-        result = _collect_github_label(project_dir)
-
-        assert result == "status-04:reviewing"
-        mock_branch.assert_called_once_with(project_dir)
-        mock_extract.assert_called_once_with("feature/456-other-tests")
-        mock_manager_instance.get_issue.assert_called_once_with(456)
+    assert result == DEFAULT_LABEL
 
 
 def test_collect_github_label_no_status_label() -> None:
     """Test _collect_github_label when no status label found."""
-    from mcp_coder.workflow_utils.branch_status import _collect_github_label
+    from mcp_coder.utils.github_operations.issue_manager import IssueData
+    from mcp_coder.workflow_utils.branch_status import (
+        DEFAULT_LABEL,
+        _collect_github_label,
+    )
 
     project_dir = Path("/test/repo")
 
-    with (
-        patch(
-            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
-        ) as mock_extract,
-        patch(
-            "mcp_coder.workflow_utils.branch_status.IssueManager"
-        ) as mock_issue_manager,
-    ):
-        # Setup mocks with no status labels
-        mock_extract.return_value = 123
-        mock_manager_instance = MagicMock()
-        mock_issue_manager.return_value = mock_manager_instance
-        mock_issue = {"labels": ["priority-high", "bug"]}  # No status- label
-        mock_manager_instance.get_issue.return_value = mock_issue
+    # Issue data with no status labels - must conform to IssueData TypedDict
+    mock_issue: IssueData = {
+        "number": 123,
+        "title": "Test issue",
+        "body": "Test body",
+        "state": "open",
+        "labels": ["priority-high", "bug"],  # No status- label
+        "assignees": [],
+        "user": "testuser",
+        "created_at": None,
+        "updated_at": None,
+        "url": "https://github.com/test/repo/issues/123",
+        "locked": False,
+    }
 
-        # Pass branch_name directly
-        result = _collect_github_label(project_dir, "feature/123-add-tests")
+    result = _collect_github_label(project_dir, mock_issue)
 
-        assert result == "unknown"
+    assert result == DEFAULT_LABEL
 
 
-def test_collect_github_label_error_handling() -> None:
-    """Test _collect_github_label with various errors."""
-    from mcp_coder.workflow_utils.branch_status import _collect_github_label
+def test_collect_github_label_empty_labels() -> None:
+    """Test _collect_github_label with empty labels list."""
+    from mcp_coder.utils.github_operations.issue_manager import IssueData
+    from mcp_coder.workflow_utils.branch_status import (
+        DEFAULT_LABEL,
+        _collect_github_label,
+    )
 
     project_dir = Path("/test/repo")
 
-    # Test branch name None when not provided (falls back to git which returns None)
-    with patch(
-        "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
-    ) as mock_branch:
-        mock_branch.return_value = None
+    # Issue data with empty labels - must conform to IssueData TypedDict
+    mock_issue: IssueData = {
+        "number": 123,
+        "title": "Test issue",
+        "body": "Test body",
+        "state": "open",
+        "labels": [],
+        "assignees": [],
+        "user": "testuser",
+        "created_at": None,
+        "updated_at": None,
+        "url": "https://github.com/test/repo/issues/123",
+        "locked": False,
+    }
 
-        result = _collect_github_label(project_dir)
+    result = _collect_github_label(project_dir, mock_issue)
 
-        assert result == "unknown"
-
-    # Test issue number extraction returns None
-    with patch(
-        "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
-    ) as mock_extract:
-        mock_extract.return_value = None
-
-        # Pass branch_name directly
-        result = _collect_github_label(project_dir, "main")
-
-        assert result == "unknown"
+    assert result == DEFAULT_LABEL
 
 
 def test_generate_recommendations_logic() -> None:
@@ -1096,3 +1150,114 @@ def test_truncate_ci_details_custom_head_lines() -> None:
     assert "Line 200" in result
     # Should not have middle lines
     assert "Line 50" not in result
+
+
+# Tests for branch info collection and issue data sharing
+
+
+def test_collect_branch_status_includes_branch_info() -> None:
+    """Test that collect_branch_status includes branch_name and base_branch."""
+    from mcp_coder.workflow_utils.branch_status import collect_branch_status
+
+    project_dir = Path("/test/repo")
+
+    with (
+        patch(
+            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.IssueManager"
+        ) as mock_issue_manager,
+        patch("mcp_coder.workflow_utils.branch_status.detect_base_branch") as mock_base,
+        patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_task_status"
+        ) as mock_tasks,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_github_label"
+        ) as mock_label,
+    ):
+        # Setup mocks
+        mock_branch.return_value = "feature/123-my-feature"
+        mock_extract.return_value = 123
+        mock_issue = {"labels": ["status-03:implementing"], "base_branch": "develop"}
+        mock_manager_instance = MagicMock()
+        mock_issue_manager.return_value = mock_manager_instance
+        mock_manager_instance.get_issue.return_value = mock_issue
+        mock_base.return_value = "develop"
+        mock_ci.return_value = ("PASSED", None)
+        mock_rebase.return_value = (False, "Up to date")
+        mock_tasks.return_value = True
+        mock_label.return_value = "status-03:implementing"
+
+        result = collect_branch_status(project_dir)
+
+        # Verify branch info is included in result
+        assert result.branch_name == "feature/123-my-feature"
+        assert result.base_branch == "develop"
+
+        # Verify detect_base_branch was called with issue_data
+        mock_base.assert_called_once()
+        call_args = mock_base.call_args
+        assert call_args[0][0] == project_dir
+        assert call_args[0][1] == "feature/123-my-feature"
+
+
+def test_collect_branch_status_shares_issue_data() -> None:
+    """Test that collect_branch_status fetches issue data once and shares it."""
+    from mcp_coder.workflow_utils.branch_status import collect_branch_status
+
+    project_dir = Path("/test/repo")
+
+    with (
+        patch(
+            "mcp_coder.workflow_utils.branch_status.get_current_branch_name"
+        ) as mock_branch,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.extract_issue_number_from_branch"
+        ) as mock_extract,
+        patch(
+            "mcp_coder.workflow_utils.branch_status.IssueManager"
+        ) as mock_issue_manager,
+        patch("mcp_coder.workflow_utils.branch_status.detect_base_branch") as mock_base,
+        patch("mcp_coder.workflow_utils.branch_status._collect_ci_status") as mock_ci,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_rebase_status"
+        ) as mock_rebase,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_task_status"
+        ) as mock_tasks,
+        patch(
+            "mcp_coder.workflow_utils.branch_status._collect_github_label"
+        ) as mock_label,
+    ):
+        # Setup mocks
+        mock_branch.return_value = "feature/456-test"
+        mock_extract.return_value = 456
+        mock_issue = {"labels": ["status-04:reviewing"], "base_branch": "main"}
+        mock_manager_instance = MagicMock()
+        mock_issue_manager.return_value = mock_manager_instance
+        mock_manager_instance.get_issue.return_value = mock_issue
+        mock_base.return_value = "main"
+        mock_ci.return_value = ("PASSED", None)
+        mock_rebase.return_value = (False, "Up to date")
+        mock_tasks.return_value = True
+        mock_label.return_value = "status-04:reviewing"
+
+        collect_branch_status(project_dir)
+
+        # Verify IssueManager.get_issue was called only once
+        mock_manager_instance.get_issue.assert_called_once_with(456)
+
+        # Verify _collect_github_label receives issue_data
+        mock_label.assert_called_once()
+        label_call_args = mock_label.call_args
+        assert label_call_args[0][0] == project_dir
+        # Second arg should be the issue_data dict
+        assert label_call_args[0][1] == mock_issue
