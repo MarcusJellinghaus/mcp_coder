@@ -131,14 +131,18 @@ class PullRequestManager(BaseGitHubManager):
     @log_function_call
     @_handle_github_errors(lambda: cast(PullRequestData, {}))
     def create_pull_request(
-        self, title: str, head_branch: str, base_branch: str = "main", body: str = ""
+        self,
+        title: str,
+        head_branch: str,
+        base_branch: Optional[str] = None,
+        body: str = "",
     ) -> PullRequestData:
         """Create a new pull request.
 
         Args:
             title: Title of the pull request (must be non-empty)
             head_branch: Source branch for the pull request
-            base_branch: Target branch for the pull request (default: "main")
+            base_branch: Target branch for the pull request (default: repository default branch)
             body: Description/body of the pull request (optional)
 
         Returns:
@@ -159,6 +163,18 @@ class PullRequestManager(BaseGitHubManager):
             - merged: Whether PR is already merged (bool)
             - draft: Whether PR is a draft (bool)
         """
+        # Resolve base_branch if not provided
+        if base_branch is None:
+            if self.project_dir is None:
+                logger.error("project_dir required for default branch resolution")
+                return cast(PullRequestData, {})
+            resolved_base = get_default_branch_name(self.project_dir)
+            if resolved_base is None:
+                logger.error("Could not determine default branch for repository")
+                return cast(PullRequestData, {})
+            base_branch = resolved_base
+            logger.debug(f"Using repository default branch: {base_branch}")
+
         # Validate title
         if not isinstance(title, str) or not title.strip():
             logger.error(f"Invalid PR title: '{title}'. Must be a non-empty string.")

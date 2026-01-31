@@ -5,10 +5,11 @@ GitHub issues through the PyGithub library.
 """
 
 import logging
+import re
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, TypedDict
+from typing import List, NotRequired, Optional, TypedDict
 
 from github.GithubException import GithubException
 
@@ -98,6 +99,7 @@ class IssueData(TypedDict):
     updated_at: Optional[str]
     url: str
     locked: bool
+    base_branch: NotRequired[Optional[str]]
 
 
 class CommentData(TypedDict):
@@ -132,6 +134,52 @@ class EventData(TypedDict):
     label: Optional[str]  # Label name (for label events)
     created_at: str  # ISO format timestamp
     actor: Optional[str]  # GitHub username who performed action
+
+
+def _parse_base_branch(body: str) -> Optional[str]:
+    """Parse base branch from issue body.
+
+    Looks for a markdown heading (any level) containing "Base Branch" (case-insensitive)
+    and extracts the content until the next heading.
+
+    Args:
+        body: GitHub issue body text
+
+    Returns:
+        Branch name if found and valid, None if not specified or empty
+
+    Raises:
+        ValueError: If base branch section contains multiple lines (malformed input)
+
+    Example:
+        >>> _parse_base_branch("### Base Branch\\n\\nfeature/v2\\n\\n### Description")
+        'feature/v2'
+        >>> _parse_base_branch("### Description\\n\\nNo base branch")
+        None
+    """
+    if not body:
+        return None
+
+    # Case-insensitive match for any heading level (# to ######) with "Base Branch"
+    # MULTILINE flag for ^ to match line starts, DOTALL for . to match newlines
+    pattern = r"^#{1,6}\s*base\s*branch\s*\n(.*?)(?=^#{1,6}\s|\Z)"
+    match = re.search(pattern, body, re.MULTILINE | re.DOTALL | re.IGNORECASE)
+
+    if not match:
+        return None
+
+    content = match.group(1).strip()
+
+    if not content:
+        return None
+
+    # Check for multi-line content (malformed input)
+    if "\n" in content:
+        raise ValueError(
+            f"Base branch section contains multiple lines (malformed): {content!r}"
+        )
+
+    return content
 
 
 class IssueManager(BaseGitHubManager):
@@ -620,11 +668,19 @@ class IssueManager(BaseGitHubManager):
         # Get issue
         github_issue = repo.get_issue(issue_number)
 
+        # Parse base_branch from body
+        body = github_issue.body or ""
+        try:
+            base_branch = _parse_base_branch(body)
+        except ValueError as e:
+            logger.warning(f"Issue #{issue_number} has malformed base branch: {e}")
+            base_branch = None
+
         # Convert to IssueData
         return IssueData(
             number=github_issue.number,
             title=github_issue.title,
-            body=github_issue.body or "",
+            body=body,
             state=github_issue.state,
             labels=[label.name for label in github_issue.labels],
             assignees=[assignee.login for assignee in github_issue.assignees],
@@ -637,6 +693,7 @@ class IssueManager(BaseGitHubManager):
             ),
             url=github_issue.html_url,
             locked=github_issue.locked,
+            base_branch=base_branch,
         )
 
     @log_function_call
@@ -689,11 +746,19 @@ class IssueManager(BaseGitHubManager):
             if not include_pull_requests and issue.pull_request is not None:
                 continue
 
+            # Parse base_branch from body
+            body = issue.body or ""
+            try:
+                base_branch = _parse_base_branch(body)
+            except ValueError as e:
+                logger.warning(f"Issue #{issue.number} has malformed base branch: {e}")
+                base_branch = None
+
             # Convert to IssueData
             issue_data = IssueData(
                 number=issue.number,
                 title=issue.title,
-                body=issue.body or "",
+                body=body,
                 state=issue.state,
                 labels=[label.name for label in issue.labels],
                 assignees=[assignee.login for assignee in issue.assignees],
@@ -702,6 +767,7 @@ class IssueManager(BaseGitHubManager):
                 updated_at=(issue.updated_at.isoformat() if issue.updated_at else None),
                 url=issue.html_url,
                 locked=issue.locked,
+                base_branch=base_branch,
             )
             issues_list.append(issue_data)
 

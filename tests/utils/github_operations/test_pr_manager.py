@@ -5,6 +5,7 @@ and data transformation - NOT the PyGithub library itself.
 """
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import git
@@ -12,6 +13,42 @@ import pytest
 from github.GithubException import GithubException
 
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
+
+
+def create_mock_pr(**overrides: Any) -> MagicMock:
+    """Create a mock PR object with common defaults."""
+    mock_pr = MagicMock()
+    mock_pr.number = overrides.get("number", 123)
+    mock_pr.title = overrides.get("title", "Test PR")
+    mock_pr.body = overrides.get("body", "Test description")
+    mock_pr.state = overrides.get("state", "open")
+    mock_pr.head.ref = overrides.get("head_ref", "feature-branch")
+    mock_pr.base.ref = overrides.get("base_ref", "main")
+    mock_pr.html_url = overrides.get(
+        "url", f"https://github.com/test/repo/pull/{mock_pr.number}"
+    )
+    mock_pr.mergeable = overrides.get("mergeable", True)
+    mock_pr.merged = overrides.get("merged", False)
+    mock_pr.draft = overrides.get("draft", False)
+    # Handle optional datetime fields
+    if overrides.get("created_at") is None and "skip_dates" not in overrides:
+        mock_pr.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+    elif overrides.get("created_at"):
+        mock_pr.created_at.isoformat.return_value = overrides["created_at"]
+    else:
+        mock_pr.created_at = None
+    if overrides.get("updated_at") is None and "skip_dates" not in overrides:
+        mock_pr.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
+    elif overrides.get("updated_at"):
+        mock_pr.updated_at.isoformat.return_value = overrides["updated_at"]
+    else:
+        mock_pr.updated_at = None
+    # Handle user
+    if overrides.get("user") is None and "skip_user" not in overrides:
+        mock_pr.user.login = overrides.get("user_login", "testuser")
+    else:
+        mock_pr.user = overrides.get("user")
+    return mock_pr
 
 
 @pytest.mark.git_integration
@@ -167,25 +204,9 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        # Mock PR object
-        mock_pr = MagicMock()
-        mock_pr.number = 123
-        mock_pr.title = "Test PR"
-        mock_pr.body = "Test description"
-        mock_pr.state = "open"
-        mock_pr.head.ref = "feature-branch"
-        mock_pr.base.ref = "main"
-        mock_pr.html_url = "https://github.com/test/repo/pull/123"
-        mock_pr.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
-        mock_pr.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
-        mock_pr.user.login = "testuser"
-        mock_pr.mergeable = True
-        mock_pr.merged = False
-        mock_pr.draft = False
-
+        mock_pr = create_mock_pr()
         mock_repo = MagicMock()
         mock_repo.create_pull.return_value = mock_pr
-
         mock_github_client = MagicMock()
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
@@ -193,12 +214,9 @@ class TestPullRequestManagerUnit:
         with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
             mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
-
             result = manager.create_pull_request(
                 "Test PR", "feature-branch", "main", "Test description"
             )
-
-            # Verify the result structure
             assert result["number"] == 123
             assert result["title"] == "Test PR"
             assert result["body"] == "Test description"
@@ -206,8 +224,6 @@ class TestPullRequestManagerUnit:
             assert result["head_branch"] == "feature-branch"
             assert result["base_branch"] == "main"
             assert result["url"] == "https://github.com/test/repo/pull/123"
-
-            # Verify GitHub API was called correctly
             mock_repo.create_pull.assert_called_once_with(
                 title="Test PR",
                 body="Test description",
@@ -278,25 +294,9 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        # Mock PR object
-        mock_pr = MagicMock()
-        mock_pr.number = 123
-        mock_pr.title = "Test PR"
-        mock_pr.body = "Test description"
-        mock_pr.state = "open"
-        mock_pr.head.ref = "feature-branch"
-        mock_pr.base.ref = "main"
-        mock_pr.html_url = "https://github.com/test/repo/pull/123"
-        mock_pr.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
-        mock_pr.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
-        mock_pr.user.login = "testuser"
-        mock_pr.mergeable = True
-        mock_pr.merged = False
-        mock_pr.draft = False
-
+        mock_pr = create_mock_pr()
         mock_repo = MagicMock()
         mock_repo.get_pull.return_value = mock_pr
-
         mock_github_client = MagicMock()
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
@@ -304,9 +304,7 @@ class TestPullRequestManagerUnit:
         with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
             mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
-
             result = manager.get_pull_request(123)
-
             assert result["number"] == 123
             assert result["title"] == "Test PR"
             mock_repo.get_pull.assert_called_once_with(123)
@@ -342,40 +340,26 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        # Mock multiple PR objects
-        mock_pr1 = MagicMock()
-        mock_pr1.number = 1
-        mock_pr1.title = "First PR"
-        mock_pr1.body = "First description"
-        mock_pr1.state = "open"
-        mock_pr1.head.ref = "feature-1"
-        mock_pr1.base.ref = "main"
-        mock_pr1.html_url = "https://github.com/test/repo/pull/1"
-        mock_pr1.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
-        mock_pr1.updated_at.isoformat.return_value = "2023-01-01T00:00:00Z"
-        mock_pr1.user.login = "user1"
-        mock_pr1.mergeable = True
-        mock_pr1.merged = False
-        mock_pr1.draft = False
-
-        mock_pr2 = MagicMock()
-        mock_pr2.number = 2
-        mock_pr2.title = "Second PR"
-        mock_pr2.body = "Second description"
-        mock_pr2.state = "open"
-        mock_pr2.head.ref = "feature-2"
-        mock_pr2.base.ref = "main"
-        mock_pr2.html_url = "https://github.com/test/repo/pull/2"
-        mock_pr2.created_at.isoformat.return_value = "2023-01-02T00:00:00Z"
-        mock_pr2.updated_at.isoformat.return_value = "2023-01-02T00:00:00Z"
-        mock_pr2.user.login = "user2"
-        mock_pr2.mergeable = False
-        mock_pr2.merged = False
-        mock_pr2.draft = True
-
+        mock_pr1 = create_mock_pr(
+            number=1,
+            title="First PR",
+            body="First description",
+            head_ref="feature-1",
+            user_login="user1",
+        )
+        mock_pr2 = create_mock_pr(
+            number=2,
+            title="Second PR",
+            body="Second description",
+            head_ref="feature-2",
+            user_login="user2",
+            mergeable=False,
+            draft=True,
+            created_at="2023-01-02T00:00:00Z",
+            updated_at="2023-01-02T00:00:00Z",
+        )
         mock_repo = MagicMock()
         mock_repo.get_pulls.return_value = [mock_pr1, mock_pr2]
-
         mock_github_client = MagicMock()
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
@@ -383,21 +367,14 @@ class TestPullRequestManagerUnit:
         with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
             mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
-
             result = manager.list_pull_requests(state="open")
-
-            # Verify we got 2 PRs
             assert len(result) == 2
-
-            # Verify data transformation is correct
             assert result[0]["number"] == 1
             assert result[0]["title"] == "First PR"
             assert result[0]["draft"] is False
             assert result[1]["number"] == 2
             assert result[1]["title"] == "Second PR"
             assert result[1]["draft"] is True
-
-            # Verify API was called with correct parameters
             mock_repo.get_pulls.assert_called_once_with(state="open")
 
     @patch("mcp_coder.utils.github_operations.base_manager.Github")
@@ -454,25 +431,9 @@ class TestPullRequestManagerUnit:
         repo = git.Repo.init(git_dir)
         repo.create_remote("origin", "https://github.com/test/repo.git")
 
-        # Mock PR object
-        mock_pr = MagicMock()
-        mock_pr.number = 123
-        mock_pr.title = "Test PR"
-        mock_pr.body = "Test description"
-        mock_pr.state = "closed"
-        mock_pr.head.ref = "feature-branch"
-        mock_pr.base.ref = "main"
-        mock_pr.html_url = "https://github.com/test/repo/pull/123"
-        mock_pr.created_at.isoformat.return_value = "2023-01-01T00:00:00Z"
-        mock_pr.updated_at.isoformat.return_value = "2023-01-01T01:00:00Z"
-        mock_pr.user.login = "testuser"
-        mock_pr.mergeable = True
-        mock_pr.merged = False
-        mock_pr.draft = False
-
+        mock_pr = create_mock_pr(state="closed", updated_at="2023-01-01T01:00:00Z")
         mock_repo = MagicMock()
         mock_repo.get_pull.return_value = mock_pr
-
         mock_github_client = MagicMock()
         mock_github_client.get_repo.return_value = mock_repo
         mock_github.return_value = mock_github_client
@@ -480,15 +441,10 @@ class TestPullRequestManagerUnit:
         with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
             mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
-
             result = manager.close_pull_request(123)
-
             assert result["number"] == 123
             assert result["state"] == "closed"
-
-            # Verify edit was called to close the PR
             mock_pr.edit.assert_called_once_with(state="closed")
-            # Verify we fetched fresh data after closing
             assert mock_repo.get_pull.call_count == 2
 
     def test_close_pull_request_invalid_number(self, tmp_path: Path) -> None:
@@ -539,3 +495,172 @@ class TestPullRequestManagerUnit:
             # Errors should return empty dict
             result = manager.create_pull_request("Test PR", "feature", "main")
             assert not result
+
+
+@pytest.mark.git_integration
+class TestCreatePullRequestDefaultBranch:
+    """Tests for dynamic default branch resolution in create_pull_request()."""
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    @patch("mcp_coder.utils.github_operations.pr_manager.get_default_branch_name")
+    def test_create_pr_resolves_default_branch_when_none(
+        self, mock_get_default: Mock, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """When base_branch=None, resolves via get_default_branch_name()."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_get_default.return_value = "main"
+        mock_pr = create_mock_pr(
+            number=1,
+            body="Body",
+            url="https://github.com/test/repo/pull/1",
+            skip_dates=True,
+            skip_user=True,
+        )
+        mock_pr.created_at = None
+        mock_pr.updated_at = None
+        mock_pr.user = None
+        mock_repo = MagicMock()
+        mock_repo.create_pull.return_value = mock_pr
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
+            manager = PullRequestManager(git_dir)
+            result = manager.create_pull_request(
+                title="Test PR",
+                head_branch="feature-branch",
+                base_branch=None,
+                body="Body",
+            )
+            mock_get_default.assert_called_once_with(git_dir)
+            mock_repo.create_pull.assert_called_once()
+            assert mock_repo.create_pull.call_args[1]["base"] == "main"
+            assert result["number"] == 1
+            assert result["base_branch"] == "main"
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    @patch("mcp_coder.utils.github_operations.pr_manager.get_default_branch_name")
+    def test_create_pr_uses_explicit_base_branch(
+        self, mock_get_default: Mock, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """When base_branch is provided, uses it directly without calling get_default_branch_name()."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_pr = create_mock_pr(
+            number=1,
+            body="Body",
+            base_ref="develop",
+            url="https://github.com/test/repo/pull/1",
+            skip_dates=True,
+            skip_user=True,
+        )
+        mock_pr.created_at = None
+        mock_pr.updated_at = None
+        mock_pr.user = None
+        mock_repo = MagicMock()
+        mock_repo.create_pull.return_value = mock_pr
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
+            manager = PullRequestManager(git_dir)
+            result = manager.create_pull_request(
+                title="Test PR",
+                head_branch="feature-branch",
+                base_branch="develop",
+                body="Body",
+            )
+            mock_get_default.assert_not_called()
+            assert mock_repo.create_pull.call_args[1]["base"] == "develop"
+            assert result["number"] == 1
+            assert result["base_branch"] == "develop"
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    @patch("mcp_coder.utils.github_operations.pr_manager.get_default_branch_name")
+    def test_create_pr_returns_empty_when_default_branch_unknown(
+        self, mock_get_default: Mock, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """When default branch cannot be determined, returns empty dict."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_get_default.return_value = None  # Cannot determine default branch
+
+        mock_repo = MagicMock()
+
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
+            manager = PullRequestManager(git_dir)
+
+            result = manager.create_pull_request(
+                title="Test PR",
+                head_branch="feature-branch",
+                base_branch=None,
+                body="Body",
+            )
+
+            # Should return empty dict (falsy)
+            assert not result
+
+            # PR creation should not be attempted
+            mock_repo.create_pull.assert_not_called()
+
+    @patch("mcp_coder.utils.github_operations.base_manager.Github")
+    @patch("mcp_coder.utils.github_operations.pr_manager.get_default_branch_name")
+    def test_create_pr_resolves_master_as_default_branch(
+        self, mock_get_default: Mock, mock_github: Mock, tmp_path: Path
+    ) -> None:
+        """When default branch is 'master', uses it correctly."""
+        git_dir = tmp_path / "git_dir"
+        git_dir.mkdir()
+        repo = git.Repo.init(git_dir)
+        repo.create_remote("origin", "https://github.com/test/repo.git")
+
+        mock_get_default.return_value = "master"
+        mock_pr = create_mock_pr(
+            number=1,
+            body="Body",
+            base_ref="master",
+            url="https://github.com/test/repo/pull/1",
+            skip_dates=True,
+            skip_user=True,
+        )
+        mock_pr.created_at = None
+        mock_pr.updated_at = None
+        mock_pr.user = None
+        mock_repo = MagicMock()
+        mock_repo.create_pull.return_value = mock_pr
+        mock_github_client = MagicMock()
+        mock_github_client.get_repo.return_value = mock_repo
+        mock_github.return_value = mock_github_client
+
+        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+            mock_config.return_value = {("github", "token"): "dummy-token"}
+            manager = PullRequestManager(git_dir)
+            result = manager.create_pull_request(
+                title="Test PR",
+                head_branch="feature-branch",
+                base_branch=None,
+                body="Body",
+            )
+            mock_get_default.assert_called_once_with(git_dir)
+            assert mock_repo.create_pull.call_args[1]["base"] == "master"
+            assert result["number"] == 1
+            assert result["base_branch"] == "master"

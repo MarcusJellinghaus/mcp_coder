@@ -488,7 +488,9 @@ class TestMain:
 
         # Verify functions were called with correct parameters
         mock_check.assert_called_once_with(tmp_path, 123)
-        mock_manage.assert_called_once_with(tmp_path, 123, "Test Issue")
+        mock_manage.assert_called_once_with(
+            tmp_path, 123, "Test Issue", base_branch=None
+        )
         mock_prompts.assert_called_once_with(
             tmp_path, mock_issue_data, "claude_code_cli", None, None
         )

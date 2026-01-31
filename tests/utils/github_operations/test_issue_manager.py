@@ -2196,3 +2196,290 @@ class TestIssueManagerUnit:
 
             # Verify get_issues was called with since parameter
             mock_repo.get_issues.assert_called_once_with(state="open", since=since_time)
+
+
+# ==============================================================================
+# Tests for _parse_base_branch() function
+# ==============================================================================
+class TestParseBaseBranch:
+    """Tests for _parse_base_branch() function."""
+
+    # Valid base branches
+    def test_parse_base_branch_with_h3_header(self) -> None:
+        """Test parsing base branch with standard H3 header."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "### Base Branch\n\nfeature/v2\n\n### Description\n\nContent"
+        assert _parse_base_branch(body) == "feature/v2"
+
+    def test_parse_base_branch_case_insensitive(self) -> None:
+        """Test parsing base branch with lowercase header."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "# base branch\n\nmain\n\n# Description"
+        assert _parse_base_branch(body) == "main"
+
+    def test_parse_base_branch_uppercase(self) -> None:
+        """Test parsing base branch with uppercase header."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "## BASE BRANCH\n\nrelease/2.0\n\n## Description"
+        assert _parse_base_branch(body) == "release/2.0"
+
+    def test_parse_base_branch_with_h1_header(self) -> None:
+        """Test parsing base branch with H1 header."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "# Base Branch\n\nhotfix/urgent\n\n# Other"
+        assert _parse_base_branch(body) == "hotfix/urgent"
+
+    # No base branch (returns None)
+    def test_parse_base_branch_no_section(self) -> None:
+        """Test returns None when no base branch section exists."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "### Description\n\nNo base branch section here"
+        assert _parse_base_branch(body) is None
+
+    def test_parse_base_branch_empty_body(self) -> None:
+        """Test returns None for empty body."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        assert _parse_base_branch("") is None
+
+    def test_parse_base_branch_none_body(self) -> None:
+        """Test returns None for None body."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        assert _parse_base_branch(None) is None  # type: ignore[arg-type]
+
+    def test_parse_base_branch_empty_content(self) -> None:
+        """Test returns None when section has no content."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "### Base Branch\n\n\n\n### Description"
+        assert _parse_base_branch(body) is None
+
+    def test_parse_base_branch_whitespace_only(self) -> None:
+        """Test returns None when section has only whitespace."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "### Base Branch\n\n   \n\n### Description"
+        assert _parse_base_branch(body) is None
+
+    def test_parse_base_branch_at_end_of_body(self) -> None:
+        """Test parsing base branch when section is at end without trailing header."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "### Description\n\nContent\n\n### Base Branch\n\nfeature/final"
+        assert _parse_base_branch(body) == "feature/final"
+
+    # Error cases (raises ValueError)
+    def test_parse_base_branch_multiline_raises_error(self) -> None:
+        """Test raises ValueError for multi-line content."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "### Base Branch\n\nline1\nline2\n\n### Description"
+        with pytest.raises(ValueError, match="multiple lines"):
+            _parse_base_branch(body)
+
+    def test_parse_base_branch_multiline_with_spaces_raises_error(self) -> None:
+        """Test raises ValueError for multi-line content with leading spaces."""
+        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+
+        body = "### Base Branch\n\nbranch1\n  branch2\n\n### Description"
+        with pytest.raises(ValueError, match="multiple lines"):
+            _parse_base_branch(body)
+
+
+class TestGetIssueBaseBranch:
+    """Tests for base_branch field in get_issue()."""
+
+    def test_get_issue_with_base_branch(self) -> None:
+        """Issue with valid base branch returns it in IssueData."""
+        mock_issue = Mock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "### Base Branch\n\nfeature/v2\n\n### Description\n\nContent"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.user = None
+        mock_issue.created_at = None
+        mock_issue.updated_at = None
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.locked = False
+
+        with patch(
+            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+        ) as mock_get_repo:
+            mock_repo = Mock()
+            mock_repo.get_issue.return_value = mock_issue
+            mock_get_repo.return_value = mock_repo
+
+            with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+                mock_config.return_value = {("github", "token"): "test_token"}
+                with patch("github.Github"):
+                    manager = IssueManager(repo_url="https://github.com/test/repo.git")
+                    result = manager.get_issue(123)
+
+        assert result["base_branch"] == "feature/v2"
+
+    def test_get_issue_without_base_branch(self) -> None:
+        """Issue without base branch section returns None."""
+        mock_issue = Mock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "### Description\n\nNo base branch here"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.user = None
+        mock_issue.created_at = None
+        mock_issue.updated_at = None
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.locked = False
+
+        with patch(
+            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+        ) as mock_get_repo:
+            mock_repo = Mock()
+            mock_repo.get_issue.return_value = mock_issue
+            mock_get_repo.return_value = mock_repo
+
+            with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+                mock_config.return_value = {("github", "token"): "test_token"}
+                with patch("github.Github"):
+                    manager = IssueManager(repo_url="https://github.com/test/repo.git")
+                    result = manager.get_issue(123)
+
+        assert result["base_branch"] is None
+
+    def test_get_issue_with_malformed_base_branch_logs_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Issue with multi-line base branch logs warning and returns None."""
+        import logging
+
+        mock_issue = Mock()
+        mock_issue.number = 123
+        mock_issue.title = "Test Issue"
+        mock_issue.body = "### Base Branch\n\nline1\nline2\n\n### Description"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.user = None
+        mock_issue.created_at = None
+        mock_issue.updated_at = None
+        mock_issue.html_url = "https://github.com/test/repo/issues/123"
+        mock_issue.locked = False
+
+        with patch(
+            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+        ) as mock_get_repo:
+            mock_repo = Mock()
+            mock_repo.get_issue.return_value = mock_issue
+            mock_get_repo.return_value = mock_repo
+
+            with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+                mock_config.return_value = {("github", "token"): "test_token"}
+                with patch("github.Github"):
+                    with caplog.at_level(logging.WARNING):
+                        manager = IssueManager(
+                            repo_url="https://github.com/test/repo.git"
+                        )
+                        result = manager.get_issue(123)
+
+        assert result["base_branch"] is None
+        assert "malformed base branch" in caplog.text.lower()
+
+
+class TestListIssuesBaseBranch:
+    """Tests for base_branch field in list_issues()."""
+
+    def test_list_issues_includes_base_branch(self) -> None:
+        """list_issues() includes base_branch in each IssueData."""
+        mock_issue1 = Mock()
+        mock_issue1.number = 1
+        mock_issue1.title = "Issue 1"
+        mock_issue1.body = "### Base Branch\n\nmain\n\n### Desc"
+        mock_issue1.state = "open"
+        mock_issue1.labels = []
+        mock_issue1.assignees = []
+        mock_issue1.user = None
+        mock_issue1.created_at = None
+        mock_issue1.updated_at = None
+        mock_issue1.html_url = "https://github.com/test/repo/issues/1"
+        mock_issue1.locked = False
+        mock_issue1.pull_request = None
+
+        mock_issue2 = Mock()
+        mock_issue2.number = 2
+        mock_issue2.title = "Issue 2"
+        mock_issue2.body = "### Description\n\nNo base branch"
+        mock_issue2.state = "open"
+        mock_issue2.labels = []
+        mock_issue2.assignees = []
+        mock_issue2.user = None
+        mock_issue2.created_at = None
+        mock_issue2.updated_at = None
+        mock_issue2.html_url = "https://github.com/test/repo/issues/2"
+        mock_issue2.locked = False
+        mock_issue2.pull_request = None
+
+        with patch(
+            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+        ) as mock_get_repo:
+            mock_repo = Mock()
+            mock_repo.get_issues.return_value = [mock_issue1, mock_issue2]
+            mock_get_repo.return_value = mock_repo
+
+            with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+                mock_config.return_value = {("github", "token"): "test_token"}
+                with patch("github.Github"):
+                    manager = IssueManager(repo_url="https://github.com/test/repo.git")
+                    results = manager.list_issues()
+
+        assert len(results) == 2
+        assert results[0]["base_branch"] == "main"
+        assert results[1]["base_branch"] is None
+
+    def test_list_issues_with_malformed_base_branch_logs_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """list_issues() logs warning for malformed base branch."""
+        import logging
+
+        mock_issue = Mock()
+        mock_issue.number = 1
+        mock_issue.title = "Issue 1"
+        mock_issue.body = "### Base Branch\n\nline1\nline2\n\n### Desc"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.user = None
+        mock_issue.created_at = None
+        mock_issue.updated_at = None
+        mock_issue.html_url = "https://github.com/test/repo/issues/1"
+        mock_issue.locked = False
+        mock_issue.pull_request = None
+
+        with patch(
+            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+        ) as mock_get_repo:
+            mock_repo = Mock()
+            mock_repo.get_issues.return_value = [mock_issue]
+            mock_get_repo.return_value = mock_repo
+
+            with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+                mock_config.return_value = {("github", "token"): "test_token"}
+                with patch("github.Github"):
+                    with caplog.at_level(logging.WARNING):
+                        manager = IssueManager(
+                            repo_url="https://github.com/test/repo.git"
+                        )
+                        results = manager.list_issues()
+
+        assert len(results) == 1
+        assert results[0]["base_branch"] is None
+        assert "malformed base branch" in caplog.text.lower()

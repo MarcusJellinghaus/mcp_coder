@@ -120,6 +120,77 @@ EOF
 mcp-coder define-labels --dry-run  # Preview your custom labels
 ```
 
+## Base Branch Support for Issues
+
+### Overview
+
+Issues can specify a base branch to start work from a branch other than the repository default. This is useful for:
+- **Hotfixes**: Starting from a release branch
+- **Feature chains**: Building on existing feature work
+- **Release preparation**: Working from release branches
+
+### Issue Body Format
+
+Add a `### Base Branch` section to your issue body:
+
+```markdown
+### Base Branch
+
+feature/existing-work
+
+### Description
+
+The actual issue content...
+```
+
+### Parsing Rules
+
+- **Case-insensitive**: `Base Branch`, `base branch`, `BASE BRANCH` all work
+- **Any heading level**: `#`, `##`, `###` all work
+- **Single line only**: Multiple lines will cause an error
+- **Whitespace trimmed**: Leading/trailing whitespace is ignored
+- **Empty = default**: If section is empty or missing, uses repository default branch
+
+### Validation
+
+The base branch is validated at branch creation time:
+- If the branch doesn't exist, branch creation fails with a clear error
+- The `/issue_analyse` command will warn if the specified branch doesn't exist
+
+### Backward Compatibility
+
+Existing issues without a `### Base Branch` section continue to work as before, using the repository's default branch (typically `main` or `master`).
+
+### Example Issues
+
+**Issue with base branch:**
+```markdown
+### Base Branch
+
+release/2.0
+
+### Description
+
+Fix critical bug in release 2.0
+
+### Acceptance Criteria
+
+- Bug is fixed
+- Tests pass
+```
+
+**Issue without base branch (uses default):**
+```markdown
+### Description
+
+Add new feature to main branch
+
+### Acceptance Criteria
+
+- Feature works
+- Tests pass
+```
+
 ## GitHub Actions Setup
 
 ### Required Actions
