@@ -173,10 +173,7 @@ def check_pr_info_not_exists(project_dir: Path) -> bool:
     """
     pr_info_dir = project_dir / "pr_info"
 
-    if pr_info_dir.exists():
-        return False
-
-    return True
+    return not pr_info_dir.exists()
 
 
 def create_pr_info_structure(project_dir: Path) -> bool:
