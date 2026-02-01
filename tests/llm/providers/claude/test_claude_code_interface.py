@@ -34,6 +34,7 @@ class TestAskClaudeCodeSessionSupport:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
 
     @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_api")
@@ -120,6 +121,7 @@ class TestAskClaudeCodeSessionSupport:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert response == "Default behavior"
 
@@ -170,6 +172,7 @@ class TestAskClaudeCodeSessionSupport:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
 
     @patch("mcp_coder.llm.providers.claude.claude_code_interface.ask_claude_code_cli")
@@ -196,6 +199,7 @@ class TestAskClaudeCodeSessionSupport:
             env_vars=test_env_vars,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
 
 

@@ -21,6 +21,7 @@ from mcp_coder.utils.git_operations import (
     rebase_onto_branch,
 )
 from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
+from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.ci_results_manager import (
     CIResultsManager,
     CIStatusData,
@@ -152,6 +153,7 @@ def _run_ci_analysis(
     # Call LLM with analysis prompt
     try:
         logger.info("Calling LLM for CI failure analysis...")
+        branch_name = get_branch_name_for_logging(config.project_dir)
         analysis_response = ask_llm(
             analysis_prompt,
             provider=config.provider,
@@ -161,6 +163,7 @@ def _run_ci_analysis(
             project_dir=str(config.project_dir),
             execution_dir=config.cwd,
             mcp_config=config.mcp_config,
+            branch_name=branch_name,
         )
 
         # Handle empty response (retry once)
@@ -220,6 +223,7 @@ def _run_ci_fix(
     # Call LLM with fix prompt
     try:
         logger.info("Calling LLM to fix CI issues...")
+        branch_name = get_branch_name_for_logging(config.project_dir)
         fix_response = ask_llm(
             fix_prompt,
             provider=config.provider,
@@ -229,6 +233,7 @@ def _run_ci_fix(
             project_dir=str(config.project_dir),
             execution_dir=config.cwd,
             mcp_config=config.mcp_config,
+            branch_name=branch_name,
         )
 
         # Handle empty response
@@ -678,7 +683,7 @@ def prepare_task_tracker(
         env_vars = prepare_llm_environment(project_dir)
 
         # Call LLM with the prompt
-
+        branch_name = get_branch_name_for_logging(project_dir)
         response = ask_llm(
             prompt_template,
             provider=provider,
@@ -688,6 +693,7 @@ def prepare_task_tracker(
             project_dir=str(project_dir),
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            branch_name=branch_name,
         )
 
         if not response or not response.strip():
@@ -848,6 +854,7 @@ def run_finalisation(
 
     # 2. Prepare environment and call LLM with finalisation prompt
     env_vars = prepare_llm_environment(project_dir)
+    branch_name = get_branch_name_for_logging(project_dir)
 
     response = ask_llm(
         FINALISATION_PROMPT,
@@ -858,6 +865,7 @@ def run_finalisation(
         project_dir=str(project_dir),
         execution_dir=str(execution_dir) if execution_dir else None,
         mcp_config=mcp_config,
+        branch_name=branch_name,
     )
 
     # 3. Check for empty/failed response

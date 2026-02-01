@@ -22,6 +22,7 @@ from mcp_coder.utils.git_operations.branches import checkout_branch
 from mcp_coder.utils.git_operations.readers import is_working_directory_clean
 from mcp_coder.utils.git_operations.remotes import git_push
 from mcp_coder.utils.git_operations.workflows import commit_all_changes
+from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
@@ -280,6 +281,9 @@ def run_planning_prompts(
     env_vars = prepare_llm_environment(project_dir)
     logger.debug(f"Environment variables prepared: {list(env_vars.keys())}")
 
+    # Get branch name for logging (with issue_id fallback)
+    branch_name = get_branch_name_for_logging(project_dir, issue_data["number"])
+
     # Prepare session storage path (relative to project directory)
     session_storage_path = str(project_dir / ".mcp-coder" / "create_plan_sessions")
     logger.info(f"Conversation logs will be stored in: {session_storage_path}")
@@ -329,6 +333,7 @@ def run_planning_prompts(
             project_dir=str(project_dir),
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            branch_name=branch_name,
         )
 
         if not response_1 or not response_1.get("text"):
@@ -381,6 +386,7 @@ def run_planning_prompts(
             project_dir=str(project_dir),
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            branch_name=branch_name,
         )
 
         if not response_2 or not response_2.get("text"):
@@ -427,6 +433,7 @@ def run_planning_prompts(
             project_dir=str(project_dir),
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            branch_name=branch_name,
         )
 
         if not response_3 or not response_3.get("text"):

@@ -54,6 +54,7 @@ class MockClaudeCLI:
         cwd: Optional[str] = None,
         env_vars: Optional[Dict[str, str]] = None,
         mcp_config: Optional[str] = None,
+        branch_name: Optional[str] = None,
     ) -> LLMResponseDict:
         """Simulate CLI call."""
         self.call_count += 1

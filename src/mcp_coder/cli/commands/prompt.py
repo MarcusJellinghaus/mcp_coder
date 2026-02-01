@@ -51,6 +51,7 @@ from ...llm.providers.claude.claude_code_api import (
     ask_claude_code_api_detailed_sync,
 )
 from ...llm.storage import extract_session_id, find_latest_session, store_session
+from ...utils.git_utils import get_branch_name_for_logging
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
@@ -157,6 +158,7 @@ def execute_prompt(
             from ...llm.interface import prompt_llm
 
             provider, method = parse_llm_method_from_args(llm_method)
+            branch_name = get_branch_name_for_logging(project_dir)
             response_dict = prompt_llm(
                 args.prompt,
                 provider=provider,
@@ -167,12 +169,14 @@ def execute_prompt(
                 project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
+                branch_name=branch_name,
             )
             # Output complete response as JSON (includes session_id)
             formatted_output = json.dumps(response_dict, indent=2, default=str)
         elif verbosity == "just-text":
             # Use unified ask_llm interface for simple text output
             provider, method = parse_llm_method_from_args(llm_method)
+            branch_name = get_branch_name_for_logging(project_dir)
             response = ask_llm(
                 args.prompt,
                 provider=provider,
@@ -183,6 +187,7 @@ def execute_prompt(
                 project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
+                branch_name=branch_name,
             )
 
             # Simple text output with tool summary

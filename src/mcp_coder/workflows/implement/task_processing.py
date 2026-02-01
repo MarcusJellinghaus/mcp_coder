@@ -23,6 +23,7 @@ from mcp_coder.llm.providers.claude.claude_code_api import (
 # Import removed - using structured parameters instead
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status, git_push
+from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
@@ -175,6 +176,7 @@ def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional
         # CLI method - no comprehensive data available
         try:
             logger.info(f"Calling Claude CLI with {timeout}s timeout...")
+            branch_name = get_branch_name_for_logging(cwd)
             response_text = ask_llm(
                 prompt,
                 provider=provider,
@@ -183,6 +185,7 @@ def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional
                 env_vars=env_vars,
                 execution_dir=cwd,
                 mcp_config=mcp_config,
+                branch_name=branch_name,
             )
             return response_text, {}
         except subprocess.TimeoutExpired as e:

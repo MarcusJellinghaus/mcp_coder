@@ -40,6 +40,7 @@ class TestExecutePrompt:
             project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
+            branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "The capital of France is Paris." in captured.out
@@ -104,6 +105,7 @@ class TestExecutePrompt:
             project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
+            branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Adding error handling." in captured.out
@@ -142,6 +144,7 @@ class TestExecutePrompt:
             project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
+            branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert (
@@ -185,6 +188,7 @@ class TestExecutePrompt:
             project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
+            branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert (
@@ -230,6 +234,7 @@ class TestExecutePrompt:
             project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
+            branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Warning: No session_id found" in captured.out
@@ -321,6 +326,7 @@ class TestExecutePrompt:
             project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
+            branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Response with env vars." in captured.out
@@ -357,6 +363,7 @@ class TestExecutePrompt:
             project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
+            branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Response without env vars." in captured.out

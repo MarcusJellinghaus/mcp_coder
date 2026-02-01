@@ -26,6 +26,7 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
     project_dir: str | None = None,
     execution_dir: str | None = None,
     mcp_config: str | None = None,
+    branch_name: str | None = None,
 ) -> str:
     """
     Ask a question to an LLM provider using the specified method.
@@ -48,6 +49,7 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
         project_dir: Optional project directory for MCP_CODER_PROJECT_DIR env var
         execution_dir: Optional working directory for LLM subprocess (default: current directory)
         mcp_config: Optional path to MCP configuration file
+        branch_name: Optional git branch name to include in log filename
 
     Returns:
         The LLM's response text as a string
@@ -90,6 +92,7 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
             env_vars=env_vars,
             cwd=execution_dir,
             mcp_config=mcp_config,
+            branch_name=branch_name,
         )
     else:
         raise ValueError(
@@ -107,6 +110,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
     project_dir: str | None = None,
     execution_dir: str | None = None,
     mcp_config: str | None = None,
+    branch_name: str | None = None,
 ) -> LLMResponseDict:
     """
     Ask a question to an LLM provider with full session management.
@@ -126,6 +130,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
         project_dir: Optional project directory for MCP_CODER_PROJECT_DIR env var
         execution_dir: Optional working directory for LLM subprocess (default: current directory)
         mcp_config: Optional path to MCP configuration file
+        branch_name: Optional git branch name to include in log filename
 
     Returns:
         LLMResponseDict containing:
@@ -184,6 +189,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
                 env_vars=env_vars,
                 cwd=execution_dir,
                 mcp_config=mcp_config,
+                branch_name=branch_name,
             )
         elif method == "api":
             return ask_claude_code_api(
