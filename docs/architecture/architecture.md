@@ -174,7 +174,7 @@ mcp-coder implement --project-dir /path/to/project
 - **Providers**: `llm/providers/` - Provider implementations
   - `claude/` - Claude Code CLI/API integration (tests: `llm/providers/claude/test_*.py`)
     - `claude_code_interface.py` - Claude routing interface
-    - `claude_code_cli.py` - Claude Code CLI integration
+    - `claude_code_cli.py` - Claude Code CLI integration with stream-json session logging
     - `claude_code_api.py` - Claude Code API integration
     - `logging_utils.py` - Logging utilities for LLM requests/responses/errors (tests: `test_logging_utils.py`)
       - **Design Decision**: Added structured logging for LLM operations (Nov 2025)
@@ -220,6 +220,7 @@ mcp-coder implement --project-dir /path/to/project
 - **Clipboard operations**: `utils/clipboard.py` - Commit message clipboard utilities (tests: `utils/test_clipboard.py`)
 - **Data file utilities**: `utils/data_files.py` - Package data file location (tests: `utils/test_data_files.py`)
 - **Subprocess execution**: `utils/subprocess_runner.py` - MCP STDIO isolation support (tests: ❌ missing)
+- **Git utilities**: `utils/git_utils.py` - Branch name utilities for LLM log correlation (tests: `utils/test_git_utils.py`)
 
 ### Code Quality & Formatting (`src/mcp_coder/formatters/`)
 - **Formatter integration**: `formatters/` - Black, isort automation (tests: `formatters/test_*.py` 🏷️ formatter_integration)
@@ -346,6 +347,11 @@ mcp-coder implement --project-dir /path/to/project
   - `log_llm_error()` - Log error details with type, message, and duration
   - **Level**: DEBUG level for detailed operation tracking
   - **Use cases**: Provider implementations for both CLI and API integration
+- **Claude CLI session logging**: Full session capture to `logs/claude-sessions/` as NDJSON files
+  - **Filename format**: `session_{timestamp}_{branch_id}.ndjson`
+  - **Real-time monitoring**: Use `tail -f logs/claude-sessions/*.ndjson` during execution
+  - **Content**: Full message history, cost/usage statistics, error diagnostics
+  - **Purpose**: Debugging, cost tracking, and post-mortem analysis of LLM interactions
 
 ### Configuration Management
 - **User config**: TOML files in `~/.mcp_coder/config.toml`
