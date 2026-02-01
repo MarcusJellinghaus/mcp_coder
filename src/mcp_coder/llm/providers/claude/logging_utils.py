@@ -89,12 +89,19 @@ def log_llm_response(
     logger.debug(log_message)
 
 
+# Maximum characters to include from subprocess stdout/stderr in error logs
+_MAX_OUTPUT_CHARS = 1000
+
+
 def log_llm_error(
     method: str,
     error: Exception,
     duration_ms: int | None = None,
 ) -> None:
     """Log LLM error at DEBUG level.
+
+    For CalledProcessError, also logs stdout and stderr to help diagnose
+    CLI failures (e.g., authentication errors, MCP server issues).
 
     Args:
         method: 'cli' or 'api'
@@ -110,6 +117,19 @@ def log_llm_error(
 
     if duration_ms is not None:
         log_lines.append(f"  duration: {duration_ms}ms")
+
+    # For CalledProcessError, include stdout and stderr for diagnosis
+    if hasattr(error, "stderr") and error.stderr:
+        stderr_str = str(error.stderr).strip()
+        if len(stderr_str) > _MAX_OUTPUT_CHARS:
+            stderr_str = stderr_str[:_MAX_OUTPUT_CHARS] + "... (truncated)"
+        log_lines.append(f"  stderr: {stderr_str}")
+
+    if hasattr(error, "output") and error.output:
+        stdout_str = str(error.output).strip()
+        if len(stdout_str) > _MAX_OUTPUT_CHARS:
+            stdout_str = stdout_str[:_MAX_OUTPUT_CHARS] + "... (truncated)"
+        log_lines.append(f"  stdout: {stdout_str}")
 
     log_message = "\n".join(log_lines)
     logger.debug(log_message)
