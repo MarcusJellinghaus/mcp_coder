@@ -198,11 +198,11 @@ def parse_stream_json_line(line: str) -> StreamMessage | None:
         return None
 
 
-def parse_stream_json_file(file_path: Path) -> ParsedStreamResponse:
-    """Parse a stream-json log file into structured response.
+def _parse_stream_lines(lines: list[str]) -> ParsedStreamResponse:
+    """Parse stream-json lines into structured response (internal helper).
 
     Args:
-        file_path: Path to the NDJSON stream log file
+        lines: List of NDJSON lines to parse
 
     Returns:
         ParsedStreamResponse with extracted text, session_id, and all messages
@@ -213,75 +213,7 @@ def parse_stream_json_file(file_path: Path) -> ParsedStreamResponse:
     result_message: StreamMessage | None = None
     system_message: StreamMessage | None = None
 
-    if not file_path.exists():
-        return ParsedStreamResponse(
-            text="",
-            session_id=None,
-            messages=[],
-            result_message=None,
-            system_message=None,
-        )
-
-    try:
-        content = file_path.read_text(encoding="utf-8")
-        for line in content.splitlines():
-            msg = parse_stream_json_line(line)
-            if msg is None:
-                continue
-
-            messages.append(msg)
-            msg_type = msg.get("type", "")
-
-            # Extract session_id from system init or result messages
-            if "session_id" in msg:
-                session_id = msg["session_id"]
-
-            # Handle different message types
-            if msg_type == "system":
-                system_message = msg
-            elif msg_type == "assistant":
-                # Extract text from assistant message content blocks
-                message_data = msg.get("message", {})
-                content_blocks = message_data.get("content", [])
-                for block in content_blocks:
-                    if isinstance(block, dict) and block.get("type") == "text":
-                        text_parts.append(block.get("text", ""))
-            elif msg_type == "result":
-                result_message = msg
-                # Result message also contains the final text
-                if "result" in msg:
-                    # Only use result text if we didn't get text from assistant messages
-                    if not text_parts:
-                        text_parts.append(str(msg["result"]))
-
-    except (OSError, IOError) as e:
-        logger.error(f"Failed to read stream file {file_path}: {e}")
-
-    return ParsedStreamResponse(
-        text="".join(text_parts).strip(),
-        session_id=session_id,
-        messages=messages,
-        result_message=result_message,
-        system_message=system_message,
-    )
-
-
-def parse_stream_json_string(content: str) -> ParsedStreamResponse:
-    """Parse stream-json content from a string.
-
-    Args:
-        content: NDJSON content as a string
-
-    Returns:
-        ParsedStreamResponse with extracted data
-    """
-    messages: list[StreamMessage] = []
-    text_parts: list[str] = []
-    session_id: str | None = None
-    result_message: StreamMessage | None = None
-    system_message: StreamMessage | None = None
-
-    for line in content.splitlines():
+    for line in lines:
         msg = parse_stream_json_line(line)
         if msg is None:
             continue
@@ -318,6 +250,50 @@ def parse_stream_json_string(content: str) -> ParsedStreamResponse:
         result_message=result_message,
         system_message=system_message,
     )
+
+
+def parse_stream_json_file(file_path: Path) -> ParsedStreamResponse:
+    """Parse a stream-json log file into structured response.
+
+    Args:
+        file_path: Path to the NDJSON stream log file
+
+    Returns:
+        ParsedStreamResponse with extracted text, session_id, and all messages
+    """
+    if not file_path.exists():
+        return ParsedStreamResponse(
+            text="",
+            session_id=None,
+            messages=[],
+            result_message=None,
+            system_message=None,
+        )
+
+    try:
+        content = file_path.read_text(encoding="utf-8")
+        return _parse_stream_lines(content.splitlines())
+    except (OSError, IOError) as e:
+        logger.error(f"Failed to read stream file {file_path}: {e}")
+        return ParsedStreamResponse(
+            text="",
+            session_id=None,
+            messages=[],
+            result_message=None,
+            system_message=None,
+        )
+
+
+def parse_stream_json_string(content: str) -> ParsedStreamResponse:
+    """Parse stream-json content from a string.
+
+    Args:
+        content: NDJSON content as a string
+
+    Returns:
+        ParsedStreamResponse with extracted data
+    """
+    return _parse_stream_lines(content.splitlines())
 
 
 def parse_cli_json_string(json_str: str) -> ParsedCliResponse:
