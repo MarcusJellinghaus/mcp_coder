@@ -1,11 +1,13 @@
 """Tests for logging_utils functions."""
 
 import logging
+import subprocess
 from unittest.mock import Mock
 
 import pytest
 
 from mcp_coder.llm.providers.claude.logging_utils import (
+    _MAX_OUTPUT_CHARS,
     log_llm_error,
     log_llm_request,
     log_llm_response,
@@ -211,3 +213,70 @@ class TestLogLLMError:
         log_output = caplog_debug.text
         assert "CustomError" in log_output
         assert "Custom message" in log_output
+
+    def test_log_llm_error_called_process_error_with_stderr(
+        self, caplog_debug: pytest.LogCaptureFixture
+    ) -> None:
+        """Test logging CalledProcessError includes stderr."""
+        error = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["claude", "-p"],
+            output="some stdout",
+            stderr="Authentication failed: invalid token",
+        )
+
+        log_llm_error(
+            method="cli",
+            error=error,
+            duration_ms=5000,
+        )
+
+        log_output = caplog_debug.text
+        assert "CalledProcessError" in log_output
+        assert "stderr: Authentication failed: invalid token" in log_output
+        assert "stdout: some stdout" in log_output
+        assert "5000ms" in log_output
+
+    def test_log_llm_error_called_process_error_truncates_long_output(
+        self, caplog_debug: pytest.LogCaptureFixture
+    ) -> None:
+        """Test that long stderr/stdout is truncated."""
+        long_stderr = "x" * (_MAX_OUTPUT_CHARS + 500)
+        error = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["claude", "-p"],
+            stderr=long_stderr,
+        )
+
+        log_llm_error(
+            method="cli",
+            error=error,
+        )
+
+        log_output = caplog_debug.text
+        assert "stderr:" in log_output
+        assert "... (truncated)" in log_output
+        # Should not contain the full long string
+        assert long_stderr not in log_output
+
+    def test_log_llm_error_called_process_error_empty_output(
+        self, caplog_debug: pytest.LogCaptureFixture
+    ) -> None:
+        """Test CalledProcessError with empty stdout/stderr doesn't add extra lines."""
+        error = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["claude", "-p"],
+            output="",
+            stderr="",
+        )
+
+        log_llm_error(
+            method="cli",
+            error=error,
+        )
+
+        log_output = caplog_debug.text
+        assert "CalledProcessError" in log_output
+        # Empty strings should not produce stderr/stdout lines
+        assert "stderr:" not in log_output
+        assert "stdout:" not in log_output
