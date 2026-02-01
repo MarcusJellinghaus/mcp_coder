@@ -12,6 +12,7 @@ def ask_claude_code(  # pylint: disable=too-many-positional-arguments
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
     mcp_config: str | None = None,
+    branch_name: str | None = None,
 ) -> str:
     """
     Ask Claude a question using the specified implementation method.
@@ -32,6 +33,7 @@ def ask_claude_code(  # pylint: disable=too-many-positional-arguments
             Controls Claude's execution context and config file discovery.
             Default: None (subprocess uses caller's working directory)
         mcp_config: Optional path to MCP configuration file
+        branch_name: Optional git branch name to include in log filename
 
     Returns:
         Claude's response text as a string
@@ -65,6 +67,7 @@ def ask_claude_code(  # pylint: disable=too-many-positional-arguments
             env_vars=env_vars,
             cwd=cwd,
             mcp_config=mcp_config,
+            branch_name=branch_name,
         )
         return result["text"]  # Extract text from LLMResponseDict
     elif method == "api":

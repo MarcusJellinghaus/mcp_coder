@@ -2,6 +2,8 @@
 """Unit tests for MCP config parameter handling in claude_code_cli module."""
 
 import json
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,6 +15,42 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
 from mcp_coder.utils.subprocess_runner import CommandResult
 
 
+def make_stream_json_output(
+    result_text: str = "Test response",
+    session_id: str = "test-session-123",
+) -> str:
+    """Helper to create valid stream-json output for testing."""
+    system_msg = json.dumps(
+        {
+            "type": "system",
+            "subtype": "init",
+            "session_id": session_id,
+            "model": "claude-opus-4-5-20251101",
+        }
+    )
+    assistant_msg = json.dumps(
+        {
+            "type": "assistant",
+            "message": {
+                "content": [{"type": "text", "text": result_text}],
+            },
+            "session_id": session_id,
+        }
+    )
+    result_msg = json.dumps(
+        {
+            "type": "result",
+            "subtype": "success",
+            "is_error": False,
+            "result": result_text,
+            "session_id": session_id,
+            "duration_ms": 1500,
+            "total_cost_usd": 0.05,
+        }
+    )
+    return f"{system_msg}\n{assistant_msg}\n{result_msg}"
+
+
 class TestClaudeMcpConfig:
     """Test suite for MCP config parameter handling."""
 
@@ -20,8 +58,15 @@ class TestClaudeMcpConfig:
         """Verify command built correctly without mcp_config parameter."""
         cmd = build_cli_command(session_id=None, claude_cmd="claude")
 
-        # Expected command structure without mcp_config
-        assert cmd == ["claude", "-p", "", "--output-format", "json"]
+        # Expected command structure without mcp_config (uses stream-json by default)
+        assert cmd == [
+            "claude",
+            "-p",
+            "",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+        ]
         assert "--mcp-config" not in cmd
         assert "--strict-mcp-config" not in cmd
 
@@ -36,7 +81,7 @@ class TestClaudeMcpConfig:
         assert "-p" in cmd
         assert "" in cmd
         assert "--output-format" in cmd
-        assert "json" in cmd
+        assert "stream-json" in cmd  # Now uses stream-json
 
         # Verify mcp_config flags are added
         assert "--mcp-config" in cmd
@@ -69,63 +114,75 @@ class TestClaudeMcpConfig:
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
     def test_ask_claude_code_cli_passes_mcp_config(
-        self, mock_execute: MagicMock, mock_find: MagicMock
+        self,
+        mock_get_path: MagicMock,
+        mock_execute: MagicMock,
+        mock_find: MagicMock,
     ) -> None:
         """Verify ask_claude_code_cli() accepts and passes mcp_config to build_cli_command()."""
         mock_find.return_value = "claude"
-        mock_result = CommandResult(
-            return_code=0,
-            stdout=json.dumps({"result": "Test response", "session_id": "test-123"}),
-            stderr="",
-            timed_out=False,
-        )
-        mock_execute.return_value = mock_result
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
+            mock_result = CommandResult(
+                return_code=0,
+                stdout=make_stream_json_output("Test response", "test-123"),
+                stderr="",
+                timed_out=False,
+            )
+            mock_execute.return_value = mock_result
 
-        # Call ask_claude_code_cli with mcp_config parameter
-        result = ask_claude_code_cli("Test question", mcp_config=".mcp.linux.json")
+            # Call ask_claude_code_cli with mcp_config parameter
+            result = ask_claude_code_cli("Test question", mcp_config=".mcp.linux.json")
 
-        # Verify the command passed to execute_subprocess contains mcp_config flags
-        call_args = mock_execute.call_args
-        command = call_args[0][0]
+            # Verify the command passed to execute_subprocess contains mcp_config flags
+            call_args = mock_execute.call_args
+            command = call_args[0][0]
 
-        assert "--mcp-config" in command
-        assert ".mcp.linux.json" in command
-        assert "--strict-mcp-config" in command
+            assert "--mcp-config" in command
+            assert ".mcp.linux.json" in command
+            assert "--strict-mcp-config" in command
 
-        # Verify response is valid
-        assert result["text"] == "Test response"
-        assert result["session_id"] == "test-123"
+            # Verify response is valid
+            assert result["text"] == "Test response"
+            assert result["session_id"] == "test-123"
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
     def test_ask_claude_code_cli_with_session_and_mcp_config(
-        self, mock_execute: MagicMock, mock_find: MagicMock
+        self,
+        mock_get_path: MagicMock,
+        mock_execute: MagicMock,
+        mock_find: MagicMock,
     ) -> None:
         """Verify ask_claude_code_cli() passes both session_id and mcp_config correctly."""
         mock_find.return_value = "claude"
-        mock_result = CommandResult(
-            return_code=0,
-            stdout=json.dumps({"result": "Continued", "session_id": "existing"}),
-            stderr="",
-            timed_out=False,
-        )
-        mock_execute.return_value = mock_result
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
+            mock_result = CommandResult(
+                return_code=0,
+                stdout=make_stream_json_output("Continued", "existing"),
+                stderr="",
+                timed_out=False,
+            )
+            mock_execute.return_value = mock_result
 
-        # Call with both session_id and mcp_config
-        result = ask_claude_code_cli(
-            "Follow up", session_id="existing", mcp_config=".mcp.linux.json"
-        )
+            # Call with both session_id and mcp_config
+            result = ask_claude_code_cli(
+                "Follow up", session_id="existing", mcp_config=".mcp.linux.json"
+            )
 
-        # Verify command contains both session and mcp_config flags
-        call_args = mock_execute.call_args
-        command = call_args[0][0]
+            # Verify command contains both session and mcp_config flags
+            call_args = mock_execute.call_args
+            command = call_args[0][0]
 
-        assert "--resume" in command
-        assert "existing" in command
-        assert "--mcp-config" in command
-        assert ".mcp.linux.json" in command
-        assert "--strict-mcp-config" in command
+            assert "--resume" in command
+            assert "existing" in command
+            assert "--mcp-config" in command
+            assert ".mcp.linux.json" in command
+            assert "--strict-mcp-config" in command
 
-        # Verify response is valid
-        assert result["session_id"] == "existing"
+            # Verify response is valid
+            assert result["session_id"] == "existing"

@@ -28,6 +28,7 @@ class TestAskLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Test response from Claude"
 
@@ -46,6 +47,7 @@ class TestAskLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Default response"
 
@@ -79,6 +81,7 @@ class TestAskLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Timeout response"
 
@@ -99,6 +102,7 @@ class TestAskLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Method response"
 
@@ -122,6 +126,7 @@ class TestAskLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Response with session"
 
@@ -141,6 +146,7 @@ class TestAskLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Response without session"
 
@@ -161,6 +167,7 @@ class TestAskLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "API response with session"
 
@@ -196,6 +203,7 @@ class TestAskLLM:
             env_vars=test_env_vars,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Response with env vars"
 
@@ -223,6 +231,7 @@ class TestAskLLMExecutionDir:
             env_vars=None,
             cwd="/custom/execution/dir",
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Response with execution_dir"
 
@@ -243,6 +252,7 @@ class TestAskLLMExecutionDir:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Response with default dir"
 
@@ -268,6 +278,7 @@ class TestAskLLMExecutionDir:
             env_vars=None,
             cwd="/execution/path",
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Response with both dirs"
 
@@ -291,6 +302,7 @@ class TestAskLLMExecutionDir:
             env_vars=None,
             cwd="/home/user/workspace",
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Response with absolute path"
 
@@ -318,6 +330,7 @@ class TestAskClaudeCode:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "CLI response"
 
@@ -341,6 +354,7 @@ class TestAskClaudeCode:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Default CLI response"
 
@@ -402,6 +416,7 @@ class TestAskClaudeCode:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Custom timeout response"
 
@@ -429,6 +444,7 @@ class TestIntegration:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Full chain response"
 
@@ -468,6 +484,7 @@ class TestIntegration:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result == "Full chain response with session"
 
@@ -505,6 +522,7 @@ class TestPromptLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert isinstance(result, dict)
         assert result["version"] == "1.0"
@@ -568,6 +586,7 @@ class TestPromptLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result["session_id"] == "existing-session"
 
@@ -679,6 +698,7 @@ class TestPromptLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result["text"] == "Response with custom timeout"
 
@@ -707,6 +727,7 @@ class TestPromptLLM:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result["provider"] == "claude"
         assert result["method"] == "cli"
@@ -737,6 +758,7 @@ class TestPromptLLM:
             env_vars=test_env_vars,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result["text"] == "CLI response with env vars"
 
@@ -802,6 +824,7 @@ class TestPromptLLMExecutionDir:
             env_vars=None,
             cwd="/custom/execution/path",
             mcp_config=None,
+            branch_name=None,
         )
         assert result["text"] == "CLI response with execution_dir"
 
@@ -868,6 +891,7 @@ class TestPromptLLMExecutionDir:
             env_vars=None,
             cwd="/execution/dir",
             mcp_config=None,
+            branch_name=None,
         )
         assert result["text"] == "Response with both directories"
 
@@ -896,5 +920,6 @@ class TestPromptLLMExecutionDir:
             env_vars=None,
             cwd=None,
             mcp_config=None,
+            branch_name=None,
         )
         assert result["text"] == "Response with default execution dir"
