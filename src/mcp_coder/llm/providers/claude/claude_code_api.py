@@ -5,7 +5,6 @@ import asyncio
 import json
 import logging
 import os
-import subprocess
 import time
 from datetime import datetime
 from typing import Any, Callable, Optional, Tuple
@@ -20,6 +19,8 @@ from claude_code_sdk import (
     query,
 )
 from claude_code_sdk._errors import CLINotFoundError
+
+from mcp_coder.utils.subprocess_runner import CalledProcessError, TimeoutExpired
 
 from ...types import LLM_RESPONSE_VERSION, LLMResponseDict
 from .claude_executable_finder import (
@@ -400,7 +401,7 @@ async def _ask_claude_code_api_async(
     try:
         return await asyncio.wait_for(_query_with_timeout(), timeout)
     except asyncio.TimeoutError as exc:
-        raise subprocess.TimeoutExpired(
+        raise TimeoutExpired(
             ["claude-code-sdk", "query"],
             timeout,
         ) from exc
@@ -435,8 +436,8 @@ def ask_claude_code_api(
 
     Raises:
         ValueError: If input validation fails
-        subprocess.TimeoutExpired: If the request times out
-        subprocess.CalledProcessError: If the SDK request fails
+        TimeoutExpired: If the request times out
+        CalledProcessError: If the SDK request fails
 
     Examples:
         >>> # First call - get session_id from Claude
@@ -493,7 +494,7 @@ def ask_claude_code_api(
         # Build and return response
         return create_api_response_dict(detailed["text"], actual_session_id, detailed)
 
-    except subprocess.TimeoutExpired as e:
+    except TimeoutExpired as e:
         # Log error before re-raising
         duration_ms = int((time.time() - start_time) * 1000)
         log_llm_error(method="api", error=e, duration_ms=duration_ms)
@@ -655,7 +656,7 @@ async def ask_claude_code_api_detailed(
     try:
         return await asyncio.wait_for(_query_with_timeout(), timeout)
     except asyncio.TimeoutError as exc:
-        raise subprocess.TimeoutExpired(
+        raise TimeoutExpired(
             ["claude-code-sdk", "query"],
             timeout,
         ) from exc
@@ -687,8 +688,8 @@ def ask_claude_code_api_detailed_sync(
 
     Raises:
         ValueError: If input validation fails
-        subprocess.TimeoutExpired: If the request times out
-        subprocess.CalledProcessError: If the SDK request fails
+        TimeoutExpired: If the request times out
+        CalledProcessError: If the SDK request fails
     """
     # Input validation is handled by ask_claude_code_api_detailed
     # Working directory is handled by SDK's cwd parameter (no need for os.chdir)
@@ -698,7 +699,7 @@ def ask_claude_code_api_detailed_sync(
         )
         return result
 
-    except subprocess.TimeoutExpired:
+    except TimeoutExpired:
         # Re-raise timeout errors as-is for consistency with CLI version
         raise
 
@@ -708,7 +709,7 @@ def ask_claude_code_api_detailed_sync(
 
     except Exception as e:
         # Convert other exceptions to CalledProcessError for consistency
-        raise subprocess.CalledProcessError(
+        raise CalledProcessError(
             1,  # Generic error code
             ["claude-code-sdk", "query"],
             output="",
