@@ -13,45 +13,6 @@ from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
 from mcp_coder.utils.subprocess_runner import CommandResult
 
 
-def make_stream_json_output(
-    result_text: str = "Test response",
-    session_id: str = "test-session-123",
-    is_error: bool = False,
-) -> str:
-    """Helper to create valid stream-json output for testing."""
-    system_msg = json.dumps(
-        {
-            "type": "system",
-            "subtype": "init",
-            "session_id": session_id,
-            "model": "claude-opus-4-5-20251101",
-            "tools": ["Task", "Bash"],
-        }
-    )
-    assistant_msg = json.dumps(
-        {
-            "type": "assistant",
-            "message": {
-                "content": [{"type": "text", "text": result_text}],
-            },
-            "session_id": session_id,
-        }
-    )
-    result_msg = json.dumps(
-        {
-            "type": "result",
-            "subtype": "success" if not is_error else "error",
-            "is_error": is_error,
-            "result": result_text,
-            "session_id": session_id,
-            "duration_ms": 1500,
-            "total_cost_usd": 0.05,
-            "usage": {"input_tokens": 100, "output_tokens": 50},
-        }
-    )
-    return f"{system_msg}\n{assistant_msg}\n{result_msg}"
-
-
 class TestIOWrappers:
     """Tests for I/O wrapper integration."""
 
@@ -63,6 +24,7 @@ class TestIOWrappers:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
+        make_stream_json_output,
     ) -> None:
         """Test that CLI method returns complete LLMResponseDict."""
         mock_find.return_value = "claude"
@@ -101,6 +63,7 @@ class TestIOWrappers:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
+        make_stream_json_output,
     ) -> None:
         """Test session ID passthrough in full workflow."""
         mock_find.return_value = "claude"
@@ -140,6 +103,7 @@ class TestCliLogging:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
+        make_stream_json_output,
     ) -> None:
         """Test that request is logged before subprocess execution."""
         mock_find.return_value = "claude"
@@ -175,6 +139,7 @@ class TestCliLogging:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
+        make_stream_json_output,
     ) -> None:
         """Test that response with duration is logged after success."""
         mock_find.return_value = "claude"

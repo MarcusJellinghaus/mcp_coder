@@ -24,45 +24,6 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
 from mcp_coder.utils.subprocess_runner import CommandResult
 
 
-def make_stream_json_output(
-    result_text: str = "Test response",
-    session_id: str = "test-session-123",
-    is_error: bool = False,
-) -> str:
-    """Helper to create valid stream-json output for testing."""
-    system_msg = json.dumps(
-        {
-            "type": "system",
-            "subtype": "init",
-            "session_id": session_id,
-            "model": "claude-opus-4-5-20251101",
-            "tools": ["Task", "Bash"],
-        }
-    )
-    assistant_msg = json.dumps(
-        {
-            "type": "assistant",
-            "message": {
-                "content": [{"type": "text", "text": result_text}],
-            },
-            "session_id": session_id,
-        }
-    )
-    result_msg = json.dumps(
-        {
-            "type": "result",
-            "subtype": "success" if not is_error else "error",
-            "is_error": is_error,
-            "result": result_text,
-            "session_id": session_id,
-            "duration_ms": 1500,
-            "total_cost_usd": 0.05,
-            "usage": {"input_tokens": 100, "output_tokens": 50},
-        }
-    )
-    return f"{system_msg}\n{assistant_msg}\n{result_msg}"
-
-
 class TestStreamJsonParsing:
     """Tests for stream-json parsing functions."""
 
@@ -83,7 +44,7 @@ class TestStreamJsonParsing:
         """Test parsing invalid JSON returns None."""
         assert parse_stream_json_line("not json {") is None
 
-    def test_parse_stream_json_string_full(self) -> None:
+    def test_parse_stream_json_string_full(self, make_stream_json_output) -> None:
         """Test parsing complete stream-json output."""
         content = make_stream_json_output("Hello world", "sess-123")
         result = parse_stream_json_string(content)
@@ -94,7 +55,9 @@ class TestStreamJsonParsing:
         assert result["system_message"] is not None
         assert result["result_message"] is not None
 
-    def test_parse_stream_json_string_extracts_cost(self) -> None:
+    def test_parse_stream_json_string_extracts_cost(
+        self, make_stream_json_output
+    ) -> None:
         """Test that cost and usage are extracted from result message."""
         content = make_stream_json_output()
         result = parse_stream_json_string(content)
@@ -103,7 +66,7 @@ class TestStreamJsonParsing:
         assert result["result_message"]["total_cost_usd"] == 0.05
         assert result["result_message"]["duration_ms"] == 1500
 
-    def test_parse_stream_json_file(self) -> None:
+    def test_parse_stream_json_file(self, make_stream_json_output) -> None:
         """Test parsing stream-json from file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "test.ndjson"
@@ -230,6 +193,7 @@ class TestStreamFileWriting:
         self,
         mock_execute: MagicMock,
         mock_find: MagicMock,
+        make_stream_json_output,
     ) -> None:
         """Test that stream output is written to log file."""
         mock_find.return_value = "claude"

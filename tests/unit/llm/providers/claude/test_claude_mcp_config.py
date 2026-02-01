@@ -15,42 +15,6 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
 from mcp_coder.utils.subprocess_runner import CommandResult
 
 
-def make_stream_json_output(
-    result_text: str = "Test response",
-    session_id: str = "test-session-123",
-) -> str:
-    """Helper to create valid stream-json output for testing."""
-    system_msg = json.dumps(
-        {
-            "type": "system",
-            "subtype": "init",
-            "session_id": session_id,
-            "model": "claude-opus-4-5-20251101",
-        }
-    )
-    assistant_msg = json.dumps(
-        {
-            "type": "assistant",
-            "message": {
-                "content": [{"type": "text", "text": result_text}],
-            },
-            "session_id": session_id,
-        }
-    )
-    result_msg = json.dumps(
-        {
-            "type": "result",
-            "subtype": "success",
-            "is_error": False,
-            "result": result_text,
-            "session_id": session_id,
-            "duration_ms": 1500,
-            "total_cost_usd": 0.05,
-        }
-    )
-    return f"{system_msg}\n{assistant_msg}\n{result_msg}"
-
-
 class TestClaudeMcpConfig:
     """Test suite for MCP config parameter handling."""
 
@@ -120,6 +84,7 @@ class TestClaudeMcpConfig:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
+        make_stream_json_output,
     ) -> None:
         """Verify ask_claude_code_cli() accepts and passes mcp_config to build_cli_command()."""
         mock_find.return_value = "claude"
@@ -156,6 +121,7 @@ class TestClaudeMcpConfig:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
+        make_stream_json_output,
     ) -> None:
         """Verify ask_claude_code_cli() passes both session_id and mcp_config correctly."""
         mock_find.return_value = "claude"
