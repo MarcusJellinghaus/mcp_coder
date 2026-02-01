@@ -57,22 +57,6 @@ class ParsedCliResponse(TypedDict):
     raw_response: dict[str, Any]
 
 
-class CLIError(Exception):
-    """CLI error with stream messages for diagnosis."""
-
-    def __init__(
-        self,
-        message: str,
-        original_error: Exception | None = None,
-        stream_messages: list[StreamMessage] | None = None,
-        stream_file: str | None = None,
-    ):
-        super().__init__(message)
-        self.original_error = original_error
-        self.stream_messages = stream_messages or []
-        self.stream_file = stream_file
-
-
 def sanitize_branch_identifier(branch_name: str | None) -> str:
     """Sanitize a branch name into a short identifier for filenames.
 
