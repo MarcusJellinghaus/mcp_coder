@@ -1,11 +1,12 @@
 """Git commit operations for creating commits."""
 
 import logging
-import subprocess
 from pathlib import Path
 from typing import Optional
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
+
+from mcp_coder.utils.subprocess_runner import execute_command
 
 from .core import GIT_SHORT_HASH_LENGTH, CommitResult, _safe_repo_context, logger
 from .readers import get_staged_changes, is_git_repository
@@ -88,14 +89,10 @@ def get_latest_commit_sha(project_dir: Path) -> Optional[str]:
     Returns:
         The full SHA of HEAD, or None if not in a git repository
     """
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+    result = execute_command(
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(project_dir),
+    )
+    if result.return_code == 0:
         return result.stdout.strip()
-    except subprocess.CalledProcessError:
-        return None
+    return None
