@@ -23,6 +23,7 @@ from mcp_coder.utils import (
     is_working_directory_clean,
 )
 from mcp_coder.utils.git_operations.readers import extract_issue_number_from_branch
+from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
@@ -298,6 +299,7 @@ def generate_pr_summary(
 
     logger.info(f"Calling LLM for PR summary using {provider}/{method}...")
     try:
+        branch_name = get_branch_name_for_logging(project_dir)
         llm_response = ask_llm(
             full_prompt,
             provider=provider,
@@ -305,6 +307,7 @@ def generate_pr_summary(
             timeout=300,
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            branch_name=branch_name,
         )
 
         if not llm_response or not llm_response.strip():

@@ -12,6 +12,7 @@ from ..llm.env import prepare_llm_environment
 from ..llm.interface import ask_llm
 from ..llm.providers.claude.claude_code_api import ClaudeAPIError
 from ..utils.git_operations import get_git_diff_for_commit, stage_all_changes
+from ..utils.git_utils import get_branch_name_for_logging
 
 # Constants
 LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes for commit message generation
@@ -147,6 +148,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
 
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
         logger.debug("Calling LLM for auto generated commit message...")
+        branch_name = get_branch_name_for_logging(project_dir)
         response = ask_llm(
             full_prompt,
             provider=provider,
@@ -155,6 +157,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
             env_vars=env_vars,
             project_dir=str(project_dir),
             execution_dir=execution_dir,
+            branch_name=branch_name,
         )
 
         if not response or not response.strip():
