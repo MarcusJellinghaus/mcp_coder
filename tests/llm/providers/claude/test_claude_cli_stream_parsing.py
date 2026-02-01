@@ -23,6 +23,8 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
 )
 from mcp_coder.utils.subprocess_runner import CommandResult
 
+from .conftest import StreamJsonFactory
+
 
 class TestStreamJsonParsing:
     """Tests for stream-json parsing functions."""
@@ -44,7 +46,9 @@ class TestStreamJsonParsing:
         """Test parsing invalid JSON returns None."""
         assert parse_stream_json_line("not json {") is None
 
-    def test_parse_stream_json_string_full(self, make_stream_json_output) -> None:
+    def test_parse_stream_json_string_full(
+        self, make_stream_json_output: StreamJsonFactory
+    ) -> None:
         """Test parsing complete stream-json output."""
         content = make_stream_json_output("Hello world", "sess-123")
         result = parse_stream_json_string(content)
@@ -56,7 +60,7 @@ class TestStreamJsonParsing:
         assert result["result_message"] is not None
 
     def test_parse_stream_json_string_extracts_cost(
-        self, make_stream_json_output
+        self, make_stream_json_output: StreamJsonFactory
     ) -> None:
         """Test that cost and usage are extracted from result message."""
         content = make_stream_json_output()
@@ -66,7 +70,9 @@ class TestStreamJsonParsing:
         assert result["result_message"]["total_cost_usd"] == 0.05
         assert result["result_message"]["duration_ms"] == 1500
 
-    def test_parse_stream_json_file(self, make_stream_json_output) -> None:
+    def test_parse_stream_json_file(
+        self, make_stream_json_output: StreamJsonFactory
+    ) -> None:
         """Test parsing stream-json from file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "test.ndjson"
@@ -193,7 +199,7 @@ class TestStreamFileWriting:
         self,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test that stream output is written to log file."""
         mock_find.return_value = "claude"

@@ -14,6 +14,8 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
 )
 from mcp_coder.utils.subprocess_runner import CommandResult
 
+from .conftest import StreamJsonFactory
+
 
 class TestClaudeMcpConfig:
     """Test suite for MCP config parameter handling."""
@@ -84,7 +86,7 @@ class TestClaudeMcpConfig:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Verify ask_claude_code_cli() accepts and passes mcp_config to build_cli_command()."""
         mock_find.return_value = "claude"
@@ -121,7 +123,7 @@ class TestClaudeMcpConfig:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Verify ask_claude_code_cli() passes both session_id and mcp_config correctly."""
         mock_find.return_value = "claude"

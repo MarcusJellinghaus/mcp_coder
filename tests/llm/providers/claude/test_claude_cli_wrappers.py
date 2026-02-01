@@ -12,6 +12,8 @@ import pytest
 from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
 from mcp_coder.utils.subprocess_runner import CommandResult
 
+from .conftest import StreamJsonFactory
+
 
 class TestIOWrappers:
     """Tests for I/O wrapper integration."""
@@ -24,7 +26,7 @@ class TestIOWrappers:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test that CLI method returns complete LLMResponseDict."""
         mock_find.return_value = "claude"
@@ -63,7 +65,7 @@ class TestIOWrappers:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test session ID passthrough in full workflow."""
         mock_find.return_value = "claude"
@@ -103,7 +105,7 @@ class TestCliLogging:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test that request is logged before subprocess execution."""
         mock_find.return_value = "claude"
@@ -139,7 +141,7 @@ class TestCliLogging:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test that response with duration is logged after success."""
         mock_find.return_value = "claude"

@@ -2,12 +2,17 @@
 """Shared pytest fixtures for Claude provider tests."""
 
 import json
+from collections.abc import Callable
 
 import pytest
 
+# Type alias for the stream output factory function
+# Uses Callable[..., str] to allow optional/default arguments
+StreamJsonFactory = Callable[..., str]
+
 
 @pytest.fixture
-def make_stream_json_output():
+def make_stream_json_output() -> StreamJsonFactory:
     """Factory fixture to create valid stream-json output for testing.
 
     Usage:

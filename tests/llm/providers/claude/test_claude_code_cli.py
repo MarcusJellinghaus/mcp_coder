@@ -17,6 +17,8 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
 )
 from mcp_coder.utils.subprocess_runner import CommandResult
 
+from .conftest import StreamJsonFactory
+
 
 class TestClaudeCodeCliBackwardCompatibility:
     """Test cases for backward compatibility of CLI functions."""
@@ -29,7 +31,7 @@ class TestClaudeCodeCliBackwardCompatibility:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test successful Claude question returns dict with text."""
         mock_find.return_value = "claude"
@@ -62,7 +64,7 @@ class TestClaudeCodeCliBackwardCompatibility:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test Claude question with custom timeout."""
         mock_find.return_value = "claude"
@@ -149,7 +151,7 @@ class TestClaudeCodeCliBackwardCompatibility:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test that CLI errors include stream file path for diagnosis."""
         mock_find.return_value = "claude"
@@ -280,7 +282,7 @@ class TestEnvVarsParameter:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test that env_vars are passed to subprocess."""
         mock_find.return_value = "claude"
@@ -311,7 +313,7 @@ class TestEnvVarsParameter:
         mock_get_path: MagicMock,
         mock_execute: MagicMock,
         mock_find: MagicMock,
-        make_stream_json_output,
+        make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test backward compatibility when env_vars is not provided."""
         mock_find.return_value = "claude"
