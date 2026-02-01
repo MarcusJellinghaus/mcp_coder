@@ -327,6 +327,35 @@ def parse_cli_json_string(json_str: str) -> ParsedCliResponse:
     )
 
 
+def format_stream_json_input(prompt: str) -> str:
+    """Format a prompt as stream-json input for Claude CLI.
+
+    When using --input-format stream-json, the prompt must be formatted as a
+    JSON object with type "user" and a message containing the content.
+
+    Args:
+        prompt: The user's prompt text
+
+    Returns:
+        JSON-formatted string ready for stdin input
+
+    Example:
+        >>> result = format_stream_json_input("What is 2+2?")
+        >>> import json
+        >>> parsed = json.loads(result)
+        >>> assert parsed["type"] == "user"
+        >>> assert parsed["message"]["content"] == "What is 2+2?"
+    """
+    input_obj = {
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": prompt,
+        },
+    }
+    return json.dumps(input_obj)
+
+
 def build_cli_command(
     session_id: str | None,
     claude_cmd: str,
@@ -341,11 +370,18 @@ def build_cli_command(
     If session_id is provided, uses --resume flag to continue Claude's native session.
     If mcp_config is provided, uses --mcp-config and --strict-mcp-config flags.
 
+    When use_stream_json is True, enables complete conversation logging:
+    - --output-format stream-json: NDJSON output with all messages
+    - --input-format stream-json: Accepts JSON-formatted input
+    - --replay-user-messages: Echoes user messages to stdout for complete logs
+    - --verbose: Required for stream-json with -p mode
+
     Args:
         session_id: Optional Claude session ID to resume previous conversation
         claude_cmd: Path to claude executable
         mcp_config: Optional path to MCP config file
         use_stream_json: If True, use stream-json format for realtime output
+            with complete logging including user prompts and tool interactions
 
     Returns:
         Command list ready for subprocess execution with stdin
@@ -354,6 +390,8 @@ def build_cli_command(
         >>> cmd = build_cli_command(None, "claude")
         >>> assert "--output-format" in cmd
         >>> assert "stream-json" in cmd
+        >>> assert "--input-format" in cmd
+        >>> assert "--replay-user-messages" in cmd
 
         >>> cmd = build_cli_command("abc123", "claude")
         >>> assert "--resume" in cmd and "abc123" in cmd
@@ -374,9 +412,15 @@ def build_cli_command(
     output_format = "stream-json" if use_stream_json else "json"
     command = [claude_cmd, "-p", "", "--output-format", output_format]
 
-    # stream-json requires --verbose when using -p (print mode)
+    # stream-json output requires additional flags for complete logging
     if use_stream_json:
+        # --verbose: Required for stream-json with -p (print mode)
         command.append("--verbose")
+        # --input-format stream-json: Accept JSON-formatted input
+        command.extend(["--input-format", "stream-json"])
+        # --replay-user-messages: Echo user messages to stdout for complete logs
+        # This ensures the user prompt is included in the NDJSON output
+        command.append("--replay-user-messages")
 
     # Resume Claude's native session if session_id provided
     if session_id:
@@ -578,14 +622,18 @@ def ask_claude_code_cli(
     # Execute command with stdin input (I/O)
     # cwd parameter controls where Claude subprocess runs
     # This affects .mcp.json discovery and relative path resolution
+    #
+    # When using stream-json input format, the prompt must be formatted as JSON
+    # to enable --replay-user-messages which echoes the prompt in the output
+    input_data = format_stream_json_input(question)
     logger.debug(
         f"Executing CLI command with stdin (prompt_len={len(question)}, "
-        f"session_id={session_id}, cwd={cwd})"
+        f"input_format=stream-json, session_id={session_id}, cwd={cwd})"
     )
     start_time = time.time()
     options = CommandOptions(
         timeout_seconds=timeout,
-        input_data=question,  # Pass question via stdin
+        input_data=input_data,  # Pass JSON-formatted question via stdin
         env=env_vars,
         cwd=cwd,  # Set working directory for Claude subprocess execution
     )

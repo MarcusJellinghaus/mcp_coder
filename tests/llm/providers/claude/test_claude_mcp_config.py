@@ -24,7 +24,7 @@ class TestClaudeMcpConfig:
         """Verify command built correctly without mcp_config parameter."""
         cmd = build_cli_command(session_id=None, claude_cmd="claude")
 
-        # Expected command structure without mcp_config (uses stream-json by default)
+        # Expected command structure without mcp_config (uses stream-json with full logging)
         assert cmd == [
             "claude",
             "-p",
@@ -32,6 +32,9 @@ class TestClaudeMcpConfig:
             "--output-format",
             "stream-json",
             "--verbose",
+            "--input-format",
+            "stream-json",
+            "--replay-user-messages",
         ]
         assert "--mcp-config" not in cmd
         assert "--strict-mcp-config" not in cmd

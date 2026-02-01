@@ -87,9 +87,11 @@ class TestIOWrappers:
             assert "--resume" in command
             assert "existing" in command
             assert result["session_id"] == "existing"
-            # Verify stdin was used
+            # Verify stdin was used with JSON-formatted input
             options = call_args[0][1]
-            assert options.input_data == "Follow up"
+            input_data = json.loads(options.input_data)
+            assert input_data["type"] == "user"
+            assert input_data["message"]["content"] == "Follow up"
 
 
 class TestCliLogging:
