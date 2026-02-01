@@ -7,7 +7,6 @@ including LLM integration, mypy fixes, formatting, and git operations.
 import json
 import logging
 import re
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -24,6 +23,7 @@ from mcp_coder.llm.providers.claude.claude_code_api import (
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status, git_push
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.subprocess_runner import TimeoutExpired
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
@@ -149,7 +149,7 @@ def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional
 
             return response_text, detailed_response
 
-        except subprocess.TimeoutExpired as e:
+        except TimeoutExpired as e:
             duration = (
                 (datetime.now() - start_time).total_seconds()
                 if "start_time" in locals()
@@ -188,7 +188,7 @@ def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional
                 branch_name=branch_name,
             )
             return response_text, {}
-        except subprocess.TimeoutExpired as e:
+        except TimeoutExpired as e:
             logger.error(f"Claude CLI call timed out after {timeout}s: {e}")
             logger.error(f"Prompt length: {len(prompt)} characters")
             logger.error(f"LLM method: {provider}/{method}")
