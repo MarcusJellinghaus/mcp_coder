@@ -5,7 +5,7 @@
 | Step | Description | Status | Notes |
 |------|-------------|--------|-------|
 | 0 | Stream-JSON output implementation | ✅ Complete | Committed: 6256668 |
-| 1 | Refactor test file (CI compliance) | 🔲 Pending | Required for CI to pass |
+| 1 | Refactor test file (CI compliance) | ✅ Complete | Split into 3 files |
 | 2 | Add branch_name to LLM call sites | 🔲 Pending | Depends on Step 1 |
 
 ## Current State
@@ -36,14 +36,14 @@
 - `tests/llm/test_interface.py`
 - `tests/unit/llm/providers/claude/test_claude_mcp_config.py`
 
-## Step 1: Refactor Test File 🔲
+## Step 1: Refactor Test File ✅
 
 ### Tasks
-- [ ] Create `test_claude_cli_stream_parsing.py` with stream-related tests
-- [ ] Create `test_claude_cli_wrappers.py` with IO/logging tests
-- [ ] Update `test_claude_code_cli.py` to remove moved classes
-- [ ] Verify all tests pass
-- [ ] Verify file sizes under 750 lines
+- [x] Create `test_claude_cli_stream_parsing.py` with stream-related tests (293 lines)
+- [x] Create `test_claude_cli_wrappers.py` with IO/logging tests (269 lines)
+- [x] Update `test_claude_code_cli.py` to remove moved classes (368 lines)
+- [x] Verify all tests pass (1599 tests passed)
+- [x] Verify file sizes under 750 lines
 - [ ] Commit changes
 
 ### Files to Create/Modify
@@ -51,11 +51,8 @@
 - `tests/llm/providers/claude/test_claude_cli_wrappers.py` (new)
 - `tests/llm/providers/claude/test_claude_code_cli.py` (reduce)
 
-### Blocking Issue
-CI fails due to file size check:
-```
-tests/llm/providers/claude/test_claude_code_cli.py: 826 lines (limit: 750)
-```
+### Result
+All test files now under 750 lines. CI file size check passes.
 
 ## Step 2: Add Branch Name to LLM Calls 🔲
 
