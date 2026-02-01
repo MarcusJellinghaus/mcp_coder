@@ -13,6 +13,7 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
     ask_claude_code_cli,
     build_cli_command,
     create_response_dict,
+    format_stream_json_input,
     parse_cli_json_string,
 )
 from mcp_coder.utils.subprocess_runner import CommandResult
@@ -52,9 +53,13 @@ class TestClaudeCodeCliBackwardCompatibility:
             command = call_args[0][0]
             assert "--output-format" in command
             assert "stream-json" in command
-            # Verify stdin was used
+            assert "--input-format" in command
+            assert "--replay-user-messages" in command
+            # Verify stdin was used with JSON-formatted input
             options = call_args[0][1]
-            assert options.input_data == "What is the meaning of life?"
+            input_data = json.loads(options.input_data)
+            assert input_data["type"] == "user"
+            assert input_data["message"]["content"] == "What is the meaning of life?"
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
@@ -227,7 +232,7 @@ class TestPureFunctions:
             parse_cli_json_string(invalid_json)
 
     def test_build_cli_command_without_session(self) -> None:
-        """Test command building without session ID uses stream-json."""
+        """Test command building without session ID uses stream-json with full logging."""
         cmd = build_cli_command(None, "claude")
 
         assert cmd == [
@@ -237,6 +242,9 @@ class TestPureFunctions:
             "--output-format",
             "stream-json",
             "--verbose",
+            "--input-format",
+            "stream-json",
+            "--replay-user-messages",
         ]
         assert "--resume" not in cmd
 
@@ -269,6 +277,43 @@ class TestPureFunctions:
         assert result["provider"] == "claude"
         assert "version" in result
         assert "timestamp" in result
+
+
+class TestFormatStreamJsonInput:
+    """Tests for format_stream_json_input function."""
+
+    def test_format_stream_json_input_basic(self) -> None:
+        """Test basic prompt formatting."""
+        result = format_stream_json_input("What is 2+2?")
+        parsed = json.loads(result)
+
+        assert parsed["type"] == "user"
+        assert parsed["message"]["role"] == "user"
+        assert parsed["message"]["content"] == "What is 2+2?"
+
+    def test_format_stream_json_input_with_special_characters(self) -> None:
+        """Test prompt with special characters is properly escaped."""
+        prompt = 'Say "hello" and use a backslash: \\'
+        result = format_stream_json_input(prompt)
+        parsed = json.loads(result)
+
+        assert parsed["message"]["content"] == prompt
+
+    def test_format_stream_json_input_with_newlines(self) -> None:
+        """Test multi-line prompt."""
+        prompt = "Line 1\nLine 2\nLine 3"
+        result = format_stream_json_input(prompt)
+        parsed = json.loads(result)
+
+        assert parsed["message"]["content"] == prompt
+
+    def test_format_stream_json_input_with_unicode(self) -> None:
+        """Test prompt with unicode characters."""
+        prompt = "Hello 世界 🌍"
+        result = format_stream_json_input(prompt)
+        parsed = json.loads(result)
+
+        assert parsed["message"]["content"] == prompt
 
 
 class TestEnvVarsParameter:
