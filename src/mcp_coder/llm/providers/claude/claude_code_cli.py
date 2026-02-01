@@ -4,14 +4,15 @@
 import json
 import logging
 import re
-import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, TypedDict, cast
 
 from ....utils.subprocess_runner import (
+    CalledProcessError,
     CommandOptions,
+    TimeoutExpired,
     execute_subprocess,
 )
 from ...types import LLM_RESPONSE_VERSION, LLMResponseDict
@@ -574,8 +575,8 @@ def ask_claude_code_cli(
 
     Raises:
         ValueError: If input validation fails or JSON parsing fails
-        subprocess.TimeoutExpired: If command times out
-        subprocess.CalledProcessError: If command fails (includes stream_file path)
+        TimeoutExpired: If command times out
+        CalledProcessError: If command fails (includes stream_file path)
 
     Examples:
         >>> # Start new conversation - get session_id from Claude
@@ -659,7 +660,7 @@ def ask_claude_code_cli(
         if result.timed_out:
             logger.error(f"CLI timed out after {timeout}s")
             duration_ms = int((time.time() - start_time) * 1000)
-            timeout_error: Exception = subprocess.TimeoutExpired(command, timeout)
+            timeout_error: Exception = TimeoutExpired(command, timeout)
             log_llm_error(method="cli", error=timeout_error, duration_ms=duration_ms)
             raise timeout_error
 
@@ -676,7 +677,7 @@ def ask_claude_code_cli(
             if result.stderr:
                 error_msg += f"\nStderr: {result.stderr[:500]}"
 
-            called_process_error = subprocess.CalledProcessError(
+            called_process_error: Exception = CalledProcessError(
                 result.return_code,
                 command,
                 output=result.stdout,
@@ -708,10 +709,7 @@ def ask_claude_code_cli(
         # Create response dict from stream data
         return create_response_dict_from_stream(parsed, stream_file_str)
 
-    except subprocess.TimeoutExpired:
-        # Already logged above - re-raise without logging again
-        raise
-    except subprocess.CalledProcessError:
+    except (TimeoutExpired, CalledProcessError):
         # Already logged above - re-raise without logging again
         raise
     except Exception as e:
