@@ -17,7 +17,6 @@ from mcp_coder.prompt_manager import get_prompt, get_prompt_with_substitutions
 from mcp_coder.utils import commit_all_changes, get_full_status
 from mcp_coder.utils.git_operations import (
     get_current_branch_name,
-    get_default_branch_name,
     rebase_onto_branch,
 )
 from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
@@ -27,7 +26,7 @@ from mcp_coder.utils.github_operations.ci_results_manager import (
     CIStatusData,
     JobData,
 )
-from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
+from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.branch_status import (
     get_failed_jobs_summary,
     truncate_ci_details,
@@ -564,43 +563,16 @@ def check_and_fix_ci(
 def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
     """Determine the target branch for rebasing the current feature branch.
 
-    Detection priority:
-    1. GitHub PR base branch (if open PR exists for current branch)
-    2. Default branch (main/master) via get_default_branch_name()
+    Uses shared detect_base_branch() function for detection.
 
     Args:
         project_dir: Path to the project directory
 
     Returns:
         Branch name to rebase onto, or None if detection fails
-
-    Note:
-        All errors are handled gracefully - returns None on any failure.
-        Debug logging indicates which detection method was used.
     """
-    # 1. Get current branch name
-    current_branch = get_current_branch_name(project_dir)
-    if not current_branch:
-        return None
-
-    # 2. Try GitHub PR lookup
-    try:
-        pr_manager = PullRequestManager(project_dir)
-        open_prs = pr_manager.list_pull_requests(state="open")
-        for pr in open_prs:
-            if pr["head_branch"] == current_branch:
-                logger.debug(
-                    f"Parent branch detected from GitHub PR: {pr['base_branch']}"
-                )
-                return pr["base_branch"]
-    except Exception as e:
-        logger.debug(f"GitHub PR lookup failed (will use default branch): {e}")
-
-    # 3. Fall back to default branch
-    default = get_default_branch_name(project_dir)
-    if default:
-        logger.debug(f"Parent branch detected from default branch: {default}")
-    return default
+    result = detect_base_branch(project_dir)
+    return None if result == "unknown" else result
 
 
 def _attempt_rebase_and_push(project_dir: Path) -> bool:

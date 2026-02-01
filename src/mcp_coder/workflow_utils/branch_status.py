@@ -15,7 +15,8 @@ from mcp_coder.utils.git_operations.readers import (
     get_current_branch_name,
 )
 from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
-from mcp_coder.utils.github_operations.issue_manager import IssueManager
+from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.task_tracker import has_incomplete_work
 
 # Status Constants
@@ -33,6 +34,8 @@ EMPTY_RECOMMENDATIONS: List[str] = []
 class BranchStatusReport:
     """Branch readiness status report."""
 
+    branch_name: str  # Current git branch name
+    base_branch: str  # Detected parent/base branch
     ci_status: str  # "PASSED", "FAILED", "NOT_CONFIGURED", "PENDING"
     ci_details: Optional[str]  # Error logs or None
     rebase_needed: bool  # True if rebase required
@@ -57,8 +60,11 @@ class BranchStatusReport:
         tasks_icon = "✅" if self.tasks_complete else "❌"
         tasks_status_text = "COMPLETE" if self.tasks_complete else "INCOMPLETE"
 
-        # Build the report sections
+        # Build the report sections - Branch info first
         lines = [
+            f"Branch: {self.branch_name}",
+            f"Base Branch: {self.base_branch}",
+            "",
             "Branch Status Report",
             "",
             f"CI Status: {ci_icon} {self.ci_status}",
@@ -107,7 +113,9 @@ class BranchStatusReport:
         )
         recommendations_text = ", ".join(self.recommendations)
 
+        # Branch info on first line
         lines = [
+            f"Branch: {self.branch_name} | Base: {self.base_branch}",
             status_summary,
             f"GitHub Label: {self.current_github_label}",
             f"Recommendations: {recommendations_text}",
@@ -133,6 +141,8 @@ class BranchStatusReport:
 def create_empty_report() -> BranchStatusReport:
     """Create empty report with default values."""
     return BranchStatusReport(
+        branch_name="unknown",
+        base_branch="unknown",
         ci_status=CI_NOT_CONFIGURED,
         ci_details=None,
         rebase_needed=False,
@@ -298,13 +308,26 @@ def collect_branch_status(
 
         logger.info(f"Collecting status for branch: {branch_name}")
 
+        # Fetch issue data once for sharing between detect_base_branch and _collect_github_label
+        issue_data: Optional[IssueData] = None
+        issue_number = extract_issue_number_from_branch(branch_name)
+        if issue_number:
+            try:
+                issue_manager = IssueManager(project_dir)
+                issue_data = issue_manager.get_issue(issue_number)
+            except Exception as e:
+                logger.debug(f"Could not fetch issue data: {e}")
+
+        # Use shared issue_data and branch_name
+        base_branch = detect_base_branch(project_dir, branch_name, issue_data)
+        current_label = _collect_github_label(project_dir, issue_data)
+
         # Collect status from all sources
         ci_status, ci_details = _collect_ci_status(
             project_dir, branch_name, truncate_logs, max_log_lines
         )
         rebase_needed, rebase_reason = _collect_rebase_status(project_dir)
         tasks_complete = _collect_task_status(project_dir)
-        current_label = _collect_github_label(project_dir, branch_name)
 
         # Prepare data for recommendation generation
         report_data = {
@@ -317,6 +340,8 @@ def collect_branch_status(
         recommendations = _generate_recommendations(report_data)
 
         return BranchStatusReport(
+            branch_name=branch_name,
+            base_branch=base_branch,
             ci_status=ci_status,
             ci_details=ci_details,
             rebase_needed=rebase_needed,
@@ -565,40 +590,29 @@ def _collect_task_status(project_dir: Path) -> bool:
         return False
 
 
-def _collect_github_label(project_dir: Path, branch_name: Optional[str] = None) -> str:
+def _collect_github_label(
+    project_dir: Path,
+    issue_data: Optional[IssueData] = None,
+) -> str:
     """Collect current GitHub workflow status label.
-
-    Uses: IssueManager.get_issue() + extract_issue_number_from_branch()
 
     Args:
         project_dir: Path to the git repository
-        branch_name: Optional branch name. If not provided, will be fetched from git.
+        issue_data: Optional pre-fetched issue data (contains labels directly)
+
+    Note:
+        If issue_data is None, returns DEFAULT_LABEL.
+        The caller is responsible for fetching issue_data.
     """
     logger = logging.getLogger(__name__)
 
-    # Use provided branch name or get it from git
-    if branch_name is None:
-        branch_name = get_current_branch_name(project_dir)
-        if not branch_name:
-            logger.info("No current branch name found")
-            return DEFAULT_LABEL
-    issue_number = extract_issue_number_from_branch(branch_name)
-
-    if not issue_number:
-        logger.info("No issue number found in branch name")
+    # Use provided issue_data if available
+    if issue_data is None:
+        logger.info("No issue data provided, returning default label")
         return DEFAULT_LABEL
 
-    # Get issue details from GitHub
-    try:
-        issue_manager = IssueManager(project_dir)
-        issue = issue_manager.get_issue(issue_number)
-    except Exception as e:
-        logger.warning(f"Failed to collect GitHub label: {e}")
-        return DEFAULT_LABEL
-
-    # Extract status label (labels starting with "status-")
-    # IssueData.labels is List[str], so labels are already strings
-    labels = issue.get("labels", [])
+    # Extract status label from issue_data
+    labels = issue_data.get("labels", [])
     for label in labels:
         if isinstance(label, str) and label.startswith("status-"):
             logger.info(f"Found GitHub label: {label}")
