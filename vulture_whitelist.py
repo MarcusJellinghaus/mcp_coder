@@ -115,6 +115,9 @@ _.require_claude_cli
 # test_issue_manager_label_update.py - Fixture used for side effect (patching)
 _._mock_git_repo
 
+# test_workspace.py - Fixture used for side effect (monkeypatching get_vscodeclaude_config)
+_.mock_vscodeclaude_config
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================
