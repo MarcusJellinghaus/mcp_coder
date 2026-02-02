@@ -59,13 +59,13 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Update coordinator __init__.py - Remove test-only re-exports
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Remove test-only re-export imports (IssueBranchManager, IssueManager, JenkinsClient, etc.)
-- [ ] Remove `_update_issue_labels_in_cache` and `CacheData` exports
-- [ ] Update `__all__` list to only include public API
-- [ ] Run pylint on `src/mcp_coder/cli/commands/coordinator/__init__.py`
-- [ ] Run pytest on `tests/cli/commands/coordinator/`
-- [ ] Run mypy on `src/mcp_coder/cli/commands/coordinator/`
-- [ ] Prepare commit message for Step 4
+- [x] Remove test-only re-export imports (IssueBranchManager, IssueManager, JenkinsClient, etc.)
+- [x] Remove `_update_issue_labels_in_cache` and `CacheData` exports
+- [x] Update `__all__` list to only include public API
+- [x] Run pylint on `src/mcp_coder/cli/commands/coordinator/__init__.py`
+- [x] Run pytest on `tests/cli/commands/coordinator/` (tests fail until Step 5/6 fix imports)
+- [x] Run mypy on `src/mcp_coder/cli/commands/coordinator/`
+- [x] Prepare commit message for Step 4
 
 ### Step 5: Update test_core.py - Fix patch locations
 See [step_5.md](./steps/step_5.md)
