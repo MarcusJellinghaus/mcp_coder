@@ -21,6 +21,73 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add Git Merge-Base Detection to `base_branch.py`
+See [step_1.md](./steps/step_1.md) for details.
+
+- [ ] Add `MERGE_BASE_DISTANCE_THRESHOLD = 20` constant with comment
+- [ ] Implement `_detect_from_git_merge_base()` function
+- [ ] Update `detect_base_branch()` to call merge-base as priority 1
+- [ ] Change `detect_base_branch()` return type to `Optional[str]`
+- [ ] Return `None` instead of `"unknown"` on failure
+- [ ] Add DEBUG logging for detection steps
+- [ ] Add new tests for merge-base detection
+- [ ] Update existing tests for `None` return value
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 1
+
+### Step 2: Remove `get_parent_branch_name()` and Update Exports
+See [step_2.md](./steps/step_2.md) for details.
+
+- [ ] Remove `get_parent_branch_name()` function from `readers.py`
+- [ ] Remove re-export from `git_operations/__init__.py`
+- [ ] Remove re-export from `utils/__init__.py`
+- [ ] Remove test from `test_readers.py`
+- [ ] Verify `grep -r "get_parent_branch_name" src/` returns no results
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 2
+
+### Step 3: Update `diffs.py` - Remove Auto-Detection
+See [step_3.md](./steps/step_3.md) for details.
+
+- [ ] Remove `get_parent_branch_name` import from `diffs.py`
+- [ ] Remove auto-detection logic from `get_branch_diff()`
+- [ ] Return empty string with error log when `base_branch` is `None`
+- [ ] Update docstring to document new behavior
+- [ ] Update tests to reflect explicit `base_branch` requirement
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 3
+
+### Step 4: Update `create_pr/core.py` to Use `detect_base_branch()`
+See [step_4.md](./steps/step_4.md) for details.
+
+- [ ] Remove `get_parent_branch_name` import from `core.py`
+- [ ] Add `detect_base_branch` import from `workflow_utils.base_branch`
+- [ ] Update `check_prerequisites()` to use `detect_base_branch()` with `None` handling
+- [ ] Update `create_pull_request()` to use `detect_base_branch()` with `None` handling
+- [ ] Update `generate_pr_summary()` to pass explicit `base_branch` to `get_branch_diff()`
+- [ ] Add helpful tip in error messages about `### Base Branch` section
+- [ ] Change variable names from `parent_branch` to `base_branch`
+- [ ] Update all test mocks in `test_prerequisites.py` and `test_workflow.py`
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 4
+
+### Step 5: Update `implement/core.py` for `None` Handling
+See [step_5.md](./steps/step_5.md) for details.
+
+- [ ] Update `_get_rebase_target_branch()` to remove `"unknown"` check
+- [ ] Simplify function to return `detect_base_branch()` result directly
+- [ ] Update any tests mocking `"unknown"` return to mock `None`
+- [ ] Verify rebase workflow works correctly with `None` handling
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 5
+
+---
 
 ## Pull Request
+
+- [ ] Review all implementation steps are complete
+- [ ] Run full test suite to verify all tests pass
+- [ ] Run full quality checks (pylint, pytest, mypy) on entire codebase
+- [ ] Verify no regressions in existing functionality
+- [ ] Prepare PR title and description summarizing all changes
+- [ ] Create Pull Request
