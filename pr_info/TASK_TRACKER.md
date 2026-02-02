@@ -38,15 +38,15 @@ See [step_1.md](./steps/step_1.md) for details.
 See [step_2.md](./steps/step_2.md) for details.
 
 - [x] Add `import re` to issues.py
-- [ ] Remove import of `VSCODECLAUDE_PRIORITY` from types.py
-- [ ] Add `_get_status_priority()` helper function
-- [ ] Add `_get_vscodeclaude_config()` shared helper function
-- [ ] Update `_filter_eligible_vscodeclaude_issues()` sorting logic to use numeric prefix
-- [ ] Add `TestNumericPriorityExtraction` test class in test_issues.py
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare commit message for Step 2
+- [x] Remove import of `VSCODECLAUDE_PRIORITY` from types.py
+- [x] Add `_get_status_priority()` helper function
+- [x] Add `_get_vscodeclaude_config()` shared helper function
+- [x] Update `_filter_eligible_vscodeclaude_issues()` sorting logic to use numeric prefix
+- [x] Add `TestNumericPriorityExtraction` test class in test_issues.py
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare commit message for Step 2
 
 ### Step 3: Update workspace.py - Config-Based Lookups
 See [step_3.md](./steps/step_3.md) for details.
