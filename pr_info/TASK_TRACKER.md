@@ -37,7 +37,7 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Update issues.py - Numeric Prefix Sorting
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Add `import re` to issues.py
+- [x] Add `import re` to issues.py
 - [ ] Remove import of `VSCODECLAUDE_PRIORITY` from types.py
 - [ ] Add `_get_status_priority()` helper function
 - [ ] Add `_get_vscodeclaude_config()` shared helper function

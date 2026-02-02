@@ -1,6 +1,7 @@
 """Issue filtering for vscodeclaude feature."""
 
 import logging
+import re
 from importlib import resources
 from pathlib import Path
 from typing import Any
