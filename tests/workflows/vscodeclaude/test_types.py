@@ -167,3 +167,79 @@ class TestTypeHints:
         """All priority statuses have display names."""
         for status in VSCODECLAUDE_PRIORITY:
             assert status in STAGE_DISPLAY_NAMES
+
+
+class TestLabelsJsonVscodeclaudeMetadata:
+    """Test that labels.json has required vscodeclaude metadata."""
+
+    def test_human_action_labels_have_vscodeclaude_metadata(self) -> None:
+        """All human_action labels have required vscodeclaude fields."""
+        import json
+        from importlib import resources
+        from pathlib import Path
+
+        config_resource = resources.files("mcp_coder.config") / "labels.json"
+        config_path = Path(str(config_resource))
+        labels_config = json.loads(config_path.read_text(encoding="utf-8"))
+
+        human_action_labels = [
+            label
+            for label in labels_config["workflow_labels"]
+            if label["category"] == "human_action"
+        ]
+
+        assert len(human_action_labels) == 4
+
+        required_fields = {
+            "emoji",
+            "display_name",
+            "stage_short",
+            "initial_command",
+            "followup_command",
+        }
+
+        for label in human_action_labels:
+            assert "vscodeclaude" in label, f"Missing vscodeclaude in {label['name']}"
+            vscodeclaude = label["vscodeclaude"]
+            assert (
+                set(vscodeclaude.keys()) == required_fields
+            ), f"Wrong fields in {label['name']}"
+
+            # emoji should be non-empty string
+            assert isinstance(vscodeclaude["emoji"], str) and vscodeclaude["emoji"]
+            # display_name should be non-empty string
+            assert (
+                isinstance(vscodeclaude["display_name"], str)
+                and vscodeclaude["display_name"]
+            )
+            # stage_short should be non-empty string
+            assert (
+                isinstance(vscodeclaude["stage_short"], str)
+                and vscodeclaude["stage_short"]
+            )
+            # commands can be string or null
+            assert vscodeclaude["initial_command"] is None or isinstance(
+                vscodeclaude["initial_command"], str
+            )
+            assert vscodeclaude["followup_command"] is None or isinstance(
+                vscodeclaude["followup_command"], str
+            )
+
+    def test_pr_created_has_null_commands(self) -> None:
+        """status-10:pr-created should have null commands."""
+        import json
+        from importlib import resources
+        from pathlib import Path
+
+        config_resource = resources.files("mcp_coder.config") / "labels.json"
+        config_path = Path(str(config_resource))
+        labels_config = json.loads(config_path.read_text(encoding="utf-8"))
+
+        pr_created = next(
+            label
+            for label in labels_config["workflow_labels"]
+            if label["name"] == "status-10:pr-created"
+        )
+
+        assert pr_created["vscodeclaude"]["initial_command"] is None
+        assert pr_created["vscodeclaude"]["followup_command"] is None
