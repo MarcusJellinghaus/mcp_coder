@@ -89,7 +89,14 @@
       "name": "status-10:pr-created",
       "color": "8b5cf6",
       "description": "Pull request created, awaiting approval/merge",
-      "category": "human_action"
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "🎉",
+        "display_name": "PR CREATED",
+        "stage_short": "pr",
+        "initial_command": null,
+        "followup_command": null
+      }
     }
   ],
   "ignore_labels": ["Overview"]
