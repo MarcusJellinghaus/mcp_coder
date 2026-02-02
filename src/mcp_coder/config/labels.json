@@ -33,7 +33,14 @@
       "name": "status-04:plan-review",
       "color": "3b82f6",
       "description": "First implementation plan available for review/discussion",
-      "category": "human_action"
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "📋",
+        "display_name": "PLAN REVIEW",
+        "stage_short": "plan",
+        "initial_command": "/plan_review",
+        "followup_command": "/discuss"
+      }
     },
     {
       "internal_id": "plan_ready",
