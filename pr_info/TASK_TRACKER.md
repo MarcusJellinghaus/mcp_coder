@@ -47,14 +47,14 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Refactor commands.py - Remove _get_coordinator usage and use direct imports
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Remove `_get_coordinator` from `.core` import
-- [ ] Add direct imports for all functions used via coordinator pattern
-- [ ] Replace all `coordinator = _get_coordinator()` patterns with direct calls
-- [ ] Replace `coordinator._update_issue_labels_in_cache` with `update_issue_labels_in_cache`
-- [ ] Run pylint on `src/mcp_coder/cli/commands/coordinator/commands.py`
-- [ ] Run pytest on `tests/cli/commands/coordinator/test_commands.py`
-- [ ] Run mypy on `src/mcp_coder/cli/commands/coordinator/`
-- [ ] Prepare commit message for Step 3
+- [x] Remove `_get_coordinator` from `.core` import
+- [x] Add direct imports for all functions used via coordinator pattern
+- [x] Replace all `coordinator = _get_coordinator()` patterns with direct calls
+- [x] Replace `coordinator._update_issue_labels_in_cache` with `update_issue_labels_in_cache`
+- [x] Run pylint on `src/mcp_coder/cli/commands/coordinator/commands.py`
+- [x] Run pytest on `tests/cli/commands/coordinator/test_commands.py`
+- [x] Run mypy on `src/mcp_coder/cli/commands/coordinator/`
+- [x] Prepare commit message for Step 3
 
 ### Step 4: Update coordinator __init__.py - Remove test-only re-exports
 See [step_4.md](./steps/step_4.md)
