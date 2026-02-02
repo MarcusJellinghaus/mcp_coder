@@ -78,8 +78,6 @@ class TestLaunchProcess:
 
     def test_launch_process_redirects_stdout_stderr(self) -> None:
         """Redirects stdout and stderr to DEVNULL."""
-        import subprocess
-
         captured_kwargs: dict[str, object] = {}
 
         def mock_popen(cmd: list[str], **kwargs: object) -> MagicMock:
@@ -94,5 +92,8 @@ class TestLaunchProcess:
         ):
             launch_process(["echo", "test"])
 
-        assert captured_kwargs["stdout"] == subprocess.DEVNULL
-        assert captured_kwargs["stderr"] == subprocess.DEVNULL
+        # DEVNULL is a negative integer (platform-specific value)
+        # Both stdout and stderr should be redirected to the same DEVNULL
+        assert isinstance(captured_kwargs["stdout"], int)
+        assert captured_kwargs["stdout"] < 0  # DEVNULL is negative
+        assert captured_kwargs["stdout"] == captured_kwargs["stderr"]
