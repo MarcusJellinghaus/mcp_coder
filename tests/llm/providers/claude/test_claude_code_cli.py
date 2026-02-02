@@ -2,7 +2,6 @@
 """Unit tests for claude_code_cli module - core CLI functionality."""
 
 import json
-import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -16,7 +15,11 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
     format_stream_json_input,
     parse_cli_json_string,
 )
-from mcp_coder.utils.subprocess_runner import CommandResult
+from mcp_coder.utils.subprocess_runner import (
+    CalledProcessError,
+    CommandResult,
+    TimeoutExpired,
+)
 
 from .conftest import StreamJsonFactory
 
@@ -121,7 +124,7 @@ class TestClaudeCodeCliBackwardCompatibility:
             )
             mock_execute.return_value = mock_result
 
-            with pytest.raises(subprocess.TimeoutExpired):
+            with pytest.raises(TimeoutExpired):
                 ask_claude_code_cli("Test question")
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
@@ -145,7 +148,7 @@ class TestClaudeCodeCliBackwardCompatibility:
             )
             mock_execute.return_value = mock_result
 
-            with pytest.raises(subprocess.CalledProcessError):
+            with pytest.raises(CalledProcessError):
                 ask_claude_code_cli("Test question")
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
@@ -171,7 +174,7 @@ class TestClaudeCodeCliBackwardCompatibility:
             )
             mock_execute.return_value = mock_result
 
-            with pytest.raises(subprocess.CalledProcessError) as exc_info:
+            with pytest.raises(CalledProcessError) as exc_info:
                 ask_claude_code_cli("Test question")
 
             # Verify stream file path is in stderr

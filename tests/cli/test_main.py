@@ -1,7 +1,6 @@
 """Tests for CLI main entry point."""
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch

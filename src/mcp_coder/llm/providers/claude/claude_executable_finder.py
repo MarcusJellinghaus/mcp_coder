@@ -3,11 +3,10 @@
 
 import os
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Any, List, Optional
 
-from ....utils.subprocess_runner import execute_command
+from ....utils.subprocess_runner import SubprocessError, execute_command
 
 
 def _get_claude_search_paths() -> List[str]:
@@ -130,7 +129,7 @@ def find_claude_executable(
                 # Accept both 0 (success) and 1 (help shown) as valid
                 if result.return_code not in [0, 1]:
                     continue
-            except (OSError, subprocess.SubprocessError, FileNotFoundError):
+            except (OSError, SubprocessError, FileNotFoundError):
                 # If testing fails, try the next location
                 # OSError: File not executable, permission issues
                 # SubprocessError: Process execution issues
@@ -203,64 +202,22 @@ def verify_claude_installation() -> dict[str, Any]:
         result["found"] = True
         result["path"] = claude_path
 
-        # Get version information using simple subprocess to avoid complex runner issues
-        try:
-            # First try with our complex runner
-            version_result = execute_command(
-                [str(claude_path), "--version"],
-                timeout_seconds=20,
+        # Get version information
+        version_result = execute_command(
+            [str(claude_path), "--version"],
+            timeout_seconds=20,
+        )
+        if version_result.return_code == 0 and version_result.stdout.strip():
+            result["version"] = version_result.stdout.strip()
+            result["works"] = True
+        else:
+            result["error"] = (
+                f"Version check failed: {version_result.stderr or 'No output'}"
             )
-            if version_result.return_code == 0 and version_result.stdout.strip():
-                result["version"] = version_result.stdout.strip()
-                result["works"] = True
-            else:
-                # If complex runner fails, try simple subprocess as fallback
-                try:
-                    simple_result = subprocess.run(
-                        [str(claude_path), "--version"],
-                        capture_output=True,
-                        text=True,
-                        timeout=10,
-                        cwd=None,  # Use current directory
-                        env=None,  # Use current environment
-                        check=False,
-                    )
-                    if simple_result.returncode == 0 and simple_result.stdout.strip():
-                        result["version"] = simple_result.stdout.strip()
-                        result["works"] = True
-                    else:
-                        result["error"] = (
-                            f"Version check failed: {simple_result.stderr or version_result.stderr or 'No output'}"
-                        )
-                except Exception as fallback_e:
-                    result["error"] = (
-                        f"Version check failed: {version_result.stderr} (fallback: {fallback_e})"
-                    )
-        except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
-            # Try simple subprocess as final fallback
-            try:
-                simple_result = subprocess.run(
-                    [str(claude_path), "--version"],
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                    check=False,
-                )
-                if simple_result.returncode == 0 and simple_result.stdout.strip():
-                    result["version"] = simple_result.stdout.strip()
-                    result["works"] = True
-                else:
-                    result["error"] = (
-                        f"Version check error: {e} (simple fallback: {simple_result.stderr or 'No output'})"
-                    )
-            except Exception as final_e:
-                result["error"] = (
-                    f"Version check error: {e} (final fallback: {final_e})"
-                )
 
     except FileNotFoundError as e:
         result["error"] = str(e)
-    except (OSError, subprocess.SubprocessError) as e:
+    except (OSError, SubprocessError) as e:
         result["error"] = f"Process execution error: {e}"
     except (TypeError, ValueError) as e:
         result["error"] = f"Configuration error: {e}"

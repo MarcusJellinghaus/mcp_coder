@@ -7,7 +7,6 @@ These tests verify the complete workflow integration including:
 """
 
 import os
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any, Dict

@@ -2,7 +2,6 @@
 """Tests for Claude CLI stream-json parsing functions."""
 
 import json
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import cast
@@ -21,7 +20,7 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
     parse_stream_json_string,
     sanitize_branch_identifier,
 )
-from mcp_coder.utils.subprocess_runner import CommandResult
+from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
 
 from .conftest import StreamJsonFactory
 
@@ -247,7 +246,7 @@ class TestStreamFileWriting:
         mock_execute.return_value = mock_result
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with pytest.raises(subprocess.CalledProcessError) as exc_info:
+            with pytest.raises(CalledProcessError) as exc_info:
                 ask_claude_code_cli("Test question", logs_dir=tmpdir)
 
             # Stream file path should be in error stderr

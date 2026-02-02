@@ -4,7 +4,6 @@ This module tests the automatic label update functionality that transitions
 workflow labels when operations complete successfully.
 """
 
-import subprocess
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import MagicMock, Mock, patch
@@ -13,6 +12,7 @@ import pytest
 
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.utils.subprocess_runner import execute_command
 
 # Mock label configuration
 MOCK_LABELS_CONFIG = {
@@ -108,18 +108,14 @@ class TestIssueManagerLabelUpdate:
         to target state.
         """
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         # Create mock issue data that get_issue will return
@@ -186,18 +182,14 @@ class TestIssueManagerLabelUpdate:
         gracefully with appropriate warning messages.
         """
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         with (
@@ -234,18 +226,14 @@ class TestIssueManagerLabelUpdate:
         are rejected for safety.
         """
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         with (
@@ -287,18 +275,14 @@ class TestIssueManagerLabelUpdate:
         have the source label, the operation succeeds without making changes.
         """
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         # Configure issue to already have target label (without source label)
@@ -355,18 +339,14 @@ class TestIssueManagerLabelUpdate:
         target label is still added if not present.
         """
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         # Configure issue without source label
@@ -429,18 +409,14 @@ class TestIssueManagerLabelUpdate:
         rejected with appropriate error messages.
         """
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         with (
@@ -482,18 +458,14 @@ class TestIssueManagerLabelUpdate:
         from github.GithubException import GithubException
 
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         # Create mock issue data that get_issue will return
@@ -555,18 +527,14 @@ class TestIssueManagerLabelUpdate:
         method automatically detects the current branch from git.
         """
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         # Create mock issue data that get_issue will return
@@ -636,18 +604,14 @@ class TestIssueManagerLabelUpdate:
         caplog.set_level(logging.INFO)
 
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         # Configure issue with a DIFFERENT workflow label (planning instead of implementing)
@@ -719,18 +683,14 @@ class TestIssueManagerLabelUpdate:
     ) -> None:
         """Tests that validated_issue_number skips branch linkage validation."""
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         # Create mock issue data that get_issue will return
@@ -794,18 +754,14 @@ class TestIssueManagerLabelUpdate:
     ) -> None:
         """Tests that invalid validated_issue_number (non-existent issue) fails gracefully."""
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         # Create empty issue data to simulate issue not found
@@ -856,18 +812,14 @@ class TestIssueManagerLabelUpdate:
         4. Label update succeeds despite empty linkedBranches
         """
         # Initialize tmp_path as a git repository
-        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-        subprocess.run(
+        execute_command(["git", "init"], cwd=str(tmp_path))
+        execute_command(
             ["git", "config", "user.email", "test@example.com"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
-        subprocess.run(
+        execute_command(
             ["git", "config", "user.name", "Test User"],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
+            cwd=str(tmp_path),
         )
 
         # Create mock issue data that get_issue will return

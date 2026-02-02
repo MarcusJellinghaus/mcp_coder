@@ -1,7 +1,6 @@
 """Tests for logging_utils functions."""
 
 import logging
-import subprocess
 from unittest.mock import Mock
 
 import pytest
@@ -12,6 +11,7 @@ from mcp_coder.llm.providers.claude.logging_utils import (
     log_llm_request,
     log_llm_response,
 )
+from mcp_coder.utils.subprocess_runner import CalledProcessError
 
 
 @pytest.fixture
@@ -218,7 +218,7 @@ class TestLogLLMError:
         self, caplog_debug: pytest.LogCaptureFixture
     ) -> None:
         """Test logging CalledProcessError includes stderr."""
-        error = subprocess.CalledProcessError(
+        error = CalledProcessError(
             returncode=1,
             cmd=["claude", "-p"],
             output="some stdout",
@@ -242,7 +242,7 @@ class TestLogLLMError:
     ) -> None:
         """Test that long stderr/stdout is truncated."""
         long_stderr = "x" * (_MAX_OUTPUT_CHARS + 500)
-        error = subprocess.CalledProcessError(
+        error = CalledProcessError(
             returncode=1,
             cmd=["claude", "-p"],
             stderr=long_stderr,
@@ -263,7 +263,7 @@ class TestLogLLMError:
         self, caplog_debug: pytest.LogCaptureFixture
     ) -> None:
         """Test CalledProcessError with empty stdout/stderr doesn't add extra lines."""
-        error = subprocess.CalledProcessError(
+        error = CalledProcessError(
             returncode=1,
             cmd=["claude", "-p"],
             output="",

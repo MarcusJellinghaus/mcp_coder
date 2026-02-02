@@ -7,11 +7,10 @@ Based on Step 2 requirements, this module implements isort formatting using:
 """
 
 import logging
-import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from mcp_coder.utils.subprocess_runner import execute_command
+from mcp_coder.utils.subprocess_runner import CalledProcessError, execute_command
 
 from .models import FormatterResult
 from .utils import get_default_target_dirs, read_tool_config
@@ -59,7 +58,7 @@ def format_with_isort(
             error_message=None,
         )
 
-    except subprocess.CalledProcessError as e:
+    except CalledProcessError as e:
         # Include the actual stderr output from isort for better debugging
         # CalledProcessError stores output in 'output' attr when using 3-arg form
         stderr_output = getattr(e, "output", "") or getattr(e, "stderr", "") or ""
@@ -125,7 +124,7 @@ def _format_isort_directory(target_path: Path, config: Dict[str, Any]) -> List[s
         return _parse_isort_output(result.stdout)
     else:
         # Syntax error or other failure
-        raise subprocess.CalledProcessError(result.return_code, command, result.stderr)
+        raise CalledProcessError(result.return_code, command, result.stderr)
 
 
 def _parse_isort_output(stdout: str) -> List[str]:
