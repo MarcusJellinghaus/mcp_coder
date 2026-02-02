@@ -1,0 +1,7 @@
+# CI Failure Analysis
+
+The CI pipeline failed in the unit-tests job due to a test mock configuration error in `tests/workflow_utils/test_base_branch.py`. The failing test `TestDetectFromGitMergeBase::test_remote_branch_only` at line 313 attempts to set `mock_repo.remotes.origin.refs`, but the `mock_repo` fixture at line 83-88 configures `repo_instance.remotes` as a plain Python list (`[mock_origin]`). This causes an `AttributeError: 'list' object has no attribute 'origin'` because lists don't support attribute-style access.
+
+The root cause is a mismatch between how the test mocks the remotes and how the actual GitPython library works. In GitPython, `repo.remotes` is an `IterableList` that supports both iteration (allowing `for r in repo.remotes`) and attribute-based access by remote name (allowing `repo.remotes.origin`). The implementation in `src/mcp_coder/workflow_utils/base_branch.py` lines 93-94 correctly uses both patterns: it iterates to check if origin exists, then accesses `repo.remotes.origin.refs` for the remote's references.
+
+The fix requires modifying the `mock_repo` fixture in the test file to properly mock the dual-access pattern of GitPython's `IterableList`. The fixture should configure `mock_repo.remotes` as a mock object that: (1) supports iteration to return the list of remotes, (2) supports the `.origin` attribute to return the origin remote mock, and (3) has the origin mock's `.refs` attribute accessible for tests like `test_remote_branch_only` to configure. This is a test-only fix; the implementation code is correct.

@@ -89,8 +89,14 @@ class TestDetectFromGitMergeBase:
             # Setup default remote
             mock_origin = MagicMock()
             mock_origin.name = "origin"
-            repo_instance.remotes = [mock_origin]
             mock_origin.refs = []  # Default empty
+
+            # GitPython's IterableList supports both iteration and attribute access
+            # Mock remotes to support: [r for r in repo.remotes] and repo.remotes.origin
+            mock_remotes = MagicMock()
+            mock_remotes.__iter__ = MagicMock(return_value=iter([mock_origin]))
+            mock_remotes.origin = mock_origin
+            repo_instance.remotes = mock_remotes
 
             yield repo_instance
 
