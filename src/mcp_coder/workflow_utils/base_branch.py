@@ -2,14 +2,18 @@
 
 This module provides a unified function for detecting the base branch
 of a feature branch by checking multiple sources in priority order:
-1. Open PR base branch
-2. Linked issue's base branch section
-3. Default branch (main/master)
+1. Git merge-base (detect actual parent from git history)
+2. Open PR base branch
+3. Linked issue's base branch section
+4. Default branch (main/master)
 """
 
 import logging
 from pathlib import Path
 from typing import Optional
+
+from git import Repo
+from git.exc import GitCommandError
 
 from mcp_coder.utils.git_operations.readers import (
     extract_issue_number_from_branch,
@@ -28,18 +32,141 @@ logger = logging.getLogger(__name__)
 MERGE_BASE_DISTANCE_THRESHOLD = 20
 
 
+def _detect_from_git_merge_base(
+    project_dir: Path,
+    current_branch: str,
+) -> Optional[str]:
+    """Detect parent branch using git merge-base.
+
+    For each local and remote branch (candidate), find the merge-base with
+    current branch. The parent is the branch whose HEAD is closest to the
+    merge-base (smallest distance).
+
+    Args:
+        project_dir: Path to git repository
+        current_branch: Current branch name
+
+    Returns:
+        Branch name if found within threshold, None otherwise
+    """
+    try:
+        repo = Repo(project_dir)
+    except Exception as e:
+        logger.debug(f"Failed to open git repository: {e}")
+        return None
+
+    # Get current branch commit
+    try:
+        current_commit = repo.heads[current_branch].commit
+    except (IndexError, KeyError) as e:
+        logger.debug(f"Failed to get commit for branch '{current_branch}': {e}")
+        return None
+
+    candidates_passing: list[tuple[str, int]] = []
+    checked_branch_names: set[str] = set()
+
+    # Check local branches
+    for branch in repo.heads:
+        if branch.name == current_branch:
+            continue
+
+        try:
+            merge_base_list = repo.merge_base(current_commit, branch.commit)
+            if not merge_base_list:
+                logger.debug(f"No merge-base found for local branch '{branch.name}'")
+                continue
+
+            merge_base = merge_base_list[0]
+            # Count commits from merge-base to branch HEAD
+            distance = sum(
+                1
+                for _ in repo.iter_commits(
+                    f"{merge_base.hexsha}..{branch.commit.hexsha}"
+                )
+            )
+            logger.debug(
+                f"Local branch '{branch.name}': merge-base distance = {distance}"
+            )
+
+            if distance <= MERGE_BASE_DISTANCE_THRESHOLD:
+                candidates_passing.append((branch.name, distance))
+                checked_branch_names.add(branch.name)
+
+        except GitCommandError as e:
+            logger.debug(f"Git error checking local branch '{branch.name}': {e}")
+            continue
+
+    # Check remote branches (origin/*)
+    try:
+        if "origin" in [r.name for r in repo.remotes]:
+            for ref in repo.remotes.origin.refs:
+                # Extract branch name without "origin/" prefix
+                branch_name = ref.name.replace("origin/", "", 1)
+
+                # Skip current branch, HEAD, and already-checked branches
+                if branch_name in (current_branch, "HEAD"):
+                    continue
+                if branch_name in checked_branch_names:
+                    continue
+
+                try:
+                    merge_base_list = repo.merge_base(current_commit, ref.commit)
+                    if not merge_base_list:
+                        logger.debug(
+                            f"No merge-base found for remote branch '{branch_name}'"
+                        )
+                        continue
+
+                    merge_base = merge_base_list[0]
+                    # Count commits from merge-base to remote branch HEAD
+                    distance = sum(
+                        1
+                        for _ in repo.iter_commits(
+                            f"{merge_base.hexsha}..{ref.commit.hexsha}"
+                        )
+                    )
+                    logger.debug(
+                        f"Remote branch '{branch_name}': merge-base distance = {distance}"
+                    )
+
+                    if distance <= MERGE_BASE_DISTANCE_THRESHOLD:
+                        candidates_passing.append((branch_name, distance))
+                        checked_branch_names.add(branch_name)
+
+                except GitCommandError as e:
+                    logger.debug(
+                        f"Git error checking remote branch '{branch_name}': {e}"
+                    )
+                    continue
+    except Exception as e:
+        logger.debug(f"Error checking remote branches: {e}")
+
+    # Return smallest distance candidate
+    if candidates_passing:
+        candidates_passing.sort(key=lambda x: x[1])
+        winner = candidates_passing[0]
+        logger.info(
+            f"Detected base branch from merge-base: '{winner[0]}' (distance={winner[1]})"
+        )
+        return winner[0]
+
+    logger.debug("No candidate branches found within threshold")
+    return None
+
+
 def detect_base_branch(
     project_dir: Path,
     current_branch: Optional[str] = None,
     issue_data: Optional[IssueData] = None,
-) -> str:
+) -> Optional[str]:
     """Detect the base branch for the current feature branch.
 
     Detection priority:
-    1. GitHub PR base branch (if open PR exists for current branch)
-    2. Linked issue's `### Base Branch` section (from issue_data or fetched)
-    3. Default branch (main/master)
-    4. "unknown" if all detection fails
+    1. Git merge-base (PRIMARY) - Detect actual parent from git history
+    2. GitHub PR base branch (if open PR exists for current branch)
+    3. Linked issue's `### Base Branch` section (from issue_data or fetched)
+    4. Default branch (main/master)
+    5. None if all detection fails
 
     Args:
         project_dir: Path to git repository
@@ -47,7 +174,7 @@ def detect_base_branch(
         issue_data: Optional pre-fetched issue data (avoids duplicate API calls)
 
     Returns:
-        Branch name string, or "unknown" if detection fails.
+        Branch name string, or None if detection fails.
 
     Note:
         Makes up to 2 GitHub API calls if issue_data not provided:
@@ -60,27 +187,38 @@ def detect_base_branch(
         logger.debug(f"Detected current branch: {current_branch}")
 
     if current_branch is None:
-        logger.debug("No current branch (detached HEAD), returning unknown")
-        return "unknown"
+        logger.debug("No current branch (detached HEAD), returning None")
+        return None
 
-    # 1. Try PR lookup first (highest priority)
+    # 1. Try git merge-base first (PRIMARY - highest priority)
+    logger.debug("Attempting base branch detection via git merge-base")
+    base_branch = _detect_from_git_merge_base(project_dir, current_branch)
+    if base_branch:
+        return base_branch
+
+    # 2. Try PR lookup
+    logger.debug("Attempting base branch detection via PR lookup")
     base_branch = _detect_from_pr(project_dir, current_branch)
     if base_branch:
         return base_branch
 
-    # 2. Try issue base_branch
+    # 3. Try issue base_branch
+    logger.debug("Attempting base branch detection via issue base_branch")
     base_branch = _detect_from_issue(project_dir, current_branch, issue_data)
     if base_branch:
         return base_branch
 
-    # 3. Fall back to default branch
+    # 4. Fall back to default branch
+    logger.debug("Attempting base branch detection via default branch")
     base_branch = _detect_default_branch(project_dir)
     if base_branch:
         return base_branch
 
-    # All detection methods failed
-    logger.warning("Could not detect base branch from PR, issue, or default")
-    return "unknown"
+    # All detection methods failed - return None
+    logger.warning(
+        "Could not detect base branch from merge-base, PR, issue, or default"
+    )
+    return None
 
 
 def _detect_from_pr(project_dir: Path, current_branch: str) -> Optional[str]:
