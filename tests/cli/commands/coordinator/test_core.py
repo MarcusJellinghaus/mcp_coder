@@ -20,7 +20,6 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
-    CacheData,
     dispatch_workflow,
     get_cached_eligible_issues,
     get_eligible_issues,
@@ -37,6 +36,7 @@ from mcp_coder.utils.github_operations import (
     _log_stale_cache_entries,
     _save_cache_file,
 )
+from mcp_coder.utils.github_operations.issue_cache import CacheData
 from mcp_coder.utils.user_config import get_cache_refresh_minutes
 
 # pylint: enable=no-name-in-module
@@ -45,7 +45,7 @@ from mcp_coder.utils.user_config import get_cache_refresh_minutes
 class TestLoadRepoConfig:
     """Tests for load_repo_config function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
+    @patch("mcp_coder.cli.commands.coordinator.core.get_config_values")
     def test_load_repo_config_success(self, mock_get_config: MagicMock) -> None:
         """Test successful loading of repository configuration."""
         # Setup - return batch config values dict
@@ -69,7 +69,7 @@ class TestLoadRepoConfig:
         assert result["github_credentials_id"] == "github-pat"
         assert result["executor_os"] == "linux"  # Default
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
+    @patch("mcp_coder.cli.commands.coordinator.core.get_config_values")
     def test_load_repo_config_missing_repo(self, mock_get_config: MagicMock) -> None:
         """Test that missing repository returns dict with None values."""
         # Setup - return dict with None values for all keys
@@ -90,7 +90,7 @@ class TestLoadRepoConfig:
         assert result["github_credentials_id"] is None
         assert result["executor_os"] == "linux"  # Default
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
+    @patch("mcp_coder.cli.commands.coordinator.core.get_config_values")
     def test_load_repo_config_defaults_executor_os(
         self, mock_get_config: MagicMock
     ) -> None:
@@ -112,7 +112,7 @@ class TestLoadRepoConfig:
         # Verify
         assert config["executor_os"] == "linux"
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
+    @patch("mcp_coder.cli.commands.coordinator.core.get_config_values")
     def test_load_repo_config_normalizes_executor_os(
         self, mock_get_config: MagicMock
     ) -> None:
@@ -251,7 +251,7 @@ class TestGetJenkinsCredentials:
         assert username == "testuser"
         assert api_token == "testtoken123"
 
-    @patch("mcp_coder.cli.commands.coordinator.get_config_values")
+    @patch("mcp_coder.cli.commands.coordinator.core.get_config_values")
     def test_get_jenkins_credentials_from_config(
         self, mock_get_config: MagicMock, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -340,8 +340,8 @@ class TestGetCacheRefreshMinutes:
 class TestGetEligibleIssues:
     """Tests for get_eligible_issues function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.core.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.core.load_labels_config")
     def test_get_eligible_issues_filters_by_bot_pickup_labels(
         self, mock_load_config: MagicMock, mock_issue_manager_class: MagicMock
     ) -> None:
@@ -425,9 +425,9 @@ class TestGetEligibleIssues:
 class TestDispatchWorkflow:
     """Tests for dispatch_workflow function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.core.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.core.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.core.JenkinsClient")
     def test_dispatch_workflow_create_plan(
         self,
         mock_jenkins_class: MagicMock,

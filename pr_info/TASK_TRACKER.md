@@ -70,11 +70,11 @@ See [step_4.md](./steps/step_4.md)
 ### Step 5: Update test_core.py - Fix patch locations
 See [step_5.md](./steps/step_5.md)
 
-- [ ] Update patch locations from `...coordinator.<name>` to `...coordinator.core.<name>`
-- [ ] Run pylint on `tests/cli/commands/coordinator/test_core.py`
-- [ ] Run pytest on `tests/cli/commands/coordinator/test_core.py`
-- [ ] Run mypy on `tests/cli/commands/coordinator/`
-- [ ] Prepare commit message for Step 5
+- [x] Update patch locations from `...coordinator.<name>` to `...coordinator.core.<name>`
+- [x] Run pylint on `tests/cli/commands/coordinator/test_core.py`
+- [x] Run pytest on `tests/cli/commands/coordinator/test_core.py`
+- [x] Run mypy on `tests/cli/commands/coordinator/`
+- [x] Prepare commit message for Step 5
 
 ### Step 6: Update test_commands.py - Fix patch locations
 See [step_6.md](./steps/step_6.md)
