@@ -24,7 +24,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Add Git Merge-Base Detection to `base_branch.py`
 See [step_1.md](./steps/step_1.md) for details.
 
-- [ ] Add `MERGE_BASE_DISTANCE_THRESHOLD = 20` constant with comment
+- [x] Add `MERGE_BASE_DISTANCE_THRESHOLD = 20` constant with comment
 - [ ] Implement `_detect_from_git_merge_base()` function
 - [ ] Update `detect_base_branch()` to call merge-base as priority 1
 - [ ] Change `detect_base_branch()` return type to `Optional[str]`

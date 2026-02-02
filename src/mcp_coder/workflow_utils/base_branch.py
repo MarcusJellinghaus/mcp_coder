@@ -21,6 +21,12 @@ from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 
 logger = logging.getLogger(__name__)
 
+# Maximum commits between merge-base and candidate branch HEAD to consider
+# the candidate as the parent branch. Higher values are more permissive but
+# risk selecting wrong branches; lower values may miss valid parents that
+# have moved forward since branching.
+MERGE_BASE_DISTANCE_THRESHOLD = 20
+
 
 def detect_base_branch(
     project_dir: Path,
