@@ -1,12 +1,12 @@
 """Test workspace setup and git operations for VSCode Claude."""
 
 import json
-import subprocess
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
 from mcp_coder.workflows.vscodeclaude.workspace import (
     create_startup_script,
     create_status_file,
@@ -157,32 +157,35 @@ class TestWorkspaceSetup:
 
         commands_run: list[tuple[Any, Any]] = []
 
-        def mock_run(cmd: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
-            commands_run.append((cmd, kwargs.get("cwd")))
-            return subprocess.CompletedProcess(cmd, 0, "", "")
+        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
+            cwd = options.cwd if options else None
+            commands_run.append((cmd, cwd))
+            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
+            mock_execute,
         )
 
         run_setup_commands(tmp_path, ["echo hello", "echo world"])
 
         assert len(commands_run) == 2
-        assert all(cwd == tmp_path for _, cwd in commands_run)
+        assert all(cwd == str(tmp_path) for _, cwd in commands_run)
 
     def test_run_setup_commands_failure_aborts(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Raises on command failure."""
 
-        def mock_run(cmd: Any, **kwargs: Any) -> None:
-            raise subprocess.CalledProcessError(1, cmd)
+        def mock_execute(cmd: Any, options: Any = None) -> None:
+            raise CalledProcessError(1, cmd)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
+            mock_execute,
         )
 
-        with pytest.raises(subprocess.CalledProcessError):
+        with pytest.raises(CalledProcessError):
             run_setup_commands(tmp_path, ["failing_command"])
 
     def test_update_gitignore_adds_entry(self, tmp_path: Path) -> None:
@@ -395,12 +398,13 @@ class TestGitOperations:
 
         commands: list[Any] = []
 
-        def mock_run(cmd: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
             commands.append(cmd)
-            return subprocess.CompletedProcess(cmd, 0, "", "")
+            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
+            mock_execute,
         )
 
         folder = tmp_path / "new_repo"
@@ -418,12 +422,13 @@ class TestGitOperations:
 
         commands: list[Any] = []
 
-        def mock_run(cmd: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
             commands.append(cmd)
-            return subprocess.CompletedProcess(cmd, 0, "", "")
+            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
+            mock_execute,
         )
 
         # Create folder with .git
@@ -445,12 +450,13 @@ class TestGitOperations:
 
         commands: list[Any] = []
 
-        def mock_run(cmd: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
             commands.append(cmd)
-            return subprocess.CompletedProcess(cmd, 0, "", "")
+            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
+            mock_execute,
         )
 
         folder = tmp_path / "repo"
@@ -467,11 +473,12 @@ class TestGitOperations:
     ) -> None:
         """Raises error when folder has content but no .git."""
 
-        def mock_run(cmd: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
-            return subprocess.CompletedProcess(cmd, 0, "", "")
+        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
+            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
+            mock_execute,
         )
 
         folder = tmp_path / "has_content"
@@ -489,20 +496,24 @@ class TestGitOperations:
         commands: list[Any] = []
         rmtree_called: list[Path] = []
 
-        def mock_run(cmd: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
             commands.append(cmd)
             # Simulate corrupted git repo - rev-parse fails
             if "rev-parse" in str(cmd):
-                return subprocess.CompletedProcess(
-                    cmd, 128, "", "fatal: not a git repo"
+                return CommandResult(
+                    return_code=128,
+                    stdout="",
+                    stderr="fatal: not a git repo",
+                    timed_out=False,
                 )
-            return subprocess.CompletedProcess(cmd, 0, "", "")
+            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
 
         def mock_rmtree(path: Path, **kwargs: Any) -> None:
             rmtree_called.append(path)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.subprocess.run", mock_run
+            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
+            mock_execute,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.shutil.rmtree", mock_rmtree

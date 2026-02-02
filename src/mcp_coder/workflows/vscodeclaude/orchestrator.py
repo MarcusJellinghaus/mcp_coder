@@ -6,12 +6,17 @@ Main functions for preparing, launching, and managing sessions.
 import logging
 import platform
 import shutil
-import subprocess
 from pathlib import Path
 
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
 from ...utils.github_operations.issue_cache import get_all_cached_issues
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
+from ...utils.subprocess_runner import (
+    CalledProcessError,
+    CommandOptions,
+    execute_subprocess,
+    launch_process,
+)
 from ...utils.user_config import get_cache_refresh_minutes, load_config
 from .config import get_github_username, load_repo_vscodeclaude_config
 from .helpers import (
@@ -86,26 +91,16 @@ def launch_vscode(workspace_file: Path) -> int:
     Returns:
         VSCode process PID
 
-    Uses subprocess.Popen for non-blocking launch.
+    Uses launch_process for non-blocking launch.
     On Windows, uses shell=True to find code.cmd in PATH.
     """
     is_windows = platform.system() == "Windows"
 
     if is_windows:
         # On Windows, 'code' is a .cmd file which requires shell=True
-        process = subprocess.Popen(
-            f'code "{workspace_file}"',
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        return launch_process(f'code "{workspace_file}"', shell=True)
     else:
-        process = subprocess.Popen(
-            ["code", str(workspace_file)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    return process.pid
+        return launch_process(["code", str(workspace_file)])
 
 
 def prepare_and_launch_session(
@@ -131,7 +126,7 @@ def prepare_and_launch_session(
 
     Raises:
         FileNotFoundError: If .mcp.json missing
-        subprocess.CalledProcessError: If git or setup fails
+        CalledProcessError: If git or setup fails
 
     Steps:
     1. Create working folder
@@ -404,15 +399,13 @@ def regenerate_session_files(
 
     # Get current branch from git
     try:
-        result = subprocess.run(
+        options = CommandOptions(cwd=str(folder_path), check=True)
+        result = execute_subprocess(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=folder_path,
-            capture_output=True,
-            text=True,
-            check=True,
+            options,
         )
         branch_name = result.stdout.strip()
-    except subprocess.CalledProcessError:
+    except CalledProcessError:
         branch_name = "main"
 
     # Regenerate startup script

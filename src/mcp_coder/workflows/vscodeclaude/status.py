@@ -1,10 +1,10 @@
 """Status display and staleness checking for vscodeclaude feature."""
 
 import logging
-import subprocess
 from pathlib import Path
 
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
+from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .sessions import check_vscode_running, load_sessions
 from .types import VSCodeClaudeSession
 
@@ -156,20 +156,15 @@ def check_folder_dirty(folder_path: Path) -> bool:
     Uses: git status --porcelain
     """
     try:
-        result = subprocess.run(
+        options = CommandOptions(cwd=str(folder_path), check=True)
+        result = execute_subprocess(
             ["git", "status", "--porcelain"],
-            cwd=folder_path,
-            capture_output=True,
-            text=True,
-            check=True,
+            options,
         )
         # If output is empty, the folder is clean
         return bool(result.stdout.strip())
-    except subprocess.CalledProcessError:
-        # On error, assume dirty to be safe
-        return True
     except Exception:
-        # On any other error, assume dirty to be safe
+        # On any error, assume dirty to be safe
         return True
 
 

@@ -1,13 +1,13 @@
 """Test main orchestration functions for VSCode Claude."""
 
 import json
-import subprocess
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.subprocess_runner import CalledProcessError
 from mcp_coder.workflows.vscodeclaude.orchestrator import (
     handle_pr_created_issues,
     prepare_and_launch_session,
@@ -126,7 +126,7 @@ class TestOrchestration:
         )
 
         def failing_git(*args: Any, **kwargs: Any) -> None:
-            raise subprocess.CalledProcessError(1, "git clone")
+            raise CalledProcessError(1, "git clone")
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.setup_git_repo",
@@ -152,7 +152,7 @@ class TestOrchestration:
             "max_sessions": 3,
         }
 
-        with pytest.raises(subprocess.CalledProcessError):
+        with pytest.raises(CalledProcessError):
             prepare_and_launch_session(
                 issue=issue,
                 repo_config=repo_config,
@@ -194,7 +194,7 @@ class TestOrchestration:
         )
 
         def failing_setup(*args: Any, **kwargs: Any) -> None:
-            raise subprocess.CalledProcessError(1, "uv sync")
+            raise CalledProcessError(1, "uv sync")
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.run_setup_commands",
@@ -229,7 +229,7 @@ class TestOrchestration:
             lambda: "Windows",
         )
 
-        with pytest.raises(subprocess.CalledProcessError):
+        with pytest.raises(CalledProcessError):
             prepare_and_launch_session(
                 issue=issue,
                 repo_config=repo_config,

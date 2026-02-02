@@ -1,6 +1,5 @@
 """Test status display functions for VSCode Claude."""
 
-import subprocess
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -268,14 +267,20 @@ class TestStatusDisplay:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns False for clean git repo."""
+        from mcp_coder.utils.subprocess_runner import CommandResult
 
-        def mock_run(cmd: list[str], **kwargs: Any) -> Mock:
-            result = Mock()
-            result.stdout = ""  # Empty = clean
-            result.returncode = 0
-            return result
+        def mock_execute(cmd: list[str], options: Any = None) -> CommandResult:
+            return CommandResult(
+                return_code=0,
+                stdout="",  # Empty = clean
+                stderr="",
+                timed_out=False,
+            )
 
-        monkeypatch.setattr("subprocess.run", mock_run)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
+            mock_execute,
+        )
 
         assert check_folder_dirty(tmp_path) is False
 
@@ -283,14 +288,20 @@ class TestStatusDisplay:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns True when uncommitted changes exist."""
+        from mcp_coder.utils.subprocess_runner import CommandResult
 
-        def mock_run(cmd: list[str], **kwargs: Any) -> Mock:
-            result = Mock()
-            result.stdout = "M  file.py\n"  # Modified file
-            result.returncode = 0
-            return result
+        def mock_execute(cmd: list[str], options: Any = None) -> CommandResult:
+            return CommandResult(
+                return_code=0,
+                stdout="M  file.py\n",  # Modified file
+                stderr="",
+                timed_out=False,
+            )
 
-        monkeypatch.setattr("subprocess.run", mock_run)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
+            mock_execute,
+        )
 
         assert check_folder_dirty(tmp_path) is True
 
@@ -298,11 +309,15 @@ class TestStatusDisplay:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns True (conservative) when git command fails."""
+        from mcp_coder.utils.subprocess_runner import CalledProcessError
 
-        def mock_run(cmd: list[str], **kwargs: Any) -> Mock:
-            raise subprocess.CalledProcessError(1, cmd)
+        def mock_execute(cmd: list[str], options: Any = None) -> None:
+            raise CalledProcessError(1, cmd)
 
-        monkeypatch.setattr("subprocess.run", mock_run)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
+            mock_execute,
+        )
 
         assert check_folder_dirty(tmp_path) is True
 

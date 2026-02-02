@@ -27,6 +27,7 @@ __all__ = [
     "CommandOptions",
     "execute_command",
     "execute_subprocess",
+    "launch_process",
     # Re-exported exceptions
     "CalledProcessError",
     "SubprocessError",
@@ -606,3 +607,40 @@ def execute_command(
         env=env,
     )
     return execute_subprocess(command, options)
+
+
+def launch_process(
+    command: list[str] | str,
+    cwd: str | Path | None = None,
+    shell: bool = False,
+) -> int:
+    """Launch a process without waiting for it to complete.
+
+    This is for fire-and-forget process launching where you need the PID
+    but don't need to wait for completion or capture output.
+
+    Args:
+        command: Command as list or string (string requires shell=True)
+        cwd: Working directory for the process
+        shell: Whether to execute through shell (required for string commands)
+
+    Returns:
+        Process ID (PID) of the launched process
+
+    Example:
+        # Launch VSCode
+        pid = launch_process(["code", "myfile.txt"])
+
+        # Launch with shell on Windows
+        pid = launch_process('code "my file.txt"', shell=True)
+    """
+    cwd_str = str(cwd) if cwd else None
+
+    process = subprocess.Popen(
+        command,
+        cwd=cwd_str,
+        shell=shell,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return process.pid

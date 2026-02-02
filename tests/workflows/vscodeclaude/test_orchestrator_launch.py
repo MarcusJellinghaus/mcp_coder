@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
@@ -15,13 +14,16 @@ class TestLaunch:
     def test_launch_vscode_returns_pid(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Returns PID from Popen."""
-        mock_process = Mock()
-        mock_process.pid = 12345
+        """Returns PID from launch_process."""
+
+        def mock_launch_process(
+            cmd: list[str] | str, cwd: str | Path | None = None, shell: bool = False
+        ) -> int:
+            return 12345
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.subprocess.Popen",
-            lambda *args, **kwargs: mock_process,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_process",
+            mock_launch_process,
         )
 
         workspace = tmp_path / "test.code-workspace"
@@ -37,14 +39,16 @@ class TestLaunch:
         captured_args: list[Any] = []
         captured_kwargs: dict[str, Any] = {}
 
-        def mock_popen(args: Any, **kwargs: Any) -> Mock:
-            captured_args.append(args)
-            captured_kwargs.update(kwargs)
-            return Mock(pid=1)
+        def mock_launch_process(
+            cmd: list[str] | str, cwd: str | Path | None = None, shell: bool = False
+        ) -> int:
+            captured_args.append(cmd)
+            captured_kwargs["shell"] = shell
+            return 1
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.subprocess.Popen",
-            mock_popen,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_process",
+            mock_launch_process,
         )
 
         workspace = tmp_path / "test.code-workspace"

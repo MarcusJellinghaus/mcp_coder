@@ -7,12 +7,16 @@ import logging
 import platform
 import shutil
 import stat
-import subprocess
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ...utils.subprocess_runner import (
+    CalledProcessError,
+    CommandOptions,
+    execute_subprocess,
+)
 from .config import sanitize_folder_name
 from .issues import get_vscodeclaude_config
 from .types import DEFAULT_PROMPT_TIMEOUT
@@ -128,7 +132,7 @@ def setup_git_repo(
     4. Logs progress using logger.info()
 
     Raises:
-        subprocess.CalledProcessError: If git command fails
+        CalledProcessError: If git command fails
     """
     # Check if folder is empty or doesn't have .git
     is_empty = not any(folder_path.iterdir()) if folder_path.exists() else True
@@ -138,13 +142,12 @@ def setup_git_repo(
     git_is_valid = False
     if has_git:
         try:
-            result = subprocess.run(
+            options = CommandOptions(cwd=str(folder_path))
+            result = execute_subprocess(
                 ["git", "rev-parse", "--is-inside-work-tree"],
-                cwd=folder_path,
-                capture_output=True,
-                text=True,
+                options,
             )
-            git_is_valid = result.returncode == 0
+            git_is_valid = result.return_code == 0
         except Exception:
             git_is_valid = False
 
@@ -162,11 +165,10 @@ def setup_git_repo(
     if is_empty:
         # Clone into folder
         logger.info("Cloning %s into %s", repo_url, folder_path)
-        subprocess.run(
+        clone_options = CommandOptions(check=True)
+        execute_subprocess(
             ["git", "clone", repo_url, str(folder_path)],
-            check=True,
-            capture_output=True,
-            text=True,
+            clone_options,
         )
     elif not has_git:
         # Folder has content but no .git - error
@@ -177,21 +179,17 @@ def setup_git_repo(
     # Checkout and pull
     branch = branch_name or "main"
     logger.info("Checking out branch %s", branch)
-    subprocess.run(
+    checkout_options = CommandOptions(cwd=str(folder_path), check=True)
+    execute_subprocess(
         ["git", "checkout", branch],
-        cwd=folder_path,
-        check=True,
-        capture_output=True,
-        text=True,
+        checkout_options,
     )
 
     logger.info("Pulling latest changes")
-    subprocess.run(
+    pull_options = CommandOptions(cwd=str(folder_path), check=True)
+    execute_subprocess(
         ["git", "pull"],
-        cwd=folder_path,
-        check=True,
-        capture_output=True,
-        text=True,
+        pull_options,
     )
 
 
@@ -246,19 +244,16 @@ def run_setup_commands(
         commands: List of shell commands to run
 
     Raises:
-        subprocess.CalledProcessError: If any command fails
+        CalledProcessError: If any command fails
 
     Logs progress for each command using logger.info().
     """
     for command in commands:
         logger.info("Running: %s", command)
-        subprocess.run(
-            command,
-            cwd=folder_path,
-            check=True,
-            shell=True,
-            capture_output=True,
-            text=True,
+        options = CommandOptions(cwd=str(folder_path), check=True, shell=True)
+        execute_subprocess(
+            [command],  # Shell commands passed as single-element list with shell=True
+            options,
         )
 
 
