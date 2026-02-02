@@ -387,13 +387,10 @@ class TestCommandHandlers:
             execute_coordinator_vscodeclaude,
         )
 
-        # Mock _get_coordinator to return a mock that doesn't create config
-        mock_coordinator = type(
-            "MockCoordinator", (), {"create_default_config": lambda self: False}
-        )()
+        # Mock create_default_config to not create config
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.cli.commands.coordinator.commands.create_default_config",
+            lambda: False,
         )
         monkeypatch.setattr(
             "mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config",
@@ -422,12 +419,10 @@ class TestCommandHandlers:
             execute_coordinator_vscodeclaude,
         )
 
-        mock_coordinator = type(
-            "MockCoordinator", (), {"create_default_config": lambda self: True}
-        )()
+        # Mock create_default_config to indicate config was created
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands._get_coordinator",
-            lambda: mock_coordinator,
+            "mcp_coder.cli.commands.coordinator.commands.create_default_config",
+            lambda: True,
         )
         monkeypatch.setattr(
             "mcp_coder.cli.commands.coordinator.commands.get_config_file_path",

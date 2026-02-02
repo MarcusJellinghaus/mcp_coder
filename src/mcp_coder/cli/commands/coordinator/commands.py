@@ -11,17 +11,18 @@ by filtering eligible issues and triggering appropriate Jenkins workflows.
 import argparse
 import logging
 import sys
-
-# Lazy imports from coordinator package to enable test patching
-# Tests can patch at 'mcp_coder.cli.commands.coordinator.<name>'
-from types import ModuleType
 from typing import Any, List, Optional
 
 from ....utils.github_operations.github_utils import RepoIdentifier
-from ....utils.github_operations.issue_cache import get_all_cached_issues
+from ....utils.github_operations.issue_branch_manager import IssueBranchManager
+from ....utils.github_operations.issue_cache import (
+    get_all_cached_issues,
+    update_issue_labels_in_cache,
+)
 from ....utils.github_operations.issue_manager import IssueData, IssueManager
-from ....utils.jenkins_operations.models import JobStatus
+from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.user_config import (
+    create_default_config,
     get_cache_refresh_minutes,
     get_config_file_path,
     load_config,
@@ -29,13 +30,10 @@ from ....utils.user_config import (
 
 # VSCodeClaude imports - now from workflows layer
 from ....workflows.vscodeclaude import (
-    DEFAULT_MAX_SESSIONS,
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
     cleanup_stale_sessions,
     get_active_session_count,
-    get_eligible_vscodeclaude_issues,
-    get_github_username,
     get_linked_branch_for_issue,
     load_repo_vscodeclaude_config,
     load_sessions,
@@ -45,7 +43,14 @@ from ....workflows.vscodeclaude import (
     restart_closed_sessions,
 )
 from .command_templates import TEST_COMMAND_TEMPLATES
-from .core import _get_coordinator, validate_repo_config
+from .core import (
+    dispatch_workflow,
+    get_cached_eligible_issues,
+    get_eligible_issues,
+    get_jenkins_credentials,
+    load_repo_config,
+    validate_repo_config,
+)
 from .workflow_constants import WORKFLOW_MAPPING
 
 __all__ = [
@@ -94,11 +99,8 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         int: Exit code (0 for success, 1 for error)
     """
     try:
-        # Get coordinator for patchable function access
-        coordinator = _get_coordinator()
-
         # Auto-create config on first run
-        created = coordinator.create_default_config()
+        created = create_default_config()
         if created:
             config_path = get_config_file_path()
             logger.info(
@@ -109,11 +111,14 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
             return 1  # Exit to let user configure
 
         # Load and validate repository config
-        repo_config = coordinator.load_repo_config(args.repo_name)
+        repo_config = load_repo_config(args.repo_name)
         validate_repo_config(args.repo_name, repo_config)
 
         # Type narrowing: validate_repo_config raises if any fields are None
-        # After validation, we can safely cast to non-optional dict
+        # Assert to help mypy understand the values are non-None after validation
+        assert repo_config["repo_url"] is not None
+        assert repo_config["executor_job_path"] is not None
+        assert repo_config["github_credentials_id"] is not None
         validated_config: dict[str, str] = {
             "repo_url": repo_config["repo_url"],
             "executor_job_path": repo_config["executor_job_path"],
@@ -121,13 +126,14 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         }
 
         # Get Jenkins credentials
-        server_url, username, api_token = coordinator.get_jenkins_credentials()
+        server_url, username, api_token = get_jenkins_credentials()
 
         # Create Jenkins client
-        client = coordinator.JenkinsClient(server_url, username, api_token)
+        client = JenkinsClient(server_url, username, api_token)
 
         # Select template based on OS using dictionary mapping
         # executor_os is guaranteed to be non-None and one of {"windows", "linux"} after validation
+        assert repo_config["executor_os"] is not None
         executor_os: str = repo_config["executor_os"]
         test_command = TEST_COMMAND_TEMPLATES[executor_os].format(
             log_level=args.log_level
@@ -187,11 +193,8 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         Exception: Any unexpected errors (not caught, let bubble up)
     """
     try:
-        # Get coordinator for patchable function access
-        coordinator = _get_coordinator()
-
         # Step 1: Auto-create config on first run
-        created = coordinator.create_default_config()
+        created = create_default_config()
         if created:
             config_path = get_config_file_path()
             logger.info(
@@ -222,13 +225,13 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             return 1
 
         # Step 3: Get Jenkins credentials (shared across all repos)
-        server_url, username, api_token = coordinator.get_jenkins_credentials()
-        jenkins_client = coordinator.JenkinsClient(server_url, username, api_token)
+        server_url, username, api_token = get_jenkins_credentials()
+        jenkins_client = JenkinsClient(server_url, username, api_token)
 
         # Step 4: Process each repository
         for repo_name in repo_names:
             # Step 4a: Load and validate repo config
-            repo_config = coordinator.load_repo_config(repo_name)
+            repo_config = load_repo_config(repo_name)
             validate_repo_config(repo_name, repo_config)
 
             # Log repository header with URL
@@ -238,21 +241,20 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             logger.info(f"{'='*80}")
 
             # Type narrowing: validate_repo_config raises if any fields are None
-            # Use .get() for executor_os with default to ensure backward compatibility
+            # Assert to help mypy understand the values are non-None after validation
+            assert repo_config["repo_url"] is not None
+            assert repo_config["executor_job_path"] is not None
+            assert repo_config["github_credentials_id"] is not None
             validated_config: dict[str, str] = {
                 "repo_url": repo_config["repo_url"],
                 "executor_job_path": repo_config["executor_job_path"],
                 "github_credentials_id": repo_config["github_credentials_id"],
-                "executor_os": repo_config.get("executor_os", "linux"),
+                "executor_os": repo_config.get("executor_os") or "linux",
             }
 
             # Step 4b: Create managers
-            issue_manager = coordinator.IssueManager(
-                repo_url=validated_config["repo_url"]
-            )
-            branch_manager = coordinator.IssueBranchManager(
-                repo_url=validated_config["repo_url"]
-            )
+            issue_manager = IssueManager(repo_url=validated_config["repo_url"])
+            branch_manager = IssueBranchManager(repo_url=validated_config["repo_url"])
 
             # Step 4c: Get eligible issues using cache
             # Create RepoIdentifier from repo_url
@@ -265,7 +267,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                 repo_full_name = repo_name
 
             try:
-                eligible_issues = coordinator.get_cached_eligible_issues(
+                eligible_issues = get_cached_eligible_issues(
                     repo_full_name=repo_full_name,
                     issue_manager=issue_manager,
                     force_refresh=args.force_refresh,
@@ -275,7 +277,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                 logger.warning(
                     f"Cache failed for {repo_full_name}: {e}, using direct fetch"
                 )
-                eligible_issues = coordinator.get_eligible_issues(issue_manager)
+                eligible_issues = get_eligible_issues(issue_manager)
 
             logger.info(f"Found {len(eligible_issues)} eligible issues")
 
@@ -303,7 +305,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                 workflow_name = workflow_config["workflow"]
 
                 try:
-                    coordinator.dispatch_workflow(
+                    dispatch_workflow(
                         issue=issue,
                         workflow_name=workflow_name,
                         repo_config=validated_config,
@@ -315,7 +317,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
 
                     # Update cache with new labels immediately after successful dispatch
                     try:
-                        coordinator._update_issue_labels_in_cache(
+                        update_issue_labels_in_cache(
                             repo_full_name=repo_full_name,
                             issue_number=issue["number"],
                             old_label=current_label,
@@ -379,24 +381,20 @@ def _get_repo_full_name_from_url(repo_url: str) -> str:
 
 def _build_cached_issues_by_repo(
     repo_names: list[str],
-    coordinator: ModuleType,
 ) -> dict[str, dict[int, IssueData]]:
     """Build cached issues dict for all configured repos.
 
     Args:
         repo_names: List of repository config names
-        coordinator: Coordinator module for config access
 
     Returns:
         Dict mapping repo_full_name to {issue_number: IssueData}
     """
-    from ....utils.user_config import get_cache_refresh_minutes
-
     cached_issues_by_repo: dict[str, dict[int, IssueData]] = {}
 
     for repo_name in repo_names:
         try:
-            repo_config: dict[str, Any] = coordinator.load_repo_config(repo_name)
+            repo_config: dict[str, Any] = load_repo_config(repo_name)
             repo_url = repo_config.get("repo_url", "")
             if not repo_url:
                 continue
@@ -406,10 +404,10 @@ def _build_cached_issues_by_repo(
                 continue
 
             # Create issue manager and fetch cached issues
-            issue_manager: IssueManager = coordinator.IssueManager(repo_url=repo_url)
+            issue_manager_instance: IssueManager = IssueManager(repo_url=repo_url)
             all_issues = get_all_cached_issues(
                 repo_full_name=repo_full_name,
-                issue_manager=issue_manager,
+                issue_manager=issue_manager_instance,
                 force_refresh=False,
                 cache_refresh_minutes=get_cache_refresh_minutes(),
             )
@@ -441,10 +439,8 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         Exit code (0 success, 1 error)
     """
     try:
-        coordinator = _get_coordinator()
-
         # Auto-create config if needed
-        created = coordinator.create_default_config()
+        created = create_default_config()
         if created:
             config_path = get_config_file_path()
             print(f"Created default config at {config_path}")
@@ -470,7 +466,7 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         repo_names = list(repos_section.keys())
 
         # Build cached issues for all repos (used for staleness checks)
-        cached_issues_by_repo = _build_cached_issues_by_repo(repo_names, coordinator)
+        cached_issues_by_repo = _build_cached_issues_by_repo(repo_names)
 
         # Step 1: Restart closed sessions (pass cache for staleness checks)
         restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
@@ -500,11 +496,11 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
             if args.repo and repo_name != args.repo:
                 continue
 
-            repo_config = coordinator.load_repo_config(repo_name)
+            repo_config = load_repo_config(repo_name)
 
-            # Build validated config dict
+            # Build validated config dict - use empty string fallback for optional repo_url
             validated_config: dict[str, str] = {
-                "repo_url": repo_config.get("repo_url", ""),
+                "repo_url": repo_config.get("repo_url") or "",
             }
 
             started = process_eligible_issues(
@@ -640,27 +636,25 @@ def _handle_intervention_mode(
     Returns:
         Exit code (0 success, 1 error)
     """
-    coordinator = _get_coordinator()
-
     # Get the repo (required for intervention)
     if not args.repo:
         print("Error: --intervene requires --repo NAME", file=sys.stderr)
         return 1
 
     # Load repo config
-    repo_config = coordinator.load_repo_config(args.repo)
+    repo_config = load_repo_config(args.repo)
     validated_config: dict[str, str] = {
-        "repo_url": repo_config.get("repo_url", ""),
+        "repo_url": repo_config.get("repo_url") or "",
     }
 
     # Create issue manager to get issue data
     repo_url = validated_config["repo_url"]
-    issue_manager = coordinator.IssueManager(repo_url=repo_url)
-    branch_manager = coordinator.IssueBranchManager(repo_url=repo_url)
+    issue_manager = IssueManager(repo_url=repo_url)
+    branch_manager = IssueBranchManager(repo_url=repo_url)
 
     # Get issue
     issue = issue_manager.get_issue(args.issue)
-    if not issue:
+    if issue["number"] == 0:
         print(f"Error: Issue #{args.issue} not found", file=sys.stderr)
         return 1
 

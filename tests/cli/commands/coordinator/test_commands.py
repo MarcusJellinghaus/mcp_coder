@@ -57,10 +57,10 @@ class TestFormatJobOutput:
 class TestExecuteCoordinatorTest:
     """Tests for execute_coordinator_test command function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_test_success(
         self,
         mock_create_config: MagicMock,
@@ -133,14 +133,14 @@ class TestExecuteCoordinatorTest:
 class TestExecuteCoordinatorRun:
     """Tests for execute_coordinator_run function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_single_repo_success(
         self,
         mock_create_config: MagicMock,
@@ -240,7 +240,7 @@ class TestExecuteCoordinatorRun:
         # Verify - dispatch_workflow was called twice (once for each issue)
         assert mock_dispatch_workflow.call_count == 2
 
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_creates_config_if_missing(
         self, mock_create_config: MagicMock, capsys: pytest.CaptureFixture[str]
     ) -> None:

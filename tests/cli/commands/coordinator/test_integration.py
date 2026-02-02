@@ -19,14 +19,14 @@ from mcp_coder.utils.github_operations.issue_manager import IssueData
 class TestCoordinatorRunCacheIntegration:
     """Integration tests for coordinator run with caching."""
 
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_with_force_refresh(
         self,
         mock_create_config: MagicMock,
@@ -103,14 +103,14 @@ class TestCoordinatorRunCacheIntegration:
         # Verify - dispatch_workflow was called for the issue
         mock_dispatch_workflow.assert_called_once()
 
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.get_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_cache_fallback(
         self,
         mock_create_config: MagicMock,
@@ -175,14 +175,14 @@ class TestCoordinatorRunCacheIntegration:
         # Verify - Warning was logged
         assert "Cache failed" in caplog.text or "using direct fetch" in caplog.text
 
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_continues_processing_after_dispatch_failure(
         self,
         mock_create_config: MagicMock,
@@ -280,15 +280,15 @@ class TestCoordinatorRunCacheIntegration:
 class TestCacheUpdateIntegration:
     """End-to-end tests for cache update integration in execute_coordinator_run."""
 
-    @patch("mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache")
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.update_issue_labels_in_cache")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_updates_cache_after_successful_dispatch(
         self,
         mock_create_config: MagicMock,
@@ -370,15 +370,15 @@ class TestCacheUpdateIntegration:
             new_label="status-03:planning",
         )
 
-    @patch("mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache")
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.update_issue_labels_in_cache")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_cache_update_failure_does_not_break_dispatch(
         self,
         mock_create_config: MagicMock,
@@ -465,15 +465,15 @@ class TestCacheUpdateIntegration:
         # Note: Cache update error is handled within _update_issue_labels_in_cache
         # itself and logged as warning, so no exception propagates to coordinator
 
-    @patch("mcp_coder.cli.commands.coordinator._update_issue_labels_in_cache")
-    @patch("mcp_coder.cli.commands.coordinator.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.JenkinsClient")
-    @patch("mcp_coder.cli.commands.coordinator.get_jenkins_credentials")
-    @patch("mcp_coder.cli.commands.coordinator.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.get_cached_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.dispatch_workflow")
-    @patch("mcp_coder.cli.commands.coordinator.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.update_issue_labels_in_cache")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_multiple_dispatches_keep_cache_synchronized(
         self,
         mock_create_config: MagicMock,

@@ -137,7 +137,7 @@ def _get_cache_file_path(repo_identifier: RepoIdentifier) -> Path:
     return cache_dir / f"{repo_identifier.cache_safe_name}.issues.json"
 
 
-def _update_issue_labels_in_cache(
+def update_issue_labels_in_cache(
     repo_full_name: str, issue_number: int, old_label: str, new_label: str
 ) -> None:
     """Update issue labels in cache after successful dispatch.
