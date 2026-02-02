@@ -42,11 +42,15 @@ See [step_2.md](./steps/step_2.md) for details.
 - [x] Remove re-export from `git_operations/__init__.py`
 - [x] Remove re-export from `utils/__init__.py`
 - [x] Remove test from `test_readers.py`
-- [ ] Verify `grep -r "get_parent_branch_name" src/` returns no results
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Verify `grep -r "get_parent_branch_name" src/` returns no results
+  - Note: Function removed from readers.py and exports. Consumers in diffs.py/core.py remain (fixed in Steps 3-4)
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues *(blocked - see note)*
+- [ ] Prepare git commit message for Step 2 *(blocked - see note)*
 
-**Note:** Verification and quality checks will pass after Steps 3-4 complete (consumers still reference removed function)
+**Note:** Quality checks blocked until Steps 3-4 complete. Current failures:
+- `diffs.py:12` - broken import (Step 3)
+- `core.py:17` - broken import (Step 4)
+- `test_create_pr_integration.py:65` - broken import (Step 4)
 
 ### Step 3: Update `diffs.py` - Remove Auto-Detection
 See [step_3.md](./steps/step_3.md) for details.
