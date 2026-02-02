@@ -33,16 +33,16 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Refactor core.py - Remove _get_coordinator() and use direct imports
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Delete `_get_coordinator()` function from `core.py`
-- [ ] Delete `from types import ModuleType` import
-- [ ] Add direct imports for `get_config_values` and `load_labels_config`
-- [ ] Remove `_update_issue_labels_in_cache` from `issue_cache` import (unused in core.py)
-- [ ] Replace all `coordinator.get_config_values` calls with direct `get_config_values` calls
-- [ ] Replace all `coordinator.load_labels_config` calls with direct `load_labels_config` calls
-- [ ] Run pylint on `src/mcp_coder/cli/commands/coordinator/core.py`
-- [ ] Run pytest on `tests/cli/commands/coordinator/test_core.py`
-- [ ] Run mypy on `src/mcp_coder/cli/commands/coordinator/`
-- [ ] Prepare commit message for Step 2
+- [x] Delete `_get_coordinator()` function from `core.py`
+- [x] Delete `from types import ModuleType` import
+- [x] Add direct imports for `get_config_values` and `load_labels_config`
+- [x] Remove `_update_issue_labels_in_cache` from `issue_cache` import (unused in core.py)
+- [x] Replace all `coordinator.get_config_values` calls with direct `get_config_values` calls
+- [x] Replace all `coordinator.load_labels_config` calls with direct `load_labels_config` calls
+- [x] Run pylint on `src/mcp_coder/cli/commands/coordinator/core.py`
+- [x] Run pytest on `tests/cli/commands/coordinator/test_core.py` (tests need patch location updates in Step 5)
+- [x] Run mypy on `src/mcp_coder/cli/commands/coordinator/` (mypy errors in commands.py/__init__.py will be fixed in Steps 3&4)
+- [x] Prepare commit message for Step 2
 
 ### Step 3: Refactor commands.py - Remove _get_coordinator usage and use direct imports
 See [step_3.md](./steps/step_3.md)
