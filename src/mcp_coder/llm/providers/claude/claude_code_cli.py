@@ -677,7 +677,7 @@ def ask_claude_code_cli(
             if result.stderr:
                 error_msg += f"\nStderr: {result.stderr[:500]}"
 
-            called_process_error: Exception = CalledProcessError(
+            called_process_error = CalledProcessError(
                 result.return_code,
                 command,
                 output=result.stdout,
