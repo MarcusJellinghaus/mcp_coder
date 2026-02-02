@@ -75,8 +75,8 @@ from .workflow_constants import WORKFLOW_MAPPING
 
 ```python
 # REMOVE from __all__:
-# - "CacheData" (if only used for testing)
-# - "_update_issue_labels_in_cache" 
+# - "CacheData" (unused re-export, see Decisions.md)
+# - "_update_issue_labels_in_cache" (import directly where needed, see Decisions.md) 
 # - "create_default_config"
 # - "get_config_values"
 # - "load_labels_config"
