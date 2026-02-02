@@ -23,3 +23,11 @@ The function will be imported directly in `commands.py` from `issue_cache.py`. N
 **Decision:** **Remove from `__init__.py`**
 
 The re-export is dead code - nobody imports `CacheData` from the coordinator package.
+
+## Decision 3: `_update_issue_labels_in_cache` Import in `core.py`
+
+**Question:** The function `_update_issue_labels_in_cache` is imported in `core.py` but never used there. It's only imported for re-export via `__init__.py`. Should we update this import (to the renamed version) or remove it entirely?
+
+**Decision:** **Remove from `core.py` entirely**
+
+Since the function is never used in `core.py`, remove the import completely. `commands.py` will import `update_issue_labels_in_cache` directly from `issue_cache.py`.

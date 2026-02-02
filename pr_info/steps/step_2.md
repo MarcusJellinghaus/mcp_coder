@@ -38,22 +38,24 @@ from ....utils.user_config import get_config_values
 from ....utils.github_operations.label_config import load_labels_config
 ```
 
-### Update Function Import
+### Remove Unused Import (see Decision 3)
 ```python
-# CHANGE this import
+# CHANGE this import - REMOVE _update_issue_labels_in_cache (unused in core.py)
 from ....utils.github_operations.issue_cache import (
     CacheData,
-    _update_issue_labels_in_cache,  # OLD
+    _update_issue_labels_in_cache,  # REMOVE - not used in core.py
     get_all_cached_issues,
 )
 
 # TO
 from ....utils.github_operations.issue_cache import (
     CacheData,
-    update_issue_labels_in_cache,  # NEW (renamed in Step 1)
     get_all_cached_issues,
 )
 ```
+
+Note: `_update_issue_labels_in_cache` is never used in `core.py` - it was only imported for re-export.
+`commands.py` will import `update_issue_labels_in_cache` directly from `issue_cache.py` (Step 3).
 
 ## HOW
 
@@ -104,7 +106,7 @@ labels_config = load_labels_config(config_path)
 1. Delete _get_coordinator() function definition
 2. Delete "from types import ModuleType" import
 3. Add imports for get_config_values and load_labels_config
-4. Update _update_issue_labels_in_cache import to update_issue_labels_in_cache
+4. Remove _update_issue_labels_in_cache from issue_cache import (unused in core.py)
 5. In each function using coordinator pattern:
    a. Delete line "coordinator = _get_coordinator()"
    b. Replace "coordinator.get_config_values" with "get_config_values"
