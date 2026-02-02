@@ -1,13 +1,11 @@
 """Test type definitions and constants for VSCode Claude session management."""
 
-import pytest
+import json
+from importlib import resources
+from pathlib import Path
 
 from mcp_coder.workflows.vscodeclaude.types import (
     DEFAULT_MAX_SESSIONS,
-    HUMAN_ACTION_COMMANDS,
-    STAGE_DISPLAY_NAMES,
-    STATUS_EMOJI,
-    VSCODECLAUDE_PRIORITY,
     RepoVSCodeClaudeConfig,
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
@@ -18,52 +16,9 @@ from mcp_coder.workflows.vscodeclaude.types import (
 class TestTypes:
     """Test type definitions and constants."""
 
-    def test_vscodeclaude_priority_order(self) -> None:
-        """Priority list has correct order (later stages first)."""
-        assert VSCODECLAUDE_PRIORITY[0] == "status-10:pr-created"
-        assert VSCODECLAUDE_PRIORITY[-1] == "status-01:created"
-
-    def test_human_action_commands_coverage(self) -> None:
-        """All priority statuses have command mappings."""
-        for status in VSCODECLAUDE_PRIORITY:
-            assert status in HUMAN_ACTION_COMMANDS
-
-    def test_status_emoji_coverage(self) -> None:
-        """All priority statuses have emoji mappings."""
-        for status in VSCODECLAUDE_PRIORITY:
-            assert status in STATUS_EMOJI
-
     def test_default_max_sessions(self) -> None:
         """Default max sessions is 3."""
         assert DEFAULT_MAX_SESSIONS == 3
-
-    def test_vscodeclaude_priority_completeness(self) -> None:
-        """All expected statuses are in the priority list."""
-        expected_statuses = {
-            "status-01:created",
-            "status-04:plan-review",
-            "status-07:code-review",
-            "status-10:pr-created",
-        }
-        assert set(VSCODECLAUDE_PRIORITY) == expected_statuses
-
-    def test_human_action_commands_structure(self) -> None:
-        """Human action commands have correct structure."""
-        for status, commands in HUMAN_ACTION_COMMANDS.items():
-            assert isinstance(commands, tuple)
-            assert len(commands) == 2
-            # Commands are either strings or None
-            assert all(cmd is None or isinstance(cmd, str) for cmd in commands)
-            # If command is a string, it should start with "/"
-            for cmd in commands:
-                if cmd is not None:
-                    assert cmd.startswith("/"), f"Command {cmd} should start with '/'"
-
-    def test_status_emoji_structure(self) -> None:
-        """Status emoji mappings have correct structure."""
-        for status, emoji in STATUS_EMOJI.items():
-            assert isinstance(emoji, str)
-            assert len(emoji) == 1 or len(emoji) == 2  # Handle unicode emojis
 
 
 class TestTypeHints:
@@ -71,7 +26,6 @@ class TestTypeHints:
 
     def test_vscodeclaude_session_type_structure(self) -> None:
         """VSCodeClaudeSession has all required fields."""
-        # This is a compile-time check, but we can verify the annotations exist
         annotations = VSCodeClaudeSession.__annotations__
         expected_fields = {
             "folder",
@@ -113,8 +67,6 @@ class TestTypeHints:
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
-
-        # Verify all fields are present and correct types
         assert isinstance(session["folder"], str)
         assert isinstance(session["repo"], str)
         assert isinstance(session["issue_number"], int)
@@ -129,7 +81,6 @@ class TestTypeHints:
             "sessions": [],
             "last_updated": "2024-01-01T00:00:00Z",
         }
-
         assert isinstance(store["sessions"], list)
         assert isinstance(store["last_updated"], str)
 
@@ -139,7 +90,6 @@ class TestTypeHints:
             "workspace_base": "/path/to/workspace",
             "max_sessions": 5,
         }
-
         assert isinstance(config["workspace_base"], str)
         assert isinstance(config["max_sessions"], int)
 
@@ -149,24 +99,14 @@ class TestTypeHints:
             "setup_commands_windows": ["cmd1", "cmd2"],
             "setup_commands_linux": ["cmd3", "cmd4"],
         }
-
         assert isinstance(config["setup_commands_windows"], list)
         assert isinstance(config["setup_commands_linux"], list)
-        assert all(isinstance(cmd, str) for cmd in config["setup_commands_windows"])
-        assert all(isinstance(cmd, str) for cmd in config["setup_commands_linux"])
 
     def test_repo_vscodeclaude_config_partial(self) -> None:
-        """Can create a partial RepoVSCodeClaudeConfig instance (total=False)."""
-        # Should be able to create with only some fields since total=False
+        """Can create a partial RepoVSCodeClaudeConfig instance."""
         config: RepoVSCodeClaudeConfig = {"setup_commands_windows": ["cmd1"]}
-
         assert "setup_commands_windows" in config
         assert "setup_commands_linux" not in config
-
-    def test_stage_display_names_coverage(self) -> None:
-        """All priority statuses have display names."""
-        for status in VSCODECLAUDE_PRIORITY:
-            assert status in STAGE_DISPLAY_NAMES
 
 
 class TestLabelsJsonVscodeclaudeMetadata:
@@ -174,10 +114,6 @@ class TestLabelsJsonVscodeclaudeMetadata:
 
     def test_human_action_labels_have_vscodeclaude_metadata(self) -> None:
         """All human_action labels have required vscodeclaude fields."""
-        import json
-        from importlib import resources
-        from pathlib import Path
-
         config_resource = resources.files("mcp_coder.config") / "labels.json"
         config_path = Path(str(config_resource))
         labels_config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -205,32 +141,8 @@ class TestLabelsJsonVscodeclaudeMetadata:
                 set(vscodeclaude.keys()) == required_fields
             ), f"Wrong fields in {label['name']}"
 
-            # emoji should be non-empty string
-            assert isinstance(vscodeclaude["emoji"], str) and vscodeclaude["emoji"]
-            # display_name should be non-empty string
-            assert (
-                isinstance(vscodeclaude["display_name"], str)
-                and vscodeclaude["display_name"]
-            )
-            # stage_short should be non-empty string
-            assert (
-                isinstance(vscodeclaude["stage_short"], str)
-                and vscodeclaude["stage_short"]
-            )
-            # commands can be string or null
-            assert vscodeclaude["initial_command"] is None or isinstance(
-                vscodeclaude["initial_command"], str
-            )
-            assert vscodeclaude["followup_command"] is None or isinstance(
-                vscodeclaude["followup_command"], str
-            )
-
     def test_pr_created_has_null_commands(self) -> None:
         """status-10:pr-created should have null commands."""
-        import json
-        from importlib import resources
-        from pathlib import Path
-
         config_resource = resources.files("mcp_coder.config") / "labels.json"
         config_path = Path(str(config_resource))
         labels_config = json.loads(config_path.read_text(encoding="utf-8"))

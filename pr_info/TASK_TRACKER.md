@@ -92,16 +92,16 @@ See [step_5.md](./steps/step_5.md) for details.
 ### Step 6: Final Test Cleanup and Verification
 See [step_6.md](./steps/step_6.md) for details.
 
-- [ ] Remove constant assertion tests from test_types.py
-- [ ] Remove unused constant imports from test_helpers.py
-- [ ] Verify all vscodeclaude tests pass
-- [ ] Verify no remaining imports of removed constants in tests/
-- [ ] Verify module exports work correctly
-- [ ] Verify removed exports raise ImportError
-- [ ] Run full pytest suite
-- [ ] Run pylint and fix any issues
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare commit message for Step 6
+- [x] Remove constant assertion tests from test_types.py
+- [x] Remove unused constant imports from test_helpers.py
+- [x] Verify all vscodeclaude tests pass
+- [x] Verify no remaining imports of removed constants in tests/
+- [x] Verify module exports work correctly
+- [x] Verify removed exports raise ImportError
+- [x] Run full pytest suite
+- [x] Run pylint and fix any issues
+- [x] Run mypy and fix any type errors
+- [x] Prepare commit message for Step 6
 
 ---
 

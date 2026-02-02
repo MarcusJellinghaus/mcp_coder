@@ -11,10 +11,6 @@ from mcp_coder.workflows.vscodeclaude.helpers import (
     get_stage_display_name,
     truncate_title,
 )
-from mcp_coder.workflows.vscodeclaude.types import (
-    STAGE_DISPLAY_NAMES,
-    VSCODECLAUDE_PRIORITY,
-)
 
 
 class TestRepoNameParsing:
@@ -177,8 +173,3 @@ class TestDisplayHelpers:
         assert result.endswith("...")
         # Should have 47 'A's followed by '...'
         assert result == "A" * 47 + "..."
-
-    def test_stage_display_names_coverage(self) -> None:
-        """All priority statuses have display names."""
-        for status in VSCODECLAUDE_PRIORITY:
-            assert status in STAGE_DISPLAY_NAMES
