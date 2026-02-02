@@ -51,17 +51,17 @@ See [step_2.md](./steps/step_2.md) for details.
 ### Step 3: Update workspace.py - Config-Based Lookups
 See [step_3.md](./steps/step_3.md) for details.
 
-- [ ] Remove imports of `HUMAN_ACTION_COMMANDS`, `STATUS_EMOJI` from types.py
-- [ ] Import `_get_vscodeclaude_config` from issues.py
-- [ ] Remove `_get_stage_short()` function
-- [ ] Update `create_workspace_file()` to use config for stage_short
-- [ ] Update `create_startup_script()` to use config for emoji and commands
-- [ ] Update `create_status_file()` to use config for emoji
-- [ ] Update test mocks in test_workspace.py
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare commit message for Step 3
+- [x] Remove imports of `HUMAN_ACTION_COMMANDS`, `STATUS_EMOJI` from types.py
+- [x] Import `_get_vscodeclaude_config` from issues.py
+- [x] Remove `_get_stage_short()` function
+- [x] Update `create_workspace_file()` to use config for stage_short
+- [x] Update `create_startup_script()` to use config for emoji and commands
+- [x] Update `create_status_file()` to use config for emoji
+- [x] Update test mocks in test_workspace.py
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare commit message for Step 3
 
 ### Step 4: Update helpers.py - Config-Based Display Names
 See [step_4.md](./steps/step_4.md) for details.

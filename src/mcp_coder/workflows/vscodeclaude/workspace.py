@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Any
 
 from .config import sanitize_folder_name
-from .types import DEFAULT_PROMPT_TIMEOUT, HUMAN_ACTION_COMMANDS, STATUS_EMOJI
+from .issues import _get_vscodeclaude_config
+from .types import DEFAULT_PROMPT_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -287,29 +288,6 @@ def update_gitignore(folder_path: Path) -> None:
         f.write(GITIGNORE_ENTRY)
 
 
-def _get_stage_short(status: str) -> str:
-    """Extract short stage name from status label.
-
-    Args:
-        status: Full status label like "status-07:code-review"
-
-    Returns:
-        Short name like "review" for window titles
-    """
-    # Extract the part after the colon and simplify
-    if ":" in status:
-        stage = status.split(":")[1]
-        # Map to short names
-        stage_map = {
-            "created": "new",
-            "plan-review": "plan",
-            "code-review": "review",
-            "pr-created": "pr",
-        }
-        return stage_map.get(stage, stage[:6])
-    return status[:6]
-
-
 def create_workspace_file(
     workspace_base: str,
     folder_name: str,
@@ -335,7 +313,8 @@ def create_workspace_file(
 
     # Truncate title if too long
     title_short = issue_title[:30] + "..." if len(issue_title) > 30 else issue_title
-    stage_short = _get_stage_short(status)
+    config = _get_vscodeclaude_config(status)
+    stage_short = config["stage_short"] if config else status[:6]
 
     # Format the workspace file
     content = WORKSPACE_FILE_TEMPLATE.format(
@@ -395,11 +374,10 @@ def create_startup_script(
 
     is_windows = platform.system() == "Windows"
 
-    # Get commands for this status
-    initial_cmd, _followup_cmd = HUMAN_ACTION_COMMANDS.get(status, (None, None))
-
-    # Get emoji for status
-    emoji = STATUS_EMOJI.get(status, "📋")
+    # Get config for this status
+    config = _get_vscodeclaude_config(status)
+    initial_cmd = config["initial_command"] if config else None
+    emoji = config["emoji"] if config else "📋"
 
     # Truncate title if too long
     title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
@@ -503,8 +481,9 @@ def create_status_file(
         STATUS_FILE_TEMPLATE,
     )
 
-    # Get emoji for status
-    status_emoji = STATUS_EMOJI.get(status, "📋")
+    # Get emoji for status from config
+    config = _get_vscodeclaude_config(status)
+    status_emoji = config["emoji"] if config else "📋"
 
     # Build intervention row if needed
     intervention_row = INTERVENTION_ROW if is_intervention else ""
