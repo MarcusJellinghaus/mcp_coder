@@ -8,7 +8,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.utils.github_operations.issue_manager import IssueData
-from mcp_coder.workflow_utils.base_branch import detect_base_branch
+from mcp_coder.workflow_utils.base_branch import (
+    MERGE_BASE_DISTANCE_THRESHOLD,
+    _detect_from_git_merge_base,
+    detect_base_branch,
+)
 
 # ============================================================================
 # Fixtures
@@ -33,7 +37,11 @@ class BaseBranchMocks(NamedTuple):
 
 @pytest.fixture
 def mocks() -> Generator[BaseBranchMocks, None, None]:
-    """Consolidated fixture for all base branch detection mocks."""
+    """Consolidated fixture for all base branch detection mocks.
+
+    Note: Also patches _detect_from_git_merge_base to return None,
+    allowing tests to focus on PR/Issue/Default detection paths.
+    """
     with (
         patch("mcp_coder.workflow_utils.base_branch.PullRequestManager") as mock_pr,
         patch("mcp_coder.workflow_utils.base_branch.IssueManager") as mock_issue,
@@ -46,7 +54,12 @@ def mocks() -> Generator[BaseBranchMocks, None, None]:
         patch(
             "mcp_coder.workflow_utils.base_branch.get_default_branch_name"
         ) as mock_default,
+        patch(
+            "mcp_coder.workflow_utils.base_branch._detect_from_git_merge_base"
+        ) as mock_merge_base,
     ):
+        # By default, merge-base returns None to allow other detection methods
+        mock_merge_base.return_value = None
         yield BaseBranchMocks(
             pr_manager=mock_pr,
             issue_manager=mock_issue,
@@ -56,6 +69,295 @@ def mocks() -> Generator[BaseBranchMocks, None, None]:
                 default=mock_default,
             ),
         )
+
+
+# ============================================================================
+# Test Classes for Git Merge-Base Detection (Priority 1)
+# ============================================================================
+
+
+class TestDetectFromGitMergeBase:
+    """Tests for git merge-base detection (priority 1)."""
+
+    @pytest.fixture
+    def mock_repo(self) -> Generator[MagicMock, None, None]:
+        """Mock GitPython Repo for merge-base tests."""
+        with patch("mcp_coder.workflow_utils.base_branch.Repo") as mock_repo_class:
+            repo_instance = MagicMock()
+            mock_repo_class.return_value = repo_instance
+
+            # Setup default remote
+            mock_origin = MagicMock()
+            mock_origin.name = "origin"
+            repo_instance.remotes = [mock_origin]
+            mock_origin.refs = []  # Default empty
+
+            yield repo_instance
+
+    def _create_mock_branch(
+        self, name: str, commit_hexsha: str = "abc123"
+    ) -> MagicMock:
+        """Helper to create a mock branch."""
+        branch = MagicMock()
+        branch.name = name
+        branch.commit = MagicMock()
+        branch.commit.hexsha = commit_hexsha
+        return branch
+
+    def _create_mock_remote_ref(
+        self, name: str, commit_hexsha: str = "abc123"
+    ) -> MagicMock:
+        """Helper to create a mock remote reference."""
+        ref = MagicMock()
+        ref.name = f"origin/{name}"
+        ref.commit = MagicMock()
+        ref.commit.hexsha = commit_hexsha
+        return ref
+
+    def test_simple_branch_from_main(self, mock_repo: MagicMock) -> None:
+        """Standard case: feature branch from main with distance=0."""
+        project_dir = Path("/test/project")
+        current_branch = "feature-123"
+
+        # Setup branches
+        mock_current = self._create_mock_branch(current_branch, "current123")
+        mock_main = self._create_mock_branch("main", "main456")
+        mock_repo.heads = {current_branch: mock_current, "main": mock_main}
+        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_main])
+
+        # Setup merge-base
+        merge_base_commit = MagicMock()
+        merge_base_commit.hexsha = "main456"  # Same as main HEAD
+        mock_repo.merge_base.return_value = [merge_base_commit]
+
+        # Distance = 0 (main HEAD is the merge-base)
+        mock_repo.iter_commits.return_value = iter([])  # 0 commits
+
+        result = _detect_from_git_merge_base(project_dir, current_branch)
+
+        assert result == "main"
+
+    def test_branch_from_feature_branch(self, mock_repo: MagicMock) -> None:
+        """feature-B branched from feature-A, main is further away."""
+        project_dir = Path("/test/project")
+        current_branch = "feature-B"
+
+        # Setup branches
+        mock_current = self._create_mock_branch(current_branch, "current123")
+        mock_feature_a = self._create_mock_branch("feature-A", "featureA456")
+        mock_main = self._create_mock_branch("main", "main789")
+        mock_repo.heads = {
+            current_branch: mock_current,
+            "feature-A": mock_feature_a,
+            "main": mock_main,
+        }
+        mock_repo.heads.__iter__ = lambda self: iter(
+            [mock_current, mock_feature_a, mock_main]
+        )
+
+        # Setup merge-base - different for each branch
+        merge_base_feature_a = MagicMock()
+        merge_base_feature_a.hexsha = "featureA456"  # Same as feature-A HEAD
+        merge_base_main = MagicMock()
+        merge_base_main.hexsha = "oldmain000"
+
+        def mock_merge_base(
+            current_commit: MagicMock, target_commit: MagicMock
+        ) -> list[MagicMock]:
+            if target_commit.hexsha == "featureA456":
+                return [merge_base_feature_a]
+            return [merge_base_main]
+
+        mock_repo.merge_base.side_effect = mock_merge_base
+
+        # Setup distances: feature-A=0, main=15
+        def mock_iter_commits(rev_range: str) -> list[MagicMock]:
+            if "featureA456" in rev_range:
+                return []  # 0 commits
+            return [MagicMock() for _ in range(15)]  # 15 commits
+
+        mock_repo.iter_commits.side_effect = mock_iter_commits
+
+        result = _detect_from_git_merge_base(project_dir, current_branch)
+
+        assert result == "feature-A"
+
+    def test_parent_moved_forward(self, mock_repo: MagicMock) -> None:
+        """Parent branch got more commits after branching (within threshold)."""
+        project_dir = Path("/test/project")
+        current_branch = "feature-123"
+
+        # Setup branches
+        mock_current = self._create_mock_branch(current_branch, "current123")
+        mock_feature_a = self._create_mock_branch("feature-A", "featureA456")
+        mock_repo.heads = {current_branch: mock_current, "feature-A": mock_feature_a}
+        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_feature_a])
+
+        # Setup merge-base
+        merge_base_commit = MagicMock()
+        merge_base_commit.hexsha = "mergebase000"
+        mock_repo.merge_base.return_value = [merge_base_commit]
+
+        # Distance = 5 (feature-A moved 5 commits ahead of merge-base)
+        mock_repo.iter_commits.return_value = [MagicMock() for _ in range(5)]
+
+        result = _detect_from_git_merge_base(project_dir, current_branch)
+
+        assert result == "feature-A"
+
+    def test_parent_moved_too_far(self, mock_repo: MagicMock) -> None:
+        """Parent moved beyond threshold, returns None."""
+        project_dir = Path("/test/project")
+        current_branch = "feature-123"
+
+        # Setup branches
+        mock_current = self._create_mock_branch(current_branch, "current123")
+        mock_main = self._create_mock_branch("main", "main456")
+        mock_repo.heads = {current_branch: mock_current, "main": mock_main}
+        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_main])
+
+        # Setup merge-base
+        merge_base_commit = MagicMock()
+        merge_base_commit.hexsha = "mergebase000"
+        mock_repo.merge_base.return_value = [merge_base_commit]
+
+        # Distance = 25 (exceeds MERGE_BASE_DISTANCE_THRESHOLD of 20)
+        mock_repo.iter_commits.return_value = [MagicMock() for _ in range(25)]
+
+        result = _detect_from_git_merge_base(project_dir, current_branch)
+
+        assert result is None
+
+    def test_multiple_candidates_pick_smallest(self, mock_repo: MagicMock) -> None:
+        """Multiple branches pass threshold, pick smallest distance."""
+        project_dir = Path("/test/project")
+        current_branch = "feature-123"
+
+        # Setup branches
+        mock_current = self._create_mock_branch(current_branch, "current123")
+        mock_feature_a = self._create_mock_branch("feature-A", "featureA456")
+        mock_develop = self._create_mock_branch("develop", "develop789")
+        mock_repo.heads = {
+            current_branch: mock_current,
+            "feature-A": mock_feature_a,
+            "develop": mock_develop,
+        }
+        mock_repo.heads.__iter__ = lambda self: iter(
+            [mock_current, mock_feature_a, mock_develop]
+        )
+
+        # Setup merge-base for each
+        merge_base_a = MagicMock()
+        merge_base_a.hexsha = "mbA"
+        merge_base_develop = MagicMock()
+        merge_base_develop.hexsha = "mbDevelop"
+
+        def mock_merge_base(
+            current_commit: MagicMock, target_commit: MagicMock
+        ) -> list[MagicMock]:
+            if target_commit.hexsha == "featureA456":
+                return [merge_base_a]
+            return [merge_base_develop]
+
+        mock_repo.merge_base.side_effect = mock_merge_base
+
+        # Distances: feature-A=3, develop=8 (both within threshold)
+        call_count = [0]
+
+        def mock_iter_commits(rev_range: str) -> list[MagicMock]:
+            call_count[0] += 1
+            if "featureA456" in rev_range:
+                return [MagicMock() for _ in range(3)]  # 3 commits
+            return [MagicMock() for _ in range(8)]  # 8 commits
+
+        mock_repo.iter_commits.side_effect = mock_iter_commits
+
+        result = _detect_from_git_merge_base(project_dir, current_branch)
+
+        assert result == "feature-A"  # Smallest distance wins
+
+    def test_remote_branch_only(self, mock_repo: MagicMock) -> None:
+        """Local branch deleted, only origin/feature-A exists."""
+        project_dir = Path("/test/project")
+        current_branch = "feature-123"
+
+        # Setup local branches (only current branch)
+        mock_current = self._create_mock_branch(current_branch, "current123")
+        mock_repo.heads = {current_branch: mock_current}
+        mock_repo.heads.__iter__ = lambda self: iter([mock_current])
+
+        # Setup remote branch
+        mock_remote_feature_a = self._create_mock_remote_ref("feature-A", "remoteA456")
+        mock_repo.remotes.origin.refs = [mock_remote_feature_a]
+
+        # Setup merge-base
+        merge_base_commit = MagicMock()
+        merge_base_commit.hexsha = "remoteA456"  # Same as remote HEAD
+        mock_repo.merge_base.return_value = [merge_base_commit]
+
+        # Distance = 2
+        mock_repo.iter_commits.return_value = [MagicMock() for _ in range(2)]
+
+        result = _detect_from_git_merge_base(project_dir, current_branch)
+
+        assert result == "feature-A"  # Without origin/ prefix
+
+    def test_skips_current_branch(self, mock_repo: MagicMock) -> None:
+        """Ensure current branch is skipped in candidate list."""
+        project_dir = Path("/test/project")
+        current_branch = "feature-123"
+
+        # Setup branches including current
+        mock_current = self._create_mock_branch(current_branch, "current123")
+        mock_main = self._create_mock_branch("main", "main456")
+        mock_repo.heads = {current_branch: mock_current, "main": mock_main}
+        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_main])
+
+        # Setup merge-base
+        merge_base_commit = MagicMock()
+        merge_base_commit.hexsha = "main456"
+        mock_repo.merge_base.return_value = [merge_base_commit]
+
+        # Distance = 0
+        mock_repo.iter_commits.return_value = []
+
+        result = _detect_from_git_merge_base(project_dir, current_branch)
+
+        # Should return main, not current branch
+        assert result == "main"
+
+    def test_no_merge_base_found(self, mock_repo: MagicMock) -> None:
+        """Returns None when no merge-base can be found."""
+        project_dir = Path("/test/project")
+        current_branch = "feature-123"
+
+        # Setup branches
+        mock_current = self._create_mock_branch(current_branch, "current123")
+        mock_orphan = self._create_mock_branch("orphan", "orphan456")
+        mock_repo.heads = {current_branch: mock_current, "orphan": mock_orphan}
+        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_orphan])
+
+        # No merge-base (orphan branch)
+        mock_repo.merge_base.return_value = []
+
+        result = _detect_from_git_merge_base(project_dir, current_branch)
+
+        assert result is None
+
+    def test_repo_open_error(self, mock_repo: MagicMock) -> None:
+        """Returns None when repo cannot be opened."""
+        project_dir = Path("/test/project")
+
+        with patch("mcp_coder.workflow_utils.base_branch.Repo") as mock_repo_class:
+            mock_repo_class.side_effect = Exception("Not a git repository")
+
+            result = _detect_from_git_merge_base(project_dir, "feature-123")
+
+        assert result is None
+
+    def test_threshold_constant_value(self) -> None:
+        """Verify MERGE_BASE_DISTANCE_THRESHOLD has expected value."""
+        assert MERGE_BASE_DISTANCE_THRESHOLD == 20
 
 
 # ============================================================================
@@ -205,24 +507,24 @@ class TestDetectBaseBranchDefaultFallback:
         mocks.git.default.assert_called_once_with(project_dir)
 
 
-class TestDetectBaseBranchUnknownFallback:
-    """Tests for unknown fallback when all detection fails."""
+class TestDetectBaseBranchReturnsNone:
+    """Tests for None return value when all detection fails (was 'unknown')."""
 
-    def test_detect_base_branch_unknown_fallback(self, mocks: BaseBranchMocks) -> None:
-        """Test unknown fallback when all detection fails."""
-        # Setup: no current branch
+    def test_returns_none_when_no_current_branch(self, mocks: BaseBranchMocks) -> None:
+        """Detached HEAD returns None."""
+        # Setup: no current branch (detached HEAD)
         project_dir = Path("/test/project")
         mocks.git.branch.return_value = None
 
         result = detect_base_branch(project_dir)
 
-        assert result == "unknown"
+        assert result is None
 
-    def test_detect_base_branch_unknown_when_no_default(
+    def test_returns_none_when_all_detection_fails(
         self, mocks: BaseBranchMocks
     ) -> None:
-        """Test unknown when no PR, no issue base, no default branch."""
-        # Setup: no PR, no issue base_branch, no default branch
+        """All methods fail returns None."""
+        # Setup: no merge-base (via fixture), no PR, no issue base_branch, no default
         project_dir = Path("/test/project")
         mocks.git.extract.return_value = None  # No issue number in branch
         mocks.git.default.return_value = None
@@ -230,7 +532,7 @@ class TestDetectBaseBranchUnknownFallback:
 
         result = detect_base_branch(project_dir, current_branch="feature-no-issue")
 
-        assert result == "unknown"
+        assert result is None
 
 
 class TestDetectBaseBranchErrorHandling:

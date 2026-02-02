@@ -320,6 +320,8 @@ def collect_branch_status(
 
         # Use shared issue_data and branch_name
         base_branch = detect_base_branch(project_dir, branch_name, issue_data)
+        if base_branch is None:
+            base_branch = "unknown"
         current_label = _collect_github_label(project_dir, issue_data)
 
         # Collect status from all sources

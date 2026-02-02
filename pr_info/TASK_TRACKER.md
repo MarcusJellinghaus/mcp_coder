@@ -26,14 +26,14 @@ See [step_1.md](./steps/step_1.md) for details.
 
 - [x] Add `MERGE_BASE_DISTANCE_THRESHOLD = 20` constant with comment
 - [x] Implement `_detect_from_git_merge_base()` function
-- [ ] Update `detect_base_branch()` to call merge-base as priority 1
-- [ ] Change `detect_base_branch()` return type to `Optional[str]`
-- [ ] Return `None` instead of `"unknown"` on failure
-- [ ] Add DEBUG logging for detection steps
-- [ ] Add new tests for merge-base detection
-- [ ] Update existing tests for `None` return value
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Update `detect_base_branch()` to call merge-base as priority 1
+- [x] Change `detect_base_branch()` return type to `Optional[str]`
+- [x] Return `None` instead of `"unknown"` on failure
+- [x] Add DEBUG logging for detection steps
+- [x] Add new tests for merge-base detection
+- [x] Update existing tests for `None` return value
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Remove `get_parent_branch_name()` and Update Exports
 See [step_2.md](./steps/step_2.md) for details.
