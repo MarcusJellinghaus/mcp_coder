@@ -1,4 +1,8 @@
-"""Tests for base branch detection functionality."""
+"""Tests for base branch detection functionality.
+
+Note: Tests for detect_parent_branch_via_merge_base are located in
+tests/utils/git_operations/test_readers.py to match the source structure.
+"""
 
 from collections.abc import Generator
 from pathlib import Path
@@ -33,7 +37,11 @@ class BaseBranchMocks(NamedTuple):
 
 @pytest.fixture
 def mocks() -> Generator[BaseBranchMocks, None, None]:
-    """Consolidated fixture for all base branch detection mocks."""
+    """Consolidated fixture for all base branch detection mocks.
+
+    Note: Also patches detect_parent_branch_via_merge_base to return None,
+    allowing tests to focus on PR/Issue/Default detection paths.
+    """
     with (
         patch("mcp_coder.workflow_utils.base_branch.PullRequestManager") as mock_pr,
         patch("mcp_coder.workflow_utils.base_branch.IssueManager") as mock_issue,
@@ -46,7 +54,12 @@ def mocks() -> Generator[BaseBranchMocks, None, None]:
         patch(
             "mcp_coder.workflow_utils.base_branch.get_default_branch_name"
         ) as mock_default,
+        patch(
+            "mcp_coder.workflow_utils.base_branch.detect_parent_branch_via_merge_base"
+        ) as mock_merge_base,
     ):
+        # By default, merge-base returns None to allow other detection methods
+        mock_merge_base.return_value = None
         yield BaseBranchMocks(
             pr_manager=mock_pr,
             issue_manager=mock_issue,
@@ -205,24 +218,24 @@ class TestDetectBaseBranchDefaultFallback:
         mocks.git.default.assert_called_once_with(project_dir)
 
 
-class TestDetectBaseBranchUnknownFallback:
-    """Tests for unknown fallback when all detection fails."""
+class TestDetectBaseBranchReturnsNone:
+    """Tests for None return value when all detection fails (was 'unknown')."""
 
-    def test_detect_base_branch_unknown_fallback(self, mocks: BaseBranchMocks) -> None:
-        """Test unknown fallback when all detection fails."""
-        # Setup: no current branch
+    def test_returns_none_when_no_current_branch(self, mocks: BaseBranchMocks) -> None:
+        """Detached HEAD returns None."""
+        # Setup: no current branch (detached HEAD)
         project_dir = Path("/test/project")
         mocks.git.branch.return_value = None
 
         result = detect_base_branch(project_dir)
 
-        assert result == "unknown"
+        assert result is None
 
-    def test_detect_base_branch_unknown_when_no_default(
+    def test_returns_none_when_all_detection_fails(
         self, mocks: BaseBranchMocks
     ) -> None:
-        """Test unknown when no PR, no issue base, no default branch."""
-        # Setup: no PR, no issue base_branch, no default branch
+        """All methods fail returns None."""
+        # Setup: no merge-base (via fixture), no PR, no issue base_branch, no default
         project_dir = Path("/test/project")
         mocks.git.extract.return_value = None  # No issue number in branch
         mocks.git.default.return_value = None
@@ -230,7 +243,7 @@ class TestDetectBaseBranchUnknownFallback:
 
         result = detect_base_branch(project_dir, current_branch="feature-no-issue")
 
-        assert result == "unknown"
+        assert result is None
 
 
 class TestDetectBaseBranchErrorHandling:

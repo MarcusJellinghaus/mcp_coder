@@ -412,11 +412,11 @@ class TestGetRebaseTargetBranch:
         assert result == "develop"
 
     @patch("mcp_coder.workflows.implement.core.detect_base_branch")
-    def test_returns_none_when_base_branch_unknown(
+    def test_returns_none_when_detection_fails(
         self, mock_detect_base: MagicMock, tmp_path: Path
     ) -> None:
-        """Test returns None when detect_base_branch returns 'unknown'."""
-        mock_detect_base.return_value = "unknown"
+        """Test returns None when detect_base_branch returns None."""
+        mock_detect_base.return_value = None
 
         result = _get_rebase_target_branch(tmp_path)
         assert result is None

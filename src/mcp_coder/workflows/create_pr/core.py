@@ -18,7 +18,6 @@ from mcp_coder.utils import (
     commit_all_changes,
     get_branch_diff,
     get_current_branch_name,
-    get_parent_branch_name,
     git_push,
     is_working_directory_clean,
 )
@@ -26,6 +25,7 @@ from mcp_coder.utils.git_operations.readers import extract_issue_number_from_bra
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
+from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 # Note: PROMPTS_FILE_PATH imported from constants
@@ -230,19 +230,22 @@ def check_prerequisites(project_dir: Path) -> bool:
             logger.error("Could not determine current branch (possibly detached HEAD)")
             return False
 
-        parent_branch = get_parent_branch_name(project_dir)
-        if parent_branch is None:
-            logger.error("Could not determine parent branch")
+        base_branch = detect_base_branch(project_dir, current_branch=current_branch)
+        if base_branch is None:
+            logger.error(
+                "Could not detect base branch for PR creation.\n"
+                "Tip: Add '### Base Branch' section to your GitHub issue with the target branch name."
+            )
             return False
 
-        if current_branch == parent_branch:
+        if current_branch == base_branch:
             logger.error(
-                f"Current branch '{current_branch}' is the parent branch. Please create feature branch."
+                f"Current branch '{current_branch}' is the base branch. Please create feature branch."
             )
             return False
 
         logger.info(
-            f"✓ Current branch '{current_branch}' is not parent branch '{parent_branch}'"
+            f"✓ Current branch '{current_branch}' is not base branch '{base_branch}'"
         )
     except Exception as e:
         logger.error(f"Error checking branch status: {e}")
@@ -273,9 +276,18 @@ def generate_pr_summary(
     """
     logger.info("Generating PR summary...")
 
+    # Get base branch for diff
+    current_branch = get_current_branch_name(project_dir)
+    base_branch = detect_base_branch(project_dir, current_branch=current_branch)
+    if base_branch is None:
+        logger.error("Could not detect base branch for PR summary generation")
+        return "Pull Request", "Could not generate summary - base branch unknown"
+
     # Get branch diff
     logger.info("Getting branch diff...")
-    diff_content = get_branch_diff(project_dir, exclude_paths=["pr_info/steps/"])
+    diff_content = get_branch_diff(
+        project_dir, base_branch=base_branch, exclude_paths=["pr_info/steps/"]
+    )
 
     if not diff_content or not diff_content.strip():
         logger.warning("No diff content found, using fallback PR summary")
@@ -375,15 +387,18 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
     logger.info("Creating GitHub pull request...")
 
     try:
-        # Get current and parent branches
+        # Get current and base branches
         current_branch = get_current_branch_name(project_dir)
         if current_branch is None:
             logger.error("Could not determine current branch")
             return False
 
-        parent_branch = get_parent_branch_name(project_dir)
-        if parent_branch is None:
-            logger.error("Could not determine parent branch")
+        base_branch = detect_base_branch(project_dir, current_branch=current_branch)
+        if base_branch is None:
+            logger.error(
+                "Could not detect base branch for PR creation.\n"
+                "Tip: Add '### Base Branch' section to your GitHub issue."
+            )
             return False
 
         # Create PR using PullRequestManager
@@ -391,7 +406,7 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
         pr_result = pr_manager.create_pull_request(
             title=title,
             head_branch=current_branch,
-            base_branch=parent_branch,
+            base_branch=base_branch,
             body=body,
         )
 

@@ -1,5 +1,6 @@
 """Minimal tests for git diff operations."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -113,3 +114,25 @@ class TestDiffOperations:
         assert diff != ""
         assert "feature.py" in diff
         assert "# Feature file" in diff
+
+    def test_get_branch_diff_returns_empty_when_no_base_branch(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """get_branch_diff returns empty string when base_branch is None."""
+        _, project_dir = git_repo_with_commit
+
+        result = get_branch_diff(project_dir, base_branch=None)
+
+        assert result == ""
+
+    def test_get_branch_diff_logs_error_when_no_base_branch(
+        self, git_repo_with_commit: tuple[Repo, Path], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """get_branch_diff logs error when base_branch is None."""
+        _, project_dir = git_repo_with_commit
+
+        with caplog.at_level(logging.ERROR):
+            result = get_branch_diff(project_dir, base_branch=None)
+
+        assert result == ""
+        assert "base_branch is required" in caplog.text
