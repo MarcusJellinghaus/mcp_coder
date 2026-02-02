@@ -628,6 +628,14 @@ def detect_parent_branch_via_merge_base(
                         distance,
                     )
 
+                    # Early exit: distance=0 means ideal parent (branch HEAD is merge-base)
+                    if distance == 0:
+                        logger.debug(
+                            "Detected parent branch from merge-base: '%s' (distance=0)",
+                            branch.name,
+                        )
+                        return branch.name
+
                     if distance <= distance_threshold:
                         candidates_passing.append((branch.name, distance))
                         checked_branch_names.add(branch.name)
@@ -676,6 +684,14 @@ def detect_parent_branch_via_merge_base(
                                 distance,
                             )
 
+                            # Early exit: distance=0 means ideal parent
+                            if distance == 0:
+                                logger.debug(
+                                    "Detected parent branch from merge-base: '%s' (distance=0)",
+                                    branch_name,
+                                )
+                                return branch_name
+
                             if distance <= distance_threshold:
                                 candidates_passing.append((branch_name, distance))
                                 checked_branch_names.add(branch_name)
@@ -694,7 +710,7 @@ def detect_parent_branch_via_merge_base(
             if candidates_passing:
                 candidates_passing.sort(key=lambda x: x[1])
                 winner = candidates_passing[0]
-                logger.info(
+                logger.debug(
                     "Detected parent branch from merge-base: '%s' (distance=%d)",
                     winner[0],
                     winner[1],
