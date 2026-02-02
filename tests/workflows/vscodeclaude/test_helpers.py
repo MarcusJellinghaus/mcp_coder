@@ -133,7 +133,7 @@ class TestDisplayHelpers:
             return configs.get(status)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.helpers._get_vscodeclaude_config",
+            "mcp_coder.workflows.vscodeclaude.helpers.get_vscodeclaude_config",
             mock_get_config,
         )
 
@@ -147,7 +147,7 @@ class TestDisplayHelpers:
     ) -> None:
         """Returns uppercased status for unknown statuses."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.helpers._get_vscodeclaude_config",
+            "mcp_coder.workflows.vscodeclaude.helpers.get_vscodeclaude_config",
             lambda status: None,  # Unknown status returns None
         )
 

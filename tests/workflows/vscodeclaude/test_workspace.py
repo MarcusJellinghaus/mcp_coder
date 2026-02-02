@@ -55,15 +55,15 @@ MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
 
 
 def _mock_get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
-    """Mock implementation for _get_vscodeclaude_config."""
+    """Mock implementation for get_vscodeclaude_config."""
     return MOCK_VSCODECLAUDE_CONFIGS.get(status)
 
 
 @pytest.fixture
 def mock_vscodeclaude_config(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Mock _get_vscodeclaude_config for workspace tests."""
+    """Mock get_vscodeclaude_config for workspace tests."""
     monkeypatch.setattr(
-        "mcp_coder.workflows.vscodeclaude.workspace._get_vscodeclaude_config",
+        "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
         _mock_get_vscodeclaude_config,
     )
 

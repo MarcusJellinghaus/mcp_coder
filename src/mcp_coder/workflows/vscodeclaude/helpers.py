@@ -10,7 +10,7 @@ Contains utility functions for:
 from datetime import datetime, timezone
 
 from ...utils.github_operations.issue_manager import IssueData
-from .issues import _get_vscodeclaude_config
+from .issues import get_vscodeclaude_config
 from .types import VSCodeClaudeSession
 
 
@@ -131,7 +131,7 @@ def get_stage_display_name(status: str) -> str:
     Returns:
         Display name (e.g., "CODE REVIEW")
     """
-    config = _get_vscodeclaude_config(status)
+    config = get_vscodeclaude_config(status)
     return config["display_name"] if config else status.upper()
 
 

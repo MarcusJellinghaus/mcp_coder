@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import sanitize_folder_name
-from .issues import _get_vscodeclaude_config
+from .issues import get_vscodeclaude_config
 from .types import DEFAULT_PROMPT_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -313,7 +313,7 @@ def create_workspace_file(
 
     # Truncate title if too long
     title_short = issue_title[:30] + "..." if len(issue_title) > 30 else issue_title
-    config = _get_vscodeclaude_config(status)
+    config = get_vscodeclaude_config(status)
     stage_short = config["stage_short"] if config else status[:6]
 
     # Format the workspace file
@@ -375,7 +375,7 @@ def create_startup_script(
     is_windows = platform.system() == "Windows"
 
     # Get config for this status
-    config = _get_vscodeclaude_config(status)
+    config = get_vscodeclaude_config(status)
     initial_cmd = config["initial_command"] if config else None
     emoji = config["emoji"] if config else "📋"
 
@@ -482,7 +482,7 @@ def create_status_file(
     )
 
     # Get emoji for status from config
-    config = _get_vscodeclaude_config(status)
+    config = get_vscodeclaude_config(status)
     status_emoji = config["emoji"] if config else "📋"
 
     # Build intervention row if needed

@@ -54,7 +54,7 @@ def _get_status_priority(label: str) -> int:
     return int(match.group(1)) if match else 0
 
 
-def _get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
+def get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
     """Get vscodeclaude config for a status label.
 
     Shared helper used by workspace.py and helpers.py.
