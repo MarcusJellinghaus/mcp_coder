@@ -115,7 +115,10 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         validate_repo_config(args.repo_name, repo_config)
 
         # Type narrowing: validate_repo_config raises if any fields are None
-        # After validation, we can safely cast to non-optional dict
+        # Assert to help mypy understand the values are non-None after validation
+        assert repo_config["repo_url"] is not None
+        assert repo_config["executor_job_path"] is not None
+        assert repo_config["github_credentials_id"] is not None
         validated_config: dict[str, str] = {
             "repo_url": repo_config["repo_url"],
             "executor_job_path": repo_config["executor_job_path"],
@@ -130,6 +133,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
 
         # Select template based on OS using dictionary mapping
         # executor_os is guaranteed to be non-None and one of {"windows", "linux"} after validation
+        assert repo_config["executor_os"] is not None
         executor_os: str = repo_config["executor_os"]
         test_command = TEST_COMMAND_TEMPLATES[executor_os].format(
             log_level=args.log_level
@@ -237,12 +241,15 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             logger.info(f"{'='*80}")
 
             # Type narrowing: validate_repo_config raises if any fields are None
-            # Use .get() for executor_os with default to ensure backward compatibility
+            # Assert to help mypy understand the values are non-None after validation
+            assert repo_config["repo_url"] is not None
+            assert repo_config["executor_job_path"] is not None
+            assert repo_config["github_credentials_id"] is not None
             validated_config: dict[str, str] = {
                 "repo_url": repo_config["repo_url"],
                 "executor_job_path": repo_config["executor_job_path"],
                 "github_credentials_id": repo_config["github_credentials_id"],
-                "executor_os": repo_config.get("executor_os", "linux"),
+                "executor_os": repo_config.get("executor_os") or "linux",
             }
 
             # Step 4b: Create managers
@@ -491,9 +498,9 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
 
             repo_config = load_repo_config(repo_name)
 
-            # Build validated config dict
+            # Build validated config dict - use empty string fallback for optional repo_url
             validated_config: dict[str, str] = {
-                "repo_url": repo_config.get("repo_url", ""),
+                "repo_url": repo_config.get("repo_url") or "",
             }
 
             started = process_eligible_issues(
@@ -637,7 +644,7 @@ def _handle_intervention_mode(
     # Load repo config
     repo_config = load_repo_config(args.repo)
     validated_config: dict[str, str] = {
-        "repo_url": repo_config.get("repo_url", ""),
+        "repo_url": repo_config.get("repo_url") or "",
     }
 
     # Create issue manager to get issue data
@@ -647,7 +654,7 @@ def _handle_intervention_mode(
 
     # Get issue
     issue = issue_manager.get_issue(args.issue)
-    if not issue:
+    if issue["number"] == 0:
         print(f"Error: Issue #{args.issue} not found", file=sys.stderr)
         return 1
 
