@@ -155,3 +155,13 @@ _.__getattr__
 # =============================================================================
 # repository.py - Variable used in git status parsing
 _.index_status
+
+# =============================================================================
+# FALSE POSITIVES - GitPython Mock Patterns
+# =============================================================================
+# test_base_branch.py - Mock attributes for GitPython's IterableList dual-access pattern
+# These are set on MagicMock objects to simulate repo.heads iteration and indexing
+_.__iter__
+_.__getitem__
+_.__enter__
+_.__exit__

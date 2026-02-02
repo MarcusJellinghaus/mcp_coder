@@ -22,7 +22,9 @@ from .file_tracking import git_move, is_file_tracked
 # Repository status operations (from readers module)
 # Branch reader operations (from readers module)
 from .readers import (
+    MERGE_BASE_DISTANCE_THRESHOLD,
     branch_exists,
+    detect_parent_branch_via_merge_base,
     extract_issue_number_from_branch,
     get_current_branch_name,
     get_default_branch_name,
@@ -59,9 +61,11 @@ __all__ = [
     "checkout_branch",
     "create_branch",
     "delete_branch",
+    "detect_parent_branch_via_merge_base",
     "extract_issue_number_from_branch",
     "get_current_branch_name",
     "get_default_branch_name",
+    "MERGE_BASE_DISTANCE_THRESHOLD",
     "needs_rebase",
     "rebase_onto_branch",
     "remote_branch_exists",

@@ -12,10 +12,9 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from git import Repo
-from git.exc import GitCommandError
-
-from mcp_coder.utils.git_operations.readers import (
+from mcp_coder.utils.git_operations import (
+    MERGE_BASE_DISTANCE_THRESHOLD,
+    detect_parent_branch_via_merge_base,
     extract_issue_number_from_branch,
     get_current_branch_name,
     get_default_branch_name,
@@ -25,12 +24,6 @@ from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 
 logger = logging.getLogger(__name__)
 
-# Maximum commits between merge-base and candidate branch HEAD to consider
-# the candidate as the parent branch. Higher values are more permissive but
-# risk selecting wrong branches; lower values may miss valid parents that
-# have moved forward since branching.
-MERGE_BASE_DISTANCE_THRESHOLD = 20
-
 
 def _detect_from_git_merge_base(
     project_dir: Path,
@@ -38,9 +31,7 @@ def _detect_from_git_merge_base(
 ) -> Optional[str]:
     """Detect parent branch using git merge-base.
 
-    For each local and remote branch (candidate), find the merge-base with
-    current branch. The parent is the branch whose HEAD is closest to the
-    merge-base (smallest distance).
+    Delegates to git_operations.detect_parent_branch_via_merge_base.
 
     Args:
         project_dir: Path to git repository
@@ -49,109 +40,9 @@ def _detect_from_git_merge_base(
     Returns:
         Branch name if found within threshold, None otherwise
     """
-    try:
-        repo = Repo(project_dir)
-    except Exception as e:
-        logger.debug(f"Failed to open git repository: {e}")
-        return None
-
-    # Get current branch commit
-    try:
-        current_commit = repo.heads[current_branch].commit
-    except (IndexError, KeyError) as e:
-        logger.debug(f"Failed to get commit for branch '{current_branch}': {e}")
-        return None
-
-    candidates_passing: list[tuple[str, int]] = []
-    checked_branch_names: set[str] = set()
-
-    # Check local branches
-    for branch in repo.heads:
-        if branch.name == current_branch:
-            continue
-
-        try:
-            merge_base_list = repo.merge_base(current_commit, branch.commit)
-            if not merge_base_list:
-                logger.debug(f"No merge-base found for local branch '{branch.name}'")
-                continue
-
-            merge_base = merge_base_list[0]
-            # Count commits from merge-base to branch HEAD
-            distance = sum(
-                1
-                for _ in repo.iter_commits(
-                    f"{merge_base.hexsha}..{branch.commit.hexsha}"
-                )
-            )
-            logger.debug(
-                f"Local branch '{branch.name}': merge-base distance = {distance}"
-            )
-
-            if distance <= MERGE_BASE_DISTANCE_THRESHOLD:
-                candidates_passing.append((branch.name, distance))
-                checked_branch_names.add(branch.name)
-
-        except GitCommandError as e:
-            logger.debug(f"Git error checking local branch '{branch.name}': {e}")
-            continue
-
-    # Check remote branches (origin/*)
-    try:
-        if "origin" in [r.name for r in repo.remotes]:
-            for ref in repo.remotes.origin.refs:
-                # Extract branch name without "origin/" prefix
-                branch_name = ref.name.replace("origin/", "", 1)
-
-                # Skip current branch, HEAD, and already-checked branches
-                if branch_name in (current_branch, "HEAD"):
-                    continue
-                if branch_name in checked_branch_names:
-                    continue
-
-                try:
-                    merge_base_list = repo.merge_base(current_commit, ref.commit)
-                    if not merge_base_list:
-                        logger.debug(
-                            f"No merge-base found for remote branch '{branch_name}'"
-                        )
-                        continue
-
-                    merge_base = merge_base_list[0]
-                    # Count commits from merge-base to remote branch HEAD
-                    distance = sum(
-                        1
-                        for _ in repo.iter_commits(
-                            f"{merge_base.hexsha}..{ref.commit.hexsha}"
-                        )
-                    )
-                    logger.debug(
-                        f"Remote branch '{branch_name}': merge-base distance = {distance}"
-                    )
-
-                    if distance <= MERGE_BASE_DISTANCE_THRESHOLD:
-                        candidates_passing.append((branch_name, distance))
-                        checked_branch_names.add(branch_name)
-
-                except GitCommandError as e:
-                    logger.debug(
-                        f"Git error checking remote branch '{branch_name}': {e}"
-                    )
-                    continue
-    except Exception as e:
-        logger.debug(f"Error checking remote branches: {e}")
-
-    # Return smallest distance candidate
-    if candidates_passing:
-        candidates_passing.sort(key=lambda x: x[1])
-        winner = candidates_passing[0]
-        logger.info(
-            f"Detected base branch from merge-base: '{winner[0]}' (distance={winner[1]})"
-        )
-        return winner[0]
-
-    logger.debug("No candidate branches found within threshold")
-    return None
+    return detect_parent_branch_via_merge_base(
+        project_dir, current_branch, MERGE_BASE_DISTANCE_THRESHOLD
+    )
 
 
 def detect_base_branch(
