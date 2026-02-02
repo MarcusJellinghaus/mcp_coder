@@ -18,8 +18,8 @@ from .issue_cache import (
     _load_cache_file,
     _log_stale_cache_entries,
     _save_cache_file,
-    _update_issue_labels_in_cache,
     get_all_cached_issues,
+    update_issue_labels_in_cache,
 )
 from .issue_manager import CommentData, EventData, IssueData, IssueManager
 from .labels_manager import LabelData, LabelsManager
@@ -46,7 +46,7 @@ __all__ = [
     "_load_cache_file",
     "_log_stale_cache_entries",
     "_save_cache_file",
-    "_update_issue_labels_in_cache",
+    "update_issue_labels_in_cache",
     "generate_branch_name_from_issue",
     "get_all_cached_issues",
 ]

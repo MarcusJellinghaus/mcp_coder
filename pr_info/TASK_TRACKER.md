@@ -24,11 +24,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Rename _update_issue_labels_in_cache to public function
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Rename `_update_issue_labels_in_cache` to `update_issue_labels_in_cache` in `issue_cache.py`
-- [ ] Run pylint on `src/mcp_coder/utils/github_operations/issue_cache.py`
-- [ ] Run pytest on `tests/utils/github_operations/test_issue_cache.py`
-- [ ] Run mypy on `src/mcp_coder/utils/github_operations/`
-- [ ] Prepare commit message for Step 1
+- [x] Rename `_update_issue_labels_in_cache` to `update_issue_labels_in_cache` in `issue_cache.py`
+- [x] Run pylint on `src/mcp_coder/utils/github_operations/issue_cache.py`
+- [x] Run pytest on `tests/utils/github_operations/test_issue_cache.py`
+- [x] Run mypy on `src/mcp_coder/utils/github_operations/`
+- [x] Prepare commit message for Step 1
 
 ### Step 2: Refactor core.py - Remove _get_coordinator() and use direct imports
 See [step_2.md](./steps/step_2.md)
