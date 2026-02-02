@@ -72,17 +72,23 @@ def mocks() -> Generator[BaseBranchMocks, None, None]:
 
 
 # ============================================================================
-# Test Classes for Detection Priority (PR -> Issue -> Default)
+# Test Classes for Detection Priority (Issue -> PR -> merge-base -> Default)
 # ============================================================================
 
 
 class TestDetectBaseBranchFromPR:
-    """Tests for detection from open PR."""
+    """Tests for detection from open PR (when no issue base_branch)."""
 
     def test_detect_base_branch_from_pr(self, mocks: BaseBranchMocks) -> None:
-        """Test detection from open PR base branch (highest priority)."""
+        """Test detection from open PR base branch when issue has no base_branch."""
         # Setup: current branch has an open PR targeting 'develop'
+        # Issue exists but has no base_branch specified
         project_dir = Path("/test/project")
+        mocks.git.extract.return_value = 370
+        mocks.issue_manager.return_value.get_issue.return_value = {
+            "number": 370,
+            "base_branch": None,  # No base_branch in issue
+        }
         mocks.pr_manager.return_value.list_pull_requests.return_value = [
             {"head_branch": "370-feature-name", "base_branch": "develop"}
         ]
@@ -90,33 +96,33 @@ class TestDetectBaseBranchFromPR:
         result = detect_base_branch(project_dir, current_branch="370-feature-name")
 
         assert result == "develop"
-        # PR manager should be called
+        # Issue manager should be called first (higher priority)
+        mocks.issue_manager.return_value.get_issue.assert_called_once_with(370)
+        # PR manager should be called since issue has no base_branch
         mocks.pr_manager.return_value.list_pull_requests.assert_called_once()
-        # Issue manager should NOT be called when PR exists
-        mocks.issue_manager.return_value.get_issue.assert_not_called()
 
-    def test_detect_base_branch_pr_takes_priority_over_issue(
+    def test_detect_base_branch_issue_takes_priority_over_pr(
         self, mocks: BaseBranchMocks
     ) -> None:
-        """Test that PR base branch has higher priority than issue base branch."""
-        # Setup: both PR and issue have base branches - PR should win
+        """Test that issue base branch has higher priority than PR base branch."""
+        # Setup: both PR and issue have base branches - issue should win
         project_dir = Path("/test/project")
         mocks.git.extract.return_value = 370
-        # PR targets 'develop'
-        mocks.pr_manager.return_value.list_pull_requests.return_value = [
-            {"head_branch": "370-feature-name", "base_branch": "develop"}
-        ]
-        # Issue specifies 'release/v2' - should be ignored
+        # Issue specifies 'release/v2' - should be used (highest priority)
         mocks.issue_manager.return_value.get_issue.return_value = {
             "number": 370,
             "base_branch": "release/v2",
         }
+        # PR targets 'develop' - should be ignored since issue has base_branch
+        mocks.pr_manager.return_value.list_pull_requests.return_value = [
+            {"head_branch": "370-feature-name", "base_branch": "develop"}
+        ]
 
         result = detect_base_branch(project_dir, current_branch="370-feature-name")
 
-        assert result == "develop"  # PR branch, not issue branch
-        # Issue manager should NOT be called when PR exists
-        mocks.issue_manager.return_value.get_issue.assert_not_called()
+        assert result == "release/v2"  # Issue branch, not PR branch
+        # PR manager should NOT be called when issue has base_branch
+        mocks.pr_manager.return_value.list_pull_requests.assert_not_called()
 
 
 class TestDetectBaseBranchFromIssueData:
@@ -345,9 +351,14 @@ class TestDetectBaseBranchEdgeCases:
         self, mocks: BaseBranchMocks
     ) -> None:
         """Test auto-detection of current branch when not provided."""
-        # Setup: auto-detect current branch
+        # Setup: auto-detect current branch, issue has no base_branch
         project_dir = Path("/test/project")
         mocks.git.branch.return_value = "370-feature"
+        mocks.git.extract.return_value = 370
+        mocks.issue_manager.return_value.get_issue.return_value = {
+            "number": 370,
+            "base_branch": None,  # No base_branch in issue
+        }
         mocks.pr_manager.return_value.list_pull_requests.return_value = [
             {"head_branch": "370-feature", "base_branch": "develop"}
         ]

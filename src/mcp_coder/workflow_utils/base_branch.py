@@ -2,9 +2,9 @@
 
 This module provides a unified function for detecting the base branch
 of a feature branch by checking multiple sources in priority order:
-1. Git merge-base (detect actual parent from git history)
-2. Open PR base branch
-3. Linked issue's base branch section
+1. Linked issue's base branch section (explicit user intent)
+2. Open PR base branch (if PR already exists)
+3. Git merge-base (heuristic fallback from git history)
 4. Default branch (main/master)
 """
 
@@ -33,11 +33,16 @@ def detect_base_branch(
     """Detect the base branch for the current feature branch.
 
     Detection priority:
-    1. Git merge-base (PRIMARY) - Detect actual parent from git history
+    1. Linked issue's `### Base Branch` section (explicit user intent)
     2. GitHub PR base branch (if open PR exists for current branch)
-    3. Linked issue's `### Base Branch` section (from issue_data or fetched)
+    3. Git merge-base (heuristic fallback from git history)
     4. Default branch (main/master)
     5. None if all detection fails
+
+    The issue's base branch takes priority over merge-base because:
+    - Users explicitly specify their intended base branch in the issue
+    - Merge-base can be misleading when parent branches are merged to main
+      (e.g., stacked PR workflows where the parent branch was merged)
 
     Args:
         project_dir: Path to git repository
@@ -49,8 +54,8 @@ def detect_base_branch(
 
     Note:
         Makes up to 2 GitHub API calls if issue_data not provided:
-        - PR list lookup
-        - Issue fetch (if no PR found and branch has issue number)
+        - Issue fetch (if branch has issue number)
+        - PR list lookup (if no issue base branch found)
     """
     # Get current branch if not provided
     if current_branch is None:
@@ -61,23 +66,23 @@ def detect_base_branch(
         logger.debug("No current branch (detached HEAD), returning None")
         return None
 
-    # 1. Try git merge-base first (PRIMARY - highest priority)
-    logger.debug("Attempting base branch detection via git merge-base")
-    base_branch = detect_parent_branch_via_merge_base(
-        project_dir, current_branch, MERGE_BASE_DISTANCE_THRESHOLD
-    )
+    # 1. Try issue base_branch first (explicit user intent - highest priority)
+    logger.debug("Attempting base branch detection via issue base_branch")
+    base_branch = _detect_from_issue(project_dir, current_branch, issue_data)
     if base_branch:
         return base_branch
 
-    # 2. Try PR lookup
+    # 2. Try PR lookup (existing PR knows its base)
     logger.debug("Attempting base branch detection via PR lookup")
     base_branch = _detect_from_pr(project_dir, current_branch)
     if base_branch:
         return base_branch
 
-    # 3. Try issue base_branch
-    logger.debug("Attempting base branch detection via issue base_branch")
-    base_branch = _detect_from_issue(project_dir, current_branch, issue_data)
+    # 3. Try git merge-base (heuristic fallback)
+    logger.debug("Attempting base branch detection via git merge-base")
+    base_branch = detect_parent_branch_via_merge_base(
+        project_dir, current_branch, MERGE_BASE_DISTANCE_THRESHOLD
+    )
     if base_branch:
         return base_branch
 
@@ -89,7 +94,7 @@ def detect_base_branch(
 
     # All detection methods failed - return None
     logger.warning(
-        "Could not detect base branch from merge-base, PR, issue, or default"
+        "Could not detect base branch from issue, PR, merge-base, or default"
     )
     return None
 
