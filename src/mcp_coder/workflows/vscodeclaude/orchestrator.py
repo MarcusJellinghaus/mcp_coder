@@ -74,12 +74,6 @@ __all__ = [
     # Re-exported from helpers for backward compatibility
     "get_stage_display_name",
     "truncate_title",
-    # Internal aliases (backward compatibility)
-    "_get_repo_short_name",
-    "_get_repo_full_name",
-    "_get_issue_status",
-    "_build_session",
-    "_get_repo_short_name_from_full",
 ]
 
 
@@ -112,15 +106,6 @@ def launch_vscode(workspace_file: Path) -> int:
             stderr=subprocess.DEVNULL,
         )
     return process.pid
-
-
-# Re-export helper functions for backward compatibility
-# These aliases maintain the original internal API naming convention
-_get_repo_short_name = get_repo_short_name
-_get_repo_full_name = get_repo_full_name
-_get_issue_status = get_issue_status
-_build_session = build_session
-_get_repo_short_name_from_full = get_repo_short_name_from_full
 
 
 def prepare_and_launch_session(
@@ -165,12 +150,12 @@ def prepare_and_launch_session(
     """
     workspace_base = vscodeclaude_config["workspace_base"]
     repo_url = repo_config.get("repo_url", "")
-    repo_short_name = _get_repo_short_name(repo_config)
-    repo_full_name = _get_repo_full_name(repo_config)
+    repo_short_name = get_repo_short_name(repo_config)
+    repo_full_name = get_repo_full_name(repo_config)
     issue_number = issue["number"]
     issue_title = issue["title"]
     issue_url = issue.get("url", "")
-    status = _get_issue_status(issue)
+    status = get_issue_status(issue)
 
     # Build folder path
     folder_path = get_working_folder_path(workspace_base, repo_short_name, issue_number)
@@ -242,7 +227,7 @@ def prepare_and_launch_session(
         pid = launch_vscode(workspace_file)
 
         # Build and save session
-        session = _build_session(
+        session = build_session(
             folder=folder_str,
             repo=repo_full_name,
             issue_number=issue_number,
@@ -317,7 +302,7 @@ def process_eligible_issues(
     github_username = get_github_username()
 
     # Get repo full name for session lookup
-    repo_full_name = _get_repo_full_name(repo_config)
+    repo_full_name = get_repo_full_name(repo_config)
 
     # Create managers using direct imports
     # Build repo_url from repo_full_name for proper instantiation
@@ -345,7 +330,7 @@ def process_eligible_issues(
     actionable_issues: list[IssueData] = [
         issue
         for issue in eligible_issues
-        if _get_issue_status(issue) != "status-10:pr-created"
+        if get_issue_status(issue) != "status-10:pr-created"
     ]
 
     # Filter out issues that already have sessions
@@ -410,11 +395,11 @@ def regenerate_session_files(
     """
     folder_path = Path(session["folder"])
     repo_full_name = session["repo"]
-    repo_short_name = _get_repo_short_name_from_full(repo_full_name)
+    repo_short_name = get_repo_short_name_from_full(repo_full_name)
     issue_number = issue["number"]
     issue_title = issue["title"]
     issue_url = issue.get("url", "")
-    status = _get_issue_status(issue)
+    status = get_issue_status(issue)
     is_intervention = session.get("is_intervention", False)
 
     # Get current branch from git
@@ -494,7 +479,7 @@ def _get_configured_repos() -> set[str]:
         repo_url = repo_config.get("repo_url", "")
         if repo_url:
             try:
-                repo_full_name = _get_repo_full_name({"repo_url": repo_url})
+                repo_full_name = get_repo_full_name({"repo_url": repo_url})
                 configured_repos.add(repo_full_name)
             except ValueError:
                 # Skip invalid repo URLs
