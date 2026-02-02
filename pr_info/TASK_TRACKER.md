@@ -79,22 +79,22 @@ See [step_5.md](./steps/step_5.md)
 ### Step 6: Update test_commands.py - Fix patch locations
 See [step_6.md](./steps/step_6.md)
 
-- [ ] Update patch locations from `...coordinator.<name>` to `...coordinator.commands.<name>`
-- [ ] Update `_update_issue_labels_in_cache` patches to `update_issue_labels_in_cache` (renamed)
-- [ ] Run pylint on `tests/cli/commands/coordinator/test_commands.py`
-- [ ] Run pytest on `tests/cli/commands/coordinator/test_commands.py`
-- [ ] Run mypy on `tests/cli/commands/coordinator/`
-- [ ] Prepare commit message for Step 6
+- [x] Update patch locations from `...coordinator.<name>` to `...coordinator.commands.<name>`
+- [x] Update `_update_issue_labels_in_cache` patches to `update_issue_labels_in_cache` (renamed)
+- [x] Run pylint on `tests/cli/commands/coordinator/test_commands.py`
+- [x] Run pytest on `tests/cli/commands/coordinator/test_commands.py`
+- [x] Run mypy on `tests/cli/commands/coordinator/`
+- [x] Prepare commit message for Step 6
 
 ### Step 7: Run all checks and verify
 See [step_7.md](./steps/step_7.md)
 
-- [ ] Run full pylint check on coordinator package
-- [ ] Run full mypy check on coordinator package
-- [ ] Run full pytest on coordinator tests
-- [ ] Run full test suite for regression check
-- [ ] Verify all acceptance criteria from summary.md are met
-- [ ] Prepare final commit message for Step 7
+- [x] Run full pylint check on coordinator package
+- [x] Run full mypy check on coordinator package (pre-existing type issues in commands.py - not related to refactor)
+- [x] Run full pytest on coordinator tests
+- [x] Run full test suite for regression check
+- [x] Verify all acceptance criteria from summary.md are met
+- [x] Prepare final commit message for Step 7
 
 ---
 

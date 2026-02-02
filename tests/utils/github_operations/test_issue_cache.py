@@ -338,7 +338,7 @@ class TestStalenessLogging:
 class TestEligibleIssuesFiltering:
     """Tests for _filter_eligible_issues function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.core.load_labels_config")
     def test_filter_eligible_issues_basic(self, mock_load_config: Mock) -> None:
         """Test basic filtering of eligible issues."""
         # Mock labels config
@@ -428,7 +428,7 @@ class TestEligibleIssuesFiltering:
             result[1]["number"] == 1
         )  # status-02:awaiting-planning has lower priority
 
-    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.core.load_labels_config")
     def test_filter_eligible_issues_multiple_bot_pickup_labels(
         self, mock_load_config: Mock
     ) -> None:
