@@ -62,14 +62,14 @@ class TestCreatePRWorkflowIntegration:
         self._setup_complete_project(project_dir, repo)
 
         # Import workflow functions (get_current_branch_name and is_working_directory_clean already imported at module level)
-        from mcp_coder.utils.git_operations import get_parent_branch_name
+        from mcp_coder.workflow_utils.base_branch import detect_base_branch
         from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
         from mcp_coder.workflows.create_pr.core import check_prerequisites
 
         # Test each prerequisite individually
         is_clean = is_working_directory_clean(project_dir)
         current_branch = get_current_branch_name(project_dir)
-        parent_branch = get_parent_branch_name(project_dir)
+        base_branch = detect_base_branch(project_dir, current_branch=current_branch)
 
         # Test task tracker
         try:
@@ -80,12 +80,10 @@ class TestCreatePRWorkflowIntegration:
         # Individual assertions for better error messages
         assert is_clean, "Working directory not clean"
         assert current_branch is not None, "Could not get current branch name"
+        assert base_branch is not None, f"Could not detect base branch: {base_branch}"
         assert (
-            parent_branch is not None
-        ), f"Could not get parent branch name: {parent_branch}"
-        assert (
-            current_branch != parent_branch
-        ), f"Current branch '{current_branch}' equals parent branch '{parent_branch}'"
+            current_branch != base_branch
+        ), f"Current branch '{current_branch}' equals base branch '{base_branch}'"
         assert len(incomplete_tasks) == 0, f"Found incomplete tasks: {incomplete_tasks}"
 
         # Should pass prerequisites now

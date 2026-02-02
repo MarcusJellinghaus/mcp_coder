@@ -43,14 +43,9 @@ See [step_2.md](./steps/step_2.md) for details.
 - [x] Remove re-export from `utils/__init__.py`
 - [x] Remove test from `test_readers.py`
 - [x] Verify `grep -r "get_parent_branch_name" src/` returns no results
-  - Note: Function removed from readers.py and exports. Consumers in diffs.py/core.py remain (fixed in Steps 3-4)
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues *(blocked - see note)*
-- [ ] Prepare git commit message for Step 2 *(blocked - see note)*
-
-**Note:** Quality checks blocked until Steps 3-4 complete. Current failures:
-- `diffs.py:12` - broken import (Step 3)
-- `core.py:17` - broken import (Step 4)
-- `test_create_pr_integration.py:65` - broken import (Step 4)
+  - Note: Function removed from readers.py and exports. Consumers in diffs.py/core.py fixed in Steps 3-4
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Update `diffs.py` - Remove Auto-Detection
 See [step_3.md](./steps/step_3.md) for details.
@@ -66,16 +61,16 @@ See [step_3.md](./steps/step_3.md) for details.
 ### Step 4: Update `create_pr/core.py` to Use `detect_base_branch()`
 See [step_4.md](./steps/step_4.md) for details.
 
-- [ ] Remove `get_parent_branch_name` import from `core.py`
-- [ ] Add `detect_base_branch` import from `workflow_utils.base_branch`
-- [ ] Update `check_prerequisites()` to use `detect_base_branch()` with `None` handling
-- [ ] Update `create_pull_request()` to use `detect_base_branch()` with `None` handling
-- [ ] Update `generate_pr_summary()` to pass explicit `base_branch` to `get_branch_diff()`
-- [ ] Add helpful tip in error messages about `### Base Branch` section
-- [ ] Change variable names from `parent_branch` to `base_branch`
-- [ ] Update all test mocks in `test_prerequisites.py` and `test_workflow.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 4
+- [x] Remove `get_parent_branch_name` import from `core.py`
+- [x] Add `detect_base_branch` import from `workflow_utils.base_branch`
+- [x] Update `check_prerequisites()` to use `detect_base_branch()` with `None` handling
+- [x] Update `create_pull_request()` to use `detect_base_branch()` with `None` handling
+- [x] Update `generate_pr_summary()` to pass explicit `base_branch` to `get_branch_diff()`
+- [x] Add helpful tip in error messages about `### Base Branch` section
+- [x] Change variable names from `parent_branch` to `base_branch`
+- [x] Update all test mocks in `test_prerequisites.py` and `test_workflow.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Update `implement/core.py` for `None` Handling
 See [step_5.md](./steps/step_5.md) for details.
