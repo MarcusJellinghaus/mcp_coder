@@ -12,7 +12,6 @@ from .core import GIT_SHORT_HASH_LENGTH, PLACEHOLDER_HASH, _safe_repo_context, l
 from .readers import (
     branch_exists,
     get_current_branch_name,
-    get_parent_branch_name,
     is_git_repository,
     remote_branch_exists,
 )
@@ -103,7 +102,9 @@ def get_branch_diff(
 
     Args:
         project_dir: Path to the project directory containing git repository
-        base_branch: Base branch to compare against (auto-detected if None)
+        base_branch: Base branch to compare against. If None, returns empty
+            string with error log. Callers should use detect_base_branch()
+            to determine the base branch before calling this function.
         exclude_paths: List of paths to exclude from diff (e.g., ['pr_info/', '*.log'])
 
     Returns:
@@ -111,7 +112,6 @@ def get_branch_diff(
 
     Note:
         - Uses three-dot notation (base...HEAD) to show changes on current branch
-        - Auto-detects base branch using get_parent_branch_name() if not provided
         - If base_branch doesn't exist locally but exists on origin,
           falls back to using origin/{base_branch} for comparison.
         - Returns empty string for any error conditions (invalid repo, missing branch, etc.)
@@ -129,15 +129,16 @@ def get_branch_diff(
         logger.error("Directory %s is not a git repository", project_dir)
         return ""
 
+    # Require explicit base branch - no auto-detection
+    if base_branch is None:
+        logger.error(
+            "base_branch is required. Use detect_base_branch() from "
+            "workflow_utils.base_branch to determine the base branch."
+        )
+        return ""
+
     try:
         with _safe_repo_context(project_dir) as repo:
-            # Auto-detect base branch if not provided
-            if base_branch is None:
-                base_branch = get_parent_branch_name(project_dir)
-                if base_branch is None:
-                    logger.error("Could not determine base branch for diff")
-                    return ""
-                logger.debug("Auto-detected base branch: %s", base_branch)
 
             # Get current branch for validation
             current_branch = get_current_branch_name(project_dir)

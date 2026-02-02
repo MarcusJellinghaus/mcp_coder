@@ -55,13 +55,13 @@ See [step_2.md](./steps/step_2.md) for details.
 ### Step 3: Update `diffs.py` - Remove Auto-Detection
 See [step_3.md](./steps/step_3.md) for details.
 
-- [ ] Remove `get_parent_branch_name` import from `diffs.py`
-- [ ] Remove auto-detection logic from `get_branch_diff()`
-- [ ] Return empty string with error log when `base_branch` is `None`
-- [ ] Update docstring to document new behavior
-- [ ] Update tests to reflect explicit `base_branch` requirement
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Remove `get_parent_branch_name` import from `diffs.py`
+- [x] Remove auto-detection logic from `get_branch_diff()`
+- [x] Return empty string with error log when `base_branch` is `None`
+- [x] Update docstring to document new behavior
+- [x] Update tests to reflect explicit `base_branch` requirement
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Update `create_pr/core.py` to Use `detect_base_branch()`
 See [step_4.md](./steps/step_4.md) for details.
