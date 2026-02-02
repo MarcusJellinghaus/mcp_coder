@@ -1,5 +1,7 @@
 """Test helper functions for VSCode Claude orchestration."""
 
+import pytest
+
 from mcp_coder.utils.github_operations.issue_manager import IssueData
 from mcp_coder.workflows.vscodeclaude.helpers import (
     get_issue_status,
@@ -120,15 +122,39 @@ class TestIssueStatus:
 class TestDisplayHelpers:
     """Test display helper functions."""
 
-    def test_get_stage_display_name_known_statuses(self) -> None:
+    def test_get_stage_display_name_known_statuses(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Returns human-readable stage names."""
+
+        def mock_get_config(status: str) -> dict[str, str] | None:
+            configs: dict[str, dict[str, str]] = {
+                "status-07:code-review": {"display_name": "CODE REVIEW"},
+                "status-04:plan-review": {"display_name": "PLAN REVIEW"},
+                "status-01:created": {"display_name": "ISSUE ANALYSIS"},
+                "status-10:pr-created": {"display_name": "PR CREATED"},
+            }
+            return configs.get(status)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.helpers._get_vscodeclaude_config",
+            mock_get_config,
+        )
+
         assert get_stage_display_name("status-07:code-review") == "CODE REVIEW"
         assert get_stage_display_name("status-04:plan-review") == "PLAN REVIEW"
         assert get_stage_display_name("status-01:created") == "ISSUE ANALYSIS"
         assert get_stage_display_name("status-10:pr-created") == "PR CREATED"
 
-    def test_get_stage_display_name_unknown_status(self) -> None:
+    def test_get_stage_display_name_unknown_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Returns uppercased status for unknown statuses."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.helpers._get_vscodeclaude_config",
+            lambda status: None,  # Unknown status returns None
+        )
+
         result = get_stage_display_name("unknown-status")
         assert result == "UNKNOWN-STATUS"
 

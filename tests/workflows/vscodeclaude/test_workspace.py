@@ -68,8 +68,6 @@ def mock_vscodeclaude_config(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-
-
 class TestWorkspaceSetup:
     """Test workspace creation and setup."""
 

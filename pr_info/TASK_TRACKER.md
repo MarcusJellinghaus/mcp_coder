@@ -66,14 +66,14 @@ See [step_3.md](./steps/step_3.md) for details.
 ### Step 4: Update helpers.py - Config-Based Display Names
 See [step_4.md](./steps/step_4.md) for details.
 
-- [ ] Remove import of `STAGE_DISPLAY_NAMES` from types.py
-- [ ] Import `_get_vscodeclaude_config` from issues.py
-- [ ] Update `get_stage_display_name()` to use config lookup
-- [ ] Update test mocks in test_helpers.py
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare commit message for Step 4
+- [x] Remove import of `STAGE_DISPLAY_NAMES` from types.py
+- [x] Import `_get_vscodeclaude_config` from issues.py
+- [x] Update `get_stage_display_name()` to use config lookup
+- [x] Update test mocks in test_helpers.py
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare commit message for Step 4
 
 ### Step 5: Clean Up types.py and __init__.py
 See [step_5.md](./steps/step_5.md) for details.
