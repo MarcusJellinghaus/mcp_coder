@@ -26,7 +26,7 @@ from mcp_coder.utils.github_operations.issue_cache import (
     _log_cache_metrics,
     _log_stale_cache_entries,
     _save_cache_file,
-    _update_issue_labels_in_cache,
+    update_issue_labels_in_cache,
 )
 from mcp_coder.utils.github_operations.issue_manager import IssueData
 
@@ -338,7 +338,7 @@ class TestStalenessLogging:
 class TestEligibleIssuesFiltering:
     """Tests for _filter_eligible_issues function."""
 
-    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.core.load_labels_config")
     def test_filter_eligible_issues_basic(self, mock_load_config: Mock) -> None:
         """Test basic filtering of eligible issues."""
         # Mock labels config
@@ -428,7 +428,7 @@ class TestEligibleIssuesFiltering:
             result[1]["number"] == 1
         )  # status-02:awaiting-planning has lower priority
 
-    @patch("mcp_coder.cli.commands.coordinator.load_labels_config")
+    @patch("mcp_coder.cli.commands.coordinator.core.load_labels_config")
     def test_filter_eligible_issues_multiple_bot_pickup_labels(
         self, mock_load_config: Mock
     ) -> None:
@@ -811,7 +811,7 @@ class TestGetCachedEligibleIssues:
 
 
 class TestCacheIssueUpdate:
-    """Tests for _update_issue_labels_in_cache function."""
+    """Tests for update_issue_labels_in_cache function."""
 
     def test_update_issue_labels_success(self) -> None:
         """Test successful label update for existing issue."""
@@ -846,7 +846,7 @@ class TestCacheIssueUpdate:
                 mock_path.return_value = cache_path
 
                 # Call the function under test
-                _update_issue_labels_in_cache(
+                update_issue_labels_in_cache(
                     "test/repo",
                     123,
                     "status-02:awaiting-planning",
@@ -893,7 +893,7 @@ class TestCacheIssueUpdate:
                 mock_path.return_value = cache_path
 
                 # Remove label without adding new one (empty string)
-                _update_issue_labels_in_cache(
+                update_issue_labels_in_cache(
                     "test/repo", 456, "status-05:plan-ready", ""
                 )
 
@@ -936,7 +936,7 @@ class TestCacheIssueUpdate:
                 mock_path.return_value = cache_path
 
                 # Add new label without removing any (empty old_label)
-                _update_issue_labels_in_cache(
+                update_issue_labels_in_cache(
                     "test/repo", 789, "", "status-02:awaiting-planning"
                 )
 
@@ -985,9 +985,7 @@ class TestCacheIssueUpdate:
                 mock_path.return_value = cache_path
 
                 # Try to update non-existent issue - should not raise exception
-                _update_issue_labels_in_cache(
-                    "test/repo", 123, "old-label", "new-label"
-                )
+                update_issue_labels_in_cache("test/repo", 123, "old-label", "new-label")
 
             # Verify appropriate warning was logged
             assert "Issue #123 not found in cache for test/repo" in caplog.text
@@ -1018,9 +1016,7 @@ class TestCacheIssueUpdate:
                 mock_path.return_value = cache_path
 
                 # Should handle gracefully without crashing
-                _update_issue_labels_in_cache(
-                    "test/repo", 123, "old-label", "new-label"
-                )
+                update_issue_labels_in_cache("test/repo", 123, "old-label", "new-label")
 
             # Verify warning was logged
             assert (
@@ -1069,7 +1065,7 @@ class TestCacheIssueUpdate:
             mock_save.return_value = False  # Simulate save failure
 
             # Should handle save failure gracefully
-            _update_issue_labels_in_cache("test/repo", 123, "old-label", "new-label")
+            update_issue_labels_in_cache("test/repo", 123, "old-label", "new-label")
 
             # Verify appropriate warning was logged
             assert any(
@@ -1112,7 +1108,7 @@ class TestCacheIssueUpdate:
             ) as mock_path:
                 mock_path.return_value = cache_path
 
-                _update_issue_labels_in_cache(
+                update_issue_labels_in_cache(
                     "test/repo",
                     123,
                     "status-02:awaiting-planning",
@@ -1175,7 +1171,7 @@ class TestCacheUpdateIntegration:
                 mock_path.return_value = cache_path
 
                 # Call the actual cache update function (this is what dispatch_workflow calls)
-                _update_issue_labels_in_cache(
+                update_issue_labels_in_cache(
                     "test/repo",
                     123,
                     "status-02:awaiting-planning",
@@ -1235,13 +1231,13 @@ class TestCacheUpdateIntegration:
                 mock_path.return_value = cache_path
 
                 # Simulate multiple dispatch operations
-                _update_issue_labels_in_cache(
+                update_issue_labels_in_cache(
                     "test/repo",
                     123,
                     "status-02:awaiting-planning",
                     "status-03:planning",
                 )
-                _update_issue_labels_in_cache(
+                update_issue_labels_in_cache(
                     "test/repo", 456, "status-05:plan-ready", "status-06:implementing"
                 )
 
@@ -1277,9 +1273,7 @@ class TestCacheUpdateIntegration:
 
             # Cache update failure should not raise exception
             try:
-                _update_issue_labels_in_cache(
-                    "test/repo", 123, "old-label", "new-label"
-                )
+                update_issue_labels_in_cache("test/repo", 123, "old-label", "new-label")
                 # Should complete without exception
             except Exception as e:
                 pytest.fail(f"Cache update failure should not break workflow: {e}")

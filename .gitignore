@@ -58,3 +58,9 @@ pr_info/.ci_problem_description.md
 
 # Test artifacts (cleanup safety net)
 temp_integration_test.py
+
+# VSCodeClaude session files (auto-generated)
+.vscodeclaude_status.md
+.vscodeclaude_analysis.json
+.vscodeclaude_start.bat
+.vscodeclaude_start.sh

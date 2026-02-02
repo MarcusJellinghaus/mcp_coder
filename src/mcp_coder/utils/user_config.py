@@ -4,6 +4,7 @@ This module provides functions to read user configuration from TOML files
 located in user-specific configuration directories.
 """
 
+import logging
 import os
 import platform
 import tomllib
@@ -63,7 +64,15 @@ def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
         pass
 
     # Add the error message
-    lines.append(f"TOML parse error: {error}")
+    error_str = str(error)
+    lines.append(f"TOML parse error: {error_str}")
+
+    # Add hint for common Windows path backslash issues
+    if "Invalid" in error_str and ("hex" in error_str or "escape" in error_str):
+        lines.append("")
+        lines.append("Hint: Backslashes in paths need escaping in TOML.")
+        lines.append('  Use forward slashes: "C:/Users/..."')
+        lines.append("  Or single quotes:    'C:\\Users\\...'")
 
     return "\n".join(lines)
 
@@ -83,7 +92,6 @@ def get_config_file_path() -> Path:
         return Path.home() / ".config" / "mcp_coder" / "config.toml"
 
 
-@log_function_call(sensitive_fields=["token", "api_token"])
 def load_config() -> dict[str, Any]:
     """Load user configuration from TOML file.
 
@@ -171,7 +179,6 @@ def _get_nested_value(
     return str(value) if value is not None else None
 
 
-@log_function_call(sensitive_fields=["token", "api_token"])
 def get_config_values(
     keys: list[tuple[str, str, str | None]],
 ) -> dict[tuple[str, str], str | None]:
@@ -318,3 +325,36 @@ executor_os = "linux"
     config_path.write_text(template, encoding="utf-8")
 
     return True
+
+
+# Module-level logger for configuration functions
+logger = logging.getLogger(__name__)
+
+
+def get_cache_refresh_minutes() -> int:
+    """Get cache refresh threshold from config with default fallback.
+
+    Returns:
+        Cache refresh threshold in minutes (default: 1440 = 24 hours)
+    """
+    config = get_config_values([("coordinator", "cache_refresh_minutes", None)])
+    value = config[("coordinator", "cache_refresh_minutes")]
+
+    if value is None:
+        return 1440  # Default: 24 hours
+
+    try:
+        result = int(value)
+        if result <= 0:
+            logger.warning(
+                f"Invalid cache_refresh_minutes value '{value}' (must be positive), "
+                "using default 1440"
+            )
+            return 1440
+        return result
+    except (ValueError, TypeError):
+        logger.warning(
+            f"Invalid cache_refresh_minutes value '{value}' (must be integer), "
+            "using default 1440"
+        )
+        return 1440

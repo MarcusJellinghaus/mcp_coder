@@ -4,7 +4,7 @@ This module provides GitHub API integration functionality for managing
 pull requests, labels, and repository operations.
 """
 
-from .base_manager import BaseGitHubManager
+from .base_manager import BaseGitHubManager, get_authenticated_username
 from .ci_results_manager import CIResultsManager, CIStatusData
 from .github_utils import RepoIdentifier
 from .issue_branch_manager import (
@@ -18,8 +18,8 @@ from .issue_cache import (
     _load_cache_file,
     _log_stale_cache_entries,
     _save_cache_file,
-    _update_issue_labels_in_cache,
     get_all_cached_issues,
+    update_issue_labels_in_cache,
 )
 from .issue_manager import CommentData, EventData, IssueData, IssueManager
 from .labels_manager import LabelData, LabelsManager
@@ -27,6 +27,7 @@ from .pr_manager import PullRequestManager
 
 __all__ = [
     "BaseGitHubManager",
+    "get_authenticated_username",
     "BranchCreationResult",
     "CIResultsManager",
     "CIStatusData",
@@ -45,7 +46,7 @@ __all__ = [
     "_load_cache_file",
     "_log_stale_cache_entries",
     "_save_cache_file",
-    "_update_issue_labels_in_cache",
+    "update_issue_labels_in_cache",
     "generate_branch_name_from_issue",
     "get_all_cached_issues",
 ]

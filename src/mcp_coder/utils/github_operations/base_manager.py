@@ -71,6 +71,32 @@ def _handle_github_errors(
     return decorator
 
 
+def get_authenticated_username() -> str:
+    """Get authenticated GitHub username via PyGithub API.
+
+    Returns:
+        GitHub username string
+
+    Raises:
+        ValueError: If GitHub authentication fails or token not configured
+    """
+    config = user_config.get_config_values([("github", "token", None)])
+    token = config[("github", "token")]
+
+    if not token:
+        raise ValueError(
+            "GitHub token not configured. Set via GITHUB_TOKEN environment "
+            "variable or config file [github] section"
+        )
+
+    try:
+        github_client = Github(auth=Auth.Token(token))
+        user = github_client.get_user()
+        return user.login
+    except Exception as e:
+        raise ValueError(f"Failed to authenticate with GitHub: {e}") from e
+
+
 class BaseGitHubManager:
     """Base class for GitHub managers.
 
@@ -243,8 +269,24 @@ class BaseGitHubManager:
             return self._repository
 
         except GithubException as e:
-            logger.error("Failed to access repository: %s", e)
+            repo_url = f"https://github.com/{repo_full_name}"
+            if e.status == 404:
+                logger.error(
+                    "Repository not found: %s - Check that the repo exists, "
+                    "you have access, and the URL in ~/.mcp_coder/config.toml is correct.",
+                    repo_url,
+                )
+            else:
+                logger.error(
+                    "Failed to access repository %s: %s",
+                    repo_url,
+                    e,
+                )
             return None
         except Exception as e:
-            logger.error("Unexpected error accessing repository: %s", e)
+            logger.error(
+                "Unexpected error accessing repository '%s': %s",
+                repo_full_name,
+                e,
+            )
             return None

@@ -10,6 +10,7 @@ import pytest
 from mcp_coder.utils.user_config import (
     _format_toml_error,
     create_default_config,
+    get_cache_refresh_minutes,
     get_config_file_path,
     get_config_values,
     load_config,
@@ -19,11 +20,14 @@ from mcp_coder.utils.user_config import (
 class TestFormatTomlError:
     """Tests for _format_toml_error helper function."""
 
-    def test_format_includes_file_path(self, tmp_path: Path) -> None:
-        """Error message includes the file path."""
-        # Setup - create a file with invalid TOML to generate real error
+    def test_format_includes_all_error_components(self, tmp_path: Path) -> None:
+        """Error message includes file path, line number, content, and pointer."""
+        # Setup - create file with error on line 3 to test line number extraction
         config_file = tmp_path / "config.toml"
-        config_file.write_text('key = "unclosed string\n', encoding="utf-8")
+        config_file.write_text(
+            'line1 = "ok"\nline2 = "ok"\nmy_special_key = "unclosed\n',
+            encoding="utf-8",
+        )
 
         # Parse to get real TOMLDecodeError
         try:
@@ -34,62 +38,12 @@ class TestFormatTomlError:
             # Execute
             result = _format_toml_error(config_file, error)
 
-            # Verify
-            assert str(config_file) in result
-            assert 'File "' in result
-
-    def test_format_includes_line_number(self, tmp_path: Path) -> None:
-        """Error message includes line number from error."""
-        # Setup - create file with error on line 3
-        config_file = tmp_path / "config.toml"
-        config_file.write_text(
-            'line1 = "ok"\nline2 = "ok"\nline3 = "unclosed\n', encoding="utf-8"
-        )
-
-        try:
-            with open(config_file, "rb") as f:
-                tomllib.load(f)
-            pytest.fail("Expected TOMLDecodeError")
-        except tomllib.TOMLDecodeError as error:
-            # Execute
-            result = _format_toml_error(config_file, error)
-
-            # Verify - line number should be in the output
-            assert "line 3" in result
-
-    def test_format_includes_error_line_content(self, tmp_path: Path) -> None:
-        """Error message includes the actual line content."""
-        # Setup
-        config_file = tmp_path / "config.toml"
-        config_file.write_text('my_special_key = "unclosed\n', encoding="utf-8")
-
-        try:
-            with open(config_file, "rb") as f:
-                tomllib.load(f)
-            pytest.fail("Expected TOMLDecodeError")
-        except tomllib.TOMLDecodeError as error:
-            # Execute
-            result = _format_toml_error(config_file, error)
-
-            # Verify - the line content should be included
-            assert "my_special_key" in result
-
-    def test_format_includes_pointer_at_column(self, tmp_path: Path) -> None:
-        """Error message includes ^ pointer at error column."""
-        # Setup
-        config_file = tmp_path / "config.toml"
-        config_file.write_text('key = "unclosed\n', encoding="utf-8")
-
-        try:
-            with open(config_file, "rb") as f:
-                tomllib.load(f)
-            pytest.fail("Expected TOMLDecodeError")
-        except tomllib.TOMLDecodeError as error:
-            # Execute
-            result = _format_toml_error(config_file, error)
-
-            # Verify - should have a caret pointer
-            assert "^" in result
+            # Verify all components are present
+            assert str(config_file) in result  # file path
+            assert 'File "' in result  # file path format
+            assert "line 3" in result  # line number
+            assert "my_special_key" in result  # line content
+            assert "^" in result  # caret pointer
 
     def test_format_handles_file_read_error(self, tmp_path: Path) -> None:
         """Gracefully handles if file cannot be read for context."""
@@ -173,46 +127,10 @@ class TestLoadConfig:
         # Verify
         assert result == {}
 
-    def test_load_config_raises_on_invalid_toml(
+    def test_load_config_raises_with_detailed_error_on_invalid_toml(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Raises ValueError on TOML parse error."""
-        # Setup
-        config_file = tmp_path / "config.toml"
-        config_file.write_text('key = "unclosed\n', encoding="utf-8")
-        monkeypatch.setattr(
-            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
-        )
-
-        # Execute & Verify
-        with pytest.raises(ValueError) as exc_info:
-            load_config()
-
-        # Should have formatted error message
-        assert "TOML parse error" in str(exc_info.value)
-
-    def test_load_config_error_includes_file_path(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """ValueError message includes the config file path."""
-        # Setup
-        config_file = tmp_path / "config.toml"
-        config_file.write_text('key = "unclosed\n', encoding="utf-8")
-        monkeypatch.setattr(
-            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
-        )
-
-        # Execute & Verify
-        with pytest.raises(ValueError) as exc_info:
-            load_config()
-
-        # Should include file path
-        assert str(config_file) in str(exc_info.value)
-
-    def test_load_config_error_includes_line_content(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """ValueError message includes the error line content."""
+        """Raises ValueError with file path and line content on TOML parse error."""
         # Setup
         config_file = tmp_path / "config.toml"
         config_file.write_text('my_unique_key = "unclosed\n', encoding="utf-8")
@@ -224,8 +142,10 @@ class TestLoadConfig:
         with pytest.raises(ValueError) as exc_info:
             load_config()
 
-        # Should include line content
-        assert "my_unique_key" in str(exc_info.value)
+        error_message = str(exc_info.value)
+        assert "TOML parse error" in error_message  # formatted error
+        assert str(config_file) in error_message  # file path included
+        assert "my_unique_key" in error_message  # line content included
 
     def test_load_config_preserves_nested_structure(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -659,3 +579,75 @@ class TestCreateDefaultConfig:
         # Execute & Verify - Should raise OSError
         with pytest.raises(OSError):
             create_default_config()
+
+
+class TestGetCacheRefreshMinutes:
+    """Tests for get_cache_refresh_minutes function."""
+
+    def test_get_cache_refresh_minutes_default(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns 1440 when config not set."""
+        # Setup - empty config file
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("", encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = get_cache_refresh_minutes()
+
+        # Verify
+        assert result == 1440
+
+    def test_get_cache_refresh_minutes_from_config(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns configured value when set."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[coordinator]\ncache_refresh_minutes = 60\n", encoding="utf-8"
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = get_cache_refresh_minutes()
+
+        # Verify
+        assert result == 60
+
+    @pytest.mark.parametrize(
+        "config_value,description",
+        [
+            ('"not_a_number"', "non-integer string"),
+            ("-10", "negative value"),
+            ("0", "zero value"),
+        ],
+    )
+    def test_get_cache_refresh_minutes_invalid_returns_default(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        config_value: str,
+        description: str,
+    ) -> None:
+        """Returns 1440 for invalid values (non-integer, negative, zero)."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            f"[coordinator]\ncache_refresh_minutes = {config_value}\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        result = get_cache_refresh_minutes()
+
+        # Verify - invalid value should return default 1440
+        assert result == 1440, f"Expected default 1440 for {description}"

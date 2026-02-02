@@ -92,6 +92,13 @@ _.workflow
 _.branch_strategy
 _.next_label
 
+# workflows/vscodeclaude/types.py - VSCodeClaudeSessionStore field
+_.last_updated
+
+# workflows/vscodeclaude/types.py - RepoVSCodeClaudeConfig fields
+_.setup_commands_windows
+_.setup_commands_linux
+
 # =============================================================================
 # FALSE POSITIVES - Argparse Pattern
 # =============================================================================
@@ -104,6 +111,12 @@ _.verify_parser
 # =============================================================================
 # test_execution_dir_integration.py - Fixture triggers skip logic
 _.require_claude_cli
+
+# test_issue_manager_label_update.py - Fixture used for side effect (patching)
+_._mock_git_repo
+
+# test_workspace.py - Fixture used for side effect (monkeypatching get_vscodeclaude_config)
+_.mock_vscodeclaude_config
 
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields

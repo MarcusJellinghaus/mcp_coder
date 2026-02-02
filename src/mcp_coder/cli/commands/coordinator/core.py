@@ -8,22 +8,18 @@ This module contains:
 
 import logging
 from pathlib import Path
-
-# Lazy imports from coordinator package to enable test patching
-# Tests can patch at 'mcp_coder.cli.commands.coordinator.<name>'
-from types import ModuleType
 from typing import List, Optional
 from urllib.parse import quote
 
 from ....utils.github_operations.issue_branch_manager import IssueBranchManager
 from ....utils.github_operations.issue_cache import (
     CacheData,
-    _update_issue_labels_in_cache,
     get_all_cached_issues,
 )
 from ....utils.github_operations.issue_manager import IssueData, IssueManager
+from ....utils.github_operations.label_config import load_labels_config
 from ....utils.jenkins_operations.client import JenkinsClient
-from ....utils.user_config import get_config_file_path
+from ....utils.user_config import get_config_file_path, get_config_values
 from .command_templates import (
     CREATE_PLAN_COMMAND_TEMPLATE,
     CREATE_PLAN_COMMAND_WINDOWS,
@@ -34,14 +30,6 @@ from .command_templates import (
     PRIORITY_ORDER,
 )
 from .workflow_constants import WORKFLOW_MAPPING
-
-
-def _get_coordinator() -> ModuleType:
-    """Get coordinator package for late binding of patchable functions."""
-    from mcp_coder.cli.commands import coordinator
-
-    return coordinator
-
 
 logger = logging.getLogger(__name__)
 
@@ -56,13 +44,10 @@ def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
         Dictionary with repo_url, executor_job_path, github_credentials_id, executor_os
         Values may be None except executor_os which defaults to "linux" (normalized to lowercase)
     """
-    # Use late binding for patchable function access
-    coordinator = _get_coordinator()
-
     section = f"coordinator.repos.{repo_name}"
 
     # Batch fetch all config values in single disk read
-    config = coordinator.get_config_values(
+    config = get_config_values(
         [
             (section, "repo_url", None),
             (section, "executor_job_path", None),
@@ -145,39 +130,6 @@ def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> No
         raise ValueError(error_msg)
 
 
-def get_cache_refresh_minutes() -> int:
-    """Get cache refresh threshold from config with default fallback.
-
-    Returns:
-        Cache refresh threshold in minutes (default: 1440 = 24 hours)
-    """
-    # Use late binding for patchable function access
-    coordinator = _get_coordinator()
-
-    # Batch fetch config value in single disk read
-    config = coordinator.get_config_values(
-        [("coordinator", "cache_refresh_minutes", None)]
-    )
-    value = config[("coordinator", "cache_refresh_minutes")]
-
-    if value is None:
-        return 1440  # Default: 24 hours
-
-    try:
-        result = int(value)
-        if result <= 0:
-            logger.warning(
-                f"Invalid cache_refresh_minutes value '{value}' (must be positive), using default 1440"
-            )
-            return 1440
-        return result
-    except (ValueError, TypeError):
-        logger.warning(
-            f"Invalid cache_refresh_minutes value '{value}' (must be integer), using default 1440"
-        )
-        return 1440
-
-
 def get_jenkins_credentials() -> tuple[str, str, str]:
     """Get Jenkins credentials from environment or config file.
 
@@ -189,11 +141,8 @@ def get_jenkins_credentials() -> tuple[str, str, str]:
     Raises:
         ValueError: If any required credential is missing
     """
-    # Use late binding for patchable function access
-    coordinator = _get_coordinator()
-
     # Batch fetch all Jenkins credentials in single disk read
-    config = coordinator.get_config_values(
+    config = get_config_values(
         [
             ("jenkins", "server_url", None),
             ("jenkins", "username", None),
@@ -237,15 +186,12 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
     Returns:
         List of eligible issues sorted by priority
     """
-    # Use late binding for patchable function access
-    coordinator = _get_coordinator()
-
     # Load label configuration
     from importlib import resources
 
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))
-    labels_config = coordinator.load_labels_config(config_path)
+    labels_config = load_labels_config(config_path)
 
     # Extract bot_pickup labels and ignore_labels
     bot_pickup_labels = set()
@@ -310,16 +256,13 @@ def get_eligible_issues(
     Raises:
         GithubException: If GitHub API errors occur
     """
-    # Use late binding for patchable function access
-    coordinator = _get_coordinator()
-
     # Load label configuration
     # Uses bundled package config (coordinator operates without local project context)
     from importlib import resources
 
     config_resource = resources.files("mcp_coder.config") / "labels.json"
     config_path = Path(str(config_resource))
-    labels_config = coordinator.load_labels_config(config_path)
+    labels_config = load_labels_config(config_path)
 
     # Extract bot_pickup labels (labels with category="bot_pickup")
     bot_pickup_labels = set()

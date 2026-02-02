@@ -430,6 +430,16 @@ Add to `.gitignore` if configs contain sensitive paths:
 .mcp.*.json
 ```
 
+### VSCodeClaude Setup
+
+For `mcp-coder coordinator vscodeclaude`, add to `.gitignore`:
+
+```gitignore
+.vscodeclaude_status.md
+```
+
+This prevents working folders from appearing "dirty" due to the session status file.
+
 ---
 
 # Optional Setup

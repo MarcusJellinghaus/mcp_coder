@@ -137,7 +137,7 @@ def _get_cache_file_path(repo_identifier: RepoIdentifier) -> Path:
     return cache_dir / f"{repo_identifier.cache_safe_name}.issues.json"
 
 
-def _update_issue_labels_in_cache(
+def update_issue_labels_in_cache(
     repo_full_name: str, issue_number: int, old_label: str, new_label: str
 ) -> None:
     """Update issue labels in cache after successful dispatch.
@@ -292,6 +292,9 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
         if cache_data["issues"]:
             fresh_dict = {str(issue["number"]): issue for issue in fresh_issues}
             _log_stale_cache_entries(cache_data["issues"], fresh_dict)
+
+        # Clear cache on full refresh to remove closed issues
+        cache_data["issues"] = {}
     else:
         # last_checked is guaranteed to be non-None here
         assert last_checked is not None
@@ -381,7 +384,7 @@ def get_all_cached_issues(
             age_minutes=0,
             reason=f"duplicate_protection_{age_seconds}s",
         )
-        logger.info(f"Skipping {repo_name} - checked {age_seconds}s ago")
+        logger.debug(f"Skipping {repo_name} - checked {age_seconds}s ago")
         return list(cache_data["issues"].values())
 
     # Step 3: Fetch and merge issues
