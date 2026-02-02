@@ -78,16 +78,16 @@ See [step_4.md](./steps/step_4.md) for details.
 ### Step 5: Clean Up types.py and __init__.py
 See [step_5.md](./steps/step_5.md) for details.
 
-- [ ] Remove `VSCODECLAUDE_PRIORITY` from types.py
-- [ ] Remove `HUMAN_ACTION_COMMANDS` from types.py
-- [ ] Remove `STATUS_EMOJI` from types.py
-- [ ] Remove `STAGE_DISPLAY_NAMES` from types.py
-- [ ] Remove 4 constant exports from __init__.py
-- [ ] Verify no remaining imports of removed constants in src/
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare commit message for Step 5
+- [x] Remove `VSCODECLAUDE_PRIORITY` from types.py
+- [x] Remove `HUMAN_ACTION_COMMANDS` from types.py
+- [x] Remove `STATUS_EMOJI` from types.py
+- [x] Remove `STAGE_DISPLAY_NAMES` from types.py
+- [x] Remove 4 constant exports from __init__.py
+- [x] Verify no remaining imports of removed constants in src/
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare commit message for Step 5
 
 ### Step 6: Final Test Cleanup and Verification
 See [step_6.md](./steps/step_6.md) for details.

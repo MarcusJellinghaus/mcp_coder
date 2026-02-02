@@ -70,10 +70,6 @@ from .status import (
 from .types import (
     DEFAULT_MAX_SESSIONS,
     DEFAULT_PROMPT_TIMEOUT,
-    HUMAN_ACTION_COMMANDS,
-    STAGE_DISPLAY_NAMES,
-    STATUS_EMOJI,
-    VSCODECLAUDE_PRIORITY,
     RepoVSCodeClaudeConfig,
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
@@ -102,10 +98,6 @@ __all__ = [
     "VSCodeClaudeConfig",
     "RepoVSCodeClaudeConfig",
     # Constants
-    "VSCODECLAUDE_PRIORITY",
-    "HUMAN_ACTION_COMMANDS",
-    "STATUS_EMOJI",
-    "STAGE_DISPLAY_NAMES",
     "DEFAULT_MAX_SESSIONS",
     "DEFAULT_PROMPT_TIMEOUT",
     # Session management
