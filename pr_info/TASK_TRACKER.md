@@ -75,12 +75,12 @@ See [step_4.md](./steps/step_4.md) for details.
 ### Step 5: Update `implement/core.py` for `None` Handling
 See [step_5.md](./steps/step_5.md) for details.
 
-- [ ] Update `_get_rebase_target_branch()` to remove `"unknown"` check
-- [ ] Simplify function to return `detect_base_branch()` result directly
-- [ ] Update any tests mocking `"unknown"` return to mock `None`
-- [ ] Verify rebase workflow works correctly with `None` handling
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 5
+- [x] Update `_get_rebase_target_branch()` to remove `"unknown"` check
+- [x] Simplify function to return `detect_base_branch()` result directly
+- [x] Update any tests mocking `"unknown"` return to mock `None`
+- [x] Verify rebase workflow works correctly with `None` handling
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 5
 
 ---
 

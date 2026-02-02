@@ -571,8 +571,7 @@ def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
     Returns:
         Branch name to rebase onto, or None if detection fails
     """
-    result = detect_base_branch(project_dir)
-    return None if result == "unknown" else result
+    return detect_base_branch(project_dir)  # Now returns None directly on failure
 
 
 def _attempt_rebase_and_push(project_dir: Path) -> bool:
