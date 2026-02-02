@@ -21,6 +21,52 @@ from mcp_coder.workflows.vscodeclaude.workspace import (
     validate_setup_commands,
 )
 
+# Mock vscodeclaude config data for tests
+MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
+    "status-01:created": {
+        "emoji": "📝",
+        "display_name": "ISSUE ANALYSIS",
+        "stage_short": "new",
+        "initial_command": "/issue_analyse",
+        "followup_command": "/discuss",
+    },
+    "status-04:plan-review": {
+        "emoji": "📋",
+        "display_name": "PLAN REVIEW",
+        "stage_short": "plan",
+        "initial_command": "/plan_review",
+        "followup_command": "/discuss",
+    },
+    "status-07:code-review": {
+        "emoji": "🔍",
+        "display_name": "CODE REVIEW",
+        "stage_short": "review",
+        "initial_command": "/implementation_review",
+        "followup_command": "/discuss",
+    },
+    "status-10:pr-created": {
+        "emoji": "🎉",
+        "display_name": "PR CREATED",
+        "stage_short": "pr",
+        "initial_command": None,
+        "followup_command": None,
+    },
+}
+
+
+def _mock_get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
+    """Mock implementation for get_vscodeclaude_config."""
+    return MOCK_VSCODECLAUDE_CONFIGS.get(status)
+
+
+@pytest.fixture
+def mock_vscodeclaude_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Mock get_vscodeclaude_config for workspace tests."""
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
+        _mock_get_vscodeclaude_config,
+    )
+
 
 class TestWorkspaceSetup:
     """Test workspace creation and setup."""
@@ -167,7 +213,9 @@ class TestWorkspaceSetup:
         content = gitignore.read_text(encoding="utf-8")
         assert content.count(".vscodeclaude_status.md") == 1
 
-    def test_create_workspace_file(self, tmp_path: Path) -> None:
+    def test_create_workspace_file(
+        self, tmp_path: Path, mock_vscodeclaude_config: None
+    ) -> None:
         """Creates valid workspace JSON file."""
         workspace_path = create_workspace_file(
             workspace_base=str(tmp_path),
@@ -186,7 +234,9 @@ class TestWorkspaceSetup:
         assert "settings" in content
         assert "#123" in content["settings"]["window.title"]
 
-    def test_create_workspace_file_truncates_long_title(self, tmp_path: Path) -> None:
+    def test_create_workspace_file_truncates_long_title(
+        self, tmp_path: Path, mock_vscodeclaude_config: None
+    ) -> None:
         """Truncates long issue titles."""
         long_title = "A" * 50  # More than 30 chars
         workspace_path = create_workspace_file(
@@ -203,7 +253,10 @@ class TestWorkspaceSetup:
         assert "..." in content["settings"]["window.title"]
 
     def test_create_startup_script_windows(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Creates .bat script on Windows."""
         monkeypatch.setattr(
@@ -228,7 +281,10 @@ class TestWorkspaceSetup:
         assert "/implementation_review" in content
 
     def test_create_startup_script_linux_raises_not_implemented(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Linux raises NotImplementedError until Step 17."""
         monkeypatch.setattr(
@@ -248,7 +304,10 @@ class TestWorkspaceSetup:
             )
 
     def test_create_startup_script_intervention(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Intervention mode uses plain claude command."""
         monkeypatch.setattr(
@@ -283,7 +342,9 @@ class TestWorkspaceSetup:
         content = json.loads(tasks_file.read_text(encoding="utf-8"))
         assert content["tasks"][0]["runOptions"]["runOn"] == "folderOpen"
 
-    def test_create_status_file(self, tmp_path: Path) -> None:
+    def test_create_status_file(
+        self, tmp_path: Path, mock_vscodeclaude_config: None
+    ) -> None:
         """Creates status markdown file."""
         create_status_file(
             folder_path=tmp_path,
@@ -304,7 +365,9 @@ class TestWorkspaceSetup:
         assert "Add feature" in content
         assert "code-review" in content
 
-    def test_create_status_file_intervention(self, tmp_path: Path) -> None:
+    def test_create_status_file_intervention(
+        self, tmp_path: Path, mock_vscodeclaude_config: None
+    ) -> None:
         """Status file includes intervention warning when set."""
         create_status_file(
             folder_path=tmp_path,
@@ -464,7 +527,10 @@ class TestCreateStartupScriptV2:
     """Test V2 startup script generation with venv and mcp-coder."""
 
     def test_creates_script_with_venv_section(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Generated script includes venv setup."""
         monkeypatch.setattr(
@@ -487,7 +553,10 @@ class TestCreateStartupScriptV2:
         assert "activate.bat" in content
 
     def test_creates_script_with_mcp_coder_prompt(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Generated script uses mcp-coder prompt."""
         monkeypatch.setattr(
@@ -511,7 +580,10 @@ class TestCreateStartupScriptV2:
         assert "--session-id %SESSION_ID%" in content
 
     def test_creates_script_with_claude_resume(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Generated script ends with claude --resume."""
         monkeypatch.setattr(
@@ -533,7 +605,10 @@ class TestCreateStartupScriptV2:
         assert "claude --resume %SESSION_ID%" in content
 
     def test_uses_custom_timeout(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Timeout parameter is used in script."""
         monkeypatch.setattr(
@@ -556,7 +631,10 @@ class TestCreateStartupScriptV2:
         assert "--timeout 600" in content
 
     def test_intervention_mode_no_automation(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Intervention mode skips automation."""
         monkeypatch.setattr(
@@ -580,7 +658,10 @@ class TestCreateStartupScriptV2:
         assert "uv venv" in content  # Venv still activated
 
     def test_uses_correct_initial_command_for_status(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Uses correct initial command based on status."""
         monkeypatch.setattr(
@@ -603,7 +684,10 @@ class TestCreateStartupScriptV2:
         assert "/issue_analyse 123" in content
 
     def test_includes_discussion_section(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
     ) -> None:
         """Generated script includes discussion section."""
         monkeypatch.setattr(

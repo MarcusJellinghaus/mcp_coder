@@ -524,3 +524,25 @@ class TestGetCachedEligibleVscodeclaudeIssues:
         mock_issue_manager.list_issues.assert_called_once()
         assert len(eligible) == 1
         assert eligible[0]["number"] == 99
+
+
+class TestNumericPriorityExtraction:
+    """Test numeric priority extraction from status labels."""
+
+    def test_extracts_priority_from_standard_labels(self) -> None:
+        """Extracts numeric priority from status-NN:name format."""
+        from mcp_coder.workflows.vscodeclaude.issues import _get_status_priority
+
+        assert _get_status_priority("status-10:pr-created") == 10
+        assert _get_status_priority("status-07:code-review") == 7
+        assert _get_status_priority("status-04:plan-review") == 4
+        assert _get_status_priority("status-01:created") == 1
+
+    def test_returns_zero_for_non_status_labels(self) -> None:
+        """Returns 0 for labels that don't match pattern."""
+        from mcp_coder.workflows.vscodeclaude.issues import _get_status_priority
+
+        assert _get_status_priority("bug") == 0
+        assert _get_status_priority("priority-high") == 0
+        assert _get_status_priority("Overview") == 0
+        assert _get_status_priority("") == 0

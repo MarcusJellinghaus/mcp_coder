@@ -10,10 +10,8 @@ Contains utility functions for:
 from datetime import datetime, timezone
 
 from ...utils.github_operations.issue_manager import IssueData
-from .types import (
-    STAGE_DISPLAY_NAMES,
-    VSCodeClaudeSession,
-)
+from .issues import get_vscodeclaude_config
+from .types import VSCodeClaudeSession
 
 
 def get_repo_short_name(repo_config: dict[str, str]) -> str:
@@ -133,7 +131,8 @@ def get_stage_display_name(status: str) -> str:
     Returns:
         Display name (e.g., "CODE REVIEW")
     """
-    return STAGE_DISPLAY_NAMES.get(status, status.upper())
+    config = get_vscodeclaude_config(status)
+    return config["display_name"] if config else status.upper()
 
 
 def truncate_title(title: str, max_length: int = 50) -> str:

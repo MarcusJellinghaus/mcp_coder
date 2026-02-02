@@ -1,15 +1,15 @@
 """Issue filtering for vscodeclaude feature."""
 
 import logging
+import re
 from importlib import resources
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ...utils.github_operations.issue_branch_manager import IssueBranchManager
 from ...utils.github_operations.issue_cache import get_all_cached_issues
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
 from ...utils.github_operations.label_config import load_labels_config
-from .types import VSCODECLAUDE_PRIORITY
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,37 @@ def get_human_action_labels() -> set[str]:
         for label in labels_config["workflow_labels"]
         if label["category"] == "human_action"
     }
+
+
+def _get_status_priority(label: str) -> int:
+    """Extract numeric priority from status label.
+
+    Args:
+        label: Label name like "status-07:code-review"
+
+    Returns:
+        Numeric priority (e.g., 7) or 0 if not a status label
+    """
+    match = re.search(r"status-(\d+):", label)
+    return int(match.group(1)) if match else 0
+
+
+def get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
+    """Get vscodeclaude config for a status label.
+
+    Shared helper used by workspace.py and helpers.py.
+
+    Args:
+        status: Status label like "status-07:code-review"
+
+    Returns:
+        vscodeclaude config dict or None if not found
+    """
+    labels_config = _load_labels_config()
+    for label in labels_config["workflow_labels"]:
+        if label["name"] == status and "vscodeclaude" in label:
+            return cast(dict[str, Any], label["vscodeclaude"])
+    return None
 
 
 def _is_issue_eligible(
@@ -116,17 +147,14 @@ def _filter_eligible_vscodeclaude_issues(
         )
     ]
 
-    # Sort by VSCODECLAUDE_PRIORITY (lower index = higher priority)
-    priority_map = {label: i for i, label in enumerate(VSCODECLAUDE_PRIORITY)}
+    # Sort by numeric prefix descending (higher number = higher priority)
+    def get_issue_priority(issue: IssueData) -> int:
+        """Get max priority from issue's status labels."""
+        return max(
+            (_get_status_priority(label) for label in issue["labels"]), default=0
+        )
 
-    def get_priority(issue: IssueData) -> int:
-        """Get priority index for an issue (lower = higher priority)."""
-        for label in issue["labels"]:
-            if label in priority_map:
-                return priority_map[label]
-        return len(VSCODECLAUDE_PRIORITY)  # Lowest priority
-
-    eligible_issues.sort(key=get_priority)
+    eligible_issues.sort(key=get_issue_priority, reverse=True)
 
     return eligible_issues
 

@@ -5,7 +5,14 @@
       "name": "status-01:created",
       "color": "10b981",
       "description": "Fresh issue, may need refinement",
-      "category": "human_action"
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "📝",
+        "display_name": "ISSUE ANALYSIS",
+        "stage_short": "new",
+        "initial_command": "/issue_analyse",
+        "followup_command": "/discuss"
+      }
     },
     {
       "internal_id": "awaiting_planning",
@@ -26,7 +33,14 @@
       "name": "status-04:plan-review",
       "color": "3b82f6",
       "description": "First implementation plan available for review/discussion",
-      "category": "human_action"
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "📋",
+        "display_name": "PLAN REVIEW",
+        "stage_short": "plan",
+        "initial_command": "/plan_review",
+        "followup_command": "/discuss"
+      }
     },
     {
       "internal_id": "plan_ready",
@@ -47,7 +61,14 @@
       "name": "status-07:code-review",
       "color": "f59e0b",
       "description": "Implementation complete, needs code review",
-      "category": "human_action"
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "🔍",
+        "display_name": "CODE REVIEW",
+        "stage_short": "review",
+        "initial_command": "/implementation_review",
+        "followup_command": "/discuss"
+      }
     },
     {
       "internal_id": "ready_pr",
@@ -68,7 +89,14 @@
       "name": "status-10:pr-created",
       "color": "8b5cf6",
       "description": "Pull request created, awaiting approval/merge",
-      "category": "human_action"
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "🎉",
+        "display_name": "PR CREATED",
+        "stage_short": "pr",
+        "initial_command": null,
+        "followup_command": null
+      }
     }
   ],
   "ignore_labels": ["Overview"]
