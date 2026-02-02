@@ -28,7 +28,7 @@ Requirements:
 - Import of `STAGE_DISPLAY_NAMES` from `.types`
 
 ### Add
-- Import `_load_labels_config` from `.issues`
+- Import `_get_vscodeclaude_config` from `.issues` (shared helper added in Step 2)
 
 ### Modify
 - `get_stage_display_name()` - use config lookup instead of constant
@@ -42,7 +42,7 @@ def get_stage_display_name(status: str) -> str:
 ## HOW
 
 ### Integration Points
-- Import `_load_labels_config` from `.issues`
+- Import `_get_vscodeclaude_config` from `.issues` (shared helper from Step 2)
 - Function signature unchanged - no impact on callers
 
 ### Imports
@@ -57,19 +57,18 @@ from .types import (
 from .types import VSCodeClaudeSession
 
 # Add:
-from .issues import _load_labels_config
+from .issues import _get_vscodeclaude_config
 ```
 
 ## ALGORITHM
 
 ```python
+# Uses _get_vscodeclaude_config imported from issues.py (added in Step 2)
+
 def get_stage_display_name(status: str) -> str:
     """Get human-readable stage name for display."""
-    labels_config = _load_labels_config()
-    for label in labels_config["workflow_labels"]:
-        if label["name"] == status and "vscodeclaude" in label:
-            return label["vscodeclaude"]["display_name"]
-    return status.upper()  # Fallback unchanged
+    config = _get_vscodeclaude_config(status)
+    return config["display_name"] if config else status.upper()
 ```
 
 ## DATA
@@ -115,7 +114,7 @@ def get_stage_display_name(status: str) -> str:
 **After:**
 ```python
 from .types import VSCodeClaudeSession
-from .issues import _load_labels_config
+from .issues import _get_vscodeclaude_config
 
 
 def get_stage_display_name(status: str) -> str:
@@ -127,11 +126,8 @@ def get_stage_display_name(status: str) -> str:
     Returns:
         Display name (e.g., "CODE REVIEW")
     """
-    labels_config = _load_labels_config()
-    for label in labels_config["workflow_labels"]:
-        if label["name"] == status and "vscodeclaude" in label:
-            return label["vscodeclaude"]["display_name"]
-    return status.upper()
+    config = _get_vscodeclaude_config(status)
+    return config["display_name"] if config else status.upper()
 ```
 
 ## TEST IMPLEMENTATION
@@ -148,33 +144,19 @@ class TestDisplayHelpers:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns human-readable stage names."""
-        mock_config = {
-            "workflow_labels": [
-                {
-                    "name": "status-07:code-review",
-                    "category": "human_action",
-                    "vscodeclaude": {"display_name": "CODE REVIEW", "emoji": "🔍", "stage_short": "review", "initial_command": "/implementation_review", "followup_command": "/discuss"}
-                },
-                {
-                    "name": "status-04:plan-review",
-                    "category": "human_action",
-                    "vscodeclaude": {"display_name": "PLAN REVIEW", "emoji": "📋", "stage_short": "plan", "initial_command": "/plan_review", "followup_command": "/discuss"}
-                },
-                {
-                    "name": "status-01:created",
-                    "category": "human_action",
-                    "vscodeclaude": {"display_name": "ISSUE ANALYSIS", "emoji": "📝", "stage_short": "new", "initial_command": "/issue_analyse", "followup_command": "/discuss"}
-                },
-                {
-                    "name": "status-10:pr-created",
-                    "category": "human_action",
-                    "vscodeclaude": {"display_name": "PR CREATED", "emoji": "🎉", "stage_short": "pr", "initial_command": None, "followup_command": None}
-                },
-            ]
-        }
+        # Mock _get_vscodeclaude_config to return config for known statuses
+        def mock_get_config(status: str) -> dict | None:
+            configs = {
+                "status-07:code-review": {"display_name": "CODE REVIEW"},
+                "status-04:plan-review": {"display_name": "PLAN REVIEW"},
+                "status-01:created": {"display_name": "ISSUE ANALYSIS"},
+                "status-10:pr-created": {"display_name": "PR CREATED"},
+            }
+            return configs.get(status)
+        
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.helpers._load_labels_config",
-            lambda: mock_config
+            "mcp_coder.workflows.vscodeclaude.helpers._get_vscodeclaude_config",
+            mock_get_config
         )
         
         from mcp_coder.workflows.vscodeclaude.helpers import get_stage_display_name
@@ -188,10 +170,9 @@ class TestDisplayHelpers:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns uppercased status for unknown statuses."""
-        mock_config = {"workflow_labels": []}
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.helpers._load_labels_config",
-            lambda: mock_config
+            "mcp_coder.workflows.vscodeclaude.helpers._get_vscodeclaude_config",
+            lambda status: None  # Unknown status returns None
         )
         
         from mcp_coder.workflows.vscodeclaude.helpers import get_stage_display_name

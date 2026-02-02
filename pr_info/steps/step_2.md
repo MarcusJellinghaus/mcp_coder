@@ -35,6 +35,8 @@ from .types import VSCODECLAUDE_PRIORITY
 import re
 ```
 
+**Add new helper function:** `_get_vscodeclaude_config()` - shared helper for Steps 3 and 4
+
 **Modify:** `_filter_eligible_vscodeclaude_issues()` sorting logic
 
 ### Function Signature (unchanged)
@@ -60,6 +62,24 @@ import re  # Add at top of file
 ## ALGORITHM
 
 ```python
+def _get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
+    """Get vscodeclaude config for a status label.
+    
+    Shared helper used by workspace.py and helpers.py.
+    
+    Args:
+        status: Status label like "status-07:code-review"
+        
+    Returns:
+        vscodeclaude config dict or None if not found
+    """
+    labels_config = _load_labels_config()
+    for label in labels_config["workflow_labels"]:
+        if label["name"] == status and "vscodeclaude" in label:
+            return label["vscodeclaude"]
+    return None
+
+
 def _get_status_priority(label: str) -> int:
     """Extract numeric priority from status label (higher = more priority)."""
     match = re.search(r'status-(\d+):', label)

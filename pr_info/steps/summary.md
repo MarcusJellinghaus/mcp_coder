@@ -35,7 +35,7 @@ labels.json (with vscodeclaude metadata) ──► issues.py (_load_labels_confi
 1. **No new abstractions** - Reuse existing `_load_labels_config()` function
 2. **Priority from label name** - Extract numeric prefix with regex `r'status-(\d+):'`
 3. **Clean break** - Remove constants entirely (no backwards-compatible wrappers)
-4. **Inline lookups** - Each consumer extracts what it needs directly from config
+4. **Shared helper in issues.py** - `_get_vscodeclaude_config()` added to `issues.py` and imported by `workspace.py` and `helpers.py` (DRY principle)
 
 ## Data Structure Change
 

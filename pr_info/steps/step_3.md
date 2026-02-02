@@ -29,24 +29,22 @@ Requirements:
 - Function `_get_stage_short()`
 
 ### Add
-- Import `_load_labels_config` from `.issues`
-- Helper function to get vscodeclaude config for a status
+- Import `_get_vscodeclaude_config` from `.issues` (shared helper added in Step 2)
 
 ### Modify
 - `create_workspace_file()` - use config for stage_short
 - `create_startup_script()` - use config for emoji and commands
 - `create_status_file()` - use config for emoji
 
-### New Helper Function
+### Imported Helper
 ```python
-def _get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
-    """Get vscodeclaude config for a status label."""
+from .issues import _get_vscodeclaude_config  # Shared helper from Step 2
 ```
 
 ## HOW
 
 ### Integration Points
-- Import `_load_labels_config` from `.issues` (same module family)
+- Import `_get_vscodeclaude_config` from `.issues` (shared helper from Step 2)
 - All public function signatures unchanged
 
 ### Imports
@@ -58,19 +56,13 @@ from .types import DEFAULT_PROMPT_TIMEOUT, HUMAN_ACTION_COMMANDS, STATUS_EMOJI
 from .types import DEFAULT_PROMPT_TIMEOUT
 
 # Add:
-from .issues import _load_labels_config
+from .issues import _get_vscodeclaude_config
 ```
 
 ## ALGORITHM
 
 ```python
-def _get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
-    """Get vscodeclaude config for a status label from labels.json."""
-    labels_config = _load_labels_config()
-    for label in labels_config["workflow_labels"]:
-        if label["name"] == status and "vscodeclaude" in label:
-            return label["vscodeclaude"]
-    return None
+# _get_vscodeclaude_config is imported from issues.py (added in Step 2)
 
 # Usage in create_startup_script():
 config = _get_vscodeclaude_config(status)
@@ -108,27 +100,9 @@ from .types import DEFAULT_PROMPT_TIMEOUT
 from .issues import _load_labels_config
 ```
 
-**2. Add helper function (after imports, before other functions):**
-```python
-def _get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
-    """Get vscodeclaude config for a status label.
-    
-    Args:
-        status: Status label like "status-07:code-review"
-        
-    Returns:
-        vscodeclaude config dict or None if not found
-    """
-    labels_config = _load_labels_config()
-    for label in labels_config["workflow_labels"]:
-        if label["name"] == status and "vscodeclaude" in label:
-            return label["vscodeclaude"]
-    return None
-```
+**2. Remove `_get_stage_short()` function entirely**
 
-**3. Remove `_get_stage_short()` function entirely**
-
-**4. Update `create_workspace_file()`:**
+**3. Update `create_workspace_file()`:**
 ```python
 # Before:
 stage_short = _get_stage_short(status)
@@ -138,7 +112,7 @@ config = _get_vscodeclaude_config(status)
 stage_short = config["stage_short"] if config else status[:6]
 ```
 
-**5. Update `create_startup_script()`:**
+**4. Update `create_startup_script()`:**
 ```python
 # Before:
 initial_cmd, _followup_cmd = HUMAN_ACTION_COMMANDS.get(status, (None, None))
@@ -150,7 +124,7 @@ initial_cmd = config["initial_command"] if config else None
 emoji = config["emoji"] if config else "📋"
 ```
 
-**6. Update `create_status_file()`:**
+**5. Update `create_status_file()`:**
 ```python
 # Before:
 status_emoji = STATUS_EMOJI.get(status, "📋")
