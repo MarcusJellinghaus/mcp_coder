@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Tests for enhanced error handling in claude_code_api module."""
 
-import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,6 +12,7 @@ from mcp_coder.llm.providers.claude.claude_code_api import (
     _verify_claude_before_use,
     ask_claude_code_api,
 )
+from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
 
 @pytest.mark.claude_api_integration
@@ -308,10 +308,10 @@ class TestAskClaudeCodeApiErrorHandling:
     )
     def test_timeout_error_passthrough(self, mock_detailed: MagicMock) -> None:
         """Test that timeout errors are passed through without modification."""
-        timeout_error = subprocess.TimeoutExpired(["claude"], 30, "Timeout")
+        timeout_error = TimeoutExpired(["claude"], 30, "Timeout")
         mock_detailed.side_effect = timeout_error
 
-        with pytest.raises(subprocess.TimeoutExpired):
+        with pytest.raises(TimeoutExpired):
             ask_claude_code_api("test question")
 
     @patch(

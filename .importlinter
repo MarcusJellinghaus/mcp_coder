@@ -446,3 +446,22 @@ ignore_imports =
 # forbidden_modules =
 #     mcp_coder.cli
 #     mcp_coder.workflows
+
+
+# -----------------------------------------------------------------------------
+# Contract: Subprocess Library Isolation
+# -----------------------------------------------------------------------------
+# The 'subprocess' module should only be used by subprocess_runner.
+# All other modules must use subprocess_runner as an abstraction layer.
+# This is the first library isolation contract enforced in tests as well.
+# -----------------------------------------------------------------------------
+[importlinter:contract:subprocess_isolation]
+name = Subprocess Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+    tests
+forbidden_modules =
+    subprocess
+ignore_imports =
+    mcp_coder.utils.subprocess_runner -> subprocess

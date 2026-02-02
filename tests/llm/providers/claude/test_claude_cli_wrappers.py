@@ -2,7 +2,6 @@
 """Tests for Claude CLI IO wrappers and logging functionality."""
 
 import json
-import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -10,7 +9,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
-from mcp_coder.utils.subprocess_runner import CommandResult
+from mcp_coder.utils.subprocess_runner import (
+    CalledProcessError,
+    CommandResult,
+    TimeoutExpired,
+)
 
 from .conftest import StreamJsonFactory
 
@@ -193,14 +196,14 @@ class TestCliLogging:
             )
             mock_execute.return_value = mock_result
 
-            with pytest.raises(subprocess.TimeoutExpired):
+            with pytest.raises(TimeoutExpired):
                 ask_claude_code_cli("Test question", timeout=30)
 
             # Verify log_llm_error was called with error and duration
             mock_log_error.assert_called_once()
             call_kwargs = mock_log_error.call_args[1]
             assert call_kwargs["method"] == "cli"
-            assert isinstance(call_kwargs["error"], subprocess.TimeoutExpired)
+            assert isinstance(call_kwargs["error"], TimeoutExpired)
             assert "duration_ms" in call_kwargs
             assert isinstance(call_kwargs["duration_ms"], int)
 
@@ -227,12 +230,12 @@ class TestCliLogging:
             )
             mock_execute.return_value = mock_result
 
-            with pytest.raises(subprocess.CalledProcessError):
+            with pytest.raises(CalledProcessError):
                 ask_claude_code_cli("Test question")
 
             # Verify log_llm_error was called with CalledProcessError
             mock_log_error.assert_called_once()
             call_kwargs = mock_log_error.call_args[1]
             assert call_kwargs["method"] == "cli"
-            assert isinstance(call_kwargs["error"], subprocess.CalledProcessError)
+            assert isinstance(call_kwargs["error"], CalledProcessError)
             assert "duration_ms" in call_kwargs

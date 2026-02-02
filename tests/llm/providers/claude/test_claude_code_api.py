@@ -2,7 +2,6 @@
 """Tests for claude_code_api module."""
 
 import asyncio
-import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,6 +14,7 @@ from mcp_coder.llm.providers.claude.claude_code_api import (
     ask_claude_code_api,
     create_api_response_dict,
 )
+from mcp_coder.utils.subprocess_runner import CalledProcessError, TimeoutExpired
 
 
 class TestCreateClaudeClient:
@@ -233,7 +233,7 @@ class TestAskClaudeCodeApiAsync:
         mock_query.side_effect = slow_query_response
 
         # Execute & Verify - timeout must be less than sleep time to trigger
-        with pytest.raises(subprocess.TimeoutExpired) as exc_info:
+        with pytest.raises(TimeoutExpired) as exc_info:
             await _ask_claude_code_api_async("test question", timeout=0.3)
 
         assert "timed out after 0.3 seconds" in str(exc_info.value)
@@ -305,13 +305,11 @@ class TestAskClaudeCodeApi:
     def test_timeout_exception_passthrough(self, mock_detailed_sync: MagicMock) -> None:
         """Test that TimeoutExpired exceptions are passed through."""
         # Setup
-        timeout_error = subprocess.TimeoutExpired(
-            ["claude-code-sdk", "query"], 30, "Timeout"
-        )
+        timeout_error = TimeoutExpired(["claude-code-sdk", "query"], 30, "Timeout")
         mock_detailed_sync.side_effect = timeout_error
 
         # Execute & Verify
-        with pytest.raises(subprocess.TimeoutExpired):
+        with pytest.raises(TimeoutExpired):
             ask_claude_code_api("test question")
 
     @patch(
@@ -634,13 +632,11 @@ class TestAskClaudeCodeApiLogging:
     ) -> None:
         """Test that timeout errors are logged and re-raised."""
         # Setup
-        timeout_error = subprocess.TimeoutExpired(
-            ["claude-code-sdk", "query"], 30, "Timeout"
-        )
+        timeout_error = TimeoutExpired(["claude-code-sdk", "query"], 30, "Timeout")
         mock_detailed_sync.side_effect = timeout_error
 
         # Execute and verify timeout is logged
-        with pytest.raises(subprocess.TimeoutExpired):
+        with pytest.raises(TimeoutExpired):
             ask_claude_code_api("test question")
 
         # Verify error logging was called
