@@ -26,7 +26,7 @@ See [step_1.md](./steps/step_1.md) for details.
 
 - [x] Add vscodeclaude object to `status-01:created` label in labels.json
 - [x] Add vscodeclaude object to `status-04:plan-review` label in labels.json
-- [ ] Add vscodeclaude object to `status-07:code-review` label in labels.json
+- [x] Add vscodeclaude object to `status-07:code-review` label in labels.json
 - [ ] Add vscodeclaude object to `status-10:pr-created` label in labels.json (with null commands)
 - [ ] Add schema validation test in test_types.py (`TestLabelsJsonVscodeclaudeMetadata`)
 - [ ] Run pylint and fix any issues
