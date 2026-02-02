@@ -5,7 +5,14 @@
       "name": "status-01:created",
       "color": "10b981",
       "description": "Fresh issue, may need refinement",
-      "category": "human_action"
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "📝",
+        "display_name": "ISSUE ANALYSIS",
+        "stage_short": "new",
+        "initial_command": "/issue_analyse",
+        "followup_command": "/discuss"
+      }
     },
     {
       "internal_id": "awaiting_planning",
