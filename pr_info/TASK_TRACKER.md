@@ -38,13 +38,15 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Remove `get_parent_branch_name()` and Update Exports
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Remove `get_parent_branch_name()` function from `readers.py`
-- [ ] Remove re-export from `git_operations/__init__.py`
-- [ ] Remove re-export from `utils/__init__.py`
-- [ ] Remove test from `test_readers.py`
+- [x] Remove `get_parent_branch_name()` function from `readers.py`
+- [x] Remove re-export from `git_operations/__init__.py`
+- [x] Remove re-export from `utils/__init__.py`
+- [x] Remove test from `test_readers.py`
 - [ ] Verify `grep -r "get_parent_branch_name" src/` returns no results
 - [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
 - [ ] Prepare git commit message for Step 2
+
+**Note:** Verification and quality checks will pass after Steps 3-4 complete (consumers still reference removed function)
 
 ### Step 3: Update `diffs.py` - Remove Auto-Detection
 See [step_3.md](./steps/step_3.md) for details.

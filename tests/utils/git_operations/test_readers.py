@@ -11,7 +11,6 @@ from mcp_coder.utils.git_operations import (
     get_current_branch_name,
     get_default_branch_name,
     get_full_status,
-    get_parent_branch_name,
     get_staged_changes,
     get_unstaged_changes,
     is_git_repository,
@@ -317,19 +316,3 @@ class TestBranchNameReaders:
 
         default_branch = get_default_branch_name(project_dir)
         assert default_branch in ["main", "master"]
-
-    def test_get_parent_branch_name(
-        self, git_repo_with_commit: tuple[Repo, Path]
-    ) -> None:
-        """Test get_parent_branch_name returns parent branch."""
-        repo, project_dir = git_repo_with_commit
-
-        # Get initial branch name
-        initial_branch = get_current_branch_name(project_dir)
-
-        # Create feature branch
-        repo.git.checkout("-b", "feature-branch")
-
-        # Parent should be the initial branch
-        parent = get_parent_branch_name(project_dir)
-        assert parent == initial_branch
