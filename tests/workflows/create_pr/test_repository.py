@@ -120,16 +120,16 @@ class TestCreatePullRequest:
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_create_pull_request_success(
         self,
-        mock_parent_branch: MagicMock,
+        mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
     ) -> None:
         """Test successful pull request creation."""
         mock_current_branch.return_value = "feature-branch"
-        mock_parent_branch.return_value = "main"
+        mock_detect_base_branch.return_value = "main"
 
         mock_manager_instance = MagicMock()
         mock_manager_instance.create_pull_request.return_value = {
@@ -165,15 +165,15 @@ class TestCreatePullRequest:
         assert result is False
 
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_create_pull_request_no_parent_branch(
         self,
-        mock_parent_branch: MagicMock,
+        mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
     ) -> None:
         """Test pull request creation when parent branch is unknown."""
         mock_current_branch.return_value = "feature-branch"
-        mock_parent_branch.return_value = None
+        mock_detect_base_branch.return_value = None
 
         result = create_pull_request(
             Path("/test/project"), "Test PR Title", "Test PR Body"
@@ -183,16 +183,16 @@ class TestCreatePullRequest:
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_create_pull_request_manager_failure(
         self,
-        mock_parent_branch: MagicMock,
+        mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
     ) -> None:
         """Test pull request creation when PullRequestManager fails."""
         mock_current_branch.return_value = "feature-branch"
-        mock_parent_branch.return_value = "main"
+        mock_detect_base_branch.return_value = "main"
 
         mock_manager_instance = MagicMock()
         mock_manager_instance.create_pull_request.return_value = (
@@ -208,16 +208,16 @@ class TestCreatePullRequest:
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_create_pull_request_no_pr_number(
         self,
-        mock_parent_branch: MagicMock,
+        mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
     ) -> None:
         """Test pull request creation when PR number is missing."""
         mock_current_branch.return_value = "feature-branch"
-        mock_parent_branch.return_value = "main"
+        mock_detect_base_branch.return_value = "main"
 
         mock_manager_instance = MagicMock()
         mock_manager_instance.create_pull_request.return_value = {
@@ -234,16 +234,16 @@ class TestCreatePullRequest:
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_create_pull_request_exception(
         self,
-        mock_parent_branch: MagicMock,
+        mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
     ) -> None:
         """Test pull request creation when exception occurs."""
         mock_current_branch.return_value = "feature-branch"
-        mock_parent_branch.return_value = "main"
+        mock_detect_base_branch.return_value = "main"
 
         mock_pr_manager.side_effect = Exception("GitHub API error")
 
@@ -255,16 +255,16 @@ class TestCreatePullRequest:
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_create_pull_request_success_with_url(
         self,
-        mock_parent_branch: MagicMock,
+        mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
     ) -> None:
         """Test successful pull request creation with URL logging."""
         mock_current_branch.return_value = "feature-branch"
-        mock_parent_branch.return_value = "main"
+        mock_detect_base_branch.return_value = "main"
 
         mock_manager_instance = MagicMock()
         mock_manager_instance.create_pull_request.return_value = {
@@ -287,16 +287,16 @@ class TestCreatePullRequest:
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.get_parent_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_create_pull_request_success_without_url(
         self,
-        mock_parent_branch: MagicMock,
+        mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
     ) -> None:
         """Test successful pull request creation without URL in response."""
         mock_current_branch.return_value = "feature-branch"
-        mock_parent_branch.return_value = "main"
+        mock_detect_base_branch.return_value = "main"
 
         mock_manager_instance = MagicMock()
         mock_manager_instance.create_pull_request.return_value = {

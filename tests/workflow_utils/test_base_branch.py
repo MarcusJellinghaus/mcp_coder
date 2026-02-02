@@ -122,8 +122,13 @@ class TestDetectFromGitMergeBase:
         # Setup branches
         mock_current = self._create_mock_branch(current_branch, "current123")
         mock_main = self._create_mock_branch("main", "main456")
-        mock_repo.heads = {current_branch: mock_current, "main": mock_main}
-        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_main])
+        mock_heads = MagicMock()
+        mock_heads.__iter__ = MagicMock(return_value=iter([mock_current, mock_main]))
+        mock_heads.__getitem__ = lambda self, key: {
+            current_branch: mock_current,
+            "main": mock_main,
+        }[key]
+        mock_repo.heads = mock_heads
 
         # Setup merge-base
         merge_base_commit = MagicMock()
@@ -146,14 +151,17 @@ class TestDetectFromGitMergeBase:
         mock_current = self._create_mock_branch(current_branch, "current123")
         mock_feature_a = self._create_mock_branch("feature-A", "featureA456")
         mock_main = self._create_mock_branch("main", "main789")
-        mock_repo.heads = {
+        branch_dict = {
             current_branch: mock_current,
             "feature-A": mock_feature_a,
             "main": mock_main,
         }
-        mock_repo.heads.__iter__ = lambda self: iter(
-            [mock_current, mock_feature_a, mock_main]
+        mock_heads = MagicMock()
+        mock_heads.__iter__ = MagicMock(
+            return_value=iter([mock_current, mock_feature_a, mock_main])
         )
+        mock_heads.__getitem__ = lambda self, key: branch_dict[key]
+        mock_repo.heads = mock_heads
 
         # Setup merge-base - different for each branch
         merge_base_feature_a = MagicMock()
@@ -190,8 +198,13 @@ class TestDetectFromGitMergeBase:
         # Setup branches
         mock_current = self._create_mock_branch(current_branch, "current123")
         mock_feature_a = self._create_mock_branch("feature-A", "featureA456")
-        mock_repo.heads = {current_branch: mock_current, "feature-A": mock_feature_a}
-        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_feature_a])
+        branch_dict = {current_branch: mock_current, "feature-A": mock_feature_a}
+        mock_heads = MagicMock()
+        mock_heads.__iter__ = MagicMock(
+            return_value=iter([mock_current, mock_feature_a])
+        )
+        mock_heads.__getitem__ = lambda self, key: branch_dict[key]
+        mock_repo.heads = mock_heads
 
         # Setup merge-base
         merge_base_commit = MagicMock()
@@ -213,8 +226,11 @@ class TestDetectFromGitMergeBase:
         # Setup branches
         mock_current = self._create_mock_branch(current_branch, "current123")
         mock_main = self._create_mock_branch("main", "main456")
-        mock_repo.heads = {current_branch: mock_current, "main": mock_main}
-        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_main])
+        branch_dict = {current_branch: mock_current, "main": mock_main}
+        mock_heads = MagicMock()
+        mock_heads.__iter__ = MagicMock(return_value=iter([mock_current, mock_main]))
+        mock_heads.__getitem__ = lambda self, key: branch_dict[key]
+        mock_repo.heads = mock_heads
 
         # Setup merge-base
         merge_base_commit = MagicMock()
@@ -237,14 +253,17 @@ class TestDetectFromGitMergeBase:
         mock_current = self._create_mock_branch(current_branch, "current123")
         mock_feature_a = self._create_mock_branch("feature-A", "featureA456")
         mock_develop = self._create_mock_branch("develop", "develop789")
-        mock_repo.heads = {
+        branch_dict = {
             current_branch: mock_current,
             "feature-A": mock_feature_a,
             "develop": mock_develop,
         }
-        mock_repo.heads.__iter__ = lambda self: iter(
-            [mock_current, mock_feature_a, mock_develop]
+        mock_heads = MagicMock()
+        mock_heads.__iter__ = MagicMock(
+            return_value=iter([mock_current, mock_feature_a, mock_develop])
         )
+        mock_heads.__getitem__ = lambda self, key: branch_dict[key]
+        mock_repo.heads = mock_heads
 
         # Setup merge-base for each
         merge_base_a = MagicMock()
@@ -283,8 +302,11 @@ class TestDetectFromGitMergeBase:
 
         # Setup local branches (only current branch)
         mock_current = self._create_mock_branch(current_branch, "current123")
-        mock_repo.heads = {current_branch: mock_current}
-        mock_repo.heads.__iter__ = lambda self: iter([mock_current])
+        branch_dict = {current_branch: mock_current}
+        mock_heads = MagicMock()
+        mock_heads.__iter__ = MagicMock(return_value=iter([mock_current]))
+        mock_heads.__getitem__ = lambda self, key: branch_dict[key]
+        mock_repo.heads = mock_heads
 
         # Setup remote branch
         mock_remote_feature_a = self._create_mock_remote_ref("feature-A", "remoteA456")
@@ -310,8 +332,11 @@ class TestDetectFromGitMergeBase:
         # Setup branches including current
         mock_current = self._create_mock_branch(current_branch, "current123")
         mock_main = self._create_mock_branch("main", "main456")
-        mock_repo.heads = {current_branch: mock_current, "main": mock_main}
-        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_main])
+        branch_dict = {current_branch: mock_current, "main": mock_main}
+        mock_heads = MagicMock()
+        mock_heads.__iter__ = MagicMock(return_value=iter([mock_current, mock_main]))
+        mock_heads.__getitem__ = lambda self, key: branch_dict[key]
+        mock_repo.heads = mock_heads
 
         # Setup merge-base
         merge_base_commit = MagicMock()
@@ -334,8 +359,11 @@ class TestDetectFromGitMergeBase:
         # Setup branches
         mock_current = self._create_mock_branch(current_branch, "current123")
         mock_orphan = self._create_mock_branch("orphan", "orphan456")
-        mock_repo.heads = {current_branch: mock_current, "orphan": mock_orphan}
-        mock_repo.heads.__iter__ = lambda self: iter([mock_current, mock_orphan])
+        branch_dict = {current_branch: mock_current, "orphan": mock_orphan}
+        mock_heads = MagicMock()
+        mock_heads.__iter__ = MagicMock(return_value=iter([mock_current, mock_orphan]))
+        mock_heads.__getitem__ = lambda self, key: branch_dict[key]
+        mock_repo.heads = mock_heads
 
         # No merge-base (orphan branch)
         mock_repo.merge_base.return_value = []
