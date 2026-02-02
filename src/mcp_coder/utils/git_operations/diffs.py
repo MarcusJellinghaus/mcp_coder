@@ -139,7 +139,6 @@ def get_branch_diff(
 
     try:
         with _safe_repo_context(project_dir) as repo:
-
             # Get current branch for validation
             current_branch = get_current_branch_name(project_dir)
             if current_branch is None:

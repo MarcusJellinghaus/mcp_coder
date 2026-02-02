@@ -39,7 +39,7 @@ class BaseBranchMocks(NamedTuple):
 def mocks() -> Generator[BaseBranchMocks, None, None]:
     """Consolidated fixture for all base branch detection mocks.
 
-    Note: Also patches _detect_from_git_merge_base to return None,
+    Note: Also patches detect_parent_branch_via_merge_base to return None,
     allowing tests to focus on PR/Issue/Default detection paths.
     """
     with (
@@ -55,7 +55,7 @@ def mocks() -> Generator[BaseBranchMocks, None, None]:
             "mcp_coder.workflow_utils.base_branch.get_default_branch_name"
         ) as mock_default,
         patch(
-            "mcp_coder.workflow_utils.base_branch._detect_from_git_merge_base"
+            "mcp_coder.workflow_utils.base_branch.detect_parent_branch_via_merge_base"
         ) as mock_merge_base,
     ):
         # By default, merge-base returns None to allow other detection methods

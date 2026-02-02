@@ -25,26 +25,6 @@ from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 logger = logging.getLogger(__name__)
 
 
-def _detect_from_git_merge_base(
-    project_dir: Path,
-    current_branch: str,
-) -> Optional[str]:
-    """Detect parent branch using git merge-base.
-
-    Delegates to git_operations.detect_parent_branch_via_merge_base.
-
-    Args:
-        project_dir: Path to git repository
-        current_branch: Current branch name
-
-    Returns:
-        Branch name if found within threshold, None otherwise
-    """
-    return detect_parent_branch_via_merge_base(
-        project_dir, current_branch, MERGE_BASE_DISTANCE_THRESHOLD
-    )
-
-
 def detect_base_branch(
     project_dir: Path,
     current_branch: Optional[str] = None,
@@ -83,7 +63,9 @@ def detect_base_branch(
 
     # 1. Try git merge-base first (PRIMARY - highest priority)
     logger.debug("Attempting base branch detection via git merge-base")
-    base_branch = _detect_from_git_merge_base(project_dir, current_branch)
+    base_branch = detect_parent_branch_via_merge_base(
+        project_dir, current_branch, MERGE_BASE_DISTANCE_THRESHOLD
+    )
     if base_branch:
         return base_branch
 
