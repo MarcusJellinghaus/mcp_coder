@@ -430,13 +430,8 @@ def diagnose_folder(path: Path, quick: bool = False) -> DiagnosticResult:
     # Find locking processes (skip in quick mode - can be slow)
     if not quick:
         result.locking_processes = find_locking_processes_windows(path)
-    if result.locking_processes:
-        result.suggestions.append("Close the applications listed above")
-        result.suggestions.append("Or restart Windows Explorer: taskkill /f /im explorer.exe && start explorer.exe")
-
-    # Add general suggestions
-    if not result.errors and not result.locking_processes:
-        result.suggestions.append("Folder appears deletable - try with --force flag")
+    # No generic suggestions - only actual diagnostic results matter
+    # Suggestions are only added for specific diagnosed issues (permissions, readonly, etc.)
 
     return result
 
@@ -472,20 +467,22 @@ def print_diagnostic_report(diag: DiagnosticResult) -> None:
             print(f"  [X] {error}")
 
     if diag.locking_processes:
-        print("\n[HANDLE DETECTION RESULTS]")
+        print("\n[HANDLE DETECTION]")
         for proc in diag.locking_processes:
-            # Distinguish between actual locks found and info messages
+            # Distinguish between actual locks found and info/warning messages
             if proc.startswith("[INFO]"):
                 print(f"  {proc}")
             elif "Timed out" in proc or "EULA" in proc:
                 print(f"  [WARN] {proc}")
             else:
+                # Actual lock found - this is the important diagnostic info
                 print(f"  [LOCKED BY] {proc}")
 
+    # Only show suggestions if there are specific actionable ones (not generic advice)
     if diag.suggestions:
-        print("\n[SUGGESTIONS]")
+        print("\n[ACTIONABLE ISSUES]")
         for suggestion in diag.suggestions:
-            print(f"  [*] {suggestion}")
+            print(f"  - {suggestion}")
 
     print("\n" + "=" * 60)
 
@@ -1283,14 +1280,8 @@ Examples:
                     except OSError as e:
                         print(f"[FAIL] Could not schedule for reboot: {e}")
                 else:
-                    print("\n[HELP] Additional steps to try manually:")
-                    print("   1. Run this script from a SEPARATE terminal (not from Claude Code)")
-                    print("   2. Close all applications that might be using this folder")
-                    print("   3. Close all File Explorer windows")
-                    print("   4. Run this script as Administrator")
-                    print("   5. Try: taskkill /f /im explorer.exe && rmdir /s /q \"<path>\" && start explorer.exe")
-                    print("   6. Use --schedule-reboot to delete on next Windows restart")
-                    print("   7. Boot into Safe Mode and delete")
+                    # Only show actionable next steps, not generic advice
+                    print("\nNext steps: Run with --schedule-reboot or from outside Claude Code")
 
         elif args.diagnose_only:
             if diag.errors or diag.locking_processes:
