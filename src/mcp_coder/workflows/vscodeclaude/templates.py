@@ -29,6 +29,20 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+
+if defined MCP_CODER_PROJECT_DIR (
+    if not "%MCP_CODER_PROJECT_DIR%"=="%CD%" (
+        echo.
+        echo WARNING: MCP_CODER_PROJECT_DIR mismatch detected
+        echo   Expected: %CD%
+        echo   Found:    %MCP_CODER_PROJECT_DIR%
+        echo.
+        echo Press any key to continue...
+        pause >nul
+    )
+)
+set "MCP_CODER_PROJECT_DIR=%CD%"
+set "MCP_CODER_VENV_DIR=%CD%\.venv"
 """
 
 # Automated analysis section for Windows (V2 - using mcp-coder prompt)

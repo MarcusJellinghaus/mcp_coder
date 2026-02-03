@@ -25,8 +25,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 See [step_1.md](./steps/step_1.md)
 
 - [x] Create new test `test_creates_script_with_env_var_setup` in `tests/workflows/vscodeclaude/test_workspace.py`
-- [ ] Add mismatch warning and env var setup to `VENV_SECTION_WINDOWS` in `src/mcp_coder/workflows/vscodeclaude/templates.py`
-- [ ] Run pylint on modified files and fix any issues
+- [x] Add mismatch warning and env var setup to `VENV_SECTION_WINDOWS` in `src/mcp_coder/workflows/vscodeclaude/templates.py`
+- [x] Run pylint on modified files and fix any issues
 - [ ] Run pytest for Step 1 changes and ensure all tests pass
 - [ ] Run mypy on modified files and fix any type errors
 - [ ] Prepare git commit message for Step 1
