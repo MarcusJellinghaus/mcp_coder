@@ -6,13 +6,7 @@ Detects processes locking a folder using Sysinternals handle64.exe,
 kills them, then deletes the folder.
 
 Usage:
-    python tools/safe_delete_folder.py <folder_path> --force --kill-lockers
-
-Features:
-    - Auto-downloads handle64.exe from Microsoft
-    - Detects which processes are locking the folder
-    - Kills locking processes (--kill-lockers)
-    - Falls back to schedule-on-reboot if needed
+    python tools/safe_delete_folder.py <folder_path> --delete --kill-lockers
 """
 
 from __future__ import annotations
@@ -219,36 +213,6 @@ def _delete_folder(path: Path) -> tuple[bool, str]:
         return False, f"OS error: {e}"
 
 
-def _schedule_delete_on_reboot(path: Path) -> None:
-    """Schedule folder for deletion on next Windows reboot via registry."""
-    if sys.platform != "win32":
-        raise OSError("Windows only")
-
-    import winreg
-
-    key_path = r"SYSTEM\CurrentControlSet\Control\Session Manager"
-    value_name = "PendingFileRenameOperations"
-    nt_path = f"\\??\\{path}"
-    entry = f"{nt_path}\0\0"
-
-    try:
-        with winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE, key_path, 0, winreg.KEY_READ | winreg.KEY_WRITE
-        ) as key:
-            try:
-                existing, _ = winreg.QueryValueEx(key, value_name)
-                if isinstance(existing, str):
-                    new_value = existing.rstrip("\0") + "\0" + entry
-                else:
-                    new_value = entry
-            except FileNotFoundError:
-                new_value = entry
-
-            winreg.SetValueEx(key, value_name, 0, winreg.REG_MULTI_SZ, new_value.split("\0"))
-    except PermissionError:
-        raise OSError("Need Administrator privileges") from None
-
-
 # =============================================================================
 # Diagnostics
 # =============================================================================
@@ -318,21 +282,16 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Diagnose locks
-    python tools/safe_delete_folder.py "C:\\path\\folder" --diagnose-only
+    # Diagnose locks (default behavior)
+    python tools/safe_delete_folder.py "C:\\path\\folder"
 
-    # Delete (kill lockers first)
-    python tools/safe_delete_folder.py "C:\\path\\folder" --force --kill-lockers
-
-    # Schedule for reboot if all else fails
-    python tools/safe_delete_folder.py "C:\\path\\folder" --force --kill-lockers --schedule-reboot
+    # Delete after killing lockers
+    python tools/safe_delete_folder.py "C:\\path\\folder" --delete --kill-lockers
         """,
     )
-    parser.add_argument("paths", nargs="+", help="Folder path(s) to delete")
-    parser.add_argument("--diagnose-only", "-d", action="store_true", help="Only diagnose, don't delete")
-    parser.add_argument("--force", "-f", action="store_true", help="Attempt deletion")
+    parser.add_argument("paths", nargs="+", help="Folder path(s) to process")
+    parser.add_argument("--delete", action="store_true", help="Delete the folder(s)")
     parser.add_argument("--kill-lockers", "-k", action="store_true", help="Kill processes locking the folder")
-    parser.add_argument("--schedule-reboot", action="store_true", help="Schedule deletion on reboot if deletion fails")
     parser.add_argument("--quiet", "-q", action="store_true", help="Minimal output")
 
     args = parser.parse_args()
@@ -352,11 +311,9 @@ Examples:
         if not args.quiet:
             print_diagnostic_report(diag)
 
-        if args.diagnose_only:
-            continue
-
-        if not args.force:
-            print("\n[!] Use --force to attempt deletion")
+        if not args.delete:
+            if diag.exists:
+                print("\n[!] Use --delete to delete the folder")
             continue
 
         if not diag.exists:
@@ -381,18 +338,8 @@ Examples:
             print(f"[OK] {message}")
         else:
             print(f"[FAIL] {message}")
+            print("\nTip: Try --kill-lockers")
             exit_code = 1
-
-            if args.schedule_reboot and sys.platform == "win32":
-                print("\n[...] Scheduling for deletion on reboot...")
-                try:
-                    _schedule_delete_on_reboot(path)
-                    print("[OK] Scheduled for reboot")
-                    exit_code = 0
-                except OSError as e:
-                    print(f"[FAIL] {e}")
-            else:
-                print("\nTip: Try --kill-lockers or --schedule-reboot")
 
     return exit_code
 
