@@ -1,6 +1,6 @@
 """Template strings for VSCode Claude session files."""
 
-# Venv setup section for Windows (V2)
+# Venv setup section for Windows
 VENV_SECTION_WINDOWS = r"""echo Checking Python environment...
 if not exist .venv\Scripts\activate.bat (
     echo Creating virtual environment...
@@ -29,10 +29,24 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+
+if defined MCP_CODER_PROJECT_DIR (
+    if not "%MCP_CODER_PROJECT_DIR%"=="%CD%" (
+        echo.
+        echo WARNING: MCP_CODER_PROJECT_DIR mismatch detected
+        echo   Expected: %CD%
+        echo   Found:    %MCP_CODER_PROJECT_DIR%
+        echo.
+        echo Press any key to continue...
+        pause >nul
+    )
+)
+set "MCP_CODER_PROJECT_DIR=%CD%"
+set "MCP_CODER_VENV_DIR=%CD%\.venv"
 """
 
-# Automated analysis section for Windows (V2 - using mcp-coder prompt)
-AUTOMATED_SECTION_WINDOWS_V2 = r"""echo.
+# Automated analysis section for Windows (using mcp-coder prompt)
+AUTOMATED_SECTION_WINDOWS = r"""echo.
 echo === Step 1: Automated Analysis ===
 echo Running: {initial_command} {issue_number}
 echo.
@@ -52,7 +66,7 @@ if "%SESSION_ID%"=="" (
 echo Session ID: %SESSION_ID%
 """
 
-# Discussion section for Windows (V2 - using mcp-coder prompt with session resume)
+# Discussion section for Windows (using mcp-coder prompt with session resume)
 DISCUSSION_SECTION_WINDOWS = r"""echo.
 echo === Step 2: Automated Discussion ===
 echo Running: /discuss
@@ -68,8 +82,8 @@ if errorlevel 1 (
 )
 """
 
-# Interactive section for Windows (V2 - raw claude CLI with resume)
-INTERACTIVE_SECTION_WINDOWS_V2 = r"""echo.
+# Interactive section for Windows (raw claude CLI with resume)
+INTERACTIVE_SECTION_WINDOWS = r"""echo.
 echo === Step 3: Interactive Session ===
 echo You can now interact with Claude directly.
 echo The conversation context from previous steps is preserved.
@@ -78,8 +92,8 @@ echo.
 claude --resume %SESSION_ID%
 """
 
-# Main startup script for Windows (V2 - with venv and mcp-coder)
-STARTUP_SCRIPT_WINDOWS_V2 = r"""@echo off
+# Main startup script for Windows (with venv and mcp-coder)
+STARTUP_SCRIPT_WINDOWS = r"""@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -101,8 +115,8 @@ echo.
 {interactive_section}
 """
 
-# Intervention mode for Windows (V2 - with venv activation)
-INTERVENTION_SCRIPT_WINDOWS_V2 = r"""@echo off
+# Intervention mode for Windows (with venv activation)
+INTERVENTION_SCRIPT_WINDOWS = r"""@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 

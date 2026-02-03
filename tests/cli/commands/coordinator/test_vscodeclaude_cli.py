@@ -192,8 +192,8 @@ class TestTemplates:
         assert "# VSCodeClaude session files" in GITIGNORE_ENTRY
 
 
-class TestTemplatesV2:
-    """Test V2 template strings with venv and mcp-coder."""
+class TestWindowsTemplates:
+    """Test Windows template strings with venv and mcp-coder."""
 
     def test_venv_section_creates_venv_if_missing(self) -> None:
         """VENV_SECTION_WINDOWS creates venv when not present."""
@@ -213,24 +213,24 @@ class TestTemplatesV2:
 
         assert "call .venv\\Scripts\\activate.bat" in VENV_SECTION_WINDOWS
 
-    def test_automated_section_v2_uses_mcp_coder_prompt(self) -> None:
-        """AUTOMATED_SECTION_WINDOWS_V2 uses mcp-coder prompt."""
+    def test_automated_section_uses_mcp_coder_prompt(self) -> None:
+        """AUTOMATED_SECTION_WINDOWS uses mcp-coder prompt."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            AUTOMATED_SECTION_WINDOWS_V2,
+            AUTOMATED_SECTION_WINDOWS,
         )
 
-        assert "mcp-coder prompt" in AUTOMATED_SECTION_WINDOWS_V2
-        assert "--output-format session-id" in AUTOMATED_SECTION_WINDOWS_V2
-        assert "--mcp-config .mcp.json" in AUTOMATED_SECTION_WINDOWS_V2
+        assert "mcp-coder prompt" in AUTOMATED_SECTION_WINDOWS
+        assert "--output-format session-id" in AUTOMATED_SECTION_WINDOWS
+        assert "--mcp-config .mcp.json" in AUTOMATED_SECTION_WINDOWS
 
-    def test_automated_section_v2_captures_session_id(self) -> None:
-        """AUTOMATED_SECTION_WINDOWS_V2 captures SESSION_ID."""
+    def test_automated_section_captures_session_id(self) -> None:
+        """AUTOMATED_SECTION_WINDOWS captures SESSION_ID."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            AUTOMATED_SECTION_WINDOWS_V2,
+            AUTOMATED_SECTION_WINDOWS,
         )
 
-        assert "set SESSION_ID=" in AUTOMATED_SECTION_WINDOWS_V2
-        assert 'if "%SESSION_ID%"==""' in AUTOMATED_SECTION_WINDOWS_V2
+        assert "set SESSION_ID=" in AUTOMATED_SECTION_WINDOWS
+        assert 'if "%SESSION_ID%"==""' in AUTOMATED_SECTION_WINDOWS
 
     def test_discussion_section_uses_session_id(self) -> None:
         """DISCUSSION_SECTION_WINDOWS passes session-id."""
@@ -241,43 +241,43 @@ class TestTemplatesV2:
         assert "mcp-coder prompt" in DISCUSSION_SECTION_WINDOWS
         assert "--session-id %SESSION_ID%" in DISCUSSION_SECTION_WINDOWS
 
-    def test_interactive_section_v2_uses_claude_resume(self) -> None:
-        """INTERACTIVE_SECTION_WINDOWS_V2 uses claude --resume."""
+    def test_interactive_section_uses_claude_resume(self) -> None:
+        """INTERACTIVE_SECTION_WINDOWS uses claude --resume."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            INTERACTIVE_SECTION_WINDOWS_V2,
+            INTERACTIVE_SECTION_WINDOWS,
         )
 
-        assert "claude --resume %SESSION_ID%" in INTERACTIVE_SECTION_WINDOWS_V2
+        assert "claude --resume %SESSION_ID%" in INTERACTIVE_SECTION_WINDOWS
 
-    def test_startup_script_v2_has_all_sections(self) -> None:
-        """STARTUP_SCRIPT_WINDOWS_V2 includes all section placeholders."""
+    def test_startup_script_has_all_sections(self) -> None:
+        """STARTUP_SCRIPT_WINDOWS includes all section placeholders."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            STARTUP_SCRIPT_WINDOWS_V2,
+            STARTUP_SCRIPT_WINDOWS,
         )
 
-        assert "{venv_section}" in STARTUP_SCRIPT_WINDOWS_V2
-        assert "{automated_section}" in STARTUP_SCRIPT_WINDOWS_V2
-        assert "{discussion_section}" in STARTUP_SCRIPT_WINDOWS_V2
-        assert "{interactive_section}" in STARTUP_SCRIPT_WINDOWS_V2
+        assert "{venv_section}" in STARTUP_SCRIPT_WINDOWS
+        assert "{automated_section}" in STARTUP_SCRIPT_WINDOWS
+        assert "{discussion_section}" in STARTUP_SCRIPT_WINDOWS
+        assert "{interactive_section}" in STARTUP_SCRIPT_WINDOWS
 
-    def test_intervention_script_v2_has_warning(self) -> None:
-        """INTERVENTION_SCRIPT_WINDOWS_V2 shows intervention warning."""
+    def test_intervention_script_has_warning(self) -> None:
+        """INTERVENTION_SCRIPT_WINDOWS shows intervention warning."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            INTERVENTION_SCRIPT_WINDOWS_V2,
+            INTERVENTION_SCRIPT_WINDOWS,
         )
 
-        assert "INTERVENTION MODE" in INTERVENTION_SCRIPT_WINDOWS_V2
-        assert "{venv_section}" in INTERVENTION_SCRIPT_WINDOWS_V2
-        assert "claude" in INTERVENTION_SCRIPT_WINDOWS_V2
+        assert "INTERVENTION MODE" in INTERVENTION_SCRIPT_WINDOWS
+        assert "{venv_section}" in INTERVENTION_SCRIPT_WINDOWS
+        assert "claude" in INTERVENTION_SCRIPT_WINDOWS
 
-    def test_templates_v2_include_timeout_placeholder(self) -> None:
-        """V2 templates include {timeout} placeholder."""
+    def test_templates_include_timeout_placeholder(self) -> None:
+        """Templates include {timeout} placeholder."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            AUTOMATED_SECTION_WINDOWS_V2,
+            AUTOMATED_SECTION_WINDOWS,
             DISCUSSION_SECTION_WINDOWS,
         )
 
-        assert "{timeout}" in AUTOMATED_SECTION_WINDOWS_V2
+        assert "{timeout}" in AUTOMATED_SECTION_WINDOWS
         assert "{timeout}" in DISCUSSION_SECTION_WINDOWS
 
 
