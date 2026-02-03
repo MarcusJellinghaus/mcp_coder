@@ -2,11 +2,24 @@
 """
 Safe folder deletion utility for Windows.
 
-Detects processes locking a folder using Sysinternals handle64.exe,
-kills them, then deletes the folder.
+Two modes of operation:
+
+1. DIAGNOSE (default): Scans entire folder with handle64.exe upfront to show
+   all locking processes. Useful for understanding what's blocking deletion.
+
+2. DELETE (--delete): Tries to delete immediately, only runs handle64.exe on
+   specific files that fail. Faster when most files aren't locked.
+
+Escalation strategy for --delete:
+    1. Try shutil.rmtree
+    2. If file locked, move it to temp
+    3. If move fails and --kill-lockers, find and kill locker, retry move
+    4. Repeat until done or max retries
 
 Usage:
-    python tools/safe_delete_folder.py <folder_path> --delete --kill-lockers
+    python tools/safe_delete_folder.py <folder_path>                    # diagnose
+    python tools/safe_delete_folder.py <folder_path> --delete           # delete
+    python tools/safe_delete_folder.py <folder_path> --delete -k        # delete + kill
 """
 
 from __future__ import annotations
@@ -16,30 +29,8 @@ from __future__ import annotations
 # =============================================================================
 PROTECTED_PROCESSES: set[str] = {
     "explorer.exe",      # Windows Explorer - killing causes desktop issues
-    "dwm.exe",           # Desktop Window Manager
-    "csrss.exe",         # Client Server Runtime
-    "winlogon.exe",      # Windows Logon
-    "services.exe",      # Service Control Manager
-    "lsass.exe",         # Local Security Authority
-    "smss.exe",          # Session Manager
-    "svchost.exe",       # Service Host (many services depend on it)
-    "System",            # System process
-    "wininit.exe",       # Windows Initialization
 }
 
-# =============================================================================
-# Problematic Files - Move to temp instead of direct delete
-# These files often remain locked even after process termination
-# =============================================================================
-PROBLEMATIC_FILE_PATTERNS: set[str] = {
-    "_rust.pyd",         # Cryptography Rust bindings
-    "_cffi_backend.pyd", # CFFI backend
-    "_sqlite3.pyd",      # SQLite bindings
-    "_ssl.pyd",          # SSL bindings
-    "_hashlib.pyd",      # Hash library bindings
-    ".pyd",              # Any Python DLL (fallback pattern)
-    ".dll",              # Any DLL file
-}
 
 import argparse
 import os
@@ -217,59 +208,10 @@ def _kill_detected_lockers(locking_processes: list[str]) -> list[str]:
 
 
 # =============================================================================
-# Problematic File Handling
-# =============================================================================
-
-
-def _is_problematic_file(filepath: Path) -> bool:
-    """Check if a file matches known problematic patterns."""
-    name = filepath.name.lower()
-    for pattern in PROBLEMATIC_FILE_PATTERNS:
-        if name.endswith(pattern.lower()):
-            return True
-    return False
-
-
-def _move_problematic_files_to_temp(folder: Path) -> list[str]:
-    """Move known problematic files to temp folder before deletion.
-
-    This handles files like .pyd and .dll that often remain locked
-    even after processes are terminated.
-
-    Returns:
-        List of status messages about moved files.
-    """
-    import tempfile
-    import uuid
-
-    results = []
-    temp_base = Path(tempfile.gettempdir()) / "safe_delete_staging"
-
-    try:
-        for filepath in folder.rglob("*"):
-            if filepath.is_file() and _is_problematic_file(filepath):
-                try:
-                    # Create unique temp location
-                    unique_name = f"{filepath.stem}_{uuid.uuid4().hex[:8]}{filepath.suffix}"
-                    temp_dest = temp_base / unique_name
-                    temp_base.mkdir(parents=True, exist_ok=True)
-
-                    # Try to move the file
-                    shutil.move(str(filepath), str(temp_dest))
-                    results.append(f"MOVED: {filepath.name} -> {temp_dest}")
-                except PermissionError:
-                    results.append(f"LOCKED (cannot move): {filepath}")
-                except OSError as e:
-                    results.append(f"ERROR moving {filepath.name}: {e}")
-    except PermissionError:
-        results.append("ERROR: Cannot scan folder (permission denied)")
-
-    return results
-
-
-# =============================================================================
 # Folder Deletion
 # =============================================================================
+
+MAX_DELETE_RETRIES = 50  # Max locked files to move before giving up
 
 
 def _rmtree_remove_readonly(func: Callable[..., None], path: str, _exc: object) -> None:
@@ -278,25 +220,137 @@ def _rmtree_remove_readonly(func: Callable[..., None], path: str, _exc: object) 
     func(path)
 
 
-def _delete_folder(path: Path) -> tuple[bool, str]:
-    """Delete folder using shutil.rmtree with readonly handling."""
-    if not path.exists():
-        return True, "Already deleted"
+def _move_file_to_temp(filepath: Path) -> tuple[bool, str]:
+    """Move a locked file to temp directory."""
+    import tempfile
+    import uuid
+
+    temp_base = Path(tempfile.gettempdir()) / "safe_delete_staging"
+    unique_name = f"{filepath.stem}_{uuid.uuid4().hex[:8]}{filepath.suffix}"
+    temp_dest = temp_base / unique_name
 
     try:
-        if sys.version_info >= (3, 12):
-            shutil.rmtree(path, onexc=_rmtree_remove_readonly)
-        else:
-            shutil.rmtree(path, onerror=_rmtree_remove_readonly)  # pylint: disable=deprecated-argument
+        temp_base.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(filepath), str(temp_dest))
+        return True, str(temp_dest)
+    except (PermissionError, OSError) as e:
+        return False, str(e)
 
-        if not path.exists():
-            return True, "Deleted successfully"
-        return False, "Folder still exists after rmtree"
 
-    except PermissionError as e:
-        return False, f"Permission denied: {e}"
-    except OSError as e:
-        return False, f"OS error: {e}"
+def _extract_path_from_error(error: PermissionError | OSError) -> Path | None:
+    """Extract file path from a PermissionError or OSError."""
+    # Error format: [WinError 5] Access is denied: 'C:\\path\\to\\file'
+    if error.filename:
+        return Path(error.filename)
+    # Try parsing from string representation
+    match = re.search(r"['\"]([^'\"]+)['\"]$", str(error))
+    if match:
+        return Path(match.group(1))
+    return None
+
+
+def _delete_folder(
+    path: Path, kill_lockers: bool = False, quiet: bool = False
+) -> tuple[bool, str, list[str], list[str]]:
+    """Delete folder with escalating strategies for locked files.
+
+    Strategy (escalates as needed):
+        1. Try delete
+        2. If fails, try move locked file to temp
+        3. If move fails AND kill_lockers=True, kill locker, retry move
+        4. Retry delete
+
+    Args:
+        path: Folder to delete
+        kill_lockers: If True, kill locking processes as last resort
+        quiet: Suppress progress output
+
+    Returns:
+        Tuple of (success, message, moved_files, killed_processes)
+    """
+    if not path.exists():
+        return True, "Already deleted", [], []
+
+    moved_files: list[str] = []
+    killed_procs: list[str] = []
+
+    def log(msg: str) -> None:
+        if not quiet:
+            print(f"  {msg}")
+
+    for _ in range(MAX_DELETE_RETRIES):
+        try:
+            if sys.version_info >= (3, 12):
+                shutil.rmtree(path, onexc=_rmtree_remove_readonly)
+            else:
+                shutil.rmtree(path, onerror=_rmtree_remove_readonly)  # pylint: disable=deprecated-argument
+
+            if not path.exists():
+                return True, "Deleted successfully", moved_files, killed_procs
+            return False, "Folder still exists after rmtree", moved_files, killed_procs
+
+        except PermissionError as e:
+            locked_path = _extract_path_from_error(e)
+            if not locked_path or not locked_path.exists():
+                return (
+                    False,
+                    f"Permission denied (cannot identify file): {e}",
+                    moved_files,
+                    killed_procs,
+                )
+
+            # Step 1: Try move
+            moved, result = _move_file_to_temp(locked_path)
+            if moved:
+                log(f"MOVED: {locked_path.name}")
+                moved_files.append(f"{locked_path.name} -> {result}")
+                continue  # Retry delete
+
+            # Step 2: Move failed - escalate to kill (if allowed)
+            if not kill_lockers:
+                return (
+                    False,
+                    f"Cannot move locked file: {locked_path} (use --kill-lockers)",
+                    moved_files,
+                    killed_procs,
+                )
+
+            log(f"LOCKED: {locked_path.name} - finding locker...")
+            handle_exe = _find_handle_executable()
+            if handle_exe:
+                lockers = _run_handle_exe(handle_exe, locked_path)
+                if lockers:
+                    kill_results = _kill_detected_lockers(lockers)
+                    for msg in kill_results:
+                        log(msg)
+                        killed_procs.append(msg)
+                    if any("KILLED" in msg for msg in kill_results):
+                        time.sleep(1)  # Wait for handles to release
+
+            # Step 3: Try move again after kill
+            moved, result = _move_file_to_temp(locked_path)
+            if moved:
+                log(f"MOVED: {locked_path.name}")
+                moved_files.append(f"{locked_path.name} -> {result}")
+                continue  # Retry delete
+
+            # Can't handle this file
+            return (
+                False,
+                f"Cannot delete or move: {locked_path}",
+                moved_files,
+                killed_procs,
+            )
+
+        except OSError as e:
+            return False, f"OS error: {e}", moved_files, killed_procs
+
+    return (
+        False,
+        f"Too many locked files (>{MAX_DELETE_RETRIES})",
+        moved_files,
+        killed_procs,
+    )
 
 
 # =============================================================================
@@ -377,7 +431,9 @@ Examples:
     )
     parser.add_argument("paths", nargs="+", help="Folder path(s) to process")
     parser.add_argument("--delete", action="store_true", help="Delete the folder(s)")
-    parser.add_argument("--kill-lockers", "-k", action="store_true", help="Kill processes locking the folder")
+    parser.add_argument(
+        "--kill-lockers", "-k", action="store_true", help="Kill locking processes"
+    )
     parser.add_argument("--quiet", "-q", action="store_true", help="Minimal output")
 
     args = parser.parse_args()
@@ -391,52 +447,39 @@ Examples:
             print(f"Processing: {path}")
             print("=" * 50)
 
-        # Diagnose
-        diag = diagnose_folder(path)
-
-        if not args.quiet:
-            print_diagnostic_report(diag)
-
         if not args.delete:
+            # DIAGNOSE mode: scan entire folder with handle64 upfront
+            diag = diagnose_folder(path)
+            if not args.quiet:
+                print_diagnostic_report(diag)
             if diag.exists:
                 print("\n[!] Use --delete to delete the folder")
             continue
 
-        if not diag.exists:
+        # DELETE mode: skip upfront diagnose, handle locks as needed
+        if not path.exists():
             print("\n[OK] Already deleted")
             continue
 
-        # Kill lockers if requested
-        if args.kill_lockers and diag.locking_processes:
-            print("\n[...] Killing locking processes...")
-            kill_results = _kill_detected_lockers(diag.locking_processes)
-            for msg in kill_results:
-                print(f"  {msg}")
-            if any("KILLED" in msg for msg in kill_results):
-                print("  Waiting for handles to release...")
-                time.sleep(2)
-            # Warn if protected processes are blocking
-            if any("PROTECTED" in msg for msg in kill_results):
-                print("\n[!] Protected processes are blocking - deletion may fail")
-
-        # Move problematic files to temp before deletion
-        print("\n[...] Moving problematic files to temp...")
-        move_results = _move_problematic_files_to_temp(path)
-        if move_results:
-            for msg in move_results:
-                print(f"  {msg}")
-        else:
-            print("  No problematic files found")
-
-        # Delete
+        # Delete with escalating strategy:
+        # 1. Try delete
+        # 2. If fails, move locked file
+        # 3. If move fails, kill locker (if --kill-lockers), retry move
         print(f"\n[...] Deleting {path}...")
-        success, message = _delete_folder(path)
+        success, message, moved_files, killed_procs = _delete_folder(
+            path, kill_lockers=args.kill_lockers, quiet=args.quiet
+        )
+
+        if not args.quiet:
+            if moved_files:
+                print(f"\n  Summary: Moved {len(moved_files)} file(s) to temp")
+            if killed_procs:
+                print(f"  Summary: {len(killed_procs)} process action(s)")
 
         if success:
-            print(f"[OK] {message}")
+            print(f"\n[OK] {message}")
         else:
-            print(f"[FAIL] {message}")
-            print("\nTip: Try --kill-lockers")
+            print(f"\n[FAIL] {message}")
             exit_code = 1
 
     return exit_code
