@@ -719,3 +719,29 @@ class TestCreateStartupScriptV2:
         content = script_path.read_text(encoding="utf-8")
         assert "/discuss" in content
         assert "Step 2: Automated Discussion" in content
+
+    def test_creates_script_with_env_var_setup(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """Generated script sets MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert 'set "MCP_CODER_PROJECT_DIR=%CD%"' in content
+        assert 'set "MCP_CODER_VENV_DIR=%CD%\\.venv"' in content
