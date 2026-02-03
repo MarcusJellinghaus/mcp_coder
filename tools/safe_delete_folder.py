@@ -241,43 +241,25 @@ def _ensure_handle_eula_accepted(handle_exe: str) -> bool:
     if not handle_exe or not Path(handle_exe).exists():
         return False
 
-    # Quick test: run handle64.exe on a path that definitely exists
-    # If EULA is already accepted, this returns quickly
-    # If not, we need to wait for acceptance
-    try:
-        # First, try a quick run with short timeout to see if EULA is already accepted
-        result = subprocess.run(
-            [handle_exe, "-accepteula", "-nobanner", "C:\\"],
-            capture_output=True,
-            text=True,
-            timeout=10,  # Short timeout for quick check
-            check=False,
-        )
-        # If it returns quickly, EULA is accepted
-        if result.returncode == 0 or "No matching handles found" in result.stdout:
-            return True
-    except subprocess.TimeoutExpired:
-        # Timed out - EULA probably not accepted yet, need longer run
-        pass
-
-    # EULA not accepted - do a full acceptance run with progress indicator
-    print("  Accepting Sysinternals EULA (this may take 2-3 minutes on first run)...")
+    # handle64.exe is slow - even after EULA is accepted, it can take a while
+    # to scan all processes. We do a single run with a long timeout.
+    print("  Running handle64.exe (may take 1-3 minutes to scan processes)...")
     try:
         result = subprocess.run(
             [handle_exe, "-accepteula", "-nobanner", "C:\\"],
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minute timeout for EULA acceptance
+            timeout=300,  # 5 minute timeout
             check=False,
         )
         if result.returncode == 0 or "No matching handles found" in result.stdout:
-            print("  EULA accepted successfully.")
+            print("  handle64.exe ready.")
             return True
         else:
             print("  Warning: handle64.exe returned unexpected output")
             return False
     except subprocess.TimeoutExpired:
-        print("  Warning: handle64.exe timed out during EULA acceptance")
+        print("  Warning: handle64.exe timed out")
         return False
     except OSError as e:
         print(f"  Warning: Failed to run handle64.exe: {e}")
@@ -371,12 +353,12 @@ def find_locking_processes_windows(path: Path) -> list[str]:
             locking.append("[INFO] handle64.exe EULA could not be accepted")
         else:
             try:
-                # EULA is accepted, now run the actual query (should be fast)
+                # Run the actual query for the specific path
                 result = subprocess.run(
                     [handle_exe, "-nobanner", str(path)],
                     capture_output=True,
                     text=True,
-                    timeout=60,  # 1 minute should be enough after EULA is accepted
+                    timeout=180,  # 3 minutes - handle64.exe can be slow
                     check=False,
                 )
                 if result.returncode == 0 and result.stdout.strip():
