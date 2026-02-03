@@ -11,6 +11,36 @@ Usage:
 
 from __future__ import annotations
 
+# =============================================================================
+# Protected Processes - NEVER kill these, just report as blocking
+# =============================================================================
+PROTECTED_PROCESSES: set[str] = {
+    "explorer.exe",      # Windows Explorer - killing causes desktop issues
+    "dwm.exe",           # Desktop Window Manager
+    "csrss.exe",         # Client Server Runtime
+    "winlogon.exe",      # Windows Logon
+    "services.exe",      # Service Control Manager
+    "lsass.exe",         # Local Security Authority
+    "smss.exe",          # Session Manager
+    "svchost.exe",       # Service Host (many services depend on it)
+    "System",            # System process
+    "wininit.exe",       # Windows Initialization
+}
+
+# =============================================================================
+# Problematic Files - Move to temp instead of direct delete
+# These files often remain locked even after process termination
+# =============================================================================
+PROBLEMATIC_FILE_PATTERNS: set[str] = {
+    "_rust.pyd",         # Cryptography Rust bindings
+    "_cffi_backend.pyd", # CFFI backend
+    "_sqlite3.pyd",      # SQLite bindings
+    "_ssl.pyd",          # SSL bindings
+    "_hashlib.pyd",      # Hash library bindings
+    ".pyd",              # Any Python DLL (fallback pattern)
+    ".dll",              # Any DLL file
+}
+
 import argparse
 import os
 import re
@@ -143,11 +173,11 @@ def _run_handle_exe(handle_exe: str, path: Path) -> list[str]:
 
 
 def _kill_detected_lockers(locking_processes: list[str]) -> list[str]:
-    """Kill all processes detected by handle64.exe."""
+    """Kill processes detected by handle64.exe, skipping protected ones."""
     if sys.platform != "win32":
         return []
 
-    killed = []
+    results = []
 
     for proc_info in locking_processes:
         if proc_info.startswith("[ERROR]") or proc_info.startswith("[INFO]"):
@@ -161,6 +191,11 @@ def _kill_detected_lockers(locking_processes: list[str]) -> list[str]:
         proc_name = match.group(1)
         pid = int(match.group(2))
 
+        # Skip protected processes
+        if proc_name.lower() in {p.lower() for p in PROTECTED_PROCESSES}:
+            results.append(f"PROTECTED (not killed): {proc_name} (PID {pid})")
+            continue
+
         try:
             result = subprocess.run(
                 ["taskkill", "/F", "/PID", str(pid)],
@@ -170,15 +205,66 @@ def _kill_detected_lockers(locking_processes: list[str]) -> list[str]:
                 check=False,
             )
             if result.returncode == 0:
-                killed.append(f"KILLED: {proc_name} (PID {pid})")
+                results.append(f"KILLED: {proc_name} (PID {pid})")
             elif "not found" in result.stderr.lower():
-                killed.append(f"ALREADY GONE: {proc_name} (PID {pid})")
+                results.append(f"ALREADY GONE: {proc_name} (PID {pid})")
             else:
-                killed.append(f"FAILED: {proc_name} (PID {pid})")
+                results.append(f"FAILED: {proc_name} (PID {pid})")
         except Exception as e:  # noqa: BLE001
-            killed.append(f"ERROR: {proc_name} (PID {pid}): {e}")
+            results.append(f"ERROR: {proc_name} (PID {pid}): {e}")
 
-    return killed
+    return results
+
+
+# =============================================================================
+# Problematic File Handling
+# =============================================================================
+
+
+def _is_problematic_file(filepath: Path) -> bool:
+    """Check if a file matches known problematic patterns."""
+    name = filepath.name.lower()
+    for pattern in PROBLEMATIC_FILE_PATTERNS:
+        if name.endswith(pattern.lower()):
+            return True
+    return False
+
+
+def _move_problematic_files_to_temp(folder: Path) -> list[str]:
+    """Move known problematic files to temp folder before deletion.
+
+    This handles files like .pyd and .dll that often remain locked
+    even after processes are terminated.
+
+    Returns:
+        List of status messages about moved files.
+    """
+    import tempfile
+    import uuid
+
+    results = []
+    temp_base = Path(tempfile.gettempdir()) / "safe_delete_staging"
+
+    try:
+        for filepath in folder.rglob("*"):
+            if filepath.is_file() and _is_problematic_file(filepath):
+                try:
+                    # Create unique temp location
+                    unique_name = f"{filepath.stem}_{uuid.uuid4().hex[:8]}{filepath.suffix}"
+                    temp_dest = temp_base / unique_name
+                    temp_base.mkdir(parents=True, exist_ok=True)
+
+                    # Try to move the file
+                    shutil.move(str(filepath), str(temp_dest))
+                    results.append(f"MOVED: {filepath.name} -> {temp_dest}")
+                except PermissionError:
+                    results.append(f"LOCKED (cannot move): {filepath}")
+                except OSError as e:
+                    results.append(f"ERROR moving {filepath.name}: {e}")
+    except PermissionError:
+        results.append("ERROR: Cannot scan folder (permission denied)")
+
+    return results
 
 
 # =============================================================================
@@ -323,12 +409,24 @@ Examples:
         # Kill lockers if requested
         if args.kill_lockers and diag.locking_processes:
             print("\n[...] Killing locking processes...")
-            killed = _kill_detected_lockers(diag.locking_processes)
-            for k in killed:
-                print(f"  {k}")
-            if any("KILLED" in k for k in killed):
+            kill_results = _kill_detected_lockers(diag.locking_processes)
+            for msg in kill_results:
+                print(f"  {msg}")
+            if any("KILLED" in msg for msg in kill_results):
                 print("  Waiting for handles to release...")
                 time.sleep(2)
+            # Warn if protected processes are blocking
+            if any("PROTECTED" in msg for msg in kill_results):
+                print("\n[!] Protected processes are blocking - deletion may fail")
+
+        # Move problematic files to temp before deletion
+        print("\n[...] Moving problematic files to temp...")
+        move_results = _move_problematic_files_to_temp(path)
+        if move_results:
+            for msg in move_results:
+                print(f"  {msg}")
+        else:
+            print("  No problematic files found")
 
         # Delete
         print(f"\n[...] Deleting {path}...")
