@@ -359,11 +359,11 @@ def create_startup_script(
     - claude --resume for interactive session
     """
     from .templates import (
-        AUTOMATED_SECTION_WINDOWS_V2,
+        AUTOMATED_SECTION_WINDOWS,
         DISCUSSION_SECTION_WINDOWS,
-        INTERACTIVE_SECTION_WINDOWS_V2,
-        INTERVENTION_SCRIPT_WINDOWS_V2,
-        STARTUP_SCRIPT_WINDOWS_V2,
+        INTERACTIVE_SECTION_WINDOWS,
+        INTERVENTION_SCRIPT_WINDOWS,
+        STARTUP_SCRIPT_WINDOWS,
         VENV_SECTION_WINDOWS,
     )
 
@@ -380,7 +380,7 @@ def create_startup_script(
     if is_windows:
         if is_intervention:
             # Intervention mode - plain claude, no automation
-            script_content = INTERVENTION_SCRIPT_WINDOWS_V2.format(
+            script_content = INTERVENTION_SCRIPT_WINDOWS.format(
                 emoji=emoji,
                 issue_number=issue_number,
                 title=title_display,
@@ -391,7 +391,7 @@ def create_startup_script(
             )
         else:
             # Normal mode - full automation flow
-            automated_section = AUTOMATED_SECTION_WINDOWS_V2.format(
+            automated_section = AUTOMATED_SECTION_WINDOWS.format(
                 initial_command=initial_cmd or "/issue_analyse",
                 issue_number=issue_number,
                 timeout=timeout,
@@ -401,7 +401,7 @@ def create_startup_script(
                 timeout=timeout,
             )
 
-            script_content = STARTUP_SCRIPT_WINDOWS_V2.format(
+            script_content = STARTUP_SCRIPT_WINDOWS.format(
                 emoji=emoji,
                 issue_number=issue_number,
                 title=title_display,
@@ -411,7 +411,7 @@ def create_startup_script(
                 venv_section=VENV_SECTION_WINDOWS,
                 automated_section=automated_section,
                 discussion_section=discussion_section,
-                interactive_section=INTERACTIVE_SECTION_WINDOWS_V2,
+                interactive_section=INTERACTIVE_SECTION_WINDOWS,
             )
 
         script_path = folder_path / ".vscodeclaude_start.bat"

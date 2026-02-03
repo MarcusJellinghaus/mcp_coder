@@ -45,8 +45,8 @@ set "MCP_CODER_PROJECT_DIR=%CD%"
 set "MCP_CODER_VENV_DIR=%CD%\.venv"
 """
 
-# Automated analysis section for Windows (V2 - using mcp-coder prompt)
-AUTOMATED_SECTION_WINDOWS_V2 = r"""echo.
+# Automated analysis section for Windows (using mcp-coder prompt)
+AUTOMATED_SECTION_WINDOWS = r"""echo.
 echo === Step 1: Automated Analysis ===
 echo Running: {initial_command} {issue_number}
 echo.
@@ -82,8 +82,8 @@ if errorlevel 1 (
 )
 """
 
-# Interactive section for Windows (V2 - raw claude CLI with resume)
-INTERACTIVE_SECTION_WINDOWS_V2 = r"""echo.
+# Interactive section for Windows (raw claude CLI with resume)
+INTERACTIVE_SECTION_WINDOWS = r"""echo.
 echo === Step 3: Interactive Session ===
 echo You can now interact with Claude directly.
 echo The conversation context from previous steps is preserved.
@@ -92,8 +92,8 @@ echo.
 claude --resume %SESSION_ID%
 """
 
-# Main startup script for Windows (V2 - with venv and mcp-coder)
-STARTUP_SCRIPT_WINDOWS_V2 = r"""@echo off
+# Main startup script for Windows (with venv and mcp-coder)
+STARTUP_SCRIPT_WINDOWS = r"""@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
@@ -115,8 +115,8 @@ echo.
 {interactive_section}
 """
 
-# Intervention mode for Windows (V2 - with venv activation)
-INTERVENTION_SCRIPT_WINDOWS_V2 = r"""@echo off
+# Intervention mode for Windows (with venv activation)
+INTERVENTION_SCRIPT_WINDOWS = r"""@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
