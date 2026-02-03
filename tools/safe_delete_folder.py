@@ -226,6 +226,64 @@ def _download_handle_executable() -> str | None:
         return None
 
 
+def _ensure_handle_eula_accepted(handle_exe: str) -> bool:
+    """Ensure the Sysinternals EULA has been accepted for handle64.exe.
+
+    The first run of handle64.exe requires EULA acceptance, which can be very slow
+    (2-3 minutes). This function does a quick test run to check/accept the EULA.
+
+    Args:
+        handle_exe: Path to handle64.exe
+
+    Returns:
+        True if EULA is accepted and handle64.exe is ready to use.
+    """
+    if not handle_exe or not Path(handle_exe).exists():
+        return False
+
+    # Quick test: run handle64.exe on a path that definitely exists
+    # If EULA is already accepted, this returns quickly
+    # If not, we need to wait for acceptance
+    try:
+        # First, try a quick run with short timeout to see if EULA is already accepted
+        result = subprocess.run(
+            [handle_exe, "-accepteula", "-nobanner", "C:\\"],
+            capture_output=True,
+            text=True,
+            timeout=10,  # Short timeout for quick check
+            check=False,
+        )
+        # If it returns quickly, EULA is accepted
+        if result.returncode == 0 or "No matching handles found" in result.stdout:
+            return True
+    except subprocess.TimeoutExpired:
+        # Timed out - EULA probably not accepted yet, need longer run
+        pass
+
+    # EULA not accepted - do a full acceptance run with progress indicator
+    print("  Accepting Sysinternals EULA (this may take 2-3 minutes on first run)...")
+    try:
+        result = subprocess.run(
+            [handle_exe, "-accepteula", "-nobanner", "C:\\"],
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout for EULA acceptance
+            check=False,
+        )
+        if result.returncode == 0 or "No matching handles found" in result.stdout:
+            print("  EULA accepted successfully.")
+            return True
+        else:
+            print("  Warning: handle64.exe returned unexpected output")
+            return False
+    except subprocess.TimeoutExpired:
+        print("  Warning: handle64.exe timed out during EULA acceptance")
+        return False
+    except OSError as e:
+        print(f"  Warning: Failed to run handle64.exe: {e}")
+        return False
+
+
 def _find_handle_executable(auto_download: bool = True) -> str | None:
     """Find the Sysinternals handle executable.
 
@@ -308,28 +366,26 @@ def find_locking_processes_windows(path: Path) -> list[str]:
     # Try using handle.exe/handle64.exe from Sysinternals if available
     handle_exe = _find_handle_executable()
     if handle_exe:
-        try:
-            # Run with long timeout (180s) - handle64.exe can take 2-3 minutes!
-            # First run is especially slow, and even subsequent runs can be slow
-            # on systems with many processes/handles
-            result = subprocess.run(
-                [handle_exe, "-accepteula", "-nobanner", str(path)],
-                capture_output=True,
-                text=True,
-                timeout=180,  # 3 minutes - handle64.exe can be very slow
-                check=False,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                for line in result.stdout.strip().split("\n"):
-                    if line.strip() and "No matching handles found" not in line:
-                        locking.append(f"[{Path(handle_exe).name}] {line.strip()}")
-            elif result.returncode == 0:
-                # No handles found - that's actually good!
-                pass
-            elif "EULA" in result.stdout or "EULA" in result.stderr:
-                locking.append(f"[{Path(handle_exe).name}] EULA not accepted - run: {handle_exe} -accepteula")
-        except subprocess.TimeoutExpired:
-            locking.append(f"[{Path(handle_exe).name}] Timed out (try running manually: {handle_exe} -accepteula)")
+        # Ensure EULA is accepted before running (handles first-run slowness)
+        if not _ensure_handle_eula_accepted(handle_exe):
+            locking.append("[INFO] handle64.exe EULA could not be accepted")
+        else:
+            try:
+                # EULA is accepted, now run the actual query (should be fast)
+                result = subprocess.run(
+                    [handle_exe, "-nobanner", str(path)],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,  # 1 minute should be enough after EULA is accepted
+                    check=False,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    for line in result.stdout.strip().split("\n"):
+                        if line.strip() and "No matching handles found" not in line:
+                            locking.append(f"[{Path(handle_exe).name}] {line.strip()}")
+                # returncode 0 with no output or "No matching handles" = no locks (good!)
+            except subprocess.TimeoutExpired:
+                locking.append(f"[{Path(handle_exe).name}] Timed out querying handles")
     else:
         locking.append("[INFO] handle64.exe not available (download failed or offline)")
 
