@@ -424,7 +424,7 @@ def create_startup_script(
         # Linux - TODO: Implement in Step 17
         # For now, raise NotImplementedError
         raise NotImplementedError(
-            "Linux V2 templates not yet implemented. " "See Step 17 for Linux support."
+            "Linux templates not yet implemented. " "See Step 17 for Linux support."
         )
 
 

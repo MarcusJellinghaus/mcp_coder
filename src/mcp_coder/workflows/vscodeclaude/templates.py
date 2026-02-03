@@ -66,7 +66,7 @@ if "%SESSION_ID%"=="" (
 echo Session ID: %SESSION_ID%
 """
 
-# Discussion section for Windows (V2 - using mcp-coder prompt with session resume)
+# Discussion section for Windows (using mcp-coder prompt with session resume)
 DISCUSSION_SECTION_WINDOWS = r"""echo.
 echo === Step 2: Automated Discussion ===
 echo Running: /discuss
