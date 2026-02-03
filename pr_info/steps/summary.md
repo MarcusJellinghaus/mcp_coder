@@ -33,11 +33,11 @@ The `.vscodeclaude_start.bat` template does not set `MCP_CODER_PROJECT_DIR` befo
 
 ## Implementation Steps
 
-| Step | Description | TDD Approach |
-|------|-------------|--------------|
-| 1 | Add env var setup and warning to `VENV_SECTION_WINDOWS` | Extend test first, then fix template |
-| 2 | Remove V2 suffix from 4 template names and update 8 usages | Verify tests still pass |
-| 3 | Final verification | Run all tests |
+| Step | Description | TDD Approach | Commit |
+|------|-------------|--------------|--------|
+| 1 | Add env var setup and warning to `VENV_SECTION_WINDOWS` | New test first, then fix template | Commit 1 |
+| 2 | Remove V2 suffix from 4 template names and update 8 usages | Verify tests still pass | Commit 2 |
+| 3 | Final verification | Run all tests | - |
 
 ## Acceptance Criteria
 
@@ -46,5 +46,5 @@ The `.vscodeclaude_start.bat` template does not set `MCP_CODER_PROJECT_DIR` befo
 - [ ] Warning with pause displayed when `MCP_CODER_PROJECT_DIR` doesn't match CWD
 - [ ] V2 suffix removed from 4 template names in `templates.py`
 - [ ] 8 references updated in `workspace.py`
-- [ ] Test extended to verify environment variable setup
+- [ ] New test `test_creates_script_with_env_var_setup` verifies environment variable setup
 - [ ] All tests pass

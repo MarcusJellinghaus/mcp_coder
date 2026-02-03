@@ -18,17 +18,39 @@ Add `MCP_CODER_PROJECT_DIR` and `MCP_CODER_VENV_DIR` setup to the Windows venv s
 `tests/workflows/vscodeclaude/test_workspace.py`
 
 ### WHAT
-Extend existing test `test_creates_script_with_venv_section` in `TestCreateStartupScriptV2` class.
+Create new test `test_creates_script_with_env_var_setup` in `TestCreateStartupScriptV2` class.
 
 ### HOW
-Add assertions to verify the generated script contains the env var setup.
+Add new test method to verify the generated script contains the env var setup.
 
 ### Test Code to Add
 
 ```python
-# Add to existing test_creates_script_with_venv_section method, after existing assertions:
-assert 'set "MCP_CODER_PROJECT_DIR=%CD%"' in content
-assert 'set "MCP_CODER_VENV_DIR=%CD%\\.venv"' in content
+def test_creates_script_with_env_var_setup(
+    self,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mock_vscodeclaude_config: None,
+) -> None:
+    """Generated script sets MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR."""
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+        lambda: "Windows",
+    )
+
+    script_path = create_startup_script(
+        folder_path=tmp_path,
+        issue_number=123,
+        issue_title="Test issue",
+        status="status-07:code-review",
+        repo_name="test-repo",
+        issue_url="https://github.com/test/repo/issues/123",
+        is_intervention=False,
+    )
+
+    content = script_path.read_text(encoding="utf-8")
+    assert 'set "MCP_CODER_PROJECT_DIR=%CD%"' in content
+    assert 'set "MCP_CODER_VENV_DIR=%CD%\\.venv"' in content
 ```
 
 ## Implementation
@@ -80,7 +102,7 @@ No new data structures. Template string is modified in place.
 
 ```bash
 # Run the specific test
-pytest tests/workflows/vscodeclaude/test_workspace.py::TestCreateStartupScriptV2::test_creates_script_with_venv_section -v
+pytest tests/workflows/vscodeclaude/test_workspace.py::TestCreateStartupScriptV2::test_creates_script_with_env_var_setup -v
 ```
 
 ## Expected Outcome
