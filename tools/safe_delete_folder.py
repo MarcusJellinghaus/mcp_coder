@@ -569,6 +569,62 @@ def _run_powershell_remove(path: Path) -> None:
         raise OSError(f"PowerShell error: {error_msg}")
 
 
+def _kill_detected_lockers(locking_processes: list[str]) -> list[str]:
+    """Kill all processes detected as holding locks by handle64.exe.
+
+    Parses the handle64.exe output and terminates ALL identified processes.
+    WARNING: This may kill the current Claude Code session if it holds a lock.
+
+    Args:
+        locking_processes: List of strings from handle64.exe detection.
+
+    Returns:
+        List of killed process descriptions.
+    """
+    if sys.platform != "win32":
+        return []
+
+    import re
+
+    killed = []
+
+    for proc_info in locking_processes:
+        # Skip info/warning messages
+        if proc_info.startswith("[INFO]") or "Timed out" in proc_info or "EULA" in proc_info:
+            continue
+
+        # Parse handle64.exe output format:
+        # [handle64.exe] cmd.exe            pid: 35140  type: File  ...
+        match = re.search(r'\]\s*(\S+)\s+pid:\s*(\d+)', proc_info)
+        if not match:
+            match = re.search(r'^(\S+)\s+pid:\s*(\d+)', proc_info)
+
+        if match:
+            proc_name = match.group(1)
+            pid = int(match.group(2))
+
+            try:
+                result = subprocess.run(
+                    ["taskkill", "/F", "/PID", str(pid)],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    killed.append(f"KILLED: {proc_name} (PID {pid})")
+                elif "not found" in result.stderr.lower():
+                    killed.append(f"ALREADY GONE: {proc_name} (PID {pid})")
+                else:
+                    killed.append(f"FAILED: {proc_name} (PID {pid}) - {result.stderr.strip()}")
+            except subprocess.TimeoutExpired:
+                killed.append(f"TIMEOUT: {proc_name} (PID {pid})")
+            except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+                killed.append(f"ERROR: {proc_name} (PID {pid}): {e}")
+
+    return killed
+
+
 def _kill_workspace_python_processes(path: Path) -> list[str]:
     """Kill Python processes that are running from the given path (Windows only).
 
@@ -1224,6 +1280,11 @@ Examples:
         action="store_true",
         help="Kill VS Code processes that have this folder open (Windows only). Only kills VS Code windows for this specific folder."
     )
+    parser.add_argument(
+        "--kill-lockers",
+        action="store_true",
+        help="Automatically kill processes detected by handle64.exe that are locking the folder (Windows only). Skips killing Claude Code and parent processes for safety."
+    )
 
     args = parser.parse_args()
 
@@ -1260,6 +1321,16 @@ Examples:
             if not diag.exists:
                 print(f"\n[OK] {path} - Already deleted or doesn't exist")
                 continue
+
+            # Kill detected locking processes if requested
+            if args.kill_lockers and diag.locking_processes:
+                print("\n[...] Killing detected locking processes...")
+                killed = _kill_detected_lockers(diag.locking_processes)
+                for result in killed:
+                    print(f"  {result}")
+                if any("KILLED" in r for r in killed):
+                    print("  Waiting for handles to release...")
+                    time.sleep(2)  # Give Windows time to release handles
 
             print(f"\n[...] Attempting to delete {path}...")
             success, message = try_delete_folder(
