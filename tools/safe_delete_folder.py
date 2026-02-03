@@ -36,10 +36,12 @@ CLAUDE CODE WARNING:
     handle64.exe output shows: claude.exe and cmd.exe holding handles.
     Solution: Run the script from a separate terminal, not from within Claude.
 
-HANDLE64.EXE FIRST RUN:
-    The first run of handle64.exe requires EULA acceptance, which can cause
-    timeouts. The script attempts to pass -accepteula, but if it still times
-    out, run manually once: handle64.exe -accepteula
+HANDLE64.EXE PERFORMANCE:
+    handle64.exe can be VERY SLOW (2-3 minutes!) especially on first run.
+    The script uses a 180-second timeout. If it still times out:
+    1. Run manually once: handle64.exe -accepteula
+    2. Wait for it to complete (can take several minutes)
+    3. Subsequent runs should be faster
 
 Common blocking files in Python .venv folders:
     - cryptography/hazmat/bindings/_rust.pyd  (cryptography package)
@@ -307,13 +309,14 @@ def find_locking_processes_windows(path: Path) -> list[str]:
     handle_exe = _find_handle_executable()
     if handle_exe:
         try:
-            # Run with increased timeout (60s) - first run may be slow due to EULA
-            # The -accepteula flag should auto-accept, but first run is still slower
+            # Run with long timeout (180s) - handle64.exe can take 2-3 minutes!
+            # First run is especially slow, and even subsequent runs can be slow
+            # on systems with many processes/handles
             result = subprocess.run(
                 [handle_exe, "-accepteula", "-nobanner", str(path)],
                 capture_output=True,
                 text=True,
-                timeout=60,  # Increased from 30s for first run
+                timeout=180,  # 3 minutes - handle64.exe can be very slow
                 check=False,
             )
             if result.returncode == 0 and result.stdout.strip():
