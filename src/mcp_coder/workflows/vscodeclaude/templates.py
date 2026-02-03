@@ -1,6 +1,6 @@
 """Template strings for VSCode Claude session files."""
 
-# Venv setup section for Windows (V2)
+# Venv setup section for Windows
 VENV_SECTION_WINDOWS = r"""echo Checking Python environment...
 if not exist .venv\Scripts\activate.bat (
     echo Creating virtual environment...

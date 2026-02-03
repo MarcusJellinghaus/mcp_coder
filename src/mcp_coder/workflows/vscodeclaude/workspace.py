@@ -352,7 +352,7 @@ def create_startup_script(
     Returns:
         Path to created script (.bat or .sh)
 
-    The V2 templates include:
+    The templates include:
     - Venv creation/activation
     - mcp-coder prompt for automated analysis
     - mcp-coder prompt for /discuss

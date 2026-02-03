@@ -192,8 +192,8 @@ class TestTemplates:
         assert "# VSCodeClaude session files" in GITIGNORE_ENTRY
 
 
-class TestTemplatesV2:
-    """Test V2 template strings with venv and mcp-coder."""
+class TestWindowsTemplates:
+    """Test Windows template strings with venv and mcp-coder."""
 
     def test_venv_section_creates_venv_if_missing(self) -> None:
         """VENV_SECTION_WINDOWS creates venv when not present."""

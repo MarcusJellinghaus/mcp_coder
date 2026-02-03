@@ -534,8 +534,8 @@ class TestGitOperations:
         assert any("clone" in str(c) for c in commands)
 
 
-class TestCreateStartupScriptV2:
-    """Test V2 startup script generation with venv and mcp-coder."""
+class TestCreateStartupScript:
+    """Test startup script generation with venv and mcp-coder."""
 
     def test_creates_script_with_venv_section(
         self,
