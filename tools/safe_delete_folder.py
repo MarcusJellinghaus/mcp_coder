@@ -357,23 +357,10 @@ def find_locking_processes_windows(path: Path) -> list[str]:
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
 
-    # Check for common processes that often lock directories
-    common_lockers = ["explorer.exe", "SearchIndexer.exe", "OneDrive.exe", "Code.exe"]
-    try:
-        result = subprocess.run(
-            ["tasklist", "/FO", "CSV"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-        if result.returncode == 0:
-            running = result.stdout.lower()
-            for proc in common_lockers:
-                if proc.lower() in running:
-                    locking.append(f"[Running] {proc} (commonly locks folders)")
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        pass
+    # Note: We used to check for common processes (explorer, SearchIndexer, etc.)
+    # but this was misleading - it only showed they were RUNNING, not that they
+    # were actually locking THIS folder. Removed to avoid confusion.
+    # The handle64.exe output above is the only reliable way to identify lockers.
 
     return locking
 
@@ -482,9 +469,15 @@ def print_diagnostic_report(diag: DiagnosticResult) -> None:
             print(f"  [X] {error}")
 
     if diag.locking_processes:
-        print("\n[POTENTIAL LOCKING PROCESSES]")
+        print("\n[HANDLE DETECTION RESULTS]")
         for proc in diag.locking_processes:
-            print(f"  [LOCK] {proc}")
+            # Distinguish between actual locks found and info messages
+            if proc.startswith("[INFO]"):
+                print(f"  {proc}")
+            elif "Timed out" in proc or "EULA" in proc:
+                print(f"  [WARN] {proc}")
+            else:
+                print(f"  [LOCKED BY] {proc}")
 
     if diag.suggestions:
         print("\n[SUGGESTIONS]")
