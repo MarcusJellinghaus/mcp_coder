@@ -30,11 +30,10 @@ Sysinternals Handle Tool (RECOMMENDED for accurate lock detection):
 LEARNINGS & KNOWN ISSUES (Updated from real-world usage)
 ================================================================================
 
-CLAUDE CODE WARNING:
-    If running this script from within Claude Code (claude.exe), be aware that
-    Claude Code itself may hold file handles to folders it's diagnosing!
-    handle64.exe output shows: claude.exe and cmd.exe holding handles.
-    Solution: Run the script from a separate terminal, not from within Claude.
+HOST APPLICATION LOCKS:
+    IDEs, terminals, and other host applications may hold file handles to folders.
+    Use handle64.exe to identify the specific process holding the lock.
+    Common culprits: VS Code, Claude Code, Explorer, SearchIndexer.
 
 HANDLE64.EXE PERFORMANCE:
     handle64.exe can be VERY SLOW (2-3 minutes!) especially on first run.
@@ -1122,33 +1121,6 @@ def restart_explorer() -> bool:
         return False
 
 
-def _is_running_in_claude_code() -> bool:
-    """Detect if we're running inside Claude Code.
-
-    Claude Code (claude.exe) holds file handles to folders it's working with,
-    which can prevent deletion. This function detects if Claude Code is running.
-
-    Returns:
-        True if Claude Code is running (may be holding handles), False otherwise.
-    """
-    if sys.platform != "win32":
-        return False
-
-    try:
-        # Simple check: is claude.exe running?
-        result = subprocess.run(
-            ["tasklist", "/FI", "IMAGENAME eq claude.exe", "/FO", "CSV", "/NH"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-            shell=True,  # Needed for tasklist on some systems
-        )
-        return "claude.exe" in result.stdout.lower()
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return False
-
-
 def _stop_searchindexer_and_delete(path: Path) -> None:
     """Stop Windows Search Indexer, delete folder, then restart indexer.
 
@@ -1255,14 +1227,10 @@ Examples:
 
     args = parser.parse_args()
 
-    # Warn if running inside Claude Code
-    if sys.platform == "win32" and _is_running_in_claude_code():
-        print("\n" + "!" * 60)
-        print("WARNING: Running inside Claude Code!")
-        print("Claude Code holds file handles to folders it's working with.")
-        print("This may prevent deletion. For best results, run this script")
-        print("from a separate terminal (cmd.exe, PowerShell, or Git Bash).")
-        print("!" * 60 + "\n")
+    # General note about host processes
+    if sys.platform == "win32" and not args.quiet:
+        print("\nNote: Host applications (IDEs, terminals) may hold folder locks.")
+        print("      Run handle64.exe diagnosis to identify the specific locker.\n")
 
     if args.restart_explorer and sys.platform == "win32":
         print("Restarting Windows Explorer...")
