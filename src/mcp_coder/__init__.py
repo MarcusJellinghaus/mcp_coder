@@ -38,7 +38,8 @@ from .utils.git_operations import (
     git_push,
     is_git_repository,
 )
-from .utils.github_operations import CommentData, IssueData, IssueManager, LabelData
+from .utils.github_operations.issues import CommentData, IssueData, IssueManager
+from .utils.github_operations.labels_manager import LabelData
 from .utils.subprocess_runner import (
     CommandOptions,
     CommandResult,

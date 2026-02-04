@@ -1069,7 +1069,7 @@ def run_implement_workflow(
     if update_labels and completed_tasks > 0 and not error_occurred:
         logger.info("Updating GitHub issue label...")
         try:
-            from mcp_coder.utils.github_operations.issue_manager import IssueManager
+            from mcp_coder.utils.github_operations.issues import IssueManager
 
             issue_manager = IssueManager(project_dir)
             success = issue_manager.update_workflow_label(

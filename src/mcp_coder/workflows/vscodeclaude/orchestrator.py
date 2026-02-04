@@ -8,9 +8,12 @@ import platform
 import shutil
 from pathlib import Path
 
-from ...utils.github_operations.issue_branch_manager import IssueBranchManager
-from ...utils.github_operations.issue_cache import get_all_cached_issues
-from ...utils.github_operations.issue_manager import IssueData, IssueManager
+from ...utils.github_operations.issues import (
+    IssueBranchManager,
+    IssueData,
+    IssueManager,
+    get_all_cached_issues,
+)
 from ...utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,

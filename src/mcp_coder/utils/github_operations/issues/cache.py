@@ -26,7 +26,7 @@ from ..github_utils import RepoIdentifier
 from .types import IssueData
 
 if TYPE_CHECKING:
-    from mcp_coder.utils.github_operations.issue_manager import IssueManager
+    from .manager import IssueManager
 
 logger = logging.getLogger(__name__)
 
