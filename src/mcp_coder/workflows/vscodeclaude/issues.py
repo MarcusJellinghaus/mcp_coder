@@ -41,6 +41,36 @@ def get_human_action_labels() -> set[str]:
     }
 
 
+def get_ignore_labels() -> set[str]:
+    """Get set of ignore labels from labels.json (lowercase for case-insensitive matching).
+
+    Returns:
+        Set of lowercase label names to ignore
+    """
+    labels_config = _load_labels_config()
+    ignore_labels: list[str] = labels_config.get("ignore_labels", [])
+    return {label.lower() for label in ignore_labels}
+
+
+def get_matching_ignore_label(
+    issue_labels: list[str],
+    ignore_labels: set[str],
+) -> str | None:
+    """Find first matching ignore label in issue's labels (case-insensitive).
+
+    Args:
+        issue_labels: List of label names from the issue
+        ignore_labels: Set of lowercase ignore label names
+
+    Returns:
+        The original label name if match found, None otherwise
+    """
+    for label in issue_labels:
+        if label.lower() in ignore_labels:
+            return label
+    return None
+
+
 def _get_status_priority(label: str) -> int:
     """Extract numeric priority from status label.
 

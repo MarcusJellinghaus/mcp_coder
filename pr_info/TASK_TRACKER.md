@@ -22,13 +22,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Config Update and Ignore-Label Helper Functions
-- [ ] Update `labels.json` - add `blocked` and `wait` to `ignore_labels` array
-- [ ] Implement `get_ignore_labels()` function in `issues.py`
-- [ ] Implement `get_matching_ignore_label()` function in `issues.py`
-- [ ] Write tests for `get_ignore_labels()` in `test_issues.py`
-- [ ] Write tests for `get_matching_ignore_label()` in `test_issues.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Update `labels.json` - add `blocked` and `wait` to `ignore_labels` array
+- [x] Implement `get_ignore_labels()` function in `issues.py`
+- [x] Implement `get_matching_ignore_label()` function in `issues.py`
+- [x] Write tests for `get_ignore_labels()` in `test_issues.py`
+- [x] Write tests for `get_matching_ignore_label()` in `test_issues.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Session Status Update Helper
 - [ ] Implement `update_session_status()` function in `sessions.py`
