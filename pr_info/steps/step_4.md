@@ -39,8 +39,8 @@ if args.cleanup:
 **New order (correct):**
 ```python
 # Step 1: Handle cleanup (BEFORE restart)
-# - dry_run=True shows actionable messages: "Add --cleanup to delete: XYZ"
-# - dry_run=False (with --cleanup flag) actually deletes
+# - Always runs: dry_run=True shows what would be cleaned, dry_run=False actually deletes
+# - This ensures users always see what's cleanable (Decision #1)
 if args.cleanup:
     cleanup_stale_sessions(dry_run=False, cached_issues_by_repo=cached_issues_by_repo)
 else:
@@ -50,7 +50,7 @@ else:
 restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
 ```
 
-**Note:** Cleanup runs in dry-run mode when `--cleanup` is not passed, showing actionable messages like `Add --cleanup to delete: XYZ`.
+**Note:** Cleanup always runs - in dry-run mode when `--cleanup` is not passed. This shows actionable messages like `Add --cleanup to delete: XYZ` so users know what would be cleaned up (see Decision #1).
 
 ### HOW
 - Move the cleanup block before restart_closed_sessions() call

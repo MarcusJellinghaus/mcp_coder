@@ -185,9 +185,12 @@ for session in sessions:
     if api_failed:
         status_display += " (?)"
     
+    # Check staleness using existing function (see Decision #11)
+    stale = is_session_stale(session, cached_issues=repo_issues)
+    
     # Get next action (with blocked support)
     next_action = get_next_action(
-        is_stale=...,  # existing logic
+        is_stale=stale,
         is_dirty=is_dirty,
         is_vscode_running=is_running,
         blocked_label=blocked_label,

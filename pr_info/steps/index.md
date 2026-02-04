@@ -16,8 +16,9 @@
 | [Step 4](step_4.md) | `cleanup.py`, `commands.py` | Cleanup order + blocked in cleanup | ~30 |
 | [Step 5](step_5.md) | `orchestrator.py` | Skip blocked in restart, update status | ~20 |
 | [Step 6](step_6.md) | `commands.py` | Status command display fixes | ~40 |
+| [Step 7](step_7.md) | `status.py` | Cleanup: remove duplicate `_get_issue_status()` | ~-10 |
 
-**Total estimated: ~130 lines of new/modified code**
+**Total estimated: ~120 lines of new/modified code**
 
 ### Dependency Graph
 
@@ -33,6 +34,8 @@ Step 4 (cleanup) ←── uses Step 1 helpers
 Step 5 (restart) ←── uses Step 1, 2 helpers
     ↓
 Step 6 (status) ←── uses Step 1, 2, 3
+    ↓
+Step 7 (cleanup) ←── removes duplication
 ```
 
 ### Files Modified

@@ -94,6 +94,7 @@ def get_next_action(
 4. **Step 4**: Cleanup order fix + blocked session cleanup
 5. **Step 5**: Restart blocked-skip logic
 6. **Step 6**: Status command display fix
+7. **Step 7**: Cleanup - Remove duplicate `_get_issue_status()` (Decision #12)
 
 ## Acceptance Criteria
 

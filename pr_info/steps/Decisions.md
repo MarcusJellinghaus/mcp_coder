@@ -4,7 +4,7 @@
 
 | # | Topic | Decision | Rationale |
 |---|-------|----------|-----------|
-| 1 | Dry-run cleanup behavior | Keep current behavior - only run cleanup when `--cleanup` is passed | Cleaner output; avoid noisy dry-run messages when user didn't ask for cleanup |
+| 1 | Dry-run cleanup behavior | Always run cleanup - dry-run mode when `--cleanup` not passed | Show actionable messages like `Add --cleanup to delete: XYZ` so users know what would be cleaned up |
 | 2 | Shared helper for cached issues | Modify existing `_build_cached_issues_by_repo()` to return `tuple[dict, set[str]]` | Function already exists; add `failed_repos` to return value for `(?)` indicator |
 | 3 | Race condition / file locking | Not needed for `update_session_status()` | Only one vscodeclaude process runs at a time in practice |
 | 4 | Issue not in cache handling | Current caching is sufficient | If issue missing from cache after successful API call, it's closed/deleted - session is stale |
@@ -14,3 +14,6 @@
 | 8 | Blocked + stale priority | Add test confirming blocked takes priority over stale | When unblocked, session becomes "just stale" and can be cleaned up then |
 | 9 | `(?)` indicator position | Show after status: `04:plan-review (?)` | More natural reading order |
 | 10 | Dry-run message improvement | Change to `Add --cleanup to delete: XYZ`, skip dirty folders | Actionable message; dirty folders can't be auto-cleaned anyway |
+| 11 | `is_stale` logic in Step 6 | Use existing `is_session_stale()` function | Already implements status changed OR closed/deleted check |
+| 12 | Remove `_get_issue_status()` duplication | Separate cleanup task (Step 7) after main implementation | Keep main steps focused on core functionality |
+| 13 | Integration test for cleanup order | Not needed - unit tests sufficient | Code structure makes operation order obvious |
