@@ -54,7 +54,7 @@ def get_next_action(
 | `src/mcp_coder/config/labels.json` | Config | Add `blocked`, `wait` to `ignore_labels` |
 | `src/mcp_coder/workflows/vscodeclaude/issues.py` | Source | Add `get_ignore_labels()`, `get_matching_ignore_label()` |
 | `src/mcp_coder/workflows/vscodeclaude/sessions.py` | Source | Add `update_session_status()` |
-| `src/mcp_coder/workflows/vscodeclaude/status.py` | Source | Add `blocked_label` param to `get_next_action()` |
+| `src/mcp_coder/workflows/vscodeclaude/status.py` | Source | Add `blocked_label` param to `get_next_action()`, remove `_get_issue_status()`, change emojis to plain text |
 | `src/mcp_coder/workflows/vscodeclaude/orchestrator.py` | Source | Skip blocked issues in restart, update status |
 | `src/mcp_coder/workflows/vscodeclaude/cleanup.py` | Source | Include blocked sessions in cleanup |
 | `src/mcp_coder/cli/commands/coordinator/commands.py` | Source | Reorder cleanup/restart, fix status command |
@@ -75,15 +75,16 @@ def get_next_action(
 | Topic | Decision | Rationale |
 |-------|----------|-----------|
 | Label matching | Case-insensitive | Safety - GitHub labels may vary in case |
-| Blocked display | `"Blocked (label-name)"` | Shows which label caused blocking |
+| Blocked display | `"Blocked (label-name)"` and `"!! Manual (label-name)"` | Shows which label caused blocking |
 | Session update timing | On restart AND status command | Keeps sessions in sync |
 | API failure handling | Per-repo `(?)` indicator | Only affected repos show uncertainty |
 | Blocked cleanup | Include in cleanup | Blocked + clean sessions should be deletable |
-| Cleanup without --cleanup flag | Skip entirely | Only run cleanup when explicitly requested |
-| Shared cache builder | Extract `_build_cached_issues_by_repo()` | Avoid code duplication between commands |
+| Cleanup without --cleanup flag | Show actionable message: `Add --cleanup to delete: XYZ` | Skip dirty folders in dry-run output |
+| Shared cache builder | Modify existing `_build_cached_issues_by_repo()` to return `tuple[dict, set[str]]` | Add `failed_repos` for `(?)` indicator |
 | Issue not in cache | Treat as closed/deleted | Current caching is sufficient; missing = stale |
 | File locking for sessions | Not needed | Only one vscodeclaude process runs at a time |
 | Module `__all__` exports | Skip | Keep consistent with current module style |
+| Duplicate `get_issue_status()` | Remove `_get_issue_status()` from status.py, use helpers.py version | Avoid duplication; helpers.py is designated for shared utilities |
 
 ## Implementation Order
 

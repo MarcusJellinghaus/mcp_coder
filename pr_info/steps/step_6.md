@@ -38,19 +38,38 @@ Rewrite the status display loop to use current GitHub data.
 from ....workflows.vscodeclaude.issues import get_ignore_labels, get_matching_ignore_label
 from ....workflows.vscodeclaude.sessions import update_session_status
 from ....workflows.vscodeclaude.status import get_next_action
+from ....workflows.vscodeclaude.helpers import get_issue_status
 ```
 
-**Extract shared helper** (used by both `execute_coordinator_vscodeclaude()` and `execute_coordinator_vscodeclaude_status()`):
+**Modify existing helper** `_build_cached_issues_by_repo()` (already in commands.py) to return failed repos:
 ```python
 def _build_cached_issues_by_repo(
     repo_names: list[str],
-    repos_section: dict[str, Any],
 ) -> tuple[dict[str, dict[int, IssueData]], set[str]]:
     """Build cached issues dict for all configured repos.
     
     Returns:
         Tuple of (cached_issues_by_repo, failed_repos)
     """
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] = {}
+    failed_repos: set[str] = set()
+    
+    for repo_name in repo_names:
+        try:
+            # ... existing fetch logic ...
+            cached_issues_by_repo[repo_full_name] = issues_by_number
+        except Exception as e:
+            logger.warning(f"Failed to build cache for {repo_name}: {e}")
+            # NEW: Track failed repo
+            if repo_full_name:
+                failed_repos.add(repo_full_name)
+    
+    return cached_issues_by_repo, failed_repos
+```
+
+**Update caller** in `execute_coordinator_vscodeclaude()` to handle new return type:
+```python
+cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names)  # Ignore failed_repos here
 ```
 
 **Modify function to:**

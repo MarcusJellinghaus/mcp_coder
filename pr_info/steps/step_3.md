@@ -12,7 +12,9 @@ Follow TDD: Write tests first, then implement the functionality.
 
 ## Overview
 
-Modify `get_next_action()` in `status.py` to accept a `blocked_label` parameter and return `"Blocked (label-name)"` when appropriate.
+Modify `get_next_action()` in `status.py` to:
+1. Accept a `blocked_label` parameter and return `"Blocked (label-name)"` when appropriate
+2. Change emoji-based messages to plain text (e.g., `"⚠️ Manual cleanup"` -> `"!! Manual cleanup"`)
 
 ---
 
@@ -82,7 +84,7 @@ get_next_action(is_stale=False, is_dirty=False, is_vscode_running=False, blocked
 
 # Blocked, VSCode closed, dirty folder  
 get_next_action(is_stale=False, is_dirty=True, is_vscode_running=False, blocked_label="wait")
-# Returns: "!! Manual"
+# Returns: "!! Manual (wait)"
 
 # Blocked but VSCode running (active takes priority)
 get_next_action(is_stale=False, is_dirty=False, is_vscode_running=True, blocked_label="blocked")

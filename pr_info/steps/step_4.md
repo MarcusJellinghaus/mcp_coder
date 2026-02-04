@@ -38,15 +38,19 @@ if args.cleanup:
 
 **New order (correct):**
 ```python
-# Step 1: Handle cleanup if requested (BEFORE restart)
+# Step 1: Handle cleanup (BEFORE restart)
+# - dry_run=True shows actionable messages: "Add --cleanup to delete: XYZ"
+# - dry_run=False (with --cleanup flag) actually deletes
 if args.cleanup:
     cleanup_stale_sessions(dry_run=False, cached_issues_by_repo=cached_issues_by_repo)
+else:
+    cleanup_stale_sessions(dry_run=True, cached_issues_by_repo=cached_issues_by_repo)
 
 # Step 2: Restart closed sessions
 restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
 ```
 
-**Note:** Cleanup only runs when `--cleanup` is explicitly passed (no dry-run when flag not specified).
+**Note:** Cleanup runs in dry-run mode when `--cleanup` is not passed, showing actionable messages like `Add --cleanup to delete: XYZ`.
 
 ### HOW
 - Move the cleanup block before restart_closed_sessions() call
@@ -318,6 +322,31 @@ class TestGetStaleSessions:
         
         assert len(result) == 0  # Excluded because running
 ```
+
+---
+
+## Part E: Update Dry-run Message Format in cleanup_stale_sessions()
+
+### WHERE
+- `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
+
+### WHAT
+
+Change dry-run output to be actionable and skip dirty folders:
+
+**Current (in cleanup_stale_sessions):**
+```python
+if dry_run:
+    print(f"Would delete: {folder}")
+```
+
+**New:**
+```python
+if dry_run:
+    print(f"Add --cleanup to delete: {folder}")
+```
+
+Also, in dry-run mode, skip printing dirty folders (they can't be auto-cleaned anyway).
 
 ---
 
