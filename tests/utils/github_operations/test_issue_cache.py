@@ -19,16 +19,18 @@ from mcp_coder.cli.commands.coordinator import (
     get_cached_eligible_issues,
 )
 from mcp_coder.utils.github_operations.github_utils import RepoIdentifier
-from mcp_coder.utils.github_operations.issue_cache import (
+from mcp_coder.utils.github_operations.issues import (
     CacheData,
+    IssueData,
+    update_issue_labels_in_cache,
+)
+from mcp_coder.utils.github_operations.issues.cache import (
     _get_cache_file_path,
     _load_cache_file,
     _log_cache_metrics,
     _log_stale_cache_entries,
     _save_cache_file,
-    update_issue_labels_in_cache,
 )
-from mcp_coder.utils.github_operations.issue_manager import IssueData
 
 
 class TestCacheMetricsLogging:

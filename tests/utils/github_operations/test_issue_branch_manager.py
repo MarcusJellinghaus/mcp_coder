@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_branch_manager import (
+from mcp_coder.utils.github_operations.issues import (
     BranchCreationResult,
     IssueBranchManager,
     generate_branch_name_from_issue,
