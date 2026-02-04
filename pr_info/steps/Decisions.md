@@ -41,3 +41,21 @@ from mcp_coder.utils.github_operations.issues.manager import _parse_base_branch
 **Context:** Both steps move files into `issues/` directory.
 
 **Decision:** Keep separate for easier verification of each move individually.
+
+## Decision 6: Export IssueEventType
+
+**Context:** `IssueEventType` is not currently exported from parent `__init__.py`, but the plan includes it in exports.
+
+**Decision:** Export `IssueEventType` from `issues/__init__.py` — it's used in tests for filtering `get_issue_events()`, so it should be public.
+
+## Decision 7: Skip LabelData in types.py
+
+**Context:** `LabelData` already exists in `labels_manager.py` and is exported. Creating another copy in `issues/types.py` would create duplication.
+
+**Decision:** Do NOT include `LabelData` in `issues/types.py`. Where needed, import from `labels_manager`. Consolidation can happen in #398 if desired.
+
+## Decision 8: lint_imports Verification Timing
+
+**Context:** Could run `lint_imports` after each step for earlier violation detection.
+
+**Decision:** Run `lint_imports` only at Step 10d (the end). Keeps the process simpler.
