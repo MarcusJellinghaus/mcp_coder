@@ -20,6 +20,9 @@ Usage:
     python tools/safe_delete_folder.py <folder_path>                    # diagnose
     python tools/safe_delete_folder.py <folder_path> --delete           # delete
     python tools/safe_delete_folder.py <folder_path> --delete -k        # delete + kill
+
+Note: --kill-lockers (-k) is STRONGLY RECOMMENDED when using --delete.
+      Without it, locked files will cause deletion to fail.
 """
 
 from __future__ import annotations
@@ -517,8 +520,11 @@ Examples:
     # Diagnose locks (default behavior)
     python tools/safe_delete_folder.py "C:\\path\\folder"
 
-    # Delete after killing lockers
+    # Delete after killing lockers (RECOMMENDED)
     python tools/safe_delete_folder.py "C:\\path\\folder" --delete --kill-lockers
+
+Note: --kill-lockers (-k) is STRONGLY RECOMMENDED when using --delete.
+      Without it, locked files will cause deletion to fail.
         """,
     )
     parser.add_argument("paths", nargs="+", help="Folder path(s) to process")
@@ -592,6 +598,14 @@ Examples:
                         print(f"  Still locked: {remaining} item(s) (will retry next run)")
                 else:
                     print("  Staging directory is empty")
+
+    # Print feedback request
+    if not args.quiet:
+        print(f"\n{'=' * 50}")
+        print("FEEDBACK REQUEST: Please copy this entire output to:")
+        print("  https://github.com/MarcusJellinghaus/mcp_coder/issues/410")
+        print("This helps improve the tool for everyone.")
+        print("=" * 50)
 
     return exit_code
 
