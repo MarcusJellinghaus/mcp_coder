@@ -1,4 +1,4 @@
-"""Test workspace setup and git operations for VSCode Claude."""
+"""Test workspace setup for VSCode Claude."""
 
 import json
 from pathlib import Path
@@ -15,7 +15,6 @@ from mcp_coder.workflows.vscodeclaude.workspace import (
     create_workspace_file,
     get_working_folder_path,
     run_setup_commands,
-    setup_git_repo,
     update_gitignore,
     validate_mcp_json,
     validate_setup_commands,
@@ -391,152 +390,6 @@ class TestWorkspaceSetup:
         assert status_file.exists()
         content = status_file.read_text(encoding="utf-8")
         assert "INTERVENTION" in content
-
-
-class TestGitOperations:
-    """Test git clone/checkout/pull operations."""
-
-    def test_setup_git_repo_clone_new(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Clones when folder is empty."""
-
-        commands: list[Any] = []
-
-        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
-            commands.append(cmd)
-            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
-            mock_execute,
-        )
-
-        folder = tmp_path / "new_repo"
-        folder.mkdir()
-
-        setup_git_repo(folder, "https://github.com/owner/repo.git", "main")
-
-        # Should have clone, checkout, pull
-        assert any("clone" in str(c) for c in commands)
-
-    def test_setup_git_repo_existing(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Checkout and pull when .git exists."""
-
-        commands: list[Any] = []
-
-        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
-            commands.append(cmd)
-            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
-            mock_execute,
-        )
-
-        # Create folder with .git
-        folder = tmp_path / "existing_repo"
-        folder.mkdir()
-        (folder / ".git").mkdir()
-
-        setup_git_repo(folder, "https://github.com/owner/repo.git", "feature-branch")
-
-        # Should NOT clone, but should checkout and pull
-        assert not any("clone" in str(c) for c in commands)
-        assert any("checkout" in str(c) for c in commands)
-        assert any("pull" in str(c) for c in commands)
-
-    def test_setup_git_repo_uses_main_default(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Uses main branch when branch_name is None."""
-
-        commands: list[Any] = []
-
-        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
-            commands.append(cmd)
-            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
-            mock_execute,
-        )
-
-        folder = tmp_path / "repo"
-        folder.mkdir()
-        (folder / ".git").mkdir()
-
-        setup_git_repo(folder, "https://github.com/owner/repo.git", None)
-
-        checkout_cmd = [c for c in commands if "checkout" in str(c)][0]
-        assert "main" in checkout_cmd
-
-    def test_setup_git_repo_folder_with_content_no_git(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Raises error when folder has content but no .git."""
-
-        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
-            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
-            mock_execute,
-        )
-
-        folder = tmp_path / "has_content"
-        folder.mkdir()
-        (folder / "somefile.txt").write_text("content")
-
-        with pytest.raises(ValueError, match="not a git repository"):
-            setup_git_repo(folder, "https://github.com/owner/repo.git", "main")
-
-    def test_setup_git_repo_corrupted_git_reclones(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Deletes and reclones when .git exists but is corrupted."""
-
-        commands: list[Any] = []
-        rmtree_called: list[Path] = []
-
-        def mock_execute(cmd: Any, options: Any = None) -> CommandResult:
-            commands.append(cmd)
-            # Simulate corrupted git repo - rev-parse fails
-            if "rev-parse" in str(cmd):
-                return CommandResult(
-                    return_code=128,
-                    stdout="",
-                    stderr="fatal: not a git repo",
-                    timed_out=False,
-                )
-            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
-
-        def mock_rmtree(path: Path, **kwargs: Any) -> None:
-            rmtree_called.append(path)
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.execute_subprocess",
-            mock_execute,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.shutil.rmtree", mock_rmtree
-        )
-
-        # Create folder with corrupted .git
-        folder = tmp_path / "corrupted_repo"
-        folder.mkdir()
-        (folder / ".git").mkdir()
-
-        setup_git_repo(folder, "https://github.com/owner/repo.git", "main")
-
-        # Should have called rmtree to delete corrupted folder
-        assert len(rmtree_called) == 1
-        assert rmtree_called[0] == folder
-
-        # Should have cloned after deleting
-        assert any("clone" in str(c) for c in commands)
 
 
 class TestCreateStartupScript:
