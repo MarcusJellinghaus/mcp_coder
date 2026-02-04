@@ -44,7 +44,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Update Tests ([step_3.md](./steps/step_3.md))
 
-- [ ] Update `test_update_gitignore_*` tests to check for `.txt`
+- [x] Update `test_update_gitignore_*` tests to check for `.txt`
 - [ ] Update `test_create_status_file*` tests for new filename and format
 - [ ] Update `test_create_vscode_task` to verify two tasks exist
 - [ ] Run pylint and fix any issues

@@ -196,7 +196,7 @@ class TestWorkspaceSetup:
         update_gitignore(tmp_path)
 
         content = gitignore.read_text(encoding="utf-8")
-        assert ".vscodeclaude_status.md" in content
+        assert ".vscodeclaude_status.txt" in content
         assert "*.pyc" in content  # Preserves existing
 
     def test_update_gitignore_creates_file(self, tmp_path: Path) -> None:
@@ -205,7 +205,7 @@ class TestWorkspaceSetup:
 
         gitignore = tmp_path / ".gitignore"
         assert gitignore.exists()
-        assert ".vscodeclaude_status.md" in gitignore.read_text(encoding="utf-8")
+        assert ".vscodeclaude_status.txt" in gitignore.read_text(encoding="utf-8")
 
     def test_update_gitignore_idempotent(self, tmp_path: Path) -> None:
         """Doesn't duplicate entry on second call."""
@@ -214,7 +214,7 @@ class TestWorkspaceSetup:
 
         gitignore = tmp_path / ".gitignore"
         content = gitignore.read_text(encoding="utf-8")
-        assert content.count(".vscodeclaude_status.md") == 1
+        assert content.count(".vscodeclaude_status.txt") == 1
 
     def test_create_workspace_file(
         self, tmp_path: Path, mock_vscodeclaude_config: None
