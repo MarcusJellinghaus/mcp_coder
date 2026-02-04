@@ -348,7 +348,7 @@ class TestWorkspaceSetup:
     def test_create_status_file(
         self, tmp_path: Path, mock_vscodeclaude_config: None
     ) -> None:
-        """Creates status markdown file."""
+        """Creates status txt file with plain text banner format."""
         create_status_file(
             folder_path=tmp_path,
             issue_number=123,
@@ -360,13 +360,15 @@ class TestWorkspaceSetup:
             is_intervention=False,
         )
 
-        status_file = tmp_path / ".vscodeclaude_status.md"
+        status_file = tmp_path / ".vscodeclaude_status.txt"
         assert status_file.exists()
 
         content = status_file.read_text(encoding="utf-8")
         assert "#123" in content
         assert "Add feature" in content
-        assert "code-review" in content
+        assert "Branch:" in content
+        assert "feature-123" in content
+        assert "Started:" in content
 
     def test_create_status_file_intervention(
         self, tmp_path: Path, mock_vscodeclaude_config: None
@@ -383,7 +385,8 @@ class TestWorkspaceSetup:
             is_intervention=True,
         )
 
-        status_file = tmp_path / ".vscodeclaude_status.md"
+        status_file = tmp_path / ".vscodeclaude_status.txt"
+        assert status_file.exists()
         content = status_file.read_text(encoding="utf-8")
         assert "INTERVENTION" in content
 
