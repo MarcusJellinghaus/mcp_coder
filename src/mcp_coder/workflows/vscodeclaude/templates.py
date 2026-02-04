@@ -260,6 +260,10 @@ URL:    {issue_url}
 ==========================================================================
 """
 
+# Intervention row for status file
+INTERVENTION_ROW = """Mode:    INTERVENTION (manual investigation)
+"""
+
 # Gitignore entry
 GITIGNORE_ENTRY = """
 # VSCodeClaude session files (auto-generated)
