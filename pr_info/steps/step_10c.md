@@ -30,14 +30,7 @@ from .issue_cache import (
     get_all_cached_issues,
     update_issue_labels_in_cache,
 )
-from .issue_manager import (
-    CommentData,
-    EventData,
-    IssueData,
-    IssueEventType,
-    IssueManager,
-    LabelData,
-)
+from .issue_manager import CommentData, EventData, IssueData, IssueManager
 ```
 
 ### After (clean break)
