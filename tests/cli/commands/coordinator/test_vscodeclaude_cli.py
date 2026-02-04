@@ -85,7 +85,7 @@ class TestTemplates:
         formatted = TASKS_JSON_TEMPLATE.format(script_path="test.bat")
         parsed = json.loads(formatted)
         assert "tasks" in parsed
-        assert len(parsed["tasks"]) == 1
+        assert len(parsed["tasks"]) == 2
         task = parsed["tasks"][0]
         assert task["label"] == "VSCodeClaude Startup"
         assert task["command"] == "test.bat"
@@ -105,7 +105,7 @@ class TestTemplates:
         assert "{repo}" in STATUS_FILE_TEMPLATE
         assert "{branch}" in STATUS_FILE_TEMPLATE
         assert "{started_at}" in STATUS_FILE_TEMPLATE
-        assert "{intervention_row}" in STATUS_FILE_TEMPLATE
+        assert "{intervention_line}" in STATUS_FILE_TEMPLATE
         assert "{issue_url}" in STATUS_FILE_TEMPLATE
 
     def test_status_file_template_formatting(self) -> None:
@@ -122,25 +122,21 @@ class TestTemplates:
             repo="owner/repo",
             branch="main",
             started_at="2024-01-01T00:00:00Z",
-            intervention_row="",
+            intervention_line="",
             issue_url="https://github.com/owner/repo/issues/123",
         )
 
-        assert "# VSCodeClaude Session" in formatted
-        assert "| **Issue** | #123 |" in formatted
-        assert "| **Title** | Test Issue |" in formatted
-        assert (
-            "[View Issue on GitHub](https://github.com/owner/repo/issues/123)"
-            in formatted
-        )
+        assert "Issue #123" in formatted
+        assert "Test Issue" in formatted
+        assert "https://github.com/owner/repo/issues/123" in formatted
 
-    def test_intervention_row_content(self) -> None:
-        """Intervention row has correct content."""
+    def test_intervention_line_content(self) -> None:
+        """Intervention line has correct content."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            INTERVENTION_ROW,
+            INTERVENTION_LINE,
         )
 
-        assert "INTERVENTION" in INTERVENTION_ROW
+        assert "INTERVENTION" in INTERVENTION_LINE
 
     def test_banner_template_has_placeholders(self) -> None:
         """Banner template has required placeholders."""
@@ -185,7 +181,7 @@ class TestTemplates:
             GITIGNORE_ENTRY,
         )
 
-        assert ".vscodeclaude_status.md" in GITIGNORE_ENTRY
+        assert ".vscodeclaude_status.txt" in GITIGNORE_ENTRY
         assert ".vscodeclaude_analysis.json" in GITIGNORE_ENTRY
         assert ".vscodeclaude_start.bat" in GITIGNORE_ENTRY
         assert ".vscodeclaude_start.sh" in GITIGNORE_ENTRY
