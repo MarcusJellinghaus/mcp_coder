@@ -1,7 +1,0 @@
-# CI Failure Analysis
-
-The CI pipeline failed on the file-size check because `tests/workflows/vscodeclaude/test_workspace.py` has 752 lines, which exceeds the maximum allowed limit of 750 lines. This file contains unit tests for the VSCode Claude workspace setup and git operations, and grew slightly beyond the threshold likely due to recent additions of test cases for the startup script and status file functionality.
-
-The fix requires either reducing the file size by 2+ lines or adding it to the allowlist. Since this is a test file that has grown organically with the implementation of vscodeclaude workspace features (as documented in the implementation plan steps), the preferred approach would be to refactor the test file by extracting one or more test classes into a separate file. Alternatively, if the file size is expected to remain stable and the tests are cohesive, it could be added to `.large-files-allowlist`.
-
-Files involved: `tests/workflows/vscodeclaude/test_workspace.py` (752 lines - needs reduction or allowlisting) and `.large-files-allowlist` (if the allowlist approach is chosen). The test file contains four main test classes: `TestWorkspaceSetup`, `TestGitOperations`, `TestCreateStartupScript`, and a mock configuration section. The most straightforward refactoring would be to extract `TestCreateStartupScript` or `TestGitOperations` into a separate test module such as `test_workspace_scripts.py` or `test_workspace_git.py`.
