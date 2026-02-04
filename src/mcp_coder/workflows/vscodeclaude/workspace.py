@@ -275,7 +275,7 @@ def update_gitignore(folder_path: Path) -> None:
         existing_content = gitignore_path.read_text(encoding="utf-8")
 
     # Check if already present
-    if ".vscodeclaude_status.md" in existing_content:
+    if ".vscodeclaude_status.txt" in existing_content:
         return
 
     # Append entry
@@ -459,7 +459,7 @@ def create_status_file(
     issue_url: str,
     is_intervention: bool,
 ) -> None:
-    """Create .vscodeclaude_status.md in project root.
+    """Create .vscodeclaude_status.txt in project root.
 
     Args:
         folder_path: Working folder path
@@ -471,17 +471,14 @@ def create_status_file(
         issue_url: GitHub issue URL
         is_intervention: If True, add intervention warning
     """
-    from .templates import (
-        INTERVENTION_ROW,
-        STATUS_FILE_TEMPLATE,
-    )
+    from .templates import STATUS_FILE_TEMPLATE
 
     # Get emoji for status from config
     config = get_vscodeclaude_config(status)
     status_emoji = config["emoji"] if config else "📋"
 
-    # Build intervention row if needed
-    intervention_row = INTERVENTION_ROW if is_intervention else ""
+    # Build intervention line if needed (empty or "Mode:    ⚠️ INTERVENTION\n")
+    intervention_line = "Mode:    ⚠️ INTERVENTION\n" if is_intervention else ""
 
     # Format status file
     content = STATUS_FILE_TEMPLATE.format(
@@ -492,10 +489,10 @@ def create_status_file(
         repo=repo_full_name,
         branch=branch_name,
         started_at=datetime.now(timezone.utc).isoformat(),
-        intervention_row=intervention_row,
+        intervention_line=intervention_line,
         issue_url=issue_url,
     )
 
     # Write status file
-    status_file = folder_path / ".vscodeclaude_status.md"
+    status_file = folder_path / ".vscodeclaude_status.txt"
     status_file.write_text(content, encoding="utf-8")

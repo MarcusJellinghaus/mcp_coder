@@ -34,13 +34,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Update Workspace Functions and Gitignore ([step_2.md](./steps/step_2.md))
 
-- [ ] Update `create_status_file()` to write `.txt` file with new template format
-- [ ] Update `update_gitignore()` idempotency check from `.md` to `.txt`
-- [ ] Add `.vscodeclaude_status.txt` to project root `.gitignore`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any issues
-- [ ] Run mypy and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Update `create_status_file()` to write `.txt` file with new template format
+- [x] Update `update_gitignore()` idempotency check from `.md` to `.txt`
+- [x] Add `.vscodeclaude_status.txt` to project root `.gitignore`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any issues (tests expected to fail until Step 3)
+- [x] Run mypy and fix any issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Update Tests ([step_3.md](./steps/step_3.md))
 
