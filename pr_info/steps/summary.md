@@ -20,11 +20,11 @@ Replace the markdown-formatted `.vscodeclaude_status.md` file with a plain text 
 
 1. **Plain text banner format**: Matches the existing `BANNER_TEMPLATE` pattern already used in startup scripts, ensuring visual consistency.
 
-2. **Simplified template**: Removed unused fields (Branch, Started timestamp) to match the issue's specified format. The status file now mirrors what's shown in the terminal banner.
+2. **All fields retained**: Branch and Started timestamp are included in the new format for complete session information.
 
-3. **Intervention handling**: Instead of a separate `INTERVENTION_ROW` template (markdown table row), intervention mode adds a simple `Mode:   ⚠️ INTERVENTION` line to the banner.
+3. **Intervention handling**: Instead of a separate `INTERVENTION_ROW` template (markdown table row), intervention mode adds a simple `Mode: ⚠️ INTERVENTION` line to the banner.
 
-4. **Auto-open task**: Uses VS Code's `${workspaceFolder}` variable to open the status file, running in parallel with the startup script task.
+4. **Auto-open task**: Uses simple shell task with `code` CLI to open the status file, running in parallel with the startup script task.
 
 ## Files to Modify
 
@@ -32,7 +32,7 @@ Replace the markdown-formatted `.vscodeclaude_status.md` file with a plain text 
 |------|-------------|-------------|
 | `src/mcp_coder/workflows/vscodeclaude/templates.py` | Modify | Update `STATUS_FILE_TEMPLATE`, `GITIGNORE_ENTRY`, `TASKS_JSON_TEMPLATE`, remove `INTERVENTION_ROW` |
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | Modify | Update `create_status_file()` filename and params, update `update_gitignore()` idempotency check |
-| `.gitignore` | Modify | Add `.vscodeclaude_status.txt` (keep `.md` for backward compatibility) |
+| `.gitignore` | Modify | Replace `.vscodeclaude_status.md` with `.vscodeclaude_status.txt` |
 | `tests/workflows/vscodeclaude/test_workspace.py` | Modify | Update tests for new `.txt` extension and format |
 
 ## Implementation Steps Overview

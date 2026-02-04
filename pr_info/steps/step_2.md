@@ -39,7 +39,7 @@ def create_status_file(
 ) -> None:
 ```
 
-**Keep same signature** for backward compatibility, but `branch_name` will be ignored (no functional change to callers).
+**Keep same signature** - all parameters are used in the new format.
 
 **Output:** `.vscodeclaude_status.txt` instead of `.vscodeclaude_status.md`
 
@@ -51,8 +51,7 @@ def create_status_file(
 
 ### 3. Project .gitignore
 
-**Add line:** `.vscodeclaude_status.txt`
-**Keep:** `.vscodeclaude_status.md` (backward compatibility)
+**Replace:** `.vscodeclaude_status.md` with `.vscodeclaude_status.txt`
 
 ## HOW
 
@@ -73,8 +72,8 @@ def create_status_file(...):
     config = get_vscodeclaude_config(status)
     status_emoji = config["emoji"] if config else "📋"
     
-    # Build intervention line (empty or "Mode:   ⚠️ INTERVENTION\n")
-    intervention_line = "Mode:   ⚠️ INTERVENTION\n" if is_intervention else ""
+    # Build intervention line (empty or "Mode:    ⚠️ INTERVENTION\n")
+    intervention_line = "Mode:    ⚠️ INTERVENTION\n" if is_intervention else ""
     
     content = STATUS_FILE_TEMPLATE.format(
         status_emoji=status_emoji,
@@ -82,6 +81,8 @@ def create_status_file(...):
         title=issue_title,
         repo=repo_full_name,
         status_name=status,
+        branch=branch_name,
+        started_at=datetime.now(timezone.utc).isoformat(),
         intervention_line=intervention_line,
         issue_url=issue_url,
     )
@@ -115,9 +116,11 @@ All function parameters remain the same.
 ```
 ==========================================================================
 📝 Issue #399 - vscodeclaude: Replace status markdown with plain text file
-Repo:   MarcusJellinghaus/mcp_coder
-Status: status-01:created
-URL:    https://github.com/MarcusJellinghaus/mcp_coder/issues/399
+Repo:    MarcusJellinghaus/mcp_coder
+Status:  status-01:created
+Branch:  399-vscodeclaude-status-file
+Started: 2025-01-15T10:30:00+00:00
+URL:     https://github.com/MarcusJellinghaus/mcp_coder/issues/399
 ==========================================================================
 ```
 
@@ -125,16 +128,17 @@ URL:    https://github.com/MarcusJellinghaus/mcp_coder/issues/399
 ```
 ==========================================================================
 📝 Issue #399 - vscodeclaude: Replace status markdown with plain text file
-Repo:   MarcusJellinghaus/mcp_coder
-Status: status-06:implementing
-Mode:   ⚠️ INTERVENTION
-URL:    https://github.com/MarcusJellinghaus/mcp_coder/issues/399
+Repo:    MarcusJellinghaus/mcp_coder
+Status:  status-06:implementing
+Branch:  399-vscodeclaude-status-file
+Started: 2025-01-15T10:30:00+00:00
+Mode:    ⚠️ INTERVENTION
+URL:     https://github.com/MarcusJellinghaus/mcp_coder/issues/399
 ==========================================================================
 ```
 
 ## VERIFICATION
 
-After implementation, run:
-```bash
-pytest tests/workflows/vscodeclaude/test_workspace.py -v -k "status_file or gitignore"
-```
+**Note:** Do not run tests after this step - tests will break until Step 3 completes.
+
+Manual verification only: check that the code imports without errors.

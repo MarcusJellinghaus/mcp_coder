@@ -30,7 +30,7 @@ Follow TDD: update tests first, then implement.
 
 **Current signature:** Template with placeholders: `{issue_number}`, `{title}`, `{status_emoji}`, `{status_name}`, `{repo}`, `{branch}`, `{started_at}`, `{intervention_row}`, `{issue_url}`
 
-**New signature:** Template with placeholders: `{status_emoji}`, `{issue_number}`, `{title}`, `{repo}`, `{status_name}`, `{intervention_line}`, `{issue_url}`
+**New signature:** Template with placeholders: `{status_emoji}`, `{issue_number}`, `{title}`, `{repo}`, `{status_name}`, `{branch}`, `{started_at}`, `{intervention_line}`, `{issue_url}`
 
 ### 2. GITIGNORE_ENTRY
 
@@ -56,13 +56,13 @@ Direct string replacement in template constants. No imports or decorators needed
 # STATUS_FILE_TEMPLATE
 1. Use plain text banner format with === borders
 2. Include: emoji, issue number, title on first content line
-3. Include: Repo, Status, optional Mode (intervention), URL
-4. Use {intervention_line} placeholder (empty string or "Mode:   ⚠️ INTERVENTION\n")
+3. Include: Repo, Status, Branch, Started, optional Mode (intervention), URL
+4. Use {intervention_line} placeholder (empty string or "Mode:    ⚠️ INTERVENTION\n")
 
 # TASKS_JSON_TEMPLATE  
 1. Keep existing startup task
 2. Add second task "Open Status File"
-3. Use "process" type with "code" command to open file
+3. Use "shell" type with "code" command to open file
 4. Both tasks have runOn: folderOpen
 ```
 
@@ -73,9 +73,11 @@ Direct string replacement in template constants. No imports or decorators needed
 ```python
 STATUS_FILE_TEMPLATE = """==========================================================================
 {status_emoji} Issue #{issue_number} - {title}
-Repo:   {repo}
-Status: {status_name}
-{intervention_line}URL:    {issue_url}
+Repo:    {repo}
+Status:  {status_name}
+Branch:  {branch}
+Started: {started_at}
+{intervention_line}URL:     {issue_url}
 ==========================================================================
 """
 ```
@@ -114,12 +116,9 @@ TASKS_JSON_TEMPLATE = """{{
         }},
         {{
             "label": "Open Status File",
-            "type": "process",
-            "command": "${{env:VSCODE_GIT_ASKPASS_NODE}}",
-            "args": [
-                "-e",
-                "require('child_process').exec('code \\\"${{workspaceFolder}}/.vscodeclaude_status.txt\\\"')"
-            ],
+            "type": "shell",
+            "command": "code",
+            "args": ["${{workspaceFolder}}/.vscodeclaude_status.txt"],
             "presentation": {{
                 "reveal": "never"
             }},
@@ -135,7 +134,9 @@ TASKS_JSON_TEMPLATE = """{{
 
 ## VERIFICATION
 
-After implementation, run:
+**Note:** Do not run tests after this step - tests will break until Step 3 completes.
+
+Quick syntax check only:
 ```bash
 python -c "from mcp_coder.workflows.vscodeclaude.templates import STATUS_FILE_TEMPLATE, GITIGNORE_ENTRY, TASKS_JSON_TEMPLATE; print('Templates loaded OK')"
 ```

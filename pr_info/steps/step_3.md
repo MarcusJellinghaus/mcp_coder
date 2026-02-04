@@ -71,6 +71,8 @@ def test_create_status_file(self, tmp_path, mock_vscodeclaude_config):
     content = status_file.read_text()
     assert "#123" in content
     assert "Add feature" in content
+    assert "Branch:" in content  # New field
+    assert "Started:" in content  # New field
 
 # test_create_vscode_task
 def test_create_vscode_task(self, tmp_path):
@@ -91,8 +93,8 @@ def test_create_vscode_task(self, tmp_path):
 | `test_update_gitignore_adds_entry` | `.vscodeclaude_status.md` in content | `.vscodeclaude_status.txt` in content |
 | `test_update_gitignore_creates_file` | `.vscodeclaude_status.md` in content | `.vscodeclaude_status.txt` in content |
 | `test_update_gitignore_idempotent` | count `.vscodeclaude_status.md` == 1 | count `.vscodeclaude_status.txt` == 1 |
-| `test_create_status_file` | file is `.vscodeclaude_status.md` | file is `.vscodeclaude_status.txt` |
-| `test_create_status_file_intervention` | file is `.vscodeclaude_status.md` | file is `.vscodeclaude_status.txt` |
+| `test_create_status_file` | file is `.vscodeclaude_status.md` | file is `.vscodeclaude_status.txt`, contains Branch and Started |
+| `test_create_status_file_intervention` | file is `.vscodeclaude_status.md` | file is `.vscodeclaude_status.txt`, contains INTERVENTION |
 | `test_create_vscode_task` | 1 task | 2 tasks, second has label "Open Status File" |
 
 ## VERIFICATION
