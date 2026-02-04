@@ -221,29 +221,33 @@ TASKS_JSON_TEMPLATE = """{{
                 "runOn": "folderOpen"
             }},
             "problemMatcher": []
+        }},
+        {{
+            "label": "Open Status File",
+            "type": "shell",
+            "command": "code",
+            "args": ["${{workspaceFolder}}/.vscodeclaude_status.txt"],
+            "presentation": {{
+                "reveal": "never"
+            }},
+            "runOptions": {{
+                "runOn": "folderOpen"
+            }},
+            "problemMatcher": []
         }}
     ]
 }}
 """
 
-# Status markdown file template
-STATUS_FILE_TEMPLATE = """# VSCodeClaude Session
-
-| Field | Value |
-|-------|-------|
-| **Issue** | #{issue_number} |
-| **Title** | {title} |
-| **Status** | {status_emoji} {status_name} |
-| **Repo** | {repo} |
-| **Branch** | {branch} |
-| **Started** | {started_at} |
-{intervention_row}
-
-[View Issue on GitHub]({issue_url})
-"""
-
-# Intervention warning row for status file
-INTERVENTION_ROW = """| **Mode** | ⚠️ INTERVENTION |
+# Status file template (plain text banner format)
+STATUS_FILE_TEMPLATE = """==========================================================================
+{status_emoji} Issue #{issue_number} - {title}
+Repo:    {repo}
+Status:  {status_name}
+Branch:  {branch}
+Started: {started_at}
+{intervention_line}URL:     {issue_url}
+==========================================================================
 """
 
 # Terminal banner template (for non-script contexts)
@@ -259,7 +263,7 @@ URL:    {issue_url}
 # Gitignore entry
 GITIGNORE_ENTRY = """
 # VSCodeClaude session files (auto-generated)
-.vscodeclaude_status.md
+.vscodeclaude_status.txt
 .vscodeclaude_analysis.json
 .vscodeclaude_start.bat
 .vscodeclaude_start.sh

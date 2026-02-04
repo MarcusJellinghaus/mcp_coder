@@ -23,14 +23,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Update Templates ([step_1.md](./steps/step_1.md))
 
-- [ ] Replace `STATUS_FILE_TEMPLATE` with plain text banner format
-- [ ] Update `GITIGNORE_ENTRY` to use `.txt` instead of `.md`
-- [ ] Add second task to `TASKS_JSON_TEMPLATE` for auto-opening status file
-- [ ] Remove `INTERVENTION_ROW` (no longer needed)
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any issues
-- [ ] Run mypy and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Replace `STATUS_FILE_TEMPLATE` with plain text banner format
+- [x] Update `GITIGNORE_ENTRY` to use `.txt` instead of `.md`
+- [x] Add second task to `TASKS_JSON_TEMPLATE` for auto-opening status file
+- [x] Remove `INTERVENTION_ROW` (no longer needed)
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any issues
+- [x] Run mypy and fix any issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update Workspace Functions and Gitignore ([step_2.md](./steps/step_2.md))
 
