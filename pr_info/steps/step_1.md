@@ -72,8 +72,8 @@ def get_matching_ignore_label(
 
 ### HOW
 - Add to existing imports section (none needed - uses existing `_load_labels_config`)
-- Add to `__all__` if module uses explicit exports
 - Functions go after existing helper functions
+- Note: No `__all__` needed - keep consistent with current module style
 
 ### ALGORITHM
 

@@ -41,12 +41,12 @@ if args.cleanup:
 # Step 1: Handle cleanup if requested (BEFORE restart)
 if args.cleanup:
     cleanup_stale_sessions(dry_run=False, cached_issues_by_repo=cached_issues_by_repo)
-else:
-    cleanup_stale_sessions(dry_run=True, cached_issues_by_repo=cached_issues_by_repo)
 
 # Step 2: Restart closed sessions
 restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
 ```
+
+**Note:** Cleanup only runs when `--cleanup` is explicitly passed (no dry-run when flag not specified).
 
 ### HOW
 - Move the cleanup block before restart_closed_sessions() call

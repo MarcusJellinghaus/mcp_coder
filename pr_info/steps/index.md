@@ -2,8 +2,9 @@
 
 ## Issue #400: Fix vscodeclaude Status Display, Cleanup Order, and Blocked Issue Handling
 
-### Overview Document
+### Overview Documents
 - [summary.md](summary.md) - Architecture changes, file list, design decisions
+- [Decisions.md](Decisions.md) - Decisions log from plan review discussion
 
 ### Implementation Steps (TDD Order)
 

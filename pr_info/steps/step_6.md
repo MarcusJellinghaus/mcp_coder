@@ -40,13 +40,26 @@ from ....workflows.vscodeclaude.sessions import update_session_status
 from ....workflows.vscodeclaude.status import get_next_action
 ```
 
+**Extract shared helper** (used by both `execute_coordinator_vscodeclaude()` and `execute_coordinator_vscodeclaude_status()`):
+```python
+def _build_cached_issues_by_repo(
+    repo_names: list[str],
+    repos_section: dict[str, Any],
+) -> tuple[dict[str, dict[int, IssueData]], set[str]]:
+    """Build cached issues dict for all configured repos.
+    
+    Returns:
+        Tuple of (cached_issues_by_repo, failed_repos)
+    """
+```
+
 **Modify function to:**
-1. Build `cached_issues_by_repo` at the start (reuse `_build_cached_issues_by_repo`)
-2. Track `failed_repos: set[str]` for API failures
-3. In the display loop, get current status from cache
-4. Update session if status changed
-5. Check for blocked labels
-6. Use `get_next_action()` with `blocked_label` parameter
+1. Call `_build_cached_issues_by_repo()` to get cache and failed repos
+2. In the display loop, get current status from cache
+3. Update session if status changed
+4. Check for blocked labels
+5. Use `get_next_action()` with `blocked_label` parameter
+6. If issue not in cache (after successful API), treat as closed/deleted (stale)
 
 ### ALGORITHM
 

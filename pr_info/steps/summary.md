@@ -79,6 +79,11 @@ def get_next_action(
 | Session update timing | On restart AND status command | Keeps sessions in sync |
 | API failure handling | Per-repo `(?)` indicator | Only affected repos show uncertainty |
 | Blocked cleanup | Include in cleanup | Blocked + clean sessions should be deletable |
+| Cleanup without --cleanup flag | Skip entirely | Only run cleanup when explicitly requested |
+| Shared cache builder | Extract `_build_cached_issues_by_repo()` | Avoid code duplication between commands |
+| Issue not in cache | Treat as closed/deleted | Current caching is sufficient; missing = stale |
+| File locking for sessions | Not needed | Only one vscodeclaude process runs at a time |
+| Module `__all__` exports | Skip | Keep consistent with current module style |
 
 ## Implementation Order
 
