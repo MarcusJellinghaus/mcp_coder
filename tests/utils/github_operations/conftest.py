@@ -7,8 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.utils.github_operations import CIResultsManager
-from mcp_coder.utils.github_operations.issue_cache import CacheData
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import CacheData, IssueData
 
 
 @pytest.fixture

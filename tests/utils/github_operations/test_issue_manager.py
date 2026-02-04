@@ -8,7 +8,7 @@ import git
 import pytest
 from github.GithubException import GithubException
 
-from mcp_coder.utils.github_operations.issue_manager import IssueManager
+from mcp_coder.utils.github_operations.issues import IssueManager
 
 
 @pytest.mark.git_integration
