@@ -9,7 +9,7 @@ Contains utility functions for:
 
 from datetime import datetime, timezone
 
-from ...utils.github_operations.issue_manager import IssueData
+from ...utils.github_operations.issues import IssueData
 from .issues import get_vscodeclaude_config
 from .types import VSCodeClaudeSession
 

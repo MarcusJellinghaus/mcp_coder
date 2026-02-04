@@ -16,7 +16,7 @@ from ...utils.git_operations.readers import (
     get_current_branch_name,
     is_working_directory_clean,
 )
-from ...utils.github_operations.issue_manager import IssueManager
+from ...utils.github_operations.issues import IssueManager
 from ...utils.github_operations.label_config import (
     get_labels_config_path,
     load_labels_config,

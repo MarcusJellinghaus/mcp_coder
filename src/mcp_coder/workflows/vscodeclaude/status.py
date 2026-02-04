@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from ...utils.github_operations.issue_manager import IssueData, IssueManager
+from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .sessions import check_vscode_running, load_sessions
 from .types import VSCodeClaudeSession

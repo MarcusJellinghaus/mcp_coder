@@ -15,7 +15,7 @@ from mcp_coder.utils.git_operations.readers import (
     get_current_branch_name,
 )
 from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
-from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.utils.github_operations.issues import IssueData, IssueManager
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.task_tracker import has_incomplete_work
 

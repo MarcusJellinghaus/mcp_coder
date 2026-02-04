@@ -23,8 +23,11 @@ from mcp_coder.utils.git_operations.readers import is_working_directory_clean
 from mcp_coder.utils.git_operations.remotes import git_push
 from mcp_coder.utils.git_operations.workflows import commit_all_changes
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
-from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.utils.github_operations.issues import (
+    IssueBranchManager,
+    IssueData,
+    IssueManager,
+)
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 
 # Setup logger

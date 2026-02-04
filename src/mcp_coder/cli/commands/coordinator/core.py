@@ -11,12 +11,13 @@ from pathlib import Path
 from typing import List, Optional
 from urllib.parse import quote
 
-from ....utils.github_operations.issue_branch_manager import IssueBranchManager
-from ....utils.github_operations.issue_cache import (
+from ....utils.github_operations.issues import (
     CacheData,
+    IssueBranchManager,
+    IssueData,
+    IssueManager,
     get_all_cached_issues,
 )
-from ....utils.github_operations.issue_manager import IssueData, IssueManager
 from ....utils.github_operations.label_config import load_labels_config
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.user_config import get_config_file_path, get_config_values
