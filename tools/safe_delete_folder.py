@@ -220,12 +220,18 @@ def _rmtree_remove_readonly(func: Callable[..., None], path: str, _exc: object) 
     func(path)
 
 
+def _get_staging_dir() -> Path:
+    """Get the temp staging directory path."""
+    import tempfile
+
+    return Path(tempfile.gettempdir()) / "safe_delete_staging"
+
+
 def _move_file_to_temp(filepath: Path) -> tuple[bool, str]:
     """Move a locked file to temp directory."""
-    import tempfile
     import uuid
 
-    temp_base = Path(tempfile.gettempdir()) / "safe_delete_staging"
+    temp_base = _get_staging_dir()
     unique_name = f"{filepath.stem}_{uuid.uuid4().hex[:8]}{filepath.suffix}"
     temp_dest = temp_base / unique_name
 
@@ -235,6 +241,39 @@ def _move_file_to_temp(filepath: Path) -> tuple[bool, str]:
         return True, str(temp_dest)
     except (PermissionError, OSError) as e:
         return False, str(e)
+
+
+def _cleanup_staging(quiet: bool = False) -> tuple[int, int]:
+    """Try to delete everything in the staging directory.
+
+    Returns:
+        Tuple of (deleted_count, remaining_count)
+    """
+    staging_dir = _get_staging_dir()
+    if not staging_dir.exists():
+        return 0, 0
+
+    deleted = 0
+    remaining = 0
+
+    for item in staging_dir.iterdir():
+        try:
+            if item.is_dir():
+                shutil.rmtree(item)
+            else:
+                item.unlink()
+            deleted += 1
+        except (PermissionError, OSError):
+            remaining += 1
+
+    # Try to remove the staging dir itself if empty
+    try:
+        if staging_dir.exists() and not any(staging_dir.iterdir()):
+            staging_dir.rmdir()
+    except (PermissionError, OSError):
+        pass
+
+    return deleted, remaining
 
 
 def _extract_path_from_error(error: PermissionError | OSError) -> Path | None:
@@ -269,7 +308,7 @@ def _delete_folder(
         Tuple of (success, message, moved_files, killed_processes)
     """
     if not path.exists():
-        return True, "Already deleted", [], []
+        return True, "Already gone", [], []
 
     moved_files: list[str] = []
     killed_procs: list[str] = []
@@ -279,6 +318,10 @@ def _delete_folder(
             print(f"  {msg}")
 
     for _ in range(MAX_DELETE_RETRIES):
+        # Check if folder is already gone (e.g., moved in previous iteration)
+        if not path.exists():
+            return True, "Folder removed", moved_files, killed_procs
+
         try:
             if sys.version_info >= (3, 12):
                 shutil.rmtree(path, onexc=_rmtree_remove_readonly)
@@ -286,12 +329,15 @@ def _delete_folder(
                 shutil.rmtree(path, onerror=_rmtree_remove_readonly)  # pylint: disable=deprecated-argument
 
             if not path.exists():
-                return True, "Deleted successfully", moved_files, killed_procs
+                return True, "Deleted directly", moved_files, killed_procs
             return False, "Folder still exists after rmtree", moved_files, killed_procs
 
         except PermissionError as e:
             locked_path = _extract_path_from_error(e)
             if not locked_path or not locked_path.exists():
+                # Check if root path is gone - that's success
+                if not path.exists():
+                    return True, "Folder removed", moved_files, killed_procs
                 return (
                     False,
                     f"Permission denied (cannot identify file): {e}",
@@ -303,7 +349,10 @@ def _delete_folder(
             moved, result = _move_file_to_temp(locked_path)
             if moved:
                 log(f"MOVED: {locked_path.name}")
-                moved_files.append(f"{locked_path.name} -> {result}")
+                moved_files.append(locked_path.name)
+                # Check if this move removed the entire target folder
+                if not path.exists():
+                    return True, "Folder removed (moved to staging)", moved_files, killed_procs
                 continue  # Retry delete
 
             # Step 2: Move failed - escalate to kill (if allowed)
@@ -331,7 +380,10 @@ def _delete_folder(
             moved, result = _move_file_to_temp(locked_path)
             if moved:
                 log(f"MOVED: {locked_path.name}")
-                moved_files.append(f"{locked_path.name} -> {result}")
+                moved_files.append(locked_path.name)
+                # Check if this move removed the entire target folder
+                if not path.exists():
+                    return True, "Folder removed (moved to staging)", moved_files, killed_procs
                 continue  # Retry delete
 
             # Can't handle this file
@@ -343,6 +395,9 @@ def _delete_folder(
             )
 
         except OSError as e:
+            # Check if folder is actually gone
+            if not path.exists():
+                return True, "Folder removed", moved_files, killed_procs
             return False, f"OS error: {e}", moved_files, killed_procs
 
     return (
@@ -415,6 +470,43 @@ def print_diagnostic_report(diag: DiagnosticResult) -> None:
 # =============================================================================
 
 
+def _print_deletion_summary(
+    path: Path,
+    success: bool,
+    message: str,
+    moved_files: list[str],
+    killed_procs: list[str],
+) -> None:
+    """Print a clear summary of the deletion operation."""
+    print(f"\n{'-' * 50}")
+    print(f"Summary for: {path.name}")
+    print("-" * 50)
+
+    # What was done
+    if moved_files:
+        print(f"  -> Moved to staging: {len(moved_files)} item(s)")
+        for name in moved_files:
+            print(f"       {name}")
+    else:
+        print("  -> Moved to staging: 0 items")
+
+    if killed_procs:
+        killed_count = sum(1 for p in killed_procs if "KILLED" in p)
+        protected_count = sum(1 for p in killed_procs if "PROTECTED" in p)
+        print(f"  x  Processes killed: {killed_count}")
+        if protected_count:
+            print(f"  !  Protected (not killed): {protected_count}")
+    else:
+        print("  x  Processes killed: 0")
+
+    # Final status
+    print()
+    if success:
+        print(f"  [OK] FOLDER DELETED: {message}")
+    else:
+        print(f"  [FAIL] DELETION FAILED: {message}")
+
+
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -435,9 +527,13 @@ Examples:
         "--kill-lockers", "-k", action="store_true", help="Kill locking processes"
     )
     parser.add_argument("--quiet", "-q", action="store_true", help="Minimal output")
+    parser.add_argument(
+        "--no-cleanup", action="store_true", help="Skip cleanup of staging directory"
+    )
 
     args = parser.parse_args()
     exit_code = 0
+    any_deletions = False
 
     for path_str in args.paths:
         path = Path(path_str).resolve()
@@ -458,29 +554,44 @@ Examples:
 
         # DELETE mode: skip upfront diagnose, handle locks as needed
         if not path.exists():
-            print("\n[OK] Already deleted")
+            print("\n[OK] Already gone")
             continue
+
+        any_deletions = True
 
         # Delete with escalating strategy:
         # 1. Try delete
         # 2. If fails, move locked file
         # 3. If move fails, kill locker (if --kill-lockers), retry move
-        print(f"\n[...] Deleting {path}...")
+        print(f"\nDeleting {path}...")
         success, message, moved_files, killed_procs = _delete_folder(
             path, kill_lockers=args.kill_lockers, quiet=args.quiet
         )
 
         if not args.quiet:
-            if moved_files:
-                print(f"\n  Summary: Moved {len(moved_files)} file(s) to temp")
-            if killed_procs:
-                print(f"  Summary: {len(killed_procs)} process action(s)")
+            _print_deletion_summary(path, success, message, moved_files, killed_procs)
 
-        if success:
-            print(f"\n[OK] {message}")
-        else:
-            print(f"\n[FAIL] {message}")
+        if not success:
             exit_code = 1
+
+    # Post-cleanup: try to clean up staging directory
+    if any_deletions and not args.no_cleanup:
+        staging_dir = _get_staging_dir()
+        if staging_dir.exists():
+            if not args.quiet:
+                print(f"\n{'=' * 50}")
+                print("Cleaning up staging directory...")
+                print("=" * 50)
+
+            deleted, remaining = _cleanup_staging(quiet=args.quiet)
+
+            if not args.quiet:
+                if deleted > 0 or remaining > 0:
+                    print(f"  Cleaned: {deleted} item(s)")
+                    if remaining > 0:
+                        print(f"  Still locked: {remaining} item(s) (will retry next run)")
+                else:
+                    print("  Staging directory is empty")
 
     return exit_code
 
