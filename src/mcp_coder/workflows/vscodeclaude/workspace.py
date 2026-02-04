@@ -471,14 +471,14 @@ def create_status_file(
         issue_url: GitHub issue URL
         is_intervention: If True, add intervention warning
     """
-    from .templates import STATUS_FILE_TEMPLATE
+    from .templates import INTERVENTION_LINE, STATUS_FILE_TEMPLATE
 
     # Get emoji for status from config
     config = get_vscodeclaude_config(status)
     status_emoji = config["emoji"] if config else "📋"
 
-    # Build intervention line if needed (empty or "Mode:    ⚠️ INTERVENTION\n")
-    intervention_line = "Mode:    ⚠️ INTERVENTION\n" if is_intervention else ""
+    # Build intervention line if needed
+    intervention_line = INTERVENTION_LINE if is_intervention else ""
 
     # Format status file
     content = STATUS_FILE_TEMPLATE.format(

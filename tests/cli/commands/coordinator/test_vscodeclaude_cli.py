@@ -130,13 +130,13 @@ class TestTemplates:
         assert "Test Issue" in formatted
         assert "https://github.com/owner/repo/issues/123" in formatted
 
-    def test_intervention_row_content(self) -> None:
-        """Intervention row has correct content."""
+    def test_intervention_line_content(self) -> None:
+        """Intervention line has correct content."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            INTERVENTION_ROW,
+            INTERVENTION_LINE,
         )
 
-        assert "INTERVENTION" in INTERVENTION_ROW
+        assert "INTERVENTION" in INTERVENTION_LINE
 
     def test_banner_template_has_placeholders(self) -> None:
         """Banner template has required placeholders."""
