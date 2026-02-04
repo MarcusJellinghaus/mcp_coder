@@ -46,11 +46,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [x] Update `test_update_gitignore_*` tests to check for `.txt`
 - [x] Update `test_create_status_file*` tests for new filename and format
-- [ ] Update `test_create_vscode_task` to verify two tasks exist
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any issues
-- [ ] Run mypy and fix any issues
-- [ ] Prepare git commit message for Step 3
+- [x] Update `test_create_vscode_task` to verify two tasks exist
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any issues
+- [x] Run mypy and fix any issues
+- [x] Prepare git commit message for Step 3
 
 ---
 

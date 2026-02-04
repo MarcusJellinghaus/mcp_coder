@@ -333,7 +333,7 @@ class TestWorkspaceSetup:
         assert "/implementation_review" not in content
 
     def test_create_vscode_task(self, tmp_path: Path) -> None:
-        """Creates tasks.json with runOn: folderOpen."""
+        """Creates tasks.json with two tasks that run on folderOpen."""
         script_path = tmp_path / ".vscodeclaude_start.bat"
         script_path.touch()
 
@@ -343,7 +343,9 @@ class TestWorkspaceSetup:
         assert tasks_file.exists()
 
         content = json.loads(tasks_file.read_text(encoding="utf-8"))
+        assert len(content["tasks"]) == 2
         assert content["tasks"][0]["runOptions"]["runOn"] == "folderOpen"
+        assert content["tasks"][1]["label"] == "Open Status File"
 
     def test_create_status_file(
         self, tmp_path: Path, mock_vscodeclaude_config: None
