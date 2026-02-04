@@ -21,6 +21,43 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Update Templates ([step_1.md](./steps/step_1.md))
+
+- [ ] Replace `STATUS_FILE_TEMPLATE` with plain text banner format
+- [ ] Update `GITIGNORE_ENTRY` to use `.txt` instead of `.md`
+- [ ] Add second task to `TASKS_JSON_TEMPLATE` for auto-opening status file
+- [ ] Remove `INTERVENTION_ROW` (no longer needed)
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and fix any issues
+- [ ] Run mypy and fix any issues
+- [ ] Prepare git commit message for Step 1
+
+### Step 2: Update Workspace Functions and Gitignore ([step_2.md](./steps/step_2.md))
+
+- [ ] Update `create_status_file()` to write `.txt` file with new template format
+- [ ] Update `update_gitignore()` idempotency check from `.md` to `.txt`
+- [ ] Add `.vscodeclaude_status.txt` to project root `.gitignore`
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and fix any issues
+- [ ] Run mypy and fix any issues
+- [ ] Prepare git commit message for Step 2
+
+### Step 3: Update Tests ([step_3.md](./steps/step_3.md))
+
+- [ ] Update `test_update_gitignore_*` tests to check for `.txt`
+- [ ] Update `test_create_status_file*` tests for new filename and format
+- [ ] Update `test_create_vscode_task` to verify two tasks exist
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and fix any issues
+- [ ] Run mypy and fix any issues
+- [ ] Prepare git commit message for Step 3
+
+---
 
 ## Pull Request
+
+- [ ] Review all changes across modified files
+- [ ] Verify all tests pass
+- [ ] Verify all quality checks pass (pylint, pytest, mypy)
+- [ ] Prepare PR title and description
+- [ ] Create Pull Request
