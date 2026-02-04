@@ -260,8 +260,8 @@ URL:    {issue_url}
 ==========================================================================
 """
 
-# Intervention row for status file
-INTERVENTION_ROW = """Mode:    INTERVENTION (manual investigation)
+# Intervention line for status file (includes newline for proper formatting)
+INTERVENTION_LINE = """Mode:    ⚠️ INTERVENTION
 """
 
 # Gitignore entry
