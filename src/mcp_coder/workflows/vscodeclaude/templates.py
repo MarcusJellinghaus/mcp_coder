@@ -11,7 +11,7 @@ if not exist .venv\Scripts\activate.bat (
         exit /b 1
     )
     echo Installing dependencies...
-    uv sync --extra types
+    uv sync --extra dev
     if errorlevel 1 (
         echo ERROR: Failed to install dependencies.
         pause

@@ -435,7 +435,7 @@ Add to `.gitignore` if configs contain sensitive paths:
 For `mcp-coder coordinator vscodeclaude`, add to `.gitignore`:
 
 ```gitignore
-.vscodeclaude_status.md
+.vscodeclaude_status.txt
 ```
 
 This prevents working folders from appearing "dirty" due to the session status file.
