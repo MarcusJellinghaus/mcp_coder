@@ -4,7 +4,7 @@
 
 **Framework**: Arc42 Template  
 **Version**: 1.8  
-**Last Updated**: 2025-11-23  
+**Last Updated**: 2025-02-05  
 **Status**: Complete (Sections 1-8)  
 **Maintainer**: Marcus Jellinghaus  
 **Review Frequency**: Quarterly or on major changes  
@@ -210,7 +210,19 @@ mcp-coder implement --project-dir /path/to/project
 - **GitHub integration**: `utils/github_operations/` - API interactions (tests: `utils/github_operations/test_*.py` 🏷️ github_integration)
   - `base_manager.py` - Base class for GitHub managers
   - `github_utils.py` - GitHub URL parsing and validation
-  - `issue_manager.py` - Issue management operations (tests: `test_issue_manager.py`, `test_issue_manager_integration.py`)
+  - `issues/` - Modular issue management package (tests: `test_issue_manager*.py`, `test_issue_branch_manager*.py`, `test_issue_cache.py`)
+    - **Design Decision**: Refactored from monolithic `issue_manager.py` (1,604 lines) to modular package (Jan 2025)
+      - **Rationale**: Improve maintainability by organizing code using mixin pattern with focused modules
+      - **Benefits**: Enhanced LLM navigation, clearer responsibility boundaries, all files under 500 lines
+      - **Pattern**: Mixin composition - `IssueManager` inherits from `CommentsMixin`, `LabelsMixin`, `EventsMixin`, `BaseGitHubManager`
+    - `types.py` - Type definitions (IssueData, CommentData, EventData, IssueEventType)
+    - `base.py` - Validation helpers (validate_issue_number, validate_comment_id, parse_base_branch)
+    - `manager.py` - Core IssueManager class with CRUD operations
+    - `comments_mixin.py` - CommentsMixin class for comment operations
+    - `labels_mixin.py` - LabelsMixin class for label operations
+    - `events_mixin.py` - EventsMixin class for event operations
+    - `branch_manager.py` - IssueBranchManager for branch-issue linking via GraphQL
+    - `cache.py` - Issue caching functions (get_all_cached_issues, update_issue_labels_in_cache)
   - `labels_manager.py` - Label management operations (tests: `test_labels_manager.py`)
   - `pr_manager.py` - Pull request management via PyGithub API (tests: `test_pr_manager.py`)
   - Smoke tests: `test_github_integration_smoke.py` - Basic GitHub API connectivity validation
