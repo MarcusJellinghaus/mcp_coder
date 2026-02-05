@@ -147,14 +147,14 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issues.manager.get_current_branch_name",
                 return_value="123-feature",
             ),
             patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
@@ -198,11 +198,11 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issues.manager.get_current_branch_name",
                 return_value="feature-branch",  # No issue number
             ),
         ):
@@ -235,7 +235,7 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
@@ -244,7 +244,7 @@ class TestIssueManagerLabelUpdate:
                 return_value=[],  # No linked branches
             ),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issues.manager.get_current_branch_name",
                 return_value="123-feature",
             ),
         ):
@@ -292,14 +292,14 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issues.manager.get_current_branch_name",
                 return_value="123-feature",
             ),
             patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
@@ -349,14 +349,14 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issues.manager.get_current_branch_name",
                 return_value="123-feature",
             ),
             patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
@@ -397,14 +397,14 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issues.manager.get_current_branch_name",
                 return_value="123-feature",
             ),
         ):
@@ -455,14 +455,14 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issues.manager.get_current_branch_name",
                 return_value="123-feature",
             ),
             patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
@@ -517,14 +517,14 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issues.manager.get_current_branch_name",
                 return_value="123-feature",
             ) as mock_get_branch,
             patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
@@ -587,14 +587,14 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
                 IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
             ),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.get_current_branch_name",
+                "mcp_coder.utils.github_operations.issues.manager.get_current_branch_name",
                 return_value="123-feature",
             ),
             patch.object(IssueManager, "get_issue", return_value=mock_issue_data),
@@ -655,7 +655,7 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
@@ -714,7 +714,7 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(IssueManager, "get_issue", return_value=empty_issue_data),
@@ -761,7 +761,7 @@ class TestIssueManagerLabelUpdate:
             patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
-                "mcp_coder.utils.github_operations.issue_manager.load_labels_config",
+                "mcp_coder.utils.github_operations.issues.manager.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
             # Simulate post-PR state: linkedBranches is empty
