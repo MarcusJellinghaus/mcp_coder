@@ -48,7 +48,7 @@ See [step_3.md](./steps/step_3.md) for details.
 
 - [x] Read templates.py and confirm "uv sync --extra dev" is present
 - [x] Confirm "uv sync --extra types" is absent from templates.py
-- [ ] Run new test: test_venv_section_installs_dev_dependencies with pytest
+- [x] Run new test: test_venv_section_installs_dev_dependencies with pytest
 - [ ] Run all vscodeclaude tests for regression check with pytest
 - [ ] Run full unit test suite (fast tests only) with pytest
 - [ ] Update documentation in `docs/coordinator-vscodeclaude.md`
