@@ -100,8 +100,9 @@ Issues must also:
 
 1. **Workspace Setup**: Creates folder like `mcp-coder_123` in workspace base
 2. **Git Clone/Pull**: Clones repository or pulls latest changes
-3. **VS Code Launch**: Opens workspace with auto-run task
-4. **Claude Session**: Starts appropriate Claude Code command based on issue status
+3. **Dependency Installation**: Installs complete development environment with `uv sync --extra dev` (includes test utilities, type stubs, and development tools)
+4. **VS Code Launch**: Opens workspace with auto-run task
+5. **Claude Session**: Starts appropriate Claude Code command based on issue status
 
 ### Session States
 
@@ -130,7 +131,7 @@ Each session creates:
 | `<repo>_<issue>.code-workspace` | VS Code workspace file |
 | `.vscodeclaude_start.bat/.sh` | Startup script |
 | `.vscode/tasks.json` | Auto-run task on folder open |
-| `.vscodeclaude_status.md` | Session status (gitignored) |
+| `.vscodeclaude_status.txt` | Session status (gitignored) |
 
 ### Session Storage
 

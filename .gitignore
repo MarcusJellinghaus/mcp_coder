@@ -60,7 +60,7 @@ pr_info/.ci_problem_description.md
 temp_integration_test.py
 
 # VSCodeClaude session files (auto-generated)
-.vscodeclaude_status.md
+.vscodeclaude_status.txt
 .vscodeclaude_analysis.json
 .vscodeclaude_start.bat
 .vscodeclaude_start.sh

@@ -275,7 +275,7 @@ def update_gitignore(folder_path: Path) -> None:
         existing_content = gitignore_path.read_text(encoding="utf-8")
 
     # Check if already present
-    if ".vscodeclaude_status.md" in existing_content:
+    if ".vscodeclaude_status.txt" in existing_content:
         return
 
     # Append entry
@@ -352,18 +352,18 @@ def create_startup_script(
     Returns:
         Path to created script (.bat or .sh)
 
-    The V2 templates include:
+    The templates include:
     - Venv creation/activation
     - mcp-coder prompt for automated analysis
     - mcp-coder prompt for /discuss
     - claude --resume for interactive session
     """
     from .templates import (
-        AUTOMATED_SECTION_WINDOWS_V2,
+        AUTOMATED_SECTION_WINDOWS,
         DISCUSSION_SECTION_WINDOWS,
-        INTERACTIVE_SECTION_WINDOWS_V2,
-        INTERVENTION_SCRIPT_WINDOWS_V2,
-        STARTUP_SCRIPT_WINDOWS_V2,
+        INTERACTIVE_SECTION_WINDOWS,
+        INTERVENTION_SCRIPT_WINDOWS,
+        STARTUP_SCRIPT_WINDOWS,
         VENV_SECTION_WINDOWS,
     )
 
@@ -380,7 +380,7 @@ def create_startup_script(
     if is_windows:
         if is_intervention:
             # Intervention mode - plain claude, no automation
-            script_content = INTERVENTION_SCRIPT_WINDOWS_V2.format(
+            script_content = INTERVENTION_SCRIPT_WINDOWS.format(
                 emoji=emoji,
                 issue_number=issue_number,
                 title=title_display,
@@ -391,7 +391,7 @@ def create_startup_script(
             )
         else:
             # Normal mode - full automation flow
-            automated_section = AUTOMATED_SECTION_WINDOWS_V2.format(
+            automated_section = AUTOMATED_SECTION_WINDOWS.format(
                 initial_command=initial_cmd or "/issue_analyse",
                 issue_number=issue_number,
                 timeout=timeout,
@@ -401,7 +401,7 @@ def create_startup_script(
                 timeout=timeout,
             )
 
-            script_content = STARTUP_SCRIPT_WINDOWS_V2.format(
+            script_content = STARTUP_SCRIPT_WINDOWS.format(
                 emoji=emoji,
                 issue_number=issue_number,
                 title=title_display,
@@ -411,7 +411,7 @@ def create_startup_script(
                 venv_section=VENV_SECTION_WINDOWS,
                 automated_section=automated_section,
                 discussion_section=discussion_section,
-                interactive_section=INTERACTIVE_SECTION_WINDOWS_V2,
+                interactive_section=INTERACTIVE_SECTION_WINDOWS,
             )
 
         script_path = folder_path / ".vscodeclaude_start.bat"
@@ -424,7 +424,7 @@ def create_startup_script(
         # Linux - TODO: Implement in Step 17
         # For now, raise NotImplementedError
         raise NotImplementedError(
-            "Linux V2 templates not yet implemented. " "See Step 17 for Linux support."
+            "Linux templates not yet implemented. " "See Step 17 for Linux support."
         )
 
 
@@ -459,7 +459,7 @@ def create_status_file(
     issue_url: str,
     is_intervention: bool,
 ) -> None:
-    """Create .vscodeclaude_status.md in project root.
+    """Create .vscodeclaude_status.txt in project root.
 
     Args:
         folder_path: Working folder path
@@ -471,17 +471,14 @@ def create_status_file(
         issue_url: GitHub issue URL
         is_intervention: If True, add intervention warning
     """
-    from .templates import (
-        INTERVENTION_ROW,
-        STATUS_FILE_TEMPLATE,
-    )
+    from .templates import INTERVENTION_LINE, STATUS_FILE_TEMPLATE
 
     # Get emoji for status from config
     config = get_vscodeclaude_config(status)
     status_emoji = config["emoji"] if config else "📋"
 
-    # Build intervention row if needed
-    intervention_row = INTERVENTION_ROW if is_intervention else ""
+    # Build intervention line if needed
+    intervention_line = INTERVENTION_LINE if is_intervention else ""
 
     # Format status file
     content = STATUS_FILE_TEMPLATE.format(
@@ -492,10 +489,10 @@ def create_status_file(
         repo=repo_full_name,
         branch=branch_name,
         started_at=datetime.now(timezone.utc).isoformat(),
-        intervention_row=intervention_row,
+        intervention_line=intervention_line,
         issue_url=issue_url,
     )
 
     # Write status file
-    status_file = folder_path / ".vscodeclaude_status.md"
+    status_file = folder_path / ".vscodeclaude_status.txt"
     status_file.write_text(content, encoding="utf-8")
