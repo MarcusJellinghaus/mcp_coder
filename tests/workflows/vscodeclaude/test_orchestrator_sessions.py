@@ -421,22 +421,21 @@ class TestOrchestration:
         sessions_file.write_text(json.dumps(store))
 
         # Provide cached issues to avoid API calls
-        cached_issues = {
-            "owner/repo": {
-                123: {
-                    "number": 123,
-                    "title": "Test",
-                    "state": "open",
-                    "labels": ["status-07:code-review"],
-                    "assignees": [],
-                    "user": None,
-                    "created_at": None,
-                    "updated_at": None,
-                    "url": "",
-                    "body": "",
-                    "locked": False,
-                }
-            }
+        cached_issue: IssueData = {
+            "number": 123,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {123: cached_issue}
         }
 
         restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues)
@@ -554,22 +553,21 @@ class TestOrchestration:
         sessions_file.write_text(json.dumps(store))
 
         # Cached issue with blocked label
-        cached_issues = {
-            "owner/repo": {
-                123: {
-                    "number": 123,
-                    "title": "Test",
-                    "state": "open",
-                    "labels": ["status-01:created", "blocked"],
-                    "assignees": [],
-                    "user": None,
-                    "created_at": None,
-                    "updated_at": None,
-                    "url": "",
-                    "body": "",
-                    "locked": False,
-                }
-            }
+        cached_issue: IssueData = {
+            "number": 123,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-01:created", "blocked"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {123: cached_issue}
         }
 
         result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
@@ -631,22 +629,21 @@ class TestOrchestration:
         sessions_file.write_text(json.dumps(store))
 
         # GitHub has new status
-        cached_issues = {
-            "owner/repo": {
-                123: {
-                    "number": 123,
-                    "title": "Test",
-                    "state": "open",
-                    "labels": ["status-04:plan-review"],  # Changed status
-                    "assignees": [],
-                    "user": None,
-                    "created_at": None,
-                    "updated_at": None,
-                    "url": "",
-                    "body": "",
-                    "locked": False,
-                }
-            }
+        cached_issue: IssueData = {
+            "number": 123,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-04:plan-review"],  # Changed status
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {123: cached_issue}
         }
 
         restart_closed_sessions(cached_issues_by_repo=cached_issues)

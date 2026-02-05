@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from mcp_coder.utils.github_operations.issue_manager import IssueData
 from mcp_coder.workflows.vscodeclaude.cleanup import (
     cleanup_stale_sessions,
     delete_session_folder,
@@ -334,17 +335,21 @@ class TestGetStaleSessions:
         }
         sessions_file.write_text(json.dumps(mock_sessions))
 
-        mock_cached_issues = {
-            "owner/repo": {
-                123: {
-                    "number": 123,
-                    "title": "Test",
-                    "state": "open",
-                    "labels": ["status-01:created", "blocked"],
-                    "assignees": [],
-                    "url": "",
-                }
-            }
+        mock_issue: IssueData = {
+            "number": 123,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-01:created", "blocked"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {123: mock_issue}
         }
 
         # Create folder
@@ -400,17 +405,21 @@ class TestGetStaleSessions:
         }
         sessions_file.write_text(json.dumps(mock_sessions))
 
-        mock_cached_issues = {
-            "owner/repo": {
-                456: {
-                    "number": 456,
-                    "title": "Test",
-                    "state": "open",
-                    "labels": ["status-04:plan-review", "wait"],
-                    "assignees": [],
-                    "url": "",
-                }
-            }
+        mock_issue: IssueData = {
+            "number": 456,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-04:plan-review", "wait"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {456: mock_issue}
         }
 
         (tmp_path / "repo_456").mkdir()
@@ -462,17 +471,21 @@ class TestGetStaleSessions:
         }
         sessions_file.write_text(json.dumps(mock_sessions))
 
-        mock_cached_issues = {
-            "owner/repo": {
-                789: {
-                    "number": 789,
-                    "title": "Test",
-                    "state": "open",
-                    "labels": ["status-01:created", "BLOCKED"],
-                    "assignees": [],
-                    "url": "",
-                }
-            }
+        mock_issue: IssueData = {
+            "number": 789,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-01:created", "BLOCKED"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {789: mock_issue}
         }
 
         (tmp_path / "repo_789").mkdir()
@@ -524,17 +537,21 @@ class TestGetStaleSessions:
         }
         sessions_file.write_text(json.dumps(mock_sessions))
 
-        mock_cached_issues = {
-            "owner/repo": {
-                123: {
-                    "number": 123,
-                    "title": "Test",
-                    "state": "open",
-                    "labels": ["status-01:created", "blocked"],
-                    "assignees": [],
-                    "url": "",
-                }
-            }
+        mock_issue: IssueData = {
+            "number": 123,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-01:created", "blocked"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {123: mock_issue}
         }
 
         monkeypatch.setattr(
