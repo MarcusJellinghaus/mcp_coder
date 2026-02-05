@@ -27,19 +27,15 @@ from mcp_coder.cli.commands.coordinator import (
     load_repo_config,
     validate_repo_config,
 )
-
-# pylint: disable=no-name-in-module
-from mcp_coder.utils.github_operations import (
+from mcp_coder.utils.github_operations.issues import (
+    CacheData,
     IssueData,
     _get_cache_file_path,
     _load_cache_file,
     _log_stale_cache_entries,
     _save_cache_file,
 )
-from mcp_coder.utils.github_operations.issue_cache import CacheData
 from mcp_coder.utils.user_config import get_cache_refresh_minutes
-
-# pylint: enable=no-name-in-module
 
 
 class TestLoadRepoConfig:
