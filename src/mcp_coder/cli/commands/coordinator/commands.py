@@ -468,7 +468,19 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # Build cached issues for all repos (used for staleness checks)
         cached_issues_by_repo = _build_cached_issues_by_repo(repo_names)
 
-        # Step 1: Restart closed sessions (pass cache for staleness checks)
+        # Step 1: Handle cleanup (BEFORE restart)
+        # - Always runs: dry_run=True shows what would be cleaned, dry_run=False actually deletes
+        # - This ensures users always see what's cleanable
+        if args.cleanup:
+            cleanup_stale_sessions(
+                dry_run=False, cached_issues_by_repo=cached_issues_by_repo
+            )
+        else:
+            cleanup_stale_sessions(
+                dry_run=True, cached_issues_by_repo=cached_issues_by_repo
+            )
+
+        # Step 2: Restart closed sessions (pass cache for staleness checks)
         restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
         for session in restarted:
             repo_short = session["repo"].split("/")[-1]
@@ -476,13 +488,6 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 f"Restarted: {repo_short} #{session['issue_number']} "
                 f"({session['status']}) PID:{session['vscode_pid']}"
             )
-
-        # Step 2: Handle cleanup if requested
-        if args.cleanup:
-            cleanup_stale_sessions(dry_run=False)
-        else:
-            # List stale sessions without deleting
-            cleanup_stale_sessions(dry_run=True)
 
         # Step 3: Check repo list (already loaded above)
         if not repo_names:

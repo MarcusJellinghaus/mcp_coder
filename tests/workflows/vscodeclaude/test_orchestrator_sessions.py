@@ -389,6 +389,12 @@ class TestOrchestration:
             lambda session, cached_issues=None: False,
         )
 
+        # Mock regenerate_session_files to avoid issue fetching
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            lambda session, issue: tmp_path / "script.bat",
+        )
+
         # Create working folder and workspace file
         working_folder = tmp_path / "repo_123"
         working_folder.mkdir()
@@ -414,7 +420,26 @@ class TestOrchestration:
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        restarted = restart_closed_sessions()
+        # Provide cached issues to avoid API calls
+        cached_issues = {
+            "owner/repo": {
+                123: {
+                    "number": 123,
+                    "title": "Test",
+                    "state": "open",
+                    "labels": ["status-07:code-review"],
+                    "assignees": [],
+                    "user": None,
+                    "created_at": None,
+                    "updated_at": None,
+                    "url": "",
+                    "body": "",
+                    "locked": False,
+                }
+            }
+        }
+
+        restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues)
 
         assert len(restarted) == 1
         assert restarted[0]["vscode_pid"] == new_pid
@@ -490,3 +515,143 @@ class TestOrchestration:
 
         captured = capsys.readouterr()
         assert captured.out == ""
+
+    def test_restart_closed_sessions_skips_blocked_issues(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should not restart sessions for issues with blocked label."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_stale",
+            lambda session, cached_issues=None: False,
+        )
+
+        working_folder = tmp_path / "repo_123"
+        working_folder.mkdir()
+
+        session = {
+            "folder": str(working_folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-01:created",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": ""}
+        sessions_file.write_text(json.dumps(store))
+
+        # Cached issue with blocked label
+        cached_issues = {
+            "owner/repo": {
+                123: {
+                    "number": 123,
+                    "title": "Test",
+                    "state": "open",
+                    "labels": ["status-01:created", "blocked"],
+                    "assignees": [],
+                    "user": None,
+                    "created_at": None,
+                    "updated_at": None,
+                    "url": "",
+                    "body": "",
+                    "locked": False,
+                }
+            }
+        }
+
+        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+
+        assert len(result) == 0  # Not restarted
+
+    def test_restart_closed_sessions_updates_session_status(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should update session status when GitHub status differs."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_stale",
+            lambda session, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            lambda session, issue: tmp_path / "script.bat",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            lambda _: 9999,
+        )
+
+        working_folder = tmp_path / "repo_123"
+        working_folder.mkdir()
+        workspace_file = tmp_path / "repo_123.code-workspace"
+        workspace_file.write_text("{}")
+
+        # Track status updates
+        status_updates = []
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.update_session_status",
+            lambda folder, status: status_updates.append((folder, status)),
+        )
+
+        session = {
+            "folder": str(working_folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-01:created",  # Old status
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": ""}
+        sessions_file.write_text(json.dumps(store))
+
+        # GitHub has new status
+        cached_issues = {
+            "owner/repo": {
+                123: {
+                    "number": 123,
+                    "title": "Test",
+                    "state": "open",
+                    "labels": ["status-04:plan-review"],  # Changed status
+                    "assignees": [],
+                    "user": None,
+                    "created_at": None,
+                    "updated_at": None,
+                    "url": "",
+                    "body": "",
+                    "locked": False,
+                }
+            }
+        }
+
+        restart_closed_sessions(cached_issues_by_repo=cached_issues)
+
+        # Verify status was updated
+        assert len(status_updates) == 1
+        assert status_updates[0][0] == str(working_folder)
+        assert status_updates[0][1] == "status-04:plan-review"

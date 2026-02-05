@@ -30,7 +30,9 @@ from .helpers import (
 )
 from .issues import (
     _filter_eligible_vscodeclaude_issues,
+    get_ignore_labels,
     get_linked_branch_for_issue,
+    get_matching_ignore_label,
 )
 from .sessions import (
     add_session,
@@ -43,6 +45,7 @@ from .sessions import (
     is_vscode_window_open_for_folder,
     load_sessions,
     update_session_pid,
+    update_session_status,
 )
 from .status import is_session_stale
 from .types import (
@@ -515,6 +518,9 @@ def restart_closed_sessions(
     configured_repos = _get_configured_repos()
     logger.debug("Configured repos from config: %s", configured_repos)
 
+    # Load ignore labels once for all sessions
+    ignore_labels = get_ignore_labels()
+
     for session in store["sessions"]:
         folder_path = Path(session["folder"])
 
@@ -591,9 +597,31 @@ def restart_closed_sessions(
                     "Failed to fetch issue #%d, skipping file regeneration",
                     issue_number,
                 )
-            else:
-                # Regenerate all session files with fresh data
-                regenerate_session_files(session, issue)
+                continue
+
+            # Check if issue has ignore label (blocked/wait)
+            blocked_label = get_matching_ignore_label(issue["labels"], ignore_labels)
+            if blocked_label:
+                logger.info(
+                    "Skipping blocked session for issue #%d (label: %s)",
+                    issue_number,
+                    blocked_label,
+                )
+                continue
+
+            # Update session status if changed
+            current_status = get_issue_status(issue)
+            if current_status != session["status"]:
+                update_session_status(session["folder"], current_status)
+                logger.debug(
+                    "Updated session status for #%d: %s -> %s",
+                    issue_number,
+                    session["status"],
+                    current_status,
+                )
+
+            # Regenerate all session files with fresh data
+            regenerate_session_files(session, issue)
 
         except Exception as e:
             logger.warning(

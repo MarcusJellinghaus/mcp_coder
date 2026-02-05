@@ -45,13 +45,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 3
 
 ### Step 4: Fix Cleanup Order and Include Blocked Sessions
-- [ ] Reorder cleanup and restart operations in `commands.py` (cleanup before restart)
-- [ ] Update `cleanup_stale_sessions()` to accept cache parameter in `cleanup.py`
-- [ ] Update `get_stale_sessions()` to include blocked sessions in `cleanup.py`
-- [ ] Update dry-run message format in `cleanup_stale_sessions()`
-- [ ] Write tests for blocked session cleanup in `test_cleanup.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 4
+- [x] Reorder cleanup and restart operations in `commands.py` (cleanup before restart)
+- [x] Update `cleanup_stale_sessions()` to accept cache parameter in `cleanup.py`
+- [x] Update `get_stale_sessions()` to include blocked sessions in `cleanup.py`
+- [x] Update dry-run message format in `cleanup_stale_sessions()`
+- [x] Write tests for blocked session cleanup in `test_cleanup.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Skip Blocked Issues in Restart and Update Status
 - [ ] Modify `restart_closed_sessions()` to skip blocked issues in `orchestrator.py`

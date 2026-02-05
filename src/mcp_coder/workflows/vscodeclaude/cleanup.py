@@ -4,6 +4,8 @@ import logging
 import shutil
 from pathlib import Path
 
+from ...utils.github_operations.issue_manager import IssueData
+from .issues import get_ignore_labels, get_matching_ignore_label
 from .orchestrator import _get_configured_repos
 from .sessions import check_vscode_running, load_sessions, remove_session
 from .status import check_folder_dirty, is_session_stale
@@ -12,10 +14,16 @@ from .types import VSCodeClaudeSession
 logger = logging.getLogger(__name__)
 
 
-def get_stale_sessions() -> list[tuple[VSCodeClaudeSession, bool]]:
+def get_stale_sessions(
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
+) -> list[tuple[VSCodeClaudeSession, bool]]:
     """Get stale sessions with dirty status.
 
     Only checks sessions for repos that are still configured.
+    Includes sessions with ignore labels (blocked/wait).
+
+    Args:
+        cached_issues_by_repo: Optional cache of issues for blocked detection
 
     Returns:
         List of (session, is_dirty) tuples for stale sessions
@@ -25,6 +33,9 @@ def get_stale_sessions() -> list[tuple[VSCodeClaudeSession, bool]]:
 
     # Load configured repos (skip sessions for repos no longer in config)
     configured_repos = _get_configured_repos()
+
+    # Load ignore labels for blocked detection
+    ignore_labels = get_ignore_labels()
 
     for session in store["sessions"]:
         # Skip sessions with running VSCode
@@ -41,8 +52,21 @@ def get_stale_sessions() -> list[tuple[VSCodeClaudeSession, bool]]:
             )
             continue
 
-        # Check if session is stale
-        if is_session_stale(session):
+        # Check for blocked label if cache available
+        is_blocked = False
+        if cached_issues_by_repo:
+            repo_issues = cached_issues_by_repo.get(repo_full_name, {})
+            issue_number = session["issue_number"]
+            if issue_number in repo_issues:
+                issue = repo_issues[issue_number]
+                blocked_label = get_matching_ignore_label(
+                    issue["labels"], ignore_labels
+                )
+                if blocked_label:
+                    is_blocked = True
+
+        # Check if session is stale or blocked
+        if is_session_stale(session) or is_blocked:
             folder_path = Path(session["folder"])
             is_dirty = (
                 check_folder_dirty(folder_path) if folder_path.exists() else False
@@ -87,11 +111,15 @@ def delete_session_folder(session: VSCodeClaudeSession) -> bool:
         return False
 
 
-def cleanup_stale_sessions(dry_run: bool = True) -> dict[str, list[str]]:
+def cleanup_stale_sessions(
+    dry_run: bool = True,
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
+) -> dict[str, list[str]]:
     """Clean up stale session folders.
 
     Args:
         dry_run: If True, only report what would be deleted
+        cached_issues_by_repo: Optional cache for blocked detection
 
     Returns:
         Dict with "deleted" and "skipped" folder lists
@@ -102,7 +130,7 @@ def cleanup_stale_sessions(dry_run: bool = True) -> dict[str, list[str]]:
     """
     result: dict[str, list[str]] = {"deleted": [], "skipped": []}
 
-    stale_sessions = get_stale_sessions()
+    stale_sessions = get_stale_sessions(cached_issues_by_repo=cached_issues_by_repo)
 
     for session, is_dirty in stale_sessions:
         folder = session["folder"]
@@ -117,7 +145,7 @@ def cleanup_stale_sessions(dry_run: bool = True) -> dict[str, list[str]]:
         else:
             # Clean folder - delete or report
             if dry_run:
-                print(f"Would delete: {folder}")
+                print(f"Add --cleanup to delete: {folder}")
                 # Don't add to deleted list in dry run - it wasn't actually deleted
             else:
                 if delete_session_folder(session):
