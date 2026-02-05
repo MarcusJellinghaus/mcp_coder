@@ -9,6 +9,10 @@ import pytest
 from github.GithubException import GithubException
 
 from mcp_coder.utils.github_operations.issues import IssueManager
+from mcp_coder.utils.github_operations.issues.base import (
+    validate_comment_id,
+    validate_issue_number,
+)
 
 
 @pytest.mark.git_integration
@@ -44,35 +48,19 @@ class TestIssueManagerUnit:
 
     def test_validate_issue_number(self, tmp_path: Path) -> None:
         """Test issue number validation."""
-        git_dir = tmp_path / "git_dir"
-        git_dir.mkdir()
-        repo = git.Repo.init(git_dir)
-        repo.create_remote("origin", "https://github.com/test/repo.git")
-
-        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-            manager = IssueManager(git_dir)
-
-            assert manager._validate_issue_number(1) is True
-            assert manager._validate_issue_number(123) is True
-            assert manager._validate_issue_number(0) is False
-            assert manager._validate_issue_number(-1) is False
+        # Test standalone validation function
+        assert validate_issue_number(1) is True
+        assert validate_issue_number(123) is True
+        assert validate_issue_number(0) is False
+        assert validate_issue_number(-1) is False
 
     def test_validate_comment_id(self, tmp_path: Path) -> None:
         """Test comment ID validation."""
-        git_dir = tmp_path / "git_dir"
-        git_dir.mkdir()
-        repo = git.Repo.init(git_dir)
-        repo.create_remote("origin", "https://github.com/test/repo.git")
-
-        with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-            manager = IssueManager(git_dir)
-
-            assert manager._validate_comment_id(1) is True
-            assert manager._validate_comment_id(456) is True
-            assert manager._validate_comment_id(0) is False
-            assert manager._validate_comment_id(-1) is False
+        # Test standalone validation function
+        assert validate_comment_id(1) is True
+        assert validate_comment_id(456) is True
+        assert validate_comment_id(0) is False
+        assert validate_comment_id(-1) is False
 
     @patch("mcp_coder.utils.github_operations.base_manager.Github")
     def test_get_issue_success(self, mock_github: Mock, tmp_path: Path) -> None:
