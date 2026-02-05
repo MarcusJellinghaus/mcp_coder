@@ -5,7 +5,6 @@ for managing GitHub issues through the PyGithub library.
 """
 
 import logging
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -22,7 +21,7 @@ from mcp_coder.utils.github_operations.label_config import (
 from mcp_coder.utils.log_utils import log_function_call
 
 from ..base_manager import BaseGitHubManager, _handle_github_errors
-from .base import validate_issue_number
+from .base import parse_base_branch, validate_issue_number
 from .branch_manager import IssueBranchManager
 from .comments_mixin import CommentsMixin
 from .events_mixin import EventsMixin
@@ -31,53 +30,7 @@ from .types import IssueData
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["IssueManager", "_parse_base_branch"]
-
-
-def _parse_base_branch(body: str) -> Optional[str]:
-    """Parse base branch from issue body.
-
-    Looks for a markdown heading (any level) containing "Base Branch" (case-insensitive)
-    and extracts the content until the next heading.
-
-    Args:
-        body: GitHub issue body text
-
-    Returns:
-        Branch name if found and valid, None if not specified or empty
-
-    Raises:
-        ValueError: If base branch section contains multiple lines (malformed input)
-
-    Example:
-        >>> _parse_base_branch("### Base Branch\\n\\nfeature/v2\\n\\n### Description")
-        'feature/v2'
-        >>> _parse_base_branch("### Description\\n\\nNo base branch")
-        None
-    """
-    if not body:
-        return None
-
-    # Case-insensitive match for any heading level (# to ######) with "Base Branch"
-    # MULTILINE flag for ^ to match line starts, DOTALL for . to match newlines
-    pattern = r"^#{1,6}\s*base\s*branch\s*\n(.*?)(?=^#{1,6}\s|\Z)"
-    match = re.search(pattern, body, re.MULTILINE | re.DOTALL | re.IGNORECASE)
-
-    if not match:
-        return None
-
-    content = match.group(1).strip()
-
-    if not content:
-        return None
-
-    # Check for multi-line content (malformed input)
-    if "\n" in content:
-        raise ValueError(
-            f"Base branch section contains multiple lines (malformed): {content!r}"
-        )
-
-    return content
+__all__ = ["IssueManager"]
 
 
 class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
@@ -282,7 +235,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         # Parse base_branch from body
         body = github_issue.body or ""
         try:
-            base_branch = _parse_base_branch(body)
+            base_branch = parse_base_branch(body)
         except ValueError as e:
             logger.warning(f"Issue #{issue_number} has malformed base branch: {e}")
             base_branch = None
@@ -360,7 +313,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             # Parse base_branch from body
             body = issue.body or ""
             try:
-                base_branch = _parse_base_branch(body)
+                base_branch = parse_base_branch(body)
             except ValueError as e:
                 logger.warning(f"Issue #{issue.number} has malformed base branch: {e}")
                 base_branch = None

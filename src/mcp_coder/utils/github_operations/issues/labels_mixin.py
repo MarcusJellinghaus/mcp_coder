@@ -4,8 +4,10 @@ This module provides the LabelsMixin class containing pure label operations
 for managing issue labels through the GitHub API.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import TYPE_CHECKING, List
+from typing import List
 
 from mcp_coder.utils.log_utils import log_function_call
 
@@ -13,9 +15,6 @@ from ..base_manager import BaseGitHubManager, _handle_github_errors
 from ..labels_manager import LabelData  # Per Decision #7
 from .base import validate_issue_number
 from .types import IssueData
-
-if TYPE_CHECKING:
-    pass  # Reserved for type-only imports if needed
 
 logger = logging.getLogger(__name__)
 

@@ -2187,97 +2187,97 @@ class TestIssueManagerUnit:
 
 
 # ==============================================================================
-# Tests for _parse_base_branch() function
+# Tests for parse_base_branch() function
 # ==============================================================================
 class TestParseBaseBranch:
-    """Tests for _parse_base_branch() function."""
+    """Tests for parse_base_branch() function."""
 
     # Valid base branches
-    def test_parse_base_branch_with_h3_header(self) -> None:
+    def testparse_base_branch_with_h3_header(self) -> None:
         """Test parsing base branch with standard H3 header."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "### Base Branch\n\nfeature/v2\n\n### Description\n\nContent"
-        assert _parse_base_branch(body) == "feature/v2"
+        assert parse_base_branch(body) == "feature/v2"
 
-    def test_parse_base_branch_case_insensitive(self) -> None:
+    def testparse_base_branch_case_insensitive(self) -> None:
         """Test parsing base branch with lowercase header."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "# base branch\n\nmain\n\n# Description"
-        assert _parse_base_branch(body) == "main"
+        assert parse_base_branch(body) == "main"
 
-    def test_parse_base_branch_uppercase(self) -> None:
+    def testparse_base_branch_uppercase(self) -> None:
         """Test parsing base branch with uppercase header."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "## BASE BRANCH\n\nrelease/2.0\n\n## Description"
-        assert _parse_base_branch(body) == "release/2.0"
+        assert parse_base_branch(body) == "release/2.0"
 
-    def test_parse_base_branch_with_h1_header(self) -> None:
+    def testparse_base_branch_with_h1_header(self) -> None:
         """Test parsing base branch with H1 header."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "# Base Branch\n\nhotfix/urgent\n\n# Other"
-        assert _parse_base_branch(body) == "hotfix/urgent"
+        assert parse_base_branch(body) == "hotfix/urgent"
 
     # No base branch (returns None)
-    def test_parse_base_branch_no_section(self) -> None:
+    def testparse_base_branch_no_section(self) -> None:
         """Test returns None when no base branch section exists."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "### Description\n\nNo base branch section here"
-        assert _parse_base_branch(body) is None
+        assert parse_base_branch(body) is None
 
-    def test_parse_base_branch_empty_body(self) -> None:
+    def testparse_base_branch_empty_body(self) -> None:
         """Test returns None for empty body."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
-        assert _parse_base_branch("") is None
+        assert parse_base_branch("") is None
 
-    def test_parse_base_branch_none_body(self) -> None:
+    def testparse_base_branch_none_body(self) -> None:
         """Test returns None for None body."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
-        assert _parse_base_branch(None) is None  # type: ignore[arg-type]
+        assert parse_base_branch(None) is None  # type: ignore[arg-type]
 
-    def test_parse_base_branch_empty_content(self) -> None:
+    def testparse_base_branch_empty_content(self) -> None:
         """Test returns None when section has no content."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "### Base Branch\n\n\n\n### Description"
-        assert _parse_base_branch(body) is None
+        assert parse_base_branch(body) is None
 
-    def test_parse_base_branch_whitespace_only(self) -> None:
+    def testparse_base_branch_whitespace_only(self) -> None:
         """Test returns None when section has only whitespace."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "### Base Branch\n\n   \n\n### Description"
-        assert _parse_base_branch(body) is None
+        assert parse_base_branch(body) is None
 
-    def test_parse_base_branch_at_end_of_body(self) -> None:
+    def testparse_base_branch_at_end_of_body(self) -> None:
         """Test parsing base branch when section is at end without trailing header."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "### Description\n\nContent\n\n### Base Branch\n\nfeature/final"
-        assert _parse_base_branch(body) == "feature/final"
+        assert parse_base_branch(body) == "feature/final"
 
     # Error cases (raises ValueError)
-    def test_parse_base_branch_multiline_raises_error(self) -> None:
+    def testparse_base_branch_multiline_raises_error(self) -> None:
         """Test raises ValueError for multi-line content."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "### Base Branch\n\nline1\nline2\n\n### Description"
         with pytest.raises(ValueError, match="multiple lines"):
-            _parse_base_branch(body)
+            parse_base_branch(body)
 
-    def test_parse_base_branch_multiline_with_spaces_raises_error(self) -> None:
+    def testparse_base_branch_multiline_with_spaces_raises_error(self) -> None:
         """Test raises ValueError for multi-line content with leading spaces."""
-        from mcp_coder.utils.github_operations.issues import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import parse_base_branch
 
         body = "### Base Branch\n\nbranch1\n  branch2\n\n### Description"
         with pytest.raises(ValueError, match="multiple lines"):
-            _parse_base_branch(body)
+            parse_base_branch(body)
 
 
 class TestGetIssueBaseBranch:

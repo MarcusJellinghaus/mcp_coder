@@ -8,6 +8,9 @@ This package provides:
 - Utilities: generate_branch_name_from_issue, BranchCreationResult, CacheData
 """
 
+# Base utilities
+from .base import parse_base_branch
+
 # Branch manager and utilities
 from .branch_manager import (
     BranchCreationResult,
@@ -27,7 +30,7 @@ from .cache import (
 )
 
 # Main managers
-from .manager import IssueManager, _parse_base_branch
+from .manager import IssueManager
 
 # Types (Note: LabelData not included per Decision #7 - use labels_manager)
 from .types import (
@@ -53,10 +56,11 @@ __all__ = [
     "CacheData",
     "get_all_cached_issues",
     "update_issue_labels_in_cache",
-    # Private functions (exported for testing)
+    # Utility functions (exported for testing)
+    "parse_base_branch",
+    # Private cache functions (exported for testing)
     "_get_cache_file_path",
     "_load_cache_file",
     "_log_stale_cache_entries",
     "_save_cache_file",
-    "_parse_base_branch",
 ]
