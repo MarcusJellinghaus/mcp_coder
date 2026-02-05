@@ -37,12 +37,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 2
 
 ### Step 3: Add Blocked Label Support to get_next_action()
-- [ ] Modify `get_next_action()` signature to add `blocked_label` parameter in `status.py`
-- [ ] Implement blocked label logic in `get_next_action()`
-- [ ] Write tests for blocked label behavior in `test_status.py`
-- [ ] Verify existing tests still pass (backward compatibility)
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 3
+- [x] Modify `get_next_action()` signature to add `blocked_label` parameter in `status.py`
+- [x] Implement blocked label logic in `get_next_action()`
+- [x] Write tests for blocked label behavior in `test_status.py`
+- [x] Verify existing tests still pass (backward compatibility)
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Fix Cleanup Order and Include Blocked Sessions
 - [ ] Reorder cleanup and restart operations in `commands.py` (cleanup before restart)

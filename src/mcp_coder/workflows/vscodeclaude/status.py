@@ -172,6 +172,7 @@ def get_next_action(
     is_stale: bool,
     is_dirty: bool,
     is_vscode_running: bool,
+    blocked_label: str | None = None,
 ) -> str:
     """Determine next action for a session.
 
@@ -179,16 +180,23 @@ def get_next_action(
         is_stale: Whether issue status changed
         is_dirty: Whether folder has uncommitted changes
         is_vscode_running: Whether VSCode is still running
+        blocked_label: If set, the ignore label blocking this issue (e.g., "blocked", "wait")
 
     Returns:
-        Action string like "(active)", "→ Restart", "→ Delete", "⚠️ Manual cleanup"
+        Action string like "(active)", "→ Restart", "→ Delete", "Blocked (blocked)"
     """
     if is_vscode_running:
         return "(active)"
 
+    # Check for blocked label (takes priority over stale)
+    if blocked_label is not None:
+        if is_dirty:
+            return "!! Manual"
+        return f"Blocked ({blocked_label})"
+
     if is_stale:
         if is_dirty:
-            return "⚠️ Manual cleanup"
+            return "!! Manual cleanup"
         return "→ Delete (with --cleanup)"
 
     return "→ Restart"
