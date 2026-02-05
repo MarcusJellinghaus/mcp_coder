@@ -50,7 +50,7 @@ def get_issue_current_status(
                 return label, is_open
         return None, is_open
     except Exception as e:
-        logger.warning("Failed to get issue #%d status: %s", issue_number, e)
+        logger.error("Failed to get issue #%d status: %s", issue_number, e)
         return None, False  # Assume closed on error (conservative)
 
 
