@@ -482,7 +482,7 @@ class TestIssueManagerUnit:
             assert result[1]["name"] == "enhancement"
             assert result[1]["color"] == "a2eeef"
             assert result[2]["name"] == "documentation"
-            assert result[2]["description"] is None
+            assert result[2]["description"] == ""
 
             mock_repo.get_labels.assert_called_once()
 
