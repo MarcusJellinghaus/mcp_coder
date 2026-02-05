@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
+from .helpers import get_issue_status
 from .sessions import check_vscode_running, load_sessions
 from .types import VSCodeClaudeSession
 
@@ -49,7 +50,7 @@ def get_issue_current_status(
                 return label, is_open
         return None, is_open
     except Exception as e:
-        logger.warning("Failed to get issue #%d status: %s", issue_number, e)
+        logger.error("Failed to get issue #%d status: %s", issue_number, e)
         return None, False  # Assume closed on error (conservative)
 
 
@@ -172,6 +173,7 @@ def get_next_action(
     is_stale: bool,
     is_dirty: bool,
     is_vscode_running: bool,
+    blocked_label: str | None = None,
 ) -> str:
     """Determine next action for a session.
 
@@ -179,34 +181,26 @@ def get_next_action(
         is_stale: Whether issue status changed
         is_dirty: Whether folder has uncommitted changes
         is_vscode_running: Whether VSCode is still running
+        blocked_label: If set, the ignore label blocking this issue (e.g., "blocked", "wait")
 
     Returns:
-        Action string like "(active)", "→ Restart", "→ Delete", "⚠️ Manual cleanup"
+        Action string like "(active)", "→ Restart", "→ Delete", "Blocked (blocked)"
     """
     if is_vscode_running:
         return "(active)"
 
+    # Check for blocked label (takes priority over stale)
+    if blocked_label is not None:
+        if is_dirty:
+            return "!! Manual"
+        return f"Blocked ({blocked_label})"
+
     if is_stale:
         if is_dirty:
-            return "⚠️ Manual cleanup"
+            return "!! Manual cleanup"
         return "→ Delete (with --cleanup)"
 
     return "→ Restart"
-
-
-def _get_issue_status(issue: IssueData) -> str:
-    """Get the status label from an issue.
-
-    Args:
-        issue: Issue data dict
-
-    Returns:
-        Status label string or empty string if none found
-    """
-    for label in issue["labels"]:
-        if label.startswith("status-"):
-            return label
-    return ""
 
 
 def display_status_table(
@@ -333,7 +327,7 @@ def display_status_table(
             continue
 
         issue_num = f"#{issue['number']}"
-        status = _get_issue_status(issue)
+        status = get_issue_status(issue)
 
         # Truncate status if too long
         if len(status) > col_status - 1:

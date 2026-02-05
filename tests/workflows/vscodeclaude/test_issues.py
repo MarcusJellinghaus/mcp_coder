@@ -11,7 +11,9 @@ from mcp_coder.workflows.vscodeclaude.issues import (
     get_cached_eligible_vscodeclaude_issues,
     get_eligible_vscodeclaude_issues,
     get_human_action_labels,
+    get_ignore_labels,
     get_linked_branch_for_issue,
+    get_matching_ignore_label,
 )
 
 
@@ -546,3 +548,108 @@ class TestNumericPriorityExtraction:
         assert _get_status_priority("priority-high") == 0
         assert _get_status_priority("Overview") == 0
         assert _get_status_priority("") == 0
+
+
+class TestGetIgnoreLabels:
+    """Tests for get_ignore_labels function."""
+
+    def test_returns_set_of_lowercase_labels(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should return ignore_labels as lowercase set."""
+        mock_labels_config = {
+            "workflow_labels": [],
+            "ignore_labels": ["Overview", "blocked", "wait"],
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
+        )
+
+        result = get_ignore_labels()
+        assert isinstance(result, set)
+        assert "blocked" in result
+        assert "wait" in result
+        assert "overview" in result
+
+    def test_all_labels_are_lowercase(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """All returned labels should be lowercase."""
+        mock_labels_config = {
+            "workflow_labels": [],
+            "ignore_labels": ["Overview", "BLOCKED", "Wait"],
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
+        )
+
+        result = get_ignore_labels()
+        for label in result:
+            assert label == label.lower()
+
+    def test_handles_empty_ignore_labels(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Should handle missing or empty ignore_labels."""
+        mock_labels_config: dict[str, list[str]] = {
+            "workflow_labels": [],
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues._load_labels_config",
+            lambda: mock_labels_config,
+        )
+
+        result = get_ignore_labels()
+        assert result == set()
+
+
+class TestGetMatchingIgnoreLabel:
+    """Tests for get_matching_ignore_label function."""
+
+    def test_finds_exact_match(self) -> None:
+        """Should find label with exact case."""
+        result = get_matching_ignore_label(
+            ["status-01:created", "blocked"],
+            {"blocked", "wait"},
+        )
+        assert result == "blocked"
+
+    def test_finds_case_insensitive_match(self) -> None:
+        """Should match regardless of case."""
+        result = get_matching_ignore_label(
+            ["status-01:created", "Blocked"],
+            {"blocked", "wait"},
+        )
+        assert result == "Blocked"  # Preserves original case
+
+    def test_finds_uppercase_match(self) -> None:
+        """Should match UPPERCASE labels."""
+        result = get_matching_ignore_label(
+            ["WAIT", "status-04:plan-review"],
+            {"blocked", "wait"},
+        )
+        assert result == "WAIT"
+
+    def test_returns_first_match(self) -> None:
+        """Should return first matching label."""
+        result = get_matching_ignore_label(
+            ["blocked", "wait"],
+            {"blocked", "wait"},
+        )
+        assert result == "blocked"  # First one
+
+    def test_returns_none_when_no_match(self) -> None:
+        """Should return None when no ignore labels found."""
+        result = get_matching_ignore_label(
+            ["status-01:created", "bug"],
+            {"blocked", "wait"},
+        )
+        assert result is None
+
+    def test_handles_empty_issue_labels(self) -> None:
+        """Should handle empty issue labels list."""
+        result = get_matching_ignore_label([], {"blocked", "wait"})
+        assert result is None
+
+    def test_handles_empty_ignore_labels(self) -> None:
+        """Should handle empty ignore labels set."""
+        result = get_matching_ignore_label(["blocked"], set())
+        assert result is None

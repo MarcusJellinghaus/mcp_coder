@@ -381,18 +381,20 @@ def _get_repo_full_name_from_url(repo_url: str) -> str:
 
 def _build_cached_issues_by_repo(
     repo_names: list[str],
-) -> dict[str, dict[int, IssueData]]:
+) -> tuple[dict[str, dict[int, IssueData]], set[str]]:
     """Build cached issues dict for all configured repos.
 
     Args:
         repo_names: List of repository config names
 
     Returns:
-        Dict mapping repo_full_name to {issue_number: IssueData}
+        Tuple of (cached_issues_by_repo, failed_repos)
     """
     cached_issues_by_repo: dict[str, dict[int, IssueData]] = {}
+    failed_repos: set[str] = set()
 
     for repo_name in repo_names:
+        repo_full_name = ""
         try:
             repo_config: dict[str, Any] = load_repo_config(repo_name)
             repo_url = repo_config.get("repo_url", "")
@@ -420,8 +422,10 @@ def _build_cached_issues_by_repo(
 
         except Exception as e:
             logger.warning(f"Failed to build cache for {repo_name}: {e}")
+            if repo_full_name:
+                failed_repos.add(repo_full_name)
 
-    return cached_issues_by_repo
+    return cached_issues_by_repo, failed_repos
 
 
 def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
@@ -466,9 +470,21 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         repo_names = list(repos_section.keys())
 
         # Build cached issues for all repos (used for staleness checks)
-        cached_issues_by_repo = _build_cached_issues_by_repo(repo_names)
+        cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names)
 
-        # Step 1: Restart closed sessions (pass cache for staleness checks)
+        # Step 1: Handle cleanup (BEFORE restart)
+        # - Always runs: dry_run=True shows what would be cleaned, dry_run=False actually deletes
+        # - This ensures users always see what's cleanable
+        if args.cleanup:
+            cleanup_stale_sessions(
+                dry_run=False, cached_issues_by_repo=cached_issues_by_repo
+            )
+        else:
+            cleanup_stale_sessions(
+                dry_run=True, cached_issues_by_repo=cached_issues_by_repo
+            )
+
+        # Step 2: Restart closed sessions (pass cache for staleness checks)
         restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
         for session in restarted:
             repo_short = session["repo"].split("/")[-1]
@@ -476,13 +492,6 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 f"Restarted: {repo_short} #{session['issue_number']} "
                 f"({session['status']}) PID:{session['vscode_pid']}"
             )
-
-        # Step 2: Handle cleanup if requested
-        if args.cleanup:
-            cleanup_stale_sessions(dry_run=False)
-        else:
-            # List stale sessions without deleting
-            cleanup_stale_sessions(dry_run=True)
 
         # Step 3: Check repo list (already loaded above)
         if not repo_names:
@@ -557,6 +566,27 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
         clear_vscode_window_cache,
         is_vscode_window_open_for_folder,
     )
+    from ....workflows.vscodeclaude.helpers import get_issue_status
+    from ....workflows.vscodeclaude.issues import (
+        get_ignore_labels,
+        get_matching_ignore_label,
+    )
+    from ....workflows.vscodeclaude.sessions import update_session_status
+    from ....workflows.vscodeclaude.status import (
+        get_next_action,
+        is_session_stale,
+    )
+
+    # Get repo list for cache building
+    config_data = load_config()
+    repos_section = config_data.get("coordinator", {}).get("repos", {})
+    repo_names = list(repos_section.keys())
+
+    # Build cached issues and track failures
+    cached_issues_by_repo, failed_repos = _build_cached_issues_by_repo(repo_names)
+
+    # Load ignore labels once
+    ignore_labels = get_ignore_labels()
 
     # Refresh window cache once for all sessions
     clear_vscode_window_cache()
@@ -577,16 +607,48 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     table_data = []
     for session in sessions:
         issue_num = f"#{session['issue_number']}"
-        repo_short = session["repo"].split("/")[-1]
-        # Shorten status (remove "status-" prefix)
-        status_raw = session["status"]
-        status = status_raw.replace("status-", "") if status_raw else ""
+        repo_full_name = session["repo"]
+        repo_short = repo_full_name.split("/")[-1]
+        issue_number = session["issue_number"]
 
-        # Check if VSCode is running: window title check (reliable) or PID check (fallback)
+        # Check if API failed for this repo
+        api_failed = repo_full_name in failed_repos
+
+        # Get current status from cache (or use stored if API failed)
+        current_status = session["status"]
+        blocked_label: str | None = None
+
+        if not api_failed:
+            repo_issues = cached_issues_by_repo.get(repo_full_name, {})
+            if issue_number in repo_issues:
+                issue = repo_issues[issue_number]
+                # Get current status from GitHub
+                current_status = get_issue_status(issue)
+                # Check for blocked label
+                blocked_label = get_matching_ignore_label(
+                    issue["labels"], ignore_labels
+                )
+
+                # Update session if status changed
+                if current_status != session["status"]:
+                    update_session_status(session["folder"], current_status)
+                    logger.debug(
+                        "Updated session status for #%d: %s -> %s",
+                        issue_number,
+                        session["status"],
+                        current_status,
+                    )
+
+        # Format status for display (remove "status-" prefix)
+        status_display = current_status.replace("status-", "") if current_status else ""
+        if api_failed:
+            status_display += " (?)"
+
+        # Check if VSCode is running
         is_running = is_vscode_window_open_for_folder(
             session["folder"],
-            issue_number=session["issue_number"],
-            repo=session["repo"],
+            issue_number=issue_number,
+            repo=repo_full_name,
         ) or check_vscode_running(session.get("vscode_pid"))
         vscode_status = "Running" if is_running else "Closed"
 
@@ -598,22 +660,24 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
         else:
             changes = "-"
 
-        # Determine next action
-        if is_running:
-            next_action = "(active)"
-        elif not folder_path.exists():
-            next_action = "-> Remove"
-        elif is_dirty:
-            next_action = "!! Manual"
-        else:
-            next_action = "-> Restart"
+        # Check if session is stale
+        repo_cached_issues = cached_issues_by_repo.get(repo_full_name)
+        stale = is_session_stale(session, cached_issues=repo_cached_issues)
+
+        # Determine next action with blocked support
+        next_action = get_next_action(
+            is_stale=stale,
+            is_dirty=is_dirty,
+            is_vscode_running=is_running,
+            blocked_label=blocked_label,
+        )
 
         # Add intervention marker
         if session.get("is_intervention"):
             issue_num = f"{issue_num} [I]"
 
         table_data.append(
-            [issue_num, repo_short, status, vscode_status, changes, next_action]
+            [issue_num, repo_short, status_display, vscode_status, changes, next_action]
         )
 
     # Print table

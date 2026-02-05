@@ -99,5 +99,5 @@
       }
     }
   ],
-  "ignore_labels": ["Overview"]
+  "ignore_labels": ["Overview", "blocked", "wait"]
 }

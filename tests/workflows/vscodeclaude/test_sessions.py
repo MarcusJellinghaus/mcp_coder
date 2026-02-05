@@ -15,6 +15,7 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     remove_session,
     save_sessions,
     update_session_pid,
+    update_session_status,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
     VSCodeClaudeSession,
@@ -331,3 +332,134 @@ class TestSessionManagement:
         assert sessions_file.exists()
         loaded = json.loads(sessions_file.read_text(encoding="utf-8"))
         assert "sessions" in loaded
+
+
+class TestUpdateSessionStatus:
+    """Tests for update_session_status function."""
+
+    def test_updates_existing_session_status(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should update status for existing session."""
+        # Setup: Create session store with one session
+        sessions_file = tmp_path / "sessions.json"
+        initial_store = {
+            "sessions": [
+                {
+                    "folder": "/workspace/repo_123",
+                    "repo": "owner/repo",
+                    "issue_number": 123,
+                    "status": "status-01:created",
+                    "vscode_pid": 1234,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(initial_store))
+
+        # Patch get_sessions_file_path to use tmp_path
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        # Act
+        result = update_session_status("/workspace/repo_123", "status-04:plan-review")
+
+        # Assert
+        assert result is True
+        updated_store = json.loads(sessions_file.read_text())
+        assert updated_store["sessions"][0]["status"] == "status-04:plan-review"
+
+    def test_returns_false_for_nonexistent_session(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should return False when session not found."""
+        sessions_file = tmp_path / "sessions.json"
+        initial_store = {"sessions": [], "last_updated": ""}
+        sessions_file.write_text(json.dumps(initial_store))
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        result = update_session_status("/nonexistent/path", "status-04:plan-review")
+
+        assert result is False
+
+    def test_does_not_modify_other_sessions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should only update the matching session."""
+        sessions_file = tmp_path / "sessions.json"
+        initial_store = {
+            "sessions": [
+                {
+                    "folder": "/workspace/repo_123",
+                    "repo": "owner/repo",
+                    "issue_number": 123,
+                    "status": "status-01:created",
+                    "vscode_pid": 1234,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                },
+                {
+                    "folder": "/workspace/repo_456",
+                    "repo": "owner/repo",
+                    "issue_number": 456,
+                    "status": "status-01:created",
+                    "vscode_pid": 5678,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                },
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(initial_store))
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        update_session_status("/workspace/repo_123", "status-04:plan-review")
+
+        updated_store = json.loads(sessions_file.read_text())
+        # First session updated
+        assert updated_store["sessions"][0]["status"] == "status-04:plan-review"
+        # Second session unchanged
+        assert updated_store["sessions"][1]["status"] == "status-01:created"
+
+    def test_updates_last_updated_timestamp(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should update the last_updated timestamp."""
+        sessions_file = tmp_path / "sessions.json"
+        initial_store = {
+            "sessions": [
+                {
+                    "folder": "/workspace/repo_123",
+                    "repo": "owner/repo",
+                    "issue_number": 123,
+                    "status": "status-01:created",
+                    "vscode_pid": 1234,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "old-timestamp",
+        }
+        sessions_file.write_text(json.dumps(initial_store))
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        update_session_status("/workspace/repo_123", "status-04:plan-review")
+
+        updated_store = json.loads(sessions_file.read_text())
+        assert updated_store["last_updated"] != "old-timestamp"

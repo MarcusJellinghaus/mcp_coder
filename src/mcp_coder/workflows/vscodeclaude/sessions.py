@@ -436,3 +436,22 @@ def update_session_pid(folder: str, pid: int) -> None:
             session["vscode_pid"] = pid
             break
     save_sessions(store)
+
+
+def update_session_status(folder: str, new_status: str) -> bool:
+    """Update the status field for an existing session.
+
+    Args:
+        folder: Session folder path (used as session identifier)
+        new_status: New status label to set
+
+    Returns:
+        True if session was found and updated, False otherwise
+    """
+    store = load_sessions()
+    for session in store["sessions"]:
+        if session["folder"] == folder:
+            session["status"] = new_status
+            save_sessions(store)
+            return True
+    return False
