@@ -29,20 +29,29 @@ Confirm `VENV_SECTION_WINDOWS` contains:
 
 #### 2. Test Execution
 Run the new test to ensure it passes:
-```bash
-pytest tests/workflows/vscodeclaude/test_templates.py::test_venv_section_installs_dev_dependencies -v
+```python
+mcp__code-checker__run_pytest_check(
+    extra_args=["-n", "auto", "tests/workflows/vscodeclaude/test_templates.py::test_venv_section_installs_dev_dependencies"],
+    show_details=True
+)
 ```
 
 #### 3. Regression Testing
 Run all vscodeclaude tests:
-```bash
-pytest tests/workflows/vscodeclaude/ -v
+```python
+mcp__code-checker__run_pytest_check(
+    extra_args=["-n", "auto", "tests/workflows/vscodeclaude/"],
+    show_details=False
+)
 ```
 
 #### 4. Full Test Suite
 Run complete test suite (excluding slow integration tests):
-```bash
-pytest -m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"
+```python
+mcp__code-checker__run_pytest_check(
+    extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"],
+    show_details=False
+)
 ```
 
 ## HOW
@@ -51,7 +60,7 @@ pytest -m "not git_integration and not claude_cli_integration and not claude_api
 No new integration points - this is pure verification.
 
 ### Tools Used
-- `Read` tool to verify file contents
+- `mcp__filesystem__read_file` to verify file contents
 - `mcp__code-checker__run_pytest_check` to run tests
 - Manual inspection of test results
 
@@ -102,7 +111,7 @@ tests/workflows/vscodeclaude/test_templates.py::test_venv_section_installs_dev_d
 #### 1. Read and Verify Template
 ```python
 # Read the updated file
-file_content = Read("src/mcp_coder/workflows/vscodeclaude/templates.py")
+file_content = mcp__filesystem__read_file(file_path="src/mcp_coder/workflows/vscodeclaude/templates.py")
 
 # Verify changes:
 # - Should contain "uv sync --extra dev"
@@ -113,7 +122,7 @@ file_content = Read("src/mcp_coder/workflows/vscodeclaude/templates.py")
 ```python
 # Run the specific test created in Step 1
 mcp__code-checker__run_pytest_check(
-    extra_args=["tests/workflows/vscodeclaude/test_templates.py::test_venv_section_installs_dev_dependencies"],
+    extra_args=["-n", "auto", "tests/workflows/vscodeclaude/test_templates.py::test_venv_section_installs_dev_dependencies"],
     show_details=True
 )
 ```
@@ -122,7 +131,7 @@ mcp__code-checker__run_pytest_check(
 ```python
 # Run all vscodeclaude tests to check for regressions
 mcp__code-checker__run_pytest_check(
-    extra_args=["tests/workflows/vscodeclaude/"],
+    extra_args=["-n", "auto", "tests/workflows/vscodeclaude/"],
     show_details=False
 )
 ```
@@ -131,7 +140,7 @@ mcp__code-checker__run_pytest_check(
 ```python
 # Run all unit tests (exclude slow integration tests)
 mcp__code-checker__run_pytest_check(
-    markers=["not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"],
+    extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"],
     show_details=False
 )
 ```
@@ -189,9 +198,23 @@ If issues are discovered:
 2. Remove the new test file
 3. File a new issue with details
 
+## Additional Task: Update Documentation
+
+Add a concise note to `docs/coordinator-vscodeclaude.md` about dev dependencies.
+
+**Location**: In the "Session Lifecycle" section after the workspace setup step.
+
+**Content to add**:
+```markdown
+   - **Dependency Installation**: Installs complete development environment with `uv sync --extra dev` (includes test utilities, type stubs, and development tools)
+```
+
+This provides transparency about what gets installed without excessive detail.
+
 ## Final Deliverables
 - ✅ Updated template with `--extra dev`
 - ✅ Test verifying the change
 - ✅ All tests passing
 - ✅ No regressions introduced
+- ✅ Documentation updated
 - ✅ Issue #411 resolved

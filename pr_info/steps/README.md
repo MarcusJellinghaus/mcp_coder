@@ -14,6 +14,9 @@
 ### Test Code
 - `tests/workflows/vscodeclaude/test_templates.py` (new file, ~20 lines)
 
+### Documentation
+- `docs/coordinator-vscodeclaude.md` (add note about dev dependencies)
+
 ## Step Sequence
 
 ### Step 1: Write Test (TDD Red Phase)
@@ -65,6 +68,7 @@ pytest tests/workflows/vscodeclaude/ -v
 - ✅ New test passes
 - ✅ All existing tests pass
 - ✅ Only one line changed in production code
+- ✅ Documentation updated
 
 ## KISS Principles Applied
 1. **Minimal Change**: One line in one template
@@ -87,7 +91,8 @@ pytest tests/workflows/vscodeclaude/ -v
 - Architecture tools (import-linter, pycycle, tach, vulture)
 
 ## See Also
+- `Decisions.md` - Implementation decisions from plan review
 - `summary.md` - Detailed overview and architectural context
 - `step_1.md` - Test implementation details
 - `step_2.md` - Template update details  
-- `step_3.md` - Verification procedures
+- `step_3.md` - Verification procedures and documentation update

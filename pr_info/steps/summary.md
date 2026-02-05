@@ -51,11 +51,12 @@ This is a **configuration fix**, not an architectural change. The design remains
    - Change: Line ~14 from `--extra types` to `--extra dev`
 
 ### Test Changes
-2. `tests/workflows/vscodeclaude/test_templates.py` (if exists)
+2. `tests/workflows/vscodeclaude/test_templates.py` (new file)
    - Add: Test to verify `--extra dev` is in venv section
 
-3. `tests/workflows/vscodeclaude/test_workspace.py`
-   - Add: Test to verify workspace setup includes dev dependencies
+### Documentation
+3. `docs/coordinator-vscodeclaude.md`
+   - Add: Concise note about dev dependencies in Session Lifecycle section
 
 ### Files NOT Modified
 - ❌ `src/mcp_coder/workflows/vscodeclaude/workspace.py` - No logic changes
@@ -90,4 +91,4 @@ After implementation:
 ## Steps Overview
 - **Step 1**: Add test for dev dependencies in template
 - **Step 2**: Update template to use `--extra dev`
-- **Step 3**: Verify change and ensure tests pass
+- **Step 3**: Verify change, ensure tests pass, and update documentation
