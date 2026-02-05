@@ -54,32 +54,32 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 4
 
 ### Step 5: Skip Blocked Issues in Restart and Update Status
-- [ ] Modify `restart_closed_sessions()` to skip blocked issues in `orchestrator.py`
-- [ ] Add status update logic when restarting in `orchestrator.py`
-- [ ] Write tests for blocked issue skip in `test_orchestrator_sessions.py`
-- [ ] Write tests for status update on restart in `test_orchestrator_sessions.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 5
+- [x] Modify `restart_closed_sessions()` to skip blocked issues in `orchestrator.py`
+- [x] Add status update logic when restarting in `orchestrator.py`
+- [x] Write tests for blocked issue skip in `test_orchestrator_sessions.py`
+- [x] Write tests for status update on restart in `test_orchestrator_sessions.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: Fix Status Command Display
-- [ ] Modify `_build_cached_issues_by_repo()` to return failed repos in `commands.py`
-- [ ] Update `execute_coordinator_vscodeclaude_status()` to use current GitHub status
-- [ ] Add `(?)` indicator for API failures (per-repo)
-- [ ] Add session status update when changed
-- [ ] Add blocked label support to status display
-- [ ] Write tests for current GitHub status display in `test_commands.py`
-- [ ] Write tests for API failure handling in `test_commands.py`
-- [ ] Write tests for blocked display in `test_commands.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 6
+- [x] Modify `_build_cached_issues_by_repo()` to return failed repos in `commands.py`
+- [x] Update `execute_coordinator_vscodeclaude_status()` to use current GitHub status
+- [x] Add `(?)` indicator for API failures (per-repo)
+- [x] Add session status update when changed
+- [x] Add blocked label support to status display
+- [x] Write tests for current GitHub status display in `test_commands.py`
+- [x] Write tests for API failure handling in `test_commands.py`
+- [x] Write tests for blocked display in `test_commands.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 6
 
 ### Step 7: Cleanup - Remove Duplicate _get_issue_status()
-- [ ] Add import for `get_issue_status` from `helpers.py` in `status.py`
-- [ ] Replace usage of `_get_issue_status()` with `get_issue_status()`
-- [ ] Remove `_get_issue_status()` function from `status.py`
-- [ ] Verify tests still pass
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 7
+- [x] Add import for `get_issue_status` from `helpers.py` in `status.py`
+- [x] Replace usage of `_get_issue_status()` with `get_issue_status()`
+- [x] Remove `_get_issue_status()` function from `status.py`
+- [x] Verify tests still pass
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 7
 
 ---
 

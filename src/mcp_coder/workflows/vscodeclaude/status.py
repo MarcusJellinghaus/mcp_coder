@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ...utils.github_operations.issue_manager import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
+from .helpers import get_issue_status
 from .sessions import check_vscode_running, load_sessions
 from .types import VSCodeClaudeSession
 
@@ -202,21 +203,6 @@ def get_next_action(
     return "→ Restart"
 
 
-def _get_issue_status(issue: IssueData) -> str:
-    """Get the status label from an issue.
-
-    Args:
-        issue: Issue data dict
-
-    Returns:
-        Status label string or empty string if none found
-    """
-    for label in issue["labels"]:
-        if label.startswith("status-"):
-            return label
-    return ""
-
-
 def display_status_table(
     sessions: list[VSCodeClaudeSession],
     eligible_issues: list[tuple[str, IssueData]],
@@ -341,7 +327,7 @@ def display_status_table(
             continue
 
         issue_num = f"#{issue['number']}"
-        status = _get_issue_status(issue)
+        status = get_issue_status(issue)
 
         # Truncate status if too long
         if len(status) > col_status - 1:
