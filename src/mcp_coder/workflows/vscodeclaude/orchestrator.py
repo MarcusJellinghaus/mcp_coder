@@ -385,7 +385,7 @@ def regenerate_session_files(
     Regenerates:
     - Startup script (.bat/.sh) with current issue title/URL
     - VSCode task (.vscode/tasks.json)
-    - Status file (.vscodeclaude_status.md)
+    - Status file (.vscodeclaude_status.txt)
     - Workspace file (.code-workspace)
     """
     folder_path = Path(session["folder"])
