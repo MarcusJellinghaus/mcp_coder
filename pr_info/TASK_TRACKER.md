@@ -36,12 +36,12 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Update Template to Use --extra dev
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Update `src/mcp_coder/workflows/vscodeclaude/templates.py`
-- [ ] Change `uv sync --extra types` to `uv sync --extra dev` in VENV_SECTION_WINDOWS
-- [ ] Verify test from Step 1 now passes (TDD green phase)
-- [ ] Run pylint on modified file and fix any issues
-- [ ] Run mypy on modified file and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Update `src/mcp_coder/workflows/vscodeclaude/templates.py`
+- [x] Change `uv sync --extra types` to `uv sync --extra dev` in VENV_SECTION_WINDOWS
+- [x] Verify test from Step 1 now passes (TDD green phase)
+- [x] Run pylint on modified file and fix any issues
+- [x] Run mypy on modified file and fix any issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Verify Change and Run Full Test Suite
 See [step_3.md](./steps/step_3.md) for details.
