@@ -62,7 +62,7 @@ class LabelsMixin:
                 LabelData(
                     name=label.name,
                     color=label.color,
-                    description=label.description if label.description else "",
+                    description=label.description or None,
                     url=label.url,
                 )
             )

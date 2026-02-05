@@ -39,7 +39,7 @@ class TestCacheMetricsLogging:
     def test_log_cache_metrics_hit(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache hit metrics logging."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         _log_cache_metrics("hit", "test-repo", age_minutes=15, issue_count=5)
@@ -49,7 +49,7 @@ class TestCacheMetricsLogging:
     def test_log_cache_metrics_miss(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache miss metrics logging."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         _log_cache_metrics("miss", "test-repo", reason="no_cache")
@@ -59,7 +59,7 @@ class TestCacheMetricsLogging:
     def test_log_cache_metrics_refresh(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache refresh metrics logging."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         _log_cache_metrics("refresh", "test-repo", refresh_type="full", issue_count=10)
@@ -69,7 +69,7 @@ class TestCacheMetricsLogging:
     def test_log_cache_metrics_save(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test cache save metrics logging."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         _log_cache_metrics("save", "test-repo", total_issues=25)
@@ -184,7 +184,7 @@ class TestStalenessLogging:
     ) -> None:
         """Test logging when issue state changes."""
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.INFO, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         cached_issues: Dict[str, IssueData] = {
@@ -227,7 +227,7 @@ class TestStalenessLogging:
     ) -> None:
         """Test logging when issue labels change."""
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.INFO, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         cached_issues: Dict[str, IssueData] = {
@@ -272,7 +272,7 @@ class TestStalenessLogging:
     ) -> None:
         """Test logging when cached issue no longer exists."""
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.INFO, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         cached_issues: Dict[str, IssueData] = {
@@ -475,13 +475,13 @@ class TestGetCachedEligibleIssues:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
             ) as mock_load,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
             ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
@@ -512,13 +512,13 @@ class TestGetCachedEligibleIssues:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
             ) as mock_load,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
             ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
@@ -552,19 +552,19 @@ class TestGetCachedEligibleIssues:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
             ) as mock_load,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
             ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
             ) as mock_filter,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._log_stale_cache_entries"
+                "mcp_coder.utils.github_operations.issues.cache._log_stale_cache_entries"
             ) as mock_log_stale,
         ):
 
@@ -596,10 +596,10 @@ class TestGetCachedEligibleIssues:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
             ) as mock_load,
         ):
 
@@ -625,13 +625,13 @@ class TestGetCachedEligibleIssues:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
             ) as mock_load,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
             ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
@@ -660,10 +660,10 @@ class TestGetCachedEligibleIssues:
         """Test graceful fallback when cache operations fail."""
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file",
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file",
                 side_effect=ValueError("Cache error"),
             ),
             patch(
@@ -691,13 +691,13 @@ class TestGetCachedEligibleIssues:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
             ) as mock_load,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
             ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
@@ -730,20 +730,20 @@ class TestGetCachedEligibleIssues:
     ) -> None:
         """Test that cache metrics are logged properly."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issues.cache"
         )
         mock_cache_issue_manager.list_issues.return_value = [sample_issue]
         mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
             ) as mock_load,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
             ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
@@ -771,20 +771,20 @@ class TestGetCachedEligibleIssues:
     ) -> None:
         """Test that using RepoIdentifier does not generate spurious warnings."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issues.cache"
         )
         mock_cache_issue_manager.list_issues.return_value = [sample_issue]
         mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
             ) as mock_load,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
             ) as mock_save,
             patch(
                 "mcp_coder.cli.commands.coordinator._filter_eligible_issues"
@@ -843,7 +843,7 @@ class TestCacheIssueUpdate:
 
             # Mock _get_cache_file_path to return our test path
             with patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -890,7 +890,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -933,7 +933,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -954,7 +954,7 @@ class TestCacheIssueUpdate:
     ) -> None:
         """Test graceful handling when issue not found in cache."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -982,7 +982,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1002,7 +1002,7 @@ class TestCacheIssueUpdate:
     ) -> None:
         """Test handling of corrupted cache file structure."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1013,7 +1013,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(invalid_cache))
 
             with patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1031,18 +1031,18 @@ class TestCacheIssueUpdate:
     ) -> None:
         """Test handling of file permission errors."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
             ) as mock_load,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._save_cache_file"
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
             ) as mock_save,
         ):
             mock_path.return_value = Path("/fake/cache.json")
@@ -1079,7 +1079,7 @@ class TestCacheIssueUpdate:
     ) -> None:
         """Test proper logging behavior during successful updates."""
         caplog.set_level(
-            logging.DEBUG, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.DEBUG, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1106,7 +1106,7 @@ class TestCacheIssueUpdate:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1168,7 +1168,7 @@ class TestCacheUpdateIntegration:
 
             # Mock only the cache file path to point to our test cache
             with patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1228,7 +1228,7 @@ class TestCacheUpdateIntegration:
             cache_path.write_text(json.dumps(initial_cache))
 
             with patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path:
                 mock_path.return_value = cache_path
 
@@ -1259,15 +1259,15 @@ class TestCacheUpdateIntegration:
     ) -> None:
         """Test that cache update failures don't interrupt dispatch workflow."""
         caplog.set_level(
-            logging.WARNING, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._get_cache_file_path"
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
             ) as mock_path,
             patch(
-                "mcp_coder.utils.github_operations.issue_cache._load_cache_file",
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file",
                 side_effect=Exception("Cache error"),
             ),
         ):

@@ -745,7 +745,7 @@ class TestStalenessLogging:
     ) -> None:
         """Test logging when issue state changes."""
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.INFO, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         cached_issues: Dict[str, IssueData] = {
@@ -788,7 +788,7 @@ class TestStalenessLogging:
     ) -> None:
         """Test logging when issue labels change."""
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.utils.github_operations.issue_cache"
+            logging.INFO, logger="mcp_coder.utils.github_operations.issues.cache"
         )
 
         cached_issues: Dict[str, IssueData] = {
@@ -833,12 +833,12 @@ class TestGetCachedEligibleIssues:
     """Tests for get_cached_eligible_issues wrapper function.
 
     Note: get_cached_eligible_issues is now a thin wrapper that:
-    1. Calls get_all_cached_issues() from issue_cache module
+    1. Calls get_all_cached_issues() from issues.cache module
     2. Filters results using _filter_eligible_issues()
     3. Falls back to get_eligible_issues() on errors
 
     These tests verify the wrapper behavior, not the underlying cache operations
-    (which are tested in tests/utils/github_operations/test_issue_cache.py).
+    (which are tested in tests/utils/github_operations/test_issues.cache.py).
     """
 
     @pytest.fixture
