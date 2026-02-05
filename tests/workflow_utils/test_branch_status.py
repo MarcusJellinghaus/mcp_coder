@@ -861,7 +861,7 @@ def test_collect_task_status() -> None:
 
 def test_collect_github_label() -> None:
     """Test _collect_github_label function with issue_data provided."""
-    from mcp_coder.utils.github_operations.issue_manager import IssueData
+    from mcp_coder.utils.github_operations.issues import IssueData
     from mcp_coder.workflow_utils.branch_status import _collect_github_label
 
     project_dir = Path("/test/repo")
@@ -904,7 +904,7 @@ def test_collect_github_label_without_issue_data() -> None:
 
 def test_collect_github_label_no_status_label() -> None:
     """Test _collect_github_label when no status label found."""
-    from mcp_coder.utils.github_operations.issue_manager import IssueData
+    from mcp_coder.utils.github_operations.issues import IssueData
     from mcp_coder.workflow_utils.branch_status import (
         DEFAULT_LABEL,
         _collect_github_label,
@@ -934,7 +934,7 @@ def test_collect_github_label_no_status_label() -> None:
 
 def test_collect_github_label_empty_labels() -> None:
     """Test _collect_github_label with empty labels list."""
-    from mcp_coder.utils.github_operations.issue_manager import IssueData
+    from mcp_coder.utils.github_operations.issues import IssueData
     from mcp_coder.workflow_utils.branch_status import (
         DEFAULT_LABEL,
         _collect_github_label,

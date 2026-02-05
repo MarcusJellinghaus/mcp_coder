@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.utils.subprocess_runner import CalledProcessError
 from mcp_coder.workflows.vscodeclaude.orchestrator import (
     handle_pr_created_issues,

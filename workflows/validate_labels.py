@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 from github import GithubException
 
 from mcp_coder.utils import get_github_repository_url
-from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.utils.github_operations.issues import IssueData, IssueManager
 from mcp_coder.utils.github_operations.label_config import (
     LabelLookups,
     build_label_lookups,

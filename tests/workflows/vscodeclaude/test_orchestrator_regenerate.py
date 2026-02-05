@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.workflows.vscodeclaude.orchestrator import regenerate_session_files
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 
@@ -108,7 +108,7 @@ class TestRegenerateSessionFiles:
         mock_issue: IssueData,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Regenerate creates .vscodeclaude_status.txt."""
+        """Regenerate creates .vscodeclaude_status.md."""
         monkeypatch.setattr(
             "subprocess.run",
             lambda *args, **kwargs: Mock(returncode=0, stdout="main\n"),
@@ -116,7 +116,7 @@ class TestRegenerateSessionFiles:
 
         regenerate_session_files(mock_session, mock_issue)
 
-        status_file = session_folder / ".vscodeclaude_status.txt"
+        status_file = session_folder / ".vscodeclaude_status.md"
         assert status_file.exists()
         content = status_file.read_text(encoding="utf-8")
         assert "#123" in content
@@ -189,7 +189,7 @@ class TestRegenerateSessionFiles:
 
         # All required files must exist
         required_files = [
-            session_folder / ".vscodeclaude_status.txt",
+            session_folder / ".vscodeclaude_status.md",
             session_folder / ".vscode" / "tasks.json",
             tmp_path / "repo_123.code-workspace",
         ]

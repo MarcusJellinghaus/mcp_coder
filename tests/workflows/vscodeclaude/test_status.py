@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.workflows.vscodeclaude.status import (
     check_folder_dirty,
     display_status_table,
