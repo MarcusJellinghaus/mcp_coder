@@ -31,10 +31,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 1
 
 ### Step 2: Session Status Update Helper
-- [ ] Implement `update_session_status()` function in `sessions.py`
-- [ ] Write tests for `update_session_status()` in `test_sessions.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Implement `update_session_status()` function in `sessions.py`
+- [x] Write tests for `update_session_status()` in `test_sessions.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Add Blocked Label Support to get_next_action()
 - [ ] Modify `get_next_action()` signature to add `blocked_label` parameter in `status.py`
