@@ -27,7 +27,7 @@ from .cache import (
 )
 
 # Main managers
-from .manager import IssueManager
+from .manager import IssueManager, _parse_base_branch
 
 # Types (Note: LabelData not included per Decision #7 - use labels_manager)
 from .types import (
@@ -53,9 +53,10 @@ __all__ = [
     "CacheData",
     "get_all_cached_issues",
     "update_issue_labels_in_cache",
-    # Private cache functions (exported for testing)
+    # Private functions (exported for testing)
     "_get_cache_file_path",
     "_load_cache_file",
     "_log_stale_cache_entries",
     "_save_cache_file",
+    "_parse_base_branch",
 ]

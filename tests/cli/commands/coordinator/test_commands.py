@@ -24,7 +24,7 @@ from mcp_coder.cli.commands.coordinator import (
     execute_coordinator_test,
     format_job_output,
 )
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 
 

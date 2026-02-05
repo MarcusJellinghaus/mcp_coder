@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.workflows.create_plan import (
     _load_prompt_or_exit,
     format_initial_prompt,

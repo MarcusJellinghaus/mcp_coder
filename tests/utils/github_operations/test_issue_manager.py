@@ -1807,7 +1807,7 @@ class TestIssueManagerUnit:
         self, mock_github: Mock, tmp_path: Path
     ) -> None:
         """Test that filtering by IssueEventType.LABELED works correctly."""
-        from mcp_coder.utils.github_operations.issue_manager import IssueEventType
+        from mcp_coder.utils.github_operations.issues import IssueEventType
 
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
@@ -1896,7 +1896,7 @@ class TestIssueManagerUnit:
         self, mock_github: Mock, tmp_path: Path
     ) -> None:
         """Test filtering by IssueEventType.UNLABELED."""
-        from mcp_coder.utils.github_operations.issue_manager import IssueEventType
+        from mcp_coder.utils.github_operations.issues import IssueEventType
 
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
@@ -2195,28 +2195,28 @@ class TestParseBaseBranch:
     # Valid base branches
     def test_parse_base_branch_with_h3_header(self) -> None:
         """Test parsing base branch with standard H3 header."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "### Base Branch\n\nfeature/v2\n\n### Description\n\nContent"
         assert _parse_base_branch(body) == "feature/v2"
 
     def test_parse_base_branch_case_insensitive(self) -> None:
         """Test parsing base branch with lowercase header."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "# base branch\n\nmain\n\n# Description"
         assert _parse_base_branch(body) == "main"
 
     def test_parse_base_branch_uppercase(self) -> None:
         """Test parsing base branch with uppercase header."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "## BASE BRANCH\n\nrelease/2.0\n\n## Description"
         assert _parse_base_branch(body) == "release/2.0"
 
     def test_parse_base_branch_with_h1_header(self) -> None:
         """Test parsing base branch with H1 header."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "# Base Branch\n\nhotfix/urgent\n\n# Other"
         assert _parse_base_branch(body) == "hotfix/urgent"
@@ -2224,40 +2224,40 @@ class TestParseBaseBranch:
     # No base branch (returns None)
     def test_parse_base_branch_no_section(self) -> None:
         """Test returns None when no base branch section exists."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "### Description\n\nNo base branch section here"
         assert _parse_base_branch(body) is None
 
     def test_parse_base_branch_empty_body(self) -> None:
         """Test returns None for empty body."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         assert _parse_base_branch("") is None
 
     def test_parse_base_branch_none_body(self) -> None:
         """Test returns None for None body."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         assert _parse_base_branch(None) is None  # type: ignore[arg-type]
 
     def test_parse_base_branch_empty_content(self) -> None:
         """Test returns None when section has no content."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "### Base Branch\n\n\n\n### Description"
         assert _parse_base_branch(body) is None
 
     def test_parse_base_branch_whitespace_only(self) -> None:
         """Test returns None when section has only whitespace."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "### Base Branch\n\n   \n\n### Description"
         assert _parse_base_branch(body) is None
 
     def test_parse_base_branch_at_end_of_body(self) -> None:
         """Test parsing base branch when section is at end without trailing header."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "### Description\n\nContent\n\n### Base Branch\n\nfeature/final"
         assert _parse_base_branch(body) == "feature/final"
@@ -2265,7 +2265,7 @@ class TestParseBaseBranch:
     # Error cases (raises ValueError)
     def test_parse_base_branch_multiline_raises_error(self) -> None:
         """Test raises ValueError for multi-line content."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "### Base Branch\n\nline1\nline2\n\n### Description"
         with pytest.raises(ValueError, match="multiple lines"):
@@ -2273,7 +2273,7 @@ class TestParseBaseBranch:
 
     def test_parse_base_branch_multiline_with_spaces_raises_error(self) -> None:
         """Test raises ValueError for multi-line content with leading spaces."""
-        from mcp_coder.utils.github_operations.issue_manager import _parse_base_branch
+        from mcp_coder.utils.github_operations.issues import _parse_base_branch
 
         body = "### Base Branch\n\nbranch1\n  branch2\n\n### Description"
         with pytest.raises(ValueError, match="multiple lines"):
@@ -2299,7 +2299,7 @@ class TestGetIssueBaseBranch:
         mock_issue.locked = False
 
         with patch(
-            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+            "mcp_coder.utils.github_operations.base_manager.BaseGitHubManager._get_repository"
         ) as mock_get_repo:
             mock_repo = Mock()
             mock_repo.get_issue.return_value = mock_issue
@@ -2329,7 +2329,7 @@ class TestGetIssueBaseBranch:
         mock_issue.locked = False
 
         with patch(
-            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+            "mcp_coder.utils.github_operations.base_manager.BaseGitHubManager._get_repository"
         ) as mock_get_repo:
             mock_repo = Mock()
             mock_repo.get_issue.return_value = mock_issue
@@ -2363,7 +2363,7 @@ class TestGetIssueBaseBranch:
         mock_issue.locked = False
 
         with patch(
-            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+            "mcp_coder.utils.github_operations.base_manager.BaseGitHubManager._get_repository"
         ) as mock_get_repo:
             mock_repo = Mock()
             mock_repo.get_issue.return_value = mock_issue
@@ -2416,7 +2416,7 @@ class TestListIssuesBaseBranch:
         mock_issue2.pull_request = None
 
         with patch(
-            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+            "mcp_coder.utils.github_operations.base_manager.BaseGitHubManager._get_repository"
         ) as mock_get_repo:
             mock_repo = Mock()
             mock_repo.get_issues.return_value = [mock_issue1, mock_issue2]
@@ -2453,7 +2453,7 @@ class TestListIssuesBaseBranch:
         mock_issue.pull_request = None
 
         with patch(
-            "mcp_coder.utils.github_operations.issue_manager.BaseGitHubManager._get_repository"
+            "mcp_coder.utils.github_operations.base_manager.BaseGitHubManager._get_repository"
         ) as mock_get_repo:
             mock_repo = Mock()
             mock_repo.get_issues.return_value = [mock_issue]

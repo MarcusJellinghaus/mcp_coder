@@ -591,7 +591,7 @@ def run_create_pr_workflow(
         else:
             log_step("Updating GitHub issue label...")
             try:
-                from mcp_coder.utils.github_operations.issue_manager import IssueManager
+                from mcp_coder.utils.github_operations.issues import IssueManager
 
                 issue_manager = IssueManager(project_dir)
                 success = issue_manager.update_workflow_label(
