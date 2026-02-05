@@ -4,18 +4,18 @@ This module provides the EventsMixin class containing event-related operations
 for GitHub issues.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 from github.GithubException import GithubException
 
 from mcp_coder.utils.log_utils import log_function_call
 
+from ..base_manager import BaseGitHubManager
 from .base import validate_issue_number
 from .types import EventData, IssueEventType
-
-if TYPE_CHECKING:
-    from ..base_manager import BaseGitHubManager
 
 logger = logging.getLogger(__name__)
 

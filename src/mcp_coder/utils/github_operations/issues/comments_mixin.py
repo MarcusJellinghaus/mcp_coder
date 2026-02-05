@@ -4,17 +4,16 @@ This module provides the CommentsMixin class containing comment-related operatio
 for GitHub issues.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import TYPE_CHECKING, List
+from typing import List
 
 from mcp_coder.utils.log_utils import log_function_call
 
 from ..base_manager import BaseGitHubManager, _handle_github_errors
 from .base import validate_comment_id, validate_issue_number
 from .types import CommentData
-
-if TYPE_CHECKING:
-    pass  # Reserved for type-only imports if needed
 
 logger = logging.getLogger(__name__)
 
