@@ -226,14 +226,14 @@ class TestGetArtifacts:
             assert mock_download.call_count == 2
 
     def test_invalid_run_id(self, ci_manager: CIResultsManager) -> None:
-        """Test with invalid run ID returns empty dict (decorator catches ValueError)."""
-        # Test negative run ID - returns default empty dict
-        result = ci_manager.get_artifacts(-1)
-        assert result == {}
+        """Test with invalid run ID raises ValueError."""
+        # Test negative run ID - raises ValueError
+        with pytest.raises(ValueError, match="Invalid workflow run ID: -1"):
+            ci_manager.get_artifacts(-1)
 
-        # Test zero run ID - returns default empty dict
-        result = ci_manager.get_artifacts(0)
-        assert result == {}
+        # Test zero run ID - raises ValueError
+        with pytest.raises(ValueError, match="Invalid workflow run ID: 0"):
+            ci_manager.get_artifacts(0)
 
     @patch("mcp_coder.utils.github_operations.ci_results_manager.logger")
     def test_binary_file_skipped_with_warning(

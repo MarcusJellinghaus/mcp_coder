@@ -61,14 +61,24 @@ class TestHandleGitHubErrorsDecorator:
         assert result == {"error": "default"}
 
     def test_decorator_generic_exception_returns_default(self) -> None:
-        """Test that decorator returns default for generic exceptions."""
+        """Test that decorator returns default for generic exceptions (except ValueError)."""
 
         @_handle_github_errors(default_return={"error": "default"})
         def function_with_generic_error() -> dict[str, str]:
-            raise ValueError("Something went wrong")
+            raise RuntimeError("Something went wrong")
 
         result = function_with_generic_error()
         assert result == {"error": "default"}
+
+    def test_decorator_value_error_propagates(self) -> None:
+        """Test that ValueError is propagated (not caught)."""
+
+        @_handle_github_errors(default_return={"error": "default"})
+        def function_with_value_error() -> dict[str, str]:
+            raise ValueError("Validation failed")
+
+        with pytest.raises(ValueError, match="Validation failed"):
+            function_with_value_error()
 
     def test_decorator_with_list_default_return(self) -> None:
         """Test that decorator works with list as default return value."""
@@ -95,7 +105,7 @@ class TestHandleGitHubErrorsDecorator:
 
         @_handle_github_errors(default_return=None)
         def function_returning_optional() -> str | None:
-            raise ValueError("Error")
+            raise RuntimeError("Error")
 
         result = function_returning_optional()
         assert result is None
@@ -170,7 +180,7 @@ class TestHandleGitHubErrorsDecorator:
             @_handle_github_errors(default_return={})
             def my_method(self, value: str) -> dict[str, str]:
                 if value == "error":
-                    raise ValueError("Error occurred")
+                    raise RuntimeError("Error occurred")
                 return {"value": value}
 
         manager = MyManager()

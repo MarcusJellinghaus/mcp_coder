@@ -246,9 +246,11 @@ class TestIssueManagerCore:
         mock_issue1 = MagicMock()
         mock_issue1.number = 1
         mock_issue1.pull_request = None
+        mock_issue1.body = ""
         mock_issue2 = MagicMock()
         mock_issue2.number = 2
         mock_issue2.pull_request = None
+        mock_issue2.body = ""
 
         mock_issue_manager._repository.get_issues.return_value = [
             mock_issue1,
@@ -258,24 +260,21 @@ class TestIssueManagerCore:
         result = mock_issue_manager.list_issues()
 
         assert len(result) == 2
-        mock_issue_manager._repository.get_issues.assert_called_once_with(
-            state="all", since=None
-        )
+        mock_issue_manager._repository.get_issues.assert_called_once_with(state="open")
 
     def test_list_issues_open_only(self, mock_issue_manager: IssueManager) -> None:
         """Test listing only open issues."""
         mock_issue = MagicMock()
         mock_issue.number = 1
         mock_issue.pull_request = None
+        mock_issue.body = ""
 
         mock_issue_manager._repository.get_issues.return_value = [mock_issue]
 
         result = mock_issue_manager.list_issues(state="open")
 
         assert len(result) == 1
-        mock_issue_manager._repository.get_issues.assert_called_once_with(
-            state="open", since=None
-        )
+        mock_issue_manager._repository.get_issues.assert_called_once_with(state="open")
 
     def test_list_issues_include_pull_requests(
         self, mock_issue_manager: IssueManager
@@ -284,9 +283,11 @@ class TestIssueManagerCore:
         mock_issue = MagicMock()
         mock_issue.number = 1
         mock_issue.pull_request = None
+        mock_issue.body = ""
         mock_pr = MagicMock()
         mock_pr.number = 2
         mock_pr.pull_request = MagicMock()  # Has pull_request attribute
+        mock_pr.body = ""
 
         mock_issue_manager._repository.get_issues.return_value = [mock_issue, mock_pr]
 
@@ -304,6 +305,7 @@ class TestIssueManagerCore:
         for i, issue in enumerate(mock_issues):
             issue.number = i + 1
             issue.pull_request = None
+            issue.body = ""
 
         mock_issue_manager._repository.get_issues.return_value = mock_issues
 
@@ -340,6 +342,7 @@ class TestIssueManagerCore:
         mock_issue = MagicMock()
         mock_issue.number = 1
         mock_issue.pull_request = None
+        mock_issue.body = ""
 
         mock_issue_manager._repository.get_issues.return_value = [mock_issue]
 
@@ -347,7 +350,7 @@ class TestIssueManagerCore:
 
         assert len(result) == 1
         mock_issue_manager._repository.get_issues.assert_called_once_with(
-            state="all", since=since_date
+            state="open", since=since_date
         )
 
     def test_list_issues_since_filters_pull_requests(
@@ -358,9 +361,11 @@ class TestIssueManagerCore:
         mock_issue = MagicMock()
         mock_issue.number = 1
         mock_issue.pull_request = None
+        mock_issue.body = ""
         mock_pr = MagicMock()
         mock_pr.number = 2
         mock_pr.pull_request = MagicMock()
+        mock_pr.body = ""
 
         mock_issue_manager._repository.get_issues.return_value = [mock_issue, mock_pr]
 
@@ -376,15 +381,14 @@ class TestIssueManagerCore:
         mock_issue = MagicMock()
         mock_issue.number = 1
         mock_issue.pull_request = None
+        mock_issue.body = ""
 
         mock_issue_manager._repository.get_issues.return_value = [mock_issue]
 
         result = mock_issue_manager.list_issues()
 
         assert len(result) == 1
-        mock_issue_manager._repository.get_issues.assert_called_once_with(
-            state="all", since=None
-        )
+        mock_issue_manager._repository.get_issues.assert_called_once_with(state="open")
 
     def test_list_issues_since_pagination(
         self, mock_issue_manager: IssueManager
@@ -395,6 +399,7 @@ class TestIssueManagerCore:
         for i, issue in enumerate(mock_issues):
             issue.number = i + 1
             issue.pull_request = None
+            issue.body = ""
 
         mock_issue_manager._repository.get_issues.return_value = mock_issues
 
