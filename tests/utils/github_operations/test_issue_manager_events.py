@@ -30,14 +30,14 @@ class TestIssueManagerEvents:
         mock_event2.event = "closed"
         mock_event2.created_at = datetime(2023, 1, 2)
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.get_events.return_value = [mock_event1, mock_event2]
 
         result = mock_issue_manager.get_issue_events(issue_number)
 
         assert len(result) == 2
-        assert result[0].event == "labeled"
-        assert result[1].event == "closed"
+        assert result[0]["event"] == "labeled"
+        assert result[1]["event"] == "closed"
 
     def test_get_issue_events_invalid_issue_number(
         self, mock_issue_manager: IssueManager
@@ -59,19 +59,19 @@ class TestIssueManagerEvents:
         mock_closed_event = MagicMock()
         mock_closed_event.event = "closed"
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.get_events.return_value = [mock_labeled_event, mock_closed_event]
 
         result = mock_issue_manager.get_issue_events(issue_number, event_type="labeled")
 
         assert len(result) == 1
-        assert result[0].event == "labeled"
+        assert result[0]["event"] == "labeled"
 
     def test_get_issue_events_api_error_raises(
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that API errors are raised when getting events."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             500, {"message": "Internal server error"}, None
         )
 
@@ -91,7 +91,7 @@ class TestIssueManagerEvents:
         mock_labeled_event = MagicMock()
         mock_labeled_event.event = "labeled"
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.get_events.return_value = [mock_unlabeled_event, mock_labeled_event]
 
         result = mock_issue_manager.get_issue_events(
@@ -99,7 +99,7 @@ class TestIssueManagerEvents:
         )
 
         assert len(result) == 1
-        assert result[0].event == "unlabeled"
+        assert result[0]["event"] == "unlabeled"
 
     def test_get_issue_events_empty_events(
         self, mock_issue_manager: IssueManager
@@ -108,7 +108,7 @@ class TestIssueManagerEvents:
         issue_number = 1
         mock_issue = MagicMock()
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.get_events.return_value = []
 
         result = mock_issue_manager.get_issue_events(issue_number)

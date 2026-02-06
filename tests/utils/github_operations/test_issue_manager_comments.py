@@ -28,13 +28,13 @@ class TestIssueManagerComments:
         mock_comment.id = 123
         mock_comment.body = comment_body
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.create_comment.return_value = mock_comment
 
         result = mock_issue_manager.add_comment(issue_number, comment_body)
 
-        assert result.id == 123
-        assert result.body == comment_body
+        assert result["id"] == 123
+        assert result["body"] == comment_body
         mock_issue.create_comment.assert_called_once_with(comment_body)
 
     def test_add_comment_empty_body(self, mock_issue_manager: IssueManager) -> None:
@@ -53,7 +53,7 @@ class TestIssueManagerComments:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when adding comments."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
@@ -71,21 +71,21 @@ class TestIssueManagerComments:
         mock_comment2.id = 124
         mock_comment2.body = "Comment 2"
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.get_comments.return_value = [mock_comment1, mock_comment2]
 
         result = mock_issue_manager.get_comments(issue_number)
 
         assert len(result) == 2
-        assert result[0].id == 123
-        assert result[1].id == 124
+        assert result[0]["id"] == 123
+        assert result[1]["id"] == 124
 
     def test_get_comments_empty_list(self, mock_issue_manager: IssueManager) -> None:
         """Test getting comments from issue with no comments."""
         issue_number = 1
         mock_issue = MagicMock()
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.get_comments.return_value = []
 
         result = mock_issue_manager.get_comments(issue_number)
@@ -103,7 +103,7 @@ class TestIssueManagerComments:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when getting comments."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
@@ -120,7 +120,7 @@ class TestIssueManagerComments:
         mock_comment.id = comment_id
         mock_comment.body = new_body
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.get_comment.return_value = mock_comment
 
         mock_issue_manager.edit_comment(issue_number, comment_id, new_body)
@@ -150,7 +150,7 @@ class TestIssueManagerComments:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when editing comments."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
@@ -165,7 +165,7 @@ class TestIssueManagerComments:
         mock_comment = MagicMock()
         mock_comment.id = comment_id
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.get_comment.return_value = mock_comment
 
         mock_issue_manager.delete_comment(issue_number, comment_id)
@@ -190,7 +190,7 @@ class TestIssueManagerComments:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when deleting comments."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 

@@ -26,7 +26,7 @@ class TestIssueManagerLabels:
         mock_issue = MagicMock()
         mock_issue.number = issue_number
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         mock_issue_manager.add_labels(issue_number, labels)
 
@@ -38,7 +38,7 @@ class TestIssueManagerLabels:
         labels = ["bug"]
         mock_issue = MagicMock()
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         mock_issue_manager.add_labels(issue_number, labels)
 
@@ -62,7 +62,7 @@ class TestIssueManagerLabels:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when adding labels."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
@@ -76,7 +76,7 @@ class TestIssueManagerLabels:
         mock_issue = MagicMock()
         mock_issue.number = issue_number
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         mock_issue_manager.remove_labels(issue_number, labels)
 
@@ -88,7 +88,7 @@ class TestIssueManagerLabels:
         labels = ["bug"]
         mock_issue = MagicMock()
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         mock_issue_manager.remove_labels(issue_number, labels)
 
@@ -112,7 +112,7 @@ class TestIssueManagerLabels:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when removing labels."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
@@ -126,7 +126,7 @@ class TestIssueManagerLabels:
         mock_issue = MagicMock()
         mock_issue.number = issue_number
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         mock_issue_manager.set_labels(issue_number, labels)
 
@@ -139,7 +139,7 @@ class TestIssueManagerLabels:
         issue_number = 1
         mock_issue = MagicMock()
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         mock_issue_manager.set_labels(issue_number, [])
 
@@ -151,7 +151,7 @@ class TestIssueManagerLabels:
         labels = ["bug"]
         mock_issue = MagicMock()
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         mock_issue_manager.set_labels(issue_number, labels)
 
@@ -168,7 +168,7 @@ class TestIssueManagerLabels:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when setting labels."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
