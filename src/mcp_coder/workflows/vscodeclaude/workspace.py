@@ -275,7 +275,7 @@ def update_gitignore(folder_path: Path) -> None:
         existing_content = gitignore_path.read_text(encoding="utf-8")
 
     # Check if already present
-    if ".vscodeclaude_status.txt" in existing_content:
+    if ".vscodeclaude_status.md" in existing_content:
         return
 
     # Append entry
@@ -459,7 +459,7 @@ def create_status_file(
     issue_url: str,
     is_intervention: bool,
 ) -> None:
-    """Create .vscodeclaude_status.txt in project root.
+    """Create .vscodeclaude_status.md in project root.
 
     Args:
         folder_path: Working folder path
@@ -494,5 +494,5 @@ def create_status_file(
     )
 
     # Write status file
-    status_file = folder_path / ".vscodeclaude_status.txt"
+    status_file = folder_path / ".vscodeclaude_status.md"
     status_file.write_text(content, encoding="utf-8")

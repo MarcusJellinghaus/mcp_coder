@@ -181,7 +181,7 @@ class TestTemplates:
             GITIGNORE_ENTRY,
         )
 
-        assert ".vscodeclaude_status.txt" in GITIGNORE_ENTRY
+        assert ".vscodeclaude_status.md" in GITIGNORE_ENTRY
         assert ".vscodeclaude_analysis.json" in GITIGNORE_ENTRY
         assert ".vscodeclaude_start.bat" in GITIGNORE_ENTRY
         assert ".vscodeclaude_start.sh" in GITIGNORE_ENTRY
