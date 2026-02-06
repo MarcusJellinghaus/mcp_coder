@@ -24,13 +24,13 @@ def validate_issue_number(issue_number: int) -> bool:
         issue_number: Issue number to validate
 
     Returns:
-        True if valid, False otherwise
+        True if valid
+
+    Raises:
+        ValueError: If issue number is invalid
     """
     if not isinstance(issue_number, int) or issue_number <= 0:
-        logger.error(
-            f"Invalid issue number: {issue_number}. Must be a positive integer."
-        )
-        return False
+        raise ValueError("Issue number must be a positive integer")
     return True
 
 
@@ -41,11 +41,13 @@ def validate_comment_id(comment_id: int) -> bool:
         comment_id: Comment ID to validate
 
     Returns:
-        True if valid, False otherwise
+        True if valid
+
+    Raises:
+        ValueError: If comment ID is invalid
     """
     if not isinstance(comment_id, int) or comment_id <= 0:
-        logger.error(f"Invalid comment ID: {comment_id}. Must be a positive integer.")
-        return False
+        raise ValueError("Comment ID must be a positive integer")
     return True
 
 

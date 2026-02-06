@@ -93,6 +93,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             IssueData with created issue information, or empty IssueData on error
 
         Raises:
+            ValueError: If title is empty
             GithubException: For authentication or permission errors
 
         Example:
@@ -105,20 +106,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         """
         # Validate title
         if not title or not title.strip():
-            logger.error("Issue title cannot be empty")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            raise ValueError("Issue title cannot be empty")
 
         # Get repository
         repo = self._get_repository()
@@ -139,9 +127,12 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             )
 
         # Create issue
-        github_issue = repo.create_issue(
-            title=title.strip(), body=body, labels=labels or []
-        )
+        if labels:
+            github_issue = repo.create_issue(
+                title=title.strip(), body=body, labels=labels
+            )
+        else:
+            github_issue = repo.create_issue(title=title.strip(), body=body)
 
         # Convert to IssueData
         return IssueData(
@@ -188,6 +179,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             IssueData with issue information, or empty IssueData on error
 
         Raises:
+            ValueError: If issue number is invalid
             GithubException: For authentication or permission errors
 
         Example:
@@ -196,20 +188,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             >>> print(f"Assignees: {issue['assignees']}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        validate_issue_number(issue_number)
 
         # Get repository
         repo = self._get_repository()
@@ -363,6 +342,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             IssueData with updated issue information, or empty IssueData on error
 
         Raises:
+            ValueError: If issue number is invalid
             GithubException: For authentication or permission errors
 
         Example:
@@ -370,20 +350,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             >>> print(f"Issue state: {closed_issue['state']}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        validate_issue_number(issue_number)
 
         # Get repository
         repo = self._get_repository()
@@ -455,6 +422,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             IssueData with updated issue information, or empty IssueData on error
 
         Raises:
+            ValueError: If issue number is invalid
             GithubException: For authentication or permission errors
 
         Example:
@@ -462,20 +430,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             >>> print(f"Issue state: {reopened_issue['state']}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        validate_issue_number(issue_number)
 
         # Get repository
         repo = self._get_repository()
