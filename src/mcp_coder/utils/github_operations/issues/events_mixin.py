@@ -32,19 +32,20 @@ class EventsMixin:
     def get_issue_events(
         self: "BaseGitHubManager",
         issue_number: int,
-        filter_by_type: Optional[IssueEventType] = None,
+        event_type: Optional[IssueEventType] = None,
     ) -> List[EventData]:
         """Get timeline events for an issue.
 
         Args:
             issue_number: Issue number to get events for
-            filter_by_type: Optional event type to filter by (e.g., IssueEventType.LABELED)
-                           If None, returns all event types
+            event_type: Optional event type to filter by (e.g., IssueEventType.LABELED)
+                       If None, returns all event types
 
         Returns:
             List of EventData dicts with event information
 
         Raises:
+            ValueError: If issue number is invalid
             GithubException: For authentication, permission, or API errors
 
         Note:
@@ -61,8 +62,7 @@ class EventsMixin:
             ...     print(f"Label '{event['label']}' added at {event['created_at']}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return []
+        validate_issue_number(issue_number)
 
         # Get repository
         repo = self._get_repository()
@@ -87,8 +87,8 @@ class EventsMixin:
         # Convert to EventData list
         events: List[EventData] = []
         for event in github_events:
-            # Skip if filter_by_type is provided and doesn't match
-            if filter_by_type is not None and event.event != filter_by_type.value:
+            # Skip if event_type is provided and doesn't match
+            if event_type is not None and event.event != event_type.value:
                 continue
 
             # Extract label name for labeled/unlabeled events

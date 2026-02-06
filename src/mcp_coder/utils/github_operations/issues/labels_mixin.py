@@ -97,6 +97,7 @@ class LabelsMixin:
             IssueData with updated issue information, or empty IssueData on error
 
         Raises:
+            ValueError: If issue number is invalid or no labels provided
             GithubException: For authentication or permission errors
 
         Example:
@@ -104,37 +105,11 @@ class LabelsMixin:
             >>> print(f"Labels: {updated_issue['labels']}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        validate_issue_number(issue_number)
 
         # Validate labels
         if not labels:
-            logger.error("No labels provided")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            raise ValueError("At least one label must be provided")
 
         # Get repository
         repo = self._get_repository()
@@ -209,6 +184,7 @@ class LabelsMixin:
             IssueData with updated issue information, or empty IssueData on error
 
         Raises:
+            ValueError: If issue number is invalid or no labels provided
             GithubException: For authentication or permission errors
 
         Example:
@@ -216,37 +192,11 @@ class LabelsMixin:
             >>> print(f"Labels: {updated_issue['labels']}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        validate_issue_number(issue_number)
 
         # Validate labels
         if not labels:
-            logger.error("No labels provided")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            raise ValueError("At least one label must be provided")
 
         # Get repository
         repo = self._get_repository()
@@ -268,8 +218,7 @@ class LabelsMixin:
 
         # Get issue and remove labels
         github_issue = repo.get_issue(issue_number)
-        for label in labels:
-            github_issue.remove_from_labels(label)
+        github_issue.remove_from_labels(*labels)
 
         # Get fresh issue data after removing labels
         github_issue = repo.get_issue(issue_number)
@@ -322,6 +271,7 @@ class LabelsMixin:
             IssueData with updated issue information, or empty IssueData on error
 
         Raises:
+            ValueError: If issue number is invalid
             GithubException: For authentication or permission errors
 
         Example:
@@ -332,20 +282,7 @@ class LabelsMixin:
             >>> print(f"Labels: {updated_issue['labels']}")  # Empty list
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+        validate_issue_number(issue_number)
 
         # Get repository
         repo = self._get_repository()

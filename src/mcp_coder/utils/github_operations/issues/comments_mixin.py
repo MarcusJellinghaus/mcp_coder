@@ -50,6 +50,7 @@ class CommentsMixin:
             CommentData with created comment information, or empty dict on error
 
         Raises:
+            ValueError: If issue number is invalid or body is empty
             GithubException: For authentication or permission errors
 
         Example:
@@ -57,27 +58,11 @@ class CommentsMixin:
             >>> print(f"Created comment {comment['id']}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return CommentData(
-                id=0,
-                body="",
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-            )
+        validate_issue_number(issue_number)
 
         # Validate body
         if not body or not body.strip():
-            logger.error("Comment body cannot be empty")
-            return CommentData(
-                id=0,
-                body="",
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-            )
+            raise ValueError("Comment body cannot be empty")
 
         # Get repository
         repo = self._get_repository()
@@ -126,6 +111,7 @@ class CommentsMixin:
             List of CommentData dictionaries with comment information, or empty list on error
 
         Raises:
+            ValueError: If issue number is invalid
             GithubException: For authentication or permission errors
 
         Example:
@@ -134,8 +120,7 @@ class CommentsMixin:
             ...     print(f"{comment['user']}: {comment['body']}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return []
+        validate_issue_number(issue_number)
 
         # Get repository
         repo = self._get_repository()
@@ -192,6 +177,7 @@ class CommentsMixin:
             CommentData with updated comment information, or empty dict on error
 
         Raises:
+            ValueError: If issue number is invalid, comment ID is invalid, or body is empty
             GithubException: For authentication or permission errors
 
         Example:
@@ -199,38 +185,14 @@ class CommentsMixin:
             >>> print(f"Updated comment {comment['id']}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return CommentData(
-                id=0,
-                body="",
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-            )
+        validate_issue_number(issue_number)
 
         # Validate comment ID
-        if not validate_comment_id(comment_id):
-            return CommentData(
-                id=0,
-                body="",
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-            )
+        validate_comment_id(comment_id)
 
         # Validate body
         if not body or not body.strip():
-            logger.error("Comment body cannot be empty")
-            return CommentData(
-                id=0,
-                body="",
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-            )
+            raise ValueError("Comment body cannot be empty")
 
         # Get repository
         repo = self._get_repository()
@@ -290,6 +252,7 @@ class CommentsMixin:
             True if deletion was successful, False otherwise
 
         Raises:
+            ValueError: If issue number is invalid or comment ID is invalid
             GithubException: For authentication or permission errors
 
         Example:
@@ -297,12 +260,10 @@ class CommentsMixin:
             >>> print(f"Deletion {'successful' if success else 'failed'}")
         """
         # Validate issue number
-        if not validate_issue_number(issue_number):
-            return False
+        validate_issue_number(issue_number)
 
         # Validate comment ID
-        if not validate_comment_id(comment_id):
-            return False
+        validate_comment_id(comment_id)
 
         # Get repository
         repo = self._get_repository()
