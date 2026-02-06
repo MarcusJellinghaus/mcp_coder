@@ -90,13 +90,13 @@ class TestIssueManagerCore:
         mock_issue.created_at = datetime(2023, 1, 1)
         mock_issue.updated_at = datetime(2023, 1, 2)
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         result = mock_issue_manager.get_issue(issue_number)
 
         assert result is not None
-        assert result.number == issue_number
-        mock_issue_manager._repo.get_issue.assert_called_once_with(issue_number)
+        assert result["number"] == issue_number
+        mock_issue_manager._repository.get_issue.assert_called_once_with(issue_number)
 
     def test_create_issue_success(self, mock_issue_manager: IssueManager) -> None:
         """Test successful issue creation."""
@@ -107,13 +107,13 @@ class TestIssueManagerCore:
         mock_issue.title = title
         mock_issue.body = body
 
-        mock_issue_manager._repo.create_issue.return_value = mock_issue
+        mock_issue_manager._repository.create_issue.return_value = mock_issue
 
         result = mock_issue_manager.create_issue(title, body)
 
-        assert result.number == 1
-        assert result.title == title
-        mock_issue_manager._repo.create_issue.assert_called_once_with(
+        assert result["number"] == 1
+        assert result["title"] == title
+        mock_issue_manager._repository.create_issue.assert_called_once_with(
             title=title, body=body
         )
 
@@ -125,12 +125,12 @@ class TestIssueManagerCore:
         mock_issue = MagicMock()
         mock_issue.number = 1
 
-        mock_issue_manager._repo.create_issue.return_value = mock_issue
+        mock_issue_manager._repository.create_issue.return_value = mock_issue
 
         result = mock_issue_manager.create_issue(title, body, labels=labels)
 
-        assert result.number == 1
-        mock_issue_manager._repo.create_issue.assert_called_once_with(
+        assert result["number"] == 1
+        mock_issue_manager._repository.create_issue.assert_called_once_with(
             title=title, body=body, labels=labels
         )
 
@@ -145,7 +145,7 @@ class TestIssueManagerCore:
         mock_issue = MagicMock()
         mock_issue.number = issue_number
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         mock_issue_manager.close_issue(issue_number)
 
@@ -162,7 +162,7 @@ class TestIssueManagerCore:
         mock_issue = MagicMock()
         mock_issue.number = issue_number
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         mock_issue_manager.reopen_issue(issue_number)
 
@@ -179,7 +179,7 @@ class TestIssueManagerCore:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised."""
-        mock_issue_manager._repo.create_issue.side_effect = GithubException(
+        mock_issue_manager._repository.create_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
@@ -190,7 +190,7 @@ class TestIssueManagerCore:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when closing."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
@@ -201,7 +201,7 @@ class TestIssueManagerCore:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when reopening."""
-        mock_issue_manager._repo.get_issue.side_effect = GithubException(
+        mock_issue_manager._repository.get_issue.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
@@ -217,19 +217,22 @@ class TestIssueManagerCore:
         mock_label2 = MagicMock()
         mock_label2.name = "enhancement"
 
-        mock_issue_manager._repo.get_labels.return_value = [mock_label1, mock_label2]
+        mock_issue_manager._repository.get_labels.return_value = [
+            mock_label1,
+            mock_label2,
+        ]
 
         result = mock_issue_manager.get_available_labels()
 
         assert len(result) == 2
-        assert result[0].name == "bug"
-        assert result[1].name == "enhancement"
+        assert result[0]["name"] == "bug"
+        assert result[1]["name"] == "enhancement"
 
     def test_get_available_labels_auth_error_raises(
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that authentication errors are raised when getting labels."""
-        mock_issue_manager._repo.get_labels.side_effect = GithubException(
+        mock_issue_manager._repository.get_labels.side_effect = GithubException(
             401, {"message": "Bad credentials"}, None
         )
 
@@ -247,12 +250,15 @@ class TestIssueManagerCore:
         mock_issue2.number = 2
         mock_issue2.pull_request = None
 
-        mock_issue_manager._repo.get_issues.return_value = [mock_issue1, mock_issue2]
+        mock_issue_manager._repository.get_issues.return_value = [
+            mock_issue1,
+            mock_issue2,
+        ]
 
         result = mock_issue_manager.list_issues()
 
         assert len(result) == 2
-        mock_issue_manager._repo.get_issues.assert_called_once_with(
+        mock_issue_manager._repository.get_issues.assert_called_once_with(
             state="all", since=None
         )
 
@@ -262,12 +268,12 @@ class TestIssueManagerCore:
         mock_issue.number = 1
         mock_issue.pull_request = None
 
-        mock_issue_manager._repo.get_issues.return_value = [mock_issue]
+        mock_issue_manager._repository.get_issues.return_value = [mock_issue]
 
         result = mock_issue_manager.list_issues(state="open")
 
         assert len(result) == 1
-        mock_issue_manager._repo.get_issues.assert_called_once_with(
+        mock_issue_manager._repository.get_issues.assert_called_once_with(
             state="open", since=None
         )
 
@@ -282,12 +288,12 @@ class TestIssueManagerCore:
         mock_pr.number = 2
         mock_pr.pull_request = MagicMock()  # Has pull_request attribute
 
-        mock_issue_manager._repo.get_issues.return_value = [mock_issue, mock_pr]
+        mock_issue_manager._repository.get_issues.return_value = [mock_issue, mock_pr]
 
         result = mock_issue_manager.list_issues()
 
         assert len(result) == 1
-        assert result[0].number == 1
+        assert result[0]["number"] == 1
 
     def test_list_issues_pagination_handled(
         self, mock_issue_manager: IssueManager
@@ -299,7 +305,7 @@ class TestIssueManagerCore:
             issue.number = i + 1
             issue.pull_request = None
 
-        mock_issue_manager._repo.get_issues.return_value = mock_issues
+        mock_issue_manager._repository.get_issues.return_value = mock_issues
 
         result = mock_issue_manager.list_issues()
 
@@ -309,7 +315,7 @@ class TestIssueManagerCore:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test listing issues from empty repository."""
-        mock_issue_manager._repo.get_issues.return_value = []
+        mock_issue_manager._repository.get_issues.return_value = []
 
         result = mock_issue_manager.list_issues()
 
@@ -319,7 +325,7 @@ class TestIssueManagerCore:
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that GitHub errors are properly raised."""
-        mock_issue_manager._repo.get_issues.side_effect = GithubException(
+        mock_issue_manager._repository.get_issues.side_effect = GithubException(
             403, {"message": "API rate limit exceeded"}, None
         )
 
@@ -335,12 +341,12 @@ class TestIssueManagerCore:
         mock_issue.number = 1
         mock_issue.pull_request = None
 
-        mock_issue_manager._repo.get_issues.return_value = [mock_issue]
+        mock_issue_manager._repository.get_issues.return_value = [mock_issue]
 
         result = mock_issue_manager.list_issues(since=since_date)
 
         assert len(result) == 1
-        mock_issue_manager._repo.get_issues.assert_called_once_with(
+        mock_issue_manager._repository.get_issues.assert_called_once_with(
             state="all", since=since_date
         )
 
@@ -356,12 +362,12 @@ class TestIssueManagerCore:
         mock_pr.number = 2
         mock_pr.pull_request = MagicMock()
 
-        mock_issue_manager._repo.get_issues.return_value = [mock_issue, mock_pr]
+        mock_issue_manager._repository.get_issues.return_value = [mock_issue, mock_pr]
 
         result = mock_issue_manager.list_issues(since=since_date)
 
         assert len(result) == 1
-        assert result[0].number == 1
+        assert result[0]["number"] == 1
 
     def test_list_issues_without_since_unchanged(
         self, mock_issue_manager: IssueManager
@@ -371,12 +377,12 @@ class TestIssueManagerCore:
         mock_issue.number = 1
         mock_issue.pull_request = None
 
-        mock_issue_manager._repo.get_issues.return_value = [mock_issue]
+        mock_issue_manager._repository.get_issues.return_value = [mock_issue]
 
         result = mock_issue_manager.list_issues()
 
         assert len(result) == 1
-        mock_issue_manager._repo.get_issues.assert_called_once_with(
+        mock_issue_manager._repository.get_issues.assert_called_once_with(
             state="all", since=None
         )
 
@@ -390,7 +396,7 @@ class TestIssueManagerCore:
             issue.number = i + 1
             issue.pull_request = None
 
-        mock_issue_manager._repo.get_issues.return_value = mock_issues
+        mock_issue_manager._repository.get_issues.return_value = mock_issues
 
         result = mock_issue_manager.list_issues(since=since_date)
 
@@ -403,11 +409,11 @@ class TestIssueManagerCore:
         mock_issue.title = "Test"
         mock_issue.body = "Some text\n**Base Branch:** `main`\nMore text"
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         result = mock_issue_manager.get_issue(1)
 
-        assert result.number == 1
+        assert result["number"] == 1
 
     def test_get_issue_without_base_branch(
         self, mock_issue_manager: IssueManager
@@ -418,11 +424,11 @@ class TestIssueManagerCore:
         mock_issue.title = "Test"
         mock_issue.body = "Some text without base branch"
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         result = mock_issue_manager.get_issue(1)
 
-        assert result.number == 1
+        assert result["number"] == 1
 
     def test_get_issue_with_malformed_base_branch_logs_warning(
         self, mock_issue_manager: IssueManager, caplog: pytest.LogCaptureFixture
@@ -433,11 +439,11 @@ class TestIssueManagerCore:
         mock_issue.title = "Test"
         mock_issue.body = "**Base Branch:** malformed\nMore text"
 
-        mock_issue_manager._repo.get_issue.return_value = mock_issue
+        mock_issue_manager._repository.get_issue.return_value = mock_issue
 
         result = mock_issue_manager.get_issue(1)
 
-        assert result.number == 1
+        assert result["number"] == 1
 
     def test_list_issues_includes_base_branch(
         self, mock_issue_manager: IssueManager
@@ -448,7 +454,7 @@ class TestIssueManagerCore:
         mock_issue.body = "**Base Branch:** `main`"
         mock_issue.pull_request = None
 
-        mock_issue_manager._repo.get_issues.return_value = [mock_issue]
+        mock_issue_manager._repository.get_issues.return_value = [mock_issue]
 
         result = mock_issue_manager.list_issues()
 
@@ -463,7 +469,7 @@ class TestIssueManagerCore:
         mock_issue.body = "**Base Branch:** malformed"
         mock_issue.pull_request = None
 
-        mock_issue_manager._repo.get_issues.return_value = [mock_issue]
+        mock_issue_manager._repository.get_issues.return_value = [mock_issue]
 
         result = mock_issue_manager.list_issues()
 
