@@ -145,6 +145,6 @@ def mock_issue_manager(tmp_path: Path) -> Generator[IssueManager, None, None]:
             # Store mocked repository for test access
             # Note: _repository is Optional, so tests must assert it's not None before use
             # or accept union-attr warnings from mypy
-            manager._repository = mock_repo_obj  # type: ignore[assignment]
+            manager._repository = mock_repo_obj
 
             yield manager
