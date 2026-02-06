@@ -8,7 +8,7 @@ import git
 import pytest
 from github.GithubException import GithubException
 
-from mcp_coder.utils.github_operations.issues import IssueManager
+from mcp_coder.utils.github_operations.issues import IssueEventType, IssueManager
 from mcp_coder.utils.github_operations.issues.base import (
     validate_comment_id,
     validate_issue_number,
@@ -62,7 +62,9 @@ class TestIssueManagerEvents:
         mock_issue_manager._repository.get_issue.return_value = mock_issue
         mock_issue.get_events.return_value = [mock_labeled_event, mock_closed_event]
 
-        result = mock_issue_manager.get_issue_events(issue_number, event_type="labeled")
+        result = mock_issue_manager.get_issue_events(
+            issue_number, event_type=IssueEventType.LABELED
+        )
 
         assert len(result) == 1
         assert result[0]["event"] == "labeled"
@@ -95,7 +97,7 @@ class TestIssueManagerEvents:
         mock_issue.get_events.return_value = [mock_unlabeled_event, mock_labeled_event]
 
         result = mock_issue_manager.get_issue_events(
-            issue_number, event_type="unlabeled"
+            issue_number, event_type=IssueEventType.UNLABELED
         )
 
         assert len(result) == 1

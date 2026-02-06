@@ -28,7 +28,7 @@ class TestIssueManagerLabels:
 
         mock_issue_manager._repository.get_issue.return_value = mock_issue
 
-        mock_issue_manager.add_labels(issue_number, labels)
+        mock_issue_manager.add_labels(issue_number, *labels)
 
         mock_issue.add_to_labels.assert_called_once_with(*labels)
 
@@ -40,7 +40,7 @@ class TestIssueManagerLabels:
 
         mock_issue_manager._repository.get_issue.return_value = mock_issue
 
-        mock_issue_manager.add_labels(issue_number, labels)
+        mock_issue_manager.add_labels(issue_number, *labels)
 
         mock_issue.add_to_labels.assert_called_once_with(*labels)
 
@@ -49,14 +49,14 @@ class TestIssueManagerLabels:
     ) -> None:
         """Test adding labels with invalid issue number."""
         with pytest.raises(ValueError, match="Issue number must be a positive integer"):
-            mock_issue_manager.add_labels(0, ["bug"])
+            mock_issue_manager.add_labels(0, "bug")
 
     def test_add_labels_no_labels_provided(
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that empty labels list raises ValueError."""
         with pytest.raises(ValueError, match="At least one label must be provided"):
-            mock_issue_manager.add_labels(1, [])
+            mock_issue_manager.add_labels(1)
 
     def test_add_labels_auth_error_raises(
         self, mock_issue_manager: IssueManager
@@ -67,7 +67,7 @@ class TestIssueManagerLabels:
         )
 
         with pytest.raises(GithubException):
-            mock_issue_manager.add_labels(1, ["bug"])
+            mock_issue_manager.add_labels(1, "bug")
 
     def test_remove_labels_success(self, mock_issue_manager: IssueManager) -> None:
         """Test successful label removal."""
@@ -78,7 +78,7 @@ class TestIssueManagerLabels:
 
         mock_issue_manager._repository.get_issue.return_value = mock_issue
 
-        mock_issue_manager.remove_labels(issue_number, labels)
+        mock_issue_manager.remove_labels(issue_number, *labels)
 
         mock_issue.remove_from_labels.assert_called_once_with(*labels)
 
@@ -90,7 +90,7 @@ class TestIssueManagerLabels:
 
         mock_issue_manager._repository.get_issue.return_value = mock_issue
 
-        mock_issue_manager.remove_labels(issue_number, labels)
+        mock_issue_manager.remove_labels(issue_number, *labels)
 
         mock_issue.remove_from_labels.assert_called_once_with(*labels)
 
@@ -99,14 +99,14 @@ class TestIssueManagerLabels:
     ) -> None:
         """Test removing labels with invalid issue number."""
         with pytest.raises(ValueError, match="Issue number must be a positive integer"):
-            mock_issue_manager.remove_labels(0, ["bug"])
+            mock_issue_manager.remove_labels(0, "bug")
 
     def test_remove_labels_no_labels_provided(
         self, mock_issue_manager: IssueManager
     ) -> None:
         """Test that empty labels list raises ValueError."""
         with pytest.raises(ValueError, match="At least one label must be provided"):
-            mock_issue_manager.remove_labels(1, [])
+            mock_issue_manager.remove_labels(1)
 
     def test_remove_labels_auth_error_raises(
         self, mock_issue_manager: IssueManager
@@ -117,7 +117,7 @@ class TestIssueManagerLabels:
         )
 
         with pytest.raises(GithubException):
-            mock_issue_manager.remove_labels(1, ["bug"])
+            mock_issue_manager.remove_labels(1, "bug")
 
     def test_set_labels_success(self, mock_issue_manager: IssueManager) -> None:
         """Test successful label setting."""
@@ -128,7 +128,7 @@ class TestIssueManagerLabels:
 
         mock_issue_manager._repository.get_issue.return_value = mock_issue
 
-        mock_issue_manager.set_labels(issue_number, labels)
+        mock_issue_manager.set_labels(issue_number, *labels)
 
         mock_issue.set_labels.assert_called_once_with(*labels)
 
@@ -141,7 +141,7 @@ class TestIssueManagerLabels:
 
         mock_issue_manager._repository.get_issue.return_value = mock_issue
 
-        mock_issue_manager.set_labels(issue_number, [])
+        mock_issue_manager.set_labels(issue_number)
 
         mock_issue.set_labels.assert_called_once_with()
 
@@ -153,7 +153,7 @@ class TestIssueManagerLabels:
 
         mock_issue_manager._repository.get_issue.return_value = mock_issue
 
-        mock_issue_manager.set_labels(issue_number, labels)
+        mock_issue_manager.set_labels(issue_number, *labels)
 
         mock_issue.set_labels.assert_called_once_with(*labels)
 
@@ -162,7 +162,7 @@ class TestIssueManagerLabels:
     ) -> None:
         """Test setting labels with invalid issue number."""
         with pytest.raises(ValueError, match="Issue number must be a positive integer"):
-            mock_issue_manager.set_labels(0, ["bug"])
+            mock_issue_manager.set_labels(0, "bug")
 
     def test_set_labels_auth_error_raises(
         self, mock_issue_manager: IssueManager
@@ -173,4 +173,4 @@ class TestIssueManagerLabels:
         )
 
         with pytest.raises(GithubException):
-            mock_issue_manager.set_labels(1, ["bug"])
+            mock_issue_manager.set_labels(1, "bug")

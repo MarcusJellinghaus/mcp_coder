@@ -163,11 +163,11 @@ class TestGetRunLogs:
         mock_repo.get_workflow_run.assert_called_once_with(123456789)
 
     def test_invalid_run_id(self, ci_manager: CIResultsManager) -> None:
-        """Test with invalid run ID returns empty dict (decorator catches ValueError)."""
-        # Test negative run ID - returns default empty dict
-        result = ci_manager.get_run_logs(-1)
-        assert result == {}
+        """Test with invalid run ID raises ValueError."""
+        # Test negative run ID - raises ValueError
+        with pytest.raises(ValueError, match="Invalid workflow run ID: -1"):
+            ci_manager.get_run_logs(-1)
 
-        # Test zero run ID - returns default empty dict
-        result = ci_manager.get_run_logs(0)
-        assert result == {}
+        # Test zero run ID - raises ValueError
+        with pytest.raises(ValueError, match="Invalid workflow run ID: 0"):
+            ci_manager.get_run_logs(0)
