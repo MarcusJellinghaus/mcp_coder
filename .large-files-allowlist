@@ -1,10 +1,12 @@
 # Large files allowlist - files exceeding 750 lines
 # These files are grandfathered in; reduce over time per #353
+# generate with mcp-coder check file-size --generate-allowlist --max-lines 750
+# sort for better comparability
+
 
 docs/configuration/config.md
 docs/processes-prompts/development-process.md
 src/mcp_coder/prompt_manager.py
-src/mcp_coder/utils/github_operations/issue_manager.py
 src/mcp_coder/workflows/implement/core.py
 tests/cli/commands/coordinator/test_core.py
 tests/cli/commands/test_commit.py
@@ -14,7 +16,6 @@ tests/utils/github_operations/test_base_manager.py
 tests/utils/github_operations/test_github_utils.py
 tests/utils/github_operations/test_issue_branch_manager.py
 tests/utils/github_operations/test_issue_cache.py
-tests/utils/github_operations/test_issue_manager.py
 tests/utils/github_operations/test_issue_manager_label_update.py
 tests/workflow_utils/test_branch_status.py
 tests/workflow_utils/test_commit_operations.py
