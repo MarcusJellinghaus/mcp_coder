@@ -60,6 +60,7 @@ from .sessions import (
 from .status import (
     check_folder_dirty,
     display_status_table,
+    get_folder_git_status,
     get_issue_current_status,
     get_next_action,
     is_issue_closed,
@@ -150,6 +151,7 @@ __all__ = [
     "is_issue_closed",
     "is_session_stale",
     "check_folder_dirty",
+    "get_folder_git_status",
     "get_next_action",
     "display_status_table",
     # Cleanup

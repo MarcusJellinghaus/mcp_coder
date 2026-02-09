@@ -25,10 +25,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 See [step_1.md](./steps/step_1.md) for details.
 
 - [x] Write tests for `get_folder_git_status()` in `tests/workflows/vscodeclaude/test_status.py`
-- [ ] Implement `get_folder_git_status()` function in `src/mcp_coder/workflows/vscodeclaude/status.py`
-- [ ] Export function in `src/mcp_coder/workflows/vscodeclaude/__init__.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement `get_folder_git_status()` function in `src/mcp_coder/workflows/vscodeclaude/status.py`
+- [x] Export function in `src/mcp_coder/workflows/vscodeclaude/__init__.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update Status Display and `check_folder_dirty()`
 See [step_2.md](./steps/step_2.md) for details.

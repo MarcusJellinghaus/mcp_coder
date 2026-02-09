@@ -145,6 +145,34 @@ def is_session_stale(
     return current_status != session_status
 
 
+def get_folder_git_status(folder_path: Path) -> str:
+    """Get git working directory status for display.
+
+    Args:
+        folder_path: Path to check
+
+    Returns:
+        One of: "Clean", "Dirty", "Missing", "No Git", "Error"
+    """
+    if not folder_path.exists():
+        return "Missing"
+
+    options = CommandOptions(cwd=str(folder_path), check=True)
+
+    # Check if git repo
+    try:
+        execute_subprocess(["git", "rev-parse", "--git-dir"], options)
+    except Exception:
+        return "No Git"
+
+    # Check for changes
+    try:
+        result = execute_subprocess(["git", "status", "--porcelain"], options)
+        return "Dirty" if result.stdout.strip() else "Clean"
+    except Exception:
+        return "Error"
+
+
 def check_folder_dirty(folder_path: Path) -> bool:
     """Check if folder has uncommitted changes.
 
