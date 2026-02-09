@@ -14,6 +14,7 @@ Integrate `safe_delete_folder()` into the existing codebase by updating `cleanup
 - `src/mcp_coder/utils/__init__.py`
 - `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
 - `tests/workflows/vscodeclaude/test_cleanup.py` (add integration test)
+- `tools/safe_delete_folder.py` (add comments pointing to library functions)
 
 ---
 
@@ -180,6 +181,10 @@ Tasks:
 
 3. Add integration test to tests/workflows/vscodeclaude/test_cleanup.py:
    - Test that safe_delete_folder is called when deleting session folders
+
+4. Add comments to tools/safe_delete_folder.py:
+   - Add note near similar functions pointing to library equivalents
+   - Example: "# Note: Similar function exists in src/mcp_coder/utils/folder_deletion.py"
 
 Run all tests after implementation to verify nothing is broken.
 ```

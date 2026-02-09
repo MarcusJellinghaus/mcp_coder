@@ -32,7 +32,7 @@ def safe_delete_folder(
 ### Helper Functions
 ```python
 def _get_default_staging_dir() -> Path:
-    """Return default staging directory path."""
+    """Return default staging directory path (%TEMP%/safe_delete_staging)."""
 
 def _move_to_staging(item_path: Path, staging_dir: Path | None) -> bool:
     """Move file or directory to staging with UUID suffix."""
@@ -172,10 +172,10 @@ Tasks:
    - Follow existing test patterns in tests/utils/
 
 Key requirements:
-- Use error.filename only (no regex)
+- Use error.filename only (no regex fallback)
 - Handle empty locked directories
 - UUID suffix for staging: f"{stem}_{uuid.uuid4().hex[:8]}{suffix}"
-- Default staging: Path(tempfile.gettempdir()) / "mcp_coder_delete_staging"
+- Default staging: Path(tempfile.gettempdir()) / "safe_delete_staging" (shared with CLI tool)
 
 Run tests after implementation to verify.
 ```

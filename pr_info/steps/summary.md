@@ -18,13 +18,17 @@ Add a `safe_delete_folder()` utility function that safely deletes folders by han
 
 ## Design Decisions
 
+See `pr_info/steps/Decisions.md` for full discussion log.
+
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Return type | `bool` | KISS - simple success/failure, details via logging |
-| Error path extraction | `error.filename` only | Simpler than regex parsing |
+| Error path extraction | `error.filename` only | Simpler than regex parsing (no regex fallback) |
+| Staging directory | `safe_delete_staging` (shared with CLI tool) | Both tools share cleanup |
 | Staging cleanup | Configurable parameter | Performance flexibility |
 | MAX_RETRIES | Internal constant (50) | Not exposed to callers |
 | Logger | Module-level | Follows codebase convention |
+| Code reuse | Accept duplication | Library self-contained; comments in CLI tool point to library |
 
 ## Three-Step Deletion Strategy
 
@@ -63,6 +67,7 @@ def safe_delete_folder(
 ### Modify
 1. `src/mcp_coder/utils/__init__.py` - Add export
 2. `src/mcp_coder/workflows/vscodeclaude/cleanup.py` - Use new function
+3. `tools/safe_delete_folder.py` - Add comments pointing to library functions
 
 ## Implementation Steps
 
