@@ -36,7 +36,7 @@ See [step_2.md](./steps/step_2.md) for details.
 
 - [x] Update `src/mcp_coder/utils/__init__.py` to export `safe_delete_folder` from Layer 1
 - [x] Update `src/mcp_coder/workflows/vscodeclaude/cleanup.py` to use `safe_delete_folder()`
-- [ ] Add integration test to `tests/workflows/vscodeclaude/test_cleanup.py`
+- [x] Add integration test to `tests/workflows/vscodeclaude/test_cleanup.py`
 - [ ] Add comments to `tools/safe_delete_folder.py` pointing to library functions
 - [ ] Run pylint and fix any issues
 - [ ] Run pytest and verify all tests pass
