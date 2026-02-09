@@ -188,13 +188,12 @@ def _try_rmtree(path: Path) -> bool:
         PermissionError: If a file is locked.
         OSError: If another OS error occurs.
     """
+    # Use kwargs to avoid pylint E1123 on Python <3.12 (onexc was added in 3.12)
     if sys.version_info >= (3, 12):
-        shutil.rmtree(
-            path, onexc=_rmtree_remove_readonly
-        )  # pylint: disable=unexpected-keyword-arg
+        kwargs = {"onexc": _rmtree_remove_readonly}
     else:
-        # pylint: disable=deprecated-argument
-        shutil.rmtree(path, onerror=_rmtree_remove_readonly)
+        kwargs = {"onerror": _rmtree_remove_readonly}
+    shutil.rmtree(path, **kwargs)  # type: ignore[arg-type]
     return not path.exists()
 
 
