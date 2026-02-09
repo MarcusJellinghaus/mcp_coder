@@ -32,20 +32,22 @@ from .cache import (
 # Main managers
 from .manager import IssueManager
 
-# Types (Note: LabelData not included per Decision #7 - use labels_manager)
+# Types (Note: LabelData not included - use labels_manager instead)
 from .types import (
     CommentData,
     EventData,
     IssueData,
     IssueEventType,
+    create_empty_issue_data,
 )
 
 __all__ = [
-    # Types (LabelData excluded per Decision #7)
+    # Types (LabelData excluded - use labels_manager)
     "IssueEventType",
     "IssueData",
     "CommentData",
     "EventData",
+    "create_empty_issue_data",
     # Main manager
     "IssueManager",
     # Branch manager

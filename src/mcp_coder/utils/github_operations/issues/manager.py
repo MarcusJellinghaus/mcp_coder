@@ -26,7 +26,7 @@ from .branch_manager import IssueBranchManager
 from .comments_mixin import CommentsMixin
 from .events_mixin import EventsMixin
 from .labels_mixin import LabelsMixin
-from .types import IssueData
+from .types import IssueData, create_empty_issue_data
 
 logger = logging.getLogger(__name__)
 
@@ -64,21 +64,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         super().__init__(project_dir=project_dir, repo_url=repo_url)
 
     @log_function_call
-    @_handle_github_errors(
-        default_return=IssueData(
-            number=0,
-            title="",
-            body="",
-            state="",
-            labels=[],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
-            url="",
-            locked=False,
-        )
-    )
+    @_handle_github_errors(default_return=create_empty_issue_data())
     def create_issue(
         self, title: str, body: str = "", labels: Optional[List[str]] = None
     ) -> IssueData:
@@ -112,19 +98,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         repo = self._get_repository()
         if repo is None:
             logger.error("Failed to get repository")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            return create_empty_issue_data()
 
         # Create issue
         if labels:
@@ -154,21 +128,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         )
 
     @log_function_call
-    @_handle_github_errors(
-        default_return=IssueData(
-            number=0,
-            title="",
-            body="",
-            state="",
-            labels=[],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
-            url="",
-            locked=False,
-        )
-    )
+    @_handle_github_errors(default_return=create_empty_issue_data())
     def get_issue(self, issue_number: int) -> IssueData:
         """Retrieve issue details by number.
 
@@ -194,19 +154,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         repo = self._get_repository()
         if repo is None:
             logger.error("Failed to get repository")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            return create_empty_issue_data()
 
         # Get issue
         github_issue = repo.get_issue(issue_number)
@@ -317,21 +265,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         return issues_list
 
     @log_function_call
-    @_handle_github_errors(
-        default_return=IssueData(
-            number=0,
-            title="",
-            body="",
-            state="",
-            labels=[],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
-            url="",
-            locked=False,
-        )
-    )
+    @_handle_github_errors(default_return=create_empty_issue_data())
     def close_issue(self, issue_number: int) -> IssueData:
         """Close an issue.
 
@@ -356,19 +290,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         repo = self._get_repository()
         if repo is None:
             logger.error("Failed to get repository")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            return create_empty_issue_data()
 
         # Get and close issue
         github_issue = repo.get_issue(issue_number)
@@ -397,21 +319,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         )
 
     @log_function_call
-    @_handle_github_errors(
-        default_return=IssueData(
-            number=0,
-            title="",
-            body="",
-            state="",
-            labels=[],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
-            url="",
-            locked=False,
-        )
-    )
+    @_handle_github_errors(default_return=create_empty_issue_data())
     def reopen_issue(self, issue_number: int) -> IssueData:
         """Reopen a closed issue.
 
@@ -436,19 +344,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         repo = self._get_repository()
         if repo is None:
             logger.error("Failed to get repository")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            return create_empty_issue_data()
 
         # Get and reopen issue
         github_issue = repo.get_issue(issue_number)

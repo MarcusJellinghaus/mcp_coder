@@ -91,9 +91,31 @@ class EventData(TypedDict):
     actor: Optional[str]  # GitHub username who performed action
 
 
+def create_empty_issue_data() -> IssueData:
+    """Create an empty IssueData structure for error cases.
+
+    Returns:
+        IssueData with default/empty values for all fields.
+    """
+    return IssueData(
+        number=0,
+        title="",
+        body="",
+        state="",
+        labels=[],
+        assignees=[],
+        user=None,
+        created_at=None,
+        updated_at=None,
+        url="",
+        locked=False,
+    )
+
+
 __all__ = [
     "IssueEventType",
     "IssueData",
     "CommentData",
     "EventData",
+    "create_empty_issue_data",
 ]

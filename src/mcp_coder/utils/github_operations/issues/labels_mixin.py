@@ -12,9 +12,9 @@ from typing import List
 from mcp_coder.utils.log_utils import log_function_call
 
 from ..base_manager import BaseGitHubManager, _handle_github_errors
-from ..labels_manager import LabelData  # Per Decision #7
+from ..labels_manager import LabelData
 from .base import validate_issue_number
-from .types import IssueData
+from .types import IssueData, create_empty_issue_data
 
 logger = logging.getLogger(__name__)
 
@@ -69,21 +69,7 @@ class LabelsMixin:
         return labels
 
     @log_function_call
-    @_handle_github_errors(
-        default_return=IssueData(
-            number=0,
-            title="",
-            body="",
-            state="",
-            labels=[],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
-            url="",
-            locked=False,
-        )
-    )
+    @_handle_github_errors(default_return=create_empty_issue_data())
     def add_labels(
         self: "BaseGitHubManager", issue_number: int, *labels: str
     ) -> IssueData:
@@ -115,19 +101,7 @@ class LabelsMixin:
         repo = self._get_repository()
         if repo is None:
             logger.error("Failed to get repository")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            return create_empty_issue_data()
 
         # Get issue and add labels
         github_issue = repo.get_issue(issue_number)
@@ -156,21 +130,7 @@ class LabelsMixin:
         )
 
     @log_function_call
-    @_handle_github_errors(
-        default_return=IssueData(
-            number=0,
-            title="",
-            body="",
-            state="",
-            labels=[],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
-            url="",
-            locked=False,
-        )
-    )
+    @_handle_github_errors(default_return=create_empty_issue_data())
     def remove_labels(
         self: "BaseGitHubManager", issue_number: int, *labels: str
     ) -> IssueData:
@@ -202,19 +162,7 @@ class LabelsMixin:
         repo = self._get_repository()
         if repo is None:
             logger.error("Failed to get repository")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            return create_empty_issue_data()
 
         # Get issue and remove labels
         github_issue = repo.get_issue(issue_number)
@@ -243,21 +191,7 @@ class LabelsMixin:
         )
 
     @log_function_call
-    @_handle_github_errors(
-        default_return=IssueData(
-            number=0,
-            title="",
-            body="",
-            state="",
-            labels=[],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
-            url="",
-            locked=False,
-        )
-    )
+    @_handle_github_errors(default_return=create_empty_issue_data())
     def set_labels(
         self: "BaseGitHubManager", issue_number: int, *labels: str
     ) -> IssueData:
@@ -288,19 +222,7 @@ class LabelsMixin:
         repo = self._get_repository()
         if repo is None:
             logger.error("Failed to get repository")
-            return IssueData(
-                number=0,
-                title="",
-                body="",
-                state="",
-                labels=[],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
-                url="",
-                locked=False,
-            )
+            return create_empty_issue_data()
 
         # Get issue and set labels (replaces all existing labels)
         github_issue = repo.get_issue(issue_number)
