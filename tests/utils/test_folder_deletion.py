@@ -15,7 +15,6 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_coder.utils.folder_deletion import (
-    MAX_RETRIES,
     _cleanup_staging,
     _get_default_staging_dir,
     _is_directory_empty,
@@ -640,11 +639,3 @@ class TestHelperFunctions:
 
         assert result is False
         assert empty_dir.exists()
-
-
-class TestMaxRetriesConstant:
-    """Tests for MAX_RETRIES constant."""
-
-    def test_max_retries_value(self) -> None:
-        """Test MAX_RETRIES has expected value."""
-        assert MAX_RETRIES == 50
