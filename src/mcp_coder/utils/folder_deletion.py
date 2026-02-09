@@ -189,7 +189,9 @@ def _try_rmtree(path: Path) -> bool:
         OSError: If another OS error occurs.
     """
     if sys.version_info >= (3, 12):
-        shutil.rmtree(path, onexc=_rmtree_remove_readonly)
+        shutil.rmtree(
+            path, onexc=_rmtree_remove_readonly
+        )  # pylint: disable=unexpected-keyword-arg
     else:
         # pylint: disable=deprecated-argument
         shutil.rmtree(path, onerror=_rmtree_remove_readonly)

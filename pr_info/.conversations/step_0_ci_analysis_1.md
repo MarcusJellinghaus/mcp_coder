@@ -1,0 +1,7 @@
+# CI Failure Analysis
+
+The CI pipeline failed in the pylint job at the "Run pylint" step. The error is a pylint E1123 (unexpected-keyword-arg) error on line 192 of src/mcp_coder/utils/folder_deletion.py. The error message indicates that `onexc` is an unexpected keyword argument in a function call.
+
+The root cause is a Python version compatibility issue in the `_try_rmtree` function. The code at line 192 uses `shutil.rmtree(path, onexc=_rmtree_remove_readonly)`, but the `onexc` parameter was only added to `shutil.rmtree` in Python 3.12. The CI environment is running Python 3.11.14, which does not support the `onexc` parameter. While the code has a version check (`if sys.version_info >= (3, 12)`) to conditionally use either `onexc` (Python 3.12+) or `onerror` (older versions), pylint is performing static analysis and sees the `onexc` parameter being used, which it considers invalid because the CI Python 3.11 runtime's shutil module does not have this parameter signature.
+
+The file that needs to be modified is src/mcp_coder/utils/folder_deletion.py, specifically the `_try_rmtree` function around lines 188-195. To fix this, the code needs to suppress the pylint E1123 error for the line using `onexc`, since this is a false positive caused by pylint analyzing against Python 3.11's type stubs while the runtime version check ensures correct usage. Adding a `# pylint: disable=unexpected-keyword-arg` comment to line 192 (the `onexc` call) would resolve the CI failure while maintaining the correct runtime behavior.
