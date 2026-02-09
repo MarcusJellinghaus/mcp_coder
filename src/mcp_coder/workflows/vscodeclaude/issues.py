@@ -6,9 +6,12 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
-from ...utils.github_operations.issue_branch_manager import IssueBranchManager
-from ...utils.github_operations.issue_cache import get_all_cached_issues
-from ...utils.github_operations.issue_manager import IssueData, IssueManager
+from ...utils.github_operations.issues import (
+    IssueBranchManager,
+    IssueData,
+    IssueManager,
+    get_all_cached_issues,
+)
 from ...utils.github_operations.label_config import load_labels_config
 
 logger = logging.getLogger(__name__)

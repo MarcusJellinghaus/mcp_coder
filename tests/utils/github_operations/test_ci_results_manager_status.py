@@ -381,21 +381,20 @@ class TestGetLatestCIStatusSteps:
         mock_repo.get_workflow_runs.assert_called_once()
 
     def test_invalid_branch_name(self, ci_manager: CIResultsManager) -> None:
-        """Test with invalid branch name returns empty data (decorator catches ValueError)."""
-        # Empty branch name - returns default empty data
-        result = ci_manager.get_latest_ci_status("")
-        assert result["run"] == {}
-        assert result["jobs"] == []
+        """Test with invalid branch name raises ValueError."""
+        # Empty branch name - raises ValueError
+        with pytest.raises(
+            ValueError, match="Invalid branch name: branch name cannot be empty"
+        ):
+            ci_manager.get_latest_ci_status("")
 
-        # Invalid character ~ - returns default empty data
-        result = ci_manager.get_latest_ci_status("branch~1")
-        assert result["run"] == {}
-        assert result["jobs"] == []
+        # Invalid character ~ - raises ValueError
+        with pytest.raises(ValueError, match="Invalid branch name"):
+            ci_manager.get_latest_ci_status("branch~1")
 
-        # Invalid character ^ - returns default empty data
-        result = ci_manager.get_latest_ci_status("branch^2")
-        assert result["run"] == {}
-        assert result["jobs"] == []
+        # Invalid character ^ - raises ValueError
+        with pytest.raises(ValueError, match="Invalid branch name"):
+            ci_manager.get_latest_ci_status("branch^2")
 
     def test_run_with_multiple_jobs(
         self, mock_repo: Mock, ci_manager: CIResultsManager

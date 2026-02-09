@@ -19,7 +19,7 @@ from mcp_coder.utils.git_operations import (
     get_current_branch_name,
     get_default_branch_name,
 )
-from mcp_coder.utils.github_operations.issue_manager import IssueData, IssueManager
+from mcp_coder.utils.github_operations.issues import IssueData, IssueManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 
 logger = logging.getLogger(__name__)

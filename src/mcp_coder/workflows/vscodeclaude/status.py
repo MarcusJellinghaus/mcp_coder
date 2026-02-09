@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from ...utils.github_operations.issue_manager import IssueData, IssueManager
+from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .helpers import get_issue_status
 from .sessions import check_vscode_running, load_sessions
@@ -50,7 +50,7 @@ def get_issue_current_status(
                 return label, is_open
         return None, is_open
     except Exception as e:
-        logger.error("Failed to get issue #%d status: %s", issue_number, e)
+        logger.warning("Failed to get issue #%d status: %s", issue_number, e)
         return None, False  # Assume closed on error (conservative)
 
 

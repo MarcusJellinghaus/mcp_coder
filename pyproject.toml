@@ -146,7 +146,8 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 # Disable unreachable warnings for test files due to mypy false positives with assertions
-disable_error_code = ["unreachable"]
+# Disable union-attr for test files where mocked attributes are intentionally set
+disable_error_code = ["unreachable", "union-attr"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -23,7 +23,7 @@ from mcp_coder.utils import (
 )
 from mcp_coder.utils.git_operations.readers import extract_issue_number_from_branch
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.github_operations.issue_branch_manager import IssueBranchManager
+from mcp_coder.utils.github_operations.issues import IssueBranchManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
@@ -591,7 +591,7 @@ def run_create_pr_workflow(
         else:
             log_step("Updating GitHub issue label...")
             try:
-                from mcp_coder.utils.github_operations.issue_manager import IssueManager
+                from mcp_coder.utils.github_operations.issues import IssueManager
 
                 issue_manager = IssueManager(project_dir)
                 success = issue_manager.update_workflow_label(

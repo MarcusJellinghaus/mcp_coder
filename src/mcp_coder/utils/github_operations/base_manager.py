@@ -29,6 +29,7 @@ def _handle_github_errors(
     """Decorator to handle GitHub API errors consistently.
 
     This decorator handles GithubException and general Exception errors:
+    - ValueError: Re-raised to caller (validation errors should propagate)
     - Authentication/permission errors (401, 403): Re-raised to caller
     - Other GithubException errors: Logged and return default_return
     - Other exceptions: Logged and return default_return
@@ -51,6 +52,9 @@ def _handle_github_errors(
         def wrapper(*args: Any, **kwargs: Any) -> T:
             try:
                 return func(*args, **kwargs)
+            except ValueError:
+                # Re-raise validation errors to caller
+                raise
             except GithubException as e:
                 # Re-raise authentication/permission errors
                 if e.status in (401, 403):

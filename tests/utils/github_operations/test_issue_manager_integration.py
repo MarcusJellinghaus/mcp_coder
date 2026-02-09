@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Generator
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_manager import IssueManager
+from mcp_coder.utils.github_operations.issues import IssueManager
 
 if TYPE_CHECKING:
     from tests.conftest import GitHubTestSetup

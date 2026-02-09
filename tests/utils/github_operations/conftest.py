@@ -2,13 +2,15 @@
 
 import io
 import zipfile
+from pathlib import Path
+from typing import Generator
 from unittest.mock import Mock, patch
 
+import git
 import pytest
 
 from mcp_coder.utils.github_operations import CIResultsManager
-from mcp_coder.utils.github_operations.issue_cache import CacheData
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import CacheData, IssueData, IssueManager
 
 
 @pytest.fixture
@@ -103,3 +105,46 @@ def mock_cache_issue_manager() -> Mock:
     manager = Mock()
     manager.list_issues.return_value = []
     return manager
+
+
+@pytest.fixture
+def mock_issue_manager(tmp_path: Path) -> Generator[IssueManager, None, None]:
+    """Create a real IssueManager with mocked GitHub API for unit testing.
+
+    This fixture creates a real IssueManager instance with:
+    - A temporary git repository
+    - Mocked GitHub API client and repository
+    - All IssueManager logic runs normally, only GitHub API calls are mocked
+
+    This allows tests to verify that IssueManager correctly transforms
+    GitHub API responses into IssueData/CommentData/EventData structures.
+
+    Tests access the mocked repository via manager._repository attribute.
+    """
+    # Create temporary git directory
+    git_dir = tmp_path / "test_repo"
+    git_dir.mkdir()
+    repo = git.Repo.init(git_dir)
+    repo.create_remote("origin", "https://github.com/test/repo.git")
+
+    # Patch GitHub client and config
+    with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:
+        mock_config.return_value = {("github", "token"): "test-token"}
+
+        with patch(
+            "mcp_coder.utils.github_operations.base_manager.Github"
+        ) as mock_github:
+            mock_repo_obj = Mock()
+            mock_github_client = Mock()
+            mock_github_client.get_repo.return_value = mock_repo_obj
+            mock_github.return_value = mock_github_client
+
+            # Create real IssueManager instance
+            manager = IssueManager(git_dir)
+
+            # Store mocked repository for test access
+            # Note: _repository is Optional, so tests must assert it's not None before use
+            # or accept union-attr warnings from mypy
+            manager._repository = mock_repo_obj
+
+            yield manager

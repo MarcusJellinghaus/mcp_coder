@@ -14,12 +14,13 @@ import sys
 from typing import Any, List, Optional
 
 from ....utils.github_operations.github_utils import RepoIdentifier
-from ....utils.github_operations.issue_branch_manager import IssueBranchManager
-from ....utils.github_operations.issue_cache import (
+from ....utils.github_operations.issues import (
+    IssueBranchManager,
+    IssueData,
+    IssueManager,
     get_all_cached_issues,
     update_issue_labels_in_cache,
 )
-from ....utils.github_operations.issue_manager import IssueData, IssueManager
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.user_config import (
     create_default_config,

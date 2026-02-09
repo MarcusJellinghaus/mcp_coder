@@ -11,7 +11,7 @@ if not exist .venv\Scripts\activate.bat (
         exit /b 1
     )
     echo Installing dependencies...
-    uv sync --extra types
+    uv sync --extra dev
     if errorlevel 1 (
         echo ERROR: Failed to install dependencies.
         pause
@@ -226,7 +226,7 @@ TASKS_JSON_TEMPLATE = """{{
             "label": "Open Status File",
             "type": "shell",
             "command": "code",
-            "args": ["${{workspaceFolder}}/.vscodeclaude_status.txt"],
+            "args": ["${{workspaceFolder}}/.vscodeclaude_status.md"],
             "presentation": {{
                 "reveal": "never"
             }},
@@ -267,7 +267,7 @@ INTERVENTION_LINE = """Mode:    ⚠️ INTERVENTION
 # Gitignore entry
 GITIGNORE_ENTRY = """
 # VSCodeClaude session files (auto-generated)
-.vscodeclaude_status.txt
+.vscodeclaude_status.md
 .vscodeclaude_analysis.json
 .vscodeclaude_start.bat
 .vscodeclaude_start.sh

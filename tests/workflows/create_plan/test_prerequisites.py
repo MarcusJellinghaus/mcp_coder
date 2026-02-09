@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 from mcp_coder.workflows.create_plan import (
     check_pr_info_not_exists,
