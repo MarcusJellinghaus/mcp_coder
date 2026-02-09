@@ -291,16 +291,93 @@ def _extract_path_from_error(error: PermissionError | OSError) -> Path | None:
     return None
 
 
+def _is_directory_empty(path: Path) -> bool:
+    """Check if a directory is empty."""
+    try:
+        return not any(path.iterdir())
+    except (PermissionError, OSError):
+        return False
+
+
+def _try_rmdir_with_kill(
+    path: Path,
+    kill_lockers: bool,
+    quiet: bool,
+    killed_procs: list[str],
+) -> tuple[bool, str]:
+    """Try to remove an empty directory, killing lockers if needed.
+
+    Args:
+        path: Empty directory to remove
+        kill_lockers: Whether to kill locking processes
+        quiet: Suppress output
+        killed_procs: List to append kill results to (modified in place)
+
+    Returns:
+        Tuple of (success, message)
+    """
+
+    def log(msg: str) -> None:
+        if not quiet:
+            print(f"  {msg}")
+
+    # First attempt: simple rmdir
+    try:
+        path.rmdir()
+        if not path.exists():
+            return True, "Deleted empty directory"
+    except (PermissionError, OSError):
+        pass  # Expected if locked
+
+    if not kill_lockers:
+        return False, f"Empty directory locked: {path} (use --kill-lockers)"
+
+    # Find and kill lockers on the directory itself
+    log(f"LOCKED: {path.name} (empty directory) - finding locker...")
+    handle_exe = _find_handle_executable()
+    if not handle_exe:
+        return False, "Cannot find handle64.exe to identify lockers"
+
+    lockers = _run_handle_exe(handle_exe, path)
+    if not lockers:
+        # No lockers found but still can't delete - try move as fallback
+        return False, f"No lockers found but cannot delete: {path}"
+
+    # Kill the lockers
+    kill_results = _kill_detected_lockers(lockers)
+    for msg in kill_results:
+        log(msg)
+        killed_procs.append(msg)
+
+    if any("KILLED" in msg for msg in kill_results):
+        time.sleep(1)  # Wait for handles to release
+
+    # Retry rmdir after killing
+    try:
+        path.rmdir()
+        if not path.exists():
+            return True, "Deleted empty directory after killing lockers"
+    except (PermissionError, OSError) as e:
+        # Still locked - try move as last resort
+        moved, move_result = _move_file_to_temp(path)
+        if moved:
+            return True, "Moved empty directory to staging"
+        return False, f"Still locked after killing: {e}"
+
+    return True, "Deleted empty directory"
+
+
 def _delete_folder(
     path: Path, kill_lockers: bool = False, quiet: bool = False
 ) -> tuple[bool, str, list[str], list[str]]:
     """Delete folder with escalating strategies for locked files.
 
     Strategy (escalates as needed):
-        1. Try delete
-        2. If fails, try move locked file to temp
-        3. If move fails AND kill_lockers=True, kill locker, retry move
-        4. Retry delete
+        1. For empty directories: try rmdir, then kill lockers, then move
+        2. For non-empty: try rmtree
+        3. If file locked, try move to temp
+        4. If move fails AND kill_lockers=True, kill locker, retry move
+        5. Retry delete
 
     Args:
         path: Folder to delete
@@ -325,6 +402,19 @@ def _delete_folder(
         if not path.exists():
             return True, "Folder removed", moved_files, killed_procs
 
+        # Special handling for empty directories
+        # Empty dirs can be locked at the directory level (not file level)
+        if _is_directory_empty(path):
+            success, message = _try_rmdir_with_kill(
+                path, kill_lockers, quiet, killed_procs
+            )
+            if success:
+                if "moved" in message.lower():
+                    moved_files.append(path.name)
+                return True, message, moved_files, killed_procs
+            # If we couldn't delete an empty dir, no point retrying with rmtree
+            return False, message, moved_files, killed_procs
+
         try:
             if sys.version_info >= (3, 12):
                 shutil.rmtree(path, onexc=_rmtree_remove_readonly)
@@ -347,6 +437,18 @@ def _delete_folder(
                     moved_files,
                     killed_procs,
                 )
+
+            # Check if locked path is the root directory itself
+            # This can happen when the directory becomes empty during deletion
+            if locked_path == path:
+                success, message = _try_rmdir_with_kill(
+                    path, kill_lockers, quiet, killed_procs
+                )
+                if success:
+                    if "moved" in message.lower():
+                        moved_files.append(path.name)
+                    return True, message, moved_files, killed_procs
+                # Continue to try other strategies
 
             # Step 1: Try move
             moved, result = _move_file_to_temp(locked_path)
