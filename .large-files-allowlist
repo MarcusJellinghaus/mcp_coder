@@ -6,6 +6,7 @@
 
 docs/configuration/config.md
 docs/processes-prompts/development-process.md
+src/mcp_coder/cli/commands/coordinator/commands.py
 src/mcp_coder/prompt_manager.py
 src/mcp_coder/workflows/implement/core.py
 tests/cli/commands/coordinator/test_core.py
