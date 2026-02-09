@@ -41,7 +41,7 @@
       "Skill(plan_review)",
       "Skill(plan_update)",
       "Skill(rebase)",
-      "Bash(lint-imports)",      
+      "Bash(lint-imports)",
       "Bash(PYTHONPATH=src lint-imports)",
       "Bash(find:*)",
       "Bash(git mv:*)",
