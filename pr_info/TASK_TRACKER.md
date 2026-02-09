@@ -43,13 +43,13 @@ See [step_2.md](./steps/step_2.md) for details.
 ### Step 3: Update Cleanup Logic for All Status Cases
 See [step_3.md](./steps/step_3.md) for details.
 
-- [ ] Update `get_stale_sessions()` return type to include status string
-- [ ] Update `cleanup_stale_sessions()` to handle all status cases (Clean, Dirty, Missing, No Git, Error)
-- [ ] Update import in `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
-- [ ] Update existing cleanup tests for new string-based status
-- [ ] Add new tests: `test_cleanup_handles_missing_folder`, `test_cleanup_skips_no_git_folder`, `test_cleanup_skips_error_folder`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 3
+- [x] Update `get_stale_sessions()` return type to include status string
+- [x] Update `cleanup_stale_sessions()` to handle all status cases (Clean, Dirty, Missing, No Git, Error)
+- [x] Update import in `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
+- [x] Update existing cleanup tests for new string-based status
+- [x] Add new tests: `test_cleanup_handles_missing_folder`, `test_cleanup_skips_no_git_folder`, `test_cleanup_skips_error_folder`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 3
 
 ---
 

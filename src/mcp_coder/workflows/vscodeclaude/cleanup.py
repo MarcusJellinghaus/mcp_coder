@@ -8,7 +8,7 @@ from ...utils.github_operations.issues import IssueData
 from .issues import get_ignore_labels, get_matching_ignore_label
 from .orchestrator import _get_configured_repos
 from .sessions import check_vscode_running, load_sessions, remove_session
-from .status import check_folder_dirty, is_session_stale
+from .status import get_folder_git_status, is_session_stale
 from .types import VSCodeClaudeSession
 
 logger = logging.getLogger(__name__)
@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 def get_stale_sessions(
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
-) -> list[tuple[VSCodeClaudeSession, bool]]:
-    """Get stale sessions with dirty status.
+) -> list[tuple[VSCodeClaudeSession, str]]:
+    """Get stale sessions with git status.
 
     Only checks sessions for repos that are still configured.
     Includes sessions with ignore labels (blocked/wait).
@@ -26,10 +26,11 @@ def get_stale_sessions(
         cached_issues_by_repo: Optional cache of issues for blocked detection
 
     Returns:
-        List of (session, is_dirty) tuples for stale sessions
+        List of (session, git_status) tuples where git_status is one of:
+        "Clean", "Dirty", "Missing", "No Git", "Error"
     """
     store = load_sessions()
-    stale_sessions: list[tuple[VSCodeClaudeSession, bool]] = []
+    stale_sessions: list[tuple[VSCodeClaudeSession, str]] = []
 
     # Load configured repos (skip sessions for repos no longer in config)
     configured_repos = _get_configured_repos()
@@ -68,10 +69,8 @@ def get_stale_sessions(
         # Check if session is stale or blocked
         if is_session_stale(session) or is_blocked:
             folder_path = Path(session["folder"])
-            is_dirty = (
-                check_folder_dirty(folder_path) if folder_path.exists() else False
-            )
-            stale_sessions.append((session, is_dirty))
+            git_status = get_folder_git_status(folder_path)
+            stale_sessions.append((session, git_status))
 
     return stale_sessions
 
@@ -126,25 +125,20 @@ def cleanup_stale_sessions(
     Returns:
         Dict with "deleted" and "skipped" folder lists
 
-    Behavior:
-    - Stale + clean: delete folder and session
-    - Stale + dirty: skip with warning
+    Behavior by status:
+    - Clean: delete folder and session
+    - Dirty: skip with warning (uncommitted changes)
+    - Missing: remove session only (folder already gone)
+    - No Git / Error: skip with warning (investigate manually)
     """
     result: dict[str, list[str]] = {"deleted": [], "skipped": []}
 
     stale_sessions = get_stale_sessions(cached_issues_by_repo=cached_issues_by_repo)
 
-    for session, is_dirty in stale_sessions:
+    for session, git_status in stale_sessions:
         folder = session["folder"]
 
-        if is_dirty:
-            # Skip dirty folders with warning
-            logger.warning(
-                "Skipping dirty folder (has uncommitted changes): %s", folder
-            )
-            print(f"⚠️  Skipping (dirty): {folder}")
-            result["skipped"].append(folder)
-        else:
+        if git_status == "Clean":
             # Clean folder - delete or report
             if dry_run:
                 print(f"Add --cleanup to delete: {folder}")
@@ -156,6 +150,27 @@ def cleanup_stale_sessions(
                 else:
                     print(f"Failed to delete: {folder}")
                     result["skipped"].append(folder)
+
+        elif git_status == "Missing":
+            # Folder gone, just remove session record
+            if dry_run:
+                print(f"Would remove session (folder missing): {folder}")
+            else:
+                remove_session(folder)
+                print(f"Removed session (folder missing): {folder}")
+                result["deleted"].append(folder)
+
+        elif git_status == "Dirty":
+            # Skip - has uncommitted changes
+            logger.warning("Skipping dirty folder: %s", folder)
+            print(f"⚠️  Skipping (dirty): {folder}")
+            result["skipped"].append(folder)
+
+        else:  # "No Git" or "Error"
+            # Skip - needs manual investigation
+            logger.warning("Skipping folder (%s): %s", git_status.lower(), folder)
+            print(f"⚠️  Skipping ({git_status.lower()}): {folder}")
+            result["skipped"].append(folder)
 
     if not stale_sessions:
         print("No stale sessions to clean up.")
