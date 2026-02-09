@@ -180,21 +180,13 @@ def check_folder_dirty(folder_path: Path) -> bool:
         folder_path: Path to git repository
 
     Returns:
-        True if there are uncommitted changes
-
-    Uses: git status --porcelain
+        True if there are uncommitted changes OR if status cannot be determined
+        (conservative approach for backward compatibility)
     """
-    try:
-        options = CommandOptions(cwd=str(folder_path), check=True)
-        result = execute_subprocess(
-            ["git", "status", "--porcelain"],
-            options,
-        )
-        # If output is empty, the folder is clean
-        return bool(result.stdout.strip())
-    except Exception:
-        # On any error, assume dirty to be safe
-        return True
+    status = get_folder_git_status(folder_path)
+    # Only "Clean" means definitely not dirty
+    # All other states (Dirty, Missing, No Git, Error) return True
+    return status != "Clean"
 
 
 def get_next_action(

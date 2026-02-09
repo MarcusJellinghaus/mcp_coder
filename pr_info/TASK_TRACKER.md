@@ -33,7 +33,7 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Update Status Display and `check_folder_dirty()`
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Update `check_folder_dirty()` to use `get_folder_git_status()` internally
+- [x] Update `check_folder_dirty()` to use `get_folder_git_status()` internally
 - [ ] Update import in `src/mcp_coder/cli/commands/coordinator/commands.py`
 - [ ] Update status display in `execute_coordinator_vscodeclaude_status()` to use `get_folder_git_status()`
 - [ ] Verify existing `check_folder_dirty()` tests still pass
