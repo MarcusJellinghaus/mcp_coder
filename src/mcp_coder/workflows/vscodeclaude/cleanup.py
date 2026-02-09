@@ -4,7 +4,7 @@ import logging
 import shutil
 from pathlib import Path
 
-from ...utils.github_operations.issue_manager import IssueData
+from ...utils.github_operations.issues import IssueData
 from .issues import get_ignore_labels, get_matching_ignore_label
 from .orchestrator import _get_configured_repos
 from .sessions import check_vscode_running, load_sessions, remove_session
