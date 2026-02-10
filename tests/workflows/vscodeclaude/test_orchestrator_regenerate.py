@@ -108,7 +108,7 @@ class TestRegenerateSessionFiles:
         mock_issue: IssueData,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Regenerate creates .vscodeclaude_status.md."""
+        """Regenerate creates .vscodeclaude_status.txt."""
         monkeypatch.setattr(
             "subprocess.run",
             lambda *args, **kwargs: Mock(returncode=0, stdout="main\n"),

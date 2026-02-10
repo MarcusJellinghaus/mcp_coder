@@ -38,6 +38,7 @@ Orchestration and monitoring of automated development across repositories.
 | [`coordinator test`](#coordinator-test) | Trigger Jenkins integration test for repository |
 | [`coordinator run`](#coordinator-run) | Monitor and dispatch workflows for GitHub issues |
 | [`coordinator vscodeclaude`](#coordinator-vscodeclaude) | Launch VS Code sessions for issues needing human review |
+| [`coordinator issue-stats`](#coordinator-issue-stats) | Display issue statistics grouped by workflow status category |
 
 ### Quality Checks
 Branch readiness verification and code quality tools.
@@ -393,6 +394,46 @@ mcp-coder --log-level debug coordinator vscodeclaude
 
 ---
 
+### coordinator issue-stats
+
+Display issue statistics grouped by workflow status category.
+
+```bash
+mcp-coder coordinator issue-stats [OPTIONS]
+```
+
+**Options:**
+- `--filter CATEGORY` - Filter by category: `all` (default), `human`, `bot`
+- `--details` - Show individual issue details with links
+- `--project-dir PATH` - Project directory path (default: current directory)
+
+**Examples:**
+```bash
+# Show all categories
+mcp-coder coordinator issue-stats
+
+# Show only human action required
+mcp-coder coordinator issue-stats --filter human
+
+# Show bot issues with details
+mcp-coder coordinator issue-stats --filter bot --details
+```
+
+**Example Output:**
+```
+=== Human Action Required ===
+  status-01:created           5 issues
+  status-04:plan-review       2 issues
+
+=== Validation Errors ===
+  No status label: 2 issues
+  Multiple status labels: 1 issue
+
+Total: 16 open issues (13 valid, 3 errors)
+```
+
+---
+
 ### check branch-status
 
 Check branch readiness status and optionally apply fixes.
@@ -452,7 +493,15 @@ mcp-coder define-labels [OPTIONS]
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--dry-run` - Preview changes without applying them
 
-**Description:** Create or update GitHub issue labels for workflow status tracking. Uses label configuration from `workflows/config/labels.json` or package defaults.
+**Description:** Create or update GitHub issue labels for workflow status tracking. Uses label configuration from `workflows/config/labels.json` or package defaults. Also validates issues and initializes issues without status labels.
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success - no errors or warnings |
+| 1 | Errors found - issues with multiple status labels |
+| 2 | Warnings only - stale bot processes detected |
 
 **Examples:**
 ```bash

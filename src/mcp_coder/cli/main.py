@@ -14,6 +14,7 @@ from .commands.coordinator import (
     execute_coordinator_vscodeclaude,
     execute_coordinator_vscodeclaude_status,
 )
+from .commands.coordinator.issue_stats import execute_coordinator_issue_stats
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
@@ -21,22 +22,21 @@ from .commands.gh_tool import execute_get_base_branch
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
 from .commands.prompt import execute_prompt
-from .commands.set_status import build_set_status_epilog, execute_set_status
+from .commands.set_status import execute_set_status
 from .commands.verify import execute_verify
-
-
-class WideHelpFormatter(argparse.RawDescriptionHelpFormatter):
-    """Custom formatter with wider help position for longer command names."""
-
-    def __init__(
-        self,
-        prog: str,
-        indent_increment: int = 2,
-        max_help_position: int = 32,
-        width: int | None = None,
-    ) -> None:
-        super().__init__(prog, indent_increment, max_help_position, width)
-
+from .parsers import (
+    WideHelpFormatter,
+    add_check_parsers,
+    add_commit_parsers,
+    add_coordinator_parsers,
+    add_create_plan_parser,
+    add_create_pr_parser,
+    add_define_labels_parser,
+    add_gh_tool_parsers,
+    add_implement_parser,
+    add_prompt_parser,
+    add_set_status_parser,
+)
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
@@ -65,531 +65,30 @@ def create_parser() -> argparse.ArgumentParser:
         metavar="LEVEL",
     )
 
-    # Add subparsers for future commands
+    # Add subparsers for commands
     subparsers = parser.add_subparsers(
         dest="command",
         help="Available commands",
         metavar="COMMAND",
     )
 
-    # Help command - Step 2
-    help_parser = subparsers.add_parser("help", help="Show help information")
-
-    # Verify command - Claude installation verification
-    verify_parser = subparsers.add_parser(
+    # Simple commands without subparsers
+    subparsers.add_parser("help", help="Show help information")
+    subparsers.add_parser(
         "verify", help="Verify Claude CLI installation and configuration"
     )
 
-    # Prompt command - Execute prompt via Claude API with configurable debug output
-    prompt_parser = subparsers.add_parser(
-        "prompt",
-        help="Execute prompt via Claude API with configurable debug output",
-        formatter_class=WideHelpFormatter,
-    )
-    prompt_parser.add_argument("prompt", help="The prompt to send to Claude")
-    prompt_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-    prompt_parser.add_argument(
-        "--verbosity",
-        choices=["just-text", "verbose", "raw"],
-        default="just-text",
-        help="Output detail: just-text (response only), verbose (+ metrics), raw (+ full JSON)",
-    )
-    prompt_parser.add_argument(
-        "--store-response",
-        action="store_true",
-        help="Save session to .mcp-coder/responses/ for later continuation",
-    )
-
-    # Session continuation options (mutually exclusive with each other, but --session-id has priority)
-    continue_group = prompt_parser.add_mutually_exclusive_group()
-    continue_group.add_argument(
-        "--continue-session-from",
-        type=str,
-        metavar="FILE",
-        help="Resume conversation from specific stored session file",
-    )
-    continue_group.add_argument(
-        "--continue-session",
-        action="store_true",
-        help="Resume from most recent session (auto-discovers latest file)",
-    )
-
-    prompt_parser.add_argument(
-        "--session-id",
-        type=str,
-        metavar="ID",
-        help="Direct session ID for continuation (overrides file-based options)",
-    )
-    prompt_parser.add_argument(
-        "--timeout",
-        type=int,
-        default=60,
-        metavar="SECONDS",
-        help="API request timeout in seconds (default: 60)",
-    )
-    prompt_parser.add_argument(
-        "--llm-method",
-        choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_cli",
-        metavar="METHOD",
-        help="Communication method: claude_code_cli (default) or claude_code_api",
-    )
-    prompt_parser.add_argument(
-        "--output-format",
-        choices=["text", "json", "session-id"],
-        default="text",
-        metavar="FORMAT",
-        help="Output format: text (default), json (includes session_id), or session-id (only session_id)",
-    )
-    prompt_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    prompt_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
-    )
-
-    # Commit commands - Step 5
-    commit_parser = subparsers.add_parser("commit", help="Git commit operations")
-    commit_subparsers = commit_parser.add_subparsers(
-        dest="commit_mode", help="Available commit modes", metavar="MODE"
-    )
-
-    # commit auto command - Step 5
-    auto_parser = commit_subparsers.add_parser(
-        "auto",
-        help="Auto-generate commit message using LLM",
-        formatter_class=WideHelpFormatter,
-    )
-    auto_parser.add_argument(
-        "--preview",
-        action="store_true",
-        help="Show generated message and ask for confirmation before committing",
-    )
-    auto_parser.add_argument(
-        "--llm-method",
-        choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_cli",
-        help="LLM method to use (default: claude_code_cli)",
-    )
-    auto_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-    auto_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    auto_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
-    )
-
-    # commit clipboard command - Step 6
-    clipboard_parser = commit_subparsers.add_parser(
-        "clipboard",
-        help="Use commit message from clipboard",
-        formatter_class=WideHelpFormatter,
-    )
-    clipboard_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-
-    # Implement command - Step 5
-    implement_parser = subparsers.add_parser(
-        "implement",
-        help="Execute implementation workflow from task tracker",
-        formatter_class=WideHelpFormatter,
-    )
-    implement_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-    implement_parser.add_argument(
-        "--llm-method",
-        choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_cli",
-        help="LLM method to use (default: claude_code_cli)",
-    )
-    implement_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    implement_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
-    )
-    implement_parser.add_argument(
-        "--update-labels",
-        action="store_true",
-        help="Automatically update GitHub issue labels on successful completion",
-    )
-
-    # Create plan command - Generate implementation plan from GitHub issue
-    create_plan_parser = subparsers.add_parser(
-        "create-plan",
-        help="Generate implementation plan for a GitHub issue",
-        formatter_class=WideHelpFormatter,
-    )
-    create_plan_parser.add_argument(
-        "issue_number", type=int, help="GitHub issue number to create plan for"
-    )
-    create_plan_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-    create_plan_parser.add_argument(
-        "--llm-method",
-        choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_cli",
-        help="LLM method to use (default: claude_code_cli)",
-    )
-    create_plan_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    create_plan_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
-    )
-    create_plan_parser.add_argument(
-        "--update-labels",
-        action="store_true",
-        help="Automatically update GitHub issue labels on successful completion",
-    )
-
-    # Create PR command - Step 3
-    create_pr_parser = subparsers.add_parser(
-        "create-pr",
-        help="Create pull request with AI-generated summary",
-        formatter_class=WideHelpFormatter,
-    )
-    create_pr_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-    create_pr_parser.add_argument(
-        "--llm-method",
-        choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_cli",
-        help="LLM method to use (default: claude_code_cli)",
-    )
-    create_pr_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    create_pr_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
-    )
-    create_pr_parser.add_argument(
-        "--update-labels",
-        action="store_true",
-        help="Automatically update GitHub issue labels on successful completion",
-    )
-
-    # Coordinator commands - Jenkins-based integration testing
-    coordinator_parser = subparsers.add_parser(
-        "coordinator", help="Coordinator commands for repository testing"
-    )
-    coordinator_subparsers = coordinator_parser.add_subparsers(
-        dest="coordinator_subcommand",
-        help="Available coordinator commands",
-        metavar="SUBCOMMAND",
-    )
-
-    # coordinator test command
-    test_parser = coordinator_subparsers.add_parser(
-        "test",
-        help="Trigger Jenkins integration test for repository",
-        formatter_class=WideHelpFormatter,
-    )
-    test_parser.add_argument(
-        "repo_name", help="Repository name from config (e.g., mcp_coder)"
-    )
-    test_parser.add_argument(
-        "--branch-name",
-        required=True,
-        help="Git branch to test (e.g., feature-x, main)",
-    )
-    test_parser.add_argument(
-        "--log-level",
-        type=str.upper,
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="DEBUG",
-        help="Log level for mcp-coder commands in test script (default: DEBUG)",
-        metavar="LEVEL",
-    )
-
-    # coordinator run command
-    run_parser = coordinator_subparsers.add_parser(
-        "run",
-        help="Monitor and dispatch workflows for GitHub issues",
-        formatter_class=WideHelpFormatter,
-    )
-
-    # Mutually exclusive group: --all OR --repo (one required)
-    run_group = run_parser.add_mutually_exclusive_group(required=True)
-    run_group.add_argument(
-        "--all", action="store_true", help="Process all repositories from config"
-    )
-    run_group.add_argument(
-        "--repo",
-        type=str,
-        metavar="NAME",
-        help="Process single repository (e.g., mcp_coder)",
-    )
-
-    run_parser.add_argument(
-        "--force-refresh",
-        action="store_true",
-        help="Force full cache refresh, bypass all caching",
-    )
-
-    # coordinator vscodeclaude command
-    vscodeclaude_parser = coordinator_subparsers.add_parser(
-        "vscodeclaude",
-        help="Manage VSCode/Claude sessions for interactive workflow stages",
-        epilog="Documentation: https://github.com/MarcusJellinghaus/mcp_coder/blob/main/docs/coordinator-vscodeclaude.md",
-    )
-    vscodeclaude_subparsers = vscodeclaude_parser.add_subparsers(
-        dest="vscodeclaude_subcommand",
-        help="VSCodeClaude commands",
-        metavar="SUBCOMMAND",
-    )
-
-    # Default (no subcommand) - main vscodeclaude behavior
-    vscodeclaude_parser.add_argument(
-        "--repo",
-        type=str,
-        metavar="NAME",
-        help="Filter to specific repository only",
-    )
-    vscodeclaude_parser.add_argument(
-        "--max-sessions",
-        type=int,
-        metavar="N",
-        help="Override max concurrent sessions (default: from config or 3)",
-    )
-    vscodeclaude_parser.add_argument(
-        "--cleanup",
-        action="store_true",
-        help="Delete stale clean folders (without this flag, only lists them)",
-    )
-    vscodeclaude_parser.add_argument(
-        "--intervene",
-        action="store_true",
-        help="Force open a bot_busy issue for debugging",
-    )
-    vscodeclaude_parser.add_argument(
-        "--issue",
-        type=int,
-        metavar="NUMBER",
-        help="Issue number for intervention mode (requires --intervene)",
-    )
-
-    # vscodeclaude status subcommand
-    status_parser = vscodeclaude_subparsers.add_parser(
-        "status",
-        help="Show current VSCodeClaude sessions",
-    )
-    status_parser.add_argument(
-        "--repo",
-        type=str,
-        metavar="NAME",
-        help="Filter to specific repository only",
-    )
-
-    # Define-labels command - Sync workflow status labels to GitHub
-    define_labels_parser = subparsers.add_parser(
-        "define-labels",
-        help="Sync workflow status labels to GitHub repository",
-        formatter_class=WideHelpFormatter,
-    )
-    define_labels_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-    define_labels_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Preview changes without applying them",
-    )
-
-    # Set-status command - Update GitHub issue workflow label
-    # NOTE: Generate epilog dynamically from labels.json config (Decision #3)
-    set_status_parser = subparsers.add_parser(
-        "set-status",
-        help="Update GitHub issue workflow status label",
-        formatter_class=WideHelpFormatter,
-        epilog=build_set_status_epilog(),  # Dynamic generation from config
-    )
-    set_status_parser.add_argument(
-        "status_label",
-        help="Status label to set (e.g., status-05:plan-ready)",
-    )
-    set_status_parser.add_argument(
-        "--issue",
-        type=int,
-        default=None,
-        help="Issue number (default: auto-detect from branch name)",
-    )
-    set_status_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-    set_status_parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Bypass clean working directory check",
-    )
-
-    # Check commands - Branch and code status verification
-    check_parser = subparsers.add_parser(
-        "check", help="Check commands for branch and code status verification"
-    )
-    check_subparsers = check_parser.add_subparsers(
-        dest="check_subcommand",
-        help="Available check commands",
-        metavar="SUBCOMMAND",
-    )
-
-    # check branch-status command
-    branch_status_parser = check_subparsers.add_parser(
-        "branch-status",
-        help="Check branch readiness status and optionally apply fixes",
-        formatter_class=WideHelpFormatter,
-    )
-    branch_status_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-    branch_status_parser.add_argument(
-        "--fix",
-        action="store_true",
-        help="Attempt to automatically fix issues found",
-    )
-    branch_status_parser.add_argument(
-        "--llm-truncate",
-        action="store_true",
-        help="Truncate output for LLM consumption",
-    )
-    branch_status_parser.add_argument(
-        "--llm-method",
-        choices=["claude_code_cli", "claude_code_api"],
-        default="claude_code_cli",
-        help="LLM method to use for --fix (default: claude_code_cli)",
-    )
-    branch_status_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    branch_status_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
-    )
-
-    # check file-size command
-    file_size_parser = check_subparsers.add_parser(
-        "file-size",
-        help="Check file sizes against maximum line count",
-        formatter_class=WideHelpFormatter,
-    )
-    file_size_parser.add_argument(
-        "--max-lines",
-        type=int,
-        default=600,
-        help="Maximum lines per file (default: 600)",
-    )
-    file_size_parser.add_argument(
-        "--allowlist-file",
-        type=str,
-        default=".large-files-allowlist",
-        help="Path to allowlist file (default: .large-files-allowlist)",
-    )
-    file_size_parser.add_argument(
-        "--generate-allowlist",
-        action="store_true",
-        help="Output violating paths for piping to allowlist",
-    )
-    file_size_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
-
-    # gh-tool commands - GitHub tool operations
-    gh_tool_parser = subparsers.add_parser("gh-tool", help="GitHub tool commands")
-    gh_tool_subparsers = gh_tool_parser.add_subparsers(
-        dest="gh_tool_subcommand",
-        help="Available GitHub tool commands",
-        metavar="SUBCOMMAND",
-    )
-
-    # gh-tool get-base-branch command
-    get_base_branch_parser = gh_tool_subparsers.add_parser(
-        "get-base-branch",
-        help="Detect base branch for current feature branch",
-        formatter_class=WideHelpFormatter,
-        epilog="""Exit codes:
-  0  Success - base branch printed to stdout
-  1  Could not detect base branch
-  2  Error (not a git repo, API failure)""",
-    )
-    get_base_branch_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory path (default: current directory)",
-    )
+    # Add command parsers from parsers module
+    add_prompt_parser(subparsers)
+    add_commit_parsers(subparsers)
+    add_implement_parser(subparsers)
+    add_create_plan_parser(subparsers)
+    add_create_pr_parser(subparsers)
+    add_coordinator_parsers(subparsers)
+    add_define_labels_parser(subparsers)
+    add_set_status_parser(subparsers)
+    add_check_parsers(subparsers)
+    add_gh_tool_parsers(subparsers)
 
     return parser
 
@@ -602,6 +101,86 @@ def handle_no_command(args: argparse.Namespace) -> int:
     print(help_text)
 
     return 1  # Exit with error code since no command was provided
+
+
+def _handle_coordinator_command(args: argparse.Namespace) -> int:
+    """Handle coordinator subcommands."""
+    if hasattr(args, "coordinator_subcommand") and args.coordinator_subcommand:
+        if args.coordinator_subcommand == "test":
+            return execute_coordinator_test(args)
+        elif args.coordinator_subcommand == "run":
+            return execute_coordinator_run(args)
+        elif args.coordinator_subcommand == "vscodeclaude":
+            # Check for status subcommand first
+            if (
+                hasattr(args, "vscodeclaude_subcommand")
+                and args.vscodeclaude_subcommand == "status"
+            ):
+                return execute_coordinator_vscodeclaude_status(args)
+            else:
+                return execute_coordinator_vscodeclaude(args)
+        elif args.coordinator_subcommand == "issue-stats":
+            return execute_coordinator_issue_stats(args)
+        else:
+            logger.error(
+                f"Unknown coordinator subcommand: {args.coordinator_subcommand}"
+            )
+            print(
+                f"Error: Unknown coordinator subcommand '{args.coordinator_subcommand}'"
+            )
+            return 1
+    else:
+        logger.error("Coordinator subcommand required")
+        print("Error: Please specify a coordinator subcommand (e.g., 'test', 'run')")
+        return 1
+
+
+def _handle_check_command(args: argparse.Namespace) -> int:
+    """Handle check subcommands."""
+    if hasattr(args, "check_subcommand") and args.check_subcommand:
+        if args.check_subcommand == "branch-status":
+            from .commands.check_branch_status import execute_check_branch_status
+
+            return execute_check_branch_status(args)
+        elif args.check_subcommand == "file-size":
+            return execute_check_file_sizes(args)
+        else:
+            logger.error(f"Unknown check subcommand: {args.check_subcommand}")
+            print(f"Error: Unknown check subcommand '{args.check_subcommand}'")
+            return 1
+    else:
+        logger.error("Check subcommand required")
+        print(
+            "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
+        )
+        return 1
+
+
+def _handle_gh_tool_command(args: argparse.Namespace) -> int:
+    """Handle gh-tool subcommands."""
+    if hasattr(args, "gh_tool_subcommand") and args.gh_tool_subcommand:
+        if args.gh_tool_subcommand == "get-base-branch":
+            return execute_get_base_branch(args)
+        else:
+            logger.error(f"Unknown gh-tool subcommand: {args.gh_tool_subcommand}")
+            print(f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'")
+            return 1
+    else:
+        logger.error("gh-tool subcommand required")
+        print("Error: Please specify a gh-tool subcommand (e.g., 'get-base-branch')")
+        return 1
+
+
+def _handle_commit_command(args: argparse.Namespace) -> int:
+    """Handle commit subcommands."""
+    if args.commit_mode == "auto":
+        return execute_commit_auto(args)
+    elif args.commit_mode == "clipboard":
+        return execute_commit_clipboard(args)
+    else:
+        logger.error(f"Commit mode '{args.commit_mode}' not yet implemented")
+        print(f"Error: Commit mode '{args.commit_mode}' is not yet implemented.")
+        return 1
 
 
 def main() -> int:
@@ -630,16 +209,7 @@ def main() -> int:
         elif args.command == "prompt":
             return execute_prompt(args)
         elif args.command == "commit" and hasattr(args, "commit_mode"):
-            if args.commit_mode == "auto":
-                return execute_commit_auto(args)
-            elif args.commit_mode == "clipboard":
-                return execute_commit_clipboard(args)
-            else:
-                logger.error(f"Commit mode '{args.commit_mode}' not yet implemented")
-                print(
-                    f"Error: Commit mode '{args.commit_mode}' is not yet implemented."
-                )
-                return 1
+            return _handle_commit_command(args)
         elif args.command == "implement":
             return execute_implement(args)
         elif args.command == "create-plan":
@@ -647,76 +217,15 @@ def main() -> int:
         elif args.command == "create-pr":
             return execute_create_pr(args)
         elif args.command == "coordinator":
-            if hasattr(args, "coordinator_subcommand") and args.coordinator_subcommand:
-                if args.coordinator_subcommand == "test":
-                    return execute_coordinator_test(args)
-                elif args.coordinator_subcommand == "run":
-                    return execute_coordinator_run(args)
-                elif args.coordinator_subcommand == "vscodeclaude":
-                    # Check for status subcommand first
-                    if (
-                        hasattr(args, "vscodeclaude_subcommand")
-                        and args.vscodeclaude_subcommand == "status"
-                    ):
-                        return execute_coordinator_vscodeclaude_status(args)
-                    else:
-                        return execute_coordinator_vscodeclaude(args)
-                else:
-                    logger.error(
-                        f"Unknown coordinator subcommand: {args.coordinator_subcommand}"
-                    )
-                    print(
-                        f"Error: Unknown coordinator subcommand '{args.coordinator_subcommand}'"
-                    )
-                    return 1
-            else:
-                logger.error("Coordinator subcommand required")
-                print(
-                    "Error: Please specify a coordinator subcommand (e.g., 'test', 'run')"
-                )
-                return 1
+            return _handle_coordinator_command(args)
         elif args.command == "define-labels":
             return execute_define_labels(args)
         elif args.command == "set-status":
             return execute_set_status(args)
         elif args.command == "check":
-            if hasattr(args, "check_subcommand") and args.check_subcommand:
-                if args.check_subcommand == "branch-status":
-                    from .commands.check_branch_status import (
-                        execute_check_branch_status,
-                    )
-
-                    return execute_check_branch_status(args)
-                elif args.check_subcommand == "file-size":
-                    return execute_check_file_sizes(args)
-                else:
-                    logger.error(f"Unknown check subcommand: {args.check_subcommand}")
-                    print(f"Error: Unknown check subcommand '{args.check_subcommand}'")
-                    return 1
-            else:
-                logger.error("Check subcommand required")
-                print(
-                    "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
-                )
-                return 1
+            return _handle_check_command(args)
         elif args.command == "gh-tool":
-            if hasattr(args, "gh_tool_subcommand") and args.gh_tool_subcommand:
-                if args.gh_tool_subcommand == "get-base-branch":
-                    return execute_get_base_branch(args)
-                else:
-                    logger.error(
-                        f"Unknown gh-tool subcommand: {args.gh_tool_subcommand}"
-                    )
-                    print(
-                        f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'"
-                    )
-                    return 1
-            else:
-                logger.error("gh-tool subcommand required")
-                print(
-                    "Error: Please specify a gh-tool subcommand (e.g., 'get-base-branch')"
-                )
-                return 1
+            return _handle_gh_tool_command(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")

@@ -1,29 +1,41 @@
-"""Tests for workflows/issue_stats.py - Issue statistics workflow script."""
+"""Tests for coordinator/issue_stats.py - Issue statistics functions.
+
+These tests were moved from tests/workflows/test_issue_stats.py as part of
+consolidating CLI functionality into the cli/commands structure.
+
+Note: CLI argument parsing and execute_coordinator_issue_stats tests
+have been moved to test_issue_stats_cli.py for file size management.
+"""
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, cast
-from unittest.mock import MagicMock, Mock, patch
+from typing import Any, cast
 
 import pytest
 
-from mcp_coder.utils.github_operations.issues import IssueData
-from workflows.issue_stats import (
+from mcp_coder.cli.commands.coordinator.issue_stats import (
+    display_statistics,
     filter_ignored_issues,
     format_issue_line,
     group_issues_by_category,
     truncate_title,
     validate_issue_labels,
 )
+from mcp_coder.utils.github_operations.issues import IssueData
 
 
 # Test fixtures
 @pytest.fixture
-def test_labels_config(tmp_path: Path) -> Dict[str, Any]:
+def test_labels_config(tmp_path: Path) -> dict[str, Any]:
     """Load test labels configuration from fixture."""
-    config_path = Path(__file__).parent / "config" / "test_labels.json"
+    config_path = (
+        Path(__file__).parent.parent.parent.parent
+        / "workflows"
+        / "config"
+        / "test_labels.json"
+    )
     with open(config_path, "r", encoding="utf-8") as f:
-        return cast(Dict[str, Any], json.load(f))
+        return cast(dict[str, Any], json.load(f))
 
 
 @pytest.fixture
@@ -45,7 +57,7 @@ def sample_issue() -> IssueData:
 
 
 @pytest.fixture
-def sample_issues() -> List[IssueData]:
+def sample_issues() -> list[IssueData]:
     """Create a list of sample issues for testing."""
     return [
         IssueData(
@@ -130,7 +142,7 @@ def sample_issues() -> List[IssueData]:
 
 
 # Configuration Tests
-def test_load_labels_config_valid(test_labels_config: Dict[str, Any]) -> None:
+def test_load_labels_config_valid(test_labels_config: dict[str, Any]) -> None:
     """Test loading valid labels configuration."""
     assert "workflow_labels" in test_labels_config
     assert isinstance(test_labels_config["workflow_labels"], list)
@@ -138,7 +150,7 @@ def test_load_labels_config_valid(test_labels_config: Dict[str, Any]) -> None:
 
 
 def test_load_labels_config_with_ignore_labels(
-    test_labels_config: Dict[str, Any],
+    test_labels_config: dict[str, Any],
 ) -> None:
     """Test loading configuration with ignore_labels field."""
     assert "ignore_labels" in test_labels_config
@@ -197,7 +209,7 @@ def test_validate_issue_labels_multiple_status() -> None:
 
 
 # Filtering Tests
-def test_filter_ignored_issues_no_ignore_list(sample_issues: List[IssueData]) -> None:
+def test_filter_ignored_issues_no_ignore_list(sample_issues: list[IssueData]) -> None:
     """Test filtering with empty ignore list returns all issues."""
     filtered = filter_ignored_issues(sample_issues, [])
     assert len(filtered) == len(sample_issues)
@@ -205,7 +217,7 @@ def test_filter_ignored_issues_no_ignore_list(sample_issues: List[IssueData]) ->
 
 
 def test_filter_ignored_issues_with_ignored_labels(
-    sample_issues: List[IssueData],
+    sample_issues: list[IssueData],
 ) -> None:
     """Test filtering with ignored labels."""
     # Filter out issues with 'bug' label
@@ -252,7 +264,7 @@ def test_filter_ignored_issues_labels_with_spaces() -> None:
 
 # Grouping Tests
 def test_group_issues_by_category_empty_list(
-    test_labels_config: Dict[str, Any],
+    test_labels_config: dict[str, Any],
 ) -> None:
     """Test grouping with empty issue list."""
     grouped = group_issues_by_category([], test_labels_config)
@@ -269,7 +281,7 @@ def test_group_issues_by_category_empty_list(
 
 
 def test_group_issues_by_category_all_valid(
-    sample_issues: List[IssueData], test_labels_config: Dict[str, Any]
+    sample_issues: list[IssueData], test_labels_config: dict[str, Any]
 ) -> None:
     """Test grouping with all valid issues."""
     # Use only valid issues (exclude #5 and #6)
@@ -296,7 +308,7 @@ def test_group_issues_by_category_all_valid(
 
 
 def test_group_issues_by_category_with_errors(
-    sample_issues: List[IssueData], test_labels_config: Dict[str, Any]
+    sample_issues: list[IssueData], test_labels_config: dict[str, Any]
 ) -> None:
     """Test grouping with validation errors."""
     grouped = group_issues_by_category(sample_issues, test_labels_config)
@@ -310,7 +322,7 @@ def test_group_issues_by_category_with_errors(
 
 
 def test_group_issues_by_category_zero_counts_included(
-    test_labels_config: Dict[str, Any],
+    test_labels_config: dict[str, Any],
 ) -> None:
     """Test that labels with zero issues are included in the structure."""
     # Create only one issue
@@ -408,13 +420,11 @@ def test_truncate_title_exact_length() -> None:
 
 # Display Tests
 def test_display_statistics_summary_mode(
-    sample_issues: List[IssueData],
-    test_labels_config: Dict[str, Any],
+    sample_issues: list[IssueData],
+    test_labels_config: dict[str, Any],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test display_statistics in summary mode (no details)."""
-    from workflows.issue_stats import display_statistics
-
     grouped = group_issues_by_category(sample_issues, test_labels_config)
     repo_url = "https://github.com/owner/repo"
 
@@ -447,13 +457,11 @@ def test_display_statistics_summary_mode(
 
 
 def test_display_statistics_details_mode_with_errors(
-    sample_issues: List[IssueData],
-    test_labels_config: Dict[str, Any],
+    sample_issues: list[IssueData],
+    test_labels_config: dict[str, Any],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test display_statistics in details mode with validation errors."""
-    from workflows.issue_stats import display_statistics
-
     grouped = group_issues_by_category(sample_issues, test_labels_config)
     repo_url = "https://github.com/owner/repo"
 
@@ -480,13 +488,11 @@ def test_display_statistics_details_mode_with_errors(
 
 
 def test_display_statistics_filter_human(
-    sample_issues: List[IssueData],
-    test_labels_config: Dict[str, Any],
+    sample_issues: list[IssueData],
+    test_labels_config: dict[str, Any],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test display_statistics with human filter."""
-    from workflows.issue_stats import display_statistics
-
     grouped = group_issues_by_category(sample_issues, test_labels_config)
     repo_url = "https://github.com/owner/repo"
 
@@ -511,13 +517,11 @@ def test_display_statistics_filter_human(
 
 
 def test_display_statistics_filter_bot(
-    sample_issues: List[IssueData],
-    test_labels_config: Dict[str, Any],
+    sample_issues: list[IssueData],
+    test_labels_config: dict[str, Any],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test display_statistics with bot filter."""
-    from workflows.issue_stats import display_statistics
-
     grouped = group_issues_by_category(sample_issues, test_labels_config)
     repo_url = "https://github.com/owner/repo"
 
@@ -538,127 +542,6 @@ def test_display_statistics_filter_bot(
 
 
 # Integration Tests
-def test_parse_arguments_default_values() -> None:
-    """Test parse_arguments with no arguments."""
-    from workflows.issue_stats import parse_arguments
-
-    with patch("sys.argv", ["issue_stats.py"]):
-        args = parse_arguments()
-        assert args.project_dir is None
-        assert args.log_level == "INFO"
-        assert args.filter == "all"
-        assert args.details is False
-        assert args.ignore_labels is None
-
-
-def test_parse_arguments_all_flags() -> None:
-    """Test parse_arguments with all flags specified."""
-    from workflows.issue_stats import parse_arguments
-
-    with patch(
-        "sys.argv",
-        [
-            "issue_stats.py",
-            "--project-dir",
-            "/path/to/project",
-            "--log-level",
-            "DEBUG",
-            "--filter",
-            "human",
-            "--details",
-            "--ignore-labels",
-            "wontfix",
-            "--ignore-labels",
-            "duplicate",
-        ],
-    ):
-        args = parse_arguments()
-        assert args.project_dir == "/path/to/project"
-        assert args.log_level == "DEBUG"
-        assert args.filter == "human"
-        assert args.details is True
-        assert args.ignore_labels == ["wontfix", "duplicate"]
-
-
-def test_parse_arguments_multiple_ignore_labels() -> None:
-    """Test parse_arguments with multiple --ignore-labels flags."""
-    from workflows.issue_stats import parse_arguments
-
-    with patch(
-        "sys.argv",
-        [
-            "issue_stats.py",
-            "--ignore-labels",
-            "wontfix",
-            "--ignore-labels",
-            "on hold",
-            "--ignore-labels",
-            "duplicate",
-        ],
-    ):
-        args = parse_arguments()
-        assert args.ignore_labels == ["wontfix", "on hold", "duplicate"]
-
-
-def test_batch_launcher_ignore_labels_argument_passthrough() -> None:
-    """Test that --ignore-labels arguments are correctly passed through batch launcher.
-
-    This test verifies the batch launcher's argument pass-through mechanism by
-    simulating what happens when the batch file calls the Python script with
-    --ignore-labels flags. The batch file uses %* to pass all arguments, which
-    means multiple --ignore-labels flags should work correctly.
-    """
-    from workflows.issue_stats import parse_arguments
-
-    # Simulate batch launcher calling: issue_stats.bat --ignore-labels "wontfix" --ignore-labels "duplicate"
-    with patch(
-        "sys.argv",
-        [
-            "issue_stats.py",
-            "--ignore-labels",
-            "wontfix",
-            "--ignore-labels",
-            "duplicate",
-        ],
-    ):
-        args = parse_arguments()
-
-        # Verify both labels are captured
-        assert args.ignore_labels is not None
-        assert len(args.ignore_labels) == 2
-        assert "wontfix" in args.ignore_labels
-        assert "duplicate" in args.ignore_labels
-
-
-def test_batch_launcher_ignore_labels_combined_with_other_flags() -> None:
-    """Test --ignore-labels works with other batch launcher flags.
-
-    This test verifies that --ignore-labels can be combined with other flags
-    like --filter, --details, etc., which is important for the batch launcher
-    since it passes all arguments through with %*.
-    """
-    from workflows.issue_stats import parse_arguments
-
-    # Simulate: issue_stats.bat --filter human --details --ignore-labels "on hold"
-    with patch(
-        "sys.argv",
-        [
-            "issue_stats.py",
-            "--filter",
-            "human",
-            "--details",
-            "--ignore-labels",
-            "on hold",
-        ],
-    ):
-        args = parse_arguments()
-
-        # Verify all arguments are correctly parsed
-        assert args.filter == "human"
-        assert args.details is True
-        assert args.ignore_labels == ["on hold"]
-
-
 def test_ignore_labels_integration_with_filtering() -> None:
     """Test end-to-end integration of ignore_labels from CLI arguments.
 
@@ -765,110 +648,3 @@ def test_ignore_labels_with_labels_containing_special_characters() -> None:
     filtered = filter_ignored_issues(issues, ["priority: low"])
     assert len(filtered) == 1
     assert filtered[0]["number"] == 1
-
-
-# Invalid Arguments Tests (Batch Launcher Error Handling)
-def test_parse_arguments_invalid_flag() -> None:
-    """Test parse_arguments with invalid flag exits with error.
-
-    This verifies the batch launcher will fail gracefully when passed invalid
-    flags, which is important for user feedback and CI/CD pipelines.
-    """
-    from workflows.issue_stats import parse_arguments
-
-    # Simulate: issue_stats.bat --invalid-flag
-    with patch("sys.argv", ["issue_stats.py", "--invalid-flag"]):
-        with pytest.raises(SystemExit) as exc_info:
-            parse_arguments()
-        # argparse exits with code 2 for invalid arguments
-        assert exc_info.value.code == 2
-
-
-def test_parse_arguments_invalid_filter_value() -> None:
-    """Test parse_arguments with invalid filter value exits with error.
-
-    Valid filter values are: all, human, bot. Any other value should fail.
-    This ensures the batch launcher properly validates arguments.
-    """
-    from workflows.issue_stats import parse_arguments
-
-    # Simulate: issue_stats.bat --filter invalid_value
-    with patch("sys.argv", ["issue_stats.py", "--filter", "invalid_value"]):
-        with pytest.raises(SystemExit) as exc_info:
-            parse_arguments()
-        assert exc_info.value.code == 2
-
-
-def test_parse_arguments_invalid_log_level() -> None:
-    """Test parse_arguments with invalid log level exits with error.
-
-    Valid log levels are: DEBUG, INFO, WARNING, ERROR, CRITICAL (case insensitive).
-    Any other value should fail. This ensures proper error handling.
-    """
-    from workflows.issue_stats import parse_arguments
-
-    # Simulate: issue_stats.bat --log-level INVALID
-    with patch("sys.argv", ["issue_stats.py", "--log-level", "INVALID"]):
-        with pytest.raises(SystemExit) as exc_info:
-            parse_arguments()
-        assert exc_info.value.code == 2
-
-
-def test_parse_arguments_missing_required_value() -> None:
-    """Test parse_arguments with missing required value for flag.
-
-    When a flag requires a value (like --filter or --project-dir) but none is
-    provided, argparse should exit with an error. This ensures the batch launcher
-    validates argument completeness.
-    """
-    from workflows.issue_stats import parse_arguments
-
-    # Simulate: issue_stats.bat --filter (missing value)
-    with patch("sys.argv", ["issue_stats.py", "--filter"]):
-        with pytest.raises(SystemExit) as exc_info:
-            parse_arguments()
-        assert exc_info.value.code == 2
-
-    # Simulate: issue_stats.bat --project-dir (missing value)
-    with patch("sys.argv", ["issue_stats.py", "--project-dir"]):
-        with pytest.raises(SystemExit) as exc_info:
-            parse_arguments()
-        assert exc_info.value.code == 2
-
-
-def test_parse_arguments_case_insensitive_log_level() -> None:
-    """Test that log level is case insensitive (valid behavior).
-
-    The batch launcher should accept log levels in any case (debug, DEBUG, Debug, etc.).
-    This test verifies the type=str.upper conversion works correctly.
-    """
-    from workflows.issue_stats import parse_arguments
-
-    # Test lowercase
-    with patch("sys.argv", ["issue_stats.py", "--log-level", "debug"]):
-        args = parse_arguments()
-        assert args.log_level == "DEBUG"
-
-    # Test mixed case
-    with patch("sys.argv", ["issue_stats.py", "--log-level", "WaRnInG"]):
-        args = parse_arguments()
-        assert args.log_level == "WARNING"
-
-
-def test_parse_arguments_case_insensitive_filter() -> None:
-    """Test that filter is case insensitive (valid behavior).
-
-    The batch launcher should accept filter values in any case (all, ALL, All, etc.).
-    This test verifies the type=str.lower conversion works correctly.
-    """
-    from workflows.issue_stats import parse_arguments
-
-    # Test uppercase
-    with patch("sys.argv", ["issue_stats.py", "--filter", "HUMAN"]):
-        args = parse_arguments()
-        assert args.filter == "human"
-
-    # Test mixed case
-    with patch("sys.argv", ["issue_stats.py", "--filter", "BoT"]):
-        args = parse_arguments()
-        assert args.filter == "bot"
