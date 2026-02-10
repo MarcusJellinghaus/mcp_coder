@@ -1,0 +1,9 @@
+# CI Failure Analysis
+
+The CI pipeline failed on the file-size check because three files exceed the 750-line limit enforced by the `mcp-coder check file-size` command. The violations are: `tests/cli/commands/test_define_labels.py` (2007 lines), `tests/cli/commands/coordinator/test_issue_stats.py` (908 lines), and `src/mcp_coder/cli/main.py` (767 lines).
+
+These files were created or significantly expanded as part of the implementation plan for Issue #340, which enhanced the `define-labels` command and added a new `coordinator issue-stats` subcommand. The test files grew substantially due to comprehensive test coverage for the new validation, initialization, and staleness detection features. The `main.py` file grew slightly over the limit due to wiring up the new coordinator subcommand.
+
+To fix this failure, there are two approaches. The preferred approach is to refactor the oversized files to reduce their line counts below 750 lines. For the test files, this typically means extracting test helper functions, moving fixtures to conftest.py, or splitting tests into multiple focused test modules (e.g., `test_define_labels_validation.py`, `test_define_labels_staleness.py`). For `main.py`, consider extracting command registration logic into separate modules. Alternatively, if these files cannot be reasonably reduced in size, they can be added to the `.large-files-allowlist` file to exempt them from the check, though this is discouraged as the allowlist is meant to be reduced over time per issue #353.
+
+The unit-tests job also failed, which should be investigated separately as it may indicate test failures in the newly added test code that need to be fixed alongside the file size refactoring.
