@@ -57,9 +57,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 7
 
 ### Step 8: Documentation Updates
-- [ ] Implement Step 8 - Update `repository-setup.md` and `cli-reference.md` ([step_8.md](./steps/step_8.md))
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 8
+- [x] Implement Step 8 - Update `repository-setup.md` and `cli-reference.md` ([step_8.md](./steps/step_8.md))
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 8
 
 ---
 

@@ -120,6 +120,49 @@ EOF
 mcp-coder define-labels --dry-run  # Preview your custom labels
 ```
 
+### Issue Validation and Initialization
+
+The `define-labels` command now includes automatic issue validation:
+
+**Automatic initialization:**
+- Issues without any workflow status label are initialized with `status-01:created`
+- Use `--dry-run` to preview which issues would be initialized
+
+**Validation checks:**
+- **Errors:** Issues with multiple status labels (requires manual fix)
+- **Warnings:** Bot processes exceeding their stale timeout threshold
+
+**Example output:**
+```
+Summary:
+  Labels synced: Created=0, Updated=0, Deleted=0, Unchanged=10
+  Issues initialized: 3
+  Errors (multiple status labels): 1
+    - Issue #45: status-01:created, status-03:planning
+  Warnings (stale bot processes): 1
+    - Issue #78: status-06:implementing for 150 minutes (threshold: 120)
+```
+
+### Stale Timeout Configuration
+
+Bot-busy labels can have configurable timeout thresholds in `labels.json`:
+
+```json
+{
+  "internal_id": "implementing",
+  "name": "status-06:implementing",
+  "category": "bot_busy",
+  "stale_timeout_minutes": 120
+}
+```
+
+Default timeouts:
+| Label | Timeout |
+|-------|---------|
+| status-03:planning | 15 minutes |
+| status-06:implementing | 120 minutes |
+| status-09:pr-creating | 15 minutes |
+
 ## Base Branch Support for Issues
 
 ### Overview
