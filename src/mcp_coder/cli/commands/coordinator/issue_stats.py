@@ -10,7 +10,6 @@ CLI functionality into the cli/commands structure.
 import argparse
 import logging
 import sys
-from pathlib import Path
 from typing import Any
 
 from ....utils.git_operations.remotes import get_github_repository_url
@@ -64,18 +63,12 @@ def filter_ignored_issues(
     if not ignore_labels:
         return issues
 
-    filtered = []
-    for issue in issues:
-        has_ignored_label = False
-        for label in issue["labels"]:
-            if label in ignore_labels:
-                has_ignored_label = True
-                break
-
-        if not has_ignored_label:
-            filtered.append(issue)
-
-    return filtered
+    ignore_set = set(ignore_labels)
+    return [
+        issue
+        for issue in issues
+        if not any(label in ignore_set for label in issue["labels"])
+    ]
 
 
 def group_issues_by_category(
