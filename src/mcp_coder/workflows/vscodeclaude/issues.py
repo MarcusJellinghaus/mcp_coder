@@ -4,7 +4,7 @@ import logging
 import re
 from importlib import resources
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from ...utils.github_operations.github_utils import RepoIdentifier
 from ...utils.github_operations.issues import (
@@ -15,7 +15,7 @@ from ...utils.github_operations.issues import (
 )
 from ...utils.github_operations.label_config import load_labels_config
 from ...utils.user_config import get_cache_refresh_minutes, load_config
-from .config import load_vscodeclaude_config
+from .config import get_vscodeclaude_config, load_vscodeclaude_config
 from .helpers import get_issue_status
 
 logger = logging.getLogger(__name__)
@@ -89,24 +89,6 @@ def _get_status_priority(label: str) -> int:
     """
     match = re.search(r"status-(\d+):", label)
     return int(match.group(1)) if match else 0
-
-
-def get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
-    """Get vscodeclaude config for a status label.
-
-    Shared helper used by workspace.py and helpers.py.
-
-    Args:
-        status: Status label like "status-07:code-review"
-
-    Returns:
-        vscodeclaude config dict or None if not found
-    """
-    labels_config = _load_labels_config()
-    for label in labels_config["workflow_labels"]:
-        if label["name"] == status and "vscodeclaude" in label:
-            return cast(dict[str, Any], label["vscodeclaude"])
-    return None
 
 
 def is_status_eligible_for_session(status: str) -> bool:
