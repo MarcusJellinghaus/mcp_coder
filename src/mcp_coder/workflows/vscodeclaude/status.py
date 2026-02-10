@@ -6,7 +6,7 @@ from pathlib import Path
 from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .helpers import get_issue_status
-from .issues import is_status_eligible_for_session
+from .issues import is_status_eligible_for_session, status_requires_linked_branch
 from .sessions import check_vscode_running, load_sessions
 from .types import VSCodeClaudeSession
 
@@ -236,6 +236,7 @@ def display_status_table(
     eligible_issues: list[tuple[str, IssueData]],
     repo_filter: str | None = None,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
+    issues_without_branch: set[tuple[str, int]] | None = None,
 ) -> None:
     """Print status table to stdout.
 
@@ -245,6 +246,9 @@ def display_status_table(
         repo_filter: Optional repo name filter
         cached_issues_by_repo: Dict mapping repo_full_name to issues dict.
                                If provided, avoids API calls for staleness checks.
+        issues_without_branch: Set of (repo_full_name, issue_number) tuples
+                               for issues that require but lack a linked branch.
+                               Used to show "→ Needs branch" indicator.
 
     Columns:
     - Folder
@@ -380,6 +384,19 @@ def display_status_table(
         issue_num = f"#{issue['number']}"
         status = get_issue_status(issue)
 
+        # Check if issue needs branch but doesn't have one
+        # Must check BOTH: status requires branch AND issue lacks one
+        needs_branch = (
+            status_requires_linked_branch(status)
+            and issues_without_branch is not None
+            and (repo_name, issue["number"]) in issues_without_branch
+        )
+
+        if needs_branch:
+            action = "→ Needs branch"
+        else:
+            action = "→ Create and start"
+
         # Truncate status if too long
         if len(status) > col_status - 1:
             status = status[: col_status - 4] + "..."
@@ -390,7 +407,7 @@ def display_status_table(
             f"{status:<{col_status}} "
             f"{'-':<{col_vscode}} "
             f"{repo_short:<{col_repo}} "
-            f"{'→ Create and start':<{col_action}}"
+            f"{action:<{col_action}}"
         )
         print(row)
 

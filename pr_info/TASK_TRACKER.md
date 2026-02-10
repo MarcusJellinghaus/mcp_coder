@@ -63,14 +63,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 5
 
 ### Step 6: Update `display_status_table()` for New Indicators
-- [ ] Add `issues_without_branch` parameter to `display_status_table()` ([step_6.md](./steps/step_6.md))
-- [ ] Update display logic to show `→ Needs branch` indicator
-- [ ] Refactor CLI to use `display_status_table()` from `status.py`
-- [ ] Add tests for branch-related indicators in `test_status_display.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 6
+- [x] Add `issues_without_branch` parameter to `display_status_table()` ([step_6.md](./steps/step_6.md))
+- [x] Update display logic to show `→ Needs branch` indicator
+- [x] Refactor CLI to use `display_status_table()` from `status.py`
+- [x] Add tests for branch-related indicators in `test_status_display.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 6
 
 ### Step 7: Update Module Docstring and Integration Testing
 - [ ] Update `orchestrator.py` module docstring with branch handling documentation ([step_7.md](./steps/step_7.md))
