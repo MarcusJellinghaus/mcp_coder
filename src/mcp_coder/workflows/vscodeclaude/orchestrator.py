@@ -55,6 +55,186 @@ Status Table Indicators:
 Intervention Sessions:
 - Follow same branch rules as normal sessions
 - is_intervention flag doesn't affect branch requirements
+
+---
+
+## Decision Matrix: Session Actions by State
+
+### Launch Behavior (New Sessions)
+
+| Status | Branch State | Action | Reason |
+|--------|--------------|--------|--------|
+| 01:created | No linked | Launch on `main` | Fallback allowed for status-01 |
+| 01:created | Has linked | Launch on linked | Use linked branch if available |
+| 04:plan-review | No linked | Skip, log error | Branch required for status-04 |
+| 04:plan-review | Has linked | Launch on linked | Normal flow |
+| 04:plan-review | Multiple linked | Skip, log error | Ambiguous branch state |
+| 07:code-review | No linked | Skip, log error | Branch required for status-07 |
+| 07:code-review | Has linked | Launch on linked | Normal flow |
+| 07:code-review | Multiple linked | Skip, log error | Ambiguous branch state |
+| 10:pr-created | Any | No session | PR-created issues don't need sessions |
+
+### Restart Behavior (Existing Sessions)
+
+| Status | Branch | VSCode | Folder | Blocked | Git Fetch | Action | Indicator |
+|--------|--------|--------|--------|---------|-----------|--------|-----------|
+| 01 | Any | Running | Any | No | - | No action | (active) |
+| 01 | Any | Closed | Clean | No | Success | Restart, stay on branch | → Restart |
+| 01 | Any | Closed | Dirty | No | Success | Skip | !! Dirty |
+| 01 | Any | Closed | Clean | Yes | - | Skip | Blocked (label) |
+| 01 | Any | Closed | Clean | No | Failed | Skip | !! Git error |
+| 04 | No linked | Closed | Clean | No | Success | Skip | !! No branch |
+| 04 | Multiple | Closed | Clean | No | Success | Skip | !! Multi-branch |
+| 04 | Has linked | Running | Any | No | - | No action | (active) |
+| 04 | Has linked | Closed | Dirty | No | Success | Skip | !! Dirty |
+| 04 | Has linked | Closed | Clean | No | Failed | Skip | !! Git error |
+| 04 | Has linked | Closed | Clean | No | Success | Checkout + pull + restart | → Restart |
+| 04 | Has linked | Closed | Clean | Yes | - | Skip | Blocked (label) |
+| 07 | No linked | Closed | Clean | No | Success | Skip | !! No branch |
+| 07 | Multiple | Closed | Clean | No | Success | Skip | !! Multi-branch |
+| 07 | Has linked | Running | Any | No | - | No action | (active) |
+| 07 | Has linked | Closed | Dirty | No | Success | Skip | !! Dirty |
+| 07 | Has linked | Closed | Clean | No | Failed | Skip | !! Git error |
+| 07 | Has linked | Closed | Clean | No | Success | Checkout + pull + restart | → Restart |
+| 07 | Has linked | Closed | Clean | Yes | - | Skip | Blocked (label) |
+
+**Priority Order for Restart Decisions:**
+1. VSCode running → (active)
+2. Skip reason (no branch/dirty/git error/multi-branch) → !! indicators
+3. Blocked label → Blocked (label)
+4. Stale (status changed to ineligible) → → Delete (with --cleanup)
+5. Normal flow → → Restart
+
+### Status Display (No Existing Session)
+
+| Status | Branch State | Issue State | Indicator |
+|--------|--------------|-------------|-----------|
+| 01 | Any | Open, eligible | → Create and start |
+| 04 | No linked | Open, eligible | → Needs branch |
+| 04 | Multiple linked | Open, eligible | → Needs branch |
+| 04 | Has linked | Open, eligible | → Create and start |
+| 07 | No linked | Open, eligible | → Needs branch |
+| 07 | Multiple linked | Open, eligible | → Needs branch |
+| 07 | Has linked | Open, eligible | → Create and start |
+| 10:pr-created | Any | Open | (No session row) |
+
+---
+
+## Common Scenarios
+
+### Scenario 1: Fresh Planning Session
+```
+Status: 04:plan-review
+Branch: feature/issue-123 (linked)
+VSCode: Not running
+Folder: Does not exist
+Action: Create folder, clone, checkout feature/issue-123, launch VSCode
+```
+
+### Scenario 2: Planning Approved, Status Changed
+```
+Initial: Status 04:plan-review on feature/issue-123
+User approves plan, status changes to 05:bot-pickup
+VSCode: Running
+Action: No restart (bot status ineligible), marked stale for cleanup
+Display: "→ Delete (with --cleanup)"
+```
+
+### Scenario 3: Restart After VSCode Closed
+```
+Status: 07:code-review
+Branch: feature/issue-123 (linked)
+VSCode: Closed (user closed it)
+Folder: Clean (no uncommitted changes)
+Restart flow:
+  1. git fetch origin
+  2. Get linked branch: feature/issue-123
+  3. Check dirty: Clean
+  4. git checkout feature/issue-123
+  5. git pull
+  6. Regenerate session files
+  7. Launch VSCode
+```
+
+### Scenario 4: Restart Blocked by Uncommitted Work
+```
+Status: 04:plan-review
+Branch: feature/issue-123 (linked)
+VSCode: Closed
+Folder: Dirty (user made changes)
+Action: Skip restart
+Display: "!! Dirty"
+Reason: Can't switch branches with uncommitted changes
+```
+
+### Scenario 5: Issue Moved to Code Review, No Branch
+```
+Status: 07:code-review
+Branch: None linked (forgot to link in GitHub)
+VSCode: Closed
+Action: Skip restart
+Display: "!! No branch"
+Reason: Status-07 requires linked branch
+```
+
+### Scenario 6: Multiple Branches Linked
+```
+Status: 04:plan-review
+Branch: Multiple branches linked to issue in GitHub
+VSCode: Closed
+Action: Skip restart
+Display: "!! Multi-branch"
+Reason: Ambiguous which branch to use
+Fix: Unlink all but one branch in GitHub
+```
+
+### Scenario 7: Status-01 Without Branch
+```
+Status: 01:created
+Branch: No linked branch
+VSCode: Not running
+Folder: Does not exist
+Action: Create folder, clone, checkout main, launch VSCode
+Display: "→ Create and start"
+Reason: Status-01 allows fallback to main
+```
+
+### Scenario 8: Network Failure on Restart
+```
+Status: 04:plan-review
+Branch: feature/issue-123 (linked)
+VSCode: Closed
+Folder: Clean
+git fetch origin: FAILS (network down)
+Action: Skip restart
+Display: "!! Git error"
+Reason: Can't proceed without fetch
+```
+
+---
+
+## State Transitions
+
+```
+NEW ISSUE (status-01:created)
+    ├─► Has linked branch → Launch on linked branch
+    └─► No linked branch → Launch on main
+
+PLANNING PHASE (status-04:plan-review)
+    ├─► Has linked branch + clean → Launch/restart
+    ├─► Has linked branch + dirty → Skip (!! Dirty)
+    ├─► No linked branch → Skip (!! No branch)
+    └─► Multiple branches → Skip (!! Multi-branch)
+
+CODE REVIEW (status-07:code-review)
+    ├─► Has linked branch + clean → Launch/restart
+    ├─► Has linked branch + dirty → Skip (!! Dirty)
+    ├─► No linked branch → Skip (!! No branch)
+    └─► Multiple branches → Skip (!! Multi-branch)
+
+PR CREATED (status-10:pr-created)
+    └─► No session created (displayed separately)
+```
 """
 
 import logging
