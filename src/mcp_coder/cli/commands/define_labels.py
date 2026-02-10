@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, TypedDict
 
-from ...utils.github_operations.issue_manager import (
+from ...utils.github_operations.issues import (
     IssueData,
     IssueEventType,
     IssueManager,

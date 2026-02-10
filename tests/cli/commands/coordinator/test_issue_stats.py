@@ -21,7 +21,7 @@ from mcp_coder.cli.commands.coordinator.issue_stats import (
     truncate_title,
     validate_issue_labels,
 )
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import IssueData
 
 
 # Test fixtures

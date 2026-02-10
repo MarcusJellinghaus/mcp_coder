@@ -12,7 +12,7 @@ from mcp_coder.cli.commands.define_labels import (
     calculate_elapsed_minutes,
     check_stale_bot_process,
 )
-from mcp_coder.utils.github_operations.issue_manager import IssueData
+from mcp_coder.utils.github_operations.issues import IssueData
 
 
 class TestCalculateElapsedMinutes:

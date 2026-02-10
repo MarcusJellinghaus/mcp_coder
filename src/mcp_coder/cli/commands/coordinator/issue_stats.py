@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ....utils.git_operations.remotes import get_github_repository_url
-from ....utils.github_operations.issue_manager import IssueData, IssueManager
+from ....utils.github_operations.issues import IssueData, IssueManager
 from ....utils.github_operations.label_config import (
     get_labels_config_path,
     load_labels_config,
