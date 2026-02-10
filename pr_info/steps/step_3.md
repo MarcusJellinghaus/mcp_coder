@@ -98,7 +98,8 @@ class TestValidateIssues:
     def test_detects_multiple_status_labels_as_errors(self) -> None: ...
     def test_detects_stale_bot_process_as_warning(self) -> None: ...
     def test_marks_valid_issues_as_ok(self) -> None: ...
-    def test_skips_staleness_check_in_dry_run(self) -> None: ...
+    def test_runs_staleness_check_in_dry_run(self) -> None: ...
+    def test_warns_when_timeout_not_configured(self) -> None: ...
 ```
 
 ---
@@ -129,12 +130,13 @@ from datetime import datetime, timezone
 
 ### check_stale_bot_process
 ```
-1. Get events for issue via issue_manager.get_issue_events()
-2. Filter to "labeled" events matching label_name
-3. If no events found, return (False, None)
-4. Find most recent event by created_at
-5. Calculate elapsed = calculate_elapsed_minutes(event.created_at)
-6. Return (elapsed > timeout_minutes, elapsed)
+1. If timeout_minutes is None (not configured), log warning and return (False, None)
+2. Get events for issue via issue_manager.get_issue_events()
+3. Filter to "labeled" events matching label_name
+4. If no events found, return (False, None)
+5. Find most recent event by created_at
+6. Calculate elapsed = calculate_elapsed_minutes(event.created_at)
+7. Return (elapsed > timeout_minutes, elapsed)
 ```
 
 ### validate_issues
@@ -143,11 +145,13 @@ from datetime import datetime, timezone
 2. For each issue:
 3.   count, labels = check_status_labels(issue)
 4.   If count > 1: add to errors
-5.   If count == 1 and category == "bot_busy" and not dry_run:
-6.     Check staleness, add to warnings if stale
+5.   If count == 1 and category == "bot_busy":
+6.     Check staleness (runs in dry-run too), add to warnings if stale
 7.   Else: add to ok
 8. Return ValidationResults
 ```
+
+**Note:** Staleness checks run even in dry-run mode to show complete validation report.
 
 ---
 

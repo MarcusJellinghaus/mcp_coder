@@ -112,11 +112,15 @@ GroupedIssues = TypedDict('GroupedIssues', {
 
 ## Design Decisions Reference
 
+See [Decisions.md](./Decisions.md) for full discussion log.
+
 | # | Topic | Decision |
 |---|-------|----------|
-| 1 | Dry-run behavior | Prevents ALL changes (labels + initialization) |
+| 1 | Dry-run behavior | Prevents changes but runs staleness checks for complete report |
 | 2 | Multiple status labels | Report only, no auto-fix |
-| 3 | Implementing timeout | 120 minutes |
+| 3 | Implementing timeout | 120 minutes (changed from previous 60) |
 | 4 | Exit codes | 0=success, 1=errors, 2=warnings |
 | 5 | Filter options | `--filter human\|bot\|all` |
 | 6 | Threshold display | Show threshold in stale warnings |
+| 7 | Missing timeout | Skip staleness check with warning |
+| 8 | Code reuse | Move existing functions from workflows/issue_stats.py |

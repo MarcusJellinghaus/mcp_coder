@@ -58,7 +58,7 @@ Add `stale_timeout_minutes` to these labels:
 | Label | internal_id | Timeout (minutes) |
 |-------|-------------|-------------------|
 | `status-03:planning` | `planning` | 15 |
-| `status-06:implementing` | `implementing` | 120 |
+| `status-06:implementing` | `implementing` | 120 | (changed from previous 60) |
 | `status-09:pr-creating` | `pr_creating` | 15 |
 
 ### Expected JSON Structure

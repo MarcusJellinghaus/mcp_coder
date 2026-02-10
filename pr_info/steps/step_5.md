@@ -4,10 +4,10 @@
 ```
 Implement Step 5 of Issue #340. Reference: pr_info/steps/summary.md
 
-Create the core functions for the coordinator issue-stats command.
-Migrate logic from workflows/issue_stats.py to the new CLI module.
+Move the core functions from workflows/issue_stats.py to coordinator/issue_stats.py.
+Update imports and verify existing tests pass with new paths.
 
-Follow TDD: Write tests first, then implement.
+Approach: Move existing tested code rather than rewriting.
 ```
 
 ---
@@ -16,94 +16,51 @@ Follow TDD: Write tests first, then implement.
 
 | File | Action |
 |------|--------|
-| `tests/cli/commands/coordinator/test_issue_stats.py` | Create new |
-| `src/mcp_coder/cli/commands/coordinator/issue_stats.py` | Create new |
+| `src/mcp_coder/cli/commands/coordinator/issue_stats.py` | Create new (move functions from workflows/) |
+| `tests/cli/commands/coordinator/test_issue_stats.py` | Create new (move tests from workflows/) |
+
+### Source Files (to move from)
+| Source | Destination |
+|--------|-------------|
+| `workflows/issue_stats.py` | `src/mcp_coder/cli/commands/coordinator/issue_stats.py` |
+| `tests/workflows/test_issue_stats.py` | `tests/cli/commands/coordinator/test_issue_stats.py` |
 
 ---
 
 ## WHAT
 
-### New File: `issue_stats.py`
+### Move Functions from `workflows/issue_stats.py`
+
+The following functions already exist and are tested. Move them to the new location:
 
 ```python
-"""Issue statistics command for coordinator package."""
-
-from typing import Any
-
-from ....utils.github_operations.issue_manager import IssueData
-
-
-def validate_issue_labels(
-    issue: IssueData,
-    valid_status_labels: set[str]
-) -> tuple[bool, str]:
-    """Validate that issue has exactly one valid status label.
-    
-    Returns:
-        Tuple of (is_valid, error_type: "" | "no_status" | "multiple_status")
-    """
-
-def filter_ignored_issues(
-    issues: list[IssueData],
-    ignore_labels: list[str]
-) -> list[IssueData]:
-    """Filter out issues that have any of the ignored labels."""
-
-def group_issues_by_category(
-    issues: list[IssueData],
-    labels_config: dict[str, Any]
-) -> dict[str, dict[str, list[IssueData]]]:
-    """Group issues by category and status label.
-    
-    Returns:
-        Dict with keys: 'human_action', 'bot_pickup', 'bot_busy', 'errors'
-    """
-
-def display_statistics(
-    grouped_issues: dict[str, dict[str, list[IssueData]]],
-    labels_config: dict[str, Any],
-    repo_url: str,
-    filter_category: str = "all",
-    show_details: bool = False
-) -> None:
-    """Display formatted statistics to console."""
+# Functions to move (preserve signatures and implementation)
+validate_issue_labels(issue, valid_status_labels) -> tuple[bool, str]
+filter_ignored_issues(issues, ignore_labels) -> list[IssueData]
+group_issues_by_category(issues, labels_config) -> dict
+display_statistics(grouped, labels_config, repo_url, filter_category, show_details) -> None
+format_issue_line(issue, repo_url, max_title_length) -> str
+truncate_title(title, max_length) -> str
 ```
 
 ### Test Classes
 
+Move existing tests from `tests/workflows/test_issue_stats.py`. The file contains 50+ tests covering:
+- `TestValidateIssueLabels` - validation logic
+- `TestFilterIgnoredIssues` - ignore label filtering  
+- `TestGroupIssuesByCategory` - category grouping
+- `TestDisplayStatistics` - output formatting
+- Argument parsing tests
+- Integration tests
+
+**Update imports from:**
 ```python
-class TestValidateIssueLabels:
-    """Test validate_issue_labels function."""
-    
-    def test_single_valid_label_returns_valid(self) -> None: ...
-    def test_no_label_returns_no_status(self) -> None: ...
-    def test_multiple_labels_returns_multiple_status(self) -> None: ...
+from workflows.issue_stats import ...
+```
 
-
-class TestFilterIgnoredIssues:
-    """Test filter_ignored_issues function."""
-    
-    def test_empty_ignore_list_returns_all(self) -> None: ...
-    def test_filters_issues_with_ignored_labels(self) -> None: ...
-
-
-class TestGroupIssuesByCategory:
-    """Test group_issues_by_category function."""
-    
-    def test_groups_by_human_action(self) -> None: ...
-    def test_groups_by_bot_pickup(self) -> None: ...
-    def test_groups_by_bot_busy(self) -> None: ...
-    def test_groups_errors_separately(self) -> None: ...
-    def test_includes_empty_labels_in_structure(self) -> None: ...
-
-
-class TestDisplayStatistics:
-    """Test display_statistics function."""
-    
-    def test_displays_all_categories(self, capsys) -> None: ...
-    def test_filter_human_shows_only_human(self, capsys) -> None: ...
-    def test_filter_bot_shows_pickup_and_busy(self, capsys) -> None: ...
-    def test_details_mode_shows_issue_links(self, capsys) -> None: ...
+**To:**
+```python
+from mcp_coder.cli.commands.coordinator.issue_stats import ...
 ```
 
 ---
