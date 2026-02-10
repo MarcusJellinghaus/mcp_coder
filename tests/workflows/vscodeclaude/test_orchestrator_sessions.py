@@ -1192,3 +1192,370 @@ class TestPrepareRestartBranch:
         )
 
         assert result == BranchPrepResult(False, "Multi-branch", None)
+
+
+class TestRestartClosedSessionsBranchHandling:
+    """Tests for branch handling in restart_closed_sessions()."""
+
+    def test_restart_calls_prepare_restart_branch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """restart_closed_sessions() calls _prepare_restart_branch."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+
+        # Track calls to _prepare_restart_branch
+        prepare_calls: list[dict[str, Any]] = []
+
+        def mock_prepare(
+            folder_path: Path,
+            current_status: str,
+            branch_manager: Any,
+            issue_number: int,
+        ) -> BranchPrepResult:
+            prepare_calls.append(
+                {
+                    "folder": folder_path,
+                    "status": current_status,
+                    "issue": issue_number,
+                }
+            )
+            return BranchPrepResult(True, None, None)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            mock_prepare,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            lambda session, issue: tmp_path / "script.bat",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            lambda _: 9999,
+        )
+
+        # Create working folder and workspace file
+        working_folder = tmp_path / "repo_123"
+        working_folder.mkdir()
+        workspace_file = tmp_path / "repo_123.code-workspace"
+        workspace_file.write_text("{}")
+
+        session = {
+            "folder": str(working_folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-01:created",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": ""}
+        sessions_file.write_text(json.dumps(store))
+
+        cached_issue: IssueData = {
+            "number": 123,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-01:created"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {123: cached_issue}
+        }
+
+        restart_closed_sessions(cached_issues_by_repo=cached_issues)
+
+        # Verify _prepare_restart_branch was called
+        assert len(prepare_calls) == 1
+        assert prepare_calls[0]["status"] == "status-01:created"
+        assert prepare_calls[0]["issue"] == 123
+
+    def test_restart_skips_status_04_without_branch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
+    ) -> None:
+        """Status-04 without linked branch skips restart."""
+        import logging
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            lambda **kwargs: BranchPrepResult(False, "No branch", None),
+        )
+
+        working_folder = tmp_path / "repo_456"
+        working_folder.mkdir()
+
+        session = {
+            "folder": str(working_folder),
+            "repo": "owner/repo",
+            "issue_number": 456,
+            "status": "status-04:plan-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": ""}
+        sessions_file.write_text(json.dumps(store))
+
+        cached_issue: IssueData = {
+            "number": 456,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-04:plan-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {456: cached_issue}
+        }
+
+        with caplog.at_level(logging.WARNING):
+            result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+
+        # VSCode should NOT be launched
+        assert len(result) == 0
+        assert "No branch" in caplog.text
+
+    def test_restart_skips_dirty_repo(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
+    ) -> None:
+        """Dirty repo skips restart with Dirty reason."""
+        import logging
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            lambda **kwargs: BranchPrepResult(False, "Dirty", None),
+        )
+
+        working_folder = tmp_path / "repo_789"
+        working_folder.mkdir()
+
+        session = {
+            "folder": str(working_folder),
+            "repo": "owner/repo",
+            "issue_number": 789,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": ""}
+        sessions_file.write_text(json.dumps(store))
+
+        cached_issue: IssueData = {
+            "number": 789,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {789: cached_issue}
+        }
+
+        with caplog.at_level(logging.WARNING):
+            result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+
+        assert len(result) == 0
+        assert "Dirty" in caplog.text
+
+    def test_restart_switches_branch_on_status_change(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Status change from 01 to 04 switches branch and updates status file."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            lambda **kwargs: BranchPrepResult(True, None, "feat-123"),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            lambda session, issue: tmp_path / "script.bat",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            lambda _: 9999,
+        )
+
+        # Track calls to create_status_file
+        status_file_calls: list[dict[str, Any]] = []
+
+        def mock_create_status(**kwargs: Any) -> None:
+            status_file_calls.append(kwargs)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_status_file",
+            mock_create_status,
+        )
+
+        working_folder = tmp_path / "repo_123"
+        working_folder.mkdir()
+        workspace_file = tmp_path / "repo_123.code-workspace"
+        workspace_file.write_text("{}")
+
+        session = {
+            "folder": str(working_folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-01:created",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": ""}
+        sessions_file.write_text(json.dumps(store))
+
+        # Issue is now at status-04
+        cached_issue: IssueData = {
+            "number": 123,
+            "title": "Test Issue",
+            "state": "open",
+            "labels": ["status-04:plan-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/owner/repo/issues/123",
+            "body": "",
+            "locked": False,
+        }
+        cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {123: cached_issue}
+        }
+
+        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+
+        # Session should be restarted
+        assert len(result) == 1
+
+        # Status file should be created with new branch
+        assert len(status_file_calls) == 1
+        assert status_file_calls[0]["branch_name"] == "feat-123"
+
+    def test_intervention_session_follows_same_rules(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
+    ) -> None:
+        """Intervention sessions follow same branch rules."""
+        import logging
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            lambda **kwargs: BranchPrepResult(False, "No branch", None),
+        )
+
+        working_folder = tmp_path / "repo_999"
+        working_folder.mkdir()
+
+        session = {
+            "folder": str(working_folder),
+            "repo": "owner/repo",
+            "issue_number": 999,
+            "status": "status-04:plan-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": True,  # Intervention session
+        }
+        store = {"sessions": [session], "last_updated": ""}
+        sessions_file.write_text(json.dumps(store))
+
+        cached_issue: IssueData = {
+            "number": 999,
+            "title": "Test",
+            "state": "open",
+            "labels": ["status-04:plan-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {999: cached_issue}
+        }
+
+        with caplog.at_level(logging.WARNING):
+            result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+
+        # Should skip even for intervention
+        assert len(result) == 0

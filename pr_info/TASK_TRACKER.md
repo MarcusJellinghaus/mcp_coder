@@ -55,12 +55,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 4
 
 ### Step 5: Modify `restart_closed_sessions()` for Branch-Aware Restart
-- [ ] Modify `restart_closed_sessions()` to use `_prepare_restart_branch()` ([step_5.md](./steps/step_5.md))
-- [ ] Add tests for branch handling in restart in `test_orchestrator_sessions.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 5
+- [x] Modify `restart_closed_sessions()` to use `_prepare_restart_branch()` ([step_5.md](./steps/step_5.md))
+- [x] Add tests for branch handling in restart in `test_orchestrator_sessions.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: Update `display_status_table()` for New Indicators
 - [ ] Add `issues_without_branch` parameter to `display_status_table()` ([step_6.md](./steps/step_6.md))

@@ -729,8 +729,38 @@ def restart_closed_sessions(
                     current_status,
                 )
 
+            # Branch preparation: fetch, check, switch if needed
+            branch_manager = IssueBranchManager(repo_url=repo_url)
+            branch_result = _prepare_restart_branch(
+                folder_path=folder_path,
+                current_status=current_status,
+                branch_manager=branch_manager,
+                issue_number=issue_number,
+            )
+
+            if not branch_result.should_proceed:
+                logger.warning(
+                    "Skipping restart for issue #%d: %s",
+                    issue_number,
+                    branch_result.skip_reason,
+                )
+                continue
+
             # Regenerate all session files with fresh data
             regenerate_session_files(session, issue)
+
+            # If branch was switched, update status file with new branch
+            if branch_result.branch_name:
+                create_status_file(
+                    folder_path=folder_path,
+                    issue_number=issue_number,
+                    issue_title=issue["title"],
+                    status=current_status,
+                    repo_full_name=repo_full_name,
+                    branch_name=branch_result.branch_name,
+                    issue_url=issue.get("url", ""),
+                    is_intervention=session.get("is_intervention", False),
+                )
 
         except Exception as e:
             logger.warning(
