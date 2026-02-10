@@ -429,3 +429,244 @@ class TestStatusDisplay:
         captured = capsys.readouterr()
         assert "#456" in captured.out
         assert "Create and start" in captured.out
+
+
+class TestClosedIssuePrefixDisplay:
+    """Test (Closed) prefix display for closed issues in status table."""
+
+    def test_closed_issue_shows_closed_prefix_in_status(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Closed issue with existing folder shows (Closed) prefix in status column."""
+        # Create folder so it exists
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        # Mock is_issue_closed to return True (issue is closed)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: True,
+        )
+
+        # Mock check_vscode_running - not running
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock check_folder_dirty - folder is clean
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        # Verify session is shown
+        assert "#123" in captured.out
+        # Verify "(Closed)" prefix appears in output
+        assert "(Closed)" in captured.out
+
+    def test_closed_issue_status_includes_original_status_label(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Closed issue status shows both (Closed) prefix and original status."""
+        # Create folder so it exists
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        # Mock is_issue_closed to return True
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: True,
+        )
+
+        # Mock check_vscode_running - not running
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock check_folder_dirty - folder is clean
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 456,
+            "status": "status-04:plan-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        # Should show both (Closed) prefix and status info
+        assert "(Closed)" in captured.out
+        assert "#456" in captured.out
+
+    def test_closed_issue_shows_delete_action(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Closed issue with clean folder shows Delete action."""
+        # Create folder so it exists
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        # Mock is_issue_closed to return True
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: True,
+        )
+
+        # Mock check_vscode_running - not running
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock check_folder_dirty - folder is clean
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        # Should show delete action for closed issue
+        assert "Delete" in captured.out
+
+    def test_closed_issue_dirty_folder_shows_manual_cleanup(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Closed issue with dirty folder shows Manual cleanup action."""
+        # Create folder so it exists
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        # Mock is_issue_closed to return True
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: True,
+        )
+
+        # Mock check_vscode_running - not running
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock check_folder_dirty - folder is DIRTY
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: True,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        # Should show (Closed) prefix
+        assert "(Closed)" in captured.out
+        # Should show Manual cleanup for dirty folder
+        assert "Manual" in captured.out
+
+    def test_open_issue_does_not_show_closed_prefix(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Open issue does not show (Closed) prefix."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        # Mock is_issue_closed to return False (issue is open)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+
+        # Mock check_vscode_running
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock check_folder_dirty
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        # Mock is_session_stale
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        # Should show the session
+        assert "#123" in captured.out
+        # Should NOT show (Closed) prefix
+        assert "(Closed)" not in captured.out

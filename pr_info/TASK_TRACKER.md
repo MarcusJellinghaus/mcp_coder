@@ -34,7 +34,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: Update `display_status_table()` with "(Closed)" Prefix and Folder-Exists Filter
 [Details](./steps/step_2.md)
 
-- [ ] Add test cases for "(Closed)" prefix in status column in `tests/workflows/vscodeclaude/test_status_display.py`
+- [x] Add test cases for "(Closed)" prefix in status column in `tests/workflows/vscodeclaude/test_status_display.py`
 - [ ] Add test case for closed issue with missing folder being skipped
 - [ ] Add test cases for bot stage sessions showing simple delete action
 - [ ] Add test cases for pr-created sessions showing simple delete action
