@@ -126,31 +126,45 @@ Instead of multiple boolean flags, use a single `skip_reason: str | None` patter
 
 ## Implementation Steps
 
-1. **Step 1**: Add `status_requires_linked_branch()` helper with tests
-2. **Step 2**: Add `skip_reason` parameter to `get_next_action()` with tests
-3. **Step 3**: Add `_prepare_restart_branch()` helper with tests
-4. **Step 4**: Modify `process_eligible_issues()` for branch-aware launch
-5. **Step 5**: Modify `restart_closed_sessions()` for branch-aware restart
-6. **Step 6**: Update `display_status_table()` for new indicators
-7. **Step 7**: Update module docstring and final integration testing
+### Core Implementation (Completed)
+1. **Step 1**: Add `status_requires_linked_branch()` helper with tests ✅
+2. **Step 2**: Add `skip_reason` parameter to `get_next_action()` with tests ✅
+3. **Step 3**: Add `_prepare_restart_branch()` helper with tests ✅
+4. **Step 4**: Modify `process_eligible_issues()` for branch-aware launch ✅
+5. **Step 5**: Modify `restart_closed_sessions()` for branch-aware restart ✅
+6. **Step 6**: Update `display_status_table()` for new indicators ✅
+7. **Step 7**: Update module docstring and final integration testing ✅
+
+### Code Review Follow-ups (New)
+8. **Step 8**: Extract CLI logic to `build_eligible_issues_with_branch_check()` helper
+9. **Step 9**: Remove redundant status file write in `restart_closed_sessions()`
+10. **Step 10**: Add comprehensive decision matrix to `orchestrator.py` module docstring
 
 ---
 
 ## Acceptance Criteria Mapping
 
-| Criteria | Step |
-|----------|------|
-| `status-01:created` sessions launch on `main` (or linked branch if exists) | Step 4 |
-| `status-04:plan-review` sessions require linked branch or don't start | Step 4 |
-| `status-07:code-review` sessions require linked branch or don't start | Step 4 |
-| New sessions without linked branch show `→ Needs branch` in status table | Step 6 |
-| `git fetch origin` runs on every restart (all statuses) | Step 3, 5 |
-| Restart verifies linked branch exists for status-04/07 | Step 3, 5 |
-| Session restart runs: `git fetch` → `git checkout` → `git pull` | Step 3, 5 |
-| Session restart detects status change and auto-switches branch | Step 5 |
-| Dirty repos show `!! Dirty`, VSCode not restarted | Step 2, 5 |
-| Missing branch shows `!! No branch`, VSCode not restarted | Step 2, 5 |
-| Git errors show `!! Git error`, VSCode not restarted | Step 2, 5 |
-| Status file updated after successful branch switch | Step 5 |
-| Intervention sessions follow same branch rules | Step 4, 5 |
-| `orchestrator.py` module docstring documents branch handling | Step 7 |
+### Core Feature Requirements
+| Criteria | Step | Status |
+|----------|------|--------|
+| `status-01:created` sessions launch on `main` (or linked branch if exists) | Step 4 | ✅ |
+| `status-04:plan-review` sessions require linked branch or don't start | Step 4 | ✅ |
+| `status-07:code-review` sessions require linked branch or don't start | Step 4 | ✅ |
+| New sessions without linked branch show `→ Needs branch` in status table | Step 6 | ✅ |
+| `git fetch origin` runs on every restart (all statuses) | Step 3, 5 | ✅ |
+| Restart verifies linked branch exists for status-04/07 | Step 3, 5 | ✅ |
+| Session restart runs: `git fetch` → `git checkout` → `git pull` | Step 3, 5 | ✅ |
+| Session restart detects status change and auto-switches branch | Step 5 | ✅ |
+| Dirty repos show `!! Dirty`, VSCode not restarted | Step 2, 5 | ✅ |
+| Missing branch shows `!! No branch`, VSCode not restarted | Step 2, 5 | ✅ |
+| Git errors show `!! Git error`, VSCode not restarted | Step 2, 5 | ✅ |
+| Status file updated after successful branch switch | Step 5 | ✅ |
+| Intervention sessions follow same branch rules | Step 4, 5 | ✅ |
+| `orchestrator.py` module docstring documents branch handling | Step 7 | ✅ |
+
+### Code Quality Improvements
+| Criteria | Step | Status |
+|----------|------|--------|
+| CLI eligible issues logic extracted to reusable helper | Step 8 | ⏳ |
+| Redundant status file write removed from restart | Step 9 | ⏳ |
+| Comprehensive decision matrix documented in module docstring | Step 10 | ⏳ |
