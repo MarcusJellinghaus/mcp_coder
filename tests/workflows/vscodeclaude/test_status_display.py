@@ -760,3 +760,344 @@ class TestClosedIssuePrefixDisplay:
         assert "#123" in captured.out
         # Should NOT show (Closed) prefix
         assert "(Closed)" not in captured.out
+
+
+class TestBotStageSessionsDeleteAction:
+    """Test bot stage sessions show simple delete action.
+
+    Bot stage sessions are those at statuses where the bot is working:
+    - bot_pickup: 02, 05, 08 (bot picks up work)
+    - bot_busy: 03, 06, 09 (bot is actively working)
+
+    These sessions should show "Delete" action since they don't need VSCodeClaude.
+    """
+
+    def test_bot_pickup_status_02_shows_delete_action(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Session at status-02:awaiting-planning shows Delete action."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        # Mock is_issue_closed to return False (issue is open)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+
+        # Mock check_vscode_running - not running
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock check_folder_dirty - folder is clean
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-02:awaiting-planning",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        # Should show the session
+        assert "#123" in captured.out
+        # Should show Delete action for bot stage status
+        assert "Delete" in captured.out
+        # Should NOT show (Closed) since issue is open
+        assert "(Closed)" not in captured.out
+
+    def test_bot_pickup_status_05_shows_delete_action(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Session at status-05:awaiting-coding shows Delete action."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 456,
+            "status": "status-05:awaiting-coding",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#456" in captured.out
+        assert "Delete" in captured.out
+
+    def test_bot_pickup_status_08_shows_delete_action(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Session at status-08:ready-pr shows Delete action."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 789,
+            "status": "status-08:ready-pr",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#789" in captured.out
+        assert "Delete" in captured.out
+
+    def test_bot_busy_status_03_shows_delete_action(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Session at status-03:planning shows Delete action."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 101,
+            "status": "status-03:planning",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#101" in captured.out
+        assert "Delete" in captured.out
+
+    def test_bot_busy_status_06_shows_delete_action(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Session at status-06:coding shows Delete action."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 202,
+            "status": "status-06:coding",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#202" in captured.out
+        assert "Delete" in captured.out
+
+    def test_bot_busy_status_09_shows_delete_action(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Session at status-09:creating-pr shows Delete action."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 303,
+            "status": "status-09:creating-pr",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#303" in captured.out
+        assert "Delete" in captured.out
+
+    def test_bot_stage_dirty_folder_shows_manual_cleanup(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Bot stage session with dirty folder shows Manual cleanup."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        # Folder is DIRTY
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: True,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 404,
+            "status": "status-02:awaiting-planning",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#404" in captured.out
+        # Dirty folder should show Manual cleanup
+        assert "Manual" in captured.out
+
+    def test_eligible_status_shows_restart_not_delete(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Eligible status (01, 04, 07) shows Restart, NOT Delete."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+        # Status is the same as session (not stale from status change)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 505,
+            "status": "status-07:code-review",  # Eligible status
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#505" in captured.out
+        # Eligible status should show Restart, NOT Delete
+        assert "Restart" in captured.out
+        assert "Delete" not in captured.out
