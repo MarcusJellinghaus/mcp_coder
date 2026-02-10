@@ -8,10 +8,17 @@ import argparse
 import json
 import logging
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, TypedDict
 
-from ...utils.github_operations.issue_manager import IssueData, IssueManager
+from ...utils.github_operations.issue_manager import (
+    IssueData,
+    IssueEventType,
+    IssueManager,
+)
 from ...utils.github_operations.label_config import (
+    build_label_lookups,
     get_labels_config_path,
     load_labels_config,
 )
@@ -19,6 +26,18 @@ from ...utils.github_operations.labels_manager import LabelsManager
 from ...workflows.utils import resolve_project_dir
 
 logger = logging.getLogger(__name__)
+
+
+class ValidationResults(TypedDict):
+    """Results from issue validation."""
+
+    initialized: list[int]  # Issue numbers initialized
+    errors: list[dict[str, Any]]  # {'issue': int, 'labels': list[str]}
+    warnings: list[
+        dict[str, Any]
+    ]  # {'issue': int, 'label': str, 'elapsed': int, 'threshold': int}
+    ok: list[int]  # Issue numbers with valid single label
+    skipped: int  # Count of ignored issues
 
 
 def _log_dry_run_changes(changes: dict[str, list[str]]) -> None:
@@ -97,6 +116,160 @@ def initialize_issues(
             initialized.append(issue_number)
 
     return initialized
+
+
+def calculate_elapsed_minutes(timestamp_str: str) -> int:
+    """Calculate minutes elapsed since given ISO timestamp.
+
+    Args:
+        timestamp_str: ISO format timestamp (may have 'Z' suffix)
+
+    Returns:
+        Integer minutes elapsed
+    """
+    # Replace 'Z' suffix with '+00:00' for fromisoformat compatibility
+    if timestamp_str.endswith("Z"):
+        timestamp_str = timestamp_str[:-1] + "+00:00"
+
+    # Parse ISO timestamp
+    timestamp = datetime.fromisoformat(timestamp_str)
+
+    # Get current UTC time
+    now = datetime.now(timezone.utc)
+
+    # Calculate elapsed minutes
+    elapsed_seconds = (now - timestamp).total_seconds()
+    return int(elapsed_seconds / 60)
+
+
+def check_stale_bot_process(
+    issue: IssueData,
+    label_name: str,
+    timeout_minutes: int | None,
+    issue_manager: IssueManager,
+) -> tuple[bool, int | None]:
+    """Check if a bot_busy label has exceeded its timeout threshold.
+
+    Args:
+        issue: Issue data containing the bot_busy label
+        label_name: Name of the bot_busy label to check
+        timeout_minutes: Configured timeout threshold (None if not configured)
+        issue_manager: IssueManager instance for API calls
+
+    Returns:
+        Tuple of (is_stale, elapsed_minutes or None if not found)
+    """
+    # If timeout_minutes is None (not configured), log warning and return
+    if timeout_minutes is None:
+        logger.warning(
+            f"stale_timeout_minutes not configured for label '{label_name}', "
+            "skipping staleness check"
+        )
+        return (False, None)
+
+    # Get events for issue
+    issue_number = issue["number"]
+    events = issue_manager.get_issue_events(issue_number, IssueEventType.LABELED)
+
+    # Filter to events matching the label_name
+    label_events = [event for event in events if event["label"] == label_name]
+
+    # If no events found, return (False, None)
+    if not label_events:
+        return (False, None)
+
+    # Find most recent event by created_at
+    most_recent = max(label_events, key=lambda e: e["created_at"])
+
+    # Calculate elapsed minutes
+    elapsed = calculate_elapsed_minutes(most_recent["created_at"])
+
+    # Return (is_stale, elapsed)
+    return (elapsed > timeout_minutes, elapsed)
+
+
+def validate_issues(
+    issues: list[IssueData],
+    labels_config: dict[str, Any],
+    issue_manager: IssueManager,
+    dry_run: bool = False,  # pylint: disable=unused-argument
+) -> ValidationResults:
+    """Validate all issues for errors and warnings.
+
+    Checks each issue for:
+    1. Multiple status labels (error)
+    2. Stale bot_busy processes exceeding timeout (warning)
+
+    Note: dry_run parameter is accepted for API consistency but staleness
+    checks always run to provide complete validation reports.
+
+    Args:
+        issues: List of IssueData from repository
+        labels_config: Full labels configuration with workflow_labels
+        issue_manager: IssueManager instance for API calls
+        dry_run: Accepted for API consistency (staleness checks always run)
+
+    Returns:
+        ValidationResults with errors, warnings, ok lists
+    """
+    # Build label lookups
+    label_lookups = build_label_lookups(labels_config)
+    workflow_label_names = label_lookups["all_names"]
+    name_to_category = label_lookups["name_to_category"]
+
+    # Build name_to_timeout lookup from config
+    name_to_timeout: dict[str, int | None] = {}
+    for label in labels_config["workflow_labels"]:
+        name_to_timeout[label["name"]] = label.get("stale_timeout_minutes")
+
+    # Initialize results
+    results: ValidationResults = {
+        "initialized": [],
+        "errors": [],
+        "warnings": [],
+        "ok": [],
+        "skipped": 0,
+    }
+
+    for issue in issues:
+        issue_number = issue["number"]
+        count, found_labels = check_status_labels(issue, workflow_label_names)
+
+        if count > 1:
+            # Multiple status labels - error
+            results["errors"].append({"issue": issue_number, "labels": found_labels})
+        elif count == 1:
+            # Single status label - check if bot_busy and potentially stale
+            label_name = found_labels[0]
+            category = name_to_category.get(label_name)
+
+            if category == "bot_busy":
+                # Check staleness (runs in dry-run too for complete report)
+                timeout = name_to_timeout.get(label_name)
+                is_stale, elapsed = check_stale_bot_process(
+                    issue, label_name, timeout, issue_manager
+                )
+
+                if is_stale and elapsed is not None and timeout is not None:
+                    results["warnings"].append(
+                        {
+                            "issue": issue_number,
+                            "label": label_name,
+                            "elapsed": elapsed,
+                            "threshold": timeout,
+                        }
+                    )
+                else:
+                    results["ok"].append(issue_number)
+            else:
+                # Not bot_busy - OK
+                results["ok"].append(issue_number)
+        else:
+            # No status labels (count == 0) - should have been initialized
+            # This is handled by initialize_issues, so we count as OK
+            results["ok"].append(issue_number)
+
+    return results
 
 
 def calculate_label_changes(

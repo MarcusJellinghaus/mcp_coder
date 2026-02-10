@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 2
 
 ### Step 3: Validation and Staleness Detection in define-labels
-- [ ] Implement Step 3 - Add `calculate_elapsed_minutes`, `check_stale_bot_process`, and `validate_issues` functions ([step_3.md](./steps/step_3.md))
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] Implement Step 3 - Add `calculate_elapsed_minutes`, `check_stale_bot_process`, and `validate_issues` functions ([step_3.md](./steps/step_3.md))
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Exit Codes and Output Formatting in define-labels
 - [ ] Implement Step 4 - Update `execute_define_labels()` with initialization, validation, and exit codes ([step_4.md](./steps/step_4.md))

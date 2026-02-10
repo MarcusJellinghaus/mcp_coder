@@ -10,6 +10,7 @@ Tests cover:
 
 import argparse
 import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -17,11 +18,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.define_labels import (
+    ValidationResults,
     apply_labels,
+    calculate_elapsed_minutes,
     calculate_label_changes,
+    check_stale_bot_process,
     check_status_labels,
     execute_define_labels,
     initialize_issues,
+    validate_issues,
 )
 from mcp_coder.utils.github_operations.issue_manager import IssueData
 from mcp_coder.utils.github_operations.label_config import load_labels_config
@@ -1102,3 +1107,438 @@ class TestInitializeIssues:
 
         # Only issues 10 and 30 should be initialized (20 already has a label)
         assert result == [10, 30]
+
+
+class TestCalculateElapsedMinutes:
+    """Test calculate_elapsed_minutes function."""
+
+    def test_calculates_minutes_from_iso_timestamp(self) -> None:
+        """Test that elapsed minutes are calculated correctly from ISO timestamp."""
+        # Create a timestamp 30 minutes ago
+        timestamp = datetime.now(timezone.utc) - timedelta(minutes=30)
+        timestamp_str = timestamp.isoformat()
+
+        result = calculate_elapsed_minutes(timestamp_str)
+
+        # Allow 1 minute tolerance for test execution time
+        assert 29 <= result <= 31
+
+    def test_handles_z_suffix(self) -> None:
+        """Test that Z suffix timestamps are handled correctly."""
+        # Create a timestamp 60 minutes ago with Z suffix
+        timestamp = datetime.now(timezone.utc) - timedelta(minutes=60)
+        # Format with Z suffix instead of +00:00
+        timestamp_str = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+        result = calculate_elapsed_minutes(timestamp_str)
+
+        # Allow 1 minute tolerance for test execution time
+        assert 59 <= result <= 61
+
+    def test_handles_timezone_offset(self) -> None:
+        """Test that timezone offset in timestamps is handled correctly."""
+        # Create a timestamp 15 minutes ago with explicit UTC offset
+        timestamp = datetime.now(timezone.utc) - timedelta(minutes=15)
+        timestamp_str = timestamp.isoformat()  # Will include +00:00
+
+        result = calculate_elapsed_minutes(timestamp_str)
+
+        # Allow 1 minute tolerance
+        assert 14 <= result <= 16
+
+
+class TestCheckStaleBotProcess:
+    """Test check_stale_bot_process function."""
+
+    def test_returns_false_when_under_threshold(self) -> None:
+        """Test that returns False when elapsed time is under threshold."""
+        issue: IssueData = {
+            "number": 1,
+            "title": "Test issue",
+            "body": "",
+            "state": "open",
+            "labels": ["status-06:implementing"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "locked": False,
+        }
+
+        # Create event timestamp 10 minutes ago (under 120 min threshold)
+        recent_timestamp = (
+            datetime.now(timezone.utc) - timedelta(minutes=10)
+        ).isoformat()
+
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.get_issue_events.return_value = [
+            {
+                "event": "labeled",
+                "label": "status-06:implementing",
+                "created_at": recent_timestamp,
+                "actor": "bot",
+            }
+        ]
+
+        is_stale, elapsed = check_stale_bot_process(
+            issue, "status-06:implementing", 120, mock_issue_manager
+        )
+
+        assert is_stale is False
+        assert elapsed is not None
+        assert 9 <= elapsed <= 11  # Allow 1 minute tolerance
+
+    def test_returns_true_when_over_threshold(self) -> None:
+        """Test that returns True when elapsed time is over threshold."""
+        issue: IssueData = {
+            "number": 2,
+            "title": "Stale issue",
+            "body": "",
+            "state": "open",
+            "labels": ["status-06:implementing"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "locked": False,
+        }
+
+        # Create event timestamp 150 minutes ago (over 120 min threshold)
+        stale_timestamp = (
+            datetime.now(timezone.utc) - timedelta(minutes=150)
+        ).isoformat()
+
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.get_issue_events.return_value = [
+            {
+                "event": "labeled",
+                "label": "status-06:implementing",
+                "created_at": stale_timestamp,
+                "actor": "bot",
+            }
+        ]
+
+        is_stale, elapsed = check_stale_bot_process(
+            issue, "status-06:implementing", 120, mock_issue_manager
+        )
+
+        assert is_stale is True
+        assert elapsed is not None
+        assert 149 <= elapsed <= 151  # Allow 1 minute tolerance
+
+    def test_returns_none_when_no_labeled_event(self) -> None:
+        """Test that returns None when no matching labeled event found."""
+        issue: IssueData = {
+            "number": 3,
+            "title": "Issue without events",
+            "body": "",
+            "state": "open",
+            "labels": ["status-06:implementing"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "locked": False,
+        }
+
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.get_issue_events.return_value = []  # No events
+
+        is_stale, elapsed = check_stale_bot_process(
+            issue, "status-06:implementing", 120, mock_issue_manager
+        )
+
+        assert is_stale is False
+        assert elapsed is None
+
+    def test_returns_false_when_timeout_not_configured(self) -> None:
+        """Test that returns False when timeout is None (not configured)."""
+        issue: IssueData = {
+            "number": 4,
+            "title": "Issue with unconfigured timeout",
+            "body": "",
+            "state": "open",
+            "labels": ["status-06:implementing"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "locked": False,
+        }
+
+        mock_issue_manager = MagicMock()
+
+        is_stale, elapsed = check_stale_bot_process(
+            issue, "status-06:implementing", None, mock_issue_manager
+        )
+
+        assert is_stale is False
+        assert elapsed is None
+        # API should not be called when timeout is None
+        mock_issue_manager.get_issue_events.assert_not_called()
+
+
+class TestValidateIssues:
+    """Test validate_issues function."""
+
+    @pytest.fixture
+    def sample_labels_config(self) -> dict[str, Any]:
+        """Create a sample labels config for testing."""
+        return {
+            "workflow_labels": [
+                {
+                    "name": "status-01:created",
+                    "internal_id": "created",
+                    "category": "human_action",
+                    "color": "10b981",
+                    "description": "Fresh issue",
+                },
+                {
+                    "name": "status-03:planning",
+                    "internal_id": "planning",
+                    "category": "bot_busy",
+                    "color": "a7f3d0",
+                    "description": "Planning in progress",
+                    "stale_timeout_minutes": 15,
+                },
+                {
+                    "name": "status-06:implementing",
+                    "internal_id": "implementing",
+                    "category": "bot_busy",
+                    "color": "bfdbfe",
+                    "description": "Implementation in progress",
+                    "stale_timeout_minutes": 120,
+                },
+            ]
+        }
+
+    def test_detects_multiple_status_labels_as_errors(
+        self, sample_labels_config: dict[str, Any]
+    ) -> None:
+        """Test that issues with multiple status labels are reported as errors."""
+        issues: list[IssueData] = [
+            {
+                "number": 23,
+                "title": "Issue with multiple labels",
+                "body": "",
+                "state": "open",
+                "labels": ["status-01:created", "status-03:planning"],
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "",
+                "locked": False,
+            }
+        ]
+
+        mock_issue_manager = MagicMock()
+
+        result = validate_issues(
+            issues, sample_labels_config, mock_issue_manager, dry_run=False
+        )
+
+        assert len(result["errors"]) == 1
+        assert result["errors"][0]["issue"] == 23
+        assert set(result["errors"][0]["labels"]) == {
+            "status-01:created",
+            "status-03:planning",
+        }
+        assert len(result["ok"]) == 0
+        assert len(result["warnings"]) == 0
+
+    def test_detects_stale_bot_process_as_warning(
+        self, sample_labels_config: dict[str, Any]
+    ) -> None:
+        """Test that stale bot_busy processes are reported as warnings."""
+        issues: list[IssueData] = [
+            {
+                "number": 78,
+                "title": "Stale implementing issue",
+                "body": "",
+                "state": "open",
+                "labels": ["status-06:implementing"],
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "",
+                "locked": False,
+            }
+        ]
+
+        # Create event timestamp 150 minutes ago (over 120 min threshold)
+        stale_timestamp = (
+            datetime.now(timezone.utc) - timedelta(minutes=150)
+        ).isoformat()
+
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.get_issue_events.return_value = [
+            {
+                "event": "labeled",
+                "label": "status-06:implementing",
+                "created_at": stale_timestamp,
+                "actor": "bot",
+            }
+        ]
+
+        result = validate_issues(
+            issues, sample_labels_config, mock_issue_manager, dry_run=False
+        )
+
+        assert len(result["warnings"]) == 1
+        assert result["warnings"][0]["issue"] == 78
+        assert result["warnings"][0]["label"] == "status-06:implementing"
+        assert result["warnings"][0]["threshold"] == 120
+        assert 149 <= result["warnings"][0]["elapsed"] <= 151
+        assert len(result["errors"]) == 0
+        assert len(result["ok"]) == 0
+
+    def test_marks_valid_issues_as_ok(
+        self, sample_labels_config: dict[str, Any]
+    ) -> None:
+        """Test that valid issues are marked as OK."""
+        issues: list[IssueData] = [
+            {
+                "number": 1,
+                "title": "Valid issue with human_action label",
+                "body": "",
+                "state": "open",
+                "labels": ["status-01:created"],
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "",
+                "locked": False,
+            },
+            {
+                "number": 2,
+                "title": "Valid issue with fresh bot_busy label",
+                "body": "",
+                "state": "open",
+                "labels": ["status-06:implementing"],
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "",
+                "locked": False,
+            },
+        ]
+
+        # Create event timestamp 10 minutes ago (under 120 min threshold)
+        recent_timestamp = (
+            datetime.now(timezone.utc) - timedelta(minutes=10)
+        ).isoformat()
+
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.get_issue_events.return_value = [
+            {
+                "event": "labeled",
+                "label": "status-06:implementing",
+                "created_at": recent_timestamp,
+                "actor": "bot",
+            }
+        ]
+
+        result = validate_issues(
+            issues, sample_labels_config, mock_issue_manager, dry_run=False
+        )
+
+        assert result["ok"] == [1, 2]
+        assert len(result["errors"]) == 0
+        assert len(result["warnings"]) == 0
+
+    def test_runs_staleness_check_in_dry_run(
+        self, sample_labels_config: dict[str, Any]
+    ) -> None:
+        """Test that staleness checks run even in dry-run mode."""
+        issues: list[IssueData] = [
+            {
+                "number": 100,
+                "title": "Stale issue in dry run",
+                "body": "",
+                "state": "open",
+                "labels": ["status-06:implementing"],
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "",
+                "locked": False,
+            }
+        ]
+
+        # Create stale timestamp
+        stale_timestamp = (
+            datetime.now(timezone.utc) - timedelta(minutes=150)
+        ).isoformat()
+
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.get_issue_events.return_value = [
+            {
+                "event": "labeled",
+                "label": "status-06:implementing",
+                "created_at": stale_timestamp,
+                "actor": "bot",
+            }
+        ]
+
+        result = validate_issues(
+            issues, sample_labels_config, mock_issue_manager, dry_run=True
+        )
+
+        # Staleness check should run and report warning even in dry-run
+        assert len(result["warnings"]) == 1
+        assert result["warnings"][0]["issue"] == 100
+        mock_issue_manager.get_issue_events.assert_called_once()
+
+    def test_handles_missing_timeout_gracefully(
+        self, sample_labels_config: dict[str, Any]
+    ) -> None:
+        """Test that missing timeout configuration is handled gracefully."""
+        # Add a bot_busy label without stale_timeout_minutes
+        sample_labels_config["workflow_labels"].append(
+            {
+                "name": "status-09:pr-creating",
+                "internal_id": "pr_creating",
+                "category": "bot_busy",
+                "color": "fed7aa",
+                "description": "Creating PR",
+                # Note: no stale_timeout_minutes
+            }
+        )
+
+        issues: list[IssueData] = [
+            {
+                "number": 50,
+                "title": "Issue with unconfigured timeout",
+                "body": "",
+                "state": "open",
+                "labels": ["status-09:pr-creating"],
+                "assignees": [],
+                "user": None,
+                "created_at": None,
+                "updated_at": None,
+                "url": "",
+                "locked": False,
+            }
+        ]
+
+        mock_issue_manager = MagicMock()
+
+        result = validate_issues(
+            issues, sample_labels_config, mock_issue_manager, dry_run=False
+        )
+
+        # Should be marked as OK (staleness check skipped)
+        assert result["ok"] == [50]
+        assert len(result["errors"]) == 0
+        assert len(result["warnings"]) == 0
+        # API should not be called when timeout is not configured
+        mock_issue_manager.get_issue_events.assert_not_called()
