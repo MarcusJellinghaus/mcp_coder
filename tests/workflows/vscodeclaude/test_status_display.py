@@ -619,6 +619,96 @@ class TestClosedIssuePrefixDisplay:
         # Should show Manual cleanup for dirty folder
         assert "Manual" in captured.out
 
+    def test_closed_issue_missing_folder_is_skipped(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Closed issue with missing folder is not shown in status table."""
+        # Create a path that does NOT exist - session folder is missing
+        missing_folder = tmp_path / "missing_folder"
+        # Do NOT create the folder - it should not exist
+
+        # Mock is_issue_closed to return True (issue is closed)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: True,
+        )
+
+        # These mocks should NOT be called since session should be skipped
+        # But we set them up anyway in case the implementation calls them
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(missing_folder),  # Folder does not exist
+            "repo": "owner/repo",
+            "issue_number": 789,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        # Session with closed issue and missing folder should be SKIPPED
+        # Nothing to clean up if folder doesn't exist
+        assert "#789" not in captured.out
+        assert "(Closed)" not in captured.out
+
+    def test_closed_issue_existing_folder_is_shown(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Closed issue with existing folder IS shown (contrast to missing folder)."""
+        # Create folder so it exists
+        existing_folder = tmp_path / "existing_folder"
+        existing_folder.mkdir()
+
+        # Mock is_issue_closed to return True (issue is closed)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: True,
+        )
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(existing_folder),  # Folder EXISTS
+            "repo": "owner/repo",
+            "issue_number": 789,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        # Session with closed issue and EXISTING folder should be shown
+        # Needs cleanup since folder exists
+        assert "#789" in captured.out
+        assert "(Closed)" in captured.out
+
     def test_open_issue_does_not_show_closed_prefix(
         self,
         tmp_path: Path,
