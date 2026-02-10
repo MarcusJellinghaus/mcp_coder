@@ -163,13 +163,13 @@ def cleanup_stale_sessions(
         elif git_status == "Dirty":
             # Skip - has uncommitted changes
             logger.warning("Skipping dirty folder: %s", folder)
-            print(f"⚠️  Skipping (dirty): {folder}")
+            print(f"[WARN] Skipping (dirty): {folder}")
             result["skipped"].append(folder)
 
         else:  # "No Git" or "Error"
             # Skip - needs manual investigation
             logger.warning("Skipping folder (%s): %s", git_status.lower(), folder)
-            print(f"⚠️  Skipping ({git_status.lower()}): {folder}")
+            print(f"[WARN] Skipping ({git_status.lower()}): {folder}")
             result["skipped"].append(folder)
 
     if not stale_sessions:
