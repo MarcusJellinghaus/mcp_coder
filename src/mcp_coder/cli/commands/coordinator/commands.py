@@ -558,11 +558,8 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 success)
     """
-    from ....workflows.vscodeclaude.helpers import get_issue_status
     from ....workflows.vscodeclaude.issues import (
-        get_cached_eligible_vscodeclaude_issues,
-        get_linked_branch_for_issue,
-        status_requires_linked_branch,
+        build_eligible_issues_with_branch_check,
     )
     from ....workflows.vscodeclaude.status import display_status_table
 
@@ -579,59 +576,9 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     sessions = store["sessions"]
 
     # Build eligible issues list and issues_without_branch set
-    eligible_issues: list[tuple[str, IssueData]] = []
-    issues_without_branch: set[tuple[str, int]] = set()
-
-    for repo_name in repo_names:
-        try:
-            repo_config_data: dict[str, Any] = load_repo_config(repo_name)
-            repo_url = repo_config_data.get("repo_url", "")
-            if not repo_url:
-                continue
-
-            repo_full_name = _get_repo_full_name_from_url(repo_url)
-            if not repo_full_name:
-                continue
-
-            # Load vscodeclaude config for this repo
-            vscodeclaude_config = load_vscodeclaude_config()
-            github_username: str = str(vscodeclaude_config.get("github_username", ""))
-            if not github_username:
-                continue
-
-            # Get eligible issues for this repo
-            issue_manager_instance: IssueManager = IssueManager(repo_url=repo_url)
-            repo_eligible_issues = get_cached_eligible_vscodeclaude_issues(
-                repo_full_name=repo_full_name,
-                issue_manager=issue_manager_instance,
-                github_username=github_username,
-                force_refresh=False,
-                cache_refresh_minutes=get_cache_refresh_minutes(),
-            )
-
-            # Create branch manager for linked branch checks
-            branch_manager_instance = IssueBranchManager(repo_url=repo_url)
-
-            # Add to eligible_issues list and check branch requirements
-            for issue in repo_eligible_issues:
-                eligible_issues.append((repo_full_name, issue))
-
-                # Check if this issue needs branch but doesn't have one
-                status = get_issue_status(issue)
-                if status_requires_linked_branch(status):
-                    try:
-                        branch = get_linked_branch_for_issue(
-                            branch_manager_instance, issue["number"]
-                        )
-                        if branch is None:
-                            issues_without_branch.add((repo_full_name, issue["number"]))
-                    except ValueError:
-                        # Multiple branches - also add to set
-                        issues_without_branch.add((repo_full_name, issue["number"]))
-
-        except Exception as e:
-            logger.warning(f"Failed to process repo {repo_name} for status: {e}")
-            continue
+    eligible_issues, issues_without_branch = build_eligible_issues_with_branch_check(
+        repo_names
+    )
 
     # Use display_status_table from status.py
     display_status_table(

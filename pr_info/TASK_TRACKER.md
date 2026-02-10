@@ -85,7 +85,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Code Review Follow-ups
 
 ### Step 8: Extract CLI Logic to Helper Function
-- [ ] Implement `build_eligible_issues_with_branch_check()` in `issues.py` ([step_8.md](./steps/step_8.md))
+- [x] Implement `build_eligible_issues_with_branch_check()` in `issues.py` ([step_8.md](./steps/step_8.md))
 - [ ] Add tests for helper function in `test_issues.py`
 - [ ] Refactor `execute_coordinator_vscodeclaude_status()` to use helper
 - [ ] Run pylint and fix any issues
