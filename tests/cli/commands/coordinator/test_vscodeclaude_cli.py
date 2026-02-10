@@ -373,7 +373,7 @@ class TestCommandHandlers:
 
         assert result == 0
         captured = capsys.readouterr()
-        assert "No active sessions" in captured.out
+        assert "No sessions or eligible issues found." in captured.out
 
     def test_execute_vscodeclaude_intervene_requires_issue(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]

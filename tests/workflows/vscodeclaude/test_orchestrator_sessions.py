@@ -1215,6 +1215,21 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: {"owner/repo"},
         )
 
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        from unittest.mock import MagicMock
+
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         # Track calls to _prepare_restart_branch
         prepare_calls: list[dict[str, Any]] = []
 
@@ -1307,6 +1322,22 @@ class TestRestartClosedSessionsBranchHandling:
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
             lambda: {"owner/repo"},
         )
+
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        from unittest.mock import MagicMock
+
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
             lambda **kwargs: BranchPrepResult(False, "No branch", None),
@@ -1370,6 +1401,22 @@ class TestRestartClosedSessionsBranchHandling:
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
             lambda: {"owner/repo"},
         )
+
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        from unittest.mock import MagicMock
+
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
             lambda **kwargs: BranchPrepResult(False, "Dirty", None),
@@ -1430,6 +1477,22 @@ class TestRestartClosedSessionsBranchHandling:
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
             lambda: {"owner/repo"},
         )
+
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        from unittest.mock import MagicMock
+
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
             lambda **kwargs: BranchPrepResult(True, None, "feat-123"),

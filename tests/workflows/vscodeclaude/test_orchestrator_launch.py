@@ -96,6 +96,20 @@ class TestProcessEligibleIssuesBranchRequirement:
             "locked": False,
         }
 
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_linked_branches.return_value = []
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
             lambda *args, **kwargs: [mock_issue],
@@ -160,6 +174,20 @@ class TestProcessEligibleIssuesBranchRequirement:
             "updated_at": None,
             "locked": False,
         }
+
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_linked_branches.return_value = []
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
@@ -230,6 +258,20 @@ class TestProcessEligibleIssuesBranchRequirement:
             "locked": False,
         }
 
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_linked_branches.return_value = []
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
             lambda *args, **kwargs: [mock_issue],
@@ -293,6 +335,20 @@ class TestProcessEligibleIssuesBranchRequirement:
             "updated_at": None,
             "locked": False,
         }
+
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_linked_branches.return_value = ["feat-456"]
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
