@@ -1,9 +1,9 @@
 """Cleanup functions for vscodeclaude feature."""
 
 import logging
-import shutil
 from pathlib import Path
 
+from ...utils.folder_deletion import safe_delete_folder
 from ...utils.github_operations.issues import IssueData
 from .issues import get_ignore_labels, get_matching_ignore_label
 from .orchestrator import _get_configured_repos
@@ -85,14 +85,16 @@ def delete_session_folder(session: VSCodeClaudeSession) -> bool:
     Returns:
         True if successfully deleted
 
-    Uses shutil.rmtree for folder deletion.
+    Uses safe_delete_folder for robust folder deletion.
     """
     folder_path = Path(session["folder"])
 
     try:
-        # Delete the folder if it exists
+        # Use safe_delete_folder for robust folder deletion
         if folder_path.exists():
-            shutil.rmtree(folder_path)
+            if not safe_delete_folder(folder_path):
+                logger.error("Failed to delete session folder: %s", folder_path)
+                return False
             logger.info("Deleted folder: %s", folder_path)
 
         # Also delete the workspace file if it exists

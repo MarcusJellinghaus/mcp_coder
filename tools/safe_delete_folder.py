@@ -23,6 +23,13 @@ Usage:
 
 Note: --kill-lockers (-k) is STRONGLY RECOMMENDED when using --delete.
       Without it, locked files will cause deletion to fail.
+
+Library Alternative:
+    For programmatic use within mcp_coder, use the library function instead:
+        from mcp_coder.utils.folder_deletion import safe_delete_folder
+    The library version (src/mcp_coder/utils/folder_deletion.py) provides a
+    cleaner API without CLI features like handle64.exe diagnostics or process
+    killing, but shares the same staging directory for locked files.
 """
 
 from __future__ import annotations
@@ -218,20 +225,29 @@ MAX_DELETE_RETRIES = 50  # Max locked files to move before giving up
 
 
 def _rmtree_remove_readonly(func: Callable[..., None], path: str, _exc: object) -> None:
-    """Error handler for shutil.rmtree to handle readonly files."""
+    """Error handler for shutil.rmtree to handle readonly files.
+
+    Note: Library equivalent: mcp_coder.utils.folder_deletion._rmtree_remove_readonly()
+    """
     os.chmod(path, stat.S_IWRITE)
     func(path)
 
 
 def _get_staging_dir() -> Path:
-    """Get the temp staging directory path."""
+    """Get the temp staging directory path.
+
+    Note: Library equivalent: mcp_coder.utils.folder_deletion._get_default_staging_dir()
+    """
     import tempfile
 
     return Path(tempfile.gettempdir()) / "safe_delete_staging"
 
 
 def _move_file_to_temp(filepath: Path) -> tuple[bool, str]:
-    """Move a locked file to temp directory."""
+    """Move a locked file to temp directory.
+
+    Note: Library equivalent: mcp_coder.utils.folder_deletion._move_to_staging()
+    """
     import uuid
 
     temp_base = _get_staging_dir()
@@ -248,6 +264,8 @@ def _move_file_to_temp(filepath: Path) -> tuple[bool, str]:
 
 def _cleanup_staging(quiet: bool = False) -> tuple[int, int]:
     """Try to delete everything in the staging directory.
+
+    Note: Library equivalent: mcp_coder.utils.folder_deletion._cleanup_staging()
 
     Returns:
         Tuple of (deleted_count, remaining_count)
@@ -292,7 +310,10 @@ def _extract_path_from_error(error: PermissionError | OSError) -> Path | None:
 
 
 def _is_directory_empty(path: Path) -> bool:
-    """Check if a directory is empty."""
+    """Check if a directory is empty.
+
+    Note: Library equivalent: mcp_coder.utils.folder_deletion._is_directory_empty()
+    """
     try:
         return not any(path.iterdir())
     except (PermissionError, OSError):
@@ -306,6 +327,8 @@ def _try_rmdir_with_kill(
     killed_procs: list[str],
 ) -> tuple[bool, str]:
     """Try to remove an empty directory, killing lockers if needed.
+
+    Note: Library equivalent (without kill): mcp_coder.utils.folder_deletion._try_delete_empty_directory()
 
     Args:
         path: Empty directory to remove
@@ -371,6 +394,9 @@ def _delete_folder(
     path: Path, kill_lockers: bool = False, quiet: bool = False
 ) -> tuple[bool, str, list[str], list[str]]:
     """Delete folder with escalating strategies for locked files.
+
+    Note: Library equivalent (without kill): mcp_coder.utils.folder_deletion.safe_delete_folder()
+    The library version provides a simpler API without process killing or diagnostics.
 
     Strategy (escalates as needed):
         1. For empty directories: try rmdir, then kill lockers, then move

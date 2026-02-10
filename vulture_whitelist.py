@@ -131,6 +131,12 @@ _.runner_type
 # unittest.mock sets side_effect to configure mock behavior; framework uses it internally
 _.side_effect
 
+# Exception attribute set on PermissionError for testing - code under test reads this
+_.filename
+
+# Mock attribute assignment - simulating Path.rmdir behavior
+_.rmdir
+
 # =============================================================================
 # FALSE POSITIVES - Additional Test Patterns
 # =============================================================================

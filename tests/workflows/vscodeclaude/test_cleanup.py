@@ -1,6 +1,7 @@
 """Test cleanup functions for VSCode Claude."""
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -289,6 +290,47 @@ class TestCleanup:
         result = delete_session_folder(session)
 
         assert result is True  # Still succeeds - removes session from store
+
+    def test_delete_session_folder_uses_safe_delete(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verifies safe_delete_folder is called for folder deletion."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        safe_delete_called: list[Path] = []
+
+        def mock_safe_delete(path: Path, **kwargs: object) -> bool:
+            safe_delete_called.append(path)
+            # Actually delete for the test
+            if Path(path).exists():
+                shutil.rmtree(path)
+            return True
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            mock_safe_delete,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.remove_session",
+            lambda f: True,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        result = delete_session_folder(session)
+
+        assert result is True
+        assert len(safe_delete_called) == 1
+        assert safe_delete_called[0] == folder
 
     def test_cleanup_stale_sessions_empty(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
