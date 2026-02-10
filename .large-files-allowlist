@@ -25,3 +25,6 @@ tests/workflows/implement/test_core.py
 tests/workflows/implement/test_task_processing.py
 tests/workflows/test_issue_stats.py
 tests/workflows/test_validate_labels.py
+tests/workflows/vscodeclaude/test_cleanup.py
+tests/workflows/vscodeclaude/test_orchestrator_sessions.py
+tests/workflows/vscodeclaude/test_status_display.py
