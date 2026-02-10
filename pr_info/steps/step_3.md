@@ -25,12 +25,21 @@ This function encapsulates all git operations needed during session restart.
 ### Function Signature
 
 ```python
+from typing import NamedTuple
+
+class BranchPrepResult(NamedTuple):
+    """Result of branch preparation for session restart."""
+    should_proceed: bool
+    skip_reason: str | None = None
+    branch_name: str | None = None
+
+
 def _prepare_restart_branch(
     folder_path: Path,
     current_status: str,
     branch_manager: IssueBranchManager,
     issue_number: int,
-) -> tuple[bool, str | None, str | None]:
+) -> BranchPrepResult:
     """Prepare branch for session restart.
     
     Handles git fetch, branch verification, dirty check, and checkout.
@@ -42,9 +51,9 @@ def _prepare_restart_branch(
         issue_number: GitHub issue number
         
     Returns:
-        Tuple of (should_proceed, skip_reason, branch_name):
+        BranchPrepResult with:
         - should_proceed: True if restart can continue
-        - skip_reason: None if success, else "No branch"/"Dirty"/"Git error"
+        - skip_reason: None if success, else "No branch"/"Dirty"/"Git error"/"Multi-branch"
         - branch_name: Branch name if switched, None if staying on current
     """
 ```
@@ -67,26 +76,31 @@ def _prepare_restart_branch(
 
 ```python
 def _prepare_restart_branch(folder_path, current_status, branch_manager, issue_number):
-    # 1. Always run git fetch origin
+    # 1. Always run git fetch origin (fatal if fails)
     try:
         execute_subprocess(["git", "fetch", "origin"], cwd=folder_path, check=True)
-    except CalledProcessError:
-        logger.warning("git fetch failed for %s", folder_path)
-        # Continue anyway - fetch failure is not fatal
+    except CalledProcessError as e:
+        logger.error("git fetch failed for %s: %s", folder_path, e)
+        return BranchPrepResult(False, "Git error", None)
     
     # 2. If status doesn't require branch, return success (stay on current branch)
     if not status_requires_linked_branch(current_status):
-        return (True, None, None)
+        return BranchPrepResult(True, None, None)
     
     # 3. Get linked branch from GitHub
-    linked_branch = get_linked_branch_for_issue(branch_manager, issue_number)
+    try:
+        linked_branch = get_linked_branch_for_issue(branch_manager, issue_number)
+    except ValueError:
+        # Multiple branches linked to issue
+        return BranchPrepResult(False, "Multi-branch", None)
+    
     if not linked_branch:
-        return (False, "No branch", None)
+        return BranchPrepResult(False, "No branch", None)
     
     # 4. Check if repo is dirty
     git_status = get_folder_git_status(folder_path)
     if git_status == "Dirty":
-        return (False, "Dirty", None)
+        return BranchPrepResult(False, "Dirty", None)
     
     # 5. Checkout and pull
     try:
@@ -94,9 +108,9 @@ def _prepare_restart_branch(folder_path, current_status, branch_manager, issue_n
         execute_subprocess(["git", "pull"], cwd=folder_path, check=True)
     except CalledProcessError as e:
         logger.error("Git operation failed: %s", e)
-        return (False, "Git error", None)
+        return BranchPrepResult(False, "Git error", None)
     
-    return (True, None, linked_branch)
+    return BranchPrepResult(True, None, linked_branch)
 ```
 
 ---
@@ -110,20 +124,22 @@ def _prepare_restart_branch(folder_path, current_status, branch_manager, issue_n
 - `issue_number: int` - Issue number for branch lookup
 
 ### Output
-- `tuple[bool, str | None, str | None]`:
-  - `[0]` `should_proceed: bool` - Whether restart can continue
-  - `[1]` `skip_reason: str | None` - Reason if cannot proceed
-  - `[2]` `branch_name: str | None` - Branch switched to, or None
+- `BranchPrepResult` (NamedTuple):
+  - `should_proceed: bool` - Whether restart can continue
+  - `skip_reason: str | None` - Reason if cannot proceed ("No branch", "Dirty", "Git error", "Multi-branch")
+  - `branch_name: str | None` - Branch switched to, or None
 
 ### Test Scenarios
 
 | Scenario | Status | Linked Branch | Dirty | Git Result | Expected |
 |----------|--------|---------------|-------|------------|----------|
-| status-01 | `status-01:created` | any | any | any | `(True, None, None)` |
-| status-04 + has branch + clean | `status-04:plan-review` | `"feat-123"` | No | OK | `(True, None, "feat-123")` |
-| status-04 + no branch | `status-04:plan-review` | `None` | - | - | `(False, "No branch", None)` |
-| status-07 + dirty | `status-07:code-review` | `"feat-456"` | Yes | - | `(False, "Dirty", None)` |
-| status-04 + git error | `status-04:plan-review` | `"feat-789"` | No | Fail | `(False, "Git error", None)` |
+| status-01 | `status-01:created` | any | any | OK | `BranchPrepResult(True, None, None)` |
+| status-04 + has branch + clean | `status-04:plan-review` | `"feat-123"` | No | OK | `BranchPrepResult(True, None, "feat-123")` |
+| status-04 + no branch | `status-04:plan-review` | `None` | - | - | `BranchPrepResult(False, "No branch", None)` |
+| status-07 + dirty | `status-07:code-review` | `"feat-456"` | Yes | - | `BranchPrepResult(False, "Dirty", None)` |
+| status-04 + git error | `status-04:plan-review` | `"feat-789"` | No | Fail | `BranchPrepResult(False, "Git error", None)` |
+| status-04 + multi-branch | `status-04:plan-review` | Multiple | - | - | `BranchPrepResult(False, "Multi-branch", None)` |
+| git fetch fails | any | - | - | Fetch Fail | `BranchPrepResult(False, "Git error", None)` |
 
 ---
 
@@ -154,7 +170,7 @@ class TestPrepareRestartBranch:
             issue_number=123,
         )
         
-        assert result == (True, None, None)
+        assert result == BranchPrepResult(True, None, None)
         # Branch manager should not be called for status-01
         mock_branch_manager.get_linked_branches.assert_not_called()
 
@@ -178,7 +194,7 @@ class TestPrepareRestartBranch:
             issue_number=123,
         )
         
-        assert result == (False, "No branch", None)
+        assert result == BranchPrepResult(False, "No branch", None)
 
     def test_status_07_dirty_returns_skip(
         self, tmp_path: Path, mocker: MockerFixture
@@ -204,7 +220,7 @@ class TestPrepareRestartBranch:
             issue_number=456,
         )
         
-        assert result == (False, "Dirty", None)
+        assert result == BranchPrepResult(False, "Dirty", None)
 
     def test_status_04_clean_switches_branch(
         self, tmp_path: Path, mocker: MockerFixture
@@ -230,7 +246,7 @@ class TestPrepareRestartBranch:
             issue_number=123,
         )
         
-        assert result == (True, None, "feat-123")
+        assert result == BranchPrepResult(True, None, "feat-123")
         # Verify git checkout and pull were called
         calls = mock_execute.call_args_list
         assert any("checkout" in str(c) for c in calls)
@@ -266,7 +282,7 @@ class TestPrepareRestartBranch:
             issue_number=123,
         )
         
-        assert result == (False, "Git error", None)
+        assert result == BranchPrepResult(False, "Git error", None)
 
     def test_git_fetch_always_runs(
         self, tmp_path: Path, mocker: MockerFixture

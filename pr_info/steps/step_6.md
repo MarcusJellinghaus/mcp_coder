@@ -16,6 +16,7 @@ Pass skip_reason to get_next_action() and show "→ Needs branch" for eligible i
 | File | Action |
 |------|--------|
 | `src/mcp_coder/workflows/vscodeclaude/status.py` | MODIFY function |
+| `src/mcp_coder/cli/commands/coordinator/commands.py` | REFACTOR `execute_coordinator_vscodeclaude_status()` to call `display_status_table()` |
 | `tests/workflows/vscodeclaude/test_status_display.py` | ADD tests |
 
 ---
@@ -70,8 +71,10 @@ for repo_name, issue in eligible_issues:
     status = get_issue_status(issue)
     
     # Check if issue needs branch but doesn't have one
+    # Must check BOTH: status requires branch AND issue lacks one
     needs_branch = (
-        issues_without_branch is not None 
+        status_requires_linked_branch(status)
+        and issues_without_branch is not None 
         and (repo_name, issue["number"]) in issues_without_branch
     )
     
@@ -257,19 +260,29 @@ class TestDisplayStatusTableBranchIndicators:
 
 ## ADDITIONAL CHANGES
 
-### Update Caller in CLI/Orchestrator
+### Refactor CLI to use `display_status_table()`
+
+The function `execute_coordinator_vscodeclaude_status()` in `src/mcp_coder/cli/commands/coordinator/commands.py` currently has inline table rendering using `tabulate`. This should be refactored to call `display_status_table()` from `status.py` instead.
+
+**Why refactor:** Better separation of concerns - display logic belongs in the workflows layer, not the CLI layer.
+
+### Build `issues_without_branch` Set in Caller
 
 The code that calls `display_status_table()` needs to build the `issues_without_branch` set:
 
 ```python
-# In the CLI command that displays status:
+# In execute_coordinator_vscodeclaude_status() after refactoring:
 issues_without_branch: set[tuple[str, int]] = set()
 
 for repo_name, issue in eligible_issues:
     status = get_issue_status(issue)
     if status_requires_linked_branch(status):
-        branch = get_linked_branch_for_issue(branch_manager, issue["number"])
-        if branch is None:
+        try:
+            branch = get_linked_branch_for_issue(branch_manager, issue["number"])
+            if branch is None:
+                issues_without_branch.add((repo_full_name, issue["number"]))
+        except ValueError:
+            # Multiple branches - also add to set (will show as needs attention)
             issues_without_branch.add((repo_full_name, issue["number"]))
 
 display_status_table(

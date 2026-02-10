@@ -39,10 +39,11 @@ Instead of multiple boolean flags, use a single `skip_reason: str | None` patter
 
 ### New Branch Preparation Helper
 
-**`_prepare_restart_branch(...) -> tuple[bool, str | None]`** in `orchestrator.py`
+**`_prepare_restart_branch(...) -> BranchPrepResult`** in `orchestrator.py`
 - Encapsulates all git operations for restart
-- Returns `(should_proceed, skip_reason)`
-- Handles: fetch, dirty check, checkout, pull
+- Returns `BranchPrepResult` NamedTuple with `(should_proceed, skip_reason, branch_name)`
+- Handles: fetch (fatal if fails), dirty check, checkout, pull
+- Catches `ValueError` for multiple branches → `skip_reason="Multi-branch"`
 
 ### Modified Status Display
 
@@ -57,8 +58,9 @@ Instead of multiple boolean flags, use a single `skip_reason: str | None` patter
 | File | Type | Changes |
 |------|------|---------|
 | `src/mcp_coder/workflows/vscodeclaude/issues.py` | MODIFY | Add `status_requires_linked_branch()` helper |
-| `src/mcp_coder/workflows/vscodeclaude/orchestrator.py` | MODIFY | Add `_prepare_restart_branch()`, modify `process_eligible_issues()`, `restart_closed_sessions()`, update module docstring |
+| `src/mcp_coder/workflows/vscodeclaude/orchestrator.py` | MODIFY | Add `BranchPrepResult` NamedTuple, `_prepare_restart_branch()`, modify `process_eligible_issues()`, `restart_closed_sessions()`, update module docstring |
 | `src/mcp_coder/workflows/vscodeclaude/status.py` | MODIFY | Add `skip_reason` to `get_next_action()`, update `display_status_table()` |
+| `src/mcp_coder/cli/commands/coordinator/commands.py` | REFACTOR | Refactor `execute_coordinator_vscodeclaude_status()` to call `display_status_table()` |
 | `tests/workflows/vscodeclaude/test_issues.py` | MODIFY | Add tests for `status_requires_linked_branch()` |
 | `tests/workflows/vscodeclaude/test_next_action.py` | MODIFY | Add tests for `skip_reason` parameter |
 | `tests/workflows/vscodeclaude/test_orchestrator_sessions.py` | MODIFY | Add tests for branch handling in restart |
@@ -112,8 +114,9 @@ Instead of multiple boolean flags, use a single `skip_reason: str | None` patter
 |-----------|-----------|----------|
 | VSCode running | `(active)` | Next Action column |
 | No linked branch for status-04/07 | `!! No branch` | Next Action column |
+| Multiple branches linked | `!! Multi-branch` | Next Action column |
 | Dirty repo + needs branch switch | `!! Dirty` | Next Action column |
-| Git operation failed | `!! Git error` | Next Action column |
+| Git operation failed (incl. fetch) | `!! Git error` | Next Action column |
 | Eligible issue without linked branch | `→ Needs branch` | Next Action column |
 | Blocked by label | `Blocked (label)` | Next Action column |
 | Stale (status changed) | `→ Delete (with --cleanup)` | Next Action column |

@@ -40,7 +40,7 @@ def get_next_action(
         is_vscode_running: Whether VSCode is still running
         blocked_label: If set, the ignore label blocking this issue
         skip_reason: If set, reason session cannot restart:
-                     "No branch", "Dirty", "Git error"
+                     "No branch", "Dirty", "Git error", "Multi-branch"
 
     Returns:
         Action string like "(active)", "→ Restart", "!! No branch"
@@ -83,7 +83,7 @@ def get_next_action(..., skip_reason: str | None = None) -> str:
 ## DATA
 
 ### Input (new parameter)
-- `skip_reason: str | None` - One of: `None`, `"No branch"`, `"Dirty"`, `"Git error"`
+- `skip_reason: str | None` - One of: `None`, `"No branch"`, `"Dirty"`, `"Git error"`, `"Multi-branch"`
 
 ### Output Priority
 1. `(active)` - VSCode running
