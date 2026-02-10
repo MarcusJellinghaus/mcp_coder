@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 4
 
 ### Step 5: coordinator issue-stats Core Functions
-- [ ] Implement Step 5 - Move core functions from `workflows/issue_stats.py` to `coordinator/issue_stats.py` ([step_5.md](./steps/step_5.md))
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 5
+- [x] Implement Step 5 - Move core functions from `workflows/issue_stats.py` to `coordinator/issue_stats.py` ([step_5.md](./steps/step_5.md))
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: coordinator issue-stats CLI Wiring
 - [ ] Implement Step 6 - Add `execute_coordinator_issue_stats()` and register subcommand in main.py ([step_6.md](./steps/step_6.md))
