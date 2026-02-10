@@ -1666,6 +1666,21 @@ class TestBranchHandlingIntegration:
             lambda: {"owner/repo"},
         )
 
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        from unittest.mock import MagicMock
+
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         # Track operations in order
         operations: list[str] = []
 
