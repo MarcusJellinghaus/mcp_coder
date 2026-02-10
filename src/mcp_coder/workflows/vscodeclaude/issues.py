@@ -105,6 +105,33 @@ def get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
     return None
 
 
+def is_status_eligible_for_session(status: str) -> bool:
+    """Check if status should have a VSCodeClaude session.
+
+    Returns True only for human_action statuses with non-null initial_command:
+    - status-01:created
+    - status-04:plan-review
+    - status-07:code-review
+
+    Returns False for:
+    - bot_pickup statuses (02, 05, 08)
+    - bot_busy statuses (03, 06, 09)
+    - status-10:pr-created (null initial_command)
+    - Unknown/invalid status strings
+
+    Args:
+        status: Status label like "status-07:code-review"
+
+    Returns:
+        True if status should have a VSCodeClaude session
+    """
+    config = get_vscodeclaude_config(status)
+    if config is None:
+        return False
+    initial_command = config.get("initial_command")
+    return initial_command is not None
+
+
 def _is_issue_eligible(
     issue: IssueData,
     human_action_labels: set[str],

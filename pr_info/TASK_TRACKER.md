@@ -25,11 +25,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 [Details](./steps/step_1.md)
 
 - [x] Write test class `TestIsStatusEligibleForSession` in `tests/workflows/vscodeclaude/test_issues.py`
-- [ ] Implement `is_status_eligible_for_session()` in `src/mcp_coder/workflows/vscodeclaude/issues.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and ensure all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 1
+- [x] Implement `is_status_eligible_for_session()` in `src/mcp_coder/workflows/vscodeclaude/issues.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and ensure all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update `display_status_table()` with "(Closed)" Prefix and Folder-Exists Filter
 [Details](./steps/step_2.md)
