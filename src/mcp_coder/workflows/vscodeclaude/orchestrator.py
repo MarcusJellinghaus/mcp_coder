@@ -24,6 +24,7 @@ import logging
 import platform
 import shutil
 from pathlib import Path
+from typing import NamedTuple
 
 from ...utils.github_operations.issues import (
     IssueBranchManager,
@@ -54,6 +55,7 @@ from .issues import (
     get_linked_branch_for_issue,
     get_matching_ignore_label,
     is_status_eligible_for_session,
+    status_requires_linked_branch,
 )
 from .sessions import (
     add_session,
@@ -68,6 +70,7 @@ from .sessions import (
     update_session_pid,
     update_session_status,
 )
+from .status import get_folder_git_status
 from .types import (
     DEFAULT_PROMPT_TIMEOUT,
     RepoVSCodeClaudeConfig,
@@ -90,6 +93,15 @@ from .workspace import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class BranchPrepResult(NamedTuple):
+    """Result of branch preparation for session restart."""
+
+    should_proceed: bool
+    skip_reason: str | None = None
+    branch_name: str | None = None
+
 
 __all__ = [
     # Main orchestration functions
@@ -502,6 +514,67 @@ def _get_configured_repos() -> set[str]:
                 pass
 
     return configured_repos
+
+
+def _prepare_restart_branch(
+    folder_path: Path,
+    current_status: str,
+    branch_manager: IssueBranchManager,
+    issue_number: int,
+) -> BranchPrepResult:
+    """Prepare branch for session restart.
+
+    Handles git fetch, branch verification, dirty check, and checkout.
+
+    Args:
+        folder_path: Path to the git repository
+        current_status: Current issue status label
+        branch_manager: IssueBranchManager for GitHub API calls
+        issue_number: GitHub issue number
+
+    Returns:
+        BranchPrepResult with:
+        - should_proceed: True if restart can continue
+        - skip_reason: None if success, else "No branch"/"Dirty"/"Git error"/"Multi-branch"
+        - branch_name: Branch name if switched, None if staying on current
+    """
+    # 1. Always run git fetch origin (fatal if fails)
+    try:
+        options = CommandOptions(cwd=str(folder_path), check=True)
+        execute_subprocess(["git", "fetch", "origin"], options)
+    except CalledProcessError as e:
+        logger.error("git fetch failed for %s: %s", folder_path, e)
+        return BranchPrepResult(False, "Git error", None)
+
+    # 2. If status doesn't require branch, return success (stay on current branch)
+    if not status_requires_linked_branch(current_status):
+        return BranchPrepResult(True, None, None)
+
+    # 3. Get linked branch from GitHub
+    try:
+        linked_branch = get_linked_branch_for_issue(branch_manager, issue_number)
+    except ValueError:
+        # Multiple branches linked to issue
+        return BranchPrepResult(False, "Multi-branch", None)
+
+    if not linked_branch:
+        return BranchPrepResult(False, "No branch", None)
+
+    # 4. Check if repo is dirty
+    git_status = get_folder_git_status(folder_path)
+    if git_status == "Dirty":
+        return BranchPrepResult(False, "Dirty", None)
+
+    # 5. Checkout and pull
+    try:
+        options = CommandOptions(cwd=str(folder_path), check=True)
+        execute_subprocess(["git", "checkout", linked_branch], options)
+        execute_subprocess(["git", "pull"], options)
+    except CalledProcessError as e:
+        logger.error("Git operation failed: %s", e)
+        return BranchPrepResult(False, "Git error", None)
+
+    return BranchPrepResult(True, None, linked_branch)
 
 
 def restart_closed_sessions(

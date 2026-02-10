@@ -38,13 +38,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 2
 
 ### Step 3: Add `_prepare_restart_branch()` Helper
-- [ ] Implement `BranchPrepResult` NamedTuple in `orchestrator.py` ([step_3.md](./steps/step_3.md))
-- [ ] Implement `_prepare_restart_branch()` function in `orchestrator.py`
-- [ ] Add tests for `_prepare_restart_branch()` in `test_orchestrator_sessions.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 3
+- [x] Implement `BranchPrepResult` NamedTuple in `orchestrator.py` ([step_3.md](./steps/step_3.md))
+- [x] Implement `_prepare_restart_branch()` function in `orchestrator.py`
+- [x] Add tests for `_prepare_restart_branch()` in `test_orchestrator_sessions.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Modify `process_eligible_issues()` for Branch-Aware Launch
 - [ ] Modify `process_eligible_issues()` to enforce linked branch requirements ([step_4.md](./steps/step_4.md))
