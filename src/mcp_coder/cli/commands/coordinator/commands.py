@@ -35,6 +35,7 @@ from ....workflows.vscodeclaude import (
     VSCodeClaudeSession,
     cleanup_stale_sessions,
     get_active_session_count,
+    get_folder_git_status,
     get_linked_branch_for_issue,
     load_repo_vscodeclaude_config,
     load_sessions,
@@ -562,7 +563,6 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     from tabulate import tabulate
 
     from ....workflows.vscodeclaude import (
-        check_folder_dirty,
         check_vscode_running,
         clear_vscode_window_cache,
         is_vscode_window_open_for_folder,
@@ -655,11 +655,9 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
 
         # Check for uncommitted changes
         folder_path = Path(session["folder"])
-        if folder_path.exists():
-            is_dirty = check_folder_dirty(folder_path)
-            changes = "Dirty" if is_dirty else "Clean"
-        else:
-            changes = "-"
+        changes = get_folder_git_status(folder_path)
+        # Derive is_dirty from status: only "Clean" is not dirty
+        is_dirty = changes != "Clean"
 
         # Check if session is stale
         repo_cached_issues = cached_issues_by_repo.get(repo_full_name)
