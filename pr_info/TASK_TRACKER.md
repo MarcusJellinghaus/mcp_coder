@@ -30,12 +30,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 1
 
 ### Step 2: Add `skip_reason` Parameter to `get_next_action()`
-- [ ] Add `skip_reason` parameter to `get_next_action()` in `status.py` ([step_2.md](./steps/step_2.md))
-- [ ] Add tests for `skip_reason` parameter in `test_next_action.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 2
+- [x] Add `skip_reason` parameter to `get_next_action()` in `status.py` ([step_2.md](./steps/step_2.md))
+- [x] Add tests for `skip_reason` parameter in `test_next_action.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Add `_prepare_restart_branch()` Helper
 - [ ] Implement `BranchPrepResult` NamedTuple in `orchestrator.py` ([step_3.md](./steps/step_3.md))

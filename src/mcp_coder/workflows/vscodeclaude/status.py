@@ -195,6 +195,7 @@ def get_next_action(
     is_dirty: bool,
     is_vscode_running: bool,
     blocked_label: str | None = None,
+    skip_reason: str | None = None,
 ) -> str:
     """Determine next action for a session.
 
@@ -203,12 +204,18 @@ def get_next_action(
         is_dirty: Whether folder has uncommitted changes
         is_vscode_running: Whether VSCode is still running
         blocked_label: If set, the ignore label blocking this issue (e.g., "blocked", "wait")
+        skip_reason: If set, reason session cannot restart:
+                     "No branch", "Dirty", "Git error", "Multi-branch"
 
     Returns:
-        Action string like "(active)", "→ Restart", "→ Delete", "Blocked (blocked)"
+        Action string like "(active)", "→ Restart", "!! No branch"
     """
     if is_vscode_running:
         return "(active)"
+
+    # Check for skip reason (takes priority over blocked and stale)
+    if skip_reason:
+        return f"!! {skip_reason}"
 
     # Check for blocked label (takes priority over stale)
     if blocked_label is not None:

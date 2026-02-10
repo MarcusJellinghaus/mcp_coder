@@ -94,3 +94,78 @@ class TestGetNextActionBlocked:
             blocked_label="blocked",
         )
         assert result == "!! Manual"
+
+
+class TestGetNextActionSkipReason:
+    """Tests for skip_reason parameter in get_next_action()."""
+
+    def test_skip_reason_no_branch(self) -> None:
+        """skip_reason='No branch' returns !! No branch."""
+        result = get_next_action(
+            is_stale=False,
+            is_dirty=False,
+            is_vscode_running=False,
+            skip_reason="No branch",
+        )
+        assert result == "!! No branch"
+
+    def test_skip_reason_dirty(self) -> None:
+        """skip_reason='Dirty' returns !! Dirty."""
+        result = get_next_action(
+            is_stale=False,
+            is_dirty=False,
+            is_vscode_running=False,
+            skip_reason="Dirty",
+        )
+        assert result == "!! Dirty"
+
+    def test_skip_reason_git_error(self) -> None:
+        """skip_reason='Git error' returns !! Git error."""
+        result = get_next_action(
+            is_stale=False,
+            is_dirty=False,
+            is_vscode_running=False,
+            skip_reason="Git error",
+        )
+        assert result == "!! Git error"
+
+    def test_vscode_running_takes_priority_over_skip_reason(self) -> None:
+        """VSCode running takes priority over skip_reason."""
+        result = get_next_action(
+            is_stale=False,
+            is_dirty=False,
+            is_vscode_running=True,
+            skip_reason="No branch",
+        )
+        assert result == "(active)"
+
+    def test_skip_reason_takes_priority_over_blocked(self) -> None:
+        """skip_reason takes priority over blocked_label."""
+        result = get_next_action(
+            is_stale=False,
+            is_dirty=False,
+            is_vscode_running=False,
+            blocked_label="blocked",
+            skip_reason="No branch",
+        )
+        assert result == "!! No branch"
+
+    def test_skip_reason_takes_priority_over_stale(self) -> None:
+        """skip_reason takes priority over is_stale."""
+        result = get_next_action(
+            is_stale=True,
+            is_dirty=False,
+            is_vscode_running=False,
+            skip_reason="Git error",
+        )
+        assert result == "!! Git error"
+
+    def test_none_skip_reason_uses_existing_logic(self) -> None:
+        """None skip_reason falls through to existing logic."""
+        result = get_next_action(
+            is_stale=False,
+            is_dirty=False,
+            is_vscode_running=False,
+            skip_reason=None,
+        )
+        assert result == "→ Restart"
