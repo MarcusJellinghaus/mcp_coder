@@ -1,7 +1,0 @@
-# CI Failure Analysis
-
-The CI pipeline failed on the file-size check job. This check enforces a maximum file size limit of 750 lines to maintain code quality and readability. The check found 3 test files in the vscodeclaude workflow tests that exceed this limit: test_status_display.py (1389 lines), test_cleanup.py (1062 lines), and test_orchestrator_sessions.py (961 lines).
-
-These files are located in tests/workflows/vscodeclaude/ and are not present in the .large-files-allowlist file that grants exceptions to the size limit. The allowlist currently contains 21 grandfathered files, but these three test files were either newly created or grew beyond the limit as part of recent changes without being added to the allowlist.
-
-To fix this failure, there are two approaches: either refactor the test files to reduce their line count below 750 lines by splitting them into smaller, more focused test modules, or add them to the .large-files-allowlist file as temporary exceptions. Given that these are test files with significant sizes (especially test_status_display.py at nearly double the limit), refactoring would be the preferred long-term solution. However, adding them to the allowlist is acceptable as a short-term fix if refactoring is not feasible within the current implementation scope. The allowlist file is located at .large-files-allowlist in the repository root.
