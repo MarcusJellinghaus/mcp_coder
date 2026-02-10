@@ -18,6 +18,42 @@ from mcp_coder.workflows.vscodeclaude.status import (
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 
 
+@pytest.fixture
+def mock_status_checks(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """Factory fixture to mock status check functions.
+
+    Usage:
+        def test_something(mock_status_checks):
+            mock_status_checks(is_closed=False, is_running=False, is_dirty=False, is_stale=True)
+            # ... rest of test
+    """
+
+    def _mock(
+        is_closed: bool = False,
+        is_running: bool = False,
+        is_dirty: bool = False,
+        is_stale: bool = True,
+    ) -> None:
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: is_closed,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: is_running,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: is_dirty,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: is_stale,
+        )
+
+    return _mock
+
+
 class TestStatusDisplay:
     """Test status table and display functions."""
 
@@ -355,33 +391,12 @@ class TestStatusDisplay:
     def test_display_status_table_with_session(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Displays session information."""
-
-        # Mock is_issue_closed to return False (issue is open)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-
-        # Mock check_vscode_running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-
-        # Mock check_folder_dirty
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: False,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=False
         )
 
         session: VSCodeClaudeSession = {
@@ -437,36 +452,14 @@ class TestClosedIssuePrefixDisplay:
     def test_closed_issue_shows_closed_prefix_in_status(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Closed issue with existing folder shows (Closed) prefix in status column."""
-        # Create folder so it exists
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        # Mock is_issue_closed to return True (issue is closed)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: True,
-        )
-
-        # Mock check_vscode_running - not running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-
-        # Mock check_folder_dirty - folder is clean
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -490,36 +483,14 @@ class TestClosedIssuePrefixDisplay:
     def test_closed_issue_status_includes_original_status_label(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Closed issue status shows both (Closed) prefix and original status."""
-        # Create folder so it exists
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        # Mock is_issue_closed to return True
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: True,
-        )
-
-        # Mock check_vscode_running - not running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-
-        # Mock check_folder_dirty - folder is clean
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -542,36 +513,14 @@ class TestClosedIssuePrefixDisplay:
     def test_closed_issue_shows_delete_action(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Closed issue with clean folder shows Delete action."""
-        # Create folder so it exists
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        # Mock is_issue_closed to return True
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: True,
-        )
-
-        # Mock check_vscode_running - not running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-
-        # Mock check_folder_dirty - folder is clean
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -593,36 +542,14 @@ class TestClosedIssuePrefixDisplay:
     def test_closed_issue_dirty_folder_shows_manual_cleanup(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Closed issue with dirty folder shows Manual cleanup action."""
-        # Create folder so it exists
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        # Mock is_issue_closed to return True
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: True,
-        )
-
-        # Mock check_vscode_running - not running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-
-        # Mock check_folder_dirty - folder is DIRTY
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: True,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=True, is_running=False, is_dirty=True, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -646,35 +573,14 @@ class TestClosedIssuePrefixDisplay:
     def test_closed_issue_missing_folder_is_skipped(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Closed issue with missing folder is not shown in status table."""
-        # Create a path that does NOT exist - session folder is missing
         missing_folder = tmp_path / "missing_folder"
         # Do NOT create the folder - it should not exist
-
-        # Mock is_issue_closed to return True (issue is closed)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: True,
-        )
-
-        # These mocks should NOT be called since session should be skipped
-        # But we set them up anyway in case the implementation calls them
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -698,33 +604,14 @@ class TestClosedIssuePrefixDisplay:
     def test_closed_issue_existing_folder_is_shown(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Closed issue with existing folder IS shown (contrast to missing folder)."""
-        # Create folder so it exists
         existing_folder = tmp_path / "existing_folder"
         existing_folder.mkdir()
-
-        # Mock is_issue_closed to return True (issue is closed)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: True,
-        )
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -748,35 +635,14 @@ class TestClosedIssuePrefixDisplay:
     def test_open_issue_does_not_show_closed_prefix(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Open issue does not show (Closed) prefix."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        # Mock is_issue_closed to return False (issue is open)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-
-        # Mock check_vscode_running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-
-        # Mock check_folder_dirty
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: False,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=False
         )
 
         session: VSCodeClaudeSession = {
@@ -811,35 +677,14 @@ class TestBotStageSessionsDeleteAction:
     def test_bot_pickup_status_02_shows_delete_action(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Session at status-02:awaiting-planning shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        # Mock is_issue_closed to return False (issue is open)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-
-        # Mock check_vscode_running - not running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-
-        # Mock check_folder_dirty - folder is clean
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -865,37 +710,21 @@ class TestBotStageSessionsDeleteAction:
     def test_bot_pickup_status_05_shows_delete_action(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Session at status-05:awaiting-coding shows Delete action."""
+        """Session at status-05:plan-ready shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
             "issue_number": 456,
-            "status": "status-05:awaiting-coding",
+            "status": "status-05:plan-ready",
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
@@ -910,30 +739,14 @@ class TestBotStageSessionsDeleteAction:
     def test_bot_pickup_status_08_shows_delete_action(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Session at status-08:ready-pr shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -955,30 +768,14 @@ class TestBotStageSessionsDeleteAction:
     def test_bot_busy_status_03_shows_delete_action(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Session at status-03:planning shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -1000,37 +797,21 @@ class TestBotStageSessionsDeleteAction:
     def test_bot_busy_status_06_shows_delete_action(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Session at status-06:coding shows Delete action."""
+        """Session at status-06:implementing shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
             "issue_number": 202,
-            "status": "status-06:coding",
+            "status": "status-06:implementing",
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
@@ -1045,37 +826,21 @@ class TestBotStageSessionsDeleteAction:
     def test_bot_busy_status_09_shows_delete_action(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Session at status-09:creating-pr shows Delete action."""
+        """Session at status-09:pr-creating shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
             "issue_number": 303,
-            "status": "status-09:creating-pr",
+            "status": "status-09:pr-creating",
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
@@ -1090,31 +855,14 @@ class TestBotStageSessionsDeleteAction:
     def test_bot_stage_dirty_folder_shows_manual_cleanup(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Bot stage session with dirty folder shows Manual cleanup."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        # Folder is DIRTY
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: True,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=True, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -1137,29 +885,15 @@ class TestBotStageSessionsDeleteAction:
     def test_eligible_status_shows_restart_not_delete(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Eligible status (01, 04, 07) shows Restart, NOT Delete."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
         # Status is the same as session (not stale from status change)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: False,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=False
         )
 
         session: VSCodeClaudeSession = {
@@ -1194,35 +928,14 @@ class TestPrCreatedSessionsDeleteAction:
     def test_pr_created_status_10_shows_delete_action(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Session at status-10:pr-created shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        # Mock is_issue_closed to return False (issue is open)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-
-        # Mock check_vscode_running - not running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-
-        # Mock check_folder_dirty - folder is clean
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -1248,31 +961,14 @@ class TestPrCreatedSessionsDeleteAction:
     def test_pr_created_dirty_folder_shows_manual_cleanup(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """PR-created session with dirty folder shows Manual cleanup."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        # Folder is DIRTY
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: True,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=True, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -1295,31 +991,14 @@ class TestPrCreatedSessionsDeleteAction:
     def test_pr_created_with_vscode_running_shows_active(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """PR-created session with VSCode running shows (active)."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        # VSCode IS running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: True,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=False, is_running=True, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
@@ -1342,31 +1021,14 @@ class TestPrCreatedSessionsDeleteAction:
     def test_pr_created_closed_issue_shows_closed_prefix(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """PR-created session with closed issue shows (Closed) prefix and Delete."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        # Issue is closed
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: True,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
-            lambda pid: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-
-        # Mock is_session_stale to avoid GitHub API calls
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
+        mock_status_checks(
+            is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
         session: VSCodeClaudeSession = {
