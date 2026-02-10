@@ -21,6 +21,28 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Update Source Files
+See [step_1.md](./steps/step_1.md) for details.
+
+- [ ] Implement Step 1: Replace `.vscodeclaude_status.md` with `.vscodeclaude_status.txt` in source files
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and fix any failures
+- [ ] Run mypy and fix any type errors
+- [ ] Prepare git commit message for Step 1
+
+### Step 2: Update Test Files
+See [step_2.md](./steps/step_2.md) for details.
+
+- [ ] Implement Step 2: Replace `.vscodeclaude_status.md` with `.vscodeclaude_status.txt` in test files
+- [ ] Run pylint and fix any issues
+- [ ] Run pytest and fix any failures
+- [ ] Run mypy and fix any type errors
+- [ ] Prepare git commit message for Step 2
+
+---
 
 ## Pull Request
+
+- [ ] Review all changes for completeness
+- [ ] Verify all tests pass
+- [ ] Prepare PR summary
