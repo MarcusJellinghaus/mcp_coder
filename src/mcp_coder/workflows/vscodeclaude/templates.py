@@ -226,7 +226,7 @@ TASKS_JSON_TEMPLATE = """{{
             "label": "Open Status File",
             "type": "shell",
             "command": "code",
-            "args": ["${{workspaceFolder}}/.vscodeclaude_status.md"],
+            "args": ["${{workspaceFolder}}/.vscodeclaude_status.txt"],
             "presentation": {{
                 "reveal": "never"
             }},
@@ -267,7 +267,7 @@ INTERVENTION_LINE = """Mode:    ⚠️ INTERVENTION
 # Gitignore entry
 GITIGNORE_ENTRY = """
 # VSCodeClaude session files (auto-generated)
-.vscodeclaude_status.md
+.vscodeclaude_status.txt
 .vscodeclaude_analysis.json
 .vscodeclaude_start.bat
 .vscodeclaude_start.sh
