@@ -1,76 +1,60 @@
-# Step 3: Update `display_status_table()` to Show Closed Issues and Compute Stale Reasons
+# Step 3: Update `get_stale_sessions()` to Include Ineligible Sessions
 
 ## LLM Prompt
 
 ```
 Reference: pr_info/steps/summary.md and this step file.
 
-Update `display_status_table()` in status.py to:
-1. Show closed issues (remove the skip)
-2. Compute appropriate stale_reason for each session
-3. Pass stale_reason to get_next_action()
+Update `get_stale_sessions()` in cleanup.py to include sessions that are:
+1. At bot statuses (not eligible for session)
+2. At pr-created status
+3. For closed issues
 
+These should all be eligible for cleanup, not just status-changed sessions.
 Follow TDD approach - update tests first.
 ```
 
 ## WHERE
 
-- **Test file**: `tests/workflows/vscodeclaude/test_status_display.py`
-- **Implementation file**: `src/mcp_coder/workflows/vscodeclaude/status.py`
+- **Test file**: `tests/workflows/vscodeclaude/test_cleanup.py`
+- **Implementation file**: `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
 
 ## WHAT
 
-### Changes to `display_status_table()`
+### Changes to `get_stale_sessions()`
 
-1. Remove the early `continue` for closed issues
-2. Add import: `from .issues import is_status_eligible_for_session`
-3. Compute `stale_reason` based on session state
-4. Pass `stale_reason` to `get_next_action()`
+1. Add import: `from .issues import is_status_eligible_for_session`
+2. Add import: `from .status import is_issue_closed` (already exists in module)
+3. Check for closed issues
+4. Check for ineligible statuses (bot stages, pr-created)
+5. Include these in the stale sessions list
 
-### New Helper Function (optional, can be inline)
+### Updated Function Logic
 
-```python
-def _compute_stale_reason(
-    is_closed: bool,
-    status: str,
-    status_changed: bool,
-) -> str | None:
-    """Compute the reason a session is stale.
-    
-    Args:
-        is_closed: Whether the issue is closed
-        status: Current status label
-        status_changed: Whether status differs from session
-        
-    Returns:
-        Reason string or None if not stale
-    """
-```
+The function currently returns sessions that are stale OR blocked.
+Update to return sessions that are stale OR blocked OR closed OR ineligible.
 
 ## HOW
 
 ### Integration Points
 
 - Import `is_status_eligible_for_session` from `.issues`
-- Use existing `is_issue_closed()` to check closed state
-- Use existing `is_session_stale()` for status change detection
+- Import `is_issue_closed` from `.status` (existing function)
+- Reuse existing `is_session_stale()` for status change detection
 
 ## ALGORITHM
 
 ```
-For each session:
-1. Get is_closed from is_issue_closed(session, cached_issues)
-2. Get current_status from cache or session
-3. Get status_changed from is_session_stale(session, cached_issues)
-4. Compute stale_reason:
-   a. If is_closed → "issue closed"
-   b. Elif not is_status_eligible_for_session(current_status):
-      - If status is "status-10:pr-created" → "PR in GitHub"
-      - Else → "now at bot stage"
-   c. Elif status_changed → None (use default message)
-   d. Else → None (not stale)
-5. Compute is_stale = stale_reason is not None or status_changed
-6. Call get_next_action(is_stale, is_dirty, is_running, blocked_label, stale_reason)
+For each session (with VSCode not running, in configured repo):
+1. Get is_closed = check if issue is closed (from cache or using is_issue_closed)
+2. Get is_blocked = check for blocked label (existing logic)
+3. Get is_stale = is_session_stale(session) (existing logic)
+4. Get current_status from cache or session
+5. Get is_ineligible = not is_status_eligible_for_session(current_status)
+6. If is_stale OR is_blocked OR is_closed OR is_ineligible:
+   a. Get git_status
+   b. Add (session, git_status) to result
+7. Return result
 ```
 
 ## DATA
@@ -78,33 +62,46 @@ For each session:
 ### Test Scenarios
 
 ```python
-# Closed issue - should be shown with delete message
+# Existing behavior - stale session (status changed)
+session(status="status-04:plan-review", current_github_status="status-07:code-review")
+→ included in stale_sessions
+
+# Existing behavior - blocked session
+session(status="status-07:code-review", has_blocked_label=True)
+→ included in stale_sessions
+
+# NEW: Closed issue session
 session(status="status-07:code-review", issue_closed=True)
-→ row shown with action "→ Delete (--cleanup, issue closed)"
+→ included in stale_sessions
 
-# Bot stage - should be shown with delete message  
+# NEW: Bot stage session
 session(status="status-02:awaiting-planning", issue_open=True)
-→ row shown with action "→ Delete (--cleanup, now at bot stage)"
+→ included in stale_sessions
 
-# PR created - should be shown with delete message
+# NEW: PR-created session
 session(status="status-10:pr-created", issue_open=True)
-→ row shown with action "→ Delete (--cleanup, PR in GitHub)"
+→ included in stale_sessions
 
-# Eligible status, open issue - should show restart
-session(status="status-07:code-review", issue_open=True)
-→ row shown with action "→ Restart"
+# NOT included - eligible status, open issue, not blocked
+session(status="status-07:code-review", issue_open=True, not_blocked=True)
+→ NOT in stale_sessions (should restart)
+```
 
-# Dirty folder cases
-session(status="status-02:awaiting-planning", issue_open=True, dirty=True)
-→ row shown with action "!! Manual cleanup"
+### Edge Cases
+
+```python
+# Session where we can't determine issue state (API error)
+# Should be conservative - don't include in cleanup
+session(status="status-07:code-review", api_error=True)
+→ NOT in stale_sessions (conservative)
 ```
 
 ## Implementation Order
 
-1. Add test cases for closed issues being displayed (not skipped)
-2. Add test cases for bot stage sessions showing correct action
-3. Add test cases for pr-created sessions showing correct action
-4. Update `display_status_table()` to remove closed issue skip
-5. Add stale_reason computation logic
-6. Update `get_next_action()` call to pass stale_reason
+1. Add test cases for closed issue sessions being included
+2. Add test cases for bot stage sessions being included
+3. Add test cases for pr-created sessions being included
+4. Add test case for eligible sessions NOT being included
+5. Update imports in cleanup.py
+6. Update `get_stale_sessions()` with new checks
 7. Run tests to verify

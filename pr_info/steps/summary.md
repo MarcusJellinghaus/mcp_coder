@@ -25,16 +25,11 @@ A single helper function that determines if a status label should have a VSCodeC
 
 This function enables consistent eligibility checking across restart, display, and cleanup operations.
 
-### Modified Function Signature: `get_next_action()`
+### Display Behavior Changes
 
-Add optional `stale_reason: str | None` parameter instead of multiple boolean flags:
-- Simpler API (one string vs. three booleans)
-- More extensible (new reasons just need a new string)
-- Enables specific delete messages: `"→ Delete (--cleanup, {reason})"`
-
-### Display Behavior Change
-
-Closed issues are now **shown** in the status table (not hidden) so users can see and clean them up.
+1. **Status column shows closed state**: Closed issues display with "(Closed)" prefix, e.g., `(Closed) 04:plan-review`
+2. **Closed issues shown only if folder exists**: Only actionable items (sessions with folders to clean up) are displayed
+3. **Simple delete message**: All stale sessions show `→ Delete (--cleanup)` - the Status column provides context
 
 ### Session Lifecycle Rules (Documented in orchestrator.py)
 
@@ -54,7 +49,7 @@ Closed issues are now **shown** in the status table (not hidden) so users can se
 |------|---------|
 | `src/mcp_coder/workflows/vscodeclaude/issues.py` | Add `is_status_eligible_for_session()` |
 | `src/mcp_coder/workflows/vscodeclaude/orchestrator.py` | Update `restart_closed_sessions()` + add module docstring |
-| `src/mcp_coder/workflows/vscodeclaude/status.py` | Update `get_next_action()` and `display_status_table()` |
+| `src/mcp_coder/workflows/vscodeclaude/status.py` | Update `display_status_table()` (no changes to `get_next_action()`) |
 | `src/mcp_coder/workflows/vscodeclaude/cleanup.py` | Update `get_stale_sessions()` |
 
 ## Test Files to Modify
@@ -62,18 +57,17 @@ Closed issues are now **shown** in the status table (not hidden) so users can se
 | File | Purpose |
 |------|---------|
 | `tests/workflows/vscodeclaude/test_issues.py` | Test `is_status_eligible_for_session()` |
-| `tests/workflows/vscodeclaude/test_next_action.py` | Test new `stale_reason` parameter |
-| `tests/workflows/vscodeclaude/test_status_display.py` | Test closed issues shown in display |
+| `tests/workflows/vscodeclaude/test_next_action.py` | No changes needed (no new parameter) |
+| `tests/workflows/vscodeclaude/test_status_display.py` | Test "(Closed)" prefix and folder-exists filter |
 | `tests/workflows/vscodeclaude/test_cleanup.py` | Test expanded stale session detection |
 | `tests/workflows/vscodeclaude/test_orchestrator_sessions.py` | Test restart logic changes |
 
 ## Implementation Steps Overview
 
 1. **Step 1**: Add `is_status_eligible_for_session()` with tests
-2. **Step 2**: Update `get_next_action()` with `stale_reason` parameter and tests
-3. **Step 3**: Update `display_status_table()` to show closed issues and compute stale reasons
-4. **Step 4**: Update `get_stale_sessions()` to include ineligible sessions
-5. **Step 5**: Update `restart_closed_sessions()` with eligibility checks + module docstring
+2. **Step 2**: Update `display_status_table()` with "(Closed)" prefix and folder-exists filter
+3. **Step 3**: Update `get_stale_sessions()` to include ineligible sessions
+4. **Step 4**: Update `restart_closed_sessions()` with eligibility checks + module docstring
 
 ## Acceptance Criteria
 
@@ -82,9 +76,9 @@ Closed issues are now **shown** in the status table (not hidden) so users can se
 - [ ] Sessions at `status-10:pr-created` are NOT restarted
 - [ ] Sessions for closed issues are NOT restarted
 - [ ] Sessions at `human_action` statuses with commands (01, 04, 07) for open issues ARE restarted
-- [ ] Bot-status sessions show `→ Delete (--cleanup, now at bot stage)`
-- [ ] PR-created sessions show `→ Delete (--cleanup, PR in GitHub)`
-- [ ] Closed issue sessions show `→ Delete (--cleanup, issue closed)` and ARE visible in display
+- [ ] Stale sessions (bot-status, pr-created, closed) show `→ Delete (--cleanup)`
+- [ ] Closed issues show "(Closed)" prefix in Status column, e.g., `(Closed) 04:plan-review`
+- [ ] Closed issue sessions ARE visible in display only if folder exists
 - [ ] Dirty folders show `!! Manual cleanup` (same message for all scenarios)
 - [ ] All non-restartable sessions are eligible for `--cleanup` (if clean)
 - [ ] Session lifecycle rules documented in orchestrator.py module docstring

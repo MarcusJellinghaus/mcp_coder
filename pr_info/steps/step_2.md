@@ -1,98 +1,102 @@
-# Step 2: Update `get_next_action()` with `stale_reason` Parameter
+# Step 2: Update `display_status_table()` with "(Closed)" Prefix and Folder-Exists Filter
 
 ## LLM Prompt
 
 ```
 Reference: pr_info/steps/summary.md and this step file.
 
-Update the `get_next_action()` function in status.py to accept an optional `stale_reason` 
-parameter that enables specific delete messages for different stale scenarios.
+Update `display_status_table()` in status.py to:
+1. Show "(Closed)" prefix in Status column for closed issues
+2. Only show closed issues if their session folder still exists
+3. Use simple delete message `→ Delete (--cleanup)` for all stale sessions
+
 Follow TDD approach - update tests first.
 ```
 
 ## WHERE
 
-- **Test file**: `tests/workflows/vscodeclaude/test_next_action.py`
+- **Test file**: `tests/workflows/vscodeclaude/test_status_display.py`
 - **Implementation file**: `src/mcp_coder/workflows/vscodeclaude/status.py`
 
 ## WHAT
 
-### Updated Function Signature
+### Changes to `display_status_table()`
 
-```python
-def get_next_action(
-    is_stale: bool,
-    is_dirty: bool,
-    is_vscode_running: bool,
-    blocked_label: str | None = None,
-    stale_reason: str | None = None,  # NEW PARAMETER
-) -> str:
-    """Determine next action for a session.
-
-    Args:
-        is_stale: Whether issue status changed or session is ineligible
-        is_dirty: Whether folder has uncommitted changes
-        is_vscode_running: Whether VSCode is still running
-        blocked_label: If set, the ignore label blocking this issue
-        stale_reason: If set, specific reason for staleness (used in delete message)
-                      Examples: "issue closed", "now at bot stage", "PR in GitHub"
-
-    Returns:
-        Action string like "(active)", "→ Restart", "→ Delete (--cleanup, reason)"
-    """
-```
+1. Remove the early `continue` for closed issues
+2. Add folder existence check for closed issues (skip if folder missing)
+3. Add "(Closed)" prefix to Status column for closed issues
+4. Import `is_status_eligible_for_session` from `.issues` for stale detection
+5. Compute `is_stale` based on: closed OR ineligible status OR status changed
 
 ## HOW
 
 ### Integration Points
 
-- Backward compatible - existing callers don't need changes until step 3
-- New callers pass `stale_reason` to get specific delete messages
+- Import `is_status_eligible_for_session` from `.issues`
+- Use existing `is_issue_closed()` to check closed state
+- Use existing `is_session_stale()` for status change detection
+- Check `Path(session["folder"]).exists()` for folder existence
 
 ## ALGORITHM
 
 ```
-1. If is_vscode_running → return "(active)"
-2. If blocked_label is not None:
-   a. If is_dirty → return "!! Manual"
-   b. Else → return f"Blocked ({blocked_label})"
-3. If is_stale:
-   a. If is_dirty → return "!! Manual cleanup"
-   b. If stale_reason → return f"→ Delete (--cleanup, {stale_reason})"
-   c. Else → return "→ Delete (with --cleanup)"
-4. Return "→ Restart"
+For each session:
+1. Get folder_path = Path(session["folder"])
+2. Get is_closed = is_issue_closed(session, cached_issues)
+3. If is_closed AND NOT folder_path.exists() → skip (nothing to clean up)
+4. Get current_status from cache or session
+5. Get status_changed = is_session_stale(session, cached_issues)
+6. Get is_eligible = is_status_eligible_for_session(current_status)
+7. Compute is_stale = is_closed OR NOT is_eligible OR status_changed
+8. Format status for display:
+   - If is_closed → "(Closed) {status}"
+   - Else → status as-is
+9. Call get_next_action(is_stale, is_dirty, is_running, blocked_label)
+   - Note: No stale_reason parameter - simple delete message
 ```
 
 ## DATA
 
-### New Stale Reasons (Constants to use in callers)
+### Test Scenarios
 
 ```python
-STALE_REASON_CLOSED = "issue closed"
-STALE_REASON_BOT_STAGE = "now at bot stage"
-STALE_REASON_PR_CREATED = "PR in GitHub"
-STALE_REASON_STATUS_CHANGED = None  # Use default message
-```
+# Closed issue with existing folder - should be shown with "(Closed)" prefix
+session(status="status-07:code-review", issue_closed=True, folder_exists=True)
+→ row shown with status "(Closed) status-07:code-review", action "→ Delete (--cleanup)"
 
-### New Test Cases (add to existing tests)
+# Closed issue with missing folder - should be SKIPPED
+session(status="status-07:code-review", issue_closed=True, folder_exists=False)
+→ row NOT shown (nothing to clean up)
 
-```python
-# With stale_reason - clean folder
-(True, False, False, None, "issue closed") → "→ Delete (--cleanup, issue closed)"
-(True, False, False, None, "now at bot stage") → "→ Delete (--cleanup, now at bot stage)"
-(True, False, False, None, "PR in GitHub") → "→ Delete (--cleanup, PR in GitHub)"
+# Bot stage - should be shown with delete message  
+session(status="status-02:awaiting-planning", issue_open=True)
+→ row shown with action "→ Delete (--cleanup)"
 
-# With stale_reason - dirty folder (reason ignored, same message)
-(True, True, False, None, "issue closed") → "!! Manual cleanup"
-(True, True, False, None, "now at bot stage") → "!! Manual cleanup"
+# PR created - should be shown with delete message
+session(status="status-10:pr-created", issue_open=True)
+→ row shown with action "→ Delete (--cleanup)"
 
-# Without stale_reason - backward compatible
-(True, False, False, None, None) → "→ Delete (with --cleanup)"
+# Eligible status, open issue - should show restart
+session(status="status-07:code-review", issue_open=True)
+→ row shown with action "→ Restart"
+
+# Dirty folder cases - all show manual cleanup
+session(status="status-02:awaiting-planning", issue_open=True, dirty=True)
+→ row shown with action "!! Manual cleanup"
+
+session(status="status-07:code-review", issue_closed=True, dirty=True)
+→ row shown with status "(Closed) status-07:code-review", action "!! Manual cleanup"
 ```
 
 ## Implementation Order
 
-1. Add new test cases to `test_next_action.py` for `stale_reason` parameter
-2. Update `get_next_action()` signature and implementation
-3. Run all existing tests to verify backward compatibility
-4. Run new tests to verify stale_reason behavior
+1. Add test cases for "(Closed)" prefix in status column
+2. Add test case for closed issue with missing folder being skipped
+3. Add test cases for bot stage sessions showing simple delete action
+4. Add test cases for pr-created sessions showing simple delete action
+5. Update imports in `status.py`
+6. Remove the early `continue` for closed issues
+7. Add folder existence check for closed issues
+8. Add "(Closed)" prefix formatting
+9. Add `is_status_eligible_for_session` check for stale computation
+10. Run tests to verify
