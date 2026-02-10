@@ -51,7 +51,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: Update `get_stale_sessions()` to Include Ineligible Sessions
 [Details](./steps/step_3.md)
 
-- [ ] Add test cases for closed issue sessions being included in `tests/workflows/vscodeclaude/test_cleanup.py`
+- [x] Add test cases for closed issue sessions being included in `tests/workflows/vscodeclaude/test_cleanup.py`
 - [ ] Add test cases for bot stage sessions being included
 - [ ] Add test cases for pr-created sessions being included
 - [ ] Add test case for eligible sessions NOT being included
