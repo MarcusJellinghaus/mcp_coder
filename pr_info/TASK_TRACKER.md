@@ -24,7 +24,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Add `is_status_eligible_for_session()` Function
 [Details](./steps/step_1.md)
 
-- [ ] Write test class `TestIsStatusEligibleForSession` in `tests/workflows/vscodeclaude/test_issues.py`
+- [x] Write test class `TestIsStatusEligibleForSession` in `tests/workflows/vscodeclaude/test_issues.py`
 - [ ] Implement `is_status_eligible_for_session()` in `src/mcp_coder/workflows/vscodeclaude/issues.py`
 - [ ] Run pylint and fix any issues
 - [ ] Run pytest and ensure all tests pass
