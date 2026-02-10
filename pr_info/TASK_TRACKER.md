@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `stale_timeout_minutes` to labels.json Schema
-- [ ] Implement Step 1 - Add `stale_timeout_minutes` field to bot_busy labels ([step_1.md](./steps/step_1.md))
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement Step 1 - Add `stale_timeout_minutes` field to bot_busy labels ([step_1.md](./steps/step_1.md))
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Issue Initialization in define-labels
 - [ ] Implement Step 2 - Add `check_status_labels` and `initialize_issues` functions ([step_2.md](./steps/step_2.md))

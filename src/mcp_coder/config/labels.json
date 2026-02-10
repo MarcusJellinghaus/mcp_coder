@@ -26,7 +26,8 @@
       "name": "status-03:planning",
       "color": "a7f3d0",
       "description": "Implementation plan being drafted (auto/in-progress)",
-      "category": "bot_busy"
+      "category": "bot_busy",
+      "stale_timeout_minutes": 15
     },
     {
       "internal_id": "plan_review",
@@ -54,7 +55,8 @@
       "name": "status-06:implementing",
       "color": "bfdbfe",
       "description": "Code being written (auto/in-progress)",
-      "category": "bot_busy"
+      "category": "bot_busy",
+      "stale_timeout_minutes": 120
     },
     {
       "internal_id": "code_review",
@@ -82,7 +84,8 @@
       "name": "status-09:pr-creating",
       "color": "fed7aa",
       "description": "Bot is creating the pull request (auto/in-progress)",
-      "category": "bot_busy"
+      "category": "bot_busy",
+      "stale_timeout_minutes": 15
     },
     {
       "internal_id": "pr_created",
