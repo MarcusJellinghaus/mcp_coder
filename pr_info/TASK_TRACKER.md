@@ -38,15 +38,15 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Add test case for closed issue with missing folder being skipped
 - [x] Add test cases for bot stage sessions showing simple delete action
 - [x] Add test cases for pr-created sessions showing simple delete action
-- [ ] Update imports in `src/mcp_coder/workflows/vscodeclaude/status.py`
-- [ ] Remove the early `continue` for closed issues
-- [ ] Add folder existence check for closed issues
-- [ ] Add "(Closed)" prefix formatting
-- [ ] Add `is_status_eligible_for_session` check for stale computation
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and ensure all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 2
+- [x] Update imports in `src/mcp_coder/workflows/vscodeclaude/status.py`
+- [x] Remove the early `continue` for closed issues
+- [x] Add folder existence check for closed issues
+- [x] Add "(Closed)" prefix formatting
+- [x] Add `is_status_eligible_for_session` check for stale computation
+- [x] Run pylint and fix any issues
+- [x] Run pytest and ensure all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Update `get_stale_sessions()` to Include Ineligible Sessions
 [Details](./steps/step_3.md)
