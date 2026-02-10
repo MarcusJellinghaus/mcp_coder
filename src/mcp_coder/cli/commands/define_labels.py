@@ -272,6 +272,65 @@ def validate_issues(
     return results
 
 
+def format_validation_summary(
+    label_changes: dict[str, list[str]],
+    validation_results: ValidationResults,
+    repo_url: str,  # pylint: disable=unused-argument
+) -> str:
+    """Format the complete summary output.
+
+    Args:
+        label_changes: Dict with 'created', 'updated', 'deleted', 'unchanged' lists
+        validation_results: Results from issue validation
+        repo_url: Repository URL (reserved for future use)
+
+    Returns:
+        Formatted summary string for printing
+    """
+    lines: list[str] = []
+
+    # Build "Summary:" header
+    lines.append("Summary:")
+
+    # Build "Labels synced:" line with counts
+    labels_line = (
+        f"  Labels synced: Created={len(label_changes['created'])}, "
+        f"Updated={len(label_changes['updated'])}, "
+        f"Deleted={len(label_changes['deleted'])}, "
+        f"Unchanged={len(label_changes['unchanged'])}"
+    )
+    lines.append(labels_line)
+
+    # Build "Issues initialized:" line with count
+    initialized_count = len(validation_results["initialized"])
+    lines.append(f"  Issues initialized: {initialized_count}")
+
+    # If errors: Build "Errors (multiple status labels):" with issue details
+    errors = validation_results["errors"]
+    if errors:
+        lines.append(f"  Errors (multiple status labels): {len(errors)}")
+        for error in errors:
+            issue_num = error["issue"]
+            labels = ", ".join(error["labels"])
+            lines.append(f"    - Issue #{issue_num}: {labels}")
+
+    # If warnings: Build "Warnings (stale bot processes):" with elapsed/threshold
+    warnings = validation_results["warnings"]
+    if warnings:
+        lines.append(f"  Warnings (stale bot processes): {len(warnings)}")
+        for warning in warnings:
+            issue_num = warning["issue"]
+            label = warning["label"]
+            elapsed = warning["elapsed"]
+            threshold = warning["threshold"]
+            lines.append(
+                f"    - Issue #{issue_num}: {label} for "
+                f"{elapsed} minutes (threshold: {threshold})"
+            )
+
+    return "\n".join(lines)
+
+
 def calculate_label_changes(
     existing_labels: list[tuple[str, str, str]],
     target_labels: list[tuple[str, str, str]],
@@ -433,13 +492,21 @@ def apply_labels(
 def execute_define_labels(args: argparse.Namespace) -> int:
     """Execute the define-labels command.
 
+    This command performs three operations:
+    1. Sync workflow labels to the GitHub repository
+    2. Initialize issues without status labels (assign 'created' label)
+    3. Validate issues for errors (multiple labels) and warnings (stale processes)
+
     Args:
         args: Parsed command line arguments with:
             - project_dir: Optional project directory path
             - dry_run: Preview mode flag
 
     Returns:
-        int: Exit code (0 for success, 1 for error)
+        Exit code:
+        - 0: Success (no errors or warnings)
+        - 1: Errors found (issues with multiple status labels)
+        - 2: Warnings only (stale bot processes detected, no errors)
     """
     try:
         logger.info("Starting define-labels command execution")
@@ -471,17 +538,48 @@ def execute_define_labels(args: argparse.Namespace) -> int:
             logger.info("DRY RUN MODE: Changes will be previewed only")
 
         # Apply labels to repository
-        results = apply_labels(project_dir, workflow_labels, dry_run=dry_run)
+        label_changes = apply_labels(project_dir, workflow_labels, dry_run=dry_run)
 
-        # Log summary of results
-        logger.info("Label operation completed successfully")
-        logger.info(
-            f"Summary: Created={len(results['created'])}, "
-            f"Updated={len(results['updated'])}, "
-            f"Deleted={len(results['deleted'])}, "
-            f"Unchanged={len(results['unchanged'])}"
+        # Build label lookups for initialization and validation
+        label_lookups = build_label_lookups(labels_config)
+        workflow_label_names = label_lookups["all_names"]
+        created_label_name = label_lookups["id_to_name"].get(
+            "created", "status-01:created"
         )
 
+        # Initialize IssueManager and fetch open issues
+        issue_manager = IssueManager(project_dir)
+        issues = issue_manager.list_issues(state="open", include_pull_requests=False)
+
+        # Initialize issues without status labels
+        initialized = initialize_issues(
+            issues,
+            workflow_label_names,
+            created_label_name,
+            issue_manager,
+            dry_run=dry_run,
+        )
+
+        # Validate issues for errors and warnings
+        validation = validate_issues(
+            issues, labels_config, issue_manager, dry_run=dry_run
+        )
+        # Add initialized issues to validation results
+        validation["initialized"] = initialized
+
+        # Format and print summary
+        repo_url = ""  # Reserved for future use
+        summary = format_validation_summary(label_changes, validation, repo_url)
+        print(summary)
+
+        # Log completion
+        logger.info("Label operation completed successfully")
+
+        # Return exit code based on validation results
+        if validation["errors"]:
+            return 1
+        elif validation["warnings"]:
+            return 2
         return 0
 
     except ValueError as e:
