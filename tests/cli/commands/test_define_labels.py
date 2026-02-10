@@ -280,7 +280,13 @@ class TestExecuteDefineLabels:
         mock_get_config_path.return_value = project_dir / "config" / "labels.json"
         mock_load_config.return_value = {
             "workflow_labels": [
-                {"name": "status-01:created", "color": "10b981", "description": "Test"}
+                {
+                    "internal_id": "created",
+                    "name": "status-01:created",
+                    "color": "10b981",
+                    "description": "Test",
+                    "category": "human_action",
+                }
             ]
         }
         mock_apply_labels.return_value = {
