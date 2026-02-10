@@ -132,6 +132,19 @@ def is_status_eligible_for_session(status: str) -> bool:
     return initial_command is not None
 
 
+def status_requires_linked_branch(status: str) -> bool:
+    """Check if status requires a linked branch to start/restart session.
+
+    Args:
+        status: Status label like "status-04:plan-review"
+
+    Returns:
+        True if status requires linked branch (status-04, status-07)
+        False for status-01 and all other statuses
+    """
+    return status in ("status-04:plan-review", "status-07:code-review")
+
+
 def _is_issue_eligible(
     issue: IssueData,
     human_action_labels: set[str],

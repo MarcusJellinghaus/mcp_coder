@@ -22,12 +22,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `status_requires_linked_branch()` Helper
-- [ ] Implement `status_requires_linked_branch()` function in `issues.py` ([step_1.md](./steps/step_1.md))
-- [ ] Add tests for `status_requires_linked_branch()` in `test_issues.py`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 1
+- [x] Implement `status_requires_linked_branch()` function in `issues.py` ([step_1.md](./steps/step_1.md))
+- [x] Add tests for `status_requires_linked_branch()` in `test_issues.py`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Add `skip_reason` Parameter to `get_next_action()`
 - [ ] Add `skip_reason` parameter to `get_next_action()` in `status.py` ([step_2.md](./steps/step_2.md))

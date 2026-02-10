@@ -15,6 +15,7 @@ from mcp_coder.workflows.vscodeclaude.issues import (
     get_linked_branch_for_issue,
     get_matching_ignore_label,
     is_status_eligible_for_session,
+    status_requires_linked_branch,
 )
 
 
@@ -686,3 +687,38 @@ class TestIsStatusEligibleForSession:
         """Check if status should have a VSCodeClaude session."""
         result = is_status_eligible_for_session(status)
         assert result == expected, f"Expected {expected} for status '{status}'"
+
+
+class TestStatusRequiresLinkedBranch:
+    """Tests for status_requires_linked_branch()."""
+
+    def test_status_01_does_not_require_branch(self) -> None:
+        """status-01:created allows fallback to main."""
+        assert status_requires_linked_branch("status-01:created") is False
+
+    def test_status_04_requires_branch(self) -> None:
+        """status-04:plan-review requires linked branch."""
+        assert status_requires_linked_branch("status-04:plan-review") is True
+
+    def test_status_07_requires_branch(self) -> None:
+        """status-07:code-review requires linked branch."""
+        assert status_requires_linked_branch("status-07:code-review") is True
+
+    def test_bot_statuses_do_not_require_branch(self) -> None:
+        """Bot statuses don't require linked branch."""
+        assert status_requires_linked_branch("status-02:bot-pickup") is False
+        assert status_requires_linked_branch("status-05:bot-pickup") is False
+        assert status_requires_linked_branch("status-08:bot-pickup") is False
+
+    def test_pr_created_does_not_require_branch(self) -> None:
+        """status-10:pr-created doesn't require linked branch."""
+        assert status_requires_linked_branch("status-10:pr-created") is False
+
+    def test_empty_string_returns_false(self) -> None:
+        """Empty string returns False."""
+        assert status_requires_linked_branch("") is False
+
+    def test_invalid_status_returns_false(self) -> None:
+        """Invalid status string returns False."""
+        assert status_requires_linked_branch("invalid") is False
+        assert status_requires_linked_branch("status-99:unknown") is False
