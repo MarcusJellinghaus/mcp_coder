@@ -24,7 +24,7 @@ This fix restores the `.txt` extension by performing a global find-and-replace a
 ### Source Files
 | File | Changes |
 |------|---------|
-| `src/mcp_coder/workflows/vscodeclaude/workspace.py` | 2 occurrences |
+| `src/mcp_coder/workflows/vscodeclaude/workspace.py` | 3 occurrences |
 | `src/mcp_coder/workflows/vscodeclaude/templates.py` | 2 occurrences |
 
 ### Test Files

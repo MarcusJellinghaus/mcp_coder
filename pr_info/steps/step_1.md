@@ -20,7 +20,8 @@ with `.vscodeclaude_status.txt` in the source files listed below.
 
 | Location | Function | Change |
 |----------|----------|--------|
-| ~Line 277 | `update_gitignore()` | Idempotency check string |
+| ~Line 278 | `update_gitignore()` | Idempotency check string |
+| ~Line 462 | `create_status_file()` | Docstring description |
 | ~Line 497 | `create_status_file()` | Output filename |
 
 ### templates.py
@@ -38,7 +39,7 @@ No integration changes. These are string literal replacements only.
 
 ```
 1. Open workspace.py
-2. Replace ".vscodeclaude_status.md" with ".vscodeclaude_status.txt" (2 occurrences)
+2. Replace ".vscodeclaude_status.md" with ".vscodeclaude_status.txt" (3 occurrences)
 3. Open templates.py
 4. Replace ".vscodeclaude_status.md" with ".vscodeclaude_status.txt" (2 occurrences)
 5. Save both files
