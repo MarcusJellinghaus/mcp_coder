@@ -37,7 +37,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Add test cases for "(Closed)" prefix in status column in `tests/workflows/vscodeclaude/test_status_display.py`
 - [x] Add test case for closed issue with missing folder being skipped
 - [x] Add test cases for bot stage sessions showing simple delete action
-- [ ] Add test cases for pr-created sessions showing simple delete action
+- [x] Add test cases for pr-created sessions showing simple delete action
 - [ ] Update imports in `src/mcp_coder/workflows/vscodeclaude/status.py`
 - [ ] Remove the early `continue` for closed issues
 - [ ] Add folder existence check for closed issues

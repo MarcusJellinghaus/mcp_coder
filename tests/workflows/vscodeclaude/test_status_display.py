@@ -1101,3 +1101,187 @@ class TestBotStageSessionsDeleteAction:
         # Eligible status should show Restart, NOT Delete
         assert "Restart" in captured.out
         assert "Delete" not in captured.out
+
+
+class TestPrCreatedSessionsDeleteAction:
+    """Test pr-created sessions show simple delete action.
+
+    Sessions at status-10:pr-created represent completed workflow.
+    These sessions should show "Delete" action since:
+    - The PR has been created, workflow is complete
+    - No VSCodeClaude intervention is needed
+    - Session should be cleaned up
+    """
+
+    def test_pr_created_status_10_shows_delete_action(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Session at status-10:pr-created shows Delete action."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        # Mock is_issue_closed to return False (issue is open)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+
+        # Mock check_vscode_running - not running
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+
+        # Mock check_folder_dirty - folder is clean
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-10:pr-created",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        # Should show the session
+        assert "#123" in captured.out
+        # Should show Delete action for pr-created status
+        assert "Delete" in captured.out
+        # Should NOT show (Closed) since issue is open
+        assert "(Closed)" not in captured.out
+
+    def test_pr_created_dirty_folder_shows_manual_cleanup(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """PR-created session with dirty folder shows Manual cleanup."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        # Folder is DIRTY
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: True,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 456,
+            "status": "status-10:pr-created",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#456" in captured.out
+        # Dirty folder should show Manual cleanup
+        assert "Manual" in captured.out
+
+    def test_pr_created_with_vscode_running_shows_active(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """PR-created session with VSCode running shows (active)."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        # VSCode IS running
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 789,
+            "status": "status-10:pr-created",
+            "vscode_pid": 12345,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#789" in captured.out
+        # Running VSCode should show (active)
+        assert "(active)" in captured.out
+
+    def test_pr_created_closed_issue_shows_closed_prefix(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """PR-created session with closed issue shows (Closed) prefix and Delete."""
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        # Issue is closed
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 999,
+            "status": "status-10:pr-created",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+
+        captured = capsys.readouterr()
+        assert "#999" in captured.out
+        # Should show (Closed) prefix for closed issue
+        assert "(Closed)" in captured.out
+        # Should still show Delete action
+        assert "Delete" in captured.out
