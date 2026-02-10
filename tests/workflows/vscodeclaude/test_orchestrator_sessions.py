@@ -1734,6 +1734,7 @@ class TestBranchHandlingIntegration:
             "owner/repo": {100: cached_issue}
         }
 
+        # Actually call restart_closed_sessions to trigger the restart flow
         result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
 
         # Verify full lifecycle
@@ -1981,6 +1982,22 @@ class TestBranchHandlingIntegration:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
             lambda: {"owner/repo"},
+        )
+
+        # Mock the necessary components for restart flow
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        from unittest.mock import MagicMock
+
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
         )
 
         # Return "No branch" skip reason

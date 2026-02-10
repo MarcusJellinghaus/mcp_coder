@@ -1,0 +1,9 @@
+# CI Failure Analysis
+
+The CI pipeline failed due to two integration tests in `test_orchestrator_sessions.py` that have incorrect mock setup. These tests were added as part of Step 7 to verify the branch handling feature, but they're not properly configured to test the actual branch preparation logic.
+
+The failing test `test_full_session_lifecycle_status_01_to_04` at line 1744 expects to see `"prepare_branch:status-04:plan-review"` in the operations list. However, the test mocks `_prepare_restart_branch` to track calls by appending to the operations list, but the restart_closed_sessions function is not actually being called in this test. Instead, the test only mocks session creation and updates session status directly, bypassing the restart flow entirely. The test needs to be restructured to actually call `restart_closed_sessions()` to trigger the branch preparation logic.
+
+The second failing test `test_intervention_session_requires_branch_for_status_04` at line 2030 expects to find `"No branch"` in the captured log output when an intervention session at status-04 has no linked branch. However, the test mocks `_prepare_restart_branch` to return a skip result, but the logging happens inside `restart_closed_sessions()` which uses the skip_reason from the BranchPrepResult. The log statement at orchestrator.py:803 shows a different warning message about GitHub token, suggesting the test is hitting the wrong code path or the mock isn't being called at all.
+
+Both tests are located in the `TestBranchHandlingIntegration` class and need to be fixed to properly invoke `restart_closed_sessions()` with appropriate session setup and mocks. The tests should create sessions in the sessions.json file, mock the necessary dependencies (GitHub API calls, VSCode checks), and then call `restart_closed_sessions()` to verify the branch handling logic executes correctly.
