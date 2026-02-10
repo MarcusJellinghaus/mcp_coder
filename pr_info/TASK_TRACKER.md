@@ -66,20 +66,20 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 4: Update `restart_closed_sessions()` with Eligibility Checks + Module Docstring
 [Details](./steps/step_4.md)
 
-- [ ] Add test cases for closed issues not being restarted in `tests/workflows/vscodeclaude/test_orchestrator_sessions.py`
-- [ ] Add test cases for bot stage issues not being restarted
-- [ ] Add test cases for pr-created issues not being restarted
-- [ ] Add test cases for eligible issues being restarted
-- [ ] Add test case for eligible-to-eligible transition (04 → 07) - should restart with updated status
-- [ ] Add module docstring to `src/mcp_coder/workflows/vscodeclaude/orchestrator.py`
-- [ ] Add import for `is_status_eligible_for_session`
-- [ ] Add closed issue check in `restart_closed_sessions()`
-- [ ] Add eligibility check in `restart_closed_sessions()`
-- [ ] Remove the redundant `is_session_stale()` check
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and ensure all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 4
+- [x] Add test cases for closed issues not being restarted in `tests/workflows/vscodeclaude/test_orchestrator_sessions.py`
+- [x] Add test cases for bot stage issues not being restarted
+- [x] Add test cases for pr-created issues not being restarted
+- [x] Add test cases for eligible issues being restarted
+- [x] Add test case for eligible-to-eligible transition (04 → 07) - should restart with updated status
+- [x] Add module docstring to `src/mcp_coder/workflows/vscodeclaude/orchestrator.py`
+- [x] Add import for `is_status_eligible_for_session`
+- [x] Add closed issue check in `restart_closed_sessions()`
+- [x] Add eligibility check in `restart_closed_sessions()`
+- [x] Remove the redundant `is_session_stale()` check
+- [x] Run pylint and fix any issues
+- [x] Run pytest and ensure all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 4
 
 ---
 
