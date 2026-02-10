@@ -7,9 +7,30 @@ Session Lifecycle Rules:
 - Eligible statuses: status-01:created, status-04:plan-review, status-07:code-review
 - Ineligible: bot_pickup (02, 05, 08), bot_busy (03, 06, 09), pr-created (10)
 
+Branch Handling Rules:
+- status-01:created: Use linked branch if exists, fall back to 'main' if not
+- status-04:plan-review: REQUIRE linked branch, skip if missing
+- status-07:code-review: REQUIRE linked branch, skip if missing
+
 Restart Behavior:
-- Restart: Open issues at eligible statuses (01, 04, 07) without blocked labels
-- Don't restart: Closed issues, bot statuses, pr-created, blocked issues
+- Every restart runs 'git fetch origin' to sync with remote
+- status-01 restarts: Stay on current branch, fetch only
+- status-04/07 restarts: Verify linked branch, checkout if different, pull
+- Status changes (01→04): Auto-switch to linked branch if repo is clean
+
+Branch Verification on Restart:
+1. git fetch origin (always, all statuses)
+2. If status-04/07:
+   a. Get linked branch from GitHub API
+   b. If no linked branch → skip restart, show "!! No branch"
+   c. Check repo dirty (git status --porcelain)
+   d. If dirty → skip restart, show "!! Dirty"
+   e. git checkout <linked_branch>
+   f. git pull
+   g. If git error → skip restart, show "!! Git error"
+3. Update .vscodeclaude_status.txt with branch name
+4. Regenerate session files
+5. Launch VSCode
 
 Cleanup Behavior:
 - Stale sessions (status changed, closed, bot stage, pr-created) eligible for --cleanup
@@ -18,6 +39,22 @@ Cleanup Behavior:
 Dirty Folder Protection:
 - Sessions with uncommitted git changes are never auto-deleted
 - Display shows "!! Manual cleanup" for these cases
+- Dirty detection: any output from 'git status --porcelain'
+
+Status Table Indicators:
+- (active): VSCode is running
+- !! No branch: status-04/07 without linked branch
+- !! Dirty: Repo has uncommitted changes, can't switch branch
+- !! Git error: Git operation failed
+- → Needs branch: Eligible issue at status-04/07 needs linked branch
+- Blocked (label): Issue has ignore label
+- → Delete (with --cleanup): Session is stale
+- → Restart: Normal restart needed
+- → Create and start: New session can be created
+
+Intervention Sessions:
+- Follow same branch rules as normal sessions
+- is_intervention flag doesn't affect branch requirements
 """
 
 import logging
