@@ -14,6 +14,7 @@ from .commands.coordinator import (
     execute_coordinator_vscodeclaude,
     execute_coordinator_vscodeclaude_status,
 )
+from .commands.coordinator.issue_stats import execute_coordinator_issue_stats
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
@@ -437,6 +438,31 @@ def create_parser() -> argparse.ArgumentParser:
         help="Filter to specific repository only",
     )
 
+    # coordinator issue-stats command
+    issue_stats_parser = coordinator_subparsers.add_parser(
+        "issue-stats",
+        help="Display issue statistics by workflow status",
+        formatter_class=WideHelpFormatter,
+    )
+    issue_stats_parser.add_argument(
+        "--filter",
+        type=str.lower,
+        choices=["all", "human", "bot"],
+        default="all",
+        help="Filter issues by category (default: all)",
+    )
+    issue_stats_parser.add_argument(
+        "--details",
+        action="store_true",
+        default=False,
+        help="Show individual issue details with links",
+    )
+    issue_stats_parser.add_argument(
+        "--project-dir",
+        metavar="PATH",
+        help="Project directory path (default: current directory)",
+    )
+
     # Define-labels command - Sync workflow status labels to GitHub
     define_labels_parser = subparsers.add_parser(
         "define-labels",
@@ -661,6 +687,8 @@ def main() -> int:
                         return execute_coordinator_vscodeclaude_status(args)
                     else:
                         return execute_coordinator_vscodeclaude(args)
+                elif args.coordinator_subcommand == "issue-stats":
+                    return execute_coordinator_issue_stats(args)
                 else:
                     logger.error(
                         f"Unknown coordinator subcommand: {args.coordinator_subcommand}"

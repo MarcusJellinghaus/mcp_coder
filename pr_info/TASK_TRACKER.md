@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 5
 
 ### Step 6: coordinator issue-stats CLI Wiring
-- [ ] Implement Step 6 - Add `execute_coordinator_issue_stats()` and register subcommand in main.py ([step_6.md](./steps/step_6.md))
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 6
+- [x] Implement Step 6 - Add `execute_coordinator_issue_stats()` and register subcommand in main.py ([step_6.md](./steps/step_6.md))
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 6
 
 ### Step 7: Cleanup - Delete workflows/ Folder
 - [ ] Implement Step 7 - Delete legacy `workflows/` folder and migrate test files ([step_7.md](./steps/step_7.md))

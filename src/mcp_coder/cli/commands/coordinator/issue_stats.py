@@ -7,9 +7,21 @@ Functions are moved from workflows/issue_stats.py as part of consolidating
 CLI functionality into the cli/commands structure.
 """
 
+import argparse
+import logging
+import sys
+from pathlib import Path
 from typing import Any
 
-from ....utils.github_operations.issue_manager import IssueData
+from ....utils.git_operations.remotes import get_github_repository_url
+from ....utils.github_operations.issue_manager import IssueData, IssueManager
+from ....utils.github_operations.label_config import (
+    get_labels_config_path,
+    load_labels_config,
+)
+from ....workflows.utils import resolve_project_dir
+
+logger = logging.getLogger(__name__)
 
 
 def validate_issue_labels(
@@ -268,3 +280,77 @@ def display_statistics(
     print(
         f"\nTotal: {total_issues} open issues ({valid_issues} valid, {error_issues} errors)"
     )
+
+
+def execute_coordinator_issue_stats(args: argparse.Namespace) -> int:
+    """Execute coordinator issue-stats command.
+
+    Args:
+        args: Parsed arguments with:
+            - project_dir: Optional project directory path
+            - filter: Category filter ('all', 'human', 'bot')
+            - details: Show individual issue details
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    try:
+        logger.info("Starting coordinator issue-stats command execution")
+
+        # Resolve project directory with validation
+        project_dir = resolve_project_dir(args.project_dir)
+        logger.info(f"Project directory: {project_dir}")
+
+        # Get repository URL from git remote
+        repo_url = get_github_repository_url(project_dir)
+        if not repo_url:
+            raise ValueError(
+                "Could not determine GitHub repository URL from git remote"
+            )
+        logger.info(f"Repository URL: {repo_url}")
+
+        # Load labels configuration
+        config_path = get_labels_config_path(project_dir)
+        labels_config = load_labels_config(config_path)
+        logger.debug(f"Loaded labels config from: {config_path}")
+
+        # Get ignore_labels from config (if present)
+        ignore_labels: list[str] = labels_config.get("ignore_labels", [])
+
+        # Create IssueManager and fetch open issues
+        issue_manager = IssueManager(project_dir)
+        issues = issue_manager.list_issues(state="open", include_pull_requests=False)
+        logger.info(f"Fetched {len(issues)} open issues")
+
+        # Filter ignored issues
+        filtered_issues = filter_ignored_issues(issues, ignore_labels)
+        if ignore_labels:
+            logger.info(
+                f"Filtered to {len(filtered_issues)} issues "
+                f"(ignored {len(issues) - len(filtered_issues)} with labels: {ignore_labels})"
+            )
+
+        # Group issues by category
+        grouped_issues = group_issues_by_category(filtered_issues, labels_config)
+
+        # Display statistics with filter and details args
+        display_statistics(
+            grouped_issues=grouped_issues,
+            labels_config=labels_config,
+            repo_url=repo_url,
+            filter_category=args.filter,
+            show_details=args.details,
+        )
+
+        logger.info("Issue statistics command completed successfully")
+        return 0
+
+    except ValueError as e:
+        logger.error(str(e))
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}", exc_info=True)
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
