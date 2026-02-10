@@ -52,16 +52,16 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 [Details](./steps/step_3.md)
 
 - [x] Add test cases for closed issue sessions being included in `tests/workflows/vscodeclaude/test_cleanup.py`
-- [ ] Add test cases for bot stage sessions being included
-- [ ] Add test cases for pr-created sessions being included
-- [ ] Add test case for eligible sessions NOT being included
-- [ ] Update imports in `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
-- [ ] Update `get_stale_sessions()` with closed issue check
-- [ ] Update `get_stale_sessions()` with ineligibility check
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and ensure all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 3
+- [x] Add test cases for bot stage sessions being included
+- [x] Add test cases for pr-created sessions being included
+- [x] Add test case for eligible sessions NOT being included
+- [x] Update imports in `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
+- [x] Update `get_stale_sessions()` with closed issue check
+- [x] Update `get_stale_sessions()` with ineligibility check
+- [x] Run pylint and fix any issues
+- [x] Run pytest and ensure all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Update `restart_closed_sessions()` with Eligibility Checks + Module Docstring
 [Details](./steps/step_4.md)
