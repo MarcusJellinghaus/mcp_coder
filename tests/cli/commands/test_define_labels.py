@@ -260,6 +260,7 @@ class TestResolveProjectDir:
 class TestExecuteDefineLabels:
     """Test the CLI execute function - minimal tests for wiring."""
 
+    @patch("mcp_coder.cli.commands.define_labels.IssueManager")
     @patch("mcp_coder.cli.commands.define_labels.apply_labels")
     @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
     @patch("mcp_coder.cli.commands.define_labels.get_labels_config_path")
@@ -270,6 +271,7 @@ class TestExecuteDefineLabels:
         mock_get_config_path: MagicMock,
         mock_load_config: MagicMock,
         mock_apply_labels: MagicMock,
+        mock_issue_manager: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test successful dry-run execution returns 0."""
@@ -295,6 +297,10 @@ class TestExecuteDefineLabels:
             "deleted": [],
             "unchanged": ["status-01:created"],
         }
+        # Setup IssueManager mock to return empty issues list
+        mock_issue_manager_instance = MagicMock()
+        mock_issue_manager_instance.list_issues.return_value = []
+        mock_issue_manager.return_value = mock_issue_manager_instance
 
         args = argparse.Namespace(
             project_dir=str(project_dir),

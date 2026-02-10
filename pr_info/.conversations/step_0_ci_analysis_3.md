@@ -1,0 +1,9 @@
+# CI Failure Analysis
+
+The CI pipeline failed in the unit-tests job due to a single test failure: `TestExecuteDefineLabels::test_execute_define_labels_dry_run_returns_zero` in `tests/cli/commands/test_define_labels.py:306`. The test expects the `execute_define_labels` function to return 0 (success) when running in dry-run mode with mocked dependencies, but instead it returns 1 (error).
+
+The root cause is that the mock for `resolve_project_dir` is not preventing the actual git repository validation from occurring. The test creates a temporary directory (`tmp_path / "project"`) without a `.git` subdirectory, and while it mocks `resolve_project_dir` to return this path, the actual `resolve_project_dir` function in `src/mcp_coder/workflows/utils.py` is being called and validating that the directory is a git repository. The error message "Directory is not a git repository" confirms this validation is failing.
+
+The issue is in the test setup at `tests/cli/commands/test_define_labels.py` around line 280-310. The mock decorator patches `mcp_coder.cli.commands.define_labels.resolve_project_dir`, but the function call may be occurring before the mock is applied or through a different import path. To fix this, the test should either: (1) create a `.git` directory in the mock project path to satisfy the validation, (2) ensure the mock is correctly intercepting the function call by verifying the patch path matches the actual import, or (3) have the mock raise if it's not being called, to help diagnose why the real function is executing instead.
+
+The files that need changes are `tests/cli/commands/test_define_labels.py` (to fix the test setup). The implementation code in `src/mcp_coder/cli/commands/define_labels.py` and `src/mcp_coder/workflows/utils.py` appears correct - this is purely a test isolation issue where the mock is not properly intercepting the validation call.
