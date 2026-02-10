@@ -318,13 +318,14 @@ def display_status_table(
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
 
         # Get current status for eligibility check
-        # Use session status if no cache available (tests mock is_issue_closed/is_session_stale)
+        # Use cached status if available, fall back to session status
         if repo_cached_issues is not None:
             current_status, _ = get_issue_current_status(
                 session["issue_number"], cached_issues=repo_cached_issues
             )
             status_for_eligibility = current_status or session["status"]
         else:
+            # No cache available - use session's recorded status
             status_for_eligibility = session["status"]
         is_eligible = is_status_eligible_for_session(status_for_eligibility)
 

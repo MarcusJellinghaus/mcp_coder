@@ -68,7 +68,12 @@ def get_stale_sessions(
         if cached_issues_by_repo:
             repo_issues = cached_issues_by_repo.get(repo_full_name, {})
             issue_number = session["issue_number"]
-            if issue_number in repo_issues:
+            if issue_number not in repo_issues:
+                logger.debug(
+                    "Issue #%d not in cache, skipping eligibility check",
+                    issue_number,
+                )
+            elif issue_number in repo_issues:
                 issue = repo_issues[issue_number]
                 # Check if issue is closed
                 is_closed = issue["state"] == "closed"
