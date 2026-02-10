@@ -116,7 +116,7 @@ class TestRegenerateSessionFiles:
 
         regenerate_session_files(mock_session, mock_issue)
 
-        status_file = session_folder / ".vscodeclaude_status.md"
+        status_file = session_folder / ".vscodeclaude_status.txt"
         assert status_file.exists()
         content = status_file.read_text(encoding="utf-8")
         assert "#123" in content
@@ -189,7 +189,7 @@ class TestRegenerateSessionFiles:
 
         # All required files must exist
         required_files = [
-            session_folder / ".vscodeclaude_status.md",
+            session_folder / ".vscodeclaude_status.txt",
             session_folder / ".vscode" / "tasks.json",
             tmp_path / "repo_123.code-workspace",
         ]

@@ -33,11 +33,11 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Update Test Files
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Implement Step 2: Replace `.vscodeclaude_status.md` with `.vscodeclaude_status.txt` in test files
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and fix any failures
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 2
+- [x] Implement Step 2: Replace `.vscodeclaude_status.md` with `.vscodeclaude_status.txt` in test files
+- [x] Run pylint and fix any issues
+- [x] Run pytest and fix any failures
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 2
 
 ---
 
