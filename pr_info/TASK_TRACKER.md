@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 1
 
 ### Step 2: Issue Initialization in define-labels
-- [ ] Implement Step 2 - Add `check_status_labels` and `initialize_issues` functions ([step_2.md](./steps/step_2.md))
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Implement Step 2 - Add `check_status_labels` and `initialize_issues` functions ([step_2.md](./steps/step_2.md))
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Validation and Staleness Detection in define-labels
 - [ ] Implement Step 3 - Add `calculate_elapsed_minutes`, `check_stale_bot_process`, and `validate_issues` functions ([step_3.md](./steps/step_3.md))

@@ -10,6 +10,7 @@ import logging
 import sys
 from pathlib import Path
 
+from ...utils.github_operations.issue_manager import IssueData, IssueManager
 from ...utils.github_operations.label_config import (
     get_labels_config_path,
     load_labels_config,
@@ -40,6 +41,62 @@ def _log_dry_run_changes(changes: dict[str, list[str]]) -> None:
         )
     if changes["unchanged"]:
         logger.info(f"  {len(changes['unchanged'])} labels unchanged")
+
+
+def check_status_labels(
+    issue: IssueData,
+    workflow_label_names: set[str],
+) -> tuple[int, list[str]]:
+    """Check how many workflow status labels an issue has.
+
+    Args:
+        issue: Issue data containing labels list
+        workflow_label_names: Set of all valid workflow status label names
+
+    Returns:
+        Tuple of (count, list_of_status_labels) where:
+        - count: Number of workflow status labels on the issue
+        - list_of_status_labels: List of workflow label names found on the issue
+    """
+    # Get issue's labels and filter to only workflow labels
+    issue_labels = issue["labels"]
+    found_labels = [label for label in issue_labels if label in workflow_label_names]
+    return (len(found_labels), found_labels)
+
+
+def initialize_issues(
+    issues: list[IssueData],
+    workflow_label_names: set[str],
+    created_label_name: str,
+    issue_manager: IssueManager,
+    dry_run: bool = False,
+) -> list[int]:
+    """Initialize issues without status labels.
+
+    Issues without any workflow status label will be assigned the
+    'created' label (typically 'status-01:created').
+
+    Args:
+        issues: List of IssueData from repository
+        workflow_label_names: Set of all valid workflow status label names
+        created_label_name: Name of the 'created' label to apply
+        issue_manager: IssueManager instance for API calls
+        dry_run: If True, preview changes without applying
+
+    Returns:
+        List of issue numbers that were (or would be in dry-run) initialized
+    """
+    initialized: list[int] = []
+
+    for issue in issues:
+        count, _ = check_status_labels(issue, workflow_label_names)
+        if count == 0:
+            issue_number = issue["number"]
+            if not dry_run:
+                issue_manager.add_labels(issue_number, created_label_name)
+            initialized.append(issue_number)
+
+    return initialized
 
 
 def calculate_label_changes(
