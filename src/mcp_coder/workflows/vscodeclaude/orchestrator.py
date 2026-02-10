@@ -786,19 +786,6 @@ def restart_closed_sessions(
             # Regenerate all session files with fresh data
             regenerate_session_files(session, issue)
 
-            # If branch was switched, update status file with new branch
-            if branch_result.branch_name:
-                create_status_file(
-                    folder_path=folder_path,
-                    issue_number=issue_number,
-                    issue_title=issue["title"],
-                    status=current_status,
-                    repo_full_name=repo_full_name,
-                    branch_name=branch_result.branch_name,
-                    issue_url=issue.get("url", ""),
-                    is_intervention=session.get("is_intervention", False),
-                )
-
         except Exception as e:
             logger.warning(
                 "Failed to regenerate files for issue #%d: %s",

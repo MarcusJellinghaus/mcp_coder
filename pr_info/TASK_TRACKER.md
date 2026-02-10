@@ -94,13 +94,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 8
 
 ### Step 9: Remove Redundant Status File Write
-- [ ] Remove redundant `create_status_file()` call in `restart_closed_sessions()` ([step_9.md](./steps/step_9.md))
-- [ ] Update test to verify single status file write
-- [ ] Add test for branch reading in `regenerate_session_files()`
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 9
+- [x] Remove redundant `create_status_file()` call in `restart_closed_sessions()` ([step_9.md](./steps/step_9.md))
+- [x] Update test to verify single status file write
+- [x] Add test for branch reading in `regenerate_session_files()`
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 9
 
 ### Step 10: Add Comprehensive Decision Matrix Documentation
 - [ ] Add decision matrix tables to `orchestrator.py` module docstring ([step_10.md](./steps/step_10.md))
