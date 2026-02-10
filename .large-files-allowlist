@@ -9,6 +9,7 @@ docs/processes-prompts/development-process.md
 src/mcp_coder/cli/commands/coordinator/commands.py
 src/mcp_coder/prompt_manager.py
 src/mcp_coder/workflows/implement/core.py
+src/mcp_coder/workflows/vscodeclaude/orchestrator.py
 tests/cli/commands/coordinator/test_core.py
 tests/cli/commands/test_commit.py
 tests/cli/test_main.py

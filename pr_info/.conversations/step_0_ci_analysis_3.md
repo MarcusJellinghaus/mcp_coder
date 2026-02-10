@@ -1,0 +1,9 @@
+# CI Failure Analysis
+
+The CI pipeline file-size check has failed because the file `src/mcp_coder/workflows/vscodeclaude/orchestrator.py` now contains 878 lines, exceeding the configured maximum of 750 lines. This file is not present in the `.large-files-allowlist`, which means it must be either refactored to reduce its line count or added to the allowlist.
+
+The orchestrator.py file grew significantly during the implementation of issue #422 (Status-Aware Branch Handling). The implementation added new functionality including the `BranchPrepResult` NamedTuple, the `_prepare_restart_branch()` helper function, and extensive branch verification logic in both `process_eligible_issues()` and `restart_closed_sessions()`. The file also contains a comprehensive module docstring (70+ lines) documenting all session lifecycle rules, branch handling rules, restart behavior, cleanup behavior, dirty folder protection, and status table indicators.
+
+To resolve this CI failure, there are two options: (1) Refactor orchestrator.py to extract some functionality into separate modules to bring it under 750 lines, or (2) Add the file to `.large-files-allowlist` to grandfather it in while planning future refactoring per issue #353. Given that the file contains cohesive orchestration logic and the implementation just completed is functional and well-tested, the pragmatic approach would be to add it to the allowlist now and plan refactoring as a separate effort.
+
+The fix requires adding `src/mcp_coder/workflows/vscodeclaude/orchestrator.py` to the `.large-files-allowlist` file, maintaining the alphabetical sorting of entries in that file.
