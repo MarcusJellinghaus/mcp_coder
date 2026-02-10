@@ -213,9 +213,6 @@ class TestSafeDeleteFolder:
         staging_dir = tmp_path / "staging"
         rmdir_attempts = 0
 
-        # Mock rmdir to fail (simulating locked empty directory)
-        original_rmdir = Path.rmdir
-
         def mock_rmdir(self: Path) -> None:
             nonlocal rmdir_attempts
             rmdir_attempts += 1
@@ -230,7 +227,7 @@ class TestSafeDeleteFolder:
             Path(dst).parent.mkdir(parents=True, exist_ok=True)
             # Actually delete source to simulate successful move
             Path(src).rmdir = lambda: None  # type: ignore[method-assign]
-            shutil._rmtree_unsafe(Path(src), lambda *args: None)  # type: ignore[attr-defined]
+            shutil._rmtree_unsafe(Path(src), lambda *_: None)  # type: ignore[attr-defined]
             return dst
 
         # Simpler approach - just mark folder as moved
