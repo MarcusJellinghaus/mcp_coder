@@ -463,6 +463,12 @@ class TestClosedIssuePrefixDisplay:
             lambda path: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
@@ -508,6 +514,12 @@ class TestClosedIssuePrefixDisplay:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: False,
+        )
+
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
         )
 
         session: VSCodeClaudeSession = {
@@ -556,6 +568,12 @@ class TestClosedIssuePrefixDisplay:
             lambda path: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
@@ -599,6 +617,12 @@ class TestClosedIssuePrefixDisplay:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: True,
+        )
+
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
         )
 
         session: VSCodeClaudeSession = {
@@ -647,6 +671,12 @@ class TestClosedIssuePrefixDisplay:
             lambda path: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(missing_folder),  # Folder does not exist
             "repo": "owner/repo",
@@ -689,6 +719,12 @@ class TestClosedIssuePrefixDisplay:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: False,
+        )
+
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
         )
 
         session: VSCodeClaudeSession = {
@@ -800,6 +836,12 @@ class TestBotStageSessionsDeleteAction:
             lambda path: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
@@ -843,6 +885,12 @@ class TestBotStageSessionsDeleteAction:
             lambda path: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
@@ -880,6 +928,12 @@ class TestBotStageSessionsDeleteAction:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: False,
+        )
+
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
         )
 
         session: VSCodeClaudeSession = {
@@ -921,6 +975,12 @@ class TestBotStageSessionsDeleteAction:
             lambda path: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
@@ -958,6 +1018,12 @@ class TestBotStageSessionsDeleteAction:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: False,
+        )
+
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
         )
 
         session: VSCodeClaudeSession = {
@@ -999,6 +1065,12 @@ class TestBotStageSessionsDeleteAction:
             lambda path: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
@@ -1037,6 +1109,12 @@ class TestBotStageSessionsDeleteAction:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: True,
+        )
+
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
         )
 
         session: VSCodeClaudeSession = {
@@ -1141,6 +1219,12 @@ class TestPrCreatedSessionsDeleteAction:
             lambda path: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
@@ -1185,6 +1269,12 @@ class TestPrCreatedSessionsDeleteAction:
             lambda path: True,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
@@ -1226,6 +1316,12 @@ class TestPrCreatedSessionsDeleteAction:
             lambda path: False,
         )
 
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
         session: VSCodeClaudeSession = {
             "folder": str(folder),
             "repo": "owner/repo",
@@ -1265,6 +1361,12 @@ class TestPrCreatedSessionsDeleteAction:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: False,
+        )
+
+        # Mock is_session_stale to avoid GitHub API calls
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
         )
 
         session: VSCodeClaudeSession = {

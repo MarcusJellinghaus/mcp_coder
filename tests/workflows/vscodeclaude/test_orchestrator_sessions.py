@@ -383,12 +383,6 @@ class TestOrchestration:
             lambda: {"owner/repo"},
         )
 
-        # Mock is_session_stale to avoid GitHub API calls - patch at orchestrator
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_stale",
-            lambda session, cached_issues=None: False,
-        )
-
         # Mock regenerate_session_files to avoid issue fetching
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
@@ -532,11 +526,6 @@ class TestOrchestration:
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
             lambda: {"owner/repo"},
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_stale",
-            lambda session, cached_issues=None: False,
-        )
-
         working_folder = tmp_path / "repo_123"
         working_folder.mkdir()
 
@@ -590,10 +579,6 @@ class TestOrchestration:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
             lambda: {"owner/repo"},
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_stale",
-            lambda session, cached_issues=None: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
