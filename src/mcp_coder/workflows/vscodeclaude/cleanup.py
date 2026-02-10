@@ -5,7 +5,11 @@ from pathlib import Path
 
 from ...utils.folder_deletion import safe_delete_folder
 from ...utils.github_operations.issues import IssueData
-from .issues import get_ignore_labels, get_matching_ignore_label
+from .issues import (
+    get_ignore_labels,
+    get_matching_ignore_label,
+    is_status_eligible_for_session,
+)
 from .orchestrator import _get_configured_repos
 from .sessions import check_vscode_running, load_sessions, remove_session
 from .status import get_folder_git_status, is_session_stale
@@ -20,10 +24,14 @@ def get_stale_sessions(
     """Get stale sessions with git status.
 
     Only checks sessions for repos that are still configured.
-    Includes sessions with ignore labels (blocked/wait).
+    Includes sessions that are:
+    - Stale (status changed)
+    - Blocked (has ignore labels like blocked/wait)
+    - Closed (issue state is closed)
+    - Ineligible (bot statuses or pr-created - no initial_command)
 
     Args:
-        cached_issues_by_repo: Optional cache of issues for blocked detection
+        cached_issues_by_repo: Optional cache of issues for state/blocked/eligibility detection
 
     Returns:
         List of (session, git_status) tuples where git_status is one of:
@@ -53,21 +61,39 @@ def get_stale_sessions(
             )
             continue
 
-        # Check for blocked label if cache available
+        # Check issue state, blocked label, and eligibility from cache
         is_blocked = False
+        is_closed = False
+        is_ineligible = False
         if cached_issues_by_repo:
             repo_issues = cached_issues_by_repo.get(repo_full_name, {})
             issue_number = session["issue_number"]
-            if issue_number in repo_issues:
+            if issue_number not in repo_issues:
+                logger.debug(
+                    "Issue #%d not in cache, skipping eligibility check",
+                    issue_number,
+                )
+            elif issue_number in repo_issues:
                 issue = repo_issues[issue_number]
+                # Check if issue is closed
+                is_closed = issue["state"] == "closed"
+                # Check for blocked label
                 blocked_label = get_matching_ignore_label(
                     issue["labels"], ignore_labels
                 )
                 if blocked_label:
                     is_blocked = True
+                # Check if current status is eligible for session
+                # Get status from issue labels (most current)
+                status_labels = [
+                    lbl for lbl in issue["labels"] if lbl.startswith("status-")
+                ]
+                if status_labels:
+                    current_status = status_labels[0]
+                    is_ineligible = not is_status_eligible_for_session(current_status)
 
-        # Check if session is stale or blocked
-        if is_session_stale(session) or is_blocked:
+        # Check if session is stale, blocked, closed, or ineligible
+        if is_session_stale(session) or is_blocked or is_closed or is_ineligible:
             folder_path = Path(session["folder"])
             git_status = get_folder_git_status(folder_path)
             stale_sessions.append((session, git_status))

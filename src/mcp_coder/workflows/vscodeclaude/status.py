@@ -6,6 +6,7 @@ from pathlib import Path
 from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .helpers import get_issue_status
+from .issues import is_status_eligible_for_session
 from .sessions import check_vscode_running, load_sessions
 from .types import VSCodeClaudeSession
 
@@ -278,10 +279,15 @@ def display_status_table(
         if cached_issues_by_repo:
             repo_cached_issues = cached_issues_by_repo.get(repo_full)
 
-        # Skip sessions for closed issues - they're no longer relevant
-        if is_issue_closed(session, cached_issues=repo_cached_issues):
+        # Check closed state and folder existence
+        folder_path = Path(session["folder"])
+        is_closed = is_issue_closed(session, cached_issues=repo_cached_issues)
+
+        # Skip closed issues if folder doesn't exist (nothing to clean up)
+        if is_closed and not folder_path.exists():
             logger.debug(
-                "Skipping session for closed issue #%d", session["issue_number"]
+                "Skipping closed issue #%d with missing folder",
+                session["issue_number"],
             )
             continue
 
@@ -291,9 +297,13 @@ def display_status_table(
         if repo_filter and repo_short != repo_filter:
             continue
 
-        folder_name = Path(session["folder"]).name
+        folder_name = folder_path.name
         issue_num = f"#{session['issue_number']}"
         status = session["status"]
+
+        # Add "(Closed)" prefix for closed issues
+        if is_closed:
+            status = f"(Closed) {status}"
 
         # Truncate folder name if too long
         if len(folder_name) > col_folder - 1:
@@ -305,9 +315,23 @@ def display_status_table(
 
         # Check VSCode and stale status
         is_running = check_vscode_running(session.get("vscode_pid"))
-        folder_path = Path(session["folder"])
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
-        stale = is_session_stale(session, cached_issues=repo_cached_issues)
+
+        # Get current status for eligibility check
+        # Use cached status if available, fall back to session status
+        if repo_cached_issues is not None:
+            current_status, _ = get_issue_current_status(
+                session["issue_number"], cached_issues=repo_cached_issues
+            )
+            status_for_eligibility = current_status or session["status"]
+        else:
+            # No cache available - use session's recorded status
+            status_for_eligibility = session["status"]
+        is_eligible = is_status_eligible_for_session(status_for_eligibility)
+
+        # Compute is_stale: closed OR ineligible OR status changed
+        status_changed = is_session_stale(session, cached_issues=repo_cached_issues)
+        stale = is_closed or not is_eligible or status_changed
 
         vscode_status = "Running" if is_running else "Closed"
         action = get_next_action(stale, is_dirty, is_running)

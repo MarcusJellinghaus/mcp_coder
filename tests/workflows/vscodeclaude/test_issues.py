@@ -14,6 +14,7 @@ from mcp_coder.workflows.vscodeclaude.issues import (
     get_ignore_labels,
     get_linked_branch_for_issue,
     get_matching_ignore_label,
+    is_status_eligible_for_session,
 )
 
 
@@ -653,3 +654,35 @@ class TestGetMatchingIgnoreLabel:
         """Should handle empty ignore labels set."""
         result = get_matching_ignore_label(["blocked"], set())
         assert result is None
+
+
+class TestIsStatusEligibleForSession:
+    """Tests for is_status_eligible_for_session function."""
+
+    @pytest.mark.parametrize(
+        "status,expected",
+        [
+            # Eligible statuses (have initial_command)
+            ("status-01:created", True),
+            ("status-04:plan-review", True),
+            ("status-07:code-review", True),
+            # Ineligible - bot_pickup (no vscodeclaude config)
+            ("status-02:awaiting-planning", False),
+            ("status-05:plan-ready", False),
+            ("status-08:ready-pr", False),
+            # Ineligible - bot_busy (no vscodeclaude config)
+            ("status-03:planning", False),
+            ("status-06:implementing", False),
+            ("status-09:pr-creating", False),
+            # Ineligible - pr-created (has config but null initial_command)
+            ("status-10:pr-created", False),
+            # Edge cases
+            ("", False),
+            ("invalid-status", False),
+            ("status-99:unknown", False),
+        ],
+    )
+    def test_status_eligibility(self, status: str, expected: bool) -> None:
+        """Check if status should have a VSCodeClaude session."""
+        result = is_status_eligible_for_session(status)
+        assert result == expected, f"Expected {expected} for status '{status}'"

@@ -1,6 +1,23 @@
 """Session orchestration for vscodeclaude feature.
 
 Main functions for preparing, launching, and managing sessions.
+
+Session Lifecycle Rules:
+- Sessions are created for issues at human_action statuses with initial_command
+- Eligible statuses: status-01:created, status-04:plan-review, status-07:code-review
+- Ineligible: bot_pickup (02, 05, 08), bot_busy (03, 06, 09), pr-created (10)
+
+Restart Behavior:
+- Restart: Open issues at eligible statuses (01, 04, 07) without blocked labels
+- Don't restart: Closed issues, bot statuses, pr-created, blocked issues
+
+Cleanup Behavior:
+- Stale sessions (status changed, closed, bot stage, pr-created) eligible for --cleanup
+- Dirty folders (uncommitted changes) require manual cleanup, never auto-deleted
+
+Dirty Folder Protection:
+- Sessions with uncommitted git changes are never auto-deleted
+- Display shows "!! Manual cleanup" for these cases
 """
 
 import logging
@@ -36,6 +53,7 @@ from .issues import (
     get_ignore_labels,
     get_linked_branch_for_issue,
     get_matching_ignore_label,
+    is_status_eligible_for_session,
 )
 from .sessions import (
     add_session,
@@ -50,7 +68,6 @@ from .sessions import (
     update_session_pid,
     update_session_status,
 )
-from .status import is_session_stale
 from .types import (
     DEFAULT_PROMPT_TIMEOUT,
     RepoVSCodeClaudeConfig,
@@ -474,7 +491,7 @@ def _get_configured_repos() -> set[str]:
     repos_section = config_data.get("coordinator", {}).get("repos", {})
 
     configured_repos: set[str] = set()
-    for repo_name, repo_config in repos_section.items():
+    for _repo_name, repo_config in repos_section.items():
         repo_url = repo_config.get("repo_url", "")
         if repo_url:
             try:
@@ -576,14 +593,6 @@ def restart_closed_sessions(
         if cached_issues_by_repo is not None:
             repo_cached_issues = cached_issues_by_repo.get(repo_full_name)
 
-        # Check if session is stale (issue status changed)
-        if is_session_stale(session, cached_issues=repo_cached_issues):
-            logger.info(
-                "Skipping stale session for issue #%d (status changed)",
-                session["issue_number"],
-            )
-            continue
-
         # Get issue data from cache or fetch from API
         issue_number = session["issue_number"]
         repo_url = f"https://github.com/{repo_full_name}"
@@ -602,6 +611,21 @@ def restart_closed_sessions(
                 )
                 continue
 
+            # Check if issue is closed
+            if issue["state"] != "open":
+                logger.info("Skipping closed issue #%d", issue_number)
+                continue
+
+            # Check if status is eligible for session
+            current_status = get_issue_status(issue)
+            if not is_status_eligible_for_session(current_status):
+                logger.info(
+                    "Skipping issue #%d: status %s doesn't need session",
+                    issue_number,
+                    current_status,
+                )
+                continue
+
             # Check if issue has ignore label (blocked/wait)
             blocked_label = get_matching_ignore_label(issue["labels"], ignore_labels)
             if blocked_label:
@@ -612,8 +636,7 @@ def restart_closed_sessions(
                 )
                 continue
 
-            # Update session status if changed
-            current_status = get_issue_status(issue)
+            # Update session status if changed (current_status already computed above)
             if current_status != session["status"]:
                 update_session_status(session["folder"], current_status)
                 logger.debug(

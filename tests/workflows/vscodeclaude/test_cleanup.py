@@ -698,3 +698,365 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 0
+
+    def test_includes_closed_issue_sessions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should include sessions for closed issues."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_closed"),
+                    "repo": "owner/repo",
+                    "issue_number": 100,
+                    "status": "status-07:code-review",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        # Issue is CLOSED (state="closed")
+        mock_issue: IssueData = {
+            "number": 100,
+            "title": "Closed Issue",
+            "state": "closed",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {100: mock_issue}
+        }
+
+        # Create folder
+        (tmp_path / "repo_closed").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        # Mock is_session_stale to return False (not stale based on status change)
+        # Session should still be included because issue is closed
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s: False,
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        assert len(result) == 1
+        session, git_status = result[0]
+        assert session["issue_number"] == 100
+        assert git_status == "Clean"
+
+    def test_includes_bot_pickup_status_sessions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should include sessions at bot_pickup status (02, 05, 08)."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_bot_pickup"),
+                    "repo": "owner/repo",
+                    "issue_number": 200,
+                    "status": "status-02:awaiting-planning",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        # Issue is OPEN but at bot_pickup status
+        mock_issue: IssueData = {
+            "number": 200,
+            "title": "Bot Pickup Issue",
+            "state": "open",
+            "labels": ["status-02:awaiting-planning"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {200: mock_issue}
+        }
+
+        # Create folder
+        (tmp_path / "repo_bot_pickup").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        # Mock is_session_stale to return False (not stale based on status change)
+        # Session should still be included because status is not eligible
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s: False,
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        assert len(result) == 1
+        session, git_status = result[0]
+        assert session["issue_number"] == 200
+        assert git_status == "Clean"
+
+    def test_includes_bot_busy_status_sessions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should include sessions at bot_busy status (03, 06, 09)."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_bot_busy"),
+                    "repo": "owner/repo",
+                    "issue_number": 300,
+                    "status": "status-03:planning",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        # Issue is OPEN but at bot_busy status
+        mock_issue: IssueData = {
+            "number": 300,
+            "title": "Bot Busy Issue",
+            "state": "open",
+            "labels": ["status-03:planning"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {300: mock_issue}
+        }
+
+        # Create folder
+        (tmp_path / "repo_bot_busy").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        # Mock is_session_stale to return False (not stale based on status change)
+        # Session should still be included because status is not eligible
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s: False,
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        assert len(result) == 1
+        session, git_status = result[0]
+        assert session["issue_number"] == 300
+        assert git_status == "Clean"
+
+    def test_includes_pr_created_status_sessions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should include sessions at status-10:pr-created."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_pr_created"),
+                    "repo": "owner/repo",
+                    "issue_number": 400,
+                    "status": "status-10:pr-created",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        # Issue is OPEN but at pr-created status (no initial_command)
+        mock_issue: IssueData = {
+            "number": 400,
+            "title": "PR Created Issue",
+            "state": "open",
+            "labels": ["status-10:pr-created"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {400: mock_issue}
+        }
+
+        # Create folder
+        (tmp_path / "repo_pr_created").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        # Mock is_session_stale to return False (not stale based on status change)
+        # Session should still be included because pr-created is not eligible
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s: False,
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        assert len(result) == 1
+        session, git_status = result[0]
+        assert session["issue_number"] == 400
+        assert git_status == "Clean"
+
+    def test_excludes_eligible_status_sessions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should NOT include sessions at eligible human_action statuses (01, 04, 07)."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_eligible"),
+                    "repo": "owner/repo",
+                    "issue_number": 500,
+                    "status": "status-07:code-review",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        # Issue is OPEN at eligible status (not stale, not blocked)
+        mock_issue: IssueData = {
+            "number": 500,
+            "title": "Eligible Issue",
+            "state": "open",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {500: mock_issue}
+        }
+
+        # Create folder
+        (tmp_path / "repo_eligible").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        # Mock is_session_stale to return False (status matches, no change)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s: False,
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        # Session should NOT be included - it's eligible and should restart
+        assert len(result) == 0
