@@ -87,11 +87,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 8: Extract CLI Logic to Helper Function
 - [x] Implement `build_eligible_issues_with_branch_check()` in `issues.py` ([step_8.md](./steps/step_8.md))
 - [x] Add tests for helper function in `test_issues.py`
-- [ ] Refactor `execute_coordinator_vscodeclaude_status()` to use helper
-- [ ] Run pylint and fix any issues
-- [ ] Run pytest and verify all tests pass
-- [ ] Run mypy and fix any type errors
-- [ ] Prepare git commit message for Step 8
+- [x] Refactor `execute_coordinator_vscodeclaude_status()` to use helper
+- [x] Run pylint and fix any issues
+- [x] Run pytest and verify all tests pass
+- [x] Run mypy and fix any type errors
+- [x] Prepare git commit message for Step 8
 
 ### Step 9: Remove Redundant Status File Write
 - [ ] Remove redundant `create_status_file()` call in `restart_closed_sessions()` ([step_9.md](./steps/step_9.md))
