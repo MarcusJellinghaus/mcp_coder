@@ -1533,9 +1533,14 @@ class TestRestartClosedSessionsBranchHandling:
         )
 
         # Mock create_startup_script to avoid Linux NotImplementedError
+        mock_script_path = tmp_path / ".vscodeclaude_start.bat"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_startup_script",
+            lambda **kwargs: mock_script_path,
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.create_startup_script",
-            lambda **kwargs: tmp_path / ".vscodeclaude_start.bat",
+            lambda **kwargs: mock_script_path,
         )
 
         # Mock git rev-parse to return the branch that was checked out
@@ -1731,9 +1736,14 @@ class TestRestartClosedSessionsBranchHandling:
         )
 
         # Mock create_startup_script to avoid Linux NotImplementedError
+        mock_script_path = tmp_path / ".vscodeclaude_start.bat"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.create_startup_script",
+            lambda **kwargs: mock_script_path,
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.create_startup_script",
-            lambda **kwargs: tmp_path / ".vscodeclaude_start.bat",
+            lambda **kwargs: mock_script_path,
         )
 
         # Call regenerate_session_files
