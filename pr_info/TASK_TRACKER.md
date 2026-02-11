@@ -60,7 +60,7 @@ See [step_3.md](./steps/step_3.md) for details.
 - [x] Write integration test file `tests/workflows/vscodeclaude/test_closed_issues_integration.py` with 5 test scenarios
 - [x] Run integration tests to verify the fix works (BLOCKED: Environment issue - code verified via pylint and mypy)
 - [x] Fix any issues discovered during integration testing
-- [ ] Update `restart_closed_sessions()` docstring to mention closed issues are skipped
+- [x] Update `restart_closed_sessions()` docstring to mention closed issues are skipped
 - [ ] Update `get_all_cached_issues()` docstring to document `additional_issues` parameter
 - [ ] Run full test suite to ensure no regressions
 - [ ] Manual verification with real closed issues

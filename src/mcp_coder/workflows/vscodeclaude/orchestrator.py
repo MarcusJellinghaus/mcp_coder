@@ -902,6 +902,7 @@ def restart_closed_sessions(
     - Issue status unchanged (not stale)
     - Folder still exists
     - Repo is still configured in config file
+    - Issue is still open (closed issues are skipped)
 
     Before restarting, regenerates all session files with fresh issue data.
 
