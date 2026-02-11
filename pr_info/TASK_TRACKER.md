@@ -21,6 +21,57 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `additional_issues` Parameter to Cache
+See [step_1.md](./steps/step_1.md) for details.
+
+- [ ] Write test file `tests/utils/github_operations/test_issue_cache.py` with 5 test cases
+- [ ] Run tests to verify they fail (TDD approach)
+- [ ] Add `additional_issues` parameter to `get_all_cached_issues()` function signature
+- [ ] Implement `_fetch_additional_issues()` helper function
+- [ ] Add logic to call helper and merge results into cache
+- [ ] Add debug logging for additional issues fetch
+- [ ] Run tests to verify they pass
+- [ ] Verify backward compatibility (existing tests still pass)
+- [ ] Run pylint on modified files and fix all issues
+- [ ] Run pytest on test_issue_cache.py and fix all failures
+- [ ] Run mypy on modified files and fix all type errors
+- [ ] Prepare git commit message for Step 1
+
+### Step 2: Update Orchestrator to Use `additional_issues`
+See [step_2.md](./steps/step_2.md) for details.
+
+- [ ] Write test file `tests/workflows/vscodeclaude/test_orchestrator_cache.py` with 5 test cases
+- [ ] Run tests to verify they fail (TDD approach)
+- [ ] Add import for `defaultdict` from `collections` (if not already present)
+- [ ] Implement `_build_cached_issues_by_repo()` helper function
+- [ ] Modify `restart_closed_sessions()` to call helper if cache not provided
+- [ ] Add debug logging for cache building
+- [ ] Run tests to verify they pass
+- [ ] Verify existing orchestrator tests still pass
+- [ ] Manual test with real closed issues
+- [ ] Run pylint on modified files and fix all issues
+- [ ] Run pytest on test_orchestrator_cache.py and fix all failures
+- [ ] Run mypy on modified files and fix all type errors
+- [ ] Prepare git commit message for Step 2
+
+### Step 3: Integration Tests and Verification
+See [step_3.md](./steps/step_3.md) for details.
+
+- [ ] Write integration test file `tests/workflows/vscodeclaude/test_closed_issues_integration.py` with 5 test scenarios
+- [ ] Run integration tests to verify the fix works
+- [ ] Fix any issues discovered during integration testing
+- [ ] Update `restart_closed_sessions()` docstring to mention closed issues are skipped
+- [ ] Update `get_all_cached_issues()` docstring to document `additional_issues` parameter
+- [ ] Run full test suite to ensure no regressions
+- [ ] Manual verification with real closed issues
+- [ ] Run pylint on all modified files and fix all issues
+- [ ] Run pytest on entire test suite and fix all failures
+- [ ] Run mypy on all modified files and fix all type errors
+- [ ] Prepare git commit message for Step 3
 
 ## Pull Request
+
+- [ ] Review all implemented changes
+- [ ] Verify all acceptance criteria are met
+- [ ] Prepare comprehensive PR summary documenting the fix
+- [ ] Create pull request with detailed description
