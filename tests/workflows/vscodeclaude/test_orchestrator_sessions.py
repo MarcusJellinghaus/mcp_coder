@@ -391,6 +391,12 @@ class TestOrchestration:
             lambda session, issue: tmp_path / "script.bat",
         )
 
+        # Mock _prepare_restart_branch to avoid git operations
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            lambda *args, **kwargs: BranchPrepResult(True, None, None),
+        )
+
         # Create working folder and workspace file
         working_folder = tmp_path / "repo_123"
         working_folder.mkdir()
@@ -839,6 +845,12 @@ class TestOrchestration:
             lambda _: 9999,
         )
 
+        # Mock _prepare_restart_branch to avoid git operations
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            lambda *args, **kwargs: BranchPrepResult(True, None, None),
+        )
+
         # Create working folder and workspace file
         working_folder = tmp_path / "repo_101"
         working_folder.mkdir()
@@ -912,6 +924,12 @@ class TestOrchestration:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.update_session_status",
             lambda folder, status: status_updates.append((folder, status)),
+        )
+
+        # Mock _prepare_restart_branch to avoid git operations
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            lambda *args, **kwargs: BranchPrepResult(True, None, None),
         )
 
         # Create working folder and workspace file
@@ -1803,6 +1821,8 @@ class TestBranchHandlingIntegration:
 
         def mock_regenerate(session: Any, issue: Any) -> Path:
             operations.append("regenerate_files")
+            # Call the mocked create_status_file with the branch from prepare_branch
+            mock_create_status(branch_name="feat-100")
             return tmp_path / "script.bat"
 
         monkeypatch.setattr(
