@@ -1019,7 +1019,7 @@ class TestPrepareRestartBranch:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
-            lambda bm, issue_num: None,
+            lambda _bm, _issue_num: None,
         )
         mock_branch_manager = type("MockBranchManager", (), {})()
 
@@ -1044,7 +1044,7 @@ class TestPrepareRestartBranch:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
-            lambda bm, issue_num: "feat-branch",
+            lambda _bm, _issue_num: "feat-branch",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
@@ -1077,7 +1077,7 @@ class TestPrepareRestartBranch:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
-            lambda bm, issue_num: "feat-123",
+            lambda _bm, _issue_num: "feat-123",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
@@ -1113,7 +1113,7 @@ class TestPrepareRestartBranch:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
-            lambda bm, issue_num: "feat-branch",
+            lambda _bm, _issue_num: "feat-branch",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
@@ -1193,7 +1193,7 @@ class TestPrepareRestartBranch:
             )(),
         )
 
-        def raise_value_error(bm: Any, issue_num: int) -> str:
+        def raise_value_error(_bm: Any, _issue_num: int) -> str:
             raise ValueError("Multiple branches linked")
 
         monkeypatch.setattr(
@@ -1965,7 +1965,7 @@ class TestBranchHandlingIntegration:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_session_for_issue",
-            lambda repo, num: None,
+            lambda _repo, _num: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.load_repo_vscodeclaude_config",
@@ -1974,7 +1974,7 @@ class TestBranchHandlingIntegration:
         # No linked branch
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
-            lambda bm, num: None,
+            lambda _bm, _num: None,
         )
 
         with caplog.at_level(logging.ERROR):
@@ -2021,7 +2021,7 @@ class TestBranchHandlingIntegration:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
-            lambda bm, num: "feat-branch",
+            lambda _bm, _num: "feat-branch",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
@@ -2097,7 +2097,7 @@ class TestBranchHandlingIntegration:
         # Test with status-04
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
-            lambda bm, num: "feat-branch",
+            lambda _bm, _num: "feat-branch",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
