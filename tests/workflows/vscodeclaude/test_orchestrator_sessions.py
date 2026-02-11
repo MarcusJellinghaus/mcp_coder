@@ -2084,7 +2084,7 @@ class TestBranchHandlingIntegration:
         mock_branch_manager = type("MockBranchManager", (), {})()
 
         # Test with status-01
-        result_01 = _prepare_restart_branch(
+        _ = _prepare_restart_branch(
             folder_path=tmp_path,
             current_status="status-01:created",
             branch_manager=mock_branch_manager,
@@ -2104,7 +2104,7 @@ class TestBranchHandlingIntegration:
             lambda folder: "Clean",
         )
 
-        result_04 = _prepare_restart_branch(
+        _ = _prepare_restart_branch(
             folder_path=tmp_path,
             current_status="status-04:plan-review",
             branch_manager=mock_branch_manager,
@@ -2115,7 +2115,7 @@ class TestBranchHandlingIntegration:
         fetch_calls.clear()
 
         # Test with status-07
-        result_07 = _prepare_restart_branch(
+        _ = _prepare_restart_branch(
             folder_path=tmp_path,
             current_status="status-07:code-review",
             branch_manager=mock_branch_manager,
